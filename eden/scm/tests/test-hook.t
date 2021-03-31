@@ -98,7 +98,7 @@ pretxncommit and commit hooks can see both parents of merge
 test generic hooks
 
   $ hg id
-  pre-identify hook: HG_ARGS=id HG_HOOKNAME=pre-identify HG_HOOKTYPE=pre-identify HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'insecure': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None, 'template': ''} HG_PATS=[]
+  pre-identify hook: HG_ARGS=id HG_HOOKNAME=pre-identify HG_HOOKTYPE=pre-identify HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None, 'template': ''} HG_PATS=[]
   abort: pre-identify hook exited with status 1
   [255]
   $ hg cat b
@@ -720,7 +720,7 @@ This also creates the `to` repo for the next test block.
   > post-init = sh -c "printenv.py post-init"
   > EOF
   $ HGRCPATH=hgrc-with-post-init-hook hg init to
-  post-init hook: HG_ARGS=init to HG_HOOKNAME=post-init HG_HOOKTYPE=post-init HG_OPTS={'insecure': None, 'remotecmd': '', 'ssh': ''} HG_PATS=['to'] HG_RESULT=0
+  post-init hook: HG_ARGS=init to HG_HOOKNAME=post-init HG_HOOKTYPE=post-init HG_OPTS={'remotecmd': '', 'ssh': ''} HG_PATS=['to'] HG_RESULT=0
 
 new commits must be visible in pretxnchangegroup (issue3428)
 

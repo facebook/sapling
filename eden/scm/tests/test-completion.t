@@ -211,6 +211,7 @@ Show the global options
   --encodingmode
   --help
   --hidden
+  --insecure
   --noninteractive
   --outputencoding
   --pager
@@ -247,6 +248,7 @@ Show the options for the "serve" command
   --errorlog
   --help
   --hidden
+  --insecure
   --ipv6
   --name
   --noninteractive
@@ -369,9 +371,9 @@ Show all commands + options
   blackbox: start, end, pattern, timestamp, sid
   bookmarks: force, rev, delete, strip, rename, inactive, template
   branch: force, clean, new
-  bundle: force, rev, base, all, type, ssh, remotecmd, insecure
+  bundle: force, rev, base, all, type, ssh, remotecmd
   cat: output, rev, decode, include, exclude, template
-  clone: noupdate, updaterev, rev, pull, uncompressed, stream, shallow, ssh, remotecmd, insecure
+  clone: noupdate, updaterev, rev, pull, uncompressed, stream, shallow, ssh, remotecmd
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   config: untrusted, edit, local, global, template
   continue: 
@@ -402,7 +404,7 @@ Show all commands + options
   debugdifftree: rev, include, exclude, style, template
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json
-  debugdiscovery: rev, ssh, remotecmd, insecure
+  debugdiscovery: rev, ssh, remotecmd
   debugdrawdag: print
   debugdumpindexedlog: 
   debugdumptrace: time-range, session-id, output-path
@@ -473,7 +475,7 @@ Show all commands + options
   debugvisibility: 
   debugvisibleheads: style, template
   debugwalk: include, exclude
-  debugwireargs: three, four, five, ssh, remotecmd, insecure
+  debugwireargs: three, four, five, ssh, remotecmd
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   doctor: 
   export: output, switch-parent, rev, pattern, text, git, binary, nodates, include, exclude
@@ -487,21 +489,21 @@ Show all commands + options
   help: extension, command, keyword, system
   hint: ack
   histgrep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
-  identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure, template
+  identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
-  init: ssh, remotecmd, insecure
+  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd
+  init: ssh, remotecmd
   locate: rev, print0, fullpath, include, exclude
   log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   manifest: rev, all, template
   merge: force, rev, preview, tool
-  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure
+  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev
-  pull: update, force, rev, bookmark, ssh, remotecmd, insecure
+  pull: update, force, rev, bookmark, ssh, remotecmd
   purge: abort-on-err, all, dirs, files, print, print0, include, exclude
-  push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd, insecure
+  push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd
   record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
   recover: 
   remove: after, force, include, exclude

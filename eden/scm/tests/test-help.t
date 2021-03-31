@@ -477,6 +477,7 @@ Verbose help for add
       --debugger              start debugger
       --encoding ENCODE       set the charset encoding (default: utf-8)
       --encodingmode MODE     set the charset encoding mode (default: strict)
+      --insecure              do not verify server certificate
       --outputencoding ENCODE set the output encoding (default: utf-8)
       --traceback             always print a traceback on exception
       --trace                 enable more detailed tracing

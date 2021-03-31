@@ -150,6 +150,7 @@ globalopts = cmdutil._typedflags(
             _("set the charset encoding mode"),
             _("MODE"),
         ),
+        ("", "insecure", False, _("do not verify server certificate")),
         (
             "",
             "outputencoding",

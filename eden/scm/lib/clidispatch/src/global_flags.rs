@@ -49,6 +49,9 @@ define_flags! {
         /// set the charset encoding mode
         encodingmode: String = "strict",
 
+        /// do not verify server certificate
+        insecure: bool,
+
         /// always print a traceback on exception
         traceback: bool,
 
