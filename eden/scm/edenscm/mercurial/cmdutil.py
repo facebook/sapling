@@ -3106,6 +3106,7 @@ def displaygraph(
     filematcher=None,
     props=None,
     reserved=None,
+    out=None,
 ):
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
@@ -3163,7 +3164,11 @@ def displaygraph(
             ensureunicode(encoding.unifromlocal(s), errors="replace")
             for s in displayer.hunk.pop(rev)
         )
-        ui.write(encoding.unitolocal(renderer.nextrow(rev, parents, char, msg)))
+        nextrow = renderer.nextrow(rev, parents, char, msg)
+        if out is not None:
+            out(nextrow)
+        else:
+            ui.write(encoding.unitolocal(nextrow))
         displayer.flush(ctx)
 
     displayer.close()
