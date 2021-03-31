@@ -225,7 +225,7 @@ impl SegmentedChangelogTailer {
         // Update SegmentedChangelogVersion
         let sc_version = SegmentedChangelogVersion::new(iddag_version, sc_version.idmap_version);
         self.sc_version_store
-            .set(&ctx, sc_version)
+            .update(&ctx, sc_version)
             .await
             .with_context(|| {
                 format!(
