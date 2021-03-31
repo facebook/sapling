@@ -13,6 +13,7 @@ use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use configparser::config::ConfigSet;
+use hg_http::HgHttpConfig;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use std::env;
@@ -103,7 +104,12 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         let exit_code = match {
             dispatch::Dispatcher::from_args(args[1..].to_vec()).and_then(|dispatcher| {
                 let config = dispatcher.config();
+                let global_opts = dispatcher.global_opts();
+
+                setup_http(config, global_opts);
+
                 let _ = spawn_progress_thread(config, io, Arc::downgrade(&in_scope));
+
                 dispatcher.run_command(&table, io)
             })
         } {
@@ -514,4 +520,11 @@ fn is_inside_test() -> bool {
 // TODO: Replace this with the 'exitcode' crate once it's available.
 mod exitcode {
     pub const IOERR: i32 = 74;
+}
+
+fn setup_http(_config: &ConfigSet, global_opts: &HgGlobalOpts) {
+    let http_config = HgHttpConfig {
+        disable_tls_verification: global_opts.insecure,
+    };
+    hg_http::set_global_config(http_config);
 }

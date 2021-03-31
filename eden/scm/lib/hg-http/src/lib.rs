@@ -46,6 +46,27 @@ pub fn http_client(client_id: impl ToString) -> HttpClient {
     })
 }
 
+/// Global configuration settings for Mercurial's HTTP client.
+#[derive(Debug)]
+pub struct HgHttpConfig {
+    pub disable_tls_verification: bool,
+}
+
+/// Set a global configuration that will be applied to all HTTP requests in
+/// Mercurial's Rust code.
+pub fn set_global_config(config: HgHttpConfig) {
+    if config.disable_tls_verification {
+        tracing::warn!("--insecure flag specified; server TLS certificate will not be verified");
+    }
+
+    Request::on_new_request(move |req| {
+        // Disable TLS verification if --insecure is specified.
+        if config.disable_tls_verification {
+            req.set_verify_tls_cert(false).set_verify_tls_host(false);
+        }
+    });
+}
+
 /// Setup progress reporting to the main progress registry for the lifetime of
 /// this process.
 pub fn enable_progress_reporting() {
