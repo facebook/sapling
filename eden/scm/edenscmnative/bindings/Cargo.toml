@@ -48,6 +48,7 @@ pyregex = { path = "modules/pyregex" }
 pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }
+pysptui = { path = "modules/pysptui" }
 pythreading = { path = "modules/pythreading" }
 pytracing = { path = "modules/pytracing", default-features = false }
 pytreestate = { path = "modules/pytreestate" }

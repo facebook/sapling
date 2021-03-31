@@ -9,7 +9,7 @@ use configparser::config::ConfigSet;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use pipe::pipe;
+use pipe::{pipe, PipeWriter};
 use std::any::Any;
 use std::io;
 use std::mem;
@@ -17,6 +17,10 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::{spawn, JoinHandle};
 use streampager::{config::InterfaceMode, Pager};
+
+mod impls;
+
+use crate::impls::PipeWriterWithTty;
 
 // IO is not Clone. But IO::error() and IO::output() can be cloned.
 // This ensures that there is only one strong reference, and dropping
@@ -99,8 +103,6 @@ impl<T: io::Write + IsTty + Any + Send + Sync> Write for T {
         self
     }
 }
-
-mod impls;
 
 // Write to error.
 impl io::Write for IOError {
@@ -368,7 +370,6 @@ impl IO {
         let (err_read, err_write) = pipe();
         let (prg_read, prg_write) = pipe();
 
-        use impls::PipeWriterWithTty;
         let out_is_tty = inner.output.is_tty();
         let err_is_tty = inner
             .error
@@ -412,6 +413,14 @@ impl IO {
             inner.progress_disabled -= 1;
         }
         Ok(())
+    }
+
+    pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) {
+        let mut inner = self.inner.lock();
+        inner.progress = match progress {
+            Some(progress) => Some(Box::new(PipeWriterWithTty::new(progress, false))),
+            None => None,
+        }
     }
 }
 
