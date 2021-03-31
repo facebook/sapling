@@ -224,6 +224,7 @@ hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/k
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
 openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+petgraph = { git = "https://github.com/jkeljo/petgraph", rev = "e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
