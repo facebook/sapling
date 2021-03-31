@@ -490,8 +490,15 @@ fn path_command(
     }
 
     if !no_create {
-        fs::create_dir_all(&result)?;
-        set_file_owner(&result, &repo_owner)?;
+        let mut ancestors = result.ancestors().collect::<Vec<_>>();
+        ancestors.reverse();
+        for ancestor in ancestors.iter() {
+            match fs::create_dir(ancestor) {
+                Ok(()) => set_file_owner(&ancestor, &repo_owner)?,
+                Err(_) if ancestor.is_dir() => {}
+                Err(e) => bail!(e),
+            }
+        }
         if watchable {
             create_watchmanconfig(&config, &result, &repo_owner)?;
         }
