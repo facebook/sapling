@@ -46,7 +46,7 @@ mod need_update {
     // debugging however it's nice to have the aggregation ready available to diagnose instances or
     // regions.
     define_stats! {
-        prefix = "mononke.segmented_changelog.need_update";
+        prefix = "mononoke.segmented_changelog.need_update";
         count: timeseries(Sum),
         tries:
             histogram(1, 0, 30, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
@@ -67,7 +67,7 @@ mod need_update {
 mod actual_update {
     use stats::prelude::*;
     define_stats! {
-        prefix = "mononke.segmented_changelog.update";
+        prefix = "mononoke.segmented_changelog.update";
         count: timeseries(Sum),
         failure: timeseries(Sum),
         success: timeseries(Sum),
