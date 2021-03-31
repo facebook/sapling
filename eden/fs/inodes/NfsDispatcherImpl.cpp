@@ -61,11 +61,13 @@ folly::Future<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
       .thenValue([name = std::move(name), &context](const TreeInodePtr& inode) {
         return inode->getOrLoadChild(name, context);
       })
-      .thenValue([&context](const InodePtr& inode) {
-        return inode->stat(context).thenValue(
-            [ino = inode->getNodeId()](
+      .thenValue([&context](InodePtr&& inode) {
+        auto statFut = inode->stat(context);
+        return std::move(statFut).thenValue(
+            [inode = std::move(inode)](
                 struct stat stat) -> std::tuple<InodeNumber, struct stat> {
-              return {ino, stat};
+              inode->incFsRefcount();
+              return {inode->getNodeId(), stat};
             });
       });
 }
@@ -130,6 +132,7 @@ folly::Future<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
         auto statFut = newFile->stat(context);
         return std::move(statFut).thenValue(
             [newFile = std::move(newFile)](struct stat&& stat) {
+              newFile->incFsRefcount();
               return CreateRes{
                   newFile->getNodeId(),
                   std::move(stat),
@@ -152,6 +155,7 @@ folly::Future<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
         auto statFut = newDir->stat(context);
         return std::move(statFut).thenValue([newDir = std::move(newDir)](
                                                 struct stat&& stat) {
+          newDir->incFsRefcount();
           return MkdirRes{
               newDir->getNodeId(), std::move(stat), std::nullopt, std::nullopt};
         });
@@ -172,6 +176,7 @@ folly::Future<NfsDispatcher::SymlinkRes> NfsDispatcherImpl::symlink(
         auto statFut = symlink->stat(context);
         return std::move(statFut).thenValue(
             [symlink = std::move(symlink)](struct stat&& stat) {
+              symlink->incFsRefcount();
               return SymlinkRes{
                   symlink->getNodeId(),
                   std::move(stat),
