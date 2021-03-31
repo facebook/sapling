@@ -95,6 +95,8 @@ const EXCLUDE_NODE_TYPE_ARG: &str = "exclude-node-type";
 const INCLUDE_NODE_TYPE_ARG: &str = "include-node-type";
 const EXCLUDE_EDGE_TYPE_ARG: &str = "exclude-edge-type";
 const INCLUDE_EDGE_TYPE_ARG: &str = "include-edge-type";
+const EXCLUDE_HASH_VALIDATION_NODE_TYPE_ARG: &str = "exclude-hash-validation-node-type";
+const INCLUDE_HASH_VALIDATION_NODE_TYPE_ARG: &str = "include-hash-validation-node-type";
 const BOOKMARK_ARG: &str = "bookmark";
 const WALK_ROOT_ARG: &str = "walk-root";
 const CHUNK_BY_PUBLIC_ARG: &str = "chunk-by-public";
@@ -171,6 +173,9 @@ static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     v.extend(NodeType::VARIANTS.iter());
     v
 });
+
+static NODE_HASH_VALIDATION_POSSIBLE_VALUES: Lazy<Vec<&'static str>> =
+    Lazy::new(|| vec![NodeType::HgFileEnvelope.into()]);
 
 /// Default to clearing out all except HgChangesets ( and bonsai Changsets as no option to clear those)
 const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
@@ -896,6 +901,27 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(false)
                 .required(false)
                 .help("A log file to write Scuba logs to (primarily useful in testing)"),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_HASH_VALIDATION_NODE_TYPE_ARG)
+                .long(EXCLUDE_HASH_VALIDATION_NODE_TYPE_ARG)
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .possible_values(&NODE_HASH_VALIDATION_POSSIBLE_VALUES)
+                .help("Node types for which we don't want to do hash validation"),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_HASH_VALIDATION_NODE_TYPE_ARG)
+                .long(INCLUDE_HASH_VALIDATION_NODE_TYPE_ARG)
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .possible_values(&NODE_HASH_VALIDATION_POSSIBLE_VALUES)
+                .hide_possible_values(true)
+                .help("Node types for which we want to do hash validation"),
         );
 }
 
@@ -1182,6 +1208,13 @@ pub async fn setup_common<'a>(
         DEFAULT_INCLUDE_NODE_TYPES,
     )?;
 
+    let hash_validation_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_HASH_VALIDATION_NODE_TYPE_ARG,
+        EXCLUDE_HASH_VALIDATION_NODE_TYPE_ARG,
+        &[],
+    )?;
+
     let mut walk_roots: Vec<OutgoingEdge> = vec![];
 
     if sub_m.is_present(BOOKMARK_ARG) {
@@ -1395,6 +1428,7 @@ pub async fn setup_common<'a>(
                     tail_params.clone(),
                     include_edge_types.clone(),
                     include_node_types.clone(),
+                    hash_validation_node_types.clone(),
                     progress_options,
                 )
                 .await?;
@@ -1436,6 +1470,7 @@ async fn setup_repo<'a>(
     mut tail_params: TailParams,
     include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
+    hash_validation_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
 ) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
     let logger = if repo_count > 1 {
@@ -1535,6 +1570,7 @@ async fn setup_repo<'a>(
             walk_roots,
             include_node_types,
             include_edge_types,
+            hash_validation_node_types,
             scuba_builder,
         },
     ))

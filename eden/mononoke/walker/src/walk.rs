@@ -1507,6 +1507,7 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
 
 struct Checker<V: VisitOne> {
     include_edge_types: HashSet<EdgeType>,
+    hash_validation_node_types: HashSet<NodeType>,
     always_emit_edge_types: HashSet<EdgeType>,
     required_node_data_types: HashSet<NodeType>,
     keep_edge_paths: bool,
@@ -1630,6 +1631,7 @@ pub struct RepoWalkParams {
     pub walk_roots: Vec<OutgoingEdge>,
     pub include_node_types: HashSet<NodeType>,
     pub include_edge_types: HashSet<EdgeType>,
+    pub hash_validation_node_types: HashSet<NodeType>,
 }
 
 // Parameters that vary per repo but are set differently by scrub, validate etc.
@@ -1687,10 +1689,13 @@ where
         cloned!(
             repo_params.repo,
             repo_params.include_edge_types,
+            repo_params.hash_validation_node_types,
             repo_params.include_node_types,
             repo_params.sql_shard_info,
         );
 
+        let mut required_node_data_types = type_params.required_node_data_types;
+        required_node_data_types.extend(hash_validation_node_types.clone());
         let checker = Arc::new(Checker {
             with_blame: repo_params.include_node_types.contains(&NodeType::Blame),
             with_fastlog: include_node_types
@@ -1700,10 +1705,11 @@ where
                 .iter()
                 .any(|e| e.outgoing_type() == NodeType::HgFileNode),
             include_edge_types,
+            hash_validation_node_types,
             always_emit_edge_types: type_params.always_emit_edge_types,
             keep_edge_paths: type_params.keep_edge_paths,
             visitor: visitor.clone(),
-            required_node_data_types: type_params.required_node_data_types,
+            required_node_data_types,
             phases_store: repo.get_phases_factory().get_phases(
                 repo.get_repoid(),
                 repo.get_changeset_fetcher(),
@@ -1914,6 +1920,25 @@ where
 
     let edge_label = walk_item.label;
     let node_type = walk_item.target.get_type();
+
+    // Run hash validation if needed
+    let step_result = match step_result {
+        Ok(StepOutput::Done(node_data, children)) => {
+            if checker.hash_validation_node_types.contains(&node_type) {
+                let f = walk_item
+                    .target
+                    .validate_hash(ctx.clone(), repo.clone(), &node_data);
+                match f.await {
+                    Ok(()) => Ok(StepOutput::Done(node_data, children)),
+                    Err(err) => Err(StepError::Other(err)),
+                }
+            } else {
+                Ok(StepOutput::Done(node_data, children))
+            }
+        }
+        res => res,
+    };
+
     let step_output = match step_result {
         Ok(s) => Ok(s),
         Err(e) => {

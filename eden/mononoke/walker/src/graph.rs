@@ -6,12 +6,14 @@
  */
 
 use ahash::RandomState;
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use bitflags::bitflags;
 use blame::BlameRoot;
+use blobrepo::BlobRepo;
 use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
+use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -19,14 +21,20 @@ use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
 use filenodes::FilenodeInfo;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
-use futures::stream::BoxStream;
+use futures::{
+    compat::Future01CompatExt,
+    future::BoxFuture,
+    stream::{self, BoxStream},
+    FutureExt, StreamExt, TryStreamExt,
+};
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use manifest::Entry;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobManifest},
-    FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
+    calculate_hg_node_id_stream, FileBytes, HgChangesetId, HgFileEnvelope, HgFileEnvelopeMut,
+    HgFileNodeId, HgManifestId, HgParents,
 };
 use mononoke_types::{
     blame::Blame,
@@ -835,6 +843,67 @@ impl Node {
             Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
             Node::UnodeManifest(k) => Some(k.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
+        }
+    }
+
+    pub fn validate_hash(
+        &self,
+        ctx: CoreContext,
+        repo: BlobRepo,
+        node_data: &NodeData,
+    ) -> BoxFuture<Result<(), Error>> {
+        match (&self, node_data) {
+            (Node::HgFileEnvelope(hg_filenode_id), NodeData::HgFileEnvelope(envelope)) => {
+                let hg_filenode_id = hg_filenode_id.clone();
+                let envelope = envelope.clone();
+                async move {
+                    let content_id = envelope.content_id();
+                    let file_bytes =
+                        filestore::fetch(repo.blobstore(), ctx, &envelope.content_id().into())
+                            .await?;
+
+                    let file_bytes = file_bytes.ok_or_else(|| {
+                        format_err!(
+                            "content {} not found for filenode {}",
+                            content_id,
+                            hg_filenode_id
+                        )
+                    })?;
+                    let HgFileEnvelopeMut {
+                        p1, p2, metadata, ..
+                    } = envelope.into_mut();
+                    let p1 = p1.map(|p| p.into_nodehash());
+                    let p2 = p2.map(|p| p.into_nodehash());
+                    let actual = calculate_hg_node_id_stream(
+                        stream::once(async { Ok(metadata) })
+                            .chain(file_bytes)
+                            .boxed()
+                            .compat(),
+                        &HgParents::new(p1, p2),
+                    )
+                    .compat()
+                    .await?;
+                    let actual = HgFileNodeId::new(actual);
+
+                    if actual != hg_filenode_id {
+                        return Err(format_err!(
+                            "failed to validate filenode hash: expected {} actual {}",
+                            hg_filenode_id,
+                            actual
+                        ));
+                    }
+                    Ok(())
+                }
+                .boxed()
+            }
+            _ => {
+                let ty = self.get_type();
+                async move {
+                    let s: &str = ty.into();
+                    Err(format_err!("hash validation for {} is not supported", s,))
+                }
+                .boxed()
+            }
         }
     }
 }
