@@ -32,7 +32,7 @@ tracing = "0.1"
 types = { path = "../types", optional = true }
 util = { path = "../util" }
 version = { path = "../version" }
-zstd = { version = "=0.5.3+zstd.1.4.5", optional = true }
+zstd = { version = "=0.6.0+zstd.1.4.8", optional = true }
 
 [dev-dependencies]
 lazy_static = "1.0"
