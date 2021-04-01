@@ -227,6 +227,15 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
 void DaemonStartupLogger::initClient(
     folly::StringPiece logPath,
     FileDescriptor&& pipe) {
+#ifndef _WIN32
+  // We call `setsid` on successful initialization,
+  // but we need to call `setpgrp` early to make sure spawned processes
+  // like `scribe_cat` belong to the same process group as the daemon process,
+  // not the group of the process which initiated the eden start.
+  // Note spawned processes are still not detached from the terminal,
+  // which is incorrect.
+  folly::checkUnixError(setpgid(0, 0), "setpgid failed");
+#endif
   XDCHECK(!logPath.empty());
   pipe_ = std::move(pipe);
   redirectOutput(logPath);
