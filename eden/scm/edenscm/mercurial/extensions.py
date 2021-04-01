@@ -414,7 +414,7 @@ def loadall(ui, include_list=None):
     if include_list is not None:
         result = [(k, v) for (k, v) in result if k in include_list]
 
-    newindex = len(_order)
+    alreadyenabled = set(_order)
     for (name, path) in result:
         if path:
             if path[0:1] == "!":
@@ -443,6 +443,9 @@ def loadall(ui, include_list=None):
             if isinstance(inst, error.Hint) and inst.hint:
                 ui.warn(_("(%s)\n") % inst.hint)
             ui.traceback()
+
+    newextensions = list(name for name in _order if name not in alreadyenabled)
+
     # list of (objname, loadermod, loadername) tuple:
     # - objname is the name of an object in extension module,
     #   from which extra information is loaded
@@ -452,14 +455,17 @@ def loadall(ui, include_list=None):
     #
     # This one is for the list of item that must be run before running any setup
     earlyextraloaders = [("configtable", configitems, "loadconfigtable")]
-    _loadextra(ui, newindex, earlyextraloaders)
+    _loadextra(ui, newextensions, earlyextraloaders)
 
     broken = set()
-    for name in _order[newindex:]:
+    for name in newextensions:
         if not _runuisetup(name, ui):
             broken.add(name)
 
-    for name in _order[newindex:]:
+    # Recompute since the order may have changed
+    newextensions = list(name for name in _order if name not in alreadyenabled)
+
+    for name in newextensions:
         if name in broken:
             continue
         if not _runextsetup(name, ui):
@@ -514,11 +520,11 @@ def loadall(ui, include_list=None):
         ("templatefunc", templater, "loadfunction"),
         ("templatekeyword", templatekw, "loadkeyword"),
     ]
-    _loadextra(ui, newindex, extraloaders)
+    _loadextra(ui, newextensions, extraloaders)
 
 
-def _loadextra(ui, newindex, extraloaders):
-    for name in _order[newindex:]:
+def _loadextra(ui, newextensions, extraloaders):
+    for name in newextensions:
         module = _extensions[name]
         if not module:
             continue  # loading this module failed
