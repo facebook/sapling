@@ -16,7 +16,7 @@ use blame::BlameRoot;
 use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
@@ -129,7 +129,7 @@ impl TestRepoFactory {
         con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
-        con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
+        con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
         con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(Connection::with_sqlite(con));
@@ -258,9 +258,9 @@ impl TestRepoFactory {
 
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.
     pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
-        Ok(Arc::new(SqlBonsaiHgMapping::from_sql_connections(
-            self.metadata_db.clone(),
-        )))
+        Ok(Arc::new(
+            SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone()).build(),
+        ))
     }
 
     /// Construct Bonsai Git Mapping using the in-memory metadata database.

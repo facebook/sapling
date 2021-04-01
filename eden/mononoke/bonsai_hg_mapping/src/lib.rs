@@ -227,13 +227,25 @@ queries! {
     }
 }
 
-impl SqlConstruct for SqlBonsaiHgMapping {
+#[derive(Clone)]
+pub struct SqlBonsaiHgMappingBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlBonsaiHgMappingBuilder {
     const LABEL: &'static str = "bonsai_hg_mapping";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-bonsai-hg-mapping.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
+        Self { connections }
+    }
+}
+
+impl SqlBonsaiHgMappingBuilder {
+    pub fn build(self) -> SqlBonsaiHgMapping {
+        let connections = self.connections;
+        SqlBonsaiHgMapping {
             write_connection: connections.write_connection,
             read_connection: RendezVousConnection::new(connections.read_connection, "reader"),
             read_master_connection: RendezVousConnection::new(
@@ -244,7 +256,7 @@ impl SqlConstruct for SqlBonsaiHgMapping {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMapping {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMappingBuilder {}
 
 impl SqlBonsaiHgMapping {
     async fn verify_consistency(&self, entry: BonsaiHgMappingEntry) -> Result<(), Error> {

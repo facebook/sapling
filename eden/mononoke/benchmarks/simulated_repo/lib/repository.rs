@@ -17,7 +17,7 @@ use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    SqlBonsaiHgMapping,
+    SqlBonsaiHgMappingBuilder,
 };
 use bonsai_svnrev_mapping::{RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
@@ -126,7 +126,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 
     let bonsai_hg_mapping = {
         let mapping: Arc<dyn BonsaiHgMapping> = Arc::new(DelayedBonsaiHgMapping::new(
-            SqlBonsaiHgMapping::with_sqlite_in_memory()?,
+            SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()?.build(),
             settings.db_get_dist,
             settings.db_put_dist,
         ));

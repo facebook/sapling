@@ -26,6 +26,8 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     const CREATION_QUERY: &'static str;
 
     /// Construct an instance from SqlConnections
+    ///
+    /// This function may be called in an async context and must not block.
     fn from_sql_connections(connections: SqlConnections) -> Self;
 
     /// Construct an instance from an in-memory SQLite instance
@@ -68,5 +70,7 @@ pub trait SqlShardedConstruct: Sized + Send + Sync + 'static {
     const CREATION_QUERY: &'static str;
 
     /// Construct an instance from a vector of SqlConnections, one for each shard
+    ///
+    /// This function may be called in an async context and must not block.
     fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self;
 }

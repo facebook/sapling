@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    ErrorKind, SqlBonsaiHgMapping,
+    ErrorKind, SqlBonsaiHgMappingBuilder,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -359,20 +359,44 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) {
-    add_and_get(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
+    add_and_get(
+        fb,
+        SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(),
+    )
+    .await;
 }
 
 #[fbinit::test]
 async fn test_missing(fb: FacebookInit) {
-    missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
+    missing(
+        fb,
+        SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(),
+    )
+    .await;
 }
 
 #[fbinit::test]
 async fn test_caching(fb: FacebookInit) {
-    caching(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
+    caching(
+        fb,
+        SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(),
+    )
+    .await;
 }
 
 #[fbinit::test]
 async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
-    get_many_hg_by_prefix(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
+    get_many_hg_by_prefix(
+        fb,
+        SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(),
+    )
+    .await;
 }

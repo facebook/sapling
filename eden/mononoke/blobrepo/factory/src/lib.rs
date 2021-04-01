@@ -15,7 +15,7 @@ use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{
     ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
 };
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
     CachingBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
@@ -356,10 +356,12 @@ async fn new_development<'a>(
     };
 
     let bonsai_hg_mapping = async {
-        sql_factory
-            .open::<SqlBonsaiHgMapping>()
+        let builder = sql_factory
+            .open::<SqlBonsaiHgMappingBuilder>()
             .await
-            .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
+        let mapping = tokio::task::spawn_blocking(move || builder.build()).await?;
+        Ok(mapping)
     };
 
     let hg_mutation_store = async {
@@ -491,7 +493,11 @@ async fn new_production<'a>(
     };
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
     let bonsai_svnrev_mapping = sql_factory.open::<SqlBonsaiSvnrevMapping>();
-    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
+    let bonsai_hg_mapping = async {
+        let builder = sql_factory.open::<SqlBonsaiHgMappingBuilder>().await?;
+        let mapping = tokio::task::spawn_blocking(move || builder.build()).await?;
+        Ok(mapping)
+    };
     let hg_mutation_store = async {
         let conn = sql_factory.open::<SqlHgMutationStoreBuilder>().await?;
 
