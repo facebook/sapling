@@ -101,6 +101,7 @@ path = "cmds/upload_globalrevs.rs"
 [dependencies]
 anyhow = "1.0"
 ascii = "1.0"
+async-compression = { version = "0.3", features = ["all"] }
 async-trait = "0.1.45"
 backsyncer = { version = "0.1.0", path = "commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "derived_data/blame" }

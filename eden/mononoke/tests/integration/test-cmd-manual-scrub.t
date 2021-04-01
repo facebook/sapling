@@ -47,6 +47,15 @@ Success time - these keys will exist and be scrubbed
     0 errors
     3 total
 
+Do same run with compressed key output
+  $ manual_scrub --storage-config-name blobstore --keys-zstd-level=9 --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
+  > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
+  > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
+  > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  > EOF
+  $ cat success | zstd -d | wc -l
+  3
+
 Demostrate that a key exists
   $ ls "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
   $TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
@@ -86,7 +95,7 @@ The error will group blobstores 1 and 2 together, and leave blobstore 0 in its o
   > repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   > EOF
   Error: Scrubbing key repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  
+  * (glob)
   Caused by:
       Different blobstores have different values for this item: [{*}, {*}] are grouped by content, {} do not have (glob)
   $ wc -l success missing errors

@@ -8,14 +8,16 @@
 #![deny(warnings)]
 
 use anyhow::{Context, Error, Result};
+use async_compression::{tokio_02::write::ZstdEncoder, Level};
 use clap::Arg;
 use futures::{
     channel::mpsc,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
+use std::ffi::OsStr;
 use tokio::{
     fs::File,
-    io::{stdin, AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{stdin, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader},
 };
 
 use blobstore_factory::{make_blobstore, ScrubAction};
@@ -32,26 +34,46 @@ const ARG_SCHEDULED_MAX: &str = "scheduled-max";
 const ARG_SUCCESSFUL_KEYS: &str = "success-keys-output";
 const ARG_MISSING_KEYS: &str = "missing-keys-output";
 const ARG_ERROR_KEYS: &str = "error-keys-output";
+const ARG_ZSTD_LEVEL: &str = "keys-zstd-level";
 
-async fn bridge_to_file(mut file: File, mut recv: mpsc::Receiver<String>) -> Result<()> {
+async fn bridge_to_file<W: AsyncWriteExt + Unpin>(
+    mut file: W,
+    mut recv: mpsc::Receiver<String>,
+) -> Result<()> {
     while let Some(string) = recv.next().await {
         file.write_all(string.as_bytes()).await?;
         file.write(b"\n").await?;
     }
-    // Best effort to flush
-    let _ = file.flush().await;
+    let _ = file.shutdown().await;
     Ok(())
 }
 
-async fn handle_errors(mut file: File, mut recv: mpsc::Receiver<(String, Error)>) -> Result<()> {
+async fn handle_errors<W: AsyncWriteExt + Unpin>(
+    mut file: W,
+    mut recv: mpsc::Receiver<(String, Error)>,
+) -> Result<()> {
     while let Some((key, err)) = recv.next().await {
         eprintln!("Error: {:?}", err.context(format!("Scrubbing key {}", key)));
         file.write_all(key.as_bytes()).await?;
         file.write(b"\n").await?;
     }
-    // Best effort to flush
-    let _ = file.flush().await;
+    let _ = file.shutdown().await;
     Ok(())
+}
+
+async fn create_file(
+    file_name: &OsStr,
+    zstd_level: Option<i32>,
+) -> Result<Box<dyn AsyncWrite + Unpin + Send>, Error> {
+    let file = File::create(file_name).await?;
+    if let Some(zstd_level) = zstd_level {
+        Ok(Box::new(ZstdEncoder::with_quality(
+            file,
+            Level::Precise(zstd_level as u32),
+        )))
+    } else {
+        Ok(Box::new(file))
+    }
 }
 
 #[fbinit::main]
@@ -96,6 +118,13 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
                 .takes_value(true)
                 .required(true)
                 .help("A file to write error fetching data key IDs to"),
+        )
+        .arg(
+            Arg::with_name(ARG_ZSTD_LEVEL)
+                .long(ARG_ZSTD_LEVEL)
+                .takes_value(true)
+                .required(false)
+                .help("Pass a level to Zstd compress the output files, 0 means Zstd default"),
         );
 
     let matches = app.get_matches();
@@ -128,6 +157,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
     let errors_file_name = matches
         .value_of_os(ARG_ERROR_KEYS)
         .context("No errored keys output file")?;
+    let zstd_level = args::get_i32_opt(&matches, ARG_ZSTD_LEVEL);
 
     let scrub = async move {
         let blobstore = make_blobstore(
@@ -145,19 +175,19 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         let mut output_handles = FuturesUnordered::new();
         let success = {
             let (send, recv) = mpsc::channel(100);
-            let file = File::create(success_file_name).await?;
+            let file = create_file(success_file_name, zstd_level).await?;
             output_handles.push(tokio::spawn(bridge_to_file(file, recv)));
             send
         };
         let missing = {
             let (send, recv) = mpsc::channel(100);
-            let file = File::create(missing_keys_file_name).await?;
+            let file = create_file(missing_keys_file_name, zstd_level).await?;
             output_handles.push(tokio::spawn(bridge_to_file(file, recv)));
             send
         };
         let error = {
             let (send, recv) = mpsc::channel(100);
-            let file = File::create(errors_file_name).await?;
+            let file = create_file(errors_file_name, zstd_level).await?;
             output_handles.push(tokio::spawn(handle_errors(file, recv)));
             send
         };
