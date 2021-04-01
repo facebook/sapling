@@ -757,7 +757,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     let start_cs = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
     set_bookmark(fb, blobrepo.clone(), start_hg_id, bookmark_name.clone()).await;
 
-    tokio::time::pause();
+    tokio::time::pause(); // TODO: pause only works with the `current_thread` Runtime.
 
     let on_demand = OnDemandUpdateSegmentedChangelog::new(
         blobrepo.get_repoid(),
@@ -770,8 +770,8 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     let sc =
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));
 
-    tokio::time::advance(Duration::from_secs(5)).await;
-    // jitter should have passed and the first tick is ready to be scheduled; wait for first update
+    tokio::time::advance(Duration::from_secs(10)).await;
+    // wait time is over and the first tick is ready to be scheduled
     sc.wait_for_update().await;
 
     // We assume that clone_data will not update the graph in any form.
