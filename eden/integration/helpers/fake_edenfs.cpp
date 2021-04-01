@@ -276,7 +276,7 @@ void FakeEdenServer::run(
         1,
         "Started successfully, but reporting failure because --failDuringStartup was specified");
   }
-  startupLogger.success();
+  startupLogger.success(97);
   eventBase_->loopForever();
 
   reportCleanShutdown();

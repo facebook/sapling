@@ -289,7 +289,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry([startupLogger](folly::Try<folly::Unit>&& result) {
+      .thenTry([startupLogger, daemonStart](folly::Try<folly::Unit>&& result) {
         // If an error occurred this means that we failed to mount all of the
         // mount points.  However, we have still started and will continue
         // running, so we report successful startup here no matter what.
@@ -301,12 +301,16 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
               "did not successfully remount all repositories: ",
               result.exception().what());
         }
-        startupLogger->success();
+        auto startTimeInSeconds =
+            std::chrono::duration<double>{daemonStart.elapsed()}.count();
+        startupLogger->success(startTimeInSeconds);
       })
       .ensure(
           [daemonStart,
            structuredLogger = server->getServerState()->getStructuredLogger(),
            takeover = FLAGS_takeover] {
+            // This value is slightly different from `startTimeInSeconds`
+            // we pass into `startupLogger->success()`, but should be identical.
             auto startTimeInSeconds =
                 std::chrono::duration<double>{daemonStart.elapsed()}.count();
             // Here we log a success even if we did not successfully remount

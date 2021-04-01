@@ -82,10 +82,11 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
 
 StartupLogger::~StartupLogger() = default;
 
-void StartupLogger::success() {
+void StartupLogger::success(uint64_t startTimeInSeconds) {
   writeMessage(
       folly::LogLevel::INFO,
-      folly::to<string>("Started edenfs (pid ", getpid(), ")"));
+      folly::to<string>(
+          "Started edenfs (pid ", getpid(), ") in ", startTimeInSeconds, "s"));
 
 #if EDEN_HAVE_SYSTEMD
   if (FLAGS_experimentalSystemd) {

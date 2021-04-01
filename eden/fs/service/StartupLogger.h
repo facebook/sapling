@@ -125,7 +125,7 @@ class StartupLogger {
    * If edenfs has daemonized this will cause the original foreground edenfs
    * process to exit successfully.
    */
-  void success();
+  void success(uint64_t startTimeInSeconds);
 
  protected:
   void writeMessage(folly::LogLevel level, folly::StringPiece message);

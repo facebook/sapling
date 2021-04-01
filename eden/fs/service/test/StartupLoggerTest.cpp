@@ -176,7 +176,7 @@ void successWritesStartedMessageToStandardErrorDaemonChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
   auto logger = daemonizeIfRequested(
       logFile.path().string(), nullptr, originalCommandLine);
-  logger->success();
+  logger->success(17);
   exit(0);
 }
 
@@ -199,7 +199,7 @@ void programExitsUnsuccessfullyIfLogFileIsInaccessibleChild() {
   auto badLogFilePath = logFile.path() / "file.txt";
   auto logger = daemonizeIfRequested(
       badLogFilePath.string(), nullptr, originalCommandLine);
-  logger->success();
+  logger->success(19);
   exit(0);
 }
 
@@ -298,7 +298,7 @@ void success(const std::string& logPath) {
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
-  logger.success();
+  logger.success(23);
 }
 
 TEST_F(DaemonStartupLoggerTest, success) {
@@ -376,7 +376,7 @@ void daemonClosesStandardFileDescriptorsChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
   auto logger = daemonizeIfRequested(
       logFile.path().string(), nullptr, originalCommandLine);
-  logger->success();
+  logger->success(29);
   std::this_thread::sleep_for(30s);
   exit(1);
 }
@@ -412,7 +412,7 @@ TEST(ForegroundStartupLoggerTest, xlogsAfterSuccessAreWrittenToStandardError) {
 
 void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
   auto logger = ForegroundStartupLogger{};
-  logger.success();
+  logger.success(31);
   XLOG(ERR) << "test error message with xlog";
 }
 
@@ -421,12 +421,12 @@ TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
       "successWritesStartedMessageToStandardErrorForegroundChild");
   EXPECT_THAT(
       result.standardError,
-      ContainsRegex("Started edenfs \\(pid [0-9]+\\)\n$"));
+      ContainsRegex("Started edenfs \\(pid [0-9]+\\) in [0-9]+s$\n"));
 }
 
 void successWritesStartedMessageToStandardErrorForegroundChild() {
   auto logger = ForegroundStartupLogger{};
-  logger.success();
+  logger.success(37);
 }
 
 class FileStartupLoggerTest : public StartupLoggerTestBase {};
@@ -455,9 +455,9 @@ TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
 
 TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
   auto logger = FileStartupLogger{logPath().stringPiece()};
-  logger.success();
+  logger.success(41);
   EXPECT_EQ(
-      folly::to<std::string>("Started edenfs (pid ", getpid(), ")\n"),
+      folly::to<std::string>("Started edenfs (pid ", getpid(), ") in 41s\n"),
       readLogContents());
 }
 
