@@ -274,7 +274,14 @@ void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
     // Save a copy of the original stderr descriptors, so we can still write
     // startup status messages directly to this descriptor.  This will be closed
     // once we complete initialization.
+#ifdef _WIN32
     origStderr_ = File(STDERR_FILENO, /*ownsFd=*/false).dup();
+#else
+    // This function need to be in folly.
+    int stderrDup = fcntl(STDERR_FILENO, F_DUPFD_CLOEXEC, 0);
+    folly::checkUnixError(stderrDup, "failed to dup stderr");
+    origStderr_ = File(stderrDup, /*ownsFd=*/true);
+#endif
 
     File logHandle(logPath, O_APPEND | O_CREAT | O_WRONLY | O_CLOEXEC, 0644);
     checkUnixError(dup2(logHandle.fd(), STDOUT_FILENO));
