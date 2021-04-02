@@ -28,7 +28,7 @@ use configparser::{config::ConfigSet, convert::ByteCount};
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
-use edenapi_types::FileEntry;
+use edenapi_types::{FileEntry, TreeEntry};
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -37,7 +37,7 @@ use revisionstore::{
     repack,
     scmstore::{
         BoxedReadStore, BoxedWriteStore, Fallback, FallbackCache, FilterMapStore, KeyStream,
-        LegacyDatastore, StoreFile,
+        LegacyDatastore, StoreFile, StoreTree,
     },
     util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
@@ -86,6 +86,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<metadatastore>(py)?;
     m.add_class::<memcachestore>(py)?;
     m.add_class::<filescmstore>(py)?;
+    m.add_class::<treescmstore>(py)?;
     m.add(
         py,
         "repack",
@@ -1310,6 +1311,143 @@ py_class!(pub class filescmstore |py| {
 
 impl ExtractInnerRef for filescmstore {
     type Inner = BoxedReadStore<Key, StoreFile>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
+    }
+}
+
+// TODO(meyer): Make this a `BoxedRwStore` (and introduce such a concept). Will need to implement write
+// for FallbackStore.
+/// Construct a tree ReadStore using the provided config, optionally falling back
+/// to the provided legacy HgIdDataStore.
+fn make_treescmstore<'a>(
+    path: Option<&'a Path>,
+    config: &'a ConfigSet,
+    remote: Arc<PyHgIdRemoteStore>,
+    memcache: Option<Arc<MemcacheStore>>,
+    edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
+    suffix: Option<String>,
+    correlator: Option<String>,
+) -> Result<(BoxedReadStore<Key, StoreTree>, Arc<ContentStore>)> {
+    // Construct ContentStore
+    let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+
+    builder = if let Some(path) = path {
+        builder.local_path(path)
+    } else {
+        builder.no_local_store()
+    };
+
+    builder = if let Some(memcache) = memcache {
+        builder.memcachestore(memcache)
+    } else {
+        builder
+    };
+
+    let suffix = suffix.map(|s| s.into());
+    builder = if let Some(suffix) = suffix.clone() {
+        builder.suffix(suffix)
+    } else {
+        builder
+    };
+
+    let cache_path = &util::get_cache_path(config, &suffix)?;
+    // TODO(meyer): Do check_cache_buster even for scmstore-only (happens as part of ContentStore construction)
+    // revisionstore::contentstore::check_cache_buster(config, &cache_path);
+
+    // TODO(meyer): We can eliminate the LFS-related config from the tree flow, right?
+    let enable_lfs = config.get_or_default::<bool>("remotefilelog", "lfs")?;
+    let extstored_policy = if enable_lfs {
+        if config.get_or_default::<bool>("remotefilelog", "useextstored")? {
+            ExtStoredPolicy::Use
+        } else {
+            ExtStoredPolicy::Ignore
+        }
+    } else {
+        ExtStoredPolicy::Use
+    };
+
+    // Extract EdenApiAdapter for scmstore construction later on
+    let edenapi_adapter = edenapi_treestore.map(|s| s.get_scmstore_adapter(extstored_policy));
+    // Match behavior of treemanifest contentstore construction (never include EdenApi)
+    builder = builder.remotestore(remote);
+
+    let tree_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+        util::get_indexedlogdatastore_path(&cache_path)?,
+        extstored_policy,
+        config,
+        IndexedLogDataStoreType::Shared,
+    )?);
+
+    builder = builder.shared_indexedlog(tree_indexedlog.clone());
+
+    let contentstore = Arc::new(builder.build()?);
+
+    let legacy_adapter = Arc::new(LegacyDatastore(contentstore.clone()));
+    let legacy_fallback = if let Some(edenapi_adapter) = edenapi_adapter {
+        Arc::new(Fallback {
+            preferred: Arc::new(edenapi_adapter) as BoxedReadStore<Key, TreeEntry>,
+            fallback: legacy_adapter as BoxedReadStore<Key, Entry>,
+        })
+    } else {
+        legacy_adapter as BoxedReadStore<Key, Entry>
+    };
+
+    let scmstore = Arc::new(FallbackCache {
+        preferred: tree_indexedlog.clone(),
+        fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
+        write_store: Some(tree_indexedlog),
+    });
+
+    Ok((scmstore, contentstore))
+}
+
+py_class!(pub class treescmstore |py| {
+    data store: BoxedReadStore<Key, StoreTree>;
+    data contentstore: Arc<ContentStore>;
+
+    def __new__(_cls,
+        path: Option<PyPathBuf>,
+        config: config,
+        remote: pyremotestore,
+        memcache: Option<memcachestore>,
+        edenapi: Option<edenapitreestore> = None,
+        suffix: Option<String> = None,
+        correlator: Option<String> = None
+    ) -> PyResult<treescmstore> {
+        // Extract Rust Values
+        let path = path.as_ref().map(|v| v.as_path());
+        let config = config.get_cfg(py);
+        let remote = remote.extract_inner(py);
+        let memcache = memcache.map(|v| v.extract_inner(py));
+        let edenapi = edenapi.map(|v| v.extract_inner(py));
+
+        let (scmstore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+
+        treescmstore::create_instance(py, scmstore, contentstore)
+    }
+
+    def get_contentstore(&self) -> PyResult<contentstore> {
+        contentstore::create_instance(py, self.contentstore(py).clone())
+    }
+
+    def test_scmstore(&self) -> PyResult<String> {
+        let key = Key::new(
+            RepoPathBuf::from_string("fbcode/eden/scm/lib".to_owned()).expect("failed to convert path to RepoPathBuf"),
+            HgId::from_str("4afe9e15f6eea3b63f23f8d3b58fef8953f0a9e6").expect("failed to parse HgId"),
+        );
+        let store = self.store(py).clone();
+        let mut fetched: Vec<_> = block_on_stream(store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>)).collect();
+        let fetched = fetched[0].as_mut().expect("failed to fetch tree");
+        let content = fetched.content().expect("failed to extract StoreTree content");
+        let content = std::str::from_utf8(&content).expect("failed to convert to convert to string");
+        Ok(content.to_string())
+    }
+});
+
+impl ExtractInnerRef for treescmstore {
+    type Inner = BoxedReadStore<Key, StoreTree>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.store(py)

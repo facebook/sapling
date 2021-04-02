@@ -272,6 +272,14 @@ def useruststore(ui):
     )
 
 
+def usehttpfetching(repo):
+    """Returns True if HTTP (EdenApi) fetching should be used."""
+    return (
+        repo.ui.configbool("treemanifest", "http")
+        and getattr(repo, "edenapi", None) is not None
+    )
+
+
 def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):
     oldfallbackpath = getattr(repo, "fallbackpath", None)
     if util.safehasattr(repo, "stickypushpath"):
@@ -480,10 +488,7 @@ def wraprepo(repo):
 
         def _shouldusehttp(self):
             """Returns True if HTTP fetching should be used."""
-            return (
-                self.ui.configbool("treemanifest", "http")
-                and getattr(self, "edenapi", None) is not None
-            )
+            return usehttpfetching(self)
 
         def _interactivedebug(self):
             """Returns True if this is an interactive command running in debug mode."""
@@ -1044,21 +1049,31 @@ class basetreemanifestlog(object):
         self._treemanifestcache[node] = m
         return m
 
+    def edenapistore(self, repo):
+        if usehttpfetching(repo):
+            return repo.edenapi.treestore(repo.name)
+        return None
+
     def makeruststore(self):
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
         correlator = clienttelemetry.correlator(self._repo.ui)
+        edenapistore = self.edenapistore(self._repo)
 
         mask = os.umask(0o002)
         try:
-            self.datastore = revisionstore.contentstore(
+            # TODO(meyer): Is there a reason no edenapi is used here?
+            # Do all reads fall back through _httpgetdesignatednodes instead
+            # Of the normal contentstore fallback path?
+            self.treescmstore = revisionstore.treescmstore(
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg._rcfg,
                 remotestore,
                 None,
-                None,
+                edenapistore,
                 "manifests",
                 correlator=correlator,
             )
+            self.datastore = self.treescmstore.get_contentstore()
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg._rcfg,
@@ -1128,6 +1143,8 @@ class hybridmanifestlog(manifest.manifestlog):
 
         self.treemanifestlog = treemanifestlog(opener, repo)
         setuptreestores(repo, self.treemanifestlog)
+        if useruststore(self.ui):
+            self.treescmstore = self.treemanifestlog.treescmstore
         self.datastore = self.treemanifestlog.datastore
         self.historystore = self.treemanifestlog.historystore
 

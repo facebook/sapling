@@ -3651,4 +3651,5 @@ def debugthrowexception(ui, _repo):
 @command("debugpyscmstore", [], "")
 def debugpyscmstore(ui, repo):
     """test file fetching using new storage API"""
+    ui.write(_x(repo.manifestlog.treescmstore.test_scmstore()))
     ui.write(_x(repo.fileslog.filescmstore.test_scmstore()))
