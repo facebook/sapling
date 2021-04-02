@@ -2350,9 +2350,12 @@ def update(
                 fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
                 cwd = pycompat.getcwdsafe()
 
+                updateprogresspath = repo.localvfs.join("updateprogress")
                 with progress.spinner(repo.ui, _("updating")):
                     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
-                    plan.apply(repo.wvfs.base, repo.fileslog.contentstore)
+                    plan.apply(
+                        repo.wvfs.base, repo.fileslog.contentstore, updateprogresspath
+                    )
                     repo.ui.debug("Apply done\n")
                 stats = plan.stats()
 
@@ -2376,6 +2379,7 @@ def update(
                             )
                         # update completed, clear state
                         repo.localvfs.unlink("updatestate")
+                        repo.localvfs.unlink("updateprogress")
 
                 if not partial:
                     repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])

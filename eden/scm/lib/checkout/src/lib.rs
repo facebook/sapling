@@ -5,16 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{anyhow, bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
+use parking_lot::Mutex;
 use pathmatcher::{Matcher, XorMatcher};
 use revisionstore::{
     datastore::strip_metadata, HgIdDataStore, RemoteDataStore, StoreKey, StoreResult,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::SystemTime;
+use tracing::debug;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{AsyncVfsWriter, UpdateFlag, VFS};
 
@@ -29,6 +35,13 @@ pub struct CheckoutPlan {
     update_content: Vec<UpdateContentAction>,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
+}
+
+struct CheckoutProgress {
+    file: File,
+    vfs: VFS,
+    /// Recording of the file time and size that have already been written.
+    state: HashMap<RepoPathBuf, (u128, u64)>,
 }
 
 /// Update content and (possibly) metadata on the file
@@ -155,7 +168,20 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         f: F,
+        progress_path: PathBuf,
     ) -> Result<CheckoutStats> {
+        let progress = if progress_path.exists() {
+            match CheckoutProgress::load(&progress_path, vfs.clone()) {
+                Ok(p) => p,
+                Err(e) => {
+                    debug!("Failed to load CheckoutProgress with {:?}", e);
+                    CheckoutProgress::new(&progress_path, vfs.clone())?
+                }
+            }
+        } else {
+            CheckoutProgress::new(&progress_path, vfs.clone())?
+        };
+
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
         let stats = CheckoutStats::default();
         let stats_ref = &stats;
@@ -168,8 +194,13 @@ impl CheckoutPlan {
 
         Self::process_work_stream(remove_files).await?;
 
-        let keys: Vec<_> = self
-            .update_content
+        let filtered_update_content: Vec<_> =
+            progress.filter_already_written(&self.update_content[..]);
+        debug!(
+            "Skipping checking out {} files since they're already written",
+            self.update_content.len() - filtered_update_content.len()
+        );
+        let keys: Vec<_> = filtered_update_content
             .iter()
             .map(|u| Key::new(u.path.clone(), u.content_hgid))
             .collect();
@@ -177,7 +208,7 @@ impl CheckoutPlan {
         let data_stream = f(keys);
 
         let update_content = data_stream
-            .zip(stream::iter(self.update_content.iter()))
+            .zip(stream::iter(filtered_update_content.iter()))
             .map(|(data, action)| {
                 let data = data
                     .map_err(|err| format_err!("Failed to fetch {:?}: {:?}", action.path, err))?;
@@ -193,11 +224,13 @@ impl CheckoutPlan {
                 Ok((path, data, flag))
             });
 
+        let progress = Mutex::new(progress);
+        let progress_ref = &progress;
         let update_content = update_content
             .chunks(VFS_BATCH_SIZE)
             .map(|actions| async move {
                 let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                Self::write_files(async_vfs, stats_ref, actions?).await
+                Self::write_files(async_vfs, stats_ref, actions?, progress_ref).await
             });
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
@@ -219,10 +252,13 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: &DS,
+        progress_path: PathBuf,
     ) -> Result<CheckoutStats> {
-        self.apply_stream(vfs, |keys| {
-            stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key))))
-        })
+        self.apply_stream(
+            vfs,
+            |keys| stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key)))),
+            progress_path,
+        )
         .await
     }
 
@@ -230,32 +266,37 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: &DS,
+        progress_path: PathBuf,
     ) -> Result<CheckoutStats> {
         use futures::channel::mpsc;
-        self.apply_stream(vfs, |keys| {
-            let (tx, rx) = mpsc::unbounded();
-            let store = store.clone();
-            tokio::runtime::Handle::current().spawn_blocking(move || {
-                let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
-                for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-                    match store.prefetch(chunk) {
-                        Err(e) => {
-                            if tx.unbounded_send(Err(e)).is_err() {
-                                return;
-                            }
-                        }
-                        Ok(_) => {
-                            for key in chunk {
-                                if tx.unbounded_send(store.get(key.clone())).is_err() {
+        self.apply_stream(
+            vfs,
+            |keys| {
+                let (tx, rx) = mpsc::unbounded();
+                let store = store.clone();
+                tokio::runtime::Handle::current().spawn_blocking(move || {
+                    let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
+                    for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+                        match store.prefetch(chunk) {
+                            Err(e) => {
+                                if tx.unbounded_send(Err(e)).is_err() {
                                     return;
+                                }
+                            }
+                            Ok(_) => {
+                                for key in chunk {
+                                    if tx.unbounded_send(store.get(key.clone())).is_err() {
+                                        return;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
-            rx
-        })
+                });
+                rx
+            },
+            progress_path,
+        )
         .await
     }
 
@@ -277,11 +318,18 @@ impl CheckoutPlan {
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
         actions: Vec<(RepoPathBuf, Vec<u8>, Option<UpdateFlag>)>,
+        progress: &Mutex<CheckoutProgress>,
     ) -> Result<()> {
         let count = actions.len();
+        let paths: Vec<_> = actions
+            .iter()
+            .map(|(path, _, _)| path.as_repo_path().to_owned())
+            .collect();
         let w = async_vfs.write_batch(actions).await?;
         stats.updated.fetch_add(count, Ordering::Relaxed);
         stats.written_bytes.fetch_add(w, Ordering::Relaxed);
+
+        progress.lock().record_writes(paths);
         Ok(())
     }
 
@@ -334,6 +382,121 @@ impl CheckoutPlan {
             update_content: vec![],
             update_meta: vec![],
         }
+    }
+}
+
+impl CheckoutProgress {
+    pub fn new(path: &Path, vfs: VFS) -> Result<Self> {
+        Ok(CheckoutProgress {
+            file: File::create(path)?,
+            vfs,
+            state: HashMap::new(),
+        })
+    }
+
+    /// Loads the serialized checkout progress from disk. The format is one row per file written,
+    /// consisting of space separated mtime in milliseconds, file length, and file path and a
+    /// trailing \0 character.
+    ///
+    ///   <mtime_in_millis> <written_file_length> <file_path>\0
+    ///
+    pub fn load(path: &Path, vfs: VFS) -> Result<Self> {
+        let mut state: HashMap<RepoPathBuf, (u128, u64)> = HashMap::new();
+
+        let file = File::open(&path)?;
+        let mut reader = BufReader::new(file);
+        let mut buffer = vec![];
+        loop {
+            reader.read_until(0, &mut buffer)?;
+            if buffer.is_empty() {
+                break;
+            }
+            let (path, (time, size)) = match (|| -> Result<_> {
+                let mut split = buffer.splitn(3, |c| *c == b' ');
+                let time = std::str::from_utf8(
+                    split
+                        .next()
+                        .ok_or_else(|| anyhow!("invalid checkout update time format"))?,
+                )?
+                .parse::<u128>()?;
+
+                let size = std::str::from_utf8(
+                    split
+                        .next()
+                        .ok_or_else(|| anyhow!("invalid checkout update size format"))?,
+                )?
+                .parse::<u64>()?;
+
+                let path = split
+                    .next()
+                    .ok_or_else(|| anyhow!("invalid checkout update path format"))?;
+                let path = &path[..path.len() - 1];
+                let path = RepoPathBuf::from_string(std::str::from_utf8(path)?.to_string())?;
+
+                Ok((path, (time, size)))
+            })() {
+                Ok(entry) => entry,
+                Err(_) => {
+                    buffer.clear();
+                    continue;
+                }
+            };
+
+            state.insert(path, (time, size));
+            buffer.clear();
+        }
+
+        Ok(CheckoutProgress {
+            file: OpenOptions::new().create(true).append(true).open(path)?,
+            vfs,
+            state,
+        })
+    }
+
+    fn record_writes(&mut self, paths: Vec<RepoPathBuf>) {
+        for path in paths.into_iter() {
+            // Don't report write failures, just let the checkout continue.
+            let _ = (|| -> Result<()> {
+                let stat = self.vfs.metadata(&path)?;
+                let time = stat
+                    .modified()?
+                    .duration_since(SystemTime::UNIX_EPOCH)?
+                    .as_millis();
+
+                self.file
+                    .write_all(format!("{} {} {}\0", time, stat.len(), path).as_bytes())
+                    .map_err(|e| e.into())
+            })();
+        }
+    }
+
+    fn filter_already_written<'a>(
+        &self,
+        actions: &'a [UpdateContentAction],
+    ) -> Vec<&'a UpdateContentAction> {
+        // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
+        actions
+            .iter()
+            .filter(|action| {
+                let path = &action.path;
+                if let Some((time, size)) = &self.state.get(path) {
+                    if let Ok(stat) = self.vfs.metadata(path) {
+                        let time_matches = stat
+                            .modified()
+                            .map(|t| {
+                                t.duration_since(SystemTime::UNIX_EPOCH)
+                                    .map(|d| d.as_millis() == *time)
+                                    .unwrap_or(false)
+                            })
+                            .unwrap_or(false);
+                        if time_matches && &stat.len() == size {
+                            return false;
+                        }
+                    }
+                }
+                true
+            })
+            .collect()
     }
 }
 
@@ -399,6 +562,7 @@ mod test {
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use std::collections::HashMap;
+    use std::fs::create_dir;
     use std::path::Path;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
@@ -504,6 +668,24 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_progress_parsing() -> Result<()> {
+        let tempdir = tempfile::tempdir()?;
+        let working_path = tempdir.path().to_path_buf().join("workingdir");
+        create_dir(working_path.as_path()).unwrap();
+        let vfs = VFS::new(working_path.clone())?;
+        let path = tempdir.path().to_path_buf().join("updateprogress");
+        let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
+        let file_path = RepoPathBuf::from_string("file".to_string())?;
+        vfs.write(&file_path.as_repo_path(), &vec![0b0, 0b01], None)?;
+        progress.record_writes(vec![file_path.clone()]);
+
+        let progress = CheckoutProgress::load(&path, vfs.clone())?;
+        assert_eq!(progress.state.len(), 1);
+        assert!(progress.state.get(&file_path).is_some());
+        Ok(())
+    }
+
     fn generate_trees(tree_size: usize, count: usize) -> Vec<Vec<(RepoPathBuf, FileMetadata)>> {
         let mut result = vec![];
         let rng = ChaChaRng::from_seed([0u8; 32]);
@@ -566,7 +748,9 @@ mod test {
         to: &[(RepoPathBuf, FileMetadata)],
         tempdir: &TempDir,
     ) -> Result<()> {
-        let vfs = VFS::new(tempdir.path().to_path_buf())?;
+        let working_path = tempdir.path().to_path_buf().join("workingdir");
+        create_dir(working_path.as_path()).unwrap();
+        let vfs = VFS::new(working_path.clone())?;
         roll_out_fs(&vfs, from)?;
 
         let matcher = AlwaysMatcher::new();
@@ -576,12 +760,13 @@ mod test {
         let plan = CheckoutPlan::from_diff(diff).context("Plan construction failed")?;
 
         // Use clean vfs for test
-        let vfs = VFS::new(tempdir.path().to_path_buf())?;
-        plan.apply_stream(&vfs, dummy_fs)
+        let vfs = VFS::new(working_path.clone())?;
+        let progress_path = tempdir.path().join("progress");
+        plan.apply_stream(&vfs, dummy_fs, progress_path)
             .await
             .context("Plan execution failed")?;
 
-        assert_fs(tempdir.path(), to)
+        assert_fs(&working_path, to)
     }
 
     fn print_tree(t: &[(RepoPathBuf, FileMetadata)]) {
