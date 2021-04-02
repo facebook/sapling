@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/service/EdenMain.h"
+#include "eden/fs/telemetry/SessionId.h"
 
 #include <optional>
 
@@ -262,7 +263,12 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         "minloglevel", "1", gflags::SET_FLAGS_DEFAULT);
 
     startupLogger->log(
-        "Starting ", main.getEdenfsBuildName(), ", pid ", getpid());
+        "Starting ",
+        main.getEdenfsBuildName(),
+        ", pid ",
+        getpid(),
+        ", session_id",
+        getSessionId());
 
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());

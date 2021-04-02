@@ -8,6 +8,7 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/Systemd.h"
+#include "eden/fs/telemetry/SessionId.h"
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
@@ -86,7 +87,13 @@ void StartupLogger::success(uint64_t startTimeInSeconds) {
   writeMessage(
       folly::LogLevel::INFO,
       folly::to<string>(
-          "Started edenfs (pid ", getpid(), ") in ", startTimeInSeconds, "s"));
+          "Started edenfs (pid ",
+          getpid(),
+          ", session_id ",
+          getSessionId(),
+          ") in ",
+          startTimeInSeconds,
+          "s"));
 
 #if EDEN_HAVE_SYSTEMD
   if (FLAGS_experimentalSystemd) {

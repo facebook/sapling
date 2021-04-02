@@ -29,6 +29,7 @@
  */
 
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/telemetry/SessionId.h"
 
 #include <folly/Exception.h>
 #include <folly/File.h>
@@ -168,7 +169,8 @@ TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardError) {
   auto result = runFunctionInSeparateProcess(
       "successWritesStartedMessageToStandardErrorDaemonChild");
   EXPECT_THAT(
-      result.standardError, ContainsRegex("Started edenfs \\(pid [0-9]+\\)"));
+      result.standardError,
+      ContainsRegex("Started edenfs \\(pid [0-9]+, session_id [0-9]+\\)"));
   EXPECT_THAT(result.standardError, HasSubstr("Logs available at "));
 }
 
@@ -421,7 +423,8 @@ TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
       "successWritesStartedMessageToStandardErrorForegroundChild");
   EXPECT_THAT(
       result.standardError,
-      ContainsRegex("Started edenfs \\(pid [0-9]+\\) in [0-9]+s$\n"));
+      ContainsRegex(
+          "Started edenfs \\(pid [0-9]+, session_id [0-9]+\\) in [0-9]+s$\n"));
 }
 
 void successWritesStartedMessageToStandardErrorForegroundChild() {
@@ -457,7 +460,12 @@ TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
   auto logger = FileStartupLogger{logPath().stringPiece()};
   logger.success(41);
   EXPECT_EQ(
-      folly::to<std::string>("Started edenfs (pid ", getpid(), ") in 41s\n"),
+      folly::to<std::string>(
+          "Started edenfs (pid ",
+          getpid(),
+          ", session_id ",
+          getSessionId(),
+          ") in 41s\n"),
       readLogContents());
 }
 
