@@ -41,7 +41,7 @@ struct CheckoutProgress {
     file: File,
     vfs: VFS,
     /// Recording of the file time and size that have already been written.
-    state: HashMap<RepoPathBuf, (u128, u64)>,
+    state: HashMap<RepoPathBuf, (HgId, u128, u64)>,
 }
 
 /// Update content and (possibly) metadata on the file
@@ -221,7 +221,7 @@ impl CheckoutPlan {
                 let data: Vec<_> = data.into_vec();
                 let path = action.path.clone();
                 let flag = type_to_flag(&action.file_type);
-                Ok((path, data, flag))
+                Ok((path, action.content_hgid, data, flag))
             });
 
         let progress = Mutex::new(progress);
@@ -317,13 +317,17 @@ impl CheckoutPlan {
     async fn write_files(
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
-        actions: Vec<(RepoPathBuf, Vec<u8>, Option<UpdateFlag>)>,
+        actions: Vec<(RepoPathBuf, HgId, Vec<u8>, Option<UpdateFlag>)>,
         progress: &Mutex<CheckoutProgress>,
     ) -> Result<()> {
         let count = actions.len();
         let paths: Vec<_> = actions
             .iter()
-            .map(|(path, _, _)| path.as_repo_path().to_owned())
+            .map(|(path, hgid, _, _)| (hgid.clone(), path.as_repo_path().to_owned()))
+            .collect();
+        let actions = actions
+            .into_iter()
+            .map(|(path, _, content, flag)| (path, content, flag))
             .collect();
         let w = async_vfs.write_batch(actions).await?;
         stats.updated.fetch_add(count, Ordering::Relaxed);
@@ -395,13 +399,13 @@ impl CheckoutProgress {
     }
 
     /// Loads the serialized checkout progress from disk. The format is one row per file written,
-    /// consisting of space separated mtime in milliseconds, file length, and file path and a
-    /// trailing \0 character.
+    /// consisting of space separated hg file hash, mtime in milliseconds, file length, and file
+    /// path and a trailing \0 character.
     ///
-    ///   <mtime_in_millis> <written_file_length> <file_path>\0
+    ///   <40_char_hg_hash> <mtime_in_millis> <written_file_length> <file_path>\0
     ///
     pub fn load(path: &Path, vfs: VFS) -> Result<Self> {
-        let mut state: HashMap<RepoPathBuf, (u128, u64)> = HashMap::new();
+        let mut state: HashMap<RepoPathBuf, (HgId, u128, u64)> = HashMap::new();
 
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
@@ -411,8 +415,14 @@ impl CheckoutProgress {
             if buffer.is_empty() {
                 break;
             }
-            let (path, (time, size)) = match (|| -> Result<_> {
-                let mut split = buffer.splitn(3, |c| *c == b' ');
+            let (path, (hgid, time, size)) = match (|| -> Result<_> {
+                let mut split = buffer.splitn(4, |c| *c == b' ');
+                let hgid = HgId::from_hex(
+                    split
+                        .next()
+                        .ok_or_else(|| anyhow!("invalid checkout update hgid format"))?,
+                )?;
+
                 let time = std::str::from_utf8(
                     split
                         .next()
@@ -433,7 +443,7 @@ impl CheckoutProgress {
                 let path = &path[..path.len() - 1];
                 let path = RepoPathBuf::from_string(std::str::from_utf8(path)?.to_string())?;
 
-                Ok((path, (time, size)))
+                Ok((path, (hgid, time, size)))
             })() {
                 Ok(entry) => entry,
                 Err(_) => {
@@ -442,7 +452,7 @@ impl CheckoutProgress {
                 }
             };
 
-            state.insert(path, (time, size));
+            state.insert(path, (hgid, time, size));
             buffer.clear();
         }
 
@@ -453,8 +463,8 @@ impl CheckoutProgress {
         })
     }
 
-    fn record_writes(&mut self, paths: Vec<RepoPathBuf>) {
-        for path in paths.into_iter() {
+    fn record_writes(&mut self, paths: Vec<(HgId, RepoPathBuf)>) {
+        for (hgid, path) in paths.into_iter() {
             // Don't report write failures, just let the checkout continue.
             let _ = (|| -> Result<()> {
                 let stat = self.vfs.metadata(&path)?;
@@ -464,7 +474,9 @@ impl CheckoutProgress {
                     .as_millis();
 
                 self.file
-                    .write_all(format!("{} {} {}\0", time, stat.len(), path).as_bytes())
+                    .write_all(
+                        format!("{} {} {} {}\0", hgid.to_hex(), time, stat.len(), path).as_bytes(),
+                    )
                     .map_err(|e| e.into())
             })();
         }
@@ -479,7 +491,11 @@ impl CheckoutProgress {
             .iter()
             .filter(|action| {
                 let path = &action.path;
-                if let Some((time, size)) = &self.state.get(path) {
+                if let Some((hgid, time, size)) = &self.state.get(path) {
+                    if *hgid != action.content_hgid {
+                        return true;
+                    }
+
                     if let Ok(stat) = self.vfs.metadata(path) {
                         let time_matches = stat
                             .modified()
@@ -678,11 +694,12 @@ mod test {
         let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
         let file_path = RepoPathBuf::from_string("file".to_string())?;
         vfs.write(&file_path.as_repo_path(), &vec![0b0, 0b01], None)?;
-        progress.record_writes(vec![file_path.clone()]);
+        let id = hgid(1);
+        progress.record_writes(vec![(id, file_path.clone())]);
 
         let progress = CheckoutProgress::load(&path, vfs.clone())?;
         assert_eq!(progress.state.len(), 1);
-        assert!(progress.state.get(&file_path).is_some());
+        assert_eq!(progress.state.get(&file_path).unwrap().0, id);
         Ok(())
     }
 
