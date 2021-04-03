@@ -259,6 +259,7 @@ def get_edenfs_environment() -> Dict[str, str]:
         "SSH_AUTH_SOCK",
         "SSH_AGENT_PID",
         "KRB5CCNAME",
+        "SANDCASTLE_INSTANCE_ID",
         "SCRATCH_CONFIG_PATH",
         # These environment variables are used by Corp2Prod (C2P) Secure Thrift
         # clients to get the user certificates for authentication. (We use

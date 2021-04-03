@@ -69,6 +69,7 @@ SessionInfo makeSessionInfo(
   SessionInfo env;
   env.username = userInfo.getUsername();
   env.hostname = std::move(hostname);
+  env.sandcastleInstanceId = getSandcastleInstanceId();
   env.os = getOperatingSystemName();
   env.osVersion = getOperatingSystemVersion();
   env.edenVersion = std::move(edenVersion);

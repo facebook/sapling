@@ -34,6 +34,9 @@ DynamicEvent StructuredLogger::populateDefaultFields(const char* type) {
   event.addString("type", type);
   event.addString("user", sessionInfo_.username);
   event.addString("host", sessionInfo_.hostname);
+  if (sessionInfo_.sandcastleInstanceId.has_value()) {
+    event.addInt("sandcastle_instance_id", *sessionInfo_.sandcastleInstanceId);
+  }
   event.addString("os", sessionInfo_.os);
   event.addString("osver", sessionInfo_.osVersion);
   event.addString("edenver", sessionInfo_.edenVersion);

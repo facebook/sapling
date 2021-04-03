@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
 
 namespace facebook {
@@ -15,6 +17,7 @@ namespace eden {
 struct SessionInfo {
   std::string username;
   std::string hostname;
+  std::optional<uint64_t> sandcastleInstanceId;
   std::string os;
   std::string osVersion;
   std::string edenVersion;
@@ -28,6 +31,12 @@ std::string getOperatingSystemVersion();
  * exception on failure.
  */
 std::string getHostname();
+
+/**
+ * Return the best guess of sandcastle instance id from the environment,
+ * or return empty if sandcastle instance id is unknown.
+ */
+std::optional<uint64_t> getSandcastleInstanceId();
 
 } // namespace eden
 } // namespace facebook

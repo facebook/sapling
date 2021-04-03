@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/telemetry/SessionInfo.h"
+#include <folly/Conv.h>
 #include <folly/Exception.h>
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -16,6 +17,8 @@
 #if defined(_WIN32)
 #include <winsock.h> // @manual
 #endif
+
+#include <cstdlib>
 
 namespace {
 /**
@@ -81,6 +84,19 @@ std::string getHostname() {
   hostname[kHostNameMax] = 0;
 
   return hostname;
+}
+
+std::optional<uint64_t> getSandcastleInstanceId() {
+  auto str = std::getenv("SANDCASTLE_INSTANCE_ID");
+  if (!str) {
+    return std::optional<uint64_t>{};
+  }
+  try {
+    uint64_t id = folly::to<uint64_t>(str);
+    return std::make_optional(id);
+  } catch (const folly::ConversionError&) {
+    return std::optional<uint64_t>{};
+  }
 }
 
 } // namespace eden
