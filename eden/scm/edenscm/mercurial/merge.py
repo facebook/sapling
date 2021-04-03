@@ -1716,7 +1716,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # remove in parallel (must come before resolving path conflicts and
         # getting)
         if rustworkers:
-            numworkers = worker._numworkers(repo.ui)
+            # Removing lots of files very quickly is known to cause FSEvents to
+            # lose events which forces watchman to recrwawl the entire
+            # repository. For very large repository, this can take many
+            # minutes, slowing down all the other tools that rely on it. Thus
+            # add a config that can be tweaked to specifically reduce the
+            # amount of concurrency.
+            numworkers = repo.ui.configint(
+                "experimental", "numworkersremover", worker._numworkers(repo.ui)
+            )
             remover = rustworker.removerworker(repo.wvfs.base, numworkers)
             for f, args, msg in actions["r"] + actions["rg"]:
                 # The remove method will either return immediately or block if
@@ -1751,7 +1759,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         writesize = 0
 
         if rustworkers:
-            numworkers = worker._numworkers(repo.ui)
+            numworkers = repo.ui.configint(
+                "experimental", "numworkerswriter", worker._numworkers(repo.ui)
+            )
+
             writer = rustworker.writerworker(
                 repo.fileslog.contentstore, repo.wvfs.base, numworkers
             )
