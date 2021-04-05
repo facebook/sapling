@@ -96,6 +96,58 @@ impl fmt::Debug for AncestorPath {
     }
 }
 
+// Async Remote Protocols ----------------------------------------------------
+
+/// Abstraction of network protocols.
+#[async_trait::async_trait]
+pub trait RemoteIdConvertProtocol: Send + Sync + 'static {
+    /// Ask the server to convert names to "x~n" relative paths.
+    ///
+    /// If a "name" cannot be resolved using "x~n" form in "::heads", aka. the
+    /// "heads" are known to the server, and the server can calculate "::heads",
+    /// and knows all names (commit hashes) in "::heads". And the server
+    /// confirms "name" is outside "::heads" (either because "name" is unknown
+    /// to the server's IdMap, or because "name" is known in the server's IdMap,
+    /// but the matching Id is outside "::heads"), this method should skip it in
+    /// the resulting list (instead of returning an error).
+    async fn resolve_names_to_relative_paths(
+        &self,
+        heads: Vec<VertexName>,
+        names: Vec<VertexName>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>>;
+
+    /// Ask the server to convert "x~n" relative paths back to commit hashes.
+    ///
+    /// Unlike resolve_names_to_relative_paths, failures are not expected.
+    /// They usually indicate rare events like master moving backwards.
+    async fn resolve_relative_paths_to_names(
+        &self,
+        paths: Vec<AncestorPath>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>>;
+}
+
+#[async_trait::async_trait]
+impl RemoteIdConvertProtocol for () {
+    async fn resolve_names_to_relative_paths(
+        &self,
+        _heads: Vec<VertexName>,
+        _names: Vec<VertexName>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        Ok(Default::default())
+    }
+
+    async fn resolve_relative_paths_to_names(
+        &self,
+        paths: Vec<AncestorPath>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        let msg = format!(
+            "Asked to resolve {:?} in graph but remote protocol is not configured",
+            paths
+        );
+        crate::errors::programming(msg)
+    }
+}
+
 // Traits --------------------------------------------------------------------
 
 /// Similar to `From::from(I) -> O`, but with `self` as context.
