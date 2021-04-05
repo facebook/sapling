@@ -46,6 +46,7 @@ impl Open for MemNameDagPath {
             id: format!("mem:{}", next_id()),
             overlay_map: Default::default(),
             overlay_map_next_id: Id::MIN,
+            overlay_map_paths: Default::default(),
             remote_protocol: Arc::new(()),
         })
     }

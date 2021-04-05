@@ -51,6 +51,7 @@ use dag_types::FlatSegment;
 use futures::future::join_all;
 use futures::future::BoxFuture;
 use nonblocking::non_blocking_result;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -103,6 +104,11 @@ where
     /// `map` open time. The IDs from 0..overlay_map_next_id are considered
     /// immutable, but lazy.
     overlay_map_next_id: Id,
+
+    /// The source of `overlay_map`s. This avoids absolute Ids, and is
+    /// used to flush overlay_map content shall the IdMap change on
+    /// disk.
+    overlay_map_paths: Arc<Mutex<Vec<(AncestorPath, Vec<VertexName>)>>>,
 
     /// Defines how to communicate with a remote service.
     /// The actual logic probably involves networking like HTTP etc
@@ -408,6 +414,7 @@ where
                     // protection. However that could be too expensive.
                     overlay_map: Arc::clone(&self.overlay_map),
                     overlay_map_next_id: self.overlay_map_next_id,
+                    overlay_map_paths: Arc::clone(&self.overlay_map_paths),
                     remote_protocol: self.remote_protocol.clone(),
                 };
                 let result = Arc::new(cloned);
@@ -513,7 +520,7 @@ where
         }
         let mut to_insert: Vec<(Id, VertexName)> =
             Vec::with_capacity(path_names.iter().map(|(_, ns)| ns.len()).sum());
-        for (path, names) in path_names {
+        for (path, names) in &path_names {
             if names.is_empty() {
                 continue;
             }
@@ -573,9 +580,13 @@ where
                         }
                     }
                 }
-                to_insert.push((id, name));
+                to_insert.push((id, name.clone()));
             }
         }
+
+        let mut paths = self.overlay_map_paths.lock();
+        paths.extend(path_names);
+        drop(paths);
 
         let mut overlay = self.overlay_map.write();
         for (id, name) in to_insert {

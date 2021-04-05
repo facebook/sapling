@@ -62,6 +62,7 @@ impl Open for IndexedLogNameDagPath {
             id: format!("ilog:{}", self.0.display()),
             overlay_map: Default::default(),
             overlay_map_next_id,
+            overlay_map_paths: Default::default(),
             remote_protocol: Arc::new(()),
         })
     }
