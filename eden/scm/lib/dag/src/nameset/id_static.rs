@@ -33,6 +33,7 @@ struct Iter {
     iter: IdSetIter<IdSet>,
     map: Arc<dyn IdConvert + Send + Sync>,
     reversed: bool,
+    buf: Vec<Result<VertexName>>,
 }
 
 impl Iter {
@@ -41,6 +42,9 @@ impl Iter {
     }
 
     async fn next(mut self) -> Option<(Result<VertexName>, Self)> {
+        if let Some(name) = self.buf.pop() {
+            return Some((name, self));
+        }
         let map = &self.map;
         let opt_id = if self.reversed {
             self.iter.next_back()
@@ -49,7 +53,43 @@ impl Iter {
         };
         match opt_id {
             None => None,
-            Some(id) => Some((map.vertex_name(id).await, self)),
+            Some(id) => {
+                let contains = map
+                    .contains_vertex_id_locally(&[id])
+                    .await
+                    .unwrap_or_default();
+                if contains == &[true] {
+                    Some((map.vertex_name(id).await, self))
+                } else {
+                    // On demand prefetch in batch.
+                    let batch_size = 131072;
+                    let mut ids = Vec::with_capacity(batch_size);
+                    ids.push(id);
+                    for _ in ids.len()..batch_size {
+                        if let Some(id) = if self.reversed {
+                            self.iter.next_back()
+                        } else {
+                            self.iter.next()
+                        } {
+                            ids.push(id);
+                        } else {
+                            break;
+                        }
+                    }
+                    ids.reverse();
+                    self.buf = match self.map.vertex_name_batch(&ids).await {
+                        Err(e) => return Some((Err(e), self)),
+                        Ok(names) => names,
+                    };
+                    if self.buf.len() != ids.len() {
+                        let result =
+                            crate::errors::bug("vertex_name_batch does not return enough items");
+                        return Some((result, self));
+                    }
+                    let name = self.buf.pop().expect("buf is not empty");
+                    Some((name, self))
+                }
+            }
         }
     }
 }
@@ -140,6 +180,7 @@ impl AsyncNameSetQuery for IdStaticSet {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: false,
+            buf: Default::default(),
         };
         Ok(iter.into_box_stream())
     }
@@ -149,6 +190,7 @@ impl AsyncNameSetQuery for IdStaticSet {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: true,
+            buf: Default::default(),
         };
         Ok(iter.into_box_stream())
     }
