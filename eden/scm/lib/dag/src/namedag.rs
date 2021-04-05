@@ -166,6 +166,12 @@ where
 
     /// Write in-memory DAG to disk. This will also pick up changes to
     /// the DAG by other processes.
+    ///
+    /// This function re-assigns ids for vertexes. That requires the
+    /// pending ids and vertexes to be non-lazy. If you're changing
+    /// internal structures (ex. dag and map) directly, or introducing
+    /// lazy vertexes, then avoid this function. Instead, lock and
+    /// flush directly (see `add_heads_and_flush`, `import_clone_data`).
     async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
         for head in master_heads.iter() {
@@ -245,14 +251,18 @@ where
 #[async_trait::async_trait]
 impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    IS: IdDagStore,
-    M: IdMapAssignHead + Send + Sync,
+    IS: IdDagStore + Persist,
+    M: IdMapAssignHead + Persist + Send + Sync,
     P: Send + Sync,
-    S: Send + Sync,
+    S: Persist + Send + Sync,
 {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
-        let dag = &mut self.dag;
-        let map = &mut self.map;
+        // Write directly to disk. Bypassing "flush()" that re-assigns Ids
+        // using parent functions.
+        let locked = self.state.prepare_filesystem_sync()?;
+        let mut map = self.map.prepare_filesystem_sync()?;
+        let mut dag = self.dag.prepare_filesystem_sync()?;
+
         if !dag.all()?.is_empty() {
             return programming("Cannot import clone data for non-empty graph");
         }
@@ -282,6 +292,17 @@ where
             );
             return programming(msg);
         }
+
+        let next_id = dag.next_free_id(0, Group::MASTER)?;
+
+        map.sync()?;
+        dag.sync()?;
+        locked.sync()?;
+
+        // Reset overlay map state.
+        self.overlay_map = Default::default();
+        self.overlay_map_next_id = next_id;
+
         Ok(())
     }
 }
