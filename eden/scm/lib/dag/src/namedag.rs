@@ -563,6 +563,39 @@ where
     }
 }
 
+// The server Dag. IdMap is complete. Provide APIs for client Dag to resolve vertexes.
+// Currently mainly used for testing purpose.
+#[async_trait::async_trait]
+impl<IS, M, P, S> RemoteIdConvertProtocol for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    async fn resolve_names_to_relative_paths(
+        &self,
+        heads: Vec<VertexName>,
+        names: Vec<VertexName>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        let request = protocol::RequestNameToLocation { names, heads };
+        let response: protocol::ResponseIdNamePair =
+            (self.map(), self.dag()).process(request).await?;
+        Ok(response.path_names)
+    }
+
+    async fn resolve_relative_paths_to_names(
+        &self,
+        paths: Vec<AncestorPath>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        let request = protocol::RequestLocationToName { paths };
+        let response: protocol::ResponseIdNamePair =
+            (self.map(), self.dag()).process(request).await?;
+        Ok(response.path_names)
+    }
+}
+
 // Dag operations. Those are just simple wrappers around [`IdDag`].
 // See [`IdDag`] for the actual implementations of these algorithms.
 
