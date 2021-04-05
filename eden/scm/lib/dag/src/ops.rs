@@ -235,6 +235,12 @@ pub trait DagImportCloneData {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()>;
 }
 
+#[async_trait::async_trait]
+pub trait DagExportCloneData {
+    /// Export `CloneData` for vertexes in the master group.
+    async fn export_clone_data(&self) -> Result<CloneData<VertexName>>;
+}
+
 /// Persistent the DAG on disk.
 #[async_trait::async_trait]
 pub trait DagPersistent {

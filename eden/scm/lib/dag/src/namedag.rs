@@ -27,6 +27,7 @@ use crate::nameset::NameSet;
 use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagExportCloneData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
@@ -46,6 +47,7 @@ use crate::segment::SegmentFlags;
 use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
+use dag_types::FlatSegment;
 use futures::future::join_all;
 use futures::future::BoxFuture;
 use nonblocking::non_blocking_result;
@@ -281,6 +283,63 @@ where
             return programming(msg);
         }
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl<IS, M, P, S> DagExportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
+{
+    async fn export_clone_data(&self) -> Result<CloneData<VertexName>> {
+        let head_id: Id = match self.dag.master_group()?.max() {
+            Some(id) => id,
+            None => {
+                // If we lift the limitation, CloneData struct needs to change.
+                return programming("Cannot export DAG with empty master group");
+            }
+        };
+        assert_eq!(head_id.group(), Group::MASTER);
+
+        let idmap: HashMap<Id, VertexName> = {
+            let ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
+            tracing::debug!("export: {} universally known vertexes", ids.len());
+            let names = {
+                let fallible_names = self.vertex_name_batch(&ids).await?;
+                let mut names = Vec::with_capacity(fallible_names.len());
+                for name in fallible_names {
+                    names.push(name?);
+                }
+                names
+            };
+            ids.into_iter().zip(names).collect()
+        };
+
+        let flat_segments: PreparedFlatSegments = {
+            let segments = self.dag.next_segments(Id::MIN, 0)?;
+            let mut prepared = Vec::with_capacity(segments.len());
+            for segment in segments {
+                let span = segment.span()?;
+                let parents = segment.parents()?;
+                prepared.push(FlatSegment {
+                    low: span.low,
+                    high: span.high,
+                    parents,
+                });
+            }
+            PreparedFlatSegments { segments: prepared }
+        };
+
+        let data = CloneData {
+            head_id,
+            flat_segments,
+            idmap,
+        };
+        Ok(data)
     }
 }
 
