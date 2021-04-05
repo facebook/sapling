@@ -685,6 +685,12 @@ impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
     }
 }
 
+impl<T: AsRef<SpanSet>> ExactSizeIterator for SpanSetIter<T> {
+    fn len(&self) -> usize {
+        self.count_remaining() as _
+    }
+}
+
 impl IntoIterator for SpanSet {
     type Item = Id;
     type IntoIter = SpanSetIter<SpanSet>;
@@ -987,6 +993,16 @@ mod tests {
         assert_eq!(
             set.clone().into_iter().rev().collect::<Vec<Id>>(),
             vec![3, 4, 5, 7, 8]
+        );
+        assert_eq!(
+            set.clone()
+                .into_iter()
+                .rev()
+                .skip(1)
+                .take(2)
+                .rev()
+                .collect::<Vec<Id>>(),
+            vec![5, 4]
         );
 
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
