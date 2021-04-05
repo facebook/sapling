@@ -608,7 +608,17 @@ where
     S: Send + Sync,
 {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
-        self.map.vertex_id(name).await
+        match self.map.vertex_id(name.clone()).await {
+            Ok(id) => Ok(id),
+            Err(crate::Error::VertexNotFound(_)) => {
+                if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
+                    return Ok(id);
+                }
+                // TODO: Attempt to resolve `name` remotely.
+                name.not_found()
+            }
+            Err(e) => Err(e),
+        }
     }
 
     async fn vertex_id_with_max_group(
@@ -616,15 +626,45 @@ where
         name: &VertexName,
         max_group: Group,
     ) -> Result<Option<Id>> {
-        self.map.vertex_id_with_max_group(name, max_group).await
+        match self.map.vertex_id_with_max_group(name, max_group).await {
+            Ok(Some(id)) => Ok(Some(id)),
+            Err(err) => Err(err),
+            Ok(None) => {
+                if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
+                    return Ok(Some(id));
+                }
+                // TODO: Attempt to resolve `name` remotely.
+                Ok(None)
+            }
+        }
     }
 
     async fn vertex_name(&self, id: Id) -> Result<VertexName> {
-        self.map.vertex_name(id).await
+        match self.map.vertex_name(id).await {
+            Ok(name) => Ok(name),
+            Err(crate::Error::IdNotFound(_)) => {
+                if let Some(name) = self.overlay_map.read().lookup_vertex_name(id) {
+                    return Ok(name);
+                }
+                // TODO: Attempt to resolve `id` remotely.
+                id.not_found()
+            }
+            Err(e) => Err(e),
+        }
     }
 
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
-        self.map.contains_vertex_name(name).await
+        match self.map.contains_vertex_name(name).await {
+            Ok(true) => Ok(true),
+            Ok(false) => {
+                if self.overlay_map.read().lookup_vertex_id(name).is_some() {
+                    return Ok(true);
+                }
+                // TODO: Attempt to resolve `name` remotely.
+                Ok(false)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     fn map_id(&self) -> &str {
