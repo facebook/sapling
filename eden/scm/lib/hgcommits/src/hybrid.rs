@@ -165,7 +165,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
 
     #[instrument(level = "debug", skip(self))]
     async fn resolve_remote(
-        &mut self,
+        &self,
         input: &[Vertex],
     ) -> anyhow::Result<BoxStream<'static, anyhow::Result<(Vertex, Bytes)>>> {
         let ids: Vec<Id20> = input
