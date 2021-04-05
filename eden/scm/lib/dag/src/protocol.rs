@@ -22,6 +22,7 @@ use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
 use crate::Error;
+use crate::Group;
 use crate::Id;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::IdMap;
@@ -178,7 +179,20 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
         let heads = heads
             .then(|id| map.vertex_name(id))
             .try_collect::<Vec<VertexName>>()
-            .await?;
+            .await
+            .map_err(|e| {
+                let msg = format!(
+                    concat!(
+                        "Cannot resolve heads in master group to vertex name. ",
+                        "The vertex name is required for remote vertex resolution. ",
+                        "This probably indicates the Dag update logic does not ensure the ",
+                        "vertex name of heads exist as it should. ",
+                        "(Error: {})",
+                    ),
+                    e
+                );
+                crate::Error::Programming(msg)
+            })?;
         Ok(RequestNameToLocation { names, heads })
     }
 }
@@ -203,12 +217,44 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
                         heads: heads.clone(),
                     },
                 )?
-                .ok_or_else(|| id.not_found_error())?;
+                .ok_or_else(|| {
+                    if id.group() == Group::MASTER {
+                        let msg = format!(
+                            concat!(
+                                "Cannot convert {} to x~n form using heads {:?}. ",
+                                "This is unexpected. It indicates some serious bugs in graph ",
+                                "calculation or the graph is corrupted (ex. has cycles).",
+                            ),
+                            id, &heads,
+                        );
+                        crate::Error::Bug(msg)
+                    } else {
+                        let msg = format!(
+                            concat!(
+                                "Cannot convert {} to x~n form. This is unexpected for non-master ",
+                                "vertexes since they are expected to be non-lazy.",
+                            ),
+                            id
+                        );
+                        crate::Error::Programming(msg)
+                    }
+                })?;
             Ok((x, n))
         });
         let paths = stream::iter(x_ns)
             .and_then(|(x, n)| async move {
-                let x = map.vertex_name(x).await?;
+                let x = map.vertex_name(x).await.map_err(|e| {
+                    let msg = format!(
+                        concat!(
+                            "Cannot resolve {} in to vertex name (Error: {}). ",
+                            "The vertex name is required for remote vertex resolution. ",
+                            "This probably indicates the Dag clone or update logic does ",
+                            "not maintain \"universally known\" vertexes as it should.",
+                        ),
+                        x, e,
+                    );
+                    crate::Error::Programming(msg)
+                })?;
                 Ok(AncestorPath {
                     x,
                     n,
