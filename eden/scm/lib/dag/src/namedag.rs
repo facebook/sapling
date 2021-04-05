@@ -885,6 +885,47 @@ where
         Ok(list)
     }
 
+    async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<VertexName>>> {
+        let mut list = self.map.vertex_name_batch(ids).await?;
+        let missing_indexes: Vec<usize> = {
+            let max_master_id = self.dag.master_group()?.max();
+            list.iter()
+                .enumerate()
+                .filter_map(|(i, r)| match r {
+                    // Only resolve ids that are <= max(master) remotely.
+                    Err(_) if Some(ids[i]) <= max_master_id => Some(i),
+                    Err(_) | Ok(_) => None,
+                })
+                .collect()
+        };
+        let missing_ids: Vec<Id> = missing_indexes.iter().map(|i| ids[*i]).collect();
+        let resolved = self.resolve_ids_remotely(&missing_ids).await?;
+        for (i, name) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+            list[i] = Ok(name);
+        }
+        Ok(list)
+    }
+
+    async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
+        let mut list = self.map.vertex_id_batch(names).await?;
+        let missing_indexes: Vec<usize> = list
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| if r.is_err() { Some(i) } else { None })
+            .collect();
+        if !missing_indexes.is_empty() {
+            let missing_names: Vec<VertexName> =
+                missing_indexes.iter().map(|i| names[*i].clone()).collect();
+            let resolved = self.resolve_vertexes_remotely(&missing_names).await?;
+            for (i, id) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+                if let Some(id) = id {
+                    list[i] = Ok(id);
+                }
+            }
+        }
+        Ok(list)
+    }
+
     fn map_id(&self) -> &str {
         self.map.map_id()
     }
