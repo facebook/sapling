@@ -770,12 +770,13 @@ delegate! {
 }
 
 #[async_trait::async_trait]
-impl<I, M, P, S> IdConvert for AbstractNameDag<I, M, P, S>
+impl<IS, M, P, S> IdConvert for AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    I: Send + Sync,
-    M: IdConvert + Send,
-    P: Send + Sync,
-    S: Send + Sync,
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
 {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         match self.map.vertex_id(name.clone()).await {
@@ -784,8 +785,13 @@ where
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(id);
                 }
-                // TODO: Attempt to resolve `name` remotely.
-                name.not_found()
+                let ids = self.resolve_vertexes_remotely(&[name.clone()]).await?;
+                if let Some(Some(id)) = ids.first() {
+                    Ok(*id)
+                } else {
+                    // ids is empty.
+                    name.not_found()
+                }
             }
             Err(e) => Err(e),
         }
@@ -803,8 +809,13 @@ where
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(Some(id));
                 }
-                // TODO: Attempt to resolve `name` remotely.
-                Ok(None)
+                match self.resolve_vertexes_remotely(&[name.clone()]).await {
+                    Ok(ids) => match ids.first() {
+                        Some(Some(id)) => Ok(Some(*id)),
+                        Some(None) | None => Ok(None),
+                    },
+                    Err(e) => Err(e),
+                }
             }
         }
     }
@@ -816,8 +827,17 @@ where
                 if let Some(name) = self.overlay_map.read().lookup_vertex_name(id) {
                     return Ok(name);
                 }
-                // TODO: Attempt to resolve `id` remotely.
-                id.not_found()
+                // Only ids <= max(MASTER group) can be lazy.
+                let max_master_id = self.dag.master_group()?.max();
+                if Some(id) > max_master_id {
+                    return id.not_found();
+                }
+                let names = self.resolve_ids_remotely(&[id]).await?;
+                if let Some(name) = names.into_iter().next() {
+                    Ok(name)
+                } else {
+                    id.not_found()
+                }
             }
             Err(e) => Err(e),
         }
@@ -830,8 +850,14 @@ where
                 if self.overlay_map.read().lookup_vertex_id(name).is_some() {
                     return Ok(true);
                 }
-                // TODO: Attempt to resolve `name` remotely.
-                Ok(false)
+                // PERF: Need some kind of negative cache?
+                match self.resolve_vertexes_remotely(&[name.clone()]).await {
+                    Ok(ids) => match ids.first() {
+                        Some(Some(_)) => Ok(true),
+                        Some(None) | None => Ok(false),
+                    },
+                    Err(e) => Err(e),
+                }
             }
             Err(e) => Err(e),
         }
