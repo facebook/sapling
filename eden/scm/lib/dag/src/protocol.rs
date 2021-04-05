@@ -93,7 +93,11 @@ impl fmt::Display for AncestorPath {
 
 impl fmt::Debug for AncestorPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", self)?;
+        if self.batch_size != 1 {
+            write!(f, "(+{})", self.batch_size)?;
+        }
+        Ok(())
     }
 }
 
