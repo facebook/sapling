@@ -62,6 +62,7 @@ pub fn traced(filter: &str, func: impl FnOnce()) -> Vec<String> {
             // suffix.
             if cfg!(fbcode_build) {
                 s = s.replace("_unittest: ", ": ");
+                s = s.replace("_unittest::", "::");
             }
 
             lines.push(s);

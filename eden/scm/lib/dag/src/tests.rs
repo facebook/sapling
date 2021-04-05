@@ -24,6 +24,9 @@ pub use test_dag::TestDag;
 mod test_dag;
 
 #[cfg(test)]
+mod test_sparse;
+
+#[cfg(test)]
 pub mod dummy_dag;
 
 #[cfg(test)]
