@@ -240,6 +240,7 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
@@ -247,7 +248,7 @@ where
     P: Send + Sync,
     S: Send + Sync,
 {
-    fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+    async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         for (id, name) in clone_data.idmap {
             self.map.insert(id, name.as_ref())?;
         }

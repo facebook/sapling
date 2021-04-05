@@ -78,8 +78,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         idmap,
     };
 
-    namedag
-        .import_clone_data(vertex_clone_data)
+    block_on(namedag.import_clone_data(vertex_clone_data))
         .context("error importing segmented changelog")?;
 
     block_on(namedag.flush(&[master.clone()]))
