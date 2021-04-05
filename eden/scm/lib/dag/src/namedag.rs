@@ -17,6 +17,7 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
+use crate::iddag::IdDagAlgorithm;
 use crate::iddagstore::IdDagStore;
 use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
@@ -518,71 +519,13 @@ where
         if path_names.is_empty() {
             return Ok(());
         }
-        let mut to_insert: Vec<(Id, VertexName)> =
-            Vec::with_capacity(path_names.iter().map(|(_, ns)| ns.len()).sum());
-        for (path, names) in &path_names {
-            if names.is_empty() {
-                continue;
-            }
-            // Resolve x~n to id. x is "universally known" so it should exist locally.
-            let x_id = self.map().vertex_id(path.x.clone()).await.map_err(|e| {
-                let msg = format!(
-                    concat!(
-                        "Cannot resolve x ({:?}) in x~n locally. The x is expected to be known ",
-                        "locally and is populated at clone time. This x~n is used to convert ",
-                        "{:?} to a location in the graph. (Check initial clone logic) ",
-                        "(Error: {})",
-                    ),
-                    &path.x, &names[0], e
-                );
-                crate::Error::Programming(msg)
-            })?;
-            if x_id >= self.overlay_map_next_id {
-                let msg = format!(
-                    concat!(
-                        "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
-                        "local master group. This is not expected and indicates some ",
-                        "logic error on the server side."
-                    ),
-                    &path.x, x_id, path.n,
-                );
-                return programming(msg);
-            }
-            let mut id = self.dag().first_ancestor_nth(x_id, path.n).map_err(|e| {
-                let msg = format!(
-                    concat!(
-                        "Cannot resolve x~n (x = {:?} {}, n = {}): {}. ",
-                        "This indicates the client-side graph is somewhat incompatible from the ",
-                        "server-side graph. Something (server-side or client-side) was probably ",
-                        "seriously wrong before this error."
-                    ),
-                    &path.x, x_id, path.n, e
-                );
-                crate::Error::Programming(msg)
-            })?;
-            tracing::trace!("resolved {:?} => {:?}", &path, &names[0]);
-            for (i, name) in names.into_iter().enumerate() {
-                if i > 0 {
-                    // Follow id's first parent.
-                    id = match self.dag().parent_ids(id)?.first().cloned() {
-                        Some(id) => id,
-                        None => {
-                            let msg = format!(
-                                concat!(
-                                    "Cannot resolve x~(n+i) (x = {:?} {}, n = {}, i = {}) locally. ",
-                                    "This indicates the client-side graph is somewhat incompatible ",
-                                    "from the server-side graph. Something (server-side or ",
-                                    "client-side) was probably seriously wrong before this error."
-                                ),
-                                &path.x, x_id, path.n, i
-                            );
-                            return programming(msg);
-                        }
-                    }
-                }
-                to_insert.push((id, name.clone()));
-            }
-        }
+        let to_insert: Vec<(Id, VertexName)> = calculate_id_name_from_paths(
+            self.map(),
+            self.dag().deref(),
+            self.overlay_map_next_id,
+            &path_names,
+        )
+        .await?;
 
         let mut paths = self.overlay_map_paths.lock();
         paths.extend(path_names);
@@ -595,6 +538,96 @@ where
 
         Ok(())
     }
+}
+
+/// Calculate (id, name) pairs to insert from (path, [name]) pairs.
+async fn calculate_id_name_from_paths(
+    map: &dyn IdConvert,
+    dag: &dyn IdDagAlgorithm,
+    max_id_plus_1: Id,
+    path_names: &[(AncestorPath, Vec<VertexName>)],
+) -> Result<Vec<(Id, VertexName)>> {
+    if path_names.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut to_insert: Vec<(Id, VertexName)> =
+        Vec::with_capacity(path_names.iter().map(|(_, ns)| ns.len()).sum());
+    for (path, names) in path_names {
+        if names.is_empty() {
+            continue;
+        }
+        // Resolve x~n to id. x is "universally known" so it should exist locally.
+        let x_id = map.vertex_id(path.x.clone()).await.map_err(|e| {
+            let msg = format!(
+                concat!(
+                    "Cannot resolve x ({:?}) in x~n locally. The x is expected to be known ",
+                    "locally and is populated at clone time. This x~n is used to convert ",
+                    "{:?} to a location in the graph. (Check initial clone logic) ",
+                    "(Error: {})",
+                ),
+                &path.x, &names[0], e
+            );
+            crate::Error::Programming(msg)
+        })?;
+        tracing::trace!(
+            "resolve path {:?} names {:?} (x = {}) to overlay",
+            &path,
+            &names,
+            x_id
+        );
+        if x_id >= max_id_plus_1 {
+            let msg = format!(
+                concat!(
+                    "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
+                    "local master group. This is not expected and indicates some ",
+                    "logic error on the server side."
+                ),
+                &path.x, x_id, path.n,
+            );
+            return programming(msg);
+        }
+        let mut id = dag.first_ancestor_nth(x_id, path.n).map_err(|e| {
+            let msg = format!(
+                concat!(
+                    "Cannot resolve x~n (x = {:?} {}, n = {}): {}. ",
+                    "This indicates the client-side graph is somewhat incompatible from the ",
+                    "server-side graph. Something (server-side or client-side) was probably ",
+                    "seriously wrong before this error."
+                ),
+                &path.x, x_id, path.n, e
+            );
+            crate::Error::Programming(msg)
+        })?;
+        if names.len() < 30 {
+            tracing::debug!("resolved {:?} => {} {:?}", &path, id, &names);
+        } else {
+            tracing::debug!("resolved {:?} => {} {:?} ...", &path, id, &names[0]);
+        }
+        for (i, name) in names.into_iter().enumerate() {
+            if i > 0 {
+                // Follow id's first parent.
+                id = match dag.parent_ids(id)?.first().cloned() {
+                    Some(id) => id,
+                    None => {
+                        let msg = format!(
+                            concat!(
+                                "Cannot resolve x~(n+i) (x = {:?} {}, n = {}, i = {}) locally. ",
+                                "This indicates the client-side graph is somewhat incompatible ",
+                                "from the server-side graph. Something (server-side or ",
+                                "client-side) was probably seriously wrong before this error."
+                            ),
+                            &path.x, x_id, path.n, i
+                        );
+                        return programming(msg);
+                    }
+                }
+            }
+
+            tracing::trace!(" resolved {:?} = {:?}", id, &name,);
+            to_insert.push((id, name.clone()));
+        }
+    }
+    Ok(to_insert)
 }
 
 // The server Dag. IdMap is complete. Provide APIs for client Dag to resolve vertexes.
