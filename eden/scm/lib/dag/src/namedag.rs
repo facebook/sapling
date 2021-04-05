@@ -37,6 +37,7 @@ use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
+use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::IdSet;
@@ -97,6 +98,11 @@ where
     /// `map` open time. The IDs from 0..overlay_map_next_id are considered
     /// immutable, but lazy.
     overlay_map_next_id: Id,
+
+    /// Defines how to communicate with a remote service.
+    /// The actual logic probably involves networking like HTTP etc
+    /// and is intended to be implemented outside the `dag` crate.
+    remote_protocol: Arc<dyn RemoteIdConvertProtocol>,
 }
 
 #[async_trait::async_trait]
@@ -290,6 +296,7 @@ where
                     // protection. However that could be too expensive.
                     overlay_map: Arc::clone(&self.overlay_map),
                     overlay_map_next_id: self.overlay_map_next_id,
+                    remote_protocol: self.remote_protocol.clone(),
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(Arc::clone(&result));
@@ -304,6 +311,14 @@ where
 
     pub fn map(&self) -> &M {
         &self.map
+    }
+
+    /// Set the remote protocol for converting between Id and Vertex remotely.
+    ///
+    /// This is usually used on "sparse" ("lazy") Dag where the IdMap is incomplete
+    /// for vertexes in the master groups.
+    pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
+        self.remote_protocol = protocol;
     }
 }
 

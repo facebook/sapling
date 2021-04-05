@@ -19,6 +19,7 @@ use indexedlog::multi;
 use indexedlog::DefaultOpenOptions;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// A DAG that uses VertexName instead of ids as vertexes.
 ///
@@ -61,6 +62,7 @@ impl Open for IndexedLogNameDagPath {
             id: format!("ilog:{}", self.0.display()),
             overlay_map: Default::default(),
             overlay_map_next_id,
+            remote_protocol: Arc::new(()),
         })
     }
 }

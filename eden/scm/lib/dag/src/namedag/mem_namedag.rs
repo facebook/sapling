@@ -14,6 +14,7 @@ use crate::ops::Persist;
 use crate::Id;
 use crate::Result;
 use std::sync::atomic::{self, AtomicU64};
+use std::sync::Arc;
 
 /// In-memory version of [`NameDag`].
 ///
@@ -45,6 +46,7 @@ impl Open for MemNameDagPath {
             id: format!("mem:{}", next_id()),
             overlay_map: Default::default(),
             overlay_map_next_id: Id::MIN,
+            remote_protocol: Arc::new(()),
         })
     }
 }
