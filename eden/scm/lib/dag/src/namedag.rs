@@ -37,6 +37,9 @@ use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
+use crate::protocol;
+use crate::protocol::AncestorPath;
+use crate::protocol::Process;
 use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
@@ -319,6 +322,158 @@ where
     /// for vertexes in the master groups.
     pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
         self.remote_protocol = protocol;
+    }
+}
+
+// The "client" Dag. Using a remote protocol to fill lazy part of the vertexes.
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
+{
+    /// Resolve vertexes remotely and cache the result in the overlay map.
+    /// Return the resolved ids in the given order. Not all names are resolved.
+    async fn resolve_vertexes_remotely(&self, names: &[VertexName]) -> Result<Vec<Option<Id>>> {
+        if names.is_empty() {
+            return Ok(Vec::new());
+        }
+        if names.len() < 30 {
+            tracing::debug!("resolve names {:?} remotely", &names);
+        } else {
+            tracing::debug!("resolve names ({}) remotely", names.len());
+        }
+        let request: protocol::RequestNameToLocation =
+            (self.map(), self.dag()).process(names.to_vec()).await?;
+        let path_names = self
+            .remote_protocol
+            .resolve_names_to_relative_paths(request.heads, request.names)
+            .await?;
+        self.insert_relative_paths(path_names).await?;
+        let overlay = self.overlay_map.read();
+        let mut ids = Vec::with_capacity(names.len());
+        for name in names {
+            if let Some(id) = overlay.lookup_vertex_id(name) {
+                ids.push(Some(id));
+            } else {
+                ids.push(None);
+            }
+        }
+        Ok(ids)
+    }
+
+    /// Resolve ids remotely and cache the result in the overlay map.
+    /// Return the resolved ids in the given order. All ids must be resolved.
+    async fn resolve_ids_remotely(&self, ids: &[Id]) -> Result<Vec<VertexName>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        if ids.len() < 30 {
+            tracing::debug!("resolve ids {:?} remotely", &ids);
+        } else {
+            tracing::debug!("resolve ids ({}) remotely", ids.len());
+        }
+        let request: protocol::RequestLocationToName =
+            (self.map(), self.dag()).process(ids.to_vec()).await?;
+        let path_names = self
+            .remote_protocol
+            .resolve_relative_paths_to_names(request.paths)
+            .await?;
+        self.insert_relative_paths(path_names).await?;
+        let overlay = self.overlay_map.read();
+        let mut names = Vec::with_capacity(ids.len());
+        for &id in ids {
+            if let Some(name) = overlay.lookup_vertex_name(id) {
+                names.push(name);
+            } else {
+                return id.not_found();
+            }
+        }
+        Ok(names)
+    }
+
+    /// Insert `x~n` relative paths to the overlay IdMap.
+    async fn insert_relative_paths(
+        &self,
+        path_names: Vec<(AncestorPath, Vec<VertexName>)>,
+    ) -> Result<()> {
+        if path_names.is_empty() {
+            return Ok(());
+        }
+        let mut to_insert: Vec<(Id, VertexName)> =
+            Vec::with_capacity(path_names.iter().map(|(_, ns)| ns.len()).sum());
+        for (path, names) in path_names {
+            if names.is_empty() {
+                continue;
+            }
+            // Resolve x~n to id. x is "universally known" so it should exist locally.
+            let x_id = self.map().vertex_id(path.x.clone()).await.map_err(|e| {
+                let msg = format!(
+                    concat!(
+                        "Cannot resolve x ({:?}) in x~n locally. The x is expected to be known ",
+                        "locally and is populated at clone time. This x~n is used to convert ",
+                        "{:?} to a location in the graph. (Check initial clone logic) ",
+                        "(Error: {})",
+                    ),
+                    &path.x, &names[0], e
+                );
+                crate::Error::Programming(msg)
+            })?;
+            if x_id >= self.overlay_map_next_id {
+                let msg = format!(
+                    concat!(
+                        "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
+                        "local master group. This is not expected and indicates some ",
+                        "logic error on the server side."
+                    ),
+                    &path.x, x_id, path.n,
+                );
+                return programming(msg);
+            }
+            let mut id = self.dag().first_ancestor_nth(x_id, path.n).map_err(|e| {
+                let msg = format!(
+                    concat!(
+                        "Cannot resolve x~n (x = {:?} {}, n = {}): {}. ",
+                        "This indicates the client-side graph is somewhat incompatible from the ",
+                        "server-side graph. Something (server-side or client-side) was probably ",
+                        "seriously wrong before this error."
+                    ),
+                    &path.x, x_id, path.n, e
+                );
+                crate::Error::Programming(msg)
+            })?;
+            tracing::trace!("resolved {:?} => {:?}", &path, &names[0]);
+            for (i, name) in names.into_iter().enumerate() {
+                if i > 0 {
+                    // Follow id's first parent.
+                    id = match self.dag().parent_ids(id)?.first().cloned() {
+                        Some(id) => id,
+                        None => {
+                            let msg = format!(
+                                concat!(
+                                    "Cannot resolve x~(n+i) (x = {:?} {}, n = {}, i = {}) locally. ",
+                                    "This indicates the client-side graph is somewhat incompatible ",
+                                    "from the server-side graph. Something (server-side or ",
+                                    "client-side) was probably seriously wrong before this error."
+                                ),
+                                &path.x, x_id, path.n, i
+                            );
+                            return programming(msg);
+                        }
+                    }
+                }
+                to_insert.push((id, name));
+            }
+        }
+
+        let mut overlay = self.overlay_map.write();
+        for (id, name) in to_insert {
+            overlay.insert_vertex_id_name(id, name);
+        }
+
+        Ok(())
     }
 }
 
