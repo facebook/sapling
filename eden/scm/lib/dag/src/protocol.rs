@@ -362,19 +362,21 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, Response
 
         let path_names: Vec<(AncestorPath, Vec<VertexName>)> =
             stream::iter(request.paths.into_iter())
-                .then(|path| async {
+                .then(|path| async move {
                     let id = map.vertex_id(path.x.clone()).await?;
                     let mut id = dag.first_ancestor_nth(id, path.n)?;
-                    let names: Vec<VertexName> = stream::iter(0..path.batch_size)
-                        .then(|i| async move {
-                            if i > 0 {
-                                id = dag.first_ancestor_nth(id, 1)?;
-                            }
-                            let name = map.vertex_name(id).await?;
-                            Ok::<_, crate::Error>(name)
-                        })
-                        .try_collect()
-                        .await?;
+                    let mut ids = Vec::with_capacity(path.batch_size as _);
+                    for i in 0..path.batch_size {
+                        if i > 0 {
+                            id = dag.first_ancestor_nth(id, 1)?;
+                        }
+                        ids.push(id);
+                    }
+                    let fallible_names = map.vertex_name_batch(&ids).await?;
+                    let mut names = Vec::with_capacity(fallible_names.len());
+                    for name in fallible_names {
+                        names.push(name?);
+                    }
                     debug_assert_eq!(path.batch_size, names.len() as u64);
                     Ok::<_, crate::Error>((path, names))
                 })
@@ -399,10 +401,12 @@ impl<'a, DagStore: IdDagStore> Process<ResponseIdNamePair, ()>
                 .find_id_by_name(path.x.as_ref())?
                 .ok_or_else(|| path.x.not_found_error())?;
             let mut id = dag.first_ancestor_nth(x, path.n)?;
+            tracing::trace!("insert path {:?} names {:?} (x = {})", &path, &names, id);
             for (i, name) in names.iter().enumerate() {
                 if i > 0 {
-                    id = dag.first_ancestor_nth(x, 1)?;
+                    id = dag.first_ancestor_nth(id, 1)?;
                 }
+                tracing::trace!(" insert {:?} = {:?}", id, &name);
                 map.insert(id, name.as_ref())?;
             }
         }

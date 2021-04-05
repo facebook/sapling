@@ -446,7 +446,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdNamePair { path_names: [(L~0(+2), [L, K]), (J~0(+2), [J, I]), (H~0(+4), [H, G, G, G]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
+        "ResponseIdNamePair { path_names: [(L~0(+2), [L, K]), (J~0(+2), [J, I]), (H~0(+4), [H, G, F, E]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
     );
 
     // RequestNameToLocation -> ResponseIdNamePair
