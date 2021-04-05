@@ -2361,7 +2361,10 @@ def update(
                 fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
                 cwd = pycompat.getcwdsafe()
 
-                updateprogresspath = repo.localvfs.join("updateprogress")
+                updateprogresspath = None
+                if repo.ui.configbool("checkout", "resumable"):
+                    updateprogresspath = repo.localvfs.join("updateprogress")
+
                 with progress.spinner(repo.ui, _("updating")):
                     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
                     plan.apply(

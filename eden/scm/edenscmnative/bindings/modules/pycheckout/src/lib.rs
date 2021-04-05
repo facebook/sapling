@@ -59,11 +59,13 @@ py_class!(class checkoutplan |py| {
         checkoutplan::create_instance(py, plan)
     }
 
-    def apply(&self, root: PyPathBuf, content_store: &contentstore, progress_path: PyPathBuf) -> PyResult<PyNone> {
+    def apply(&self, root: PyPathBuf, content_store: &contentstore, progress_path: Option<PyPathBuf> = None) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = content_store.extract_inner_ref(py);
         let plan = self.plan(py);
-        py.allow_threads(|| try_block_unless_interrupted(plan.apply_remote_data_store(&vfs, store, progress_path.to_path_buf()))).map_pyerr(py)?;
+        py.allow_threads(|| try_block_unless_interrupted(
+            plan.apply_remote_data_store(&vfs, store, progress_path.map(|p| p.to_path_buf()))
+        )).map_pyerr(py)?;
         Ok(PyNone)
     }
 

@@ -168,19 +168,23 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         f: F,
-        progress_path: PathBuf,
+        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
-        let progress = if progress_path.exists() {
-            match CheckoutProgress::load(&progress_path, vfs.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    debug!("Failed to load CheckoutProgress with {:?}", e);
-                    CheckoutProgress::new(&progress_path, vfs.clone())?
+        let progress = progress_path
+            .map(|path| {
+                if path.exists() {
+                    match CheckoutProgress::load(&path, vfs.clone()) {
+                        Ok(p) => Ok(p),
+                        Err(e) => {
+                            debug!("Failed to load CheckoutProgress with {:?}", e);
+                            CheckoutProgress::new(&path, vfs.clone())
+                        }
+                    }
+                } else {
+                    CheckoutProgress::new(&path, vfs.clone())
                 }
-            }
-        } else {
-            CheckoutProgress::new(&progress_path, vfs.clone())?
-        };
+            })
+            .transpose()?;
 
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
         let stats = CheckoutStats::default();
@@ -194,8 +198,10 @@ impl CheckoutPlan {
 
         Self::process_work_stream(remove_files).await?;
 
-        let filtered_update_content: Vec<_> =
-            progress.filter_already_written(&self.update_content[..]);
+        let filtered_update_content: Vec<_> = progress
+            .as_ref()
+            .map(|p| p.filter_already_written(&self.update_content[..]))
+            .unwrap_or_else(|| self.update_content.iter().collect());
         debug!(
             "Skipping checking out {} files since they're already written",
             self.update_content.len() - filtered_update_content.len()
@@ -224,8 +230,8 @@ impl CheckoutPlan {
                 Ok((path, action.content_hgid, data, flag))
             });
 
-        let progress = Mutex::new(progress);
-        let progress_ref = &progress;
+        let progress = progress.map(|p| Mutex::new(p));
+        let progress_ref = progress.as_ref();
         let update_content = update_content
             .chunks(VFS_BATCH_SIZE)
             .map(|actions| async move {
@@ -252,7 +258,7 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: &DS,
-        progress_path: PathBuf,
+        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
         self.apply_stream(
             vfs,
@@ -266,7 +272,7 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: &DS,
-        progress_path: PathBuf,
+        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
         use futures::channel::mpsc;
         self.apply_stream(
@@ -318,7 +324,7 @@ impl CheckoutPlan {
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
         actions: Vec<(RepoPathBuf, HgId, Vec<u8>, Option<UpdateFlag>)>,
-        progress: &Mutex<CheckoutProgress>,
+        progress: Option<&Mutex<CheckoutProgress>>,
     ) -> Result<()> {
         let count = actions.len();
         let paths: Vec<_> = actions
@@ -333,7 +339,9 @@ impl CheckoutPlan {
         stats.updated.fetch_add(count, Ordering::Relaxed);
         stats.written_bytes.fetch_add(w, Ordering::Relaxed);
 
-        progress.lock().record_writes(paths);
+        if let Some(progress) = progress {
+            progress.lock().record_writes(paths);
+        }
         Ok(())
     }
 
@@ -778,8 +786,7 @@ mod test {
 
         // Use clean vfs for test
         let vfs = VFS::new(working_path.clone())?;
-        let progress_path = tempdir.path().join("progress");
-        plan.apply_stream(&vfs, dummy_fs, progress_path)
+        plan.apply_stream(&vfs, dummy_fs, None)
             .await
             .context("Plan execution failed")?;
 
