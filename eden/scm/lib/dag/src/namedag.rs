@@ -140,8 +140,10 @@ where
 
         // Take lock.
         //
-        // Reload meta. This drops in-memory changes, which is fine because we have
+        // Reload meta and logs. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
+        //
+        // Also see comments in `NameDagState::lock()`.
         let locked = self.state.prepare_filesystem_sync()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;

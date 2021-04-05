@@ -92,11 +92,21 @@ impl Persist for NameDagState {
             return bug("MultiLog should be Some for read-write NameDag");
         }
         let mlog = self.mlog.as_mut().unwrap();
+        // mlog.lock() reloads its MultiMeta, but not Logs.
+        //
+        // Usually the use pattern is like:
+        //
+        //    let locked = self.state.prepare_filesystem_sync()?;  // Get the latest MultiMeta
+        //    let mut map = self.map.prepare_filesystem_sync()?;   // Get the latest Log
+        //    let mut dag = self.dag.prepare_filesystem_sync()?;   // Get the latest Log.
+        //
+        // The `NameDagState` does not control the `map` or `dag` Logs so it cannot reload
+        // them here, or in `reload()`.
         Ok(mlog.lock()?)
     }
 
     fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
-        // mlog does reload internally
+        // mlog does reload internally. See `lock()`.
         Ok(())
     }
 
