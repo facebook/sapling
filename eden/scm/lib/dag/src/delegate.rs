@@ -60,6 +60,20 @@ macro_rules! delegate {
             {
                 self.$($t)*.contains_vertex_name_locally(names)
             }
+            fn vertex_name_batch<'a: 's, 'b: 's, 's>(&'a self, ids: &'b [$crate::Id])
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<$crate::Result<$crate::VertexName>>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.vertex_name_batch(ids)
+            }
+            fn vertex_id_batch<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::VertexName])
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<$crate::Result<$crate::Id>>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.vertex_id_batch(names)
+            }
             fn map_id(&self) -> &str {
                 self.$($t)*.map_id()
             }

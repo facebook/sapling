@@ -315,6 +315,26 @@ pub trait IdConvert: PrefixLookup + Sync {
         self.vertex_id_with_max_group(name, Group::NON_MASTER).await
     }
 
+    /// Convert [`Id`]s to [`VertexName`]s in batch.
+    async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<VertexName>>> {
+        // This is not an efficient implementation in an async context.
+        let mut names = Vec::with_capacity(ids.len());
+        for &id in ids {
+            names.push(self.vertex_name(id).await);
+        }
+        Ok(names)
+    }
+
+    /// Convert [`VertexName`]s to [`Id`]s in batch.
+    async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
+        // This is not an efficient implementation in an async context.
+        let mut ids = Vec::with_capacity(names.len());
+        for name in names {
+            ids.push(self.vertex_id(name.clone()).await);
+        }
+        Ok(ids)
+    }
+
     /// Identity of the map.
     fn map_id(&self) -> &str;
 
