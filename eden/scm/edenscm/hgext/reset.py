@@ -223,7 +223,7 @@ def _deleteunreachable(repo, ctx):
         keepheads += " + remotenames()"
     except KeyError:
         pass
-    hidenodes = list(repo.nodes("(draft() & ::%s) - ::(%r)", ctx.rev(), keepheads))
+    hidenodes = list(repo.nodes("(draft() & ::%n) - ::(%r)", ctx.node(), keepheads))
     if hidenodes:
         with repo.lock():
             scmutil.cleanupnodes(repo, hidenodes, "reset")
