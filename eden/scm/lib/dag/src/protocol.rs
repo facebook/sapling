@@ -212,8 +212,19 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<IdSet, RequestLocationToName>
         let dag = &self.1;
         let heads = dag.heads_ancestors(dag.master_group()?)?;
 
-        let ids = ids.into_iter();
-        let x_ns = ids.map(|id| -> Result<(Id, u64)> {
+        let mut id_path: Vec<(Id, u64, u64)> = Vec::with_capacity(ids.as_spans().len());
+        let mut last_id_opt = None;
+        for id in ids.into_iter() {
+            if let Some(last_id) = last_id_opt {
+                if dag.try_first_ancestor_nth(last_id, 1)? == Some(id) {
+                    // Reuse the last path.
+                    if let Some(last) = id_path.last_mut() {
+                        last.2 += 1;
+                        last_id_opt = Some(id);
+                        continue;
+                    }
+                }
+            }
             let (x, n) = dag
                 .to_first_ancestor_nth(
                     id,
@@ -243,10 +254,12 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<IdSet, RequestLocationToName>
                         crate::Error::Programming(msg)
                     }
                 })?;
-            Ok((x, n))
-        });
-        let paths = stream::iter(x_ns)
-            .and_then(|(x, n)| async move {
+            id_path.push((x, n, 1));
+            last_id_opt = Some(id);
+        }
+
+        let paths = stream::iter(id_path)
+            .then(|(x, n, batch_size)| async move {
                 let x = map.vertex_name(x).await.map_err(|e| {
                     let msg = format!(
                         concat!(
@@ -259,11 +272,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<IdSet, RequestLocationToName>
                     );
                     crate::Error::Programming(msg)
                 })?;
-                Ok(AncestorPath {
-                    x,
-                    n,
-                    batch_size: 1,
-                })
+                Ok::<_, crate::Error>(AncestorPath { x, n, batch_size })
             })
             .try_collect::<Vec<_>>()
             .await?;

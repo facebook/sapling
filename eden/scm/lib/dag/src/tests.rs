@@ -430,7 +430,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
         r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
-        "RequestLocationToName { paths: [L~0, L~1, J~0, J~1, H~0, H~1, H~2, H~3, D~0, B~0, D~1, B~1] }"
+        "RequestLocationToName { paths: [L~0(+2), J~0(+2), H~0(+4), D~0, B~0, D~1, B~1] }"
     );
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
@@ -446,7 +446,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdNamePair { path_names: [(L~0, [L]), (L~1, [K]), (J~0, [J]), (J~1, [I]), (H~0, [H]), (H~1, [G]), (H~2, [F]), (H~3, [E]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
+        "ResponseIdNamePair { path_names: [(L~0(+2), [L, K]), (J~0(+2), [J, I]), (H~0(+4), [H, G, G, G]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
     );
 
     // RequestNameToLocation -> ResponseIdNamePair

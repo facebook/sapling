@@ -128,7 +128,7 @@ async fn test_sparse_dag() {
         [
             "resolve paths: [D~1]",
             "resolve names: [E], heads: [M]",
-            "resolve paths: [L~1, I~1, I~3, I~4]"
+            "resolve paths: [L~1, I~1, I~3(+2)]"
         ]
     );
 }
