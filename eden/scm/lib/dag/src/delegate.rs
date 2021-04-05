@@ -46,6 +46,20 @@ macro_rules! delegate {
             {
                 self.$($t)*.vertex_id_with_max_group(name, $crate::Group::NON_MASTER)
             }
+            fn contains_vertex_id_locally<'a: 's, 'b: 's, 's>(&'a self, ids: &'b [$crate::Id])
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<bool>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.contains_vertex_id_locally(ids)
+            }
+            fn contains_vertex_name_locally<'a: 's, 'b: 's, 's>(&'a self, names: &'b [$crate::VertexName])
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<bool>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.contains_vertex_name_locally(names)
+            }
             fn map_id(&self) -> &str {
                 self.$($t)*.map_id()
             }

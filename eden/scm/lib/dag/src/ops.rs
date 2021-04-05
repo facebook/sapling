@@ -304,6 +304,13 @@ pub trait IdConvert: PrefixLookup + Sync {
     ) -> Result<Option<Id>>;
     async fn vertex_name(&self, id: Id) -> Result<VertexName>;
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
+
+    /// Test if an `id` is present locally. Do not trigger remote fetching.
+    async fn contains_vertex_id_locally(&self, id: &[Id]) -> Result<Vec<bool>>;
+
+    /// Test if an `name` is present locally. Do not trigger remote fetching.
+    async fn contains_vertex_name_locally(&self, name: &[VertexName]) -> Result<Vec<bool>>;
+
     async fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
         self.vertex_id_with_max_group(name, Group::NON_MASTER).await
     }

@@ -863,6 +863,28 @@ where
         }
     }
 
+    async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
+        let mut list = self.map.contains_vertex_id_locally(ids).await?;
+        let map = self.overlay_map.read();
+        for (b, id) in list.iter_mut().zip(ids.iter().copied()) {
+            if !*b {
+                *b = *b || map.has_vertex_id(id);
+            }
+        }
+        Ok(list)
+    }
+
+    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+        let mut list = self.map.contains_vertex_name_locally(names).await?;
+        let map = self.overlay_map.read();
+        for (b, name) in list.iter_mut().zip(names.iter()) {
+            if !*b {
+                *b = *b || map.has_vertex_name(name);
+            }
+        }
+        Ok(list)
+    }
+
     fn map_id(&self) -> &str {
         self.map.map_id()
     }

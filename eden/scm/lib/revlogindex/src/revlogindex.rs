@@ -980,6 +980,26 @@ impl IdConvert for RevlogIndex {
             Ok(false)
         }
     }
+    async fn contains_vertex_id_locally(&self, ids: &[Id]) -> dag::Result<Vec<bool>> {
+        let mut list = Vec::with_capacity(ids.len());
+        for id in ids {
+            let rev = id.0 as usize;
+            list.push(
+                rev < self.data_len() || self.pending_nodes.get(rev - self.data_len()).is_some(),
+            );
+        }
+        Ok(list)
+    }
+    async fn contains_vertex_name_locally(&self, names: &[Vertex]) -> dag::Result<Vec<bool>> {
+        let mut list = Vec::with_capacity(names.len());
+        for name in names {
+            list.push(
+                self.pending_nodes_index.contains_key(name)
+                    || self.nodemap.node_to_rev(name.as_ref())?.is_some(),
+            )
+        }
+        Ok(list)
+    }
     fn map_id(&self) -> &str {
         &self.id
     }

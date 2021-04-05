@@ -73,6 +73,10 @@ impl CoreMemIdMap {
         self.name2id.contains_key(name)
     }
 
+    pub fn has_vertex_id(&self, id: Id) -> bool {
+        self.id2name.contains_key(&id)
+    }
+
     pub fn insert_vertex_id_name(&mut self, id: Id, vertex_name: VertexName) {
         self.name2id.insert(vertex_name.clone(), id);
         self.id2name.insert(id, vertex_name);
@@ -107,6 +111,20 @@ impl IdConvert for MemIdMap {
     }
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.core.has_vertex_name(name))
+    }
+
+    async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
+        Ok(ids
+            .iter()
+            .copied()
+            .map(|id| self.core.has_vertex_id(id))
+            .collect())
+    }
+    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+        Ok(names
+            .iter()
+            .map(|name| self.core.has_vertex_name(name))
+            .collect())
     }
 
     fn map_id(&self) -> &str {

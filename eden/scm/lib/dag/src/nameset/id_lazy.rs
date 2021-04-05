@@ -428,6 +428,12 @@ pub(crate) mod tests {
         fn map_version(&self) -> &VerLink {
             &self.version
         }
+        async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
+            Ok(ids.iter().map(|_| true).collect())
+        }
+        async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+            Ok(names.iter().map(|name| name.as_ref().len() == 8).collect())
+        }
     }
 
     #[test]

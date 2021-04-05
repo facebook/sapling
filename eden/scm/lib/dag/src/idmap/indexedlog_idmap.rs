@@ -339,6 +339,20 @@ impl IdConvert for IdMap {
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.find_id_by_name(name.as_ref())?.is_some())
     }
+    async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
+        let mut list = Vec::with_capacity(ids.len());
+        for &id in ids {
+            list.push(self.find_name_by_id(id)?.is_some());
+        }
+        Ok(list)
+    }
+    async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+        let mut list = Vec::with_capacity(names.len());
+        for name in names {
+            list.push(self.find_id_by_name(name.as_ref())?.is_some());
+        }
+        Ok(list)
+    }
     fn map_id(&self) -> &str {
         &self.map_id
     }
