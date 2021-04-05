@@ -204,10 +204,10 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
 // Id -> Name, step 1: Id -> RequestLocationToName
 // Works on an incomplete IdMap, client-side.
 #[async_trait::async_trait]
-impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
+impl<M: IdConvert, DagStore: IdDagStore> Process<IdSet, RequestLocationToName>
     for (&M, &IdDag<DagStore>)
 {
-    async fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
+    async fn process(self, ids: IdSet) -> Result<RequestLocationToName> {
         let map = &self.0;
         let dag = &self.1;
         let heads = dag.heads_ancestors(dag.master_group()?)?;

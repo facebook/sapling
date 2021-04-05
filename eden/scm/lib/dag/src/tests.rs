@@ -425,11 +425,12 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let ids: Vec<Id> = (b'A'..=b'L')
         .map(|b| built.name_dag.map.find_id_by_name(&[b]).unwrap().unwrap())
         .collect();
+    let ids = IdSet::from_spans(ids);
     let request1: RequestLocationToName =
         r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
-        "RequestLocationToName { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
+        "RequestLocationToName { paths: [L~0, L~1, J~0, J~1, H~0, H~1, H~2, H~3, D~0, B~0, D~1, B~1] }"
     );
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
@@ -445,7 +446,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+        "ResponseIdNamePair { path_names: [(L~0, [L]), (L~1, [K]), (J~0, [J]), (J~1, [I]), (H~0, [H]), (H~1, [G]), (H~2, [F]), (H~3, [E]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
     );
 
     // RequestNameToLocation -> ResponseIdNamePair

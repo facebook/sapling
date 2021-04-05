@@ -529,8 +529,9 @@ where
         } else {
             tracing::debug!("resolve ids ({}) remotely", ids.len());
         }
-        let request: protocol::RequestLocationToName =
-            (self.map(), self.dag()).process(ids.to_vec()).await?;
+        let request: protocol::RequestLocationToName = (self.map(), self.dag())
+            .process(IdSet::from_spans(ids.iter().copied()))
+            .await?;
         let path_names = self
             .remote_protocol
             .resolve_relative_paths_to_names(request.paths)
