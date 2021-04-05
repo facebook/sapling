@@ -249,11 +249,37 @@ where
     S: Send + Sync,
 {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
-        for (id, name) in clone_data.idmap {
-            self.map.insert(id, name.as_ref())?;
+        let dag = &mut self.dag;
+        let map = &mut self.map;
+        if !dag.all()?.is_empty() {
+            return programming("Cannot import clone data for non-empty graph");
         }
-        self.dag
-            .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
+        for (id, name) in clone_data.idmap {
+            map.insert(id, name.as_ref())?;
+        }
+        dag.build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
+
+        // Verify that universally known vertexes and heads are present in IdMap.
+        let missing: Vec<Id> = {
+            let universal_ids: Vec<Id> = dag.universal_ids()?.into_iter().collect();
+            tracing::debug!("clone: {} universally known vertexes", universal_ids.len());
+            let exists = map.contains_vertex_id_locally(&universal_ids).await?;
+            universal_ids
+                .into_iter()
+                .zip(exists)
+                .filter_map(|(id, b)| if b { None } else { Some(id) })
+                .collect()
+        };
+        if !missing.is_empty() {
+            let msg = format!(
+                concat!(
+                    "Clone data does not contain vertex for {:?}. ",
+                    "This is most likely a server-side bug."
+                ),
+                missing,
+            );
+            return programming(msg);
+        }
         Ok(())
     }
 }

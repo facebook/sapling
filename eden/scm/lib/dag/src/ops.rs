@@ -228,7 +228,7 @@ pub trait DagAddHeads {
     async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()>;
 }
 
-/// Import a generated `CloneData` object into the DAG.
+/// Import a generated `CloneData` object into an empty DAG.
 #[async_trait::async_trait]
 pub trait DagImportCloneData {
     /// Updates the DAG using a `CloneData` object.
