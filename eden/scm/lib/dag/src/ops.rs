@@ -248,6 +248,10 @@ pub trait DagPersistent {
     /// the DAG by other processes.
     async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
 
+    /// Write in-memory IdMap that caches Id <-> Vertex translation from
+    /// remote service to disk.
+    async fn flush_cached_idmap(&self) -> Result<()>;
+
     /// A faster path for add_heads, followed by flush.
     async fn add_heads_and_flush(
         &mut self,

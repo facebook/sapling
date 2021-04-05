@@ -189,6 +189,9 @@ where
             }
         }
 
+        // Write cached IdMap to disk.
+        self.flush_cached_idmap().await?;
+
         // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
@@ -199,6 +202,40 @@ where
             .add_heads_and_flush(&parents, master_heads, non_master_heads)
             .await?;
         *self = new_name_dag;
+        Ok(())
+    }
+
+    /// Write in-memory IdMap paths to disk so the next time we don't need to
+    /// ask remote service for IdMap translation.
+    #[tracing::instrument(skip(self))]
+    async fn flush_cached_idmap(&self) -> Result<()> {
+        // The map might have changed on disk. We cannot use the ids in overlay_map
+        // directly. Instead, re-translate the paths.
+
+        // Prepare data to insert. Do not hold Mutex across async yield points.
+        let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
+        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock());
+        if to_insert.is_empty() {
+            return Ok(());
+        }
+
+        // Lock, reload from disk. Use a new state so the existing dag is not affected.
+        let mut new: Self = self.path.open()?;
+        let locked = new.state.prepare_filesystem_sync()?;
+        let mut map = new.map.prepare_filesystem_sync()?;
+        let dag = new.dag.prepare_filesystem_sync()?;
+
+        let id_names =
+            calculate_id_name_from_paths(&*map, &**dag, new.overlay_map_next_id, &to_insert)
+                .await?;
+        for (id, name) in id_names {
+            map.insert(id, name.as_ref())?;
+        }
+
+        map.sync()?;
+        dag.sync()?;
+        locked.sync()?;
+
         Ok(())
     }
 }
