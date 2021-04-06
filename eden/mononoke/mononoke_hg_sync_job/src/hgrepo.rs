@@ -11,6 +11,7 @@ use anyhow::{bail, format_err, Context as _, Error, Result};
 use bookmarks::BookmarkName;
 use futures::future::{self, Future, FutureExt, TryFuture, TryFutureExt};
 use futures_ext::future::{FbFutureExt, FbTryFutureExt};
+use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_hg_sync_job_helper_lib::{
@@ -310,7 +311,9 @@ impl HgPeer {
             CommitsInBundle::Unknown => "".to_string(),
         };
 
-        let hgbonsaimappingfile = write_to_named_temp_file(hgbonsaimapping).await?;
+        let hgbonsaimappingfile = write_to_named_temp_file(hgbonsaimapping)
+            .watched(logger)
+            .await?;
         let hgbonsaimappingpath = match hgbonsaimappingfile.path().to_str() {
             Some(path) => path,
             None => {
@@ -330,10 +333,13 @@ impl HgPeer {
         let path = self.reports_file.path().to_path_buf();
         let bundle_timeout_ms = self.baseline_bundle_timeout_ms * 2_u64.pow(attempt as u32 - 1);
 
-        let line_num_in_reports_file = lines_after(&path, 0).await?.len();
+        let line_num_in_reports_file = lines_after(&path, 0).watched(logger).await?.len();
 
         let res = async {
-            self.process.write_line(input_line.into_bytes()).await?;
+            self.process
+                .write_line(input_line.into_bytes())
+                .watched(logger)
+                .await?;
             self.bundle_applied += 1;
 
             let report_lines = self
@@ -344,6 +350,7 @@ impl HgPeer {
                     // period, and try to collect the report if any.
                     Some(Duration::from_secs(1)),
                 )
+                .watched(logger)
                 .await?;
 
             let full_report = report_lines.join("\n");
@@ -361,6 +368,7 @@ impl HgPeer {
 
             return Err(format_err!("sync failed: {}", log));
         }
+        .watched(logger)
         .await;
 
         if res.is_err() {
@@ -424,6 +432,7 @@ impl HgRepo {
                 logger,
                 commits_in_bundle,
             )
+            .watched(logger.clone())
             .await;
 
         let err = match res {
@@ -442,6 +451,7 @@ impl HgRepo {
 
         if self
             .verify_server_bookmark_location(&onto_bookmark, expected_bookmark_position)
+            .watched(logger.clone())
             .await
             .is_ok()
         {
@@ -452,7 +462,7 @@ impl HgRepo {
     }
 
     async fn renew_peer_if_needed(&self, logger: &Logger) -> Result<()> {
-        let mut peer = self.peer.lock().await;
+        let mut peer = self.peer.lock().watched(logger).await;
 
         if peer.still_good(logger) {
             return Ok(debug!(logger, "existing hg peer is still good"));

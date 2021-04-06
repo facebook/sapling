@@ -41,6 +41,7 @@ use futures::{
     Stream,
 };
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
+use futures_watchdog::WatchdogExt;
 use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
@@ -411,6 +412,7 @@ async fn try_sync_single_combined_entry(
             ctx.logger(),
             &combined_entry.commits,
         )
+        .watched(ctx.logger())
         .await?;
 
     Ok(())
@@ -432,6 +434,7 @@ async fn sync_single_combined_entry(
                 cs_id,
                 &combined_entry.commits,
             )
+            .watched(ctx.logger())
             .await?
     }
 
@@ -441,6 +444,7 @@ async fn sync_single_combined_entry(
         base_retry_delay_ms,
         retry_num,
     )
+    .watched(ctx.logger())
     .await?;
 
     Ok(attempts)
@@ -533,41 +537,62 @@ fn loop_over_log_entries<'a, B>(
     repo_read_write_fetcher: &'a RepoReadWriteFetcher,
 ) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
 where
-    B: BookmarkUpdateLog,
+    B: BookmarkUpdateLog + Clone,
 {
-    stream::try_unfold(Some(start_id), move |maybe_id| {
-        async move {
-            match maybe_id {
-                Some(current_id) => {
-                    let entries = bookmarks
-                        .read_next_bookmark_log_entries_same_bookmark_and_reason(
-                            ctx.clone(),
-                            current_id as u64,
-                            fetch_up_to_bundles,
-                        )
-                        .try_collect::<Vec<_>>()
-                        .await?;
-
-                    match entries.iter().last().cloned() {
-                        None => {
-                            if loop_forever {
-                                info!(ctx.logger(), "id: {}, no new entries found", current_id);
-                                scuba_sample.clone().add("success", 1).add("delay", 0).log();
-
-                                // First None means that no new entries will be added to the stream,
-                                // Some(current_id) means that bookmarks will be fetched again
-                                tokio::time::delay_for(Duration::new(SLEEP_SECS, 0)).await;
-
-                                unlock_repo_if_locked(&ctx, &repo_read_write_fetcher).await?;
-                                Ok(Some((vec![], Some(current_id))))
-                            } else {
-                                Ok(Some((vec![], None)))
+    stream::try_unfold(Some(start_id), {
+        let ctx = ctx.clone();
+        let bookmarks = bookmarks.clone();
+        move |maybe_id| {
+            let ctx = ctx.clone();
+            let bookmarks = bookmarks.clone();
+            async move {
+                match maybe_id {
+                    Some(current_id) => {
+                        info!(
+                            ctx.logger(),
+                            "Starting the `ReadNextBookmarkLogEntries` query, current id: {}",
+                            current_id
+                        );
+                        let entries = tokio::spawn({
+                            let ctx = ctx.clone();
+                            let bookmarks = bookmarks.clone();
+                            async move {
+                                bookmarks
+                                    .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                                        ctx.clone(),
+                                        current_id as u64,
+                                        fetch_up_to_bundles,
+                                    )
+                                    .try_collect::<Vec<_>>()
+                                    .watched(ctx.logger())
+                                    .await
                             }
+                        });
+                        let entries = entries.await??;
+
+                        match entries.iter().last().cloned() {
+                            None => {
+                                if loop_forever {
+                                    info!(ctx.logger(), "id: {}, no new entries found", current_id);
+                                    scuba_sample.clone().add("success", 1).add("delay", 0).log();
+
+                                    // First None means that no new entries will be added to the stream,
+                                    // Some(current_id) means that bookmarks will be fetched again
+                                    tokio::time::delay_for(Duration::new(SLEEP_SECS, 0)).await;
+
+                                    unlock_repo_if_locked(&ctx, &repo_read_write_fetcher)
+                                        .watched(ctx.logger())
+                                        .await?;
+                                    Ok(Some((vec![], Some(current_id))))
+                                } else {
+                                    Ok(Some((vec![], None)))
+                                }
+                            }
+                            Some(last_entry) => Ok(Some((entries, Some(last_entry.id)))),
                         }
-                        Some(last_entry) => Ok(Some((entries, Some(last_entry.id)))),
                     }
+                    None => Ok(None),
                 }
-                None => Ok(None),
             }
         }
     })
@@ -993,6 +1018,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 &config_store,
                 matches,
             )
+            .watched(ctx.logger())
             .await?;
             let exit_path = sub_m
                 .value_of("exit-file")
@@ -1026,7 +1052,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 });
 
             let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
-                try_join(counter, repo_parts).await?;
+                try_join(counter, repo_parts).watched(ctx.logger()).await?;
 
             borrowed!(bundle_preparer: &BundlePreparer);
             let s = loop_over_log_entries(
@@ -1051,7 +1077,10 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             })
             .map(move |res_entries| async move {
                 let entries = res_entries?;
-                bundle_preparer.prepare_batches(&ctx, entries).await
+                bundle_preparer
+                    .prepare_batches(&ctx, entries)
+                    .watched(ctx.logger())
+                    .await
             })
             .buffered(bundle_buffer_size)
             .map_err(|cause| AnonymousError { cause })
@@ -1075,12 +1104,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     }
 
                     let batches = first.into_iter().chain(batches);
-                    Ok(bundle_preparer.prepare_bundles(&ctx, batches.collect(), &mut overlay))
+                    Ok(bundle_preparer
+                        .prepare_bundles(&ctx, batches.collect(), &mut overlay)
+                        .watched(ctx.logger()))
                 }
             })
             .map(|res| async move {
                 let f = res?;
-                f.await
+                f.watched(ctx.logger()).await
             })
             .buffered(bundle_buffer_size)
             .map_ok(|vec| stream::iter(vec.into_iter().map(Ok)))
@@ -1089,7 +1120,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             let outcome_handler = build_outcome_handler(&ctx, &lock_via);
             pin_mut!(s);
 
-            while let Some(res) = s.next().await {
+            while let Some(res) = s.next().watched(ctx.logger()).await {
                 if !can_continue() {
                     break;
                 }
@@ -1104,6 +1135,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                             retry_num,
                             &globalrev_syncer,
                         )
+                        .watched(ctx.logger())
                         .timed()
                         .await;
                         let res = bind_sync_result(&combined_entry.components, res);
@@ -1116,14 +1148,17 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     Err(e) => Err((None, e)),
                 };
 
-                let res = reporting_handler(res).await;
-                let entry = outcome_handler(res).await?;
+                let res = reporting_handler(res).watched(ctx.logger()).await;
+                let entry = outcome_handler(res).watched(ctx.logger()).await?;
                 let next_id = get_id_to_search_after(&entry);
 
                 retry(
                     &ctx.logger(),
                     |_| async {
-                        let success = mutable_counters.set_counter(&ctx, next_id).await?;
+                        let success = mutable_counters
+                            .set_counter(&ctx, next_id)
+                            .watched(ctx.logger())
+                            .await?;
 
                         if success {
                             Ok(())
@@ -1134,6 +1169,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     base_retry_delay_ms,
                     retry_num,
                 )
+                .watched(ctx.logger())
                 .await?;
             }
             Ok(())

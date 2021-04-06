@@ -23,6 +23,7 @@ use futures::{
     future::{self, try_join, try_join_all, BoxFuture, FutureExt, TryFutureExt},
     Future,
 };
+use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -160,12 +161,12 @@ impl BundlePreparer {
         }
     }
 
-    pub fn prepare_bundles(
+    pub fn prepare_bundles<'a>(
         &self,
-        ctx: &CoreContext,
+        ctx: &'a CoreContext,
         batches: Vec<BookmarkLogEntryBatch>,
         overlay: &mut crate::BookmarkOverlay,
-    ) -> impl Future<Output = Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
+    ) -> impl Future<Output = Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> + 'a {
         let mut futs = vec![];
         let push_vars = self.push_vars.clone();
 
@@ -238,7 +239,7 @@ impl BundlePreparer {
             .into_iter()
             .map(|(f, entries)| async move {
                 let f = tokio::spawn(f);
-                let res = f.map_err(Error::from).await;
+                let res = f.map_err(Error::from).watched(ctx.logger()).await;
                 let res = match res {
                     Ok(Ok(res)) => Ok(res),
                     Ok(Err(err)) => Err(err),
@@ -526,6 +527,7 @@ impl BookmarkLogEntryBatch {
             (Some(from_cs_id), Some(to_cs_id)) => {
                 let is_ancestor = lca_hint
                     .is_ancestor(ctx, changeset_fetcher, from_cs_id, to_cs_id)
+                    .watched(ctx.logger())
                     .await?;
                 if !is_ancestor {
                     // Force non-forward moves to go to a separate batch
@@ -583,6 +585,7 @@ async fn split_in_batches(
         let entry = match batches.last_mut() {
             Some(batch) => match batch
                 .try_append(ctx, lca_hint, changeset_fetcher, entry)
+                .watched(ctx.logger())
                 .await?
             {
                 Ok(()) => {

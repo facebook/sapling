@@ -17,6 +17,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
+use futures_watchdog::WatchdogExt;
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
@@ -517,7 +518,9 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let entries = ReadNextBookmarkLogEntries::query(&conn, &id, &repo_id, &limit).await?;
+            let entries = ReadNextBookmarkLogEntries::query(&conn, &id, &repo_id, &limit)
+                .watched(ctx.logger())
+                .await?;
 
             let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
                 Some(first_entry) => {
