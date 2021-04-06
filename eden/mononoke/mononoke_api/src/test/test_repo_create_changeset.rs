@@ -10,11 +10,16 @@ use std::convert::TryFrom;
 
 use anyhow::Error;
 use assert_matches::assert_matches;
+use blobrepo::BlobRepo;
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
+use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
+use futures::FutureExt;
+use maplit::hashmap;
 use std::str::FromStr;
+use tunables::{with_tunables_async, MononokeTunables};
 
 use crate::{
     ChangesetContext, ChangesetId, CoreContext, CreateChange, FileType, Mononoke, MononokeError,
@@ -22,7 +27,28 @@ use crate::{
 };
 
 #[fbinit::test]
-async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
+async fn test_create_commit_skeleton_manifests(fb: FacebookInit) -> Result<(), Error> {
+    let tunables = MononokeTunables::default();
+    tunables.update_by_repo_bools(&hashmap! {
+        "repo".to_string() => hashmap! {
+            "use_skeleton_manifests_for_create_changesets".into() => true
+        }
+    });
+    with_tunables_async(tunables, create_commit(fb, "skeleton_manifests").boxed()).await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_create_commit_fsnodes(fb: FacebookInit) -> Result<(), Error> {
+    create_commit(fb, "fsnodes").await?;
+    Ok(())
+}
+
+// Check that commits were created correctly, and also check that only a single
+// derived data type was derived (i.e. check that we don't derive something that we aren't supposed
+// to).
+async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
@@ -30,7 +56,7 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
     let repo = mononoke
-        .repo(ctx, "test")
+        .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
         .write()
@@ -53,6 +79,23 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     let cs = repo
         .create_changeset(
             parents,
+            author.clone(),
+            author_date,
+            committer.clone(),
+            committer_date,
+            message.clone(),
+            extra.clone(),
+            changes.clone(),
+        )
+        .await?;
+
+    changes.insert(
+        MononokePath::try_from("TEST_CREATE")?,
+        CreateChange::NewContent(Bytes::from("TEST CREATE2\n"), FileType::Regular, None),
+    );
+    let second_cs = repo
+        .create_changeset(
+            vec![cs.id()],
             author,
             author_date,
             committer,
@@ -62,6 +105,15 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
             changes,
         )
         .await?;
+
+    validate_unnecessary_derived_data_is_not_derived(
+        &ctx,
+        repo.blob_repo(),
+        cs.id(),
+        second_cs.id(),
+        derived_data_to_derive,
+    )
+    .await?;
 
     assert_eq!(cs.message().await?, "Test Created Commit");
     assert_eq!(cs.id(), ChangesetId::from_str(expected_hash)?);
@@ -74,6 +126,45 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
         .content_concat()
         .await?;
     assert_eq!(content, Bytes::from("TEST CREATE\n"));
+
+    let content = second_cs
+        .path_with_content("TEST_CREATE")?
+        .file()
+        .await?
+        .expect("file should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(content, Bytes::from("TEST CREATE2\n"));
+
+    Ok(())
+}
+
+// We expect that after creating a commit only derived a single specific derived data
+// type is derived for a parent changeset, and none derived for the newly created changeset.
+// This function validates it's actualy the case
+async fn validate_unnecessary_derived_data_is_not_derived(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    parent_cs_id: ChangesetId,
+    cs_id: ChangesetId,
+    derived_data_to_derive: &str,
+) -> Result<(), Error> {
+    for ty in &repo.get_derived_data_config().enabled.types {
+        if ty == "git_trees" {
+            // Derived data utils doesn't support git_trees, so we have to skip it
+            continue;
+        }
+        let utils = derived_data_utils(repo, ty)?;
+        let not_derived = utils
+            .pending(ctx.clone(), repo.clone(), vec![parent_cs_id, cs_id])
+            .await?;
+        // It's expected to derive skeleton manifests for the parent commit
+        if ty == derived_data_to_derive {
+            assert_eq!(not_derived, vec![cs_id]);
+        } else {
+            assert_eq!(not_derived, vec![parent_cs_id, cs_id]);
+        }
+    }
 
     Ok(())
 }

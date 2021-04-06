@@ -27,7 +27,9 @@ use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use manifest::{Entry, ManifestOps};
-use mononoke_types::{fsnode::FsnodeFile, Blame, ChangesetId, FileType, FsnodeId, Generation};
+use mononoke_types::{
+    fsnode::FsnodeFile, Blame, ChangesetId, FileType, FsnodeId, Generation, SkeletonManifestId,
+};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
 use std::collections::HashMap;
@@ -70,6 +72,7 @@ pub struct UnifiedDiff {
 }
 
 type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
+type SkeletonResult = Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError>;
 
 /// Context that makes it cheap to fetch content info about a path within a changeset.
 ///
@@ -105,6 +108,25 @@ impl fmt::Debug for ChangesetPathHistoryContext {
         write!(
             f,
             "ChangesetPathHistoryContext(repo={:?} id={:?} path={:?})",
+            self.repo().name(),
+            self.changeset().id(),
+            self.path()
+        )
+    }
+}
+
+/// Context to check if a file or a directory exists in a changeset
+pub struct ChangesetPathContext {
+    changeset: ChangesetContext,
+    path: MononokePath,
+    skeleton_manifest_id: Shared<Pin<Box<dyn Future<Output = SkeletonResult> + Send>>>,
+}
+
+impl fmt::Debug for ChangesetPathContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ChangesetPathContext(repo={:?} id={:?} path={:?})",
             self.repo().name(),
             self.changeset().id(),
             self.path()
@@ -539,6 +561,90 @@ impl ChangesetPathHistoryContext {
         Ok(history
             .map_err(MononokeError::from)
             .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id)))
+    }
+}
+
+impl ChangesetPathContext {
+    pub fn new(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        skeleton_manifest_entry: Option<Entry<SkeletonManifestId, ()>>,
+    ) -> Self {
+        let path = path.into();
+        let skeleton_manifest_id = if let Some(skmf_entry) = skeleton_manifest_entry {
+            async move { Ok(Some(skmf_entry)) }.boxed()
+        } else {
+            cloned!(changeset, path);
+            async move {
+                let ctx = changeset.ctx().clone();
+                let blobstore = changeset.repo().blob_repo().get_blobstore();
+                let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
+                if let Some(mpath) = path.into() {
+                    root_skeleton_manifest_id
+                        .skeleton_manifest_id()
+                        .find_entry(ctx, blobstore, Some(mpath))
+                        .await
+                        .map_err(MononokeError::from)
+                } else {
+                    Ok(Some(Entry::Tree(
+                        root_skeleton_manifest_id.skeleton_manifest_id().clone(),
+                    )))
+                }
+            }
+            .boxed()
+        };
+        let skeleton_manifest_id = skeleton_manifest_id.shared();
+
+
+        Self {
+            changeset,
+            path,
+            skeleton_manifest_id,
+        }
+    }
+
+
+    /// The `RepoContext` for this query.
+    pub fn repo(&self) -> &RepoContext {
+        &self.changeset.repo()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext {
+        &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MononokePath {
+        &self.path
+    }
+
+    async fn skeleton_manifest_id(
+        &self,
+    ) -> Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError> {
+        self.skeleton_manifest_id.clone().await
+    }
+
+    /// Returns `true` if the path exists (as a file or directory) in this commit.
+    pub async fn exists(&self) -> Result<bool, MononokeError> {
+        // The path exists if there is any kind of skeleton manifest entry.
+        Ok(self.skeleton_manifest_id().await?.is_some())
+    }
+
+    pub async fn is_file(&self) -> Result<bool, MononokeError> {
+        let is_file = match self.skeleton_manifest_id().await? {
+            Some(Entry::Leaf(_)) => true,
+            _ => false,
+        };
+        Ok(is_file)
+    }
+
+    pub async fn is_dir(&self) -> Result<bool, MononokeError> {
+        let is_dir = match self.skeleton_manifest_id().await? {
+            Some(Entry::Tree(_)) => true,
+            _ => false,
+        };
+        Ok(is_dir)
     }
 }
 

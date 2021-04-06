@@ -149,6 +149,8 @@ pub struct MononokeTunables {
     // Maximium negative caching age of a blob, in milliseconds
     // Negative means to not use weak consistency at all
     manifold_weak_consistency_max_age_ms: AtomicI64,
+
+    use_skeleton_manifests_for_create_changesets: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

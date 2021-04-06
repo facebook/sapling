@@ -28,9 +28,12 @@ use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
 use reachabilityindex::ReachabilityIndex;
+use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::changeset_path::{ChangesetPathContentContext, ChangesetPathHistoryContext};
+use crate::changeset_path::{
+    ChangesetPathContentContext, ChangesetPathContext, ChangesetPathHistoryContext,
+};
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::path::MononokePath;
@@ -47,6 +50,8 @@ pub struct ChangesetContext {
         Shared<Pin<Box<dyn Future<Output = Result<ChangesetInfo, MononokeError>> + Send>>>,
     root_fsnode_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
+    root_skeleton_manifest_id:
+        Shared<Pin<Box<dyn Future<Output = Result<RootSkeletonManifestId, MononokeError>> + Send>>>,
 }
 
 #[derive(Default)]
@@ -105,12 +110,22 @@ impl ChangesetContext {
             }
         };
         let root_fsnode_id = root_fsnode_id.boxed().shared();
+        let root_skeleton_manifest_id = {
+            cloned!(repo);
+            async move {
+                RootSkeletonManifestId::derive(repo.ctx(), repo.blob_repo(), id)
+                    .await
+                    .map_err(MononokeError::from)
+            }
+        };
+        let root_skeleton_manifest_id = root_skeleton_manifest_id.boxed().shared();
         Self {
             repo,
             id,
             changeset_info,
             bonsai_changeset,
             root_fsnode_id,
+            root_skeleton_manifest_id,
         }
     }
 
@@ -180,6 +195,12 @@ impl ChangesetContext {
         self.root_fsnode_id.clone().await
     }
 
+    pub(crate) async fn root_skeleton_manifest_id(
+        &self,
+    ) -> Result<RootSkeletonManifestId, MononokeError> {
+        self.root_skeleton_manifest_id.clone().await
+    }
+
     /// Query the root directory in the repository at this changeset revision.
     pub fn root(&self) -> ChangesetPathContentContext {
         ChangesetPathContentContext::new(self.clone(), None)
@@ -236,6 +257,33 @@ impl ChangesetContext {
                         changeset.clone(),
                         MononokePath::new(mpath),
                         entry,
+                    )
+                }
+            })
+            .map_err(MononokeError::from))
+    }
+
+    pub async fn paths(
+        &self,
+        paths: impl Iterator<Item = MononokePath>,
+    ) -> Result<impl Stream<Item = Result<ChangesetPathContext, MononokeError>>, MononokeError>
+    {
+        Ok(self
+            .root_skeleton_manifest_id()
+            .await?
+            .skeleton_manifest_id()
+            .find_entries(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                paths.map(|path| path.into_mpath()),
+            )
+            .map_ok({
+                let changeset = self.clone();
+                move |(mpath, entry)| {
+                    ChangesetPathContext::new(
+                        changeset.clone(),
+                        MononokePath::new(mpath),
+                        Some(entry),
                     )
                 }
             })
