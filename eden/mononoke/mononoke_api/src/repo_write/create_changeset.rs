@@ -347,8 +347,8 @@ impl RepoWriteContext {
             .flatten()
             .collect();
 
-        // Check changes that replace a directory with a file also delete
-        // all files in that directory in all parents. (3)
+        // Check changes that replace a file with a directory also delete
+        // this replaced file. (3)
         let fut_verify_prefix_files_deleted = async {
             let (stats, result) = parent_ctxs
                 .iter()
