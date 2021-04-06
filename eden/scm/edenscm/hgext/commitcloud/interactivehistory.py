@@ -44,7 +44,7 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts):
             if opts.get("all"):
                 self.limit = 0
             else:
-                self.limit = 2 * 24 * 60 * 60  # two weeks
+                self.limit = 2 * 7 * 24 * 60 * 60  # two weeks
             self.flags = []
 
         def prevversion(self):
