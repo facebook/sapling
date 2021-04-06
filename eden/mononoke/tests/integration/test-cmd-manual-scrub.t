@@ -22,7 +22,10 @@ Run a heal
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
 
 Failure time - this key will not exist
-  $ echo fake-key | manual_scrub --storage-config-name blobstore --error-keys-output errors --missing-keys-output missing --success-keys-output success
+  $ echo fake-key | manual_scrub --storage-config-name blobstore --error-keys-output errors --missing-keys-output missing --success-keys-output success 2>&1 | strip_glog
+  period, rate/s, seconds, success, missing, error, total
+  run, *, *, 0, 1, 0, 1 (glob)
+  delta, *, *, 0, 1, 0, 1 (glob)
   $ wc -l success missing errors
   0 success
   1 missing
@@ -32,7 +35,7 @@ Failure time - this key will not exist
   fake-key
 
 Success time - these keys will exist and be scrubbed
-  $ manual_scrub --storage-config-name blobstore --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
+  $ manual_scrub --storage-config-name blobstore --quiet --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
@@ -48,7 +51,7 @@ Success time - these keys will exist and be scrubbed
     3 total
 
 Do same run with compressed key output
-  $ manual_scrub --storage-config-name blobstore --keys-zstd-level=9 --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
+  $ manual_scrub --storage-config-name blobstore --quiet --keys-zstd-level=9 --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
@@ -68,7 +71,7 @@ Check that healer queue is empty
   0
 
 Scrub restores it
-  $ manual_scrub --storage-config-name blobstore  --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
+  $ manual_scrub --storage-config-name blobstore --quiet --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
   > repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   > EOF
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0 (glob)
@@ -91,7 +94,7 @@ Check that healer queue is empty
 Damage the contents of blobstore 0 to demonstrate error handling
 The error will group blobstores 1 and 2 together, and leave blobstore 0 in its own group
   $ echo "foo" > "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
-  $ manual_scrub --storage-config-name blobstore  --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
+  $ manual_scrub --storage-config-name blobstore --quiet --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
   > repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   > EOF
   Error: Scrubbing key repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0

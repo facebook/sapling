@@ -24,6 +24,7 @@ use blobstore_factory::{make_blobstore, ScrubAction};
 use cmdlib::args::{self, ArgType};
 use context::CoreContext;
 
+mod progress;
 mod scrub;
 
 use crate::scrub::scrub;
@@ -35,6 +36,7 @@ const ARG_SUCCESSFUL_KEYS: &str = "success-keys-output";
 const ARG_MISSING_KEYS: &str = "missing-keys-output";
 const ARG_ERROR_KEYS: &str = "error-keys-output";
 const ARG_ZSTD_LEVEL: &str = "keys-zstd-level";
+const ARG_QUIET: &str = "quiet";
 
 async fn bridge_to_file<W: AsyncWriteExt + Unpin>(
     mut file: W,
@@ -125,6 +127,13 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
                 .takes_value(true)
                 .required(false)
                 .help("Pass a level to Zstd compress the output files, 0 means Zstd default"),
+        )
+        .arg(
+            Arg::with_name(ARG_QUIET)
+                .long(ARG_QUIET)
+                .takes_value(false)
+                .required(false)
+                .help("Run quietly with minimal progress logging"),
         );
 
     let matches = app.get_matches();
@@ -158,6 +167,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .value_of_os(ARG_ERROR_KEYS)
         .context("No errored keys output file")?;
     let zstd_level = args::get_i32_opt(&matches, ARG_ZSTD_LEVEL);
+    let quiet = matches.is_present(ARG_QUIET);
 
     let scrub = async move {
         let blobstore = make_blobstore(
@@ -199,6 +209,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             missing,
             error,
             scheduled_max,
+            quiet,
         )
         .await
         .context("Scrub failed");

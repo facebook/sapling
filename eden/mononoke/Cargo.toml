@@ -138,6 +138,7 @@ criterion = "=0.3.1"
 cross_repo_sync = { version = "0.1.0", path = "commit_rewriting/cross_repo_sync" }
 dbbookmarks = { version = "0.1.0", path = "bookmarks/dbbookmarks" }
 deleted_files_manifest = { version = "0.1.0", path = "derived_data/deleted_files_manifest" }
+derive_more = "0.99.3"
 derived_data = { version = "0.1.0", path = "derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "derived_data/filenodes" }
 derived_data_utils = { version = "0.1.0", path = "derived_data/utils" }
