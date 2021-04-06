@@ -360,7 +360,7 @@ async fn new_development<'a>(
             .open::<SqlBonsaiHgMappingBuilder>()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?;
-        let mapping = tokio::task::spawn_blocking(move || builder.build()).await?;
+        let mapping = builder.build();
         Ok(mapping)
     };
 
@@ -495,7 +495,7 @@ async fn new_production<'a>(
     let bonsai_svnrev_mapping = sql_factory.open::<SqlBonsaiSvnrevMapping>();
     let bonsai_hg_mapping = async {
         let builder = sql_factory.open::<SqlBonsaiHgMappingBuilder>().await?;
-        let mapping = tokio::task::spawn_blocking(move || builder.build()).await?;
+        let mapping = builder.build();
         Ok(mapping)
     };
     let hg_mutation_store = async {
