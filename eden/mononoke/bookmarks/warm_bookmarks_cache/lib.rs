@@ -35,7 +35,6 @@ use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
-use mutable_counters::MutableCounters;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::{debug, info, warn};
 use stats::prelude::*;
@@ -43,7 +42,7 @@ use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 mod warmers;
-pub use warmers::{blobimport_changeset_warmer, create_derived_data_warmer};
+pub use warmers::create_derived_data_warmer;
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -157,11 +156,6 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         }
 
         Ok(())
-    }
-
-    pub fn add_blobimport_warmer(&mut self, mutable_counters: Arc<dyn MutableCounters>) {
-        let warmer = blobimport_changeset_warmer(self.ctx, mutable_counters);
-        self.warmers.push(warmer);
     }
 
     /// For use in tests to avoid having to wait for the warm bookmark cache
@@ -814,7 +808,6 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use cloned::cloned;
-    use consts::HIGHEST_IMPORTED_GEN_NUM;
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -824,9 +817,7 @@ mod tests {
     use maplit::hashmap;
     use memblob::Memblob;
     use mononoke_types::RepositoryId;
-    use mutable_counters::SqlMutableCounters;
     use sql::queries;
-    use sql_construct::SqlConstruct;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio::time;
@@ -1384,67 +1375,6 @@ mod tests {
             &bookmarks,
             &publishing_book,
             Some((new_cs_id, BookmarkKind::PullDefaultPublishing)),
-        )
-        .await?;
-
-        let _ = cancel.send(());
-
-        Ok(())
-    }
-
-    #[fbinit::test]
-    async fn test_blobimport_warmer(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let ctx = CoreContext::test_mock(fb);
-
-        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-        let mutable_counters = Arc::new(mutable_counters);
-        let warmer = blobimport_changeset_warmer(&ctx, mutable_counters.clone());
-        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        assert_eq!(false, (warmer.is_warm)(&ctx, &repo, &master_cs_id).await?);
-        let gen_num = repo
-            .get_generation_number(ctx.clone(), master_cs_id)
-            .await?
-            .ok_or_else(|| anyhow!("gen num for {} not found", master_cs_id))?;
-        mutable_counters
-            .set_counter(
-                ctx.clone(),
-                repo.get_repoid(),
-                HIGHEST_IMPORTED_GEN_NUM,
-                gen_num.value() as i64,
-                None,
-            )
-            .compat()
-            .await?;
-
-        assert_eq!(true, (warmer.is_warm)(&ctx, &repo, &master_cs_id).await?);
-
-        let bookmarks = repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map_ok(|(book, cs_id)| {
-                let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
-            })
-            .try_collect::<HashMap<_, _>>()
-            .await?;
-
-        let bookmarks = Arc::new(RwLock::new(bookmarks));
-
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
-            bookmarks.clone(),
-            receiver_cancel,
-            ctx,
-            repo,
-            Arc::new(vec![warmer]),
-            TEST_LOOP_SLEEP,
-            BookmarkUpdateDelay::Disallow,
-        );
-        wait_for_bookmark(
-            &bookmarks,
-            &BookmarkName::new("master")?,
-            Some((master_cs_id, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
 

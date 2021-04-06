@@ -43,7 +43,6 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.4.2"

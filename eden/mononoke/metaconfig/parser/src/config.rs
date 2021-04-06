@@ -222,7 +222,6 @@ fn parse_repo_config(
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
-        warm_bookmark_cache_check_blobimport,
         repo_client_knobs,
         phabricator_callsign,
         ..
@@ -343,8 +342,6 @@ fn parse_repo_config(
 
     let segmented_changelog_config = segmented_changelog_config.convert()?.unwrap_or_default();
 
-    let warm_bookmark_cache_check_blobimport =
-        warm_bookmark_cache_check_blobimport.unwrap_or(false);
     let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
 
     Ok(RepoConfig {
@@ -383,7 +380,6 @@ fn parse_repo_config(
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
-        warm_bookmark_cache_check_blobimport,
         repo_client_knobs,
         phabricator_callsign,
     })
@@ -699,7 +695,6 @@ mod test {
             hook_max_file_size=456
             hipster_acl="foo/test"
             repo_client_use_warm_bookmarks_cache=true
-            warm_bookmark_cache_check_blobimport=true
             phabricator_callsign="FBS"
 
             [wireproto_logging]
@@ -1050,7 +1045,6 @@ mod test {
                     reload_dag_save_period: None,
                     update_to_master_bookmark_period: Some(Duration::from_secs(120)),
                 },
-                warm_bookmark_cache_check_blobimport: true,
                 repo_client_knobs: RepoClientKnobs {
                     allow_short_getpack_history: true,
                 },
@@ -1111,7 +1105,6 @@ mod test {
                     reload_dag_save_period: Some(Duration::from_secs(3600)),
                     update_to_master_bookmark_period: Some(Duration::from_secs(60)),
                 },
-                warm_bookmark_cache_check_blobimport: false,
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
             },

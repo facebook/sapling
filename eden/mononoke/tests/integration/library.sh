@@ -812,12 +812,6 @@ repo_client_use_warm_bookmarks_cache=true
 CONFIG
 fi
 
-if [[ -n "${WARM_BOOKMARK_CACHE_CHECK_BLOBIMPORT:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-warm_bookmark_cache_check_blobimport=true
-CONFIG
-fi
-
 if [[ -n "${SKIPLIST_INDEX_BLOBSTORE_KEY:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 skiplist_index_blobstore_key="$SKIPLIST_INDEX_BLOBSTORE_KEY"
