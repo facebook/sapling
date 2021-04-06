@@ -292,7 +292,15 @@ class basectx(object):
         except error.LookupError:
             return ""
 
-    def match(self, pats=None, include=None, exclude=None, default="glob", badfn=None):
+    def match(
+        self,
+        pats=None,
+        include=None,
+        exclude=None,
+        default="glob",
+        badfn=None,
+        emptyalways=True,
+    ):
         r = self._repo
         return matchmod.match(
             r.root,
@@ -304,6 +312,7 @@ class basectx(object):
             auditor=r.nofsauditor,
             ctx=self,
             badfn=badfn,
+            emptyalways=emptyalways,
         )
 
     def diff(self, ctx2=None, match=None, **opts):
@@ -1726,7 +1735,15 @@ class workingctx(committablectx):
                     self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
 
-    def match(self, pats=None, include=None, exclude=None, default="glob", badfn=None):
+    def match(
+        self,
+        pats=None,
+        include=None,
+        exclude=None,
+        default="glob",
+        badfn=None,
+        emptyalways=True,
+    ):
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
@@ -1743,6 +1760,7 @@ class workingctx(committablectx):
             ctx=self,
             badfn=badfn,
             icasefs=icasefs,
+            emptyalways=emptyalways,
         )
 
     def _filtersuspectsymlink(self, files):

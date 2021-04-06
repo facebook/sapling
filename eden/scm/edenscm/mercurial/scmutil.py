@@ -657,7 +657,15 @@ def expandpats(pats):
     return ret
 
 
-def matchandpats(ctx, pats=(), opts=None, globbed=False, default="relpath", badfn=None):
+def matchandpats(
+    ctx,
+    pats=(),
+    opts=None,
+    globbed=False,
+    default="relpath",
+    badfn=None,
+    emptyalways=True,
+):
     """Return a matcher and the patterns that were used.
     The matcher will warn about bad matches, unless an alternate badfn callback
     is provided."""
@@ -674,16 +682,33 @@ def matchandpats(ctx, pats=(), opts=None, globbed=False, default="relpath", badf
     if badfn is None:
         badfn = bad
 
-    m = ctx.match(pats, opts.get("include"), opts.get("exclude"), default, badfn=badfn)
+    m = ctx.match(
+        pats,
+        opts.get("include"),
+        opts.get("exclude"),
+        default,
+        badfn=badfn,
+        emptyalways=emptyalways,
+    )
 
     if m.always():
         pats = []
     return m, pats
 
 
-def match(ctx, pats=(), opts=None, globbed=False, default="relpath", badfn=None):
+def match(
+    ctx,
+    pats=(),
+    opts=None,
+    globbed=False,
+    default="relpath",
+    badfn=None,
+    emptyalways=True,
+):
     """Return a matcher that will warn about bad matches."""
-    return matchandpats(ctx, pats, opts, globbed, default, badfn=badfn)[0]
+    return matchandpats(
+        ctx, pats, opts, globbed, default, badfn=badfn, emptyalways=emptyalways
+    )[0]
 
 
 def matchall(repo):

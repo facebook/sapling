@@ -118,6 +118,7 @@ def match(
     warn=None,
     badfn=None,
     icasefs=False,
+    emptyalways=True,
 ):
     """build an object to match a set of file patterns
 
@@ -133,6 +134,8 @@ def match(
     badfn - optional bad() callback for this matcher instead of the default
     icasefs - make a matcher for wdir on case insensitive filesystems, which
         normalizes the given patterns to the case in the filesystem
+    emptyalways - decides what matcher to choose if pattern is empty:
+        alwaysmatcher if True, nevermatcher if False
 
     a pattern is one of:
     'glob:<glob>' - a glob relative to cwd
@@ -187,7 +190,10 @@ def match(
     else:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably using nevermatcher).
-        m = alwaysmatcher(root, cwd, badfn)
+        if emptyalways or include:
+            m = alwaysmatcher(root, cwd, badfn)
+        else:
+            m = nevermatcher(root, cwd, badfn)
 
     if include:
         kindpats = normalize(include, "glob", root, cwd, auditor, warn)
