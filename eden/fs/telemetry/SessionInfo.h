@@ -17,6 +17,8 @@ namespace eden {
 struct SessionInfo {
   std::string username;
   std::string hostname;
+  // TODO(nga): sandcastle is Facebook-specific, should not be used in
+  // opensource version.
   std::optional<uint64_t> sandcastleInstanceId;
   std::string os;
   std::string osVersion;
@@ -36,6 +38,8 @@ std::string getHostname();
  * Return the best guess of sandcastle instance id from the environment,
  * or return empty if sandcastle instance id is unknown.
  */
+// TODO(nga): sandcastle is Facebook-specific, should not be used in
+// opensource version.
 std::optional<uint64_t> getSandcastleInstanceId();
 
 } // namespace eden

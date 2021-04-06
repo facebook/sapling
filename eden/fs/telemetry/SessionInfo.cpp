@@ -89,13 +89,13 @@ std::string getHostname() {
 std::optional<uint64_t> getSandcastleInstanceId() {
   auto str = std::getenv("SANDCASTLE_INSTANCE_ID");
   if (!str) {
-    return std::optional<uint64_t>{};
+    return std::nullopt;
   }
   try {
     uint64_t id = folly::to<uint64_t>(str);
     return std::make_optional(id);
   } catch (const folly::ConversionError&) {
-    return std::optional<uint64_t>{};
+    return std::nullopt;
   }
 }
 
