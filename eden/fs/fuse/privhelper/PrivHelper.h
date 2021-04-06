@@ -72,7 +72,8 @@ class PrivHelper {
       folly::StringPiece mountPath,
       uint16_t mountdPort,
       uint16_t nfsdPort,
-      bool readOnly) = 0;
+      bool readOnly,
+      uint32_t iosize) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse unmount.

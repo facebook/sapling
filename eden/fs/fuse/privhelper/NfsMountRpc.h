@@ -32,7 +32,7 @@ struct nfs_flag_set {
   uint32_t value_length;
   uint32_t value; /* what each flag is set to */
 };
-EDEN_XDR_SERDE_DECL(nfs_flag_set, mask_length, mask, value);
+EDEN_XDR_SERDE_DECL(nfs_flag_set, mask_length, mask, value_length, value);
 
 enum class nfs_lock_mode {
   NFS_LOCK_MODE_ENABLED = 0,

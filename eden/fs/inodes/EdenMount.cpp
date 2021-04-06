@@ -1323,33 +1323,44 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
             getConfig()->getMountProtocol() == MountProtocol::NFS) {
           auto nfsServer = serverState_->getNfsServer();
 
+          auto iosize = serverState_->getReloadableConfig()
+                            .getEdenConfig()
+                            ->nfsIoSize.getValue();
+
           // Make sure that we are running on the EventBase while registering
           // the mount point.
           auto fut =
-              via(nfsServer->getEventBase(), [this, mountPath, nfsServer]() {
-                return nfsServer->registerMount(
-                    mountPath,
-                    getRootInode()->getNodeId(),
-                    EdenDispatcherFactory::makeNfsDispatcher(this),
-                    &getStraceLogger(),
-                    serverState_->getProcessNameCache(),
-                    std::chrono::duration_cast<folly::Duration>(
-                        serverState_->getReloadableConfig()
-                            .getEdenConfig()
-                            ->nfsRequestTimeout.getValue()),
-                    serverState_->getNotifications(),
-                    config_->getCaseSensitive());
-              });
+              via(nfsServer->getEventBase(),
+                  [this, mountPath, nfsServer, iosize]() {
+                    return nfsServer->registerMount(
+                        mountPath,
+                        getRootInode()->getNodeId(),
+                        EdenDispatcherFactory::makeNfsDispatcher(this),
+                        &getStraceLogger(),
+                        serverState_->getProcessNameCache(),
+                        std::chrono::duration_cast<folly::Duration>(
+                            serverState_->getReloadableConfig()
+                                .getEdenConfig()
+                                ->nfsRequestTimeout.getValue()),
+                        serverState_->getNotifications(),
+                        config_->getCaseSensitive(),
+                        iosize);
+                  });
           return std::move(fut).thenValue(
               [this,
                readOnly,
+               iosize,
                mountPromise = std::move(mountPromise),
                mountPath = std::move(mountPath)](
                   NfsServer::NfsMountInfo mountInfo) mutable {
                 auto [channel, mountdPort, nfsdPort] = std::move(mountInfo);
                 return serverState_->getPrivHelper()
                     ->nfsMount(
-                        mountPath.stringPiece(), mountdPort, nfsdPort, readOnly)
+                        mountPath.stringPiece(),
+                        mountdPort,
+                        nfsdPort,
+                        readOnly,
+                        iosize)
                     .thenTry([this,
                               mountPromise = std::move(mountPromise),
                               channel = std::move(channel)](

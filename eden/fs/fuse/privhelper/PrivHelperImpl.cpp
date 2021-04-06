@@ -101,7 +101,8 @@ class PrivHelperClientImpl : public PrivHelper,
       folly::StringPiece mountPath,
       uint16_t mountdPort,
       uint16_t nfsdPort,
-      bool readOnly) override;
+      bool readOnly,
+      uint32_t iosize) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
@@ -369,10 +370,11 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::StringPiece mountPath,
     uint16_t mountdPort,
     uint16_t nfsdPort,
-    bool readOnly) {
+    bool readOnly,
+    uint32_t iosize) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeMountNfsRequest(
-      xid, mountPath, mountdPort, nfsdPort, readOnly);
+      xid, mountPath, mountdPort, nfsdPort, readOnly, iosize);
   return sendAndRecv(xid, std::move(request))
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(

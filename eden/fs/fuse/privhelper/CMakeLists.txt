@@ -15,6 +15,8 @@ target_link_libraries(
   PUBLIC
     eden_utils
     Folly::folly
+  PRIVATE
+    eden_nfs_xdr
 )
 
 if (APPLE)

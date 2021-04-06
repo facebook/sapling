@@ -518,6 +518,11 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Buffer size for read and writes requests. Default to 1 MiB.
+   */
+  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
+
+  /**
    * Kill switch for the prefetch profiles feature.
    */
   ConfigSetting<bool> enablePrefetchProfiles{

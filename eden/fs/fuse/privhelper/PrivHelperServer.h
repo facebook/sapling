@@ -104,7 +104,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       std::string mountPath,
       uint16_t mountdPort,
       uint16_t nfsdPort,
-      bool readOnly);
+      bool readOnly,
+      uint32_t iosize);
   virtual void unmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);

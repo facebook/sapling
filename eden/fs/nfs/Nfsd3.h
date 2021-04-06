@@ -52,7 +52,8 @@ class Nfsd3 {
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
-      bool caseSensitive);
+      bool caseSensitive,
+      uint32_t iosize);
 
   ~Nfsd3();
 

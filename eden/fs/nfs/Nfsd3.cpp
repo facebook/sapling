@@ -27,10 +27,12 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   explicit Nfsd3ServerProcessor(
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      bool caseSensitive)
+      bool caseSensitive,
+      uint32_t iosize)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
-        caseSensitive_(caseSensitive) {}
+        caseSensitive_(caseSensitive),
+        iosize_(iosize) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -96,6 +98,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   std::unique_ptr<NfsDispatcher> dispatcher_;
   const folly::Logger* straceLogger_;
   bool caseSensitive_;
+  uint32_t iosize_;
 };
 
 /**
@@ -1145,16 +1148,15 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
   FSINFO3res res{
       {{nfsstat3::NFS3_OK,
         FSINFO3resok{
-            // TODO(xavierd): fill the post_op_attr and check the values chosen
-            // randomly below.
+            // TODO(xavierd): fill the post_op_attr.
             post_op_attr{},
-            /*rtmax=*/1024 * 1024,
-            /*rtpref=*/1024 * 1024,
+            /*rtmax=*/iosize_,
+            /*rtpref=*/iosize_,
             /*rtmult=*/1,
-            /*wtmax=*/1024 * 1024,
-            /*wtpref=*/1024 * 1024,
+            /*wtmax=*/iosize_,
+            /*wtpref=*/iosize_,
             /*wtmult=*/1,
-            /*dtpref=*/1024 * 1024,
+            /*dtpref=*/iosize_,
             /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
             nfstime3{0, 1},
             /*properties*/ FSF3_SYMLINK | FSF3_HOMOGENEOUS | FSF3_CANSETTIME,
@@ -1517,12 +1519,14 @@ Nfsd3::Nfsd3(
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/,
-    bool caseSensitive)
+    bool caseSensitive,
+    uint32_t iosize)
     : server_(
           std::make_shared<Nfsd3ServerProcessor>(
               std::move(dispatcher),
               straceLogger,
-              caseSensitive),
+              caseSensitive,
+              iosize),
           evb,
           std::move(threadPool)),
       processAccessLog_(std::move(processNameCache)) {

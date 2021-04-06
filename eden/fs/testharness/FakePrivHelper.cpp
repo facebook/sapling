@@ -96,7 +96,8 @@ Future<Unit> FakePrivHelper::nfsMount(
     folly::StringPiece /*mountPath*/,
     uint16_t /*mountdPort*/,
     uint16_t /*nfsdPort*/,
-    bool /*readOnly*/) {
+    bool /*readOnly*/,
+    uint32_t /*iosize*/) {
   return makeFuture<Unit>(
       runtime_error("FakePrivHelper::nfsMount() not implemented"));
 }

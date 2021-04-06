@@ -10,7 +10,6 @@
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <eden/fs/utils/PathFuncs.h>
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/Expected.h>
@@ -34,8 +33,9 @@
 #include <unistd.h>
 #include <chrono>
 #include <set>
-
+#include "eden/fs/fuse/privhelper/NfsMountRpc.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/utils/PathFuncs.h"
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual
 #include <IOKit/kext/KextManager.h> // @manual
@@ -562,25 +562,103 @@ void PrivHelperServer::nfsMount(
     std::string mountPath,
     uint16_t mountdPort,
     uint16_t nfsdPort,
-    bool readOnly) {
+    bool readOnly,
+    uint32_t iosize) {
 #ifdef __APPLE__
-  // TODO(xavierd): build the NFS mount args found in:
-  // https://opensource.apple.com/source/NFS/NFS-150.40.3/mount_nfs/nfs_sys_prot.x.auto.html
-  // Or invoke mount_nfs directly.
-  (void)mountPath;
-  (void)mountdPort;
-  (void)nfsdPort;
-  (void)readOnly;
-  throw std::runtime_error("NFS is not yet supported on macOS");
+  // Hold the attribute list set below.
+  auto attrsBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender attrSer{&attrsBuf, 1024};
+
+  // Holds the NFS_MATTR_* flags. Each set flag will have a corresponding
+  // structure serialized in the attribute list, the order of serialization
+  // must follow the increasing order of their associated flags.
+  uint32_t mattrFlags = 0;
+
+  mattrFlags |= NFS_MATTR_FLAGS;
+  nfs_mattr_flags flags{
+      NFS_MATTR_BITMAP_LEN,
+      NFS_MFLAG_RESVPORT | NFS_MFLAG_RDIRPLUS | NFS_MFLAG_SOFT | NFS_MFLAG_INTR,
+      NFS_MATTR_BITMAP_LEN,
+      NFS_MFLAG_SOFT | NFS_MFLAG_INTR};
+  XdrTrait<nfs_mattr_flags>::serialize(attrSer, flags);
+
+  mattrFlags |= NFS_MATTR_NFS_VERSION;
+  XdrTrait<nfs_mattr_nfs_version>::serialize(attrSer, 3);
+
+  mattrFlags |= NFS_MATTR_READ_SIZE;
+  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, iosize);
+
+  mattrFlags |= NFS_MATTR_WRITE_SIZE;
+  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, iosize);
+
+  mattrFlags |= NFS_MATTR_LOCK_MODE;
+  XdrTrait<nfs_mattr_lock_mode>::serialize(
+      attrSer, nfs_lock_mode::NFS_LOCK_MODE_LOCAL);
+
+  mattrFlags |= NFS_MATTR_SOCKET_TYPE;
+  nfs_mattr_socket_type socketType{"tcp4"};
+  XdrTrait<nfs_mattr_socket_type>::serialize(attrSer, socketType);
+
+  mattrFlags |= NFS_MATTR_NFS_PORT;
+  XdrTrait<nfs_mattr_nfs_port>::serialize(attrSer, nfsdPort);
+
+  mattrFlags |= NFS_MATTR_MOUNT_PORT;
+  XdrTrait<nfs_mattr_mount_port>::serialize(attrSer, mountdPort);
+
+  mattrFlags |= NFS_MATTR_FS_LOCATIONS;
+  AbsolutePathPiece path{mountPath};
+  auto componentIterator = AbsolutePathPiece{mountPath}.components();
+  std::vector<std::string> components;
+  for (const auto component : componentIterator) {
+    components.push_back(std::string(component.value()));
+  }
+  nfs_fs_server server{"127.0.0.1", {"127.0.0.1"}, std::nullopt};
+  nfs_fs_location location{{server}, components};
+  nfs_mattr_fs_locations locations{{location}, std::nullopt};
+  XdrTrait<nfs_mattr_fs_locations>::serialize(attrSer, locations);
+
+  mattrFlags |= NFS_MATTR_MNTFLAGS;
+  // These are non-NFS specific and will be also passed directly to mount(2)
+  nfs_mattr_mntflags mountFlags = MNT_NOSUID;
+  if (readOnly) {
+    mountFlags |= MNT_RDONLY;
+  }
+  XdrTrait<nfs_mattr_mntflags>::serialize(attrSer, mountFlags);
+
+  auto mountBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
+  folly::io::QueueAppender ser(&mountBuf, 1024);
+
+  nfs_mattr mattr{NFS_MATTR_BITMAP_LEN, mattrFlags, attrsBuf.move()};
+
+  nfs_mount_args args{
+      /*args_version*/ 88,
+      /*args_length*/ 0,
+      /*xdr_args_version*/ NFS_XDRARGS_VERSION_0,
+      /*nfs_mount_attrs*/ std::move(mattr),
+  };
+
+  auto argsLength = XdrTrait<nfs_mount_args>::serializedSize(args);
+  args.args_length = folly::to_narrow(argsLength);
+
+  XdrTrait<nfs_mount_args>::serialize(ser, args);
+
+  auto buf = mountBuf.move();
+  buf->coalesce();
+
+  int rc = mount("nfs", mountPath.c_str(), mountFlags, (void*)buf->data());
+  checkUnixError(rc, "failed to mount");
+
 #else
   // Prepare the flags and options to pass to mount(2).
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
   // TODO(xavierd): remove nordirplus as this will likely improve performance.
   auto mountOpts = fmt::format(
-      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus,soft,retrans=0",
+      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus,soft,retrans=0,rsize={},wsize={}",
       nfsdPort,
-      mountdPort);
+      mountdPort,
+      iosize,
+      iosize);
 
   // The mount flags.
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
@@ -683,11 +761,12 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   string mountPath;
   uint16_t mountdPort, nfsdPort;
   bool readOnly;
+  uint32_t iosize;
   PrivHelperConn::parseMountNfsRequest(
-      cursor, mountPath, mountdPort, nfsdPort, readOnly);
+      cursor, mountPath, mountdPort, nfsdPort, readOnly, iosize);
   XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
 
-  nfsMount(mountPath, mountdPort, nfsdPort, readOnly);
+  nfsMount(mountPath, mountdPort, nfsdPort, readOnly, iosize);
   mountPoints_.insert(mountPath);
 
   return makeResponse();
