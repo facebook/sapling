@@ -67,7 +67,7 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(cs.id(), ChangesetId::from_str(expected_hash)?);
 
     let content = cs
-        .path("TEST_CREATE")?
+        .path_with_content("TEST_CREATE")?
         .file()
         .await?
         .expect("file should exist")

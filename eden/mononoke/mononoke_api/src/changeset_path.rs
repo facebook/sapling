@@ -27,10 +27,7 @@ use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use manifest::{Entry, ManifestOps};
-use mononoke_types::{
-    fsnode::FsnodeFile, Blame, ChangesetId, FileType, FileUnodeId, FsnodeId, Generation,
-    ManifestUnodeId,
-};
+use mononoke_types::{fsnode::FsnodeFile, Blame, ChangesetId, FileType, FsnodeId, Generation};
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
 use std::collections::HashMap;
@@ -73,25 +70,23 @@ pub struct UnifiedDiff {
 }
 
 type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
-type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 
-/// A path within a changeset.
+/// Context that makes it cheap to fetch content info about a path within a changeset.
 ///
-/// A ChangesetPathContext may represent a file, a directory, a path where a
+/// A ChangesetPathContentContext may represent a file, a directory, a path where a
 /// file or directory has been deleted, or a path where nothing ever existed.
 #[derive(Clone)]
-pub struct ChangesetPathContext {
+pub struct ChangesetPathContentContext {
     changeset: ChangesetContext,
     path: MononokePath,
     fsnode_id: Shared<Pin<Box<dyn Future<Output = FsnodeResult> + Send>>>,
-    unode_id: Shared<Pin<Box<dyn Future<Output = UnodeResult> + Send>>>,
 }
 
-impl fmt::Debug for ChangesetPathContext {
+impl fmt::Debug for ChangesetPathContentContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "ChangesetPathContext(repo={:?} id={:?} path={:?})",
+            "ChangesetPathContentContext(repo={:?} id={:?} path={:?})",
             self.repo().name(),
             self.changeset().id(),
             self.path()
@@ -99,7 +94,25 @@ impl fmt::Debug for ChangesetPathContext {
     }
 }
 
-impl ChangesetPathContext {
+/// Context that makes it cheap to fetch history info about a path within a changeset.
+pub struct ChangesetPathHistoryContext {
+    changeset: ChangesetContext,
+    path: MononokePath,
+}
+
+impl fmt::Debug for ChangesetPathHistoryContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ChangesetPathHistoryContext(repo={:?} id={:?} path={:?})",
+            self.repo().name(),
+            self.changeset().id(),
+            self.path()
+        )
+    }
+}
+
+impl ChangesetPathContentContext {
     fn new_impl(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
@@ -127,31 +140,10 @@ impl ChangesetPathContext {
             .boxed()
         };
         let fsnode_id = fsnode_id.shared();
-        let unode_id = {
-            cloned!(changeset, path);
-            async move {
-                let blobstore = changeset.repo().blob_repo().get_blobstore();
-                let ctx = changeset.ctx().clone();
-                let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
-                if let Some(mpath) = path.into() {
-                    root_unode_manifest_id
-                        .manifest_unode_id()
-                        .find_entry(ctx.clone(), blobstore.clone(), Some(mpath))
-                        .await
-                        .map_err(MononokeError::from)
-                } else {
-                    Ok(Some(Entry::Tree(
-                        root_unode_manifest_id.manifest_unode_id().clone(),
-                    )))
-                }
-            }
-        };
-        let unode_id = unode_id.boxed().shared();
         Self {
             changeset,
             path,
             fsnode_id,
-            unode_id,
         }
     }
 
@@ -184,11 +176,6 @@ impl ChangesetPathContext {
 
     async fn fsnode_id(&self) -> Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError> {
         self.fsnode_id.clone().await
-    }
-
-    #[allow(dead_code)]
-    async fn unode_id(&self) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError> {
-        self.unode_id.clone().await
     }
 
     /// Returns `true` if the path exists (as a file or directory) in this commit.
@@ -259,6 +246,29 @@ impl ChangesetPathContext {
             _ => PathEntry::NotPresent,
         };
         Ok(entry)
+    }
+}
+
+impl ChangesetPathHistoryContext {
+    pub fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+        let path = path.into();
+        Self { changeset, path }
+    }
+
+
+    /// The `RepoContext` for this query.
+    pub fn repo(&self) -> &RepoContext {
+        &self.changeset.repo()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext {
+        &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MononokePath {
+        &self.path
     }
 
     pub async fn blame(&self) -> Result<(Bytes, Blame), MononokeError> {
@@ -551,15 +561,15 @@ pub enum UnifiedDiffMode {
 /// generates a placeholder diff that says that files differ.
 pub async fn unified_diff(
     // The diff applied to old_path with produce new_path
-    old_path: Option<&ChangesetPathContext>,
-    new_path: Option<&ChangesetPathContext>,
+    old_path: Option<&ChangesetPathContentContext>,
+    new_path: Option<&ChangesetPathContentContext>,
     copy_info: CopyInfo,
     context_lines: usize,
     mode: UnifiedDiffMode,
 ) -> Result<UnifiedDiff, MononokeError> {
     // Helper for getting file information.
     async fn get_file_data(
-        path: Option<&ChangesetPathContext>,
+        path: Option<&ChangesetPathContentContext>,
         mode: UnifiedDiffMode,
     ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
         match path {

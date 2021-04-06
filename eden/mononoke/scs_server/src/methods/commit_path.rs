@@ -35,7 +35,7 @@ impl SourceControlServiceImpl {
         _params: thrift::CommitPathInfoParams,
     ) -> Result<thrift::CommitPathInfoResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path(&commit_path.path)?;
+        let path = changeset.path_with_content(&commit_path.path)?;
         let response = match path.entry().await? {
             PathEntry::NotPresent => thrift::CommitPathInfoResponse {
                 exists: false,
@@ -93,7 +93,7 @@ impl SourceControlServiceImpl {
         }
 
         let result = changeset
-            .paths(paths.into_iter())
+            .paths_with_content(paths.into_iter())
             .await?
             .map_ok(|context| async move {
                 let context_path = context.path().to_string();
@@ -166,7 +166,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitPathBlameParams,
     ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path(&commit_path.path)?;
+        let path = changeset.path_with_history(&commit_path.path)?;
 
         let options = params.format_options.unwrap_or_else(|| {
             btreeset! { thrift::BlameFormatOption::INCLUDE_CONTENTS }
@@ -306,7 +306,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitPathHistoryParams,
     ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path(&commit_path.path)?;
+        let path = changeset.path_with_history(&commit_path.path)?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {

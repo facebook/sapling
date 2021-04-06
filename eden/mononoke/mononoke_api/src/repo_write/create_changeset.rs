@@ -53,7 +53,11 @@ impl CreateCopyInfo {
                 parents.len()
             ))
         })?;
-        if !parent_ctx.path(self.path.clone())?.is_file().await? {
+        if !parent_ctx
+            .path_with_content(self.path.clone())?
+            .is_file()
+            .await?
+        {
             return Err(MononokeError::InvalidRequest(String::from(
                 "Copy-from path must reference a file",
             )));
@@ -164,7 +168,7 @@ async fn verify_deleted_files_existed_in_a_parent(
         files: &'a BTreeSet<MononokePath>,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + 'a, MononokeError> {
         Ok(parent_ctx
-            .paths(files.iter().cloned())
+            .paths_with_content(files.iter().cloned())
             .await?
             .try_filter_map(|changeset_path| async move {
                 if changeset_path.is_file().await? {
@@ -224,7 +228,7 @@ async fn verify_prefix_files_deleted(
     path_changes: &PathTree<CreateChangeType>,
 ) -> Result<(), MononokeError> {
     parent_ctx
-        .paths(prefix_paths.iter().cloned())
+        .paths_with_content(prefix_paths.iter().cloned())
         .await?
         .try_for_each(|prefix_path| async move {
             if prefix_path.is_file().await?

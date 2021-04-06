@@ -13,7 +13,7 @@ use futures::try_join;
 use itertools::Itertools;
 use maplit::btreemap;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetPathContext, FileMetadata, FileType,
+    ChangesetContext, ChangesetId, ChangesetPathContentContext, FileMetadata, FileType,
     HeaderlessUnifiedDiff, MononokeError, PushrebaseOutcome, RepoContext, TreeEntry, TreeId,
     TreeSummary, UnifiedDiff,
 };
@@ -141,7 +141,7 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
+impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContentContext {
     async fn into_response(self) -> Result<Option<thrift::FilePathInfo>, errors::ServiceError> {
         let (meta, type_) = try_join!(
             async {
@@ -166,7 +166,7 @@ impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContext {
+impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContentContext {
     async fn into_response(self) -> Result<Option<thrift::TreePathInfo>, errors::ServiceError> {
         let tree = self.tree().await?;
         let summary = match tree {

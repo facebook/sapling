@@ -186,7 +186,7 @@ impl SourceControlServiceImpl {
             .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
             .await?;
 
-        // Resolve the path into ChangesetPathContext
+        // Resolve the path into ChangesetPathContentContext
         // To make it more efficient we do a batch request
         // to resolve all paths into path contexts
         let mut base_commit_paths = vec![];
@@ -226,8 +226,8 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
 
         let (base_commit_paths, other_commit_paths) = try_join!(
-            base_commit.paths(base_commit_paths.into_iter()),
-            other_commit.paths(other_commit_paths.into_iter())
+            base_commit.paths_with_content(base_commit_paths.into_iter()),
+            other_commit.paths_with_content(other_commit_paths.into_iter())
         )?;
         let (base_commit_contexts, other_commit_contexts) = try_join!(
             base_commit_paths

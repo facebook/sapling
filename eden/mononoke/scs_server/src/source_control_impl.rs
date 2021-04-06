@@ -295,7 +295,7 @@ impl SourceControlServiceImpl {
         let (repo, tree) = match tree {
             thrift::TreeSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-                let path = changeset.path(&commit_path.path)?;
+                let path = changeset.path_with_content(&commit_path.path)?;
                 (repo, path.tree().await?)
             }
             thrift::TreeSpecifier::by_id(tree_id) => {
@@ -330,7 +330,7 @@ impl SourceControlServiceImpl {
         let (repo, file) = match file {
             thrift::FileSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-                let path = changeset.path(&commit_path.path)?;
+                let path = changeset.path_with_content(&commit_path.path)?;
                 (repo, path.file().await?)
             }
             thrift::FileSpecifier::by_id(file_id) => {

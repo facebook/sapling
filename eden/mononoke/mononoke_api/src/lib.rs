@@ -45,7 +45,7 @@ pub use crate::changeset::{
     ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, Generation,
 };
 pub use crate::changeset_path::{
-    unified_diff, ChangesetPathContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,
+    unified_diff, ChangesetPathContentContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,
     UnifiedDiff, UnifiedDiffMode,
 };
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;

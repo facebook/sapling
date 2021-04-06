@@ -49,8 +49,16 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
         .expect("changeset should exist");
 
     // Compare two regular files
-    let b_file = b.path("file")?.file().await?.expect("should be a file");
-    let c_file = c.path("file")?.file().await?.expect("should be a file");
+    let b_file = b
+        .path_with_content("file")?
+        .file()
+        .await?
+        .expect("should be a file");
+    let c_file = c
+        .path_with_content("file")?
+        .file()
+        .await?
+        .expect("should be a file");
     let diff = headerless_unified_diff(&b_file, &c_file, 3).await?;
     assert_eq!(
         std::str::from_utf8(&diff.raw_diff)?,
@@ -65,8 +73,16 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
     assert!(!diff.is_binary);
 
     // Compare two binary files
-    let b_bin = b.path("bin")?.file().await?.expect("should be a file");
-    let c_bin = c.path("bin")?.file().await?.expect("should be a file");
+    let b_bin = b
+        .path_with_content("bin")?
+        .file()
+        .await?
+        .expect("should be a file");
+    let c_bin = c
+        .path_with_content("bin")?
+        .file()
+        .await?
+        .expect("should be a file");
     let diff = headerless_unified_diff(&b_bin, &c_bin, 3).await?;
     assert_eq!(std::str::from_utf8(&diff.raw_diff)?, "Binary files differ");
     assert!(diff.is_binary);

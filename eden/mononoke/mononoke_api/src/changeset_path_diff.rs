@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::changeset_path::ChangesetPathContext;
+use crate::changeset_path::ChangesetPathContentContext;
 
 /// A path difference between two commits.
 ///
@@ -13,9 +13,9 @@ use crate::changeset_path::ChangesetPathContext;
 /// files in the commits.
 #[derive(Clone, Debug)]
 pub enum ChangesetPathDiffContext {
-    Added(ChangesetPathContext),
-    Removed(ChangesetPathContext),
-    Changed(ChangesetPathContext, ChangesetPathContext),
-    Copied(ChangesetPathContext, ChangesetPathContext),
-    Moved(ChangesetPathContext, ChangesetPathContext),
+    Added(ChangesetPathContentContext),
+    Removed(ChangesetPathContentContext),
+    Changed(ChangesetPathContentContext, ChangesetPathContentContext),
+    Copied(ChangesetPathContentContext, ChangesetPathContentContext),
+    Moved(ChangesetPathContentContext, ChangesetPathContentContext),
 }

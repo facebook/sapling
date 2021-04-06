@@ -29,9 +29,8 @@ pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
 use reachabilityindex::ReachabilityIndex;
 use sorted_vector_map::SortedVectorMap;
-use unodes::RootUnodeManifestId;
 
-use crate::changeset_path::ChangesetPathContext;
+use crate::changeset_path::{ChangesetPathContentContext, ChangesetPathHistoryContext};
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::path::MononokePath;
@@ -48,8 +47,6 @@ pub struct ChangesetContext {
         Shared<Pin<Box<dyn Future<Output = Result<ChangesetInfo, MononokeError>> + Send>>>,
     root_fsnode_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
-    root_unode_manifest_id:
-        Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
 }
 
 #[derive(Default)]
@@ -108,22 +105,12 @@ impl ChangesetContext {
             }
         };
         let root_fsnode_id = root_fsnode_id.boxed().shared();
-        let root_unode_manifest_id = {
-            cloned!(repo);
-            async move {
-                RootUnodeManifestId::derive(repo.ctx(), repo.blob_repo(), id)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let root_unode_manifest_id = root_unode_manifest_id.boxed().shared();
         Self {
             repo,
             id,
             changeset_info,
             bonsai_changeset,
             root_fsnode_id,
-            root_unode_manifest_id,
         }
     }
 
@@ -193,31 +180,45 @@ impl ChangesetContext {
         self.root_fsnode_id.clone().await
     }
 
-    pub(crate) async fn root_unode_manifest_id(
-        &self,
-    ) -> Result<RootUnodeManifestId, MononokeError> {
-        self.root_unode_manifest_id.clone().await
-    }
-
     /// Query the root directory in the repository at this changeset revision.
-    pub fn root(&self) -> ChangesetPathContext {
-        ChangesetPathContext::new(self.clone(), None)
+    pub fn root(&self) -> ChangesetPathContentContext {
+        ChangesetPathContentContext::new(self.clone(), None)
     }
 
     /// Query a path within the respository. This could be a file or a
     /// directory.
-    pub fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
+    pub fn path_with_content<P>(
+        &self,
+        path: P,
+    ) -> Result<ChangesetPathContentContext, MononokeError>
     where
         P: TryInto<MononokePath>,
         MononokeError: From<P::Error>,
     {
-        Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
+        Ok(ChangesetPathContentContext::new(
+            self.clone(),
+            path.try_into()?,
+        ))
     }
 
-    pub async fn paths(
+    pub fn path_with_history<P>(
+        &self,
+        path: P,
+    ) -> Result<ChangesetPathHistoryContext, MononokeError>
+    where
+        P: TryInto<MononokePath>,
+        MononokeError: From<P::Error>,
+    {
+        Ok(ChangesetPathHistoryContext::new(
+            self.clone(),
+            path.try_into()?,
+        ))
+    }
+
+    pub async fn paths_with_content(
         &self,
         paths: impl Iterator<Item = MononokePath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathContext, MononokeError>>, MononokeError>
+    ) -> Result<impl Stream<Item = Result<ChangesetPathContentContext, MononokeError>>, MononokeError>
     {
         Ok(self
             .root_fsnode_id()
@@ -231,7 +232,7 @@ impl ChangesetContext {
             .map_ok({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
-                    ChangesetPathContext::new_with_fsnode_entry(
+                    ChangesetPathContentContext::new_with_fsnode_entry(
                         changeset.clone(),
                         MononokePath::new(mpath),
                         entry,
@@ -499,12 +500,12 @@ impl ChangesetContext {
                             if copied_paths.contains(from_path) {
                                 // If the source still exists in the current commit it was a copy.
                                 Some(ChangesetPathDiffContext::Copied(
-                                    ChangesetPathContext::new_with_fsnode_entry(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
                                         path.clone(),
                                         entry,
                                     ),
-                                    ChangesetPathContext::new_with_fsnode_entry(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
                                         other.clone(),
                                         (**from_path).clone(),
                                         *from_entry,
@@ -513,12 +514,12 @@ impl ChangesetContext {
                             } else {
                                 // If it doesn't it was a move
                                 Some(ChangesetPathDiffContext::Moved(
-                                    ChangesetPathContext::new_with_fsnode_entry(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
                                         path.clone(),
                                         entry,
                                     ),
-                                    ChangesetPathContext::new_with_fsnode_entry(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
                                         other.clone(),
                                         (**from_path).clone(),
                                         *from_entry,
@@ -527,7 +528,7 @@ impl ChangesetContext {
                             }
                         } else {
                             Some(ChangesetPathDiffContext::Added(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     self.clone(),
                                     path,
                                     entry,
@@ -545,7 +546,7 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     other.clone(),
                                     path,
                                     entry,
@@ -564,12 +565,12 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     self.clone(),
                                     path.clone(),
                                     to_entry,
                                 ),
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     other.clone(),
                                     path,
                                     from_entry,
@@ -584,7 +585,7 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Added(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     self.clone(),
                                     path,
                                     entry,
@@ -599,7 +600,7 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     self.clone(),
                                     path,
                                     entry,
@@ -618,12 +619,12 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     self.clone(),
                                     path.clone(),
                                     to_entry,
                                 ),
-                                ChangesetPathContext::new_with_fsnode_entry(
+                                ChangesetPathContentContext::new_with_fsnode_entry(
                                     other.clone(),
                                     path,
                                     from_entry,

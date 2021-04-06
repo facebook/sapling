@@ -55,7 +55,7 @@ impl fmt::Debug for FileContext {
 /// places in the repository, this context represents all of them. As such,
 /// it's not possible to go back to the commit or path from a `FileContext`.
 ///
-/// See `ChangesetPathContext` if you need to refer to a specific file in a
+/// See `ChangesetPathContentContext` if you need to refer to a specific file in a
 /// specific commit.
 impl FileContext {
     /// Create a new FileContext.  The file must exist in the repository.
