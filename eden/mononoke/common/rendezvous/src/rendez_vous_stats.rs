@@ -17,7 +17,7 @@ define_stats_struct! {
     keys_dispatched: timeseries("keys_dispatched"; Average, Sum),
     keys_deduplicated: timeseries("keys_deduplicated"; Sum),
 
-    fetch_completion_time_ms: histogram(1, 0, 10000, Average; P 50; P 95; P 99),
+    fetch_completion_time_ms: histogram(1, 0, 50, Average; P 50; P 95; P 99),
 
     inflight: singleton_counter("inflight"),
 }
