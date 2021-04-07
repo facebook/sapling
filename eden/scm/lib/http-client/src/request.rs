@@ -417,9 +417,17 @@ impl Request {
 
         // Spawn the request as another task, which will block
         // the worker it is scheduled on until completion.
-        let _ = tokio::task::spawn_blocking(move || request.send());
+        let io_task = tokio::task::spawn_blocking(move || request.send());
 
-        AsyncResponse::new(streams).await
+        match AsyncResponse::new(streams).await {
+            Ok(res) => Ok(res),
+            // If the request was dropped before completion, this likely means
+            // that configuring or sending the request failed. The IO task will
+            // likely return a more meaningful error message, so return that
+            // instead of a generic "this request was dropped" error.
+            e @ Err(HttpClientError::RequestDropped(_)) => io_task.await?.and(e),
+            Err(e) => Err(e),
+        }
     }
 
     /// Turn this `Request` into a streaming request. The
