@@ -1758,7 +1758,10 @@ impl HgCommands for RepoClient {
                                 let response = if bypass_readonly {
                                     unbundle_future.await
                                 } else {
-                                    let repo_lock = check_lock_repo(mononoke_repo);
+                                    let repo_lock =
+                                        tokio::task::spawn(check_lock_repo(mononoke_repo))
+                                            .map_err(|e| BundleResolverError::Error(e.into()))
+                                            .flatten_err();
                                     pin_mut!(repo_lock, unbundle_future);
                                     select(repo_lock, unbundle_future)
                                         .then(|either| async move {
