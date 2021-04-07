@@ -21,7 +21,7 @@ mod stream;
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
 use anyhow::{Context as _, Result};
-use blobrepo_factory::ReadOnlyStorage;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
