@@ -46,6 +46,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 readonlyblob = { version = "0.1.0", path = "../../blobstore/readonlyblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
+repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }

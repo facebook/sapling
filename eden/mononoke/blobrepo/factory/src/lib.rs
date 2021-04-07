@@ -68,14 +68,7 @@ use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, PutBehaviour, ReadOnlyStorage};
 
-#[derive(Copy, Clone, PartialEq)]
-pub enum Caching {
-    // Usize in Enabled and CachelibOnlyBlobstore represents the number of cache shards. If zero,
-    // sharding is not used.
-    Enabled(usize),
-    CachelibOnlyBlobstore(usize),
-    Disabled,
-}
+pub use repo_factory::Caching;
 
 const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
 const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
