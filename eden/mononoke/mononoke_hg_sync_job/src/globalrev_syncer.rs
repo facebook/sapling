@@ -262,100 +262,98 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_sync(fb: FacebookInit) -> Result<(), Error> {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
+    async fn test_sync(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
 
-            let master = BookmarkName::new("master")?;
-            let stable = BookmarkName::new("stable")?;
+        let master = BookmarkName::new("master")?;
+        let stable = BookmarkName::new("stable")?;
 
-            let sqlite = SqliteConnection::open_in_memory()?;
-            sqlite.execute_batch(HgsqlConnection::CREATION_QUERY)?;
-            let connection = Connection::with_sqlite(sqlite);
+        let sqlite = SqliteConnection::open_in_memory()?;
+        sqlite.execute_batch(HgsqlConnection::CREATION_QUERY)?;
+        let connection = Connection::with_sqlite(sqlite);
 
-            let repo: BlobRepo = test_repo_factory::build_empty()?;
-            let hgsql_name = HgsqlGlobalrevsName("foo".to_string());
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let hgsql_name = HgsqlGlobalrevsName("foo".to_string());
 
-            let e1 = BonsaiGlobalrevMappingEntry {
-                repo_id: REPO_ZERO,
-                bcs_id: ONES_CSID,
-                globalrev: GLOBALREV_ONE,
-            };
+        let e1 = BonsaiGlobalrevMappingEntry {
+            repo_id: REPO_ZERO,
+            bcs_id: ONES_CSID,
+            globalrev: GLOBALREV_ONE,
+        };
 
-            let e2 = BonsaiGlobalrevMappingEntry {
-                repo_id: REPO_ZERO,
-                bcs_id: TWOS_CSID,
-                globalrev: GLOBALREV_TWO,
-            };
+        let e2 = BonsaiGlobalrevMappingEntry {
+            repo_id: REPO_ZERO,
+            bcs_id: TWOS_CSID,
+            globalrev: GLOBALREV_TWO,
+        };
 
-            repo.bonsai_globalrev_mapping()
-                .bulk_import(&ctx, &[e1, e2])
-                .await?;
+        repo.bonsai_globalrev_mapping()
+            .bulk_import(&ctx, &[e1, e2])
+            .await?;
 
-            let syncer = SqlGlobalrevSyncer {
-                hgsql_name: hgsql_name.clone(),
-                repo,
-                hgsql: HgsqlConnection {
-                    connection: connection.clone(),
-                },
-                globalrevs_publishing_bookmark: master.clone(),
-            };
+        let syncer = SqlGlobalrevSyncer {
+            hgsql_name: hgsql_name.clone(),
+            repo,
+            hgsql: HgsqlConnection {
+                connection: connection.clone(),
+            },
+            globalrevs_publishing_bookmark: master.clone(),
+        };
 
-            // First, check that setting a globalrev before the counter exists fails.
-            assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
+        // First, check that setting a globalrev before the counter exists fails.
+        assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
 
-            // Now, set the counter
+        // Now, set the counter
 
-            InitGlobalrevCounter::query(&connection, hgsql_name.as_ref(), &0).await?;
+        InitGlobalrevCounter::query(&connection, hgsql_name.as_ref(), &0).await?;
 
-            // Now, try again to set the globalrev
+        // Now, try again to set the globalrev
 
-            syncer.sync(&ctx, &master, TWOS_CSID).await?;
+        syncer.sync(&ctx, &master, TWOS_CSID).await?;
 
-            assert_eq!(
-                GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .await?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| Error::msg("Globalrev missing"))?
-                    .0,
-                GLOBALREV_THREE.id()
-            );
+        assert_eq!(
+            GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
+                .await?
+                .into_iter()
+                .next()
+                .ok_or_else(|| Error::msg("Globalrev missing"))?
+                .0,
+            GLOBALREV_THREE.id()
+        );
 
-            // Check that we can sync the same value again successfully
+        // Check that we can sync the same value again successfully
 
-            syncer.sync(&ctx, &master, TWOS_CSID).await?;
+        syncer.sync(&ctx, &master, TWOS_CSID).await?;
 
-            // Check that we can't move it back
+        // Check that we can't move it back
 
-            assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
+        assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
 
-            assert_eq!(
-                GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .await?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| Error::msg("Globalrev missing"))?
-                    .0,
-                GLOBALREV_THREE.id()
-            );
+        assert_eq!(
+            GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
+                .await?
+                .into_iter()
+                .next()
+                .ok_or_else(|| Error::msg("Globalrev missing"))?
+                .0,
+            GLOBALREV_THREE.id()
+        );
 
-            // Check that moving a non-publishing bookmark works, but doesn't touch the counter.
+        // Check that moving a non-publishing bookmark works, but doesn't touch the counter.
 
-            syncer.sync(&ctx, &stable, ONES_CSID).await?;
+        syncer.sync(&ctx, &stable, ONES_CSID).await?;
 
-            assert_eq!(
-                GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .await?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| Error::msg("Globalrev missing"))?
-                    .0,
-                GLOBALREV_THREE.id()
-            );
+        assert_eq!(
+            GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
+                .await?
+                .into_iter()
+                .next()
+                .ok_or_else(|| Error::msg("Globalrev missing"))?
+                .0,
+            GLOBALREV_THREE.id()
+        );
 
-            Ok(())
-        })
+        Ok(())
     }
 
     #[fbinit::test]

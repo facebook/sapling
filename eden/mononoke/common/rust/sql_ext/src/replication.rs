@@ -142,25 +142,21 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_no_replica_lag_monitor() {
-        async_unit::tokio_unit_test(async move {
-            let monitor = NoReplicaLagMonitor();
-            let lag = monitor.get_max_replica_lag().await;
-            // Linter gets confused here, says that expected is not used.
-            let _expected = ReplicaLag::new(Duration::from_secs(0), None);
-            assert_matches!(lag, Ok(_expected));
-        })
+    #[tokio::test]
+    async fn test_no_replica_lag_monitor() {
+        let monitor = NoReplicaLagMonitor();
+        let lag = monitor.get_max_replica_lag().await;
+        // Linter gets confused here, says that expected is not used.
+        let _expected = ReplicaLag::new(Duration::from_secs(0), None);
+        assert_matches!(lag, Ok(_expected));
     }
 
-    #[test]
-    fn test_max_lag() {
-        async_unit::tokio_unit_test(async move {
-            let monitor = TestMonitor(5);
-            let lag = monitor.get_max_replica_lag().await;
-            // Linter gets confused here, says that expected is not used.
-            let _expected = ReplicaLag::new(Duration::from_secs(5), Some("5".to_string()));
-            assert_matches!(lag, Ok(_expected));
-        })
+    #[tokio::test]
+    async fn test_max_lag() {
+        let monitor = TestMonitor(5);
+        let lag = monitor.get_max_replica_lag().await;
+        // Linter gets confused here, says that expected is not used.
+        let _expected = ReplicaLag::new(Duration::from_secs(5), Some("5".to_string()));
+        assert_matches!(lag, Ok(_expected));
     }
 }

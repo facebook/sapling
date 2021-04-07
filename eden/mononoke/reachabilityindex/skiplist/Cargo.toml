@@ -27,7 +27,6 @@ tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
-async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

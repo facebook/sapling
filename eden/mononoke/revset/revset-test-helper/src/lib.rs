@@ -125,36 +125,30 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
 
     #[fbinit::test]
-    fn valid_changeset(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let repo = Arc::new(repo);
-            let bcs_id =
-                string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
-            let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
+    async fn valid_changeset(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let repo = Arc::new(repo);
+        let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
+        let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![bcs_id].into_iter(),
-                changeset_stream.boxify(),
-            )
-            .await;
-        });
+        assert_changesets_sequence(
+            ctx.clone(),
+            &repo,
+            vec![bcs_id].into_iter(),
+            changeset_stream.boxify(),
+        )
+        .await;
     }
 
     #[fbinit::test]
-    fn invalid_changeset(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let repo = Arc::new(repo);
-            let cs_id = ONES_CSID;
-            let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
+    async fn invalid_changeset(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let repo = Arc::new(repo);
+        let cs_id = ONES_CSID;
+        let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 
-            assert_changesets_sequence(ctx, &repo, vec![].into_iter(), changeset_stream.boxify())
-                .await;
-        });
+        assert_changesets_sequence(ctx, &repo, vec![].into_iter(), changeset_stream.boxify()).await;
     }
 }

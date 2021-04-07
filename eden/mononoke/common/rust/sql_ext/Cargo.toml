@@ -21,4 +21,3 @@ tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental
 
 [dev-dependencies]
 assert_matches = "1.5"
-async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

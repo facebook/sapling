@@ -74,7 +74,6 @@ impl Stream for ValidateNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::async_unit;
     use crate::fixtures::linear;
     use crate::setcommon::NotReadyEmptyStream;
     use crate::tests::TestChangesetFetcher;
@@ -85,104 +84,96 @@ mod test {
     use std::sync::Arc;
 
     #[fbinit::test]
-    fn validate_accepts_single_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn validate_accepts_single_node(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let head_csid =
-                string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
+        let head_csid =
+            string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
 
-            let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify();
+        let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify();
 
-            let nodestream =
-                ValidateNodeStream::new(ctx.clone(), nodestream, &changeset_fetcher).boxify();
-            assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream).await;
-        });
+        let nodestream =
+            ValidateNodeStream::new(ctx.clone(), nodestream, &changeset_fetcher).boxify();
+        assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream).await;
     }
 
     #[fbinit::test]
-    fn slow_ready_validates(fb: FacebookInit) {
+    async fn slow_ready_validates(fb: FacebookInit) {
         // Tests that we handle an input staying at NotReady for a while without panicking
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo));
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo));
 
-            let mut nodestream = ValidateNodeStream::new(
-                ctx,
-                NotReadyEmptyStream::new(10).boxify(),
-                &changeset_fetcher,
-            )
-            .compat();
+        let mut nodestream = ValidateNodeStream::new(
+            ctx,
+            NotReadyEmptyStream::new(10).boxify(),
+            &changeset_fetcher,
+        )
+        .compat();
 
-            assert!(nodestream.next().await.is_none());
-        });
+        assert!(nodestream.next().await.is_none());
     }
 
     #[fbinit::test]
     #[should_panic]
-    fn repeat_hash_panics(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+    async fn repeat_hash_panics(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb).await);
 
-            let head_csid =
-                string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
-            let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
-                .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
+        let head_csid =
+            string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
+        let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
+            .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
 
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new((*repo).clone()));
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new((*repo).clone()));
 
-            let mut nodestream =
-                ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
+        let mut nodestream =
+            ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 
-            loop {
-                match nodestream.poll() {
-                    Ok(Async::Ready(None)) => return,
-                    _ => {}
-                }
+        loop {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                _ => {}
             }
-        });
+        }
     }
 
     #[fbinit::test]
     #[should_panic]
-    fn wrong_order_panics(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+    async fn wrong_order_panics(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb).await);
 
-            let nodestream = single_changeset_id(
-                ctx.clone(),
-                string_to_bonsai(fb, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372")
-                    .await
-                    .clone(),
-                &repo,
-            )
-            .chain(single_changeset_id(
-                ctx.clone(),
-                string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await,
-                &repo,
-            ));
+        let nodestream = single_changeset_id(
+            ctx.clone(),
+            string_to_bonsai(fb, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372")
+                .await
+                .clone(),
+            &repo,
+        )
+        .chain(single_changeset_id(
+            ctx.clone(),
+            string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await,
+            &repo,
+        ));
 
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new((*repo).clone()));
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new((*repo).clone()));
 
-            let mut nodestream =
-                ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
+        let mut nodestream =
+            ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 
-            loop {
-                match nodestream.poll() {
-                    Ok(Async::Ready(None)) => return,
-                    _ => {}
-                }
+        loop {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                _ => {}
             }
-        });
+        }
     }
 }

@@ -387,7 +387,6 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::async_unit;
     use crate::fixtures::linear;
     use crate::fixtures::merge_uneven;
     use crate::tests::TestChangesetFetcher;
@@ -397,200 +396,188 @@ mod test {
     use skiplist::SkiplistIndex;
 
     #[fbinit::test]
-    fn empty_ancestors_combinators(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn empty_ancestors_combinators(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![],
-            )
-            .boxify();
+        let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![],
+        )
+        .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], stream).await;
+        assert_changesets_sequence(ctx.clone(), &repo, vec![], stream).await;
 
-            let excludes =
-                vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await];
+        let excludes =
+            vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await];
 
-            let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![],
-                excludes,
-            )
-            .boxify();
+        let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![],
+            excludes,
+        )
+        .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], stream).await;
-        });
+        assert_changesets_sequence(ctx.clone(), &repo, vec![], stream).await;
     }
 
     #[fbinit::test]
-    fn linear_ancestors_with_excludes(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn linear_ancestors_with_excludes(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await],
-                vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
-            )
-            .boxify();
+        let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await],
+            vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
+        )
+        .boxify();
 
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await],
-                nodestream,
-            )
-            .await;
-        });
+        assert_changesets_sequence(
+            ctx.clone(),
+            &repo,
+            vec![string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await],
+            nodestream,
+        )
+        .await;
     }
 
     #[fbinit::test]
-    fn linear_ancestors_with_excludes_empty(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn linear_ancestors_with_excludes_empty(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
-                vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
-            )
-            .boxify();
+        let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
+            vec![string_to_bonsai(fb, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await],
+        )
+        .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
-        });
+        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
-    fn ancestors_union(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = merge_uneven::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn ancestors_union(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = merge_uneven::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![
-                    string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
-                    string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
-                ],
-            )
-            .boxify();
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![
-                    string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
-                    string_to_bonsai(fb, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
-                    string_to_bonsai(fb, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
-                    string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
-                    string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
-                    string_to_bonsai(fb, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
-                    string_to_bonsai(fb, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
-                    string_to_bonsai(fb, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
-                    string_to_bonsai(fb, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
-                    string_to_bonsai(fb, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await,
-                ],
-                nodestream,
-            )
-            .await;
-        });
+        let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![
+                string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+                string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
+            ],
+        )
+        .boxify();
+        assert_changesets_sequence(
+            ctx.clone(),
+            &repo,
+            vec![
+                string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+                string_to_bonsai(fb, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+                string_to_bonsai(fb, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+                string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+                string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
+                string_to_bonsai(fb, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
+                string_to_bonsai(fb, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+                string_to_bonsai(fb, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+                string_to_bonsai(fb, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
+                string_to_bonsai(fb, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await,
+            ],
+            nodestream,
+        )
+        .await;
     }
 
     #[fbinit::test]
-    fn merge_ancestors_from_merge_excludes(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = merge_uneven::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn merge_ancestors_from_merge_excludes(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = merge_uneven::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await],
-                vec![
-                    string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
-                    string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
-                ],
-            )
-            .boxify();
+        let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await],
+            vec![
+                string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+                string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
+            ],
+        )
+        .boxify();
 
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![
-                    string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await,
-                    string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
-                    string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
-                ],
-                nodestream,
-            )
-            .await;
-        });
+        assert_changesets_sequence(
+            ctx.clone(),
+            &repo,
+            vec![
+                string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await,
+                string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
+                string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+            ],
+            nodestream,
+        )
+        .await;
     }
 
     #[fbinit::test]
-    fn merge_ancestors_from_merge_excludes_union(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = merge_uneven::getrepo(fb).await;
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let repo = Arc::new(repo);
+    async fn merge_ancestors_from_merge_excludes_union(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = merge_uneven::getrepo(fb).await;
+        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            Arc::new(TestChangesetFetcher::new(repo.clone()));
+        let repo = Arc::new(repo);
 
-            let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                Arc::new(SkiplistIndex::new()),
-                vec![string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await],
-                vec![string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await],
-            )
-            .boxify();
+        let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            ctx.clone(),
+            &changeset_fetcher,
+            Arc::new(SkiplistIndex::new()),
+            vec![string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await],
+            vec![string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await],
+        )
+        .boxify();
 
-            assert_changesets_sequence(
-                ctx.clone(),
-                &repo,
-                vec![
-                    string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await,
-                    string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
-                    string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
-                    string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
-                    string_to_bonsai(fb, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
-                    string_to_bonsai(fb, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
-                    string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
-                    string_to_bonsai(fb, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
-                    string_to_bonsai(fb, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
-                ],
-                nodestream,
-            )
-            .await;
-        });
+        assert_changesets_sequence(
+            ctx.clone(),
+            &repo,
+            vec![
+                string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await,
+                string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
+                string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+                string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+                string_to_bonsai(fb, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+                string_to_bonsai(fb, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+                string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+                string_to_bonsai(fb, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+                string_to_bonsai(fb, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+            ],
+            nodestream,
+        )
+        .await;
     }
 }

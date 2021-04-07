@@ -29,6 +29,7 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }

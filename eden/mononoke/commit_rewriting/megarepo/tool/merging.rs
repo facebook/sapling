@@ -136,19 +136,17 @@ mod test {
     use std::str::FromStr;
 
     #[fbinit::test]
-    fn test_path_conflict_detection(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let repo = merge_even::getrepo(fb).await;
-            let ctx = CoreContext::test_mock(fb);
-            let p1 = HgChangesetId::from_str("4f7f3fd428bec1a48f9314414b063c706d9c1aed").unwrap();
-            let p2 = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68").unwrap();
-            assert!(
-                fail_on_path_conflicts(ctx, repo, p1, p2)
-                    .compat()
-                    .await
-                    .is_err(),
-                "path conflicts should've been detected"
-            );
-        });
+    async fn test_path_conflict_detection(fb: FacebookInit) {
+        let repo = merge_even::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let p1 = HgChangesetId::from_str("4f7f3fd428bec1a48f9314414b063c706d9c1aed").unwrap();
+        let p2 = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68").unwrap();
+        assert!(
+            fail_on_path_conflicts(ctx, repo, p1, p2)
+                .compat()
+                .await
+                .is_err(),
+            "path conflicts should've been detected"
+        );
     }
 }

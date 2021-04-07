@@ -128,7 +128,7 @@ c0: 1 1
 "#;
 
 #[fbinit::test]
-fn test_blame(fb: FacebookInit) -> Result<(), Error> {
+async fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     // Commits structure
     //
     //   0
@@ -139,95 +139,92 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     //  \ /
     //   4
     //
-    async_unit::tokio_unit_test(async move {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
-        borrowed!(ctx, repo);
+    let ctx = CoreContext::test_mock(fb);
+    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+    borrowed!(ctx, repo);
 
-        let c0 = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            vec![],
-            store_files(
-                ctx,
-                btreemap! {
-                    "f0" => Some(F0[0]),
-                    "f1" => Some(F1[0]),
-                    "_f2" => Some(F2[0]),
-                },
-                repo,
-            )
-            .await,
+    let c0 = create_commit(
+        ctx.clone(),
+        repo.clone(),
+        vec![],
+        store_files(
+            ctx,
+            btreemap! {
+                "f0" => Some(F0[0]),
+                "f1" => Some(F1[0]),
+                "_f2" => Some(F2[0]),
+            },
+            repo,
         )
-        .await;
+        .await,
+    )
+    .await;
 
-        let mut c1_changes = store_files(ctx, btreemap! {"f0" => Some(F0[1])}, repo).await;
-        let (f2_path, f2_change) =
-            store_rename(ctx, (MPath::new("_f2")?, c0), "f2", F2[1], repo).await;
-        c1_changes.insert(f2_path, f2_change);
-        let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes).await;
+    let mut c1_changes = store_files(ctx, btreemap! {"f0" => Some(F0[1])}, repo).await;
+    let (f2_path, f2_change) = store_rename(ctx, (MPath::new("_f2")?, c0), "f2", F2[1], repo).await;
+    c1_changes.insert(f2_path, f2_change);
+    let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes).await;
 
-        let c2 = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            vec![c1],
-            store_files(ctx, btreemap! {"f0" => Some(F0[2])}, repo).await,
+    let c2 = create_commit(
+        ctx.clone(),
+        repo.clone(),
+        vec![c1],
+        store_files(ctx, btreemap! {"f0" => Some(F0[2])}, repo).await,
+    )
+    .await;
+
+    let c3 = create_commit(
+        ctx.clone(),
+        repo.clone(),
+        vec![c0],
+        store_files(
+            ctx,
+            btreemap! {
+                "f0" => Some(F0[3]),
+                "f1" => Some(F1[1]),
+                "f2" => Some(F2[2]),
+            },
+            repo,
         )
-        .await;
+        .await,
+    )
+    .await;
 
-        let c3 = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            vec![c0],
-            store_files(
-                ctx,
-                btreemap! {
-                    "f0" => Some(F0[3]),
-                    "f1" => Some(F1[1]),
-                    "f2" => Some(F2[2]),
-                },
-                repo,
-            )
-            .await,
+    let c4 = create_commit(
+        ctx.clone(),
+        repo.clone(),
+        vec![c2, c3],
+        store_files(
+            ctx,
+            btreemap! {
+                "f0" => Some(F0[4]),
+                "f1" => Some(F1[1]), // did not change after c3
+                "f2" => Some(F2[3]),
+            },
+            repo,
         )
-        .await;
+        .await,
+    )
+    .await;
 
-        let c4 = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            vec![c2, c3],
-            store_files(
-                ctx,
-                btreemap! {
-                    "f0" => Some(F0[4]),
-                    "f1" => Some(F1[1]), // did not change after c3
-                    "f2" => Some(F2[3]),
-                },
-                repo,
-            )
-            .await,
-        )
-        .await;
+    let names = hashmap! {
+        c0 => "c0",
+        c1 => "c1",
+        c2 => "c2",
+        c3 => "c3",
+        c4 => "c4",
+    };
 
-        let names = hashmap! {
-            c0 => "c0",
-            c1 => "c1",
-            c2 => "c2",
-            c3 => "c3",
-            c4 => "c4",
-        };
+    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f0")?).await?;
+    assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
 
-        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f0")?).await?;
-        assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
+    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f1")?).await?;
+    assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
 
-        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f1")?).await?;
-        assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
+    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f2")?).await?;
+    assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
 
-        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f2")?).await?;
-        assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
-
-        Ok(())
-    })
+    Ok(())
 }
 
 #[fbinit::test]

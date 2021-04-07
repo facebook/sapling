@@ -211,22 +211,16 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
 }
 
 #[fbinit::test]
-fn test_add_and_get(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        add_and_get(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await;
-    });
+async fn test_add_and_get(fb: FacebookInit) {
+    add_and_get(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
 #[fbinit::test]
-fn test_missing(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        missing(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await
-    });
+async fn test_missing(fb: FacebookInit) {
+    missing(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await
 }
 
 #[fbinit::test]
-fn test_equivalent_working_copy(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        equivalent_working_copy(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await
-    });
+async fn test_equivalent_working_copy(fb: FacebookInit) {
+    equivalent_working_copy(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await
 }

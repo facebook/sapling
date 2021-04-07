@@ -18,6 +18,6 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 
 [dev-dependencies]
-async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }

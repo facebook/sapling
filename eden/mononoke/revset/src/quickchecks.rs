@@ -12,7 +12,6 @@ mod test {
     use super::*;
     use crate::ancestors::AncestorsNodeStream;
     use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
-    use crate::async_unit;
     use crate::fixtures::branch_even;
     use crate::fixtures::branch_uneven;
     use crate::fixtures::branch_wide;
@@ -399,83 +398,74 @@ mod test {
     macro_rules! ancestors_check {
         ($test_name:ident, $repo:ident) => {
             #[fbinit::test]
-            fn $test_name(fb: FacebookInit) {
-                async_unit::tokio_unit_test(async move {
-                    let ctx = CoreContext::test_mock(fb);
+            async fn $test_name(fb: FacebookInit) {
+                let ctx = CoreContext::test_mock(fb);
 
-                    let repo = $repo::getrepo(fb).await;
-                    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                        Arc::new(TestChangesetFetcher::new(repo.clone()));
-                    let repo = Arc::new(repo);
+                let repo = $repo::getrepo(fb).await;
+                let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+                    Arc::new(TestChangesetFetcher::new(repo.clone()));
+                let repo = Arc::new(repo);
 
-                    let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo).await;
+                let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo).await;
 
-                    // Limit the number of changesets, otherwise tests take too much time
-                    let max_changesets = 7;
-                    let all_changesets: Vec<_> =
-                        all_changesets.into_iter().take(max_changesets).collect();
-                    let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
-                    for (include, exclude) in iter {
-                        let difference_stream = create_skiplist(ctx.clone(), &repo)
-                            .map({
-                                cloned!(ctx, changeset_fetcher, exclude, include);
-                                move |skiplist| {
-                                    DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                                        ctx.clone(),
-                                        &changeset_fetcher,
-                                        skiplist,
-                                        include.clone(),
-                                        exclude.clone(),
-                                    )
-                                }
-                            })
-                            .flatten_stream()
-                            .boxify();
-
-                        let actual = ValidateNodeStream::new(
-                            ctx.clone(),
-                            difference_stream,
-                            &changeset_fetcher,
-                        );
-
-                        let mut includes = vec![];
-                        for i in include.clone() {
-                            includes.push(
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i)
-                                    .boxify(),
-                            );
-                        }
-
-                        let mut excludes = vec![];
-                        for i in exclude.clone() {
-                            excludes.push(
-                                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i)
-                                    .boxify(),
-                            );
-                        }
-                        let includes =
-                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes)
-                                .boxify();
-                        let excludes =
-                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes)
-                                .boxify();
-                        let expected = SetDifferenceNodeStream::new(
-                            ctx.clone(),
-                            &changeset_fetcher,
-                            includes,
-                            excludes,
-                        )
+                // Limit the number of changesets, otherwise tests take too much time
+                let max_changesets = 7;
+                let all_changesets: Vec<_> =
+                    all_changesets.into_iter().take(max_changesets).collect();
+                let iter = IncludeExcludeDiscardCombinationsIterator::new(all_changesets);
+                for (include, exclude) in iter {
+                    let difference_stream = create_skiplist(ctx.clone(), &repo)
+                        .map({
+                            cloned!(ctx, changeset_fetcher, exclude, include);
+                            move |skiplist| {
+                                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                                    ctx.clone(),
+                                    &changeset_fetcher,
+                                    skiplist,
+                                    include.clone(),
+                                    exclude.clone(),
+                                )
+                            }
+                        })
+                        .flatten_stream()
                         .boxify();
 
-                        assert!(
-                            match_streams(expected, actual.boxify()).await,
-                            "streams do not match for {:?} {:?}",
-                            include,
-                            exclude
+                    let actual =
+                        ValidateNodeStream::new(ctx.clone(), difference_stream, &changeset_fetcher);
+
+                    let mut includes = vec![];
+                    for i in include.clone() {
+                        includes.push(
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
                         );
                     }
-                    ()
-                })
+
+                    let mut excludes = vec![];
+                    for i in exclude.clone() {
+                        excludes.push(
+                            AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, i).boxify(),
+                        );
+                    }
+                    let includes =
+                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, includes).boxify();
+                    let excludes =
+                        UnionNodeStream::new(ctx.clone(), &changeset_fetcher, excludes).boxify();
+                    let expected = SetDifferenceNodeStream::new(
+                        ctx.clone(),
+                        &changeset_fetcher,
+                        includes,
+                        excludes,
+                    )
+                    .boxify();
+
+                    assert!(
+                        match_streams(expected, actual.boxify()).await,
+                        "streams do not match for {:?} {:?}",
+                        include,
+                        exclude
+                    );
+                }
+                ()
             }
         };
     }

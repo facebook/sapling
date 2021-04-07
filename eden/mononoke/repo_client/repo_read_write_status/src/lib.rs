@@ -211,191 +211,172 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_readonly_config_no_sqlite() {
-        async_unit::tokio_unit_test(async move {
-            let fetcher = RepoReadWriteFetcher::new(
-                None,
-                ReadOnly(CONFIG_MSG.to_string()),
-                HgsqlName("repo".to_string()),
-            );
+    #[tokio::test]
+    async fn test_readonly_config_no_sqlite() {
+        let fetcher = RepoReadWriteFetcher::new(
+            None,
+            ReadOnly(CONFIG_MSG.to_string()),
+            HgsqlName("repo".to_string()),
+        );
 
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(CONFIG_MSG.to_string())
-            );
-        })
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(CONFIG_MSG.to_string())
+        );
     }
 
-    #[test]
-    fn test_readwrite_config_no_sqlite() {
-        async_unit::tokio_unit_test(async move {
-            let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, HgsqlName("repo".to_string()));
-            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
-        });
+    #[tokio::test]
+    async fn test_readwrite_config_no_sqlite() {
+        let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, HgsqlName("repo".to_string()));
+        assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
     }
 
-    #[test]
-    fn test_readonly_config_with_sqlite() {
-        async_unit::tokio_unit_test(async move {
-            let sql_repo_read_write_status =
-                SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
-            let fetcher = RepoReadWriteFetcher::new(
-                Some(sql_repo_read_write_status),
-                ReadOnly(CONFIG_MSG.to_string()),
-                HgsqlName("repo".to_string()),
-            );
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(CONFIG_MSG.to_string())
-            );
-        });
+    #[tokio::test]
+    async fn test_readonly_config_with_sqlite() {
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadOnly(CONFIG_MSG.to_string()),
+            HgsqlName("repo".to_string()),
+        );
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(CONFIG_MSG.to_string())
+        );
     }
 
-    #[test]
-    fn test_readwrite_with_sqlite() {
-        async_unit::tokio_unit_test(async move {
-            let sql_repo_read_write_status =
-                SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
-            let fetcher = RepoReadWriteFetcher::new(
-                Some(sql_repo_read_write_status),
-                ReadWrite,
-                HgsqlName("repo".to_string()),
-            );
-            // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(DEFAULT_MSG.to_string())
-            );
+    #[tokio::test]
+    async fn test_readwrite_with_sqlite() {
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            HgsqlName("repo".to_string()),
+        );
+        // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
 
-            InsertState::query(
-                &fetcher
-                    .sql_repo_read_write_status
-                    .clone()
-                    .unwrap()
-                    .write_connection,
-                &[("repo", &HgMononokeReadWrite::MononokeWrite)],
-            )
+        InsertState::query(
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
+            &[("repo", &HgMononokeReadWrite::MononokeWrite)],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
+
+        InsertState::query(
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
+            &[("repo", &HgMononokeReadWrite::HgWrite)],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(DB_MSG.to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_readwrite_with_sqlite_and_reason() {
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            HgsqlName("repo".to_string()),
+        );
+
+        InsertStateWithReason::query(
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
+            &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly("reason123".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_readwrite_with_sqlite_other_repo() {
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            HgsqlName("repo".to_string()),
+        );
+        // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
+
+        InsertState::query(
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
+            &[("other_repo", &HgMononokeReadWrite::MononokeWrite)],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
+
+        InsertState::query(
+            &fetcher
+                .sql_repo_read_write_status
+                .clone()
+                .unwrap()
+                .write_connection,
+            &[("repo", &HgMononokeReadWrite::MononokeWrite)],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
+    }
+
+    #[tokio::test]
+    async fn test_write() {
+        let sql_repo_read_write_status = SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
+        let fetcher = RepoReadWriteFetcher::new(
+            Some(sql_repo_read_write_status),
+            ReadWrite,
+            HgsqlName("repo".to_string()),
+        );
+        // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
+        assert_eq!(
+            fetcher.readonly().await.unwrap(),
+            ReadOnly(DEFAULT_MSG.to_string())
+        );
+
+        fetcher
+            .set_mononoke_read_write(&"repo is locked".to_string())
             .await
             .unwrap();
-
-            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
-
-            InsertState::query(
-                &fetcher
-                    .sql_repo_read_write_status
-                    .clone()
-                    .unwrap()
-                    .write_connection,
-                &[("repo", &HgMononokeReadWrite::HgWrite)],
-            )
-            .await
-            .unwrap();
-
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(DB_MSG.to_string())
-            );
-        });
-    }
-
-    #[test]
-    fn test_readwrite_with_sqlite_and_reason() {
-        async_unit::tokio_unit_test(async move {
-            let sql_repo_read_write_status =
-                SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
-            let fetcher = RepoReadWriteFetcher::new(
-                Some(sql_repo_read_write_status),
-                ReadWrite,
-                HgsqlName("repo".to_string()),
-            );
-
-            InsertStateWithReason::query(
-                &fetcher
-                    .sql_repo_read_write_status
-                    .clone()
-                    .unwrap()
-                    .write_connection,
-                &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
-            )
-            .await
-            .unwrap();
-
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly("reason123".to_string())
-            );
-        });
-    }
-
-    #[test]
-    fn test_readwrite_with_sqlite_other_repo() {
-        async_unit::tokio_unit_test(async move {
-            let sql_repo_read_write_status =
-                SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
-            let fetcher = RepoReadWriteFetcher::new(
-                Some(sql_repo_read_write_status),
-                ReadWrite,
-                HgsqlName("repo".to_string()),
-            );
-            // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(DEFAULT_MSG.to_string())
-            );
-
-            InsertState::query(
-                &fetcher
-                    .sql_repo_read_write_status
-                    .clone()
-                    .unwrap()
-                    .write_connection,
-                &[("other_repo", &HgMononokeReadWrite::MononokeWrite)],
-            )
-            .await
-            .unwrap();
-
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(DEFAULT_MSG.to_string())
-            );
-
-            InsertState::query(
-                &fetcher
-                    .sql_repo_read_write_status
-                    .clone()
-                    .unwrap()
-                    .write_connection,
-                &[("repo", &HgMononokeReadWrite::MononokeWrite)],
-            )
-            .await
-            .unwrap();
-
-            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
-        })
-    }
-
-    #[test]
-    fn test_write() {
-        async_unit::tokio_unit_test(async move {
-            let sql_repo_read_write_status =
-                SqlRepoReadWriteStatus::with_sqlite_in_memory().unwrap();
-            let fetcher = RepoReadWriteFetcher::new(
-                Some(sql_repo_read_write_status),
-                ReadWrite,
-                HgsqlName("repo".to_string()),
-            );
-            // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
-            assert_eq!(
-                fetcher.readonly().await.unwrap(),
-                ReadOnly(DEFAULT_MSG.to_string())
-            );
-
-            fetcher
-                .set_mononoke_read_write(&"repo is locked".to_string())
-                .await
-                .unwrap();
-            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
-        });
+        assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
     }
 }

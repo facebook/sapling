@@ -311,90 +311,84 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_do_not_move_anything(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-            let newcs = perform_move(
-                &ctx,
-                &repo,
-                bcs_id,
-                Arc::new(identity_mover),
-                changeset_args,
-            )
+    async fn test_do_not_move_anything(fb: FacebookInit) {
+        let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
+        let newcs = perform_move(
+            &ctx,
+            &repo,
+            bcs_id,
+            Arc::new(identity_mover),
+            changeset_args,
+        )
+        .await
+        .unwrap();
+        let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
+
+        let BonsaiChangesetMut {
+            parents,
+            author: _,
+            author_date: _,
+            committer: _,
+            committer_date: _,
+            message: _,
+            extra: _,
+            file_changes,
+        } = newcs.into_mut();
+        assert_eq!(parents, vec![bcs_id]);
+        assert_eq!(file_changes, Default::default());
+    }
+
+    #[fbinit::test]
+    async fn test_drop_file(fb: FacebookInit) {
+        let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
+        let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(skip_one), changeset_args)
             .await
             .unwrap();
-            let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
+        let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
-            let BonsaiChangesetMut {
-                parents,
-                author: _,
-                author_date: _,
-                committer: _,
-                committer_date: _,
-                message: _,
-                extra: _,
-                file_changes,
-            } = newcs.into_mut();
-            assert_eq!(parents, vec![bcs_id]);
-            assert_eq!(file_changes, Default::default());
-        });
+        let BonsaiChangesetMut {
+            parents,
+            author: _,
+            author_date: _,
+            committer: _,
+            committer_date: _,
+            message: _,
+            extra: _,
+            file_changes,
+        } = newcs.into_mut();
+        assert_eq!(parents, vec![bcs_id]);
+        assert_eq!(
+            file_changes,
+            sorted_vector_map! {
+                MPath::new("dir1/file_1_in_dir1").unwrap() => None
+            }
+        );
     }
 
     #[fbinit::test]
-    fn test_drop_file(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-            let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(skip_one), changeset_args)
-                .await
-                .unwrap();
-            let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
+    async fn test_shift_path_by_one(fb: FacebookInit) {
+        let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
+        let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(shift_one), changeset_args)
+            .await
+            .unwrap();
+        let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
-            let BonsaiChangesetMut {
-                parents,
-                author: _,
-                author_date: _,
-                committer: _,
-                committer_date: _,
-                message: _,
-                extra: _,
-                file_changes,
-            } = newcs.into_mut();
-            assert_eq!(parents, vec![bcs_id]);
-            assert_eq!(
-                file_changes,
-                sorted_vector_map! {
-                    MPath::new("dir1/file_1_in_dir1").unwrap() => None
-                }
-            );
-        });
-    }
-
-    #[fbinit::test]
-    fn test_shift_path_by_one(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-            let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(shift_one), changeset_args)
-                .await
-                .unwrap();
-            let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
-
-            let BonsaiChangesetMut {
-                parents,
-                author: _,
-                author_date: _,
-                committer: _,
-                committer_date: _,
-                message: _,
-                extra: _,
-                file_changes,
-            } = newcs.into_mut();
-            assert_eq!(parents, vec![bcs_id]);
-            let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();
-            let new_path = MPath::new("newdir/dir1/file_1_in_dir1").unwrap();
-            assert_eq!(file_changes[&old_path], None);
-            let file_change = file_changes[&new_path].as_ref().unwrap();
-            assert_eq!(file_change.copy_from(), Some((old_path, bcs_id)).as_ref());
-        });
+        let BonsaiChangesetMut {
+            parents,
+            author: _,
+            author_date: _,
+            committer: _,
+            committer_date: _,
+            message: _,
+            extra: _,
+            file_changes,
+        } = newcs.into_mut();
+        assert_eq!(parents, vec![bcs_id]);
+        let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();
+        let new_path = MPath::new("newdir/dir1/file_1_in_dir1").unwrap();
+        assert_eq!(file_changes[&old_path], None);
+        let file_change = file_changes[&new_path].as_ref().unwrap();
+        assert_eq!(file_change.copy_from(), Some((old_path, bcs_id)).as_ref());
     }
 
     async fn get_working_copy_contents(
@@ -420,30 +414,26 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_performed_move(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            let (ctx, repo, old_hg_cs_id, old_bcs_id, changeset_args) = prepare(fb).await;
-            let new_hg_cs_id = perform_move(
-                &ctx,
-                &repo,
-                old_bcs_id,
-                Arc::new(shift_one_skip_another),
-                changeset_args,
-            )
-            .await
-            .unwrap();
-            let mut old_wc =
-                get_working_copy_contents(ctx.clone(), repo.clone(), old_hg_cs_id).await;
-            let mut new_wc =
-                get_working_copy_contents(ctx.clone(), repo.clone(), new_hg_cs_id).await;
-            let _removed_file = old_wc.remove(&MPath::new("dir2/file_1_in_dir2").unwrap());
-            let old_moved_file = old_wc.remove(&MPath::new("dir1/file_1_in_dir1").unwrap());
-            let new_moved_file = new_wc.remove(&MPath::new("newdir/dir1/file_1_in_dir1").unwrap());
-            // Same file should live in both locations
-            assert_eq!(old_moved_file, new_moved_file);
-            // After removing renamed and removed files, both working copies should be identical
-            assert_eq!(old_wc, new_wc);
-        });
+    async fn test_performed_move(fb: FacebookInit) {
+        let (ctx, repo, old_hg_cs_id, old_bcs_id, changeset_args) = prepare(fb).await;
+        let new_hg_cs_id = perform_move(
+            &ctx,
+            &repo,
+            old_bcs_id,
+            Arc::new(shift_one_skip_another),
+            changeset_args,
+        )
+        .await
+        .unwrap();
+        let mut old_wc = get_working_copy_contents(ctx.clone(), repo.clone(), old_hg_cs_id).await;
+        let mut new_wc = get_working_copy_contents(ctx.clone(), repo.clone(), new_hg_cs_id).await;
+        let _removed_file = old_wc.remove(&MPath::new("dir2/file_1_in_dir2").unwrap());
+        let old_moved_file = old_wc.remove(&MPath::new("dir1/file_1_in_dir1").unwrap());
+        let new_moved_file = new_wc.remove(&MPath::new("newdir/dir1/file_1_in_dir1").unwrap());
+        // Same file should live in both locations
+        assert_eq!(old_moved_file, new_moved_file);
+        // After removing renamed and removed files, both working copies should be identical
+        assert_eq!(old_wc, new_wc);
     }
 
     #[fbinit::test]

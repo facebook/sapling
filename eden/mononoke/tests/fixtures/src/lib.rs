@@ -1675,72 +1675,52 @@ mod test {
     use super::*;
 
     #[fbinit::test]
-    fn test_branch_even(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            branch_even::getrepo(fb).await;
-        })
+    async fn test_branch_even(fb: FacebookInit) {
+        branch_even::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_branch_uneven(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            branch_uneven::getrepo(fb).await;
-        })
+    async fn test_branch_uneven(fb: FacebookInit) {
+        branch_uneven::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_branch_wide(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            branch_wide::getrepo(fb).await;
-        })
+    async fn test_branch_wide(fb: FacebookInit) {
+        branch_wide::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_many_files_dirs(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            many_files_dirs::getrepo(fb).await;
-        })
+    async fn test_many_files_dirs(fb: FacebookInit) {
+        many_files_dirs::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_linear(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            linear::getrepo(fb).await;
-        })
+    async fn test_linear(fb: FacebookInit) {
+        linear::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_merge_even(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            merge_even::getrepo(fb).await;
-        })
+    async fn test_merge_even(fb: FacebookInit) {
+        merge_even::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_merge_uneven(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            merge_uneven::getrepo(fb).await;
-        })
+    async fn test_merge_uneven(fb: FacebookInit) {
+        merge_uneven::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_unshared_merge_even(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            unshared_merge_even::getrepo(fb).await;
-        })
+    async fn test_unshared_merge_even(fb: FacebookInit) {
+        unshared_merge_even::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_unshared_merge_uneven(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            unshared_merge_uneven::getrepo(fb).await;
-        })
+    async fn test_unshared_merge_uneven(fb: FacebookInit) {
+        unshared_merge_uneven::getrepo(fb).await;
     }
 
     #[fbinit::test]
-    fn test_many_diamonds(fb: FacebookInit) {
-        async_unit::tokio_unit_test(async move {
-            many_diamonds::getrepo(fb).await;
-        })
+    async fn test_many_diamonds(fb: FacebookInit) {
+        many_diamonds::getrepo(fb).await;
     }
 }

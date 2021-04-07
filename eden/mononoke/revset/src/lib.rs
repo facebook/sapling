@@ -47,7 +47,6 @@ pub use crate::test::*;
 #[cfg(test)]
 mod test {
     pub use ascii;
-    pub use async_unit;
     pub use quickcheck;
 
     pub use fixtures;

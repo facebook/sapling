@@ -126,67 +126,64 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
-    async_unit::tokio_unit_test(async move {
-        let mut gen = StdGen::new(rand::thread_rng(), 128);
+async fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
+    let mut gen = StdGen::new(rand::thread_rng(), 128);
 
-        let memblob = Arc::new(memblob::Memblob::default());
-        let ctx = CoreContext::test_mock(fb);
-        borrowed!(ctx, memblob: &Arc<_>);
+    let memblob = Arc::new(memblob::Memblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, memblob: &Arc<_>);
 
-        for _ in 0..100usize {
-            let bytes = Bytes::from(Vec::arbitrary(&mut gen));
+    for _ in 0..100usize {
+        let bytes = Bytes::from(Vec::arbitrary(&mut gen));
 
-            let no_chunking = FilestoreConfig {
-                chunk_size: None,
-                concurrency: 1,
-            };
+        let no_chunking = FilestoreConfig {
+            chunk_size: None,
+            concurrency: 1,
+        };
 
-            let chunked = FilestoreConfig {
-                chunk_size: Some(std::cmp::max(1, (bytes.len() as u64) / 2)),
-                concurrency: 1,
-            };
+        let chunked = FilestoreConfig {
+            chunk_size: Some(std::cmp::max(1, (bytes.len() as u64) / 2)),
+            concurrency: 1,
+        };
 
-            let too_small_to_chunk = FilestoreConfig {
-                chunk_size: Some(std::cmp::max(1, (bytes.len() as u64) * 2)),
-                concurrency: 1,
-            };
+        let too_small_to_chunk = FilestoreConfig {
+            chunk_size: Some(std::cmp::max(1, (bytes.len() as u64) * 2)),
+            concurrency: 1,
+        };
 
-            let ((id1, len1), fut1) =
-                filestore::store_bytes(memblob, no_chunking, ctx, bytes.clone());
-            fut1.await?;
+        let ((id1, len1), fut1) = filestore::store_bytes(memblob, no_chunking, ctx, bytes.clone());
+        fut1.await?;
 
-            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id1).await?);
+        assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id1).await?);
 
-            let ((id2, len2), fut2) = filestore::store_bytes(memblob, chunked, ctx, bytes.clone());
-            fut2.await?;
+        let ((id2, len2), fut2) = filestore::store_bytes(memblob, chunked, ctx, bytes.clone());
+        fut2.await?;
 
-            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id2).await?);
+        assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id2).await?);
 
-            let ((id3, len3), fut3) =
-                filestore::store_bytes(memblob, too_small_to_chunk, ctx, bytes.clone());
-            fut3.await?;
+        let ((id3, len3), fut3) =
+            filestore::store_bytes(memblob, too_small_to_chunk, ctx, bytes.clone());
+        fut3.await?;
 
-            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id3).await?);
+        assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id3).await?);
 
-            let meta = filestore::store(
-                memblob,
-                no_chunking,
-                ctx,
-                &request(&bytes),
-                stream::once(future::ready(Ok(bytes.clone()))),
-            )
-            .await?;
+        let meta = filestore::store(
+            memblob,
+            no_chunking,
+            ctx,
+            &request(&bytes),
+            stream::once(future::ready(Ok(bytes.clone()))),
+        )
+        .await?;
 
-            assert_eq!(meta.content_id, id1);
-            assert_eq!(meta.content_id, id2);
-            assert_eq!(meta.content_id, id3);
+        assert_eq!(meta.content_id, id1);
+        assert_eq!(meta.content_id, id2);
+        assert_eq!(meta.content_id, id3);
 
-            assert_eq!(meta.total_size, len1);
-            assert_eq!(meta.total_size, len2);
-            assert_eq!(meta.total_size, len3);
-        }
+        assert_eq!(meta.total_size, len1);
+        assert_eq!(meta.total_size, len2);
+        assert_eq!(meta.total_size, len3);
+    }
 
-        Result::<_, Error>::Ok(())
-    })
+    Result::<_, Error>::Ok(())
 }
