@@ -19,7 +19,8 @@ use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{SingleValue, StorageEnvelope, StorageFormat};
-use std::{convert::TryInto, io::Cursor};
+use std::convert::TryInto;
+use zstd::block::Compressor;
 
 #[derive(Clone, Debug, Default)]
 pub struct PackOptions {
@@ -57,8 +58,8 @@ impl<T> PackBlob<T> {
 
 // If compressed version is smaller, use it, otherwise return raw
 fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue> {
-    let cursor = Cursor::new(value.clone());
-    let compressed = zstd::encode_all(cursor, zstd_level)?;
+    let mut compressor = Compressor::new();
+    let compressed = compressor.compress(&value, zstd_level)?;
     if compressed.len() < value.len() {
         Ok(SingleValue::Zstd(Bytes::from(compressed)))
     } else {
