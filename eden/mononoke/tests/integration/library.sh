@@ -103,7 +103,6 @@ function ssldebuglfssend {
 }
 
 function mononoke {
-  # Ignore specific Python warnings to make tests predictable.
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
 
@@ -114,7 +113,8 @@ function mononoke {
 
   setup_configerator_configs
 
-  PYTHONWARNINGS="ignore:::requests" \
+  # Ignore specific Python warnings to make tests predictable.
+  PYTHONWARNINGS="ignore:::requests,ignore::SyntaxWarning" \
   GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
   --scribe-logging-directory "$TESTTMP/scribe_logs" \
   --ca-pem "$TEST_CERTDIR/root-ca.crt" \
