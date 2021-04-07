@@ -29,6 +29,12 @@ def should_prefetch_profiles(instance: EdenInstance) -> bool:
     return instance.get_config_bool("prefetch-profiles.prefetching-enabled", False)
 
 
+# consults the global kill switch to check if this user should prefetch the
+# metadata for the specified prefetch profile(s).
+def should_prefetch_metadata(instance: EdenInstance) -> bool:
+    return instance.get_config_bool("prefetch-profiles.prefetch-metadata", False)
+
+
 # find the profile inside the given checkout and return a set of its contents.
 def get_contents_for_profile(
     checkout: EdenCheckout, profile: str, silent: bool
@@ -58,6 +64,7 @@ def make_prefetch_request(
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
+    prefetch_metadata: bool,
 ) -> Optional[Glob]:
     if predict_revisions:
         # The arc and hg commands need to be run in the mount mount, so we need
@@ -137,7 +144,7 @@ def make_prefetch_request(
                 prefetchFiles=enable_prefetch,
                 suppressFileList=silent,
                 revisions=byte_revisions,
-                prefetchMetadata=False,
+                prefetchMetadata=prefetch_metadata,
             )
         )
 
@@ -152,6 +159,7 @@ def prefetch_profiles(
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
+    prefetch_metadata: bool,
 ) -> Optional[Glob]:
     if not should_prefetch_profiles(instance):
         if not silent:
@@ -161,6 +169,15 @@ def prefetch_profiles(
                 "the eden configs."
             )
         return None
+
+    if should_prefetch_metadata(instance):
+        if not silent and not prefetch_metadata:
+            print(
+                "Prefetching file metadata due to global eden config. "
+                "This means prefetch-profiles.prefetch_metadata is set in the "
+                "eden configs."
+            )
+        prefetch_metadata = True
 
     # if we are running in the foreground, skip creating a new process to
     # run in, just run it here.
@@ -178,6 +195,7 @@ def prefetch_profiles(
             silent=silent,
             revisions=revisions,
             predict_revisions=predict_revisions,
+            prefetch_metadata=prefetch_metadata,
         )
     # if we are running in the background, create a copy of the fetch command
     # but in the foreground.
@@ -203,6 +221,9 @@ def prefetch_profiles(
 
         if predict_revisions:
             fetch_sub_command += ["--predict-commits"]
+
+        if prefetch_metadata:
+            fetch_sub_command += ["--prefetch-metadata"]
 
         # we need to say if we are not suppose to prefetch as it is the
         # default to enable_prefetching
@@ -382,6 +403,7 @@ class ActivateProfileCmd(Subcmd):
                     silent=not args.verbose,
                     revisions=None,
                     predict_revisions=False,
+                    prefetch_metadata=args.prefetch_metadata,
                 )
                 # there will only every be one commit used to query globFiles here,
                 # so no need to list which commit a file is fetched for, it will
@@ -485,6 +507,15 @@ class FetchProfileCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--prefetch-metadata",
+            help="Prefetch file metadata (sha1 and size) for each file in a "
+            + "tree when we fetch trees during this prefetch. This may send a "
+            + "large amount of requests to the server and should only be used if "
+            + "you understand the risks.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout = args.checkout
@@ -510,6 +541,7 @@ class FetchProfileCmd(Subcmd):
             silent=not args.verbose,
             revisions=args.commits,
             predict_revisions=args.predict_commits,
+            prefetch_metadata=args.prefetch_metadata,
         )
 
         if args.verbose and result is not None:
