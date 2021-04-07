@@ -14,12 +14,12 @@ use clap::Arg;
 use criterion::Criterion;
 use tokio::runtime::Runtime;
 
-use blobrepo_factory::{get_cachelib_blobstore, Caching};
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
 use cacheblob::{new_memcache_blobstore_no_lease, CachelibBlobstoreOptions};
 use cmdlib::args;
 use context::CoreContext;
+use repo_factory::Caching;
 
 mod parallel_puts;
 mod single_puts;
@@ -124,17 +124,19 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         .context("Could not make blobstore")?;
         let blobstore = match caching {
             Caching::Disabled => blobstore,
-            Caching::CachelibOnlyBlobstore(cache_shards) => {
-                get_cachelib_blobstore(blobstore, cache_shards, CachelibBlobstoreOptions::default())
-                    .context("get_cachelib_blobstore failed")?
-            }
+            Caching::CachelibOnlyBlobstore(cache_shards) => repo_factory::cachelib_blobstore(
+                blobstore,
+                cache_shards,
+                &CachelibBlobstoreOptions::default(),
+            )
+            .context("repo_factory::cachelib_blobstore failed")?,
             Caching::Enabled(cache_shards) => {
-                let cachelib_blobstore = get_cachelib_blobstore(
+                let cachelib_blobstore = repo_factory::cachelib_blobstore(
                     blobstore,
                     cache_shards,
-                    CachelibBlobstoreOptions::default(),
+                    &CachelibBlobstoreOptions::default(),
                 )
-                .context("get_cachelib_blobstore failed")?;
+                .context("repo_factory::cachelib_blobstore failed")?;
                 Arc::new(
                     new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
                         .context("Memcache blobstore issues")?,

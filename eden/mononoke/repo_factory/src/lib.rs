@@ -267,7 +267,7 @@ fn volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
         .ok_or_else(|| RepoFactoryError::MissingCachePool(name.to_string()))?)
 }
 
-fn cachelib_blobstore<B: Blobstore + 'static>(
+pub fn cachelib_blobstore<B: Blobstore + 'static>(
     blobstore: B,
     cache_shards: usize,
     options: &CachelibBlobstoreOptions,

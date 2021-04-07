@@ -107,7 +107,6 @@ backsyncer = { version = "0.1.0", path = "commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "derived_data/blame" }
 blobimport_lib = { version = "0.1.0", path = "blobimport_lib" }
 blobrepo = { version = "0.1.0", path = "blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
@@ -178,6 +177,7 @@ pushrebase = { version = "0.1.0", path = "pushrebase" }
 rand = { version = "0.7", features = ["small_rng"] }
 redactedblobstore = { version = "0.1.0", path = "blobstore/redactedblobstore" }
 regex = "1.4.2"
+repo_factory = { version = "0.1.0", path = "repo_factory" }
 revset = { version = "0.1.0", path = "revset" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
