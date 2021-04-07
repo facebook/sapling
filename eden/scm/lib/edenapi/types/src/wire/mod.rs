@@ -125,7 +125,7 @@ pub trait ToWire: Sized {
 /// Covnert from an EdenAPI Wire type to API type
 pub trait ToApi: Sized {
     type Api;
-    type Error: Into<WireToApiConversionError> + fmt::Debug;
+    type Error: Into<WireToApiConversionError>;
 
     fn to_api(self) -> Result<Self::Api, Self::Error>;
 }
@@ -542,6 +542,7 @@ pub mod tests {
     where
         T: ToWire + Clone + PartialEq,
         <T as ToWire>::Wire: ToApi<Api = T>,
+        <<T as ToWire>::Wire as ToApi>::Error: std::fmt::Debug,
     {
         let wire = original.clone().to_wire();
         let roundtrip = wire.to_api().unwrap();
