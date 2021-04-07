@@ -12,7 +12,6 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }

@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_factory::ReadOnlyStorage;
+use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use clap::ArgMatches;

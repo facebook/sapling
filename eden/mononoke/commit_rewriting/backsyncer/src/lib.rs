@@ -26,8 +26,7 @@
 ///    log id.
 use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::ReadOnlyStorage;
-use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::{
     ArcBookmarkUpdateLog, ArcBookmarks, BookmarkTransactionError, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, BundleReplay, Freshness,

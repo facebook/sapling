@@ -8,9 +8,9 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
