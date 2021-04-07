@@ -117,7 +117,7 @@ impl From<RepoPathParseError> for WireToApiConversionError {
 
 /// Convert from an EdenAPI API type to Wire type
 pub trait ToWire: Sized {
-    type Wire: serde::Serialize + serde::de::DeserializeOwned + std::fmt::Debug + ToApi<Api = Self>;
+    type Wire: serde::Serialize + serde::de::DeserializeOwned + std::fmt::Debug;
 
     fn to_wire(self) -> Self::Wire;
 }
@@ -538,7 +538,11 @@ pub mod tests {
         original == roundtrip
     }
 
-    pub fn check_wire_roundtrip<T: ToWire + Clone + PartialEq>(original: T) -> bool {
+    pub fn check_wire_roundtrip<T>(original: T) -> bool
+    where
+        T: ToWire + Clone + PartialEq,
+        <T as ToWire>::Wire: ToApi<Api = T>,
+    {
         let wire = original.clone().to_wire();
         let roundtrip = wire.to_api().unwrap();
         original == roundtrip
