@@ -24,7 +24,6 @@ uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 [dev-dependencies]
 ascii = "1.0"
 async-trait = "0.1.45"
-async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -35,3 +34,4 @@ quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 revset_test_helper = { version = "0.1.0", path = "revset-test-helper" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

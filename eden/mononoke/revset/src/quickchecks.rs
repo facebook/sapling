@@ -320,12 +320,11 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             #[test]
             fn $test_name() {
-                fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
-                    async_unit::tokio_unit_test(async move {
-                        let ctx = CoreContext::test_mock(fb);
-                        let repo = Arc::new($repo::getrepo(fb).await);
-                        match_hashset_to_revset(ctx, repo, set).await
-                    })
+                #[tokio::main(basic_scheduler)]
+                async fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
+                    let ctx = CoreContext::test_mock(fb);
+                    let repo = Arc::new($repo::getrepo(fb).await);
+                    match_hashset_to_revset(ctx, repo, set).await
                 }
 
                 quickcheck(prop as fn(FacebookInit, RevsetSpec) -> bool)
