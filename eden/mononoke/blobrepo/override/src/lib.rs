@@ -10,13 +10,10 @@
 use blobrepo::{BlobRepo, BlobRepoInner};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
-use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::LeaseOps;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use filenodes::ArcFilenodes;
-use filestore::FilestoreConfig;
-use metaconfig_types::DerivedDataConfig;
 use repo_blobstore::RepoBlobstoreArgs;
 use repo_derived_data::RepoDerivedData;
 use std::sync::Arc;
@@ -81,32 +78,6 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
     }
 }
 
-impl DangerousOverride<ArcBookmarks> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(ArcBookmarks) -> ArcBookmarks,
-    {
-        let bookmarks = modify(self.bookmarks.clone());
-        Self {
-            bookmarks,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<ArcBookmarkUpdateLog> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(ArcBookmarkUpdateLog) -> ArcBookmarkUpdateLog,
-    {
-        let bookmark_update_log = modify(self.bookmark_update_log.clone());
-        Self {
-            bookmark_update_log,
-            ..self.clone()
-        }
-    }
-}
-
 impl DangerousOverride<ArcChangesets> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
@@ -145,36 +116,6 @@ impl DangerousOverride<ArcBonsaiHgMapping> for BlobRepoInner {
         let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
         Self {
             bonsai_hg_mapping,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<DerivedDataConfig> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(DerivedDataConfig) -> DerivedDataConfig,
-    {
-        let derived_data_config = modify(self.repo_derived_data.config().clone());
-        let repo_derived_data = Arc::new(RepoDerivedData::new(
-            derived_data_config,
-            self.repo_derived_data.lease().clone(),
-        ));
-        Self {
-            repo_derived_data,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<FilestoreConfig> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(FilestoreConfig) -> FilestoreConfig,
-    {
-        let filestore_config = Arc::new(modify(self.filestore_config.as_ref().clone()));
-        Self {
-            filestore_config,
             ..self.clone()
         }
     }
