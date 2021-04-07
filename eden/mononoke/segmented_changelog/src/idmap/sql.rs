@@ -122,6 +122,9 @@ impl SqlIdMap {
         conn: &Connection,
         vertexes: &[u64],
     ) -> Result<HashMap<Vertex, ChangesetId>, Error> {
+        if vertexes.is_empty() {
+            return Ok(HashMap::new());
+        }
         let rows =
             SelectManyChangesetIds::query(conn, &self.repo_id, &self.version, vertexes).await?;
         Ok::<_, Error>(rows.into_iter().map(|row| (Vertex(row.0), row.1)).collect())
@@ -132,6 +135,9 @@ impl SqlIdMap {
         conn: &Connection,
         cs_ids: &[ChangesetId],
     ) -> Result<HashMap<ChangesetId, Vertex>, Error> {
+        if cs_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
         let rows = SelectManyVertexes::query(conn, &self.repo_id, &self.version, cs_ids).await?;
         Ok(rows.into_iter().map(|row| (row.0, Vertex(row.1))).collect())
     }
@@ -614,6 +620,22 @@ mod tests {
 
         assert_eq!(idmap11.get_vertex(&ctx, ONES_CSID).await?, Vertex(1));
         assert_eq!(idmap11.get_vertex(&ctx, TWOS_CSID).await?, Vertex(2));
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_many_fetch_fn_with_no_entries(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let idmap = new_sql_idmap()?;
+
+        assert!(idmap.find_many_vertexes(&ctx, vec![]).await?.is_empty());
+        assert!(
+            idmap
+                .find_many_changeset_ids(&ctx, vec![])
+                .await?
+                .is_empty()
+        );
 
         Ok(())
     }
