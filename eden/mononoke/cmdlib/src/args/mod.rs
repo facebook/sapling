@@ -38,7 +38,6 @@ use slog_term::TermDecorator;
 use std::panic::{RefUnwindSafe, UnwindSafe};
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
     ScrubAction, ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
@@ -47,6 +46,7 @@ use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, PackFormat, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
+use repo_factory::{Caching, ReadOnlyStorage, RepoFactory};
 use slog_ext::make_tag_filter_drain;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
@@ -1606,7 +1606,7 @@ async fn open_repo_internal_with_repo_id(
 ) -> Result<BlobRepo, Error> {
     let config_store = init_config_store(fb, logger, matches)?;
     let common_config = load_common_config(config_store, &matches)?;
-    let (reponame, config) = get_config_by_repoid(config_store, matches, repo_id)?;
+    let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
         BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
@@ -1625,22 +1625,24 @@ async fn open_repo_internal_with_repo_id(
     let blobstore_options = parse_blobstore_options(matches)?;
     let readonly_storage = parse_readonly_storage(matches);
 
-    let mut builder = BlobrepoBuilder::new(
+    let repo_factory = RepoFactory::new(
         fb,
-        reponame,
-        &config,
-        &mysql_options,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options,
+        blobstore_options,
+        readonly_storage,
         caching,
         common_config.censored_scuba_params,
-        readonly_storage,
-        blobstore_options,
-        &logger,
-        config_store,
     );
+
     if let Some(redaction_override) = redaction_override {
-        builder.set_redaction(redaction_override);
+        config.redaction = redaction_override;
     }
-    builder.build().await
+
+    let repo = repo_factory.build(reponame, config).await?;
+
+    Ok(repo)
 }
 
 pub async fn open_repo_with_repo_id<'a>(

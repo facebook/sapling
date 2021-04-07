@@ -8,7 +8,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
@@ -34,6 +33,7 @@ num_cpus = "1.11"
 observability = { version = "0.1.0", path = "../observability" }
 once_cell = "1.4"
 panichandler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+repo_factory = { version = "0.1.0", path = "../repo_factory" }
 scribe_ext = { version = "0.1.0", path = "../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 services = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
