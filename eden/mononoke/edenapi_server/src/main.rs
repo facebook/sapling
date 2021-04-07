@@ -23,7 +23,6 @@ use futures::{
 use slog::{debug, info, Logger};
 use tokio::net::TcpListener;
 
-use blobrepo_factory::Caching;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers::serve_forever_async,
@@ -35,6 +34,7 @@ use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
 };
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use repo_factory::{Caching, RepoFactory};
 use secure_utils::SslConfig;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -108,13 +108,23 @@ async fn start(
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
     debug!(logger, "Initializing Mononoke API");
+    let repo_factory = RepoFactory::new(
+        fb,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options.clone(),
+        blobstore_options.clone(),
+        readonly_storage,
+        caching,
+        repo_configs.common.censored_scuba_params.clone(),
+    );
+
     let env = MononokeEnvironment {
         fb,
         logger: logger.clone(),
+        repo_factory,
         mysql_options,
-        caching,
         readonly_storage,
-        blobstore_options,
         config_store,
         disabled_hooks,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,

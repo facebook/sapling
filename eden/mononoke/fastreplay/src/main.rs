@@ -37,6 +37,7 @@ use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
 use repo_client::MononokeRepo;
+use repo_factory::RepoFactory;
 use scopeguard::defer;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Logger};
@@ -228,13 +229,23 @@ async fn bootstrap_repositories<'a>(
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
+    let repo_factory = RepoFactory::new(
+        fb,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options.clone(),
+        blobstore_options.clone(),
+        readonly_storage,
+        caching,
+        config.common.censored_scuba_params.clone(),
+    );
+
     let env = MononokeEnvironment {
         fb,
         logger: logger.clone(),
+        repo_factory,
         mysql_options: mysql_options.clone(),
-        caching,
         readonly_storage,
-        blobstore_options,
         config_store,
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
@@ -313,7 +324,7 @@ async fn bootstrap_repositories<'a>(
 
             let repo_client_knobs = config.repo_client_knobs.clone();
 
-            let repo = Repo::new(&env, name.clone(), config, common.clone())
+            let repo = Repo::new(&env, name.clone(), config)
                 .await
                 .context("Error opening Repo")?;
             let repo = MononokeRepo::new(

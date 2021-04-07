@@ -14,10 +14,9 @@ use std::{
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{BlobrepoBuilder, ReadOnlyStorage};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
@@ -39,9 +38,9 @@ use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::Globalrev;
-use metaconfig_types::{CommonConfig, RepoConfig};
 use metaconfig_types::{
-    HookManagerParams, InfinitepushNamespace, InfinitepushParams, SourceControlServiceParams,
+    HookManagerParams, InfinitepushNamespace, InfinitepushParams, RepoConfig,
+    SourceControlServiceParams,
 };
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
@@ -145,7 +144,6 @@ impl Repo {
         env: &MononokeEnvironment<'_>,
         name: String,
         config: RepoConfig,
-        common_config: CommonConfig,
     ) -> Result<Self, Error> {
         let logger = env.logger.new(o!("repo" => name.clone()));
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
@@ -164,19 +162,11 @@ impl Repo {
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
             Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &env.config_store)?);
 
-        let builder = BlobrepoBuilder::new(
-            env.fb,
-            name.clone(),
-            &config,
-            &env.mysql_options,
-            env.caching,
-            common_config.censored_scuba_params,
-            env.readonly_storage,
-            env.blobstore_options.clone(),
-            &logger,
-            &env.config_store,
-        );
-        let blob_repo = builder.build().watched(&logger).await?;
+        let blob_repo = env
+            .repo_factory
+            .build(name.clone(), config.clone())
+            .watched(&logger)
+            .await?;
 
         let ctx = CoreContext::new_with_logger(env.fb, logger.clone());
 

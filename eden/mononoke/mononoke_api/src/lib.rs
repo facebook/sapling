@@ -13,13 +13,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
-use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 pub use bookmarks::BookmarkName;
 use cached_config::ConfigStore;
-use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
 use futures_watchdog::WatchdogExt;
+use repo_factory::{ReadOnlyStorage, RepoFactory};
 use slog::{debug, info, o, Logger};
 use sql_ext::facebook::MysqlOptions;
 pub use warm_bookmarks_cache::BookmarkUpdateDelay;
@@ -76,26 +75,20 @@ pub struct Mononoke {
 impl Mononoke {
     /// Create a Mononoke instance.
     pub async fn new(env: &MononokeEnvironment<'_>, configs: RepoConfigs) -> Result<Self, Error> {
-        let common_config = configs.common;
         let repos = future::try_join_all(
             configs
                 .repos
                 .into_iter()
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
-                    move |(name, config)| {
-                        cloned!(common_config);
-                        async move {
-                            info!(&env.logger, "Initializing repo: {}", &name);
-                            let repo = Repo::new(env, name.clone(), config, common_config)
-                                .watched(env.logger.new(o!("repo" => name.clone())))
-                                .await
-                                .with_context(|| {
-                                    format!("could not initialize repo '{}'", &name)
-                                })?;
-                            debug!(&env.logger, "Initialized {}", &name);
-                            Ok::<_, Error>((name, Arc::new(repo)))
-                        }
+                    move |(name, config)| async move {
+                        info!(&env.logger, "Initializing repo: {}", &name);
+                        let repo = Repo::new(env, name.clone(), config)
+                            .watched(env.logger.new(o!("repo" => name.clone())))
+                            .await
+                            .with_context(|| format!("could not initialize repo '{}'", &name))?;
+                        debug!(&env.logger, "Initialized {}", &name);
+                        Ok::<_, Error>((name, Arc::new(repo)))
                     }
                 }),
         )
@@ -156,10 +149,9 @@ impl Mononoke {
 pub struct MononokeEnvironment<'a> {
     pub fb: FacebookInit,
     pub logger: Logger,
+    pub repo_factory: RepoFactory,
     pub mysql_options: MysqlOptions,
-    pub caching: Caching,
     pub readonly_storage: ReadOnlyStorage,
-    pub blobstore_options: BlobstoreOptions,
     pub config_store: &'a ConfigStore,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
@@ -177,6 +169,7 @@ pub enum WarmBookmarksCacheDerivedData {
 mod test_impl {
     use super::*;
     use blobrepo::BlobRepo;
+    use cloned::cloned;
     use live_commit_sync_config::{
         LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
     };

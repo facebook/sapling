@@ -29,6 +29,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 rand = { version = "0.7", features = ["small_rng"] }
 repo_client = { version = "0.1.0", path = "../repo_client" }
+repo_factory = { version = "0.1.0", path = "../repo_factory" }
 scopeguard = "1.0.0"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }

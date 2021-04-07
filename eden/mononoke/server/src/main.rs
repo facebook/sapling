@@ -19,6 +19,7 @@ use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
 };
 use openssl::ssl::AlpnError;
+use repo_factory::RepoFactory;
 use slog::{error, info};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -158,13 +159,23 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repo_listeners = {
         cloned!(root_log, service, will_exit);
         async move {
+            let repo_factory = RepoFactory::new(
+                fb,
+                root_log.clone(),
+                config_store.clone(),
+                mysql_options.clone(),
+                blobstore_options.clone(),
+                readonly_storage,
+                caching,
+                config.common.censored_scuba_params.clone(),
+            );
+
             let env = MononokeEnvironment {
                 fb,
                 logger: root_log.clone(),
+                repo_factory,
                 mysql_options: mysql_options.clone(),
-                caching,
                 readonly_storage,
-                blobstore_options,
                 config_store,
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,

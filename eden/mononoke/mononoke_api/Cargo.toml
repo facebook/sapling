@@ -10,7 +10,6 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
@@ -46,6 +45,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.4.2"
+repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
 revset = { version = "0.1.0", path = "../revset" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
