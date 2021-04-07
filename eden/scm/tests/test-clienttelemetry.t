@@ -31,6 +31,7 @@ set up the local repo
   $ hg pull -q --config lfs.wantslfspointers=True \
   > --config clienttelemetryvalues.somevalue=value \
   > --config clienttelemetryvalues.anothervalue=value2
+  $ hg pull -q --config infinitepush.wantsunhydratedcommits=True
 
 check telemetry
   >>> import json
@@ -38,36 +39,48 @@ check telemetry
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     for key in "command", "fullcommand", "wantslfspointers", "somevalue", "anothervalue":
+  ...     for key in "command", "fullcommand", "wantslfspointers", "wantsunhydratedcommits", "somevalue", "anothervalue":
   ...         if "client_%s" % key in parsedrecord["data"]:
   ...             print("%s: %s" % (key, parsedrecord["data"]["client_%s" % key]))
   command: clone
   fullcommand: clone 'ssh://user@dummy/server' local -q
   wantslfspointers: False
+  wantsunhydratedcommits: False
   command: pull
   fullcommand: pull
   wantslfspointers: False
+  wantsunhydratedcommits: False
   command: pull
   fullcommand: pull -q
   wantslfspointers: False
+  wantsunhydratedcommits: False
   command: pull
   fullcommand: pull --config 'clienttelemetry.announceremotehostname=False'
   wantslfspointers: False
+  wantsunhydratedcommits: False
   command: pull
   fullcommand: pull -q --config 'lfs.wantslfspointers=True'
   wantslfspointers: True
+  wantsunhydratedcommits: False
   command: pull
   fullcommand: pull -q --config 'lfs.wantslfspointers=True' --config 'clienttelemetryvalues.somevalue=value'
   wantslfspointers: True
+  wantsunhydratedcommits: False
   somevalue: value
   command: pull
   fullcommand: pull -q --config 'lfs.wantslfspointers=True' --config 'clienttelemetryvalues.somevalue=value' --config 'clienttelemetryvalues.anothervalue=value2'
   wantslfspointers: True
+  wantsunhydratedcommits: False
   somevalue: value
   anothervalue: value2
+  command: pull
+  fullcommand: pull -q --config 'infinitepush.wantsunhydratedcommits=True'
+  wantslfspointers: False
+  wantsunhydratedcommits: True
 
 check blackbox
   $ hg blackbox --pattern '{"clienttelemetry": "_"}'
+  * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)

@@ -76,6 +76,15 @@ def wantslfspointers(ui):
     return str(ui.configbool("lfs", "wantslfspointers"))
 
 
+@clienttelemetryfunc
+def wantsunhydratedcommits(ui):
+    """
+    Tells the server whether this clients wants unhydrated draft commits
+    """
+
+    return str(ui.configbool("infinitepush", "wantsunhydratedcommits"))
+
+
 # Client telemetry data is generated before connection and stored here.
 _clienttelemetrydata = {}
 

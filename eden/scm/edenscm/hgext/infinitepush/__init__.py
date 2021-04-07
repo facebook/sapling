@@ -100,6 +100,10 @@ Configs::
     # Which compression algorithm to use for infinitepush bundles.
     bundlecompression = ZS
 
+    # Client-side option
+    # Tells the server whether this clients wants unhydrated draft commits
+    wantsunhydratedcommits = True
+
     [remotenames]
     # Client-side option
     # This option should be set only if remotenames extension is enabled.
@@ -114,6 +118,7 @@ from edenscm.mercurial import (
     changegroup,
     discovery,
     error,
+    registrar,
     extensions,
     node as nodemod,
     pycompat,
@@ -123,6 +128,9 @@ from edenscm.mercurial.i18n import _
 
 from . import bundleparts, bundlestore, client, common, infinitepushcommands, server
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("infinitepush", "wantsunhydratedcommits", default=False)
 
 cmdtable = infinitepushcommands.cmdtable
 
