@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use derive_more::{Add, Sub};
 use slog::{info, Logger};
-use std::fmt;
-use std::time::Instant;
+use std::{fmt, time::Instant};
 
 #[derive(Add, Sub, Clone, Copy, Default, Debug)]
 pub struct Progress {
     pub success: u64,
     pub missing: u64,
     pub error: u64,
+    pub skipped: u64,
 }
 
 // Log at most every N seconds
@@ -24,11 +25,12 @@ impl fmt::Display for Progress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}, {}, {}, {}",
+            "{}, {}, {}, {}, {}",
             self.success,
             self.missing,
             self.error,
-            self.total()
+            self.total(),
+            self.skipped,
         )
     }
 }
@@ -41,7 +43,7 @@ impl Progress {
     pub fn legend(&self, logger: &Logger) {
         info!(
             logger,
-            "period, rate/s, seconds, success, missing, error, total"
+            "period, rate/s, seconds, success, missing, error, total, skipped"
         );
     }
 
@@ -53,7 +55,7 @@ impl Progress {
         started: Instant,
         prev: Option<(Progress, Instant)>,
         is_final: bool,
-    ) -> Option<Instant> {
+    ) -> Result<Option<Instant>, Error> {
         let log_period = |period, run: &Self, period_secs| {
             let per_sec = if period_secs > 0 {
                 run.total() / period_secs
@@ -73,7 +75,7 @@ impl Progress {
             // keep log volume down
             let delta_secs = now.duration_since(prev_t).as_secs();
             if delta_secs < PROGRESS_INTERVAL_SECS && !is_final {
-                return None;
+                return Ok(None);
             }
             if !quiet {
                 log_period("run", self, run_secs);
@@ -83,6 +85,6 @@ impl Progress {
         } else if !quiet {
             log_period("run", self, run_secs);
         }
-        Some(now)
+        Ok(Some(now))
     }
 }

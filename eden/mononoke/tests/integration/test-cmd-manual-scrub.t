@@ -22,10 +22,10 @@ Run a heal
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
 
 Failure time - this key will not exist
-  $ echo fake-key | manual_scrub --storage-config-name blobstore --error-keys-output errors --missing-keys-output missing --success-keys-output success 2>&1 | strip_glog
-  period, rate/s, seconds, success, missing, error, total
-  run, *, *, 0, 1, 0, 1 (glob)
-  delta, *, *, 0, 1, 0, 1 (glob)
+  $ echo fake-key | manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success 2>&1 | strip_glog
+  period, rate/s, seconds, success, missing, error, total, skipped
+  run, *, *, 0, 1, 0, 1, 0 (glob)
+  delta, *, *, 0, 1, 0, 1, 0 (glob)
   $ wc -l success missing errors
   0 success
   1 missing
@@ -33,22 +33,44 @@ Failure time - this key will not exist
   1 total
   $ cat missing
   fake-key
+  $ [ ! -r checkpoint.txt ] || echo "not expecting checkpoint as no successes"
 
 Success time - these keys will exist and be scrubbed
-  $ manual_scrub --storage-config-name blobstore --quiet --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF
-  > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
+  $ manual_scrub --storage-config-name blobstore --quiet --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
-  > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > EOF
+  checkpointed repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   $ sort < success
   repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
-  repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
   $ wc -l success missing errors
-    3 success
+    2 success
     0 missing
     0 errors
-    3 total
+    2 total
+  $ cat checkpoint.txt
+  repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b (no-eol)
+
+Continue from checkpoint
+  $ manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
+  > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
+  > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
+  > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  > EOF
+  period, rate/s, seconds, success, missing, error, total, skipped
+  run, *, *, 1, 0, 0, 1, 2 (glob)
+  delta, *, *, 1, 0, 0, 1, 2 (glob)
+  checkpointed repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  $ sort < success
+  repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  $ wc -l success missing errors
+   1 success
+   0 missing
+   0 errors
+   1 total
+  $ cat checkpoint.txt
+  repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d (no-eol)
 
 Do same run with compressed key output
   $ manual_scrub --storage-config-name blobstore --quiet --keys-zstd-level=9 --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF

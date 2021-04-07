@@ -24,9 +24,11 @@ use blobstore_factory::{make_blobstore, ScrubAction};
 use cmdlib::args::{self, ArgType};
 use context::CoreContext;
 
+mod checkpoint;
 mod progress;
 mod scrub;
 
+use crate::checkpoint::FileCheckpoint;
 use crate::scrub::scrub;
 
 const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
@@ -35,6 +37,7 @@ const ARG_SCHEDULED_MAX: &str = "scheduled-max";
 const ARG_SUCCESSFUL_KEYS: &str = "success-keys-output";
 const ARG_MISSING_KEYS: &str = "missing-keys-output";
 const ARG_ERROR_KEYS: &str = "error-keys-output";
+const ARG_CHECKPOINT_KEY: &str = "checkpoint-key-file";
 const ARG_ZSTD_LEVEL: &str = "keys-zstd-level";
 const ARG_QUIET: &str = "quiet";
 
@@ -122,6 +125,13 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
                 .help("A file to write error fetching data key IDs to"),
         )
         .arg(
+            Arg::with_name(ARG_CHECKPOINT_KEY)
+                .long(ARG_CHECKPOINT_KEY)
+                .takes_value(true)
+                .required(false)
+                .help("A file to write checkpoint key to"),
+        )
+        .arg(
             Arg::with_name(ARG_ZSTD_LEVEL)
                 .long(ARG_ZSTD_LEVEL)
                 .takes_value(true)
@@ -168,6 +178,9 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .context("No errored keys output file")?;
     let zstd_level = args::get_i32_opt(&matches, ARG_ZSTD_LEVEL);
     let quiet = matches.is_present(ARG_QUIET);
+    let checkpoint = matches
+        .value_of_os(ARG_CHECKPOINT_KEY)
+        .map(FileCheckpoint::new);
 
     let scrub = async move {
         let blobstore = make_blobstore(
@@ -201,6 +214,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             output_handles.push(tokio::spawn(handle_errors(file, recv)));
             send
         };
+
         let res = scrub(
             &blobstore,
             &ctx,
@@ -208,6 +222,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             success,
             missing,
             error,
+            checkpoint,
             scheduled_max,
             quiet,
         )
