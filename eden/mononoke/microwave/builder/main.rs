@@ -14,8 +14,8 @@ use ::changesets::ArcChangesets;
 use ::filenodes::ArcFilenodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{BlobrepoBuilder, PutBehaviour};
 use blobrepo_override::DangerousOverride;
+use blobstore_factory::PutBehaviour;
 use bookmarks::BookmarkName;
 use cache_warmup::{CacheWarmupRequest, CacheWarmupTarget};
 use clap::{Arg, SubCommand};
@@ -32,6 +32,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CacheWarmupParams;
 use microwave::{Snapshot, SnapshotLocation};
+use repo_factory::RepoFactory;
 use slog::{info, o, Logger};
 use std::path::Path;
 use std::sync::Arc;
@@ -101,15 +102,21 @@ async fn do_main<'a>(
         (name, _) => return Err(format_err!("Invalid subcommand: {:?}", name)),
     };
 
+    let repo_factory = Arc::new(RepoFactory::new(
+        fb,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options,
+        blobstore_options,
+        readonly_storage,
+        caching,
+        censored_scuba_params,
+    ));
+
     let futs = repos
         .into_iter()
         .map(|(name, config)| {
-            cloned!(
-                blobstore_options,
-                censored_scuba_params,
-                mysql_options,
-                mut scuba
-            );
+            cloned!(repo_factory, mut scuba);
 
             async move {
                 let logger = logger.new(o!("repo" => name.clone()));
@@ -125,23 +132,13 @@ async fn do_main<'a>(
                 let warmup_ctx = ctx.clone();
 
                 let warmup = async move {
-                    let builder = BlobrepoBuilder::new(
-                        fb,
-                        name,
-                        &config,
-                        &mysql_options,
-                        caching,
-                        censored_scuba_params,
-                        readonly_storage,
-                        blobstore_options,
-                        &logger,
-                        config_store,
-                    );
-                    let repo = builder.build().await?;
+                    let repoid = config.repoid;
+                    let cache_warmup = config.cache_warmup.clone();
+                    let repo: BlobRepo = repo_factory.build(name, config).await?;
 
                     // Rewind bookmarks to the point where we have derived data. Cache
                     // warmup requires filenodes and hg changesets to be present.
-                    let req = match config.cache_warmup {
+                    let req = match cache_warmup {
                         Some(params) => {
                             let CacheWarmupParams {
                                 bookmark,
@@ -160,7 +157,6 @@ async fn do_main<'a>(
                         None => None,
                     };
 
-                    let repoid = config.repoid;
                     let warmup_repo = repo
                         .dangerous_override(|inner| -> ArcFilenodes {
                             Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))

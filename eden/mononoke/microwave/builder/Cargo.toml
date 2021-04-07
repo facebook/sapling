@@ -13,8 +13,8 @@ path = "main.rs"
 anyhow = "1.0"
 async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 changesets = { version = "0.1.0", path = "../../changesets" }
@@ -33,6 +33,7 @@ metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 microwave = { version = "0.1.0", path = ".." }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
