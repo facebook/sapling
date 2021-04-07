@@ -11,4 +11,5 @@ mod envelope;
 mod pack;
 mod store;
 
+pub use pack::{EmptyPack, Pack};
 pub use store::{PackBlob, PackOptions};

@@ -20,7 +20,6 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packblob_thrift = { version = "0.1.0", path = "if" }
 zstd = "=0.6.0+zstd.1.4.8"
-zstdelta = { version = "0.1.0", path = "../../../scm/lib/zstdelta" }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

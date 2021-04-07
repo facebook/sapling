@@ -18,7 +18,7 @@ use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
-use packblob_thrift::{PackedEntry, SingleValue, StorageEnvelope, StorageFormat};
+use packblob_thrift::{SingleValue, StorageEnvelope, StorageFormat};
 use std::{convert::TryInto, io::Cursor};
 
 #[derive(Clone, Debug, Default)]
@@ -168,35 +168,22 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
     // Put packed content, returning the pack's key if successful.
     // `prefix` is in the control of the packer, e.g. if packing only
     // filecontent together packer can chose "repoXXXX.packed.file_content."
-    //
-    // On ref counted stores the packer will need to call unlink on the returned key
-    // if its desirable for old packs to be removed.
     pub async fn put_packed<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        entries: Vec<PackedEntry>,
+        pack: pack::Pack,
+        repo_prefix: String,
         prefix: String,
     ) -> Result<String> {
-        let link_keys: Vec<String> = entries.iter().map(|entry| entry.key.clone()).collect();
-
-        let pack = pack::create_packed(entries)
-            .with_context(|| format!("While packing entries for {:?}", link_keys.clone()))?;
-
-        let mut pack_key = prefix;
-        pack_key.push_str(&pack.key);
-
-        // Wrap in thrift encoding
-        let pack = PackEnvelope(StorageEnvelope {
-            storage: StorageFormat::Packed(pack),
-        });
+        let (pack_key, link_keys, blob) = pack.into_blobstore_bytes(prefix)?;
 
         // pass through the put after wrapping
-        self.inner.put(ctx, pack_key.clone(), pack.into()).await?;
+        self.inner.put(ctx, pack_key.clone(), blob).await?;
 
         // add the links
         let links = FuturesUnordered::new();
-        for mut key in link_keys {
-            key.push_str(ENVELOPE_SUFFIX);
+        for key in link_keys {
+            let key = format!("{}{}{}", repo_prefix, key, ENVELOPE_SUFFIX);
             links.push(self.inner.link(ctx, &pack_key, key));
         }
         links.try_collect().await?;
@@ -215,7 +202,6 @@ mod tests {
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::Memblob;
-    use packblob_thrift::{PackedEntry, PackedValue, SingleValue};
     use rand::{RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
     use std::sync::Arc;
@@ -311,20 +297,23 @@ mod tests {
 
     #[fbinit::test]
     async fn simple_pack_test(fb: FacebookInit) -> Result<()> {
-        let mut input_entries = vec![];
         let mut input_values = vec![];
-        for i in 0..3 {
-            let mut app_key = "repo0000.app_key".to_string();
+        let pack = pack::EmptyPack::new(0);
+
+        let base_key = "app_key0".to_string();
+        let base_data = BlobstoreBytes::from_bytes(b"app_data0" as &[u8]);
+        input_values.push(base_data.clone());
+
+        let mut pack = pack.add_base_blob(base_key.clone(), base_data)?;
+        for i in 1..3 {
+            let mut app_key = "app_key".to_string();
             app_key.push_str(&i.to_string());
 
             let app_data = format!("app_data{}", i);
             let app_data = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(app_data.as_bytes()));
             input_values.push(app_data.clone());
 
-            input_entries.push(PackedEntry {
-                key: app_key,
-                data: PackedValue::Single(SingleValue::Raw(app_data.into_bytes())),
-            })
+            pack.add_delta_blob(base_key.clone(), app_key, app_data)?;
         }
 
         let ctx = CoreContext::test_mock(fb);
@@ -336,7 +325,8 @@ mod tests {
         let inner_key = packblob
             .put_packed(
                 ctx,
-                input_entries.clone(),
+                pack,
+                "repo0000.".to_string(),
                 "repo0000.packed_app_data.".to_string(),
             )
             .await?;
@@ -345,14 +335,19 @@ mod tests {
         let is_present = inner_blobstore.is_present(ctx, &inner_key).await?;
         assert!(!is_present);
 
-        // Get, should remove the thrift envelope as it is loaded
-        let fetched_value = packblob.get(ctx, &input_entries[1].key).await?;
+        for (expected, i) in input_values.into_iter().zip(0..3usize) {
+            // Get, should remove the thrift envelope as it is loaded
+            let fetched_value = packblob.get(ctx, &format!("repo0000.app_key{}", i)).await?;
 
-        assert!(fetched_value.is_some());
+            assert!(
+                fetched_value.is_some(),
+                "Failed to fetch repo0000.app_key{}",
+                i
+            );
 
-        // Make sure the thrift wrapper is not still there
-        assert_eq!(input_values[1], fetched_value.unwrap().into_bytes());
-
+            // Make sure the thrift wrapper is not still there
+            assert_eq!(expected, fetched_value.unwrap().into_bytes());
+        }
         Ok(())
     }
 }

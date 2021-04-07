@@ -5,21 +5,162 @@
  * GNU General Public License version 2.
  */
 
+use crate::envelope::PackEnvelope;
 use crate::store;
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error, Result};
 use ascii::AsciiString;
-use bytes::Bytes;
+use bytes::{buf::BufExt, buf::BufMutExt, Bytes, BytesMut};
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
-use packblob_thrift::{PackedEntry, PackedFormat, PackedValue, SingleValue, ZstdFromDictValue};
-use std::{collections::HashMap, io::Cursor, str};
+use packblob_thrift::{
+    PackedEntry, PackedFormat, PackedValue, SingleValue, StorageEnvelope, StorageFormat,
+    ZstdFromDictValue,
+};
+use std::{
+    collections::HashMap,
+    io::{self, Cursor, Write},
+};
+use zstd::dict::EncoderDictionary;
+use zstd::stream::read::Decoder as ZstdDecoder;
+use zstd::stream::write::Encoder as ZstdEncoder;
 
-pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes, Error> {
+/// An empty pack with no data. Cannot be uploaded, takes a dictionary blob
+#[derive(Debug)]
+pub struct EmptyPack(i32);
+
+/// A pack containing multiple entries, ready to extend or upload
+pub struct Pack {
+    zstd_level: i32,
+    dictionaries: HashMap<String, EncoderDictionary<'static>>,
+    entries: Vec<PackedEntry>,
+}
+
+impl EmptyPack {
+    /// Creates a new EmptyPack
+    pub fn new(zstd_level: i32) -> Self {
+        EmptyPack(zstd_level)
+    }
+
+    /// Adds the first blob to the empty pack
+    pub fn add_base_blob(self, key: String, blob: BlobstoreBytes) -> Result<Pack> {
+        let zstd_level = self.0;
+        let bytes = blob.into_bytes();
+
+        let dictionary = EncoderDictionary::copy(&bytes, zstd_level);
+
+        let cursor = Cursor::new(&bytes);
+        let compressed = zstd::encode_all(cursor, zstd_level)?;
+        let data = PackedValue::Single(SingleValue::Zstd(Bytes::from(compressed)));
+
+        let mut dictionaries = HashMap::new();
+        dictionaries.insert(key.clone(), dictionary);
+        let entries = vec![PackedEntry { key, data }];
+        Ok(Pack {
+            zstd_level,
+            dictionaries,
+            entries,
+        })
+    }
+}
+
+impl Pack {
+    /// Adds another data blob to a pack, delta'd against a previous key
+    pub fn add_delta_blob(
+        &mut self,
+        dict_key: String,
+        key: String,
+        blob: BlobstoreBytes,
+    ) -> Result<()> {
+        if self.dictionaries.contains_key(&key) {
+            bail!("Key {} cannot appear in the same pack twice", key);
+        }
+        let zstd = {
+            let dictionary = self
+                .dictionaries
+                .get(&dict_key)
+                .ok_or_else(|| format_err!("Cannot find dictionary for blob {}", dict_key))?;
+
+            let mut compressed_blob = BytesMut::with_capacity(blob.len());
+            let writer = (&mut compressed_blob).writer();
+            let mut encoder = ZstdEncoder::with_prepared_dictionary(writer, dictionary)?;
+
+            encoder.write_all(blob.as_bytes())?;
+            encoder.finish()?;
+            compressed_blob.freeze()
+        };
+        // This uses `blob` (raw data) to create a dictionary that improves compression
+        // at the expense of requiring the decompressor to find blob before it can
+        // decompress the resulting blob
+        let dictionary = EncoderDictionary::copy(blob.as_bytes(), self.zstd_level);
+        let data = PackedValue::ZstdFromDict(ZstdFromDictValue { dict_key, zstd });
+        self.dictionaries.insert(key.clone(), dictionary);
+        self.entries.push(PackedEntry { key, data });
+        Ok(())
+    }
+
+    /// Returns the compressed size of the pack contents, minus framing overheads
+    pub fn get_compressed_size(&self) -> usize {
+        self.entries
+            .iter()
+            .fold(0, |size, entry| size + get_entry_compressed_size(entry))
+    }
+
+    /// Converts the pack into something that can go into a blobstore
+    pub(crate) fn into_blobstore_bytes(
+        self,
+        prefix: String,
+    ) -> Result<(String, Vec<String>, BlobstoreBytes)> {
+        for entry in &self.entries {
+            if let Some(prefix) = REPO_PREFIX_REGEX.find(&entry.key) {
+                bail!(
+                    "Repo prefix {} found in packed blob key {}",
+                    prefix.as_str(),
+                    entry.key
+                );
+            }
+        }
+
+        let link_keys: Vec<String> = self.entries.iter().map(|entry| entry.key.clone()).collect();
+
+        // Build the pack identity
+        let mut pack_key = prefix;
+        pack_key.push_str(&compute_pack_hash(&self.entries).to_string());
+        pack_key.push_str(store::ENVELOPE_SUFFIX);
+
+        let pack = PackedFormat {
+            key: pack_key.clone(),
+            entries: self.entries,
+        };
+
+        // Wrap in thrift encoding and returm as bytes
+        Ok((
+            pack_key,
+            link_keys,
+            PackEnvelope(StorageEnvelope {
+                storage: StorageFormat::Packed(pack),
+            })
+            .into(),
+        ))
+    }
+}
+
+// Not to be used with a PackedEntry loaded from a blobstore - panics instead of handling errors
+fn get_entry_compressed_size(entry: &PackedEntry) -> usize {
+    match &entry.data {
+        PackedValue::Single(SingleValue::Raw(bytes))
+        | PackedValue::Single(SingleValue::Zstd(bytes)) => bytes.len(),
+        PackedValue::ZstdFromDict(ZstdFromDictValue { zstd, .. }) => zstd.len(),
+        // Can't happen, by construction - this only takes values created by this module
+        PackedValue::Single(SingleValue::UnknownField(_)) | PackedValue::UnknownField(_) => {
+            panic!("Unknown field")
+        }
+    }
+}
+
+pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes> {
     match v {
         SingleValue::Raw(v) => Ok(BlobstoreBytes::from_bytes(v)),
-        SingleValue::Zstd(v) => {
-            Ok(zstd::decode_all(Cursor::new(v)).map(BlobstoreBytes::from_bytes)?)
-        }
+        SingleValue::Zstd(v) => Ok(zstd::decode_all(v.reader()).map(BlobstoreBytes::from_bytes)?),
         SingleValue::UnknownField(e) => Err(format_err!("SingleValue::UnknownField {:?}", e)),
     }
 }
@@ -27,12 +168,17 @@ pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes, Error
 fn decode_zstd_from_dict(
     k: &str,
     v: ZstdFromDictValue,
-    dicts: HashMap<String, Bytes>,
+    dicts: &HashMap<String, BlobstoreBytes>,
 ) -> Result<BlobstoreBytes, Error> {
     match dicts.get(&v.dict_key) {
         Some(dict) => {
-            let v = zstdelta::apply(dict, &v.zstd)?;
-            Ok(BlobstoreBytes::from_bytes(v))
+            let data = v.zstd.reader();
+            let mut decoder = ZstdDecoder::with_dictionary(data, dict.as_bytes())?;
+            let mut output_bytes = BytesMut::new();
+            let mut writer = (&mut output_bytes).writer();
+            io::copy(&mut decoder, &mut writer)?;
+
+            Ok(BlobstoreBytes::from_bytes(output_bytes))
         }
         None => Err(format_err!(
             "Dictionary {} not found for key {}",
@@ -43,56 +189,65 @@ fn decode_zstd_from_dict(
 }
 
 // Unpack `key` from `packed`
-pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBytes, Error> {
+pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBytes> {
     // Strip repo prefix, if any
     let key = match REPO_PREFIX_REGEX.find(key) {
         Some(m) => &key[m.end()..],
         None => key,
     };
 
-    let mut possible_dicts = HashMap::new();
-    let mut remaining_entries = vec![];
-    for entry in packed.entries {
-        let current_key = entry.key;
-        let value = match entry.data {
-            PackedValue::Single(v) => Some(decode_independent(v)?),
-            v => {
-                remaining_entries.push(PackedEntry {
-                    key: current_key.clone(),
-                    data: v,
-                });
-                None
-            }
-        };
-        if let Some(value) = value {
-            if current_key == key {
-                // short circuit, desired key was not delta compressed
-                return Ok(value);
-            }
-            possible_dicts.insert(current_key, value.into_bytes());
-        }
-    }
+    let PackedFormat {
+        key: pack_key,
+        entries: pack_entries,
+    } = packed;
 
-    for entry in remaining_entries {
-        if entry.key == key {
-            match entry.data {
-                PackedValue::Single(_v) => {
-                    return Err(format_err!("Unexpected PackedValue::Single on key {}", key));
+    let mut entry_map = HashMap::new();
+    for entry in pack_entries {
+        entry_map.insert(entry.key, entry.data);
+        if entry_map.contains_key(key) {
+            // Dictionaries must come before their users, so we don't care about the rest of the pack
+            break;
+        }
+    }
+    // Decode time
+    let mut decoded_blobs = HashMap::new();
+    let mut keys_to_decode = vec![key.to_string()];
+    while let Some(next_key) = keys_to_decode.pop() {
+        match entry_map.remove(dbg!(&next_key)) {
+            None => {
+                if next_key == key {
+                    // Handled below
+                    break;
                 }
-                PackedValue::ZstdFromDict(v) => {
-                    return Ok(decode_zstd_from_dict(key, v, possible_dicts)?);
-                }
-                PackedValue::UnknownField(e) => {
-                    return Err(format_err!("PackedValue::UnknownField {:?}", e));
+                return Err(format_err!(
+                    "Key {} needs dictionary {} but it is not in the pack",
+                    key,
+                    next_key
+                ));
+            }
+            Some(PackedValue::UnknownField(e)) => {
+                return Err(format_err!("PackedValue::UnknownField {:?}", e));
+            }
+            Some(PackedValue::Single(v)) => {
+                decoded_blobs.insert(next_key, decode_independent(v)?);
+            }
+            Some(PackedValue::ZstdFromDict(v)) => {
+                if decoded_blobs.contains_key(&v.dict_key) {
+                    let decoded = decode_zstd_from_dict(&next_key, v, &decoded_blobs)?;
+                    decoded_blobs.insert(next_key, decoded);
+                } else {
+                    // Can't yet decode it - push the keys we need to decode this onto the work queue in order.
+                    keys_to_decode.push(next_key.clone());
+                    keys_to_decode.push(v.dict_key.clone());
+                    // And reinsert this for the next loop
+                    entry_map.insert(next_key, PackedValue::ZstdFromDict(v));
                 }
             }
         }
     }
-    Err(format_err!(
-        "Key {} not in the pack it is pointing to {}",
-        key,
-        packed.key
-    ))
+    decoded_blobs
+        .remove(key)
+        .ok_or_else(|| format_err!("Key {} not in the pack it is pointing to {}", key, pack_key))
 }
 
 // Hash the keys as they themselves are hashes
@@ -105,40 +260,16 @@ fn compute_pack_hash(entries: &[PackedEntry]) -> AsciiString {
     hash_context.finish().to_hex()
 }
 
-// Didn't call this encode, as the packer producing the entries is the real
-// encoder.
-pub fn create_packed(entries: Vec<PackedEntry>) -> Result<PackedFormat, Error> {
-    // make sure we don't embedded repo prefixes inside a blob
-    let entries: Vec<PackedEntry> = entries
-        .into_iter()
-        .map(|entry| match REPO_PREFIX_REGEX.find(&entry.key) {
-            Some(m) => Ok(PackedEntry {
-                key: entry.key[m.end()..].to_string(),
-                data: entry.data,
-            }),
-            None => Ok(entry),
-        })
-        .collect::<Result<Vec<PackedEntry>, Error>>()?;
-
-    // Build the pack identity
-    let mut pack_key = compute_pack_hash(&entries).to_string();
-    pack_key.push_str(store::ENVELOPE_SUFFIX);
-
-    Ok(PackedFormat {
-        key: pack_key,
-        entries,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use bytes::Bytes;
     use rand::{Rng, RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
+    use std::convert::TryInto;
 
     #[test]
-    fn decode_independent_zstd_test() -> Result<(), Error> {
+    fn decode_independent_zstd_test() -> Result<()> {
         // Highly compressable!
         let bytes_in = vec![7u8; 65535];
 
@@ -155,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn decode_zstd_from_dict_test() -> Result<(), Error> {
+    fn decode_zstd_from_dict_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
         // Some partially incompressible data as base version
@@ -166,12 +297,20 @@ mod tests {
         let mut next_version = base_version.clone();
         rng.fill_bytes(&mut next_version[60000..]);
 
-        let diff = Bytes::from(zstdelta::diff(&base_version, &next_version)?);
+        let diff = {
+            let mut compressed_blob = BytesMut::new();
+            let writer = (&mut compressed_blob).writer();
+            let mut encoder = ZstdEncoder::with_dictionary(writer, 0, &base_version)?;
+
+            encoder.write_all(&next_version)?;
+            encoder.finish()?;
+            compressed_blob.freeze()
+        };
 
         let base_key = "base".to_string();
 
         let mut dicts = HashMap::new();
-        dicts.insert(base_key.clone(), Bytes::from(base_version));
+        dicts.insert(base_key.clone(), BlobstoreBytes::from_bytes(base_version));
 
         // Test the decoder
         let decoded = decode_zstd_from_dict(
@@ -180,7 +319,7 @@ mod tests {
                 dict_key: base_key,
                 zstd: diff,
             },
-            dicts,
+            &dicts,
         )?;
         assert_eq!(decoded.as_bytes(), &Bytes::from(next_version));
 
@@ -188,44 +327,52 @@ mod tests {
     }
 
     #[test]
-    fn pack_zstd_from_dict_test() -> Result<(), Error> {
+    fn pack_zstd_from_dict_chain_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
         let mut raw_data = vec![];
-        let mut entries = vec![];
+        let pack = EmptyPack::new(0);
 
         // Some partially compressible data as base version
         let mut base_version = vec![7u8; 65535];
         rng.fill_bytes(&mut base_version[0..30000]);
         let base_key = "0".to_string();
-        entries.push(PackedEntry {
-            key: base_key.clone(),
-            data: PackedValue::Single(SingleValue::Raw(Bytes::copy_from_slice(&base_version))),
-        });
         raw_data.push(base_version.clone());
+        let mut pack =
+            pack.add_base_blob(base_key, BlobstoreBytes::from_bytes(base_version.clone()))?;
 
         // incrementally build a pack from seeded random data
-        let mut prev_version = base_version.clone();
+        let mut prev_version = base_version;
         for i in 1..20 {
             let mut this_version = prev_version;
             let start = 30000 + i * 1000;
             let end = start + 1000;
             rng.fill(&mut this_version[start..end]);
             raw_data.push(this_version.clone());
-            // Keep deltaing vs base version
-            let diff = Bytes::from(zstdelta::diff(&base_version, &this_version)?);
-            prev_version = this_version;
-            let entry = PackedEntry {
-                key: i.to_string(),
-                data: PackedValue::ZstdFromDict(ZstdFromDictValue {
-                    dict_key: base_key.clone(),
-                    zstd: diff,
-                }),
-            };
-            entries.push(entry);
+            prev_version = this_version.clone();
+            pack.add_delta_blob(
+                (i - 1).to_string(),
+                i.to_string(),
+                BlobstoreBytes::from_bytes(this_version),
+            )?;
         }
 
-        let packed = create_packed(entries)?;
+        let (key, links, blob) = pack.into_blobstore_bytes(String::new())?;
+
+        for (name, i) in links.into_iter().zip(0..20) {
+            assert_eq!(i.to_string(), name);
+        }
+
+        let packed = {
+            let envelope: PackEnvelope = blob.try_into()?;
+            if let StorageFormat::Packed(pack) = envelope.0.storage {
+                pack
+            } else {
+                bail!("Packing resulted in a single value, not a pack");
+            }
+        };
+
+        assert_eq!(packed.key, key);
 
         // Check for any change of hashing approach
         assert_eq!(
@@ -234,31 +381,61 @@ mod tests {
         );
 
         // Test reads roundtrip back to the raw form
-        for i in 0..20 {
+        for (raw_data, i) in raw_data.into_iter().zip(0..20) {
             let value = decode_pack(packed.clone(), &i.to_string())?;
-            assert_eq!(value.as_bytes(), &Bytes::copy_from_slice(&raw_data[i]));
+            assert_eq!(value.into_bytes(), Bytes::from(raw_data));
         }
 
         Ok(())
     }
 
     #[test]
-    fn pack_test() -> Result<(), Error> {
+    fn pack_zstd_from_dict_unchained_test() -> Result<()> {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
-        // build a pack from seeded random data
-        let entries: Vec<_> = (0..20)
-            .map(|i| {
-                let mut test_data = [0u8; 1024];
-                rng.fill(&mut test_data);
-                PackedEntry {
-                    key: i.to_string(),
-                    data: PackedValue::Single(SingleValue::Raw(Bytes::copy_from_slice(&test_data))),
-                }
-            })
-            .collect();
+        let mut raw_data = vec![];
+        let pack = EmptyPack::new(0);
 
-        let packed = create_packed(entries)?;
+        // Some partially compressible data as base version
+        let mut base_version = vec![7u8; 65535];
+        rng.fill_bytes(&mut base_version[0..30000]);
+        let base_key = "0".to_string();
+        raw_data.push(base_version.clone());
+        let mut pack =
+            pack.add_base_blob(base_key, BlobstoreBytes::from_bytes(base_version.clone()))?;
+
+        // incrementally build a pack from seeded random data
+        let mut prev_version = base_version;
+        for i in 1..20 {
+            let mut this_version = prev_version;
+            let start = 30000 + i * 1000;
+            let end = start + 1000;
+            rng.fill(&mut this_version[start..end]);
+            raw_data.push(this_version.clone());
+            prev_version = this_version.clone();
+            pack.add_delta_blob(
+                "0".to_string(),
+                i.to_string(),
+                BlobstoreBytes::from_bytes(this_version),
+            )?;
+        }
+
+        let (key, links, blob) = pack.into_blobstore_bytes(String::new())?;
+
+        for (name, i) in links.into_iter().zip(0..20) {
+            assert_eq!(i.to_string(), name);
+        }
+
+        let packed = {
+            let envelope: PackEnvelope = blob.try_into()?;
+            if let StorageFormat::Packed(pack) = envelope.0.storage {
+                pack
+            } else {
+                bail!("Packing resulted in a single value, not a pack");
+            }
+        };
+
+        assert_eq!(packed.key, key);
 
         // Check for any change of hashing approach
         assert_eq!(
@@ -266,13 +443,69 @@ mod tests {
             packed.key
         );
 
-        // See if we can get the data back
-        let value1 = decode_pack(packed.clone(), "1")?;
-        assert_eq!(value1.as_bytes().len(), 1024);
+        // Test reads roundtrip back to the raw form
+        for (raw_data, i) in raw_data.into_iter().zip(0..20) {
+            let value = decode_pack(packed.clone(), &i.to_string())?;
+            assert_eq!(value.into_bytes(), Bytes::from(raw_data));
+        }
 
-        // See if we get error for unknown key
-        let missing = decode_pack(packed, "missing");
-        assert!(missing.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn pack_size_test() -> Result<()> {
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+
+        let mut raw_data = vec![];
+        let pack = EmptyPack::new(0);
+
+        // Some partially compressible data as base version
+        let mut base_version = vec![7u8; 65535];
+        rng.fill_bytes(&mut base_version[0..30000]);
+        let base_key = "0".to_string();
+        raw_data.push(base_version.clone());
+        let mut pack =
+            pack.add_base_blob(base_key, BlobstoreBytes::from_bytes(base_version.clone()))?;
+
+        // Check the compressed size is reasonable
+        let base_compressed_size = pack.get_compressed_size();
+        assert!(
+            base_compressed_size > 1024,
+            "Compression turned 64 KiB into {} bytes - suspiciously small",
+            base_compressed_size
+        );
+        assert!(
+            base_compressed_size < 65535,
+            "Compression turned 64 KiB into {} bytes - expansion unexpected",
+            base_compressed_size
+        );
+
+        // incrementally build a pack from seeded random data
+        let mut prev_version = base_version;
+        for i in 1..20 {
+            let mut this_version = prev_version;
+            let start = 30000 + i * 1000;
+            let end = start + 1000;
+            rng.fill(&mut this_version[start..end]);
+            raw_data.push(this_version.clone());
+            prev_version = this_version.clone();
+            pack.add_delta_blob(
+                (i - 1).to_string(),
+                i.to_string(),
+                BlobstoreBytes::from_bytes(this_version),
+            )?;
+        }
+
+        // And check it's grown, but not too far given how compressible this should be.
+        let compressed_size = pack.get_compressed_size();
+        assert!(
+            compressed_size > base_compressed_size,
+            "Pack shrank as it gained data"
+        );
+        assert!(
+            compressed_size < (base_compressed_size + 20 * 1000),
+            "Pack grew by more than the size of added data"
+        );
 
         Ok(())
     }
