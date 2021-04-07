@@ -117,7 +117,7 @@ impl From<RepoPathParseError> for WireToApiConversionError {
 
 /// Convert from an EdenAPI API type to Wire type
 pub trait ToWire: Sized {
-    type Wire: serde::Serialize + serde::de::DeserializeOwned + std::fmt::Debug;
+    type Wire: serde::Serialize + serde::de::DeserializeOwned;
 
     fn to_wire(self) -> Self::Wire;
 }

@@ -64,7 +64,11 @@ fn main() -> Result<()> {
     }
 }
 
-fn make_req<R: FromJson + ToWire>(args: Args) -> Result<()> {
+fn make_req<R>(args: Args) -> Result<()>
+where
+    R: FromJson + ToWire,
+    <R as ToWire>::Wire: std::fmt::Debug,
+{
     let json = read_input(args.input)?;
     let req = R::from_json(&json)?.to_wire();
     let bytes = serde_cbor::to_vec(&req)?;
