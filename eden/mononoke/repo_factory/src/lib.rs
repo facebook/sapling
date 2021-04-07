@@ -6,6 +6,7 @@
  */
 
 //! Repository factory.
+#![feature(trait_alias)]
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -112,6 +113,8 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
     }
 }
 
+pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
+
 pub struct RepoFactory {
     fb: FacebookInit,
     logger: Logger,
@@ -125,6 +128,7 @@ pub struct RepoFactory {
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs:
         RepoFactoryCache<MetadataDatabaseConfig, Arc<HashMap<String, RedactedMetadata>>>,
+    blobstore_override: Option<Box<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
 }
 
 impl RepoFactory {
@@ -150,9 +154,17 @@ impl RepoFactory {
             sql_factories: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
+            blobstore_override: None,
         }
     }
 
+    pub fn with_blobstore_override(
+        &mut self,
+        blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
+    ) -> &mut Self {
+        self.blobstore_override = Some(Box::new(blobstore_override));
+        self
+    }
 
     pub async fn sql_factory(
         &self,
@@ -211,6 +223,10 @@ impl RepoFactory {
                     }
                     Caching::Disabled => {}
                 };
+
+                if let Some(blobstore_override) = &self.blobstore_override {
+                    blobstore = blobstore_override(blobstore);
+                }
 
                 Ok(blobstore)
             })
