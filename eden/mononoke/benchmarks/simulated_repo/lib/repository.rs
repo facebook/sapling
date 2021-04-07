@@ -8,45 +8,53 @@
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobrepo_factory::init_all_derived_data;
 use blobstore::Blobstore;
-use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
-use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
+use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
 use bonsai_hg_mapping::{
-    BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    SqlBonsaiHgMappingBuilder,
+    ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
+    CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder,
 };
-use bonsai_svnrev_mapping::{RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping};
+use bonsai_svnrev_mapping::{
+    ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
+};
+use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
-use changeset_fetcher::SimpleChangesetFetcher;
-use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
+use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
+use changesets::{
+    ArcChangesets, CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets,
+};
 use context::CoreContext;
-use dbbookmarks::SqlBookmarksBuilder;
+use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
 use filenodes::{
     ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode,
 };
-use filestore::FilestoreConfig;
+use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use memblob::Memblob;
-use mercurial_mutation::SqlHgMutationStoreBuilder;
+use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
+use metaconfig_types::ArcRepoConfig;
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
 use newfilenodes::NewFilenodesBuilder;
-use phases::SqlPhasesFactory;
+use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use rand::Rng;
 use rand_distr::Distribution;
-use repo_blobstore::RepoBlobstoreArgs;
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
+use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
+use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
+use segmented_changelog_types::ArcSegmentedChangelog;
 use sql_construct::SqlConstruct;
 use std::{sync::Arc, time::Duration};
 
@@ -70,120 +78,182 @@ impl Default for DelaySettings {
     }
 }
 
-pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<BlobRepo> {
-    let blobstore: Arc<dyn Blobstore> = {
-        let delayed: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
+pub struct BenchmarkRepoFactory {
+    fb: FacebookInit,
+    delay_settings: DelaySettings,
+}
+
+impl BenchmarkRepoFactory {
+    pub fn new(fb: FacebookInit, delay_settings: DelaySettings) -> Self {
+        BenchmarkRepoFactory { fb, delay_settings }
+    }
+}
+
+fn cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
+    Ok(cachelib::get_pool(name).ok_or_else(|| anyhow!("no cache pool: {}", name))?)
+}
+
+fn volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
+    Ok(cachelib::get_volatile_pool(name)?.ok_or_else(|| anyhow!("no cache pool: {}", name))?)
+}
+
+#[facet::factory()]
+impl BenchmarkRepoFactory {
+    pub fn repo_blobstore(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcRepoBlobstore> {
+        let blobstore: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
             Memblob::default(),
-            settings.blobstore_get_dist,
-            settings.blobstore_put_dist,
+            self.delay_settings.blobstore_get_dist,
+            self.delay_settings.blobstore_put_dist,
         ));
-        Arc::new(new_cachelib_blobstore(
-            delayed,
-            Arc::new(
-                cachelib::get_pool("blobstore-blobs").ok_or_else(|| Error::msg("no cache pool"))?,
-            ),
-            Arc::new(
-                cachelib::get_pool("blobstore-presence")
-                    .ok_or_else(|| Error::msg("no cache pool"))?,
-            ),
+        let blobstore = Arc::new(new_cachelib_blobstore(
+            blobstore,
+            Arc::new(cache_pool("blobstore-blobs")?),
+            Arc::new(cache_pool("blobstore-presence")?),
             CachelibBlobstoreOptions::default(),
-        ))
-    };
-
-    let filenodes = {
-        let pool = cachelib::get_volatile_pool("filenodes")
-            .unwrap()
-            .ok_or_else(|| Error::msg("no cache pool"))?;
-
-        let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
-        builder.enable_caching(fb, pool.clone(), pool, "filenodes", "");
-
-        let filenodes: ArcFilenodes = Arc::new(DelayedFilenodes::new(
-            builder.build(),
-            settings.db_get_dist,
-            settings.db_put_dist,
         ));
+        let args = RepoBlobstoreArgs::new(
+            blobstore,
+            None,
+            repo_identity.id(),
+            MononokeScubaSampleBuilder::with_discard(),
+        );
+        let (repo_blobstore, _) = args.into_blobrepo_parts();
+        Ok(Arc::new(repo_blobstore))
+    }
 
-        filenodes
-    };
+    pub fn repo_config(&self, repo_identity: &ArcRepoIdentity) -> ArcRepoConfig {
+        let mut config = test_repo_factory::default_test_repo_config();
+        config.repoid = repo_identity.id();
+        Arc::new(config)
+    }
 
-    let changesets = {
+    pub fn repo_identity(&self) -> ArcRepoIdentity {
+        Arc::new(RepoIdentity::new(
+            RepositoryId::new(rand::random()),
+            "benchmarkrepo".to_string(),
+        ))
+    }
+
+    pub fn changesets(&self) -> Result<ArcChangesets> {
         let changesets: Arc<dyn Changesets> = Arc::new(DelayedChangesets::new(
             SqlChangesets::with_sqlite_in_memory()?,
-            settings.db_get_dist,
-            settings.db_put_dist,
+            self.delay_settings.db_get_dist,
+            self.delay_settings.db_put_dist,
         ));
-        Arc::new(CachingChangesets::new(
-            fb,
+        Ok(Arc::new(CachingChangesets::new(
+            self.fb,
             changesets,
-            cachelib::get_volatile_pool("changesets")
-                .unwrap()
-                .ok_or_else(|| Error::msg("no cache pool"))?,
+            volatile_pool("changesets")?,
+        )))
+    }
+
+    pub fn changeset_fetcher(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        changesets: &ArcChangesets,
+    ) -> ArcChangesetFetcher {
+        Arc::new(SimpleChangesetFetcher::new(
+            changesets.clone(),
+            repo_identity.id(),
         ))
-    };
+    }
 
-    let bonsai_globalrev_mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);
+    pub fn sql_bookmarks(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcSqlBookmarks> {
+        // TODO:
+        //  - add caching
+        //  - add delay
+        Ok(Arc::new(
+            SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo_identity.id()),
+        ))
+    }
 
-    let bonsai_hg_mapping = {
+    pub fn bookmarks(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarks {
+        sql_bookmarks.clone()
+    }
+
+    pub fn bookmark_update_log(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarkUpdateLog {
+        sql_bookmarks.clone()
+    }
+
+    pub fn sql_phases_factory(&self) -> Result<ArcSqlPhasesFactory> {
+        Ok(Arc::new(SqlPhasesFactory::with_sqlite_in_memory()?))
+    }
+
+    pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
         let mapping: Arc<dyn BonsaiHgMapping> = Arc::new(DelayedBonsaiHgMapping::new(
             SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()?.build(),
-            settings.db_get_dist,
-            settings.db_put_dist,
+            self.delay_settings.db_get_dist,
+            self.delay_settings.db_put_dist,
         ));
-        Arc::new(CachingBonsaiHgMapping::new(
-            fb,
+        Ok(Arc::new(CachingBonsaiHgMapping::new(
+            self.fb,
             mapping,
-            cachelib::get_volatile_pool("bonsai_hg_mapping")
-                .unwrap()
-                .ok_or_else(|| Error::msg("no cache pool"))?,
+            volatile_pool("bonsai_hg_mapping")?,
+        )))
+    }
+
+    pub fn bonsai_git_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiGitMapping> {
+        Ok(Arc::new(
+            SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?
+                .with_repo_id(repo_identity.id()),
         ))
-    };
+    }
 
-    // Disable redaction check when executing benchmark reports
-    let repoid = RepositoryId::new(rand::random());
+    pub fn bonsai_globalrev_mapping(&self) -> Result<ArcBonsaiGlobalrevMapping> {
+        Ok(Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?))
+    }
 
-    // TODO:
-    //  - add caching
-    //  - add delay
-    let bookmarks = Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
+    pub fn repo_bonsai_svnrev_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcRepoBonsaiSvnrevMapping> {
+        Ok(Arc::new(RepoBonsaiSvnrevMapping::new(
+            repo_identity.id(),
+            Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?),
+        )))
+    }
 
-    let bonsai_svnrev_mapping = Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?);
+    pub fn filenodes(&self) -> Result<ArcFilenodes> {
+        let pool = volatile_pool("filenodes")?;
 
-    let bonsai_git_mapping =
-        Arc::new(SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(repoid));
+        let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
+        builder.enable_caching(self.fb, pool.clone(), pool, "filenodes", "");
 
-    let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
+        Ok(Arc::new(DelayedFilenodes::new(
+            builder.build(),
+            self.delay_settings.db_get_dist,
+            self.delay_settings.db_put_dist,
+        )))
+    }
 
-    let hg_mutation_store =
-        Arc::new(SqlHgMutationStoreBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
+    pub fn hg_mutation_store(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcHgMutationStore> {
+        Ok(Arc::new(
+            SqlHgMutationStoreBuilder::with_sqlite_in_memory()?.with_repo_id(repo_identity.id()),
+        ))
+    }
 
-    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+    pub fn segmented_changelog(&self) -> ArcSegmentedChangelog {
+        Arc::new(DisabledSegmentedChangelog::new())
+    }
 
-    let blobstore = RepoBlobstoreArgs::new(
-        blobstore,
-        None,
-        repoid,
-        MononokeScubaSampleBuilder::with_discard(),
-    );
-    Ok(blobrepo_factory::blobrepo_new(
-        bookmarks.clone(),
-        bookmarks,
-        blobstore,
-        filenodes,
-        changesets,
-        changeset_fetcher,
-        bonsai_git_mapping,
-        bonsai_globalrev_mapping,
-        RepoBonsaiSvnrevMapping::new(repoid, bonsai_svnrev_mapping),
-        bonsai_hg_mapping,
-        hg_mutation_store,
-        Arc::new(DummyLease {}),
-        Arc::new(DisabledSegmentedChangelog::new()),
-        FilestoreConfig::default(),
-        phases_factory,
-        init_all_derived_data(),
-        "benchmarkrepo".to_string(),
-    ))
+    pub fn repo_derived_data(&self, repo_config: &ArcRepoConfig) -> ArcRepoDerivedData {
+        Arc::new(RepoDerivedData::new(
+            repo_config.derived_data_config.clone(),
+            Arc::new(DummyLease {}),
+        ))
+    }
+
+    pub fn filestore_config(&self) -> ArcFilestoreConfig {
+        Arc::new(FilestoreConfig::default())
+    }
+}
+
+pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<BlobRepo> {
+    let repo = BenchmarkRepoFactory::new(fb, settings).build()?;
+    Ok(repo)
 }
 
 /// Delay target future execution by delay sampled from provided distribution

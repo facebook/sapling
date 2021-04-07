@@ -76,7 +76,10 @@ pub struct TestRepoFactory {
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
 }
 
-fn default_test_repo_config() -> RepoConfig {
+/// The default configuration for test repositories.
+///
+/// This configuration enables all derived data types at the latest version.
+pub fn default_test_repo_config() -> RepoConfig {
     RepoConfig {
         derived_data_config: DerivedDataConfig {
             scuba_table: None,
