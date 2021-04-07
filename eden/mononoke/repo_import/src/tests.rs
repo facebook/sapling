@@ -16,7 +16,6 @@ mod tests {
     use anyhow::Result;
     use ascii::AsciiString;
     use blobrepo::BlobRepo;
-    use blobrepo_override::DangerousOverride;
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
     use cached_config::{ConfigStore, TestSource};
@@ -37,7 +36,7 @@ mod tests {
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, PushrebaseParams, RepoConfig,
+        DefaultSmallToLargeCommitSyncPathAction, PushrebaseParams, RepoConfig,
         SmallRepoCommitSyncConfig,
     };
     use mononoke_hg_sync_job_helper_lib::LATEST_REPLAYED_REQUEST_KEY;
@@ -69,15 +68,15 @@ mod tests {
 
     fn create_repo(id: i32) -> Result<BlobRepo> {
         let repo: BlobRepo = TestRepoFactory::new()?
+            .with_config_override(|config| {
+                config
+                    .derived_data_config
+                    .enabled
+                    .types
+                    .remove(TreeHandle::NAME);
+            })
             .with_id(RepositoryId::new(id))
             .build()?;
-        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-            derived_data_config
-                .enabled
-                .types
-                .remove(&TreeHandle::NAME.to_string());
-            derived_data_config
-        });
         Ok(repo)
     }
 

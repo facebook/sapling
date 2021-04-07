@@ -42,7 +42,6 @@ topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]
 ascii = "1.0"
-blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
