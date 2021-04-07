@@ -384,6 +384,6 @@ impl ExtractedCommit {
     }
 }
 
-fn convert_time_to_datetime(time: &Time) -> Result<DateTime, Error> {
+pub fn convert_time_to_datetime(time: &Time) -> Result<DateTime, Error> {
     DateTime::from_timestamp(time.seconds(), -1 * time.offset_minutes() * 60)
 }

@@ -10,9 +10,9 @@
 mod gitimport_objects;
 
 pub use crate::gitimport_objects::{
-    convert_git_filemode, oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport, GitLeaf,
-    GitManifest, GitRangeImport, GitTree, GitimportPreferences, GitimportTarget,
-    ImportMissingForCommit,
+    convert_git_filemode, convert_time_to_datetime, oid_to_sha1, CommitMetadata, ExtractedCommit,
+    FullRepoImport, GitLeaf, GitManifest, GitRangeImport, GitTree, GitimportPreferences,
+    GitimportTarget, ImportMissingForCommit,
 };
 use anyhow::{format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
