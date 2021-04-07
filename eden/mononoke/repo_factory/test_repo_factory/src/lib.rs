@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-//! Repository Factories.
-
+//! Repository factory for tests.
 #![deny(missing_docs)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 

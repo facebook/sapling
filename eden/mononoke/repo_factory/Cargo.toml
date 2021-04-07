@@ -1,0 +1,47 @@
+[package]
+name = "repo_factory"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+anyhow = "1.0"
+async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
+bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
+bonsai_svnrev_mapping = { version = "0.1.0", path = "../bonsai_svnrev_mapping" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../changesets" }
+context = { version = "0.1.0", path = "../server/context" }
+dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filenodes = { version = "0.1.0", path = "../filenodes" }
+filestore = { version = "0.1.0", path = "../filestore" }
+futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
+mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
+parking_lot = "0.10.2"
+phases = { version = "0.1.0", path = "../phases" }
+readonlyblob = { version = "0.1.0", path = "../blobstore/readonlyblob" }
+redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
+segmented_changelog_types = { version = "0.1.0", path = "../segmented_changelog/types" }
+slog = { version = "2.5", features = ["max_level_debug"] }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+thiserror = "1.0"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
+virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
