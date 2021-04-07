@@ -38,7 +38,6 @@ use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use tokio::net::TcpListener;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::BlobrepoBuilder;
 use cmdlib::{
     args::{self, parse_config_spec_to_path, CachelibSettings},
     helpers::serve_forever,
@@ -46,6 +45,7 @@ use cmdlib::{
 };
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
+use repo_factory::RepoFactory;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
@@ -268,25 +268,26 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
+    let repo_factory = Arc::new(RepoFactory::new(
+        fb,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options,
+        blobstore_options,
+        readonly_storage,
+        caching,
+        common.censored_scuba_params,
+    ));
+
     let futs = repos
         .into_iter()
         .filter(|(_name, config)| config.enabled)
         .map(|(name, config)| {
-            let censored_scuba_params = common.censored_scuba_params.clone();
-            cloned!(blobstore_options, test_acl_checker, logger, mysql_options);
+            cloned!(repo_factory, test_acl_checker, logger);
             async move {
-                let builder = BlobrepoBuilder::new(
-                    fb,
-                    name.clone(),
-                    &config,
-                    &mysql_options,
-                    caching,
-                    censored_scuba_params,
-                    readonly_storage,
-                    blobstore_options,
-                    &logger,
-                    config_store,
-                );
+                let repo = repo_factory
+                    .build(name.clone(), config.clone())
+                    .map_err(Error::from);
 
                 let hipster_acl = config.hipster_acl.as_ref();
                 let aclchecker = async {
@@ -310,7 +311,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     }
                 };
 
-                let (repo, aclchecker) = try_join!(builder.build(), aclchecker)?;
+                let (repo, aclchecker) = try_join!(repo, aclchecker)?;
 
                 Result::<(String, (BlobRepo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
                     name,
