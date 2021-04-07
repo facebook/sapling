@@ -254,7 +254,6 @@ members = [
   "blobrepo/changeset_fetcher",
   "blobrepo/common",
   "blobrepo/errors",
-  "blobrepo/factory",
   "blobrepo/override",
   "blobrepo/repo_blobstore",
   "blobrepo_utils",

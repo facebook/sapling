@@ -145,8 +145,8 @@ pub struct BlobRepo {
 impl BlobRepo {
     /// Create new `BlobRepo` object.
     ///
-    /// Avoid using this constructor directly as it requires properly initialized `attributes`
-    /// argument. Instead use `blobrepo_factory::*` functions.
+    /// Avoid using this constructor directly.  Instead use a repo factory,
+    /// such as `RepoFactory` or `TestRepoFactory`.
     pub fn new_dangerous(
         blobstore_args: RepoBlobstoreArgs,
         changesets: ArcChangesets,
