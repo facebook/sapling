@@ -14,7 +14,6 @@ mod replay_spec;
 use ::hooks::{hook_loader::load_hooks, HookManager};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::BlobrepoBuilder;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, Freshness};
@@ -37,6 +36,7 @@ use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use metaconfig_types::{CensoredScubaParams, RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
+use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
@@ -402,24 +402,22 @@ async fn do_main(
         "Loading repository: {} (id = {})", repo_name, repo_id
     );
 
-    let repo = BlobrepoBuilder::new(
+    let repo_factory = RepoFactory::new(
         fb,
-        repo_name,
-        &repo_config,
-        &mysql_options,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options,
+        blobstore_options,
+        readonly_storage,
         caching,
         // We don't need to log redacted access from here
         CensoredScubaParams {
             table: None,
             local_path: None,
         },
-        readonly_storage,
-        blobstore_options,
-        &logger,
-        config_store,
-    )
-    .build()
-    .await?;
+    );
+
+    let repo: BlobRepo = repo_factory.build(repo_name, repo_config.clone()).await?;
 
     let hook_manager = if matches.is_present(ARG_RUN_HOOKS) {
         info!(logger, "Creating HookManager");
