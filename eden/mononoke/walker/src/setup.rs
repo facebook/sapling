@@ -21,10 +21,8 @@ use crate::walk::{OutgoingEdge, RepoWalkParams};
 
 use ::blobstore::Blobstore;
 use anyhow::{bail, format_err, Context, Error};
-use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
-use blobstore_factory::{
-    make_blobstore, make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory,
-};
+use blobrepo::BlobRepo;
+use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
@@ -37,10 +35,11 @@ use fbinit::FacebookInit;
 use itertools::{process_results, Itertools};
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction};
+use metaconfig_types::{MetadataDatabaseConfig, Redaction};
 use multiplexedblob::ScrubHandler;
 use newfilenodes::NewFilenodesBuilder;
 use once_cell::sync::Lazy;
+use repo_factory::RepoFactory;
 use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, o, warn, Logger};
@@ -1289,7 +1288,7 @@ pub async fn setup_common<'a>(
     }
 
     // Resolve repo ids and names
-    let repos = args::resolve_repos(config_store, &matches)?;
+    let mut repos = args::resolve_repos(config_store, &matches)?;
     let repo_count = repos.len();
     if repo_count > 1 {
         info!(
@@ -1326,28 +1325,59 @@ pub async fn setup_common<'a>(
         None
     };
 
-    let mut metadatadb_config_to_blob_config =
-        HashMap::<MetadataDatabaseConfig, HashSet<BlobConfig>>::new();
-    let mut blob_config_to_repos = HashMap::<BlobConfig, Vec<ResolvedRepo>>::new();
-    for repo in repos {
-        let storage_config = storage_override
-            .clone()
-            .unwrap_or_else(|| repo.config.storage_config.clone());
-        metadatadb_config_to_blob_config
-            .entry(storage_config.metadata)
-            .or_default()
-            .insert(storage_config.blobstore.clone());
-        blob_config_to_repos
-            .entry(storage_config.blobstore)
-            .or_default()
-            .push(repo);
+    // Override the blobstore config so we can do things like run on one side of a multiplex
+    for repo in &mut repos {
+        if let Some(storage_config) = storage_override.clone() {
+            repo.config.storage_config = storage_config;
+        }
+        crate::blobstore::replace_blobconfig(
+            &mut repo.config.storage_config.blobstore,
+            inner_blobstore_id,
+            &repo.name,
+            walk_stats_key,
+            blobstore_options.scrub_options.is_some(),
+        )?;
     }
+
+    // Disable redaction unless we are running with it enabled.
+    if !enable_redaction {
+        for repo in &mut repos {
+            repo.config.redaction = Redaction::Disabled;
+        }
+    };
+
+    let mut repo_factory = RepoFactory::new(
+        fb,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options.clone(),
+        blobstore_options.clone(),
+        readonly_storage,
+        caching,
+        common_config.censored_scuba_params.clone(),
+    );
+
+    if let Some(blobstore_sampler) = blobstore_sampler.clone() {
+        repo_factory.with_blobstore_override(move |blobstore| -> Arc<dyn Blobstore> {
+            Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
+        });
+    }
+
+    let mut parsed_tail_params: HashMap<MetadataDatabaseConfig, TailParams> = HashMap::new();
 
     let mut per_repo = Vec::new();
 
-    // First setup SQL config
-    for (metadatadb_config, blobconfigs) in metadatadb_config_to_blob_config {
-        let tail_params = parse_tail_args(fb, sub_m, &metadatadb_config, &mysql_options).await?;
+    for repo in repos {
+        let metadatadb_config = &repo.config.storage_config.metadata;
+        let tail_params = match parsed_tail_params.get(metadatadb_config) {
+            Some(tail_params) => tail_params.clone(),
+            None => {
+                let tail_params =
+                    parse_tail_args(fb, sub_m, &metadatadb_config, &mysql_options).await?;
+                parsed_tail_params.insert(metadatadb_config.clone(), tail_params.clone());
+                tail_params
+            }
+        };
 
         if tail_params.public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
             bail!(
@@ -1358,83 +1388,32 @@ pub async fn setup_common<'a>(
             );
         }
 
-        let sql_factory = make_metadata_sql_factory(
-            fb,
-            metadatadb_config,
-            mysql_options.clone(),
-            readonly_storage,
-            logger,
-        )
-        .await?;
+        let sql_factory = repo_factory.sql_factory(&metadatadb_config).await?;
 
         let sql_shard_info = SqlShardInfo {
             filenodes: sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?,
             active_keys_per_shard: mysql_options.connection_type.per_key_limit(),
         };
 
-        // Share the sql factory with the blobstores associated with it
-        for blobconfig in blobconfigs {
-            let repos = blob_config_to_repos.get(&blobconfig);
-
-            let blobconfig = blobstore::get_blobconfig(
-                blobconfig,
-                inner_blobstore_id,
-                repos.iter().flat_map(|r| r.iter().map(|r| r.name.clone())),
-                walk_stats_key,
-                blobstore_options.scrub_options.is_some(),
-            )?;
-
-            // Open the blobstore explicitly so we can do things like run on one side of a multiplex
-            let blobstore = Arc::new(
-                make_blobstore(
-                    fb,
-                    blobconfig,
-                    &mysql_options,
-                    readonly_storage,
-                    &blobstore_options,
-                    &logger,
-                    config_store,
-                )
-                .await?,
-            );
-
-            let blobstore = match blobstore_sampler.clone() {
-                Some(blobstore_sampler) => {
-                    Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler))
-                        as Arc<dyn Blobstore>
-                }
-                None => Arc::new(blobstore) as Arc<dyn Blobstore>,
-            };
-
-            // Build the per-repo structures sharing common blobstore
-            for repo in repos.into_iter().flatten() {
-                let one_repo = setup_repo(
-                    walk_stats_key,
-                    fb,
-                    logger,
-                    scuba_builder.clone(),
-                    blobstore.clone(),
-                    &sql_factory,
-                    sql_shard_info.clone(),
-                    readonly_storage,
-                    caching,
-                    blobstore_options.cachelib_options.clone(),
-                    enable_redaction,
-                    common_config.censored_scuba_params.clone(),
-                    scheduled_max,
-                    repo_count,
-                    repo,
-                    walk_roots.clone(),
-                    tail_params.clone(),
-                    include_edge_types.clone(),
-                    include_node_types.clone(),
-                    hash_validation_node_types.clone(),
-                    progress_options,
-                )
-                .await?;
-                per_repo.push(one_repo);
-            }
-        }
+        let one_repo = setup_repo(
+            walk_stats_key,
+            fb,
+            logger,
+            &repo_factory,
+            scuba_builder.clone(),
+            sql_shard_info.clone(),
+            scheduled_max,
+            repo_count,
+            &repo,
+            walk_roots.clone(),
+            tail_params,
+            include_edge_types.clone(),
+            include_node_types.clone(),
+            hash_validation_node_types.clone(),
+            progress_options,
+        )
+        .await?;
+        per_repo.push(one_repo);
     }
 
     Ok((
@@ -1454,15 +1433,9 @@ async fn setup_repo<'a>(
     walk_stats_key: &'static str,
     fb: FacebookInit,
     logger: &'a Logger,
+    repo_factory: &'a RepoFactory,
     mut scuba_builder: MononokeScubaSampleBuilder,
-    blobstore: Arc<dyn Blobstore>,
-    sql_factory: &'a MetadataSqlFactory,
     sql_shard_info: SqlShardInfo,
-    readonly_storage: ReadOnlyStorage,
-    caching: Caching,
-    cachelib_blobstore_options: CachelibBlobstoreOptions,
-    enable_redaction: bool,
-    redaction_scuba_params: CensoredScubaParams,
     scheduled_max: usize,
     repo_count: usize,
     resolved: &'a ResolvedRepo,
@@ -1520,26 +1493,6 @@ async fn setup_repo<'a>(
         sort_by_string(&include_node_types)
     );
 
-    let redaction = if enable_redaction {
-        resolved.config.redaction
-    } else {
-        Redaction::Disabled
-    };
-
-    let repo = open_blobrepo_given_datasources(
-        fb,
-        blobstore,
-        &sql_factory,
-        &resolved.config,
-        caching,
-        redaction,
-        redaction_scuba_params,
-        readonly_storage,
-        resolved.name.clone(),
-        cachelib_blobstore_options,
-        &logger,
-    );
-
     scuba_builder.add(REPO, resolved.name.clone());
 
     let mut progress_node_types = include_node_types.clone();
@@ -1556,6 +1509,10 @@ async fn setup_repo<'a>(
         progress_options,
     ));
 
+    let repo: BlobRepo = repo_factory
+        .build(resolved.name.clone(), resolved.config.clone())
+        .await?;
+
     Ok((
         RepoSubcommandParams {
             progress_state,
@@ -1563,7 +1520,7 @@ async fn setup_repo<'a>(
             lfs_threshold: resolved.config.lfs.threshold,
         },
         RepoWalkParams {
-            repo: repo.await?,
+            repo,
             logger: logger.clone(),
             scheduled_max,
             sql_shard_info,

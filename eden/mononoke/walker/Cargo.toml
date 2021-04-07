@@ -15,7 +15,6 @@ auto_impl = "0.4"
 bitflags = "1.2"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
@@ -58,6 +57,7 @@ paste = "1.0"
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../phases" }
 regex = "1.4.2"
+repo_factory = { version = "0.1.0", path = "../repo_factory" }
 samplingblob = { version = "0.1.0", path = "../blobstore/samplingblob" }
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
@@ -75,3 +75,4 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 
 [dev-dependencies]
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

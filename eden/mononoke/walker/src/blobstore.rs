@@ -7,7 +7,7 @@
 
 use crate::validate::{CHECK_FAIL, CHECK_TYPE, ERROR_MSG, NODE_KEY, REPO};
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, Error};
 use blobstore::BlobstoreMetadata;
 use context::CoreContext;
 use metaconfig_types::{BlobConfig, BlobstoreId};
@@ -128,54 +128,51 @@ impl ScrubHandler for StatsScrubHandler {
     }
 }
 
-pub fn get_blobconfig(
-    blob_config: BlobConfig,
+pub fn replace_blobconfig(
+    blob_config: &mut BlobConfig,
     inner_blobstore_id: Option<u64>,
-    repo_names: impl Iterator<Item = String>,
+    repo_name: &str,
     walk_stats_key: &'static str,
     is_scrubbing: bool,
-) -> Result<BlobConfig, Error> {
+) -> Result<(), Error> {
     match blob_config {
         BlobConfig::Multiplexed { ref blobstores, .. } => {
             if is_scrubbing {
                 // Make sure the repair stats are set to zero for each store.
-                // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
-                // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
-                for name in repo_names {
-                    for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
-                        for (id, _ty, _config) in blobstores {
-                            s.add_value(0, (walk_stats_key, id.to_string(), name.clone()));
-                        }
+                // Without this the new stats only show up when a repair is
+                // needed (i.e. as they get incremented), which makes them
+                // harder to monitor on (no datapoints rather than a zero
+                // datapoint at start).
+                for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
+                    for (id, _ty, _config) in blobstores {
+                        s.add_value(0, (walk_stats_key, id.to_string(), repo_name.to_string()));
                     }
                 }
             }
-            match inner_blobstore_id {
-                None => Ok(blob_config),
-                Some(inner_blobstore_id) => {
-                    let seeked_id = BlobstoreId::new(inner_blobstore_id);
-                    blobstores
-                        .iter()
-                        .find_map(|(blobstore_id, _, blobstore)| {
-                            if blobstore_id == &seeked_id {
-                                Some(blobstore.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| {
-                            format_err!("could not find a blobstore with id {}", inner_blobstore_id)
-                        })
-                }
+            if let Some(inner_blobstore_id) = inner_blobstore_id {
+                let sought_id = BlobstoreId::new(inner_blobstore_id);
+                let inner_blob_config = blobstores
+                    .iter()
+                    .find_map(|(blobstore_id, _, blobstore)| {
+                        if blobstore_id == &sought_id {
+                            Some(blobstore.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| {
+                        anyhow!("could not find a blobstore with id {}", inner_blobstore_id)
+                    })?;
+                *blob_config = inner_blob_config;
             }
         }
-        blob_config => {
+        _ => {
             if inner_blobstore_id.is_some() {
-                Err(format_err!(
+                return Err(anyhow!(
                     "inner-blobstore-id supplied but blobstore is not multiplexed"
-                ))
-            } else {
-                Ok(blob_config)
+                ));
             }
         }
     }
+    Ok(())
 }

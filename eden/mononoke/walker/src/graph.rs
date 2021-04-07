@@ -911,7 +911,6 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blobrepo_factory::init_all_derived_data;
     use std::{collections::HashSet, iter::FromIterator, mem::size_of};
     use strum::{EnumCount, IntoEnumIterator};
 
@@ -972,7 +971,10 @@ mod tests {
     #[test]
     fn test_all_derived_data_types_supported() {
         // All types blobrepo can support
-        let a = init_all_derived_data().enabled.types;
+        let a = test_repo_factory::default_test_repo_config()
+            .derived_data_config
+            .enabled
+            .types;
 
         // supported in graph
         let mut s = HashSet::new();
@@ -980,7 +982,7 @@ mod tests {
             if let Some(d) = t.derived_data_name() {
                 assert!(
                     a.contains(d),
-                    "graph derived data type {} for {} is not known by blobrepo::init_all_derived_data()",
+                    "graph derived data type {} for {} is not known by default_test_repo_config()",
                     d,
                     t
                 );
