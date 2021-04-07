@@ -11,7 +11,6 @@ mod tailer;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
 use clap::Arg;
 use cmdlib::{
@@ -27,6 +26,7 @@ use futures::{
 };
 use hooks::CrossRepoPushSource;
 use mononoke_types::ChangesetId;
+use repo_factory::RepoFactory;
 use slog::{debug, info, Logger};
 use std::collections::HashSet;
 use std::time::Duration;
@@ -79,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     block_execute(
-        run_hook_tailer(fb, &ctx, &config, &repo_name, &matches, &logger),
+        run_hook_tailer(fb, &ctx, config, repo_name, &matches, &logger),
         fb,
         "hook_tailer",
         &logger,
@@ -91,8 +91,8 @@ fn main(fb: FacebookInit) -> Result<()> {
 async fn run_hook_tailer<'a>(
     fb: FacebookInit,
     ctx: &CoreContext,
-    config: &metaconfig_types::RepoConfig,
-    repo_name: &str,
+    config: metaconfig_types::RepoConfig,
+    repo_name: String,
     matches: &'a MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
@@ -133,20 +133,19 @@ async fn run_hook_tailer<'a>(
     let caching = cmdlib::args::init_cachelib(fb, matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(matches);
     let mysql_options = cmdlib::args::parse_mysql_options(matches);
-    let builder = BlobrepoBuilder::new(
+    let blobstore_options = cmdlib::args::parse_blobstore_options(matches)?;
+    let repo_factory = RepoFactory::new(
         fb,
-        repo_name.into(),
-        &config,
-        &mysql_options,
+        logger.clone(),
+        config_store.clone(),
+        mysql_options,
+        blobstore_options,
+        readonly_storage,
         caching,
         common_config.censored_scuba_params,
-        readonly_storage,
-        cmdlib::args::parse_blobstore_options(matches)?,
-        &logger,
-        config_store,
     );
 
-    let blobrepo = builder.build().await?;
+    let blobrepo = repo_factory.build(repo_name, config.clone()).await?;
 
     let (exclusions, inclusions) = future::try_join(
         get_changesets(matches, "exclude", "exclude_file", &ctx, &blobrepo),
@@ -157,7 +156,7 @@ async fn run_hook_tailer<'a>(
     let tail = &Tailer::new(
         ctx.clone(),
         blobrepo.clone(),
-        config.clone(),
+        config,
         bookmark,
         concurrency,
         log_interval,
