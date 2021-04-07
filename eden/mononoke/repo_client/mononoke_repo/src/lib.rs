@@ -9,8 +9,7 @@
 
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
-
-use blobrepo_factory::ReadOnlyStorage;
+use blobstore_factory::ReadOnlyStorage;
 use fbinit::FacebookInit;
 use futures::future::{FutureExt, TryFutureExt};
 use futures_01_ext::{BoxFuture, FutureExt as _};
