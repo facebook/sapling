@@ -420,6 +420,7 @@ pub struct RepoClient {
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
+    unhydrated_commits: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
     request_perf_counters: Arc<PerfCounters>,
 }
@@ -445,6 +446,7 @@ impl RepoClient {
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
+            unhydrated_commits: Arc::new(AtomicBool::new(false)),
             knobs,
             request_perf_counters: Arc::new(PerfCounters::default()),
         }
@@ -572,7 +574,9 @@ impl RepoClient {
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
         let lca_hint = self.repo.lca_hint().clone();
 
-        let drafts_in_bundles_policy = if self.repo.infinitepush().hydrate_getbundle_response {
+        let drafts_in_bundles_policy = if self.repo.infinitepush().hydrate_getbundle_response
+            && !self.unhydrated_commits_requested()
+        {
             DraftsInBundlesPolicy::WithTreesAndFiles
         } else {
             DraftsInBundlesPolicy::CommitsOnly
@@ -939,6 +943,10 @@ impl RepoClient {
         }
     }
 
+    fn unhydrated_commits_requested(&self) -> bool {
+        self.unhydrated_commits.load(Ordering::Relaxed)
+    }
+
     fn maybe_get_pushredirector_for_action(
         &self,
         ctx: &CoreContext,
@@ -1159,6 +1167,12 @@ impl HgCommands for RepoClient {
                 if let Some(val) = args.get(b"wantslfspointers" as &[u8]) {
                     if val == b"True" {
                         self.force_lfs.store(true, Ordering::Relaxed);
+                    }
+                }
+
+                if let Some(val) = args.get(b"wantsunhydratedcommits" as &[u8]) {
+                    if val == b"True" {
+                        self.unhydrated_commits.store(true, Ordering::Relaxed);
                     }
                 }
 

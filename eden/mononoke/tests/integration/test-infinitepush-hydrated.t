@@ -32,6 +32,7 @@ setup repo-push and repo-pull
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-unhydrated --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-hydrated --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull-unhydrated-conf --noupdate
 
 blobimport
 
@@ -257,4 +258,85 @@ check hydrated infinitepush pulls
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 895414f853ef, local: 895414f853ef+, remote: c5564d074f73
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+
+setup a new config and restart mononoke
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE=true setup_common_config
+  $ mononoke
+  $ wait_for_mononoke
+
+check unhydrated infinitepush pulls if special config option is passed
+  $ cd "$TESTTMP/repo-pull-unhydrated-conf"
+
+-- do a public pull.
+  $ hgmn pull |& grep "changesets"
+  adding changesets
+  added * changesets with 0 changes to 0 files (glob)
+  $ tglogpnr -r "draft()"
+
+-- update to a public parent of the susequently pulled draft commit
+-- so that prefetchdraftparents does not cause a `gettreepack`
+  $ hgmn up -q 3903775176ed
+
+-- pull the draft commits with a fully prefetched public parent
+-- note the absence of the `b2x:treegroup2` part and the "0 changes to 0 files" wording,
+-- indicative of the fact that we return an "unhydrated" commit, expecting to fetch
+-- trees and files on the subsequent `update`
+  $ hgmn pull -r c5564d074f73 --debug --config infinitepush.wantsunhydratedcommits=True
+  pulling from * (glob)
+  running * (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: * (glob)
+  remote: * (glob)
+  sending clienttelemetry command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
+  sending lookup command
+  sending lookup command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
+  query 1; heads
+  sending batch command
+  searching for changes
+  local heads: 1; remote heads: 1 (explicit: 2); initial common: 1
+  all remote heads known locally
+  sending getbundle command
+  bundle2-input-bundle: 1 params with-transaction
+  bundle2-input-part: "changegroup" (params: 1 mandatory) supported
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-bundle: 1 parts total
+  remotenames: skipped syncing local bookmarks
+
+-- update to the recently pulled draft commit
+-- note the presence of peer connection, the `gettreepack` and `getpackv1` wireproto commands
+-- indicative of actually fetching commit contents
+  $ hgmn up -r c5564d074f73 --debug
+  running * (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: * (glob)
+  remote: * (glob)
+  sending clienttelemetry command
+  sending gettreepack command
+  bundle2-input-bundle: 1 params no-transaction
+  bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-bundle: 0 parts total
+  resolving manifests
+   branchmerge: False, force: False, partial: False
+   ancestor: 3903775176ed, local: 3903775176ed+, remote: c5564d074f73
+  reusing connection from pool
+  sending getpackv1 command
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
