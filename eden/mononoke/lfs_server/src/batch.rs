@@ -282,7 +282,7 @@ async fn internal_objects(
         )
         .collect();
 
-    Ok(ret.context(ErrorKind::GenerateDownloadUrisError)?)
+    Ok(ret.context(ErrorKind::GenerateDownloadUrisError.to_string())?)
 }
 
 fn batch_upload_response_objects(
@@ -343,7 +343,7 @@ fn batch_upload_response_objects(
         })
         .collect();
 
-    let objects = objects.context(ErrorKind::GenerateUploadUrisError)?;
+    let objects = objects.context(ErrorKind::GenerateUploadUrisError.to_string())?;
 
     Ok(objects)
 }
@@ -603,7 +603,12 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         start_time.elapsed().as_micros_unchecked(),
     );
 
-    let res = res.map_err(HttpError::e500)?;
+    let res = res.map_err(|e: anyhow::Error| {
+        if let Some(ErrorKind::HostNotAllowlisted(_)) = e.downcast_ref::<ErrorKind>() {
+            return HttpError::e400(e);
+        }
+        HttpError::e500(e)
+    })?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;
 
     Ok(BytesBody::new(body, git_lfs_mime()))
@@ -808,10 +813,11 @@ mod test {
             o3 => ObjectAction::new("http://bar.com/3".parse()?),
         };
 
-        let server = ServerUris::new("http://foo.com", Some("http://bar.com"))?;
+        let server = ServerUris::new(vec!["http://foo.com"], Some("http://bar.com"))?;
         let uri_builder = UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
+            host: "foo.com".to_string(),
         };
 
         let res = batch_upload_response_objects(

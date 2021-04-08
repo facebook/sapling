@@ -142,6 +142,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Arg::with_name(ARG_SELF_URL)
                 .takes_value(true)
                 .required(true)
+                .value_delimiter(",")
                 .help("The base URL for this server"),
         )
         .arg(
@@ -262,7 +263,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let server = ServerUris::new(
-        matches.value_of(ARG_SELF_URL).unwrap(),
+        matches.values_of(ARG_SELF_URL).unwrap().collect(),
         matches.value_of(ARG_UPSTREAM_URL),
     )?;
 

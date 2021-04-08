@@ -30,6 +30,8 @@ pub enum ErrorKind {
     UriBuilderFailed(&'static str),
     #[error("Invalid Uri {0}: {1}")]
     InvalidUri(String, &'static str),
+    #[error("Host {0} is not allowlisted")]
+    HostNotAllowlisted(String),
     #[error("Object does not exist: {0:?}")]
     ObjectDoesNotExist(FetchKey),
     #[error("Could not dispatch batch request to upstream")]
@@ -82,6 +84,8 @@ pub enum LfsServerContextErrorKind {
     PermissionCheckFailed(anyhow::Error),
     #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
+    #[error("Missing host header")]
+    MissingHostHeader,
 }
 
 impl From<LfsServerContextErrorKind> for HttpError {
@@ -91,6 +95,7 @@ impl From<LfsServerContextErrorKind> for HttpError {
             Forbidden => HttpError::e403(e),
             RepositoryDoesNotExist(_) => HttpError::e400(e),
             PermissionCheckFailed(_) => HttpError::e500(e),
+            MissingHostHeader => HttpError::e400(e),
         }
     }
 }
