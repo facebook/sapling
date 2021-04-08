@@ -248,7 +248,7 @@ class abstractsmartset(object):
         'iterctx()' respects the prefetch metadata.
         """
         newobj = self.clone()
-        newobj._prefethfields = set(fields) | self.prefetchfields()
+        newobj._prefetchfields = set(fields) | self.prefetchfields()
         return newobj
 
     def prefetchbytemplate(self, repo, templ):
@@ -269,7 +269,7 @@ class abstractsmartset(object):
 
     def prefetchfields(self):
         """get a set of fields to prefetch"""
-        return getattr(self, "_prefethfields", set())
+        return getattr(self, "_prefetchfields", set())
 
 
 class baseset(abstractsmartset):
@@ -754,7 +754,7 @@ class nameset(abstractsmartset):
     @property
     def fastasc(self):
         hints = self._set.hints()
-        if hints.get("asc"):
+        if hints.get("asc") and not self.prefetchfields():
 
             def getiter(it=self._set.iter(), torev=self._torev):
                 for node in it:
@@ -766,7 +766,7 @@ class nameset(abstractsmartset):
     @property
     def fastdesc(self):
         hints = self._set.hints()
-        if hints.get("desc"):
+        if hints.get("desc") and not self.prefetchfields():
 
             def getiter(it=self._set.iter(), torev=self._torev):
                 for node in it:
