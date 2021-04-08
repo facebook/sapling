@@ -548,11 +548,6 @@ where
             async move {
                 match maybe_id {
                     Some(current_id) => {
-                        info!(
-                            ctx.logger(),
-                            "Starting the `ReadNextBookmarkLogEntries` query, current id: {}",
-                            current_id
-                        );
                         let entries = tokio::spawn({
                             let ctx = ctx.clone();
                             let bookmarks = bookmarks.clone();
