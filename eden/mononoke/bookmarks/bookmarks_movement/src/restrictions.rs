@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, SourceControlServiceParams};
@@ -33,21 +32,9 @@ impl<'params> BookmarkMoveAuthorization<'params> {
         ctx: &CoreContext,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
-        bookmark_kind: BookmarkKind,
     ) -> Result<(), BookmarkMovementError> {
         match self {
             BookmarkMoveAuthorization::User => {
-                if bookmark_kind == BookmarkKind::Public
-                    && bookmark_attrs.is_only_external_sync_allowed(bookmark)
-                    && !ctx.session().is_external_sync()
-                {
-                    return Err(anyhow!(
-                        "Only external sync is permitted to modify '{}'",
-                        bookmark
-                    )
-                    .into());
-                }
-
                 // If user is missing, fallback to "svcscm" which is the catch-all
                 // user for service identities etc.
                 let user = ctx.metadata().unix_name().unwrap_or("svcscm");

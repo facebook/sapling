@@ -126,7 +126,7 @@ where
         let mut kinds = vec![BookmarkKind::Scratch];
 
         let mut result = HashMap::new();
-        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache(&ctx) {
+        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             let warm_bookmarks = warm_bookmarks_cache.get_all();
             for (book, (cs_id, _)) in warm_bookmarks {
                 let current_size: u64 = result.len().try_into().unwrap();
@@ -178,7 +178,7 @@ where
         ctx: CoreContext,
         bookmark: BookmarkName,
     ) -> Result<Option<HgChangesetId>, Error> {
-        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache(&ctx) {
+        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             if let Some(cs_id) = warm_bookmarks_cache.get(&bookmark) {
                 return self
                     .repo
@@ -207,7 +207,7 @@ where
         &self,
         ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache(&ctx) {
+        if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             ctx.scuba()
                 .clone()
                 .log_with_msg("Fetching bookmarks from Warm bookmarks cache", None);
@@ -227,15 +227,9 @@ where
         self.get_publishing_maybe_stale_from_db(ctx).right_future()
     }
 
-    fn get_warm_bookmark_cache(&self, ctx: &CoreContext) -> Option<&WarmBookmarksCache> {
+    fn get_warm_bookmark_cache(&self) -> Option<&WarmBookmarksCache> {
         if self.repo.repo_client_use_warm_bookmarks_cache() {
-            let mut skip_warm_bookmark_cache =
-                tunables().get_disable_repo_client_warm_bookmarks_cache();
-
-            // We don't ever need warm bookmark cache for the external sync job
-            skip_warm_bookmark_cache |= ctx.session().is_external_sync();
-
-            if !skip_warm_bookmark_cache {
+            if !tunables().get_disable_repo_client_warm_bookmarks_cache() {
                 return Some(self.repo.warm_bookmarks_cache());
             }
         }

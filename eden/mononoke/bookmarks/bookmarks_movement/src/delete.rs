@@ -92,7 +92,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             .check_kind(infinitepush_params, self.bookmark)?;
 
         self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)
+            .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
 
         if kind == BookmarkKind::Scratch || bookmark_attrs.is_fast_forward_only(self.bookmark) {

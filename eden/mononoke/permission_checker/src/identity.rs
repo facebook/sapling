@@ -75,8 +75,6 @@ impl Serialize for MononokeIdentity {
 pub trait MononokeIdentitySetExt {
     fn is_quicksand(&self) -> bool;
 
-    fn is_external_sync(&self) -> bool;
-
     fn hostprefix(&self) -> Option<&str>;
 
     fn hostname(&self) -> Option<&str>;

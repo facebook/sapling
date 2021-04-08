@@ -170,7 +170,6 @@ impl Convert for RawBookmarkConfig {
             .transpose()?
             .map(ComparableRegex::new);
         let allowed_hipster_group = self.allowed_hipster_group;
-        let allow_only_external_sync = self.allow_only_external_sync;
         let rewrite_dates = self.rewrite_dates;
         let hooks_skip_ancestors_of = self
             .hooks_skip_ancestors_of
@@ -185,7 +184,6 @@ impl Convert for RawBookmarkConfig {
             only_fast_forward,
             allowed_users,
             allowed_hipster_group,
-            allow_only_external_sync,
             rewrite_dates,
             hooks_skip_ancestors_of,
         })

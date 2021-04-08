@@ -111,10 +111,6 @@ impl SessionContainer {
         self.metadata().identities().is_quicksand()
     }
 
-    pub fn is_external_sync(&self) -> bool {
-        self.metadata().identities().is_external_sync()
-    }
-
     pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {
         &self.inner.blobstore_read_limiter
     }

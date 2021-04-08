@@ -51,10 +51,6 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         false
     }
 
-    fn is_external_sync(&self) -> bool {
-        false
-    }
-
     fn hostprefix(&self) -> Option<&str> {
         None
     }

@@ -182,7 +182,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             .check_kind(infinitepush_params, self.bookmark)?;
 
         self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)
+            .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
 
         self.update_policy

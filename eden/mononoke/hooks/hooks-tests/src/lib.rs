@@ -1445,7 +1445,6 @@ async fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         only_fast_forward: false,
         allowed_users: None,
         allowed_hipster_group: None,
-        allow_only_external_sync: None,
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
     }];
@@ -1472,7 +1471,6 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
         only_fast_forward: false,
         allowed_users: None,
         allowed_hipster_group: None,
-        allow_only_external_sync: None,
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
     }];
@@ -1524,7 +1522,6 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
         only_fast_forward: false,
         allowed_users: None,
         allowed_hipster_group: None,
-        allow_only_external_sync: None,
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
     }];
