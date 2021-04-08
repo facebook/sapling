@@ -1024,10 +1024,11 @@ async fn check_lock_repo(repo: MononokeRepo) -> Result<Bytes, BundleResolverErro
     loop {
         match repo
             .readonly()
-            .or_else(|_| {
-                ok::<RepoReadOnly, Error>(RepoReadOnly::ReadOnly(
-                    "Failed to fetch repo lock status".to_string(),
-                ))
+            .or_else(|er| {
+                ok::<RepoReadOnly, Error>(RepoReadOnly::ReadOnly(format!(
+                    "Failed to fetch repo lock status: {:#}",
+                    er
+                )))
             })
             .compat()
             .await?
@@ -1659,10 +1660,11 @@ impl HgCommands for RepoClient {
         self.repo
             .readonly()
             // Assume read only if we have an error.
-            .or_else(|_| {
-                ok(RepoReadOnly::ReadOnly(
-                    "Failed to fetch repo lock status".to_string(),
-                ))
+            .or_else(|er| {
+                ok(RepoReadOnly::ReadOnly(format!(
+                    "Failed to fetch repo lock status: {:#}",
+                    er
+                )))
             })
             .and_then(move |read_write| {
                 let client = repoclient.clone();
