@@ -8,6 +8,7 @@
 use crate::actions::UpdateAction;
 use manifest::FileMetadata;
 use std::collections::HashMap;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use types::RepoPathBuf;
 
@@ -20,7 +21,8 @@ pub enum Conflict {
         dest: FileMetadata,
         src: FileMetadata,
     },
-    SrcRemovedDstChanged(UpdateAction), // ("cd", (f, None, f, False, pa.node()), "prompt changed/deleted")
+    SrcRemovedDstChanged(UpdateAction),
+    // ("cd", (f, None, f, False, pa.node()), "prompt changed/deleted")
     DstRemovedSrcChanged(UpdateAction), // ("dc", (None, f, f, False, pa.node()), "prompt deleted/changed")
 }
 
@@ -41,5 +43,20 @@ impl Deref for ConflictState {
 impl DerefMut for ConflictState {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.map
+    }
+}
+
+impl fmt::Display for ConflictState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (path, conflict) in &self.map {
+            match conflict {
+                Conflict::SrcRemovedDstChanged(up) => write!(f, "cd {}=>{}\n", path, up.to.hgid)?,
+                Conflict::DstRemovedSrcChanged(up) => write!(f, "dc {}=>{}\n", path, up.to.hgid)?,
+                Conflict::BothChanged { dest, src, .. } => {
+                    write!(f, "m  {} [src=>{}, dest=>{}]\n", path, src.hgid, dest.hgid)?
+                }
+            }
+        }
+        Ok(())
     }
 }

@@ -11,6 +11,7 @@ use anyhow::bail;
 use anyhow::Result;
 use manifest::{FileType, FsNodeMetadata, Manifest};
 use std::collections::HashSet;
+use std::fmt;
 use types::RepoPathBuf;
 
 /// Merge operation settings
@@ -188,5 +189,11 @@ impl<M: Manifest> MergeResult<M> {
 
     pub fn into_actions_and_conflicts(self) -> (ActionMap, ConflictState) {
         (self.actions, self.conflicts)
+    }
+}
+
+impl<T: Manifest> fmt::Display for MergeResult<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\n{}", self.actions, self.conflicts)
     }
 }

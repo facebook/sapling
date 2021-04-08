@@ -9,6 +9,7 @@ use anyhow::Result;
 use manifest::{DiffType, FileMetadata, FileType, Manifest};
 use pathmatcher::AlwaysMatcher;
 use std::collections::HashMap;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use types::RepoPathBuf;
 
@@ -93,5 +94,40 @@ impl IntoIterator for ActionMap {
 
     fn into_iter(self) -> Self::IntoIter {
         self.map.into_iter()
+    }
+}
+
+impl fmt::Display for ActionMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (path, action) in &self.map {
+            match action {
+                Action::Update(up) => write!(f, "up {}=>{}\n", path, up.to.hgid)?,
+                Action::UpdateExec(x) => write!(f, "{} {}\n", if *x { "+x" } else { "-x" }, path)?,
+                Action::Remove => write!(f, "rm {}\n", path)?,
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Action {
+    pub fn pymerge_action(&self) -> (&'static str, (&'static str, bool), &'static str) {
+        match self {
+            Action::Update(up) => ("g", (pyflags(&up.to.file_type), false), "created/changed"),
+            Action::Remove => ("r", ("", false), "deleted"),
+            Action::UpdateExec(x) => (
+                "e",
+                (if *x { "x" } else { "" }, false),
+                "update permissions",
+            ),
+        }
+    }
+}
+
+fn pyflags(t: &FileType) -> &'static str {
+    match t {
+        FileType::Symlink => "l",
+        FileType::Regular => "",
+        FileType::Executable => "x",
     }
 }
