@@ -7,10 +7,11 @@
 
 use anyhow::Error;
 use chrono::{DateTime, Utc};
-use mononoke_types::{ChangesetId, Generation, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
 use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
+use std::convert::TryInto;
 
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {
@@ -28,7 +29,32 @@ pub struct CommitInfo<'a> {
     source_hostname: Option<&'a str>,
     #[serde(with = "::chrono::serde::ts_seconds")]
     received_timestamp: DateTime<Utc>,
-    changed_files_count: usize,
+    #[serde(flatten)]
+    changed_files_info: ChangedFilesInfo,
+}
+
+#[derive(Serialize)]
+pub struct ChangedFilesInfo {
+    changed_files_count: u64,
+    changed_files_size: u64,
+}
+
+impl ChangedFilesInfo {
+    pub fn new(bcs: &BonsaiChangeset) -> Self {
+        let changed_files_count: u64 = bcs.file_changes_map().len().try_into().unwrap();
+
+        let mut changed_files_size = 0;
+        for maybe_fc in bcs.file_changes_map().values() {
+            if let Some(fc) = maybe_fc {
+                changed_files_size += fc.size();
+            }
+        }
+
+        Self {
+            changed_files_count,
+            changed_files_size,
+        }
+    }
 }
 
 impl<'a> CommitInfo<'a> {
@@ -42,7 +68,7 @@ impl<'a> CommitInfo<'a> {
         user_identities: &'a MononokeIdentitySet,
         source_hostname: Option<&'a str>,
         received_timestamp: DateTime<Utc>,
-        changed_files_count: usize,
+        changed_files_info: ChangedFilesInfo,
     ) -> Self {
         Self {
             repo_id,
@@ -54,7 +80,7 @@ impl<'a> CommitInfo<'a> {
             user_identities,
             source_hostname,
             received_timestamp,
-            changed_files_count,
+            changed_files_info,
         }
     }
 }

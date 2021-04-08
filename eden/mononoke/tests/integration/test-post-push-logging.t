@@ -74,6 +74,10 @@ create new commits in repo2 and check that they are seen as outgoing
   "master_bookmark"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_count
+  2
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_size
+  34
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
   $ echo forcepushrebase > forcepushrebase

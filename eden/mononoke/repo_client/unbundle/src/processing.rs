@@ -26,6 +26,7 @@ use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
+use scribe_commit_queue::ChangedFilesInfo;
 use slog::{debug, warn};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -186,12 +187,11 @@ async fn run_push(
         .into());
     }
 
-    let mut new_changeset_ids_and_changed_files_count = Vec::new();
+    let mut changesets_to_log = vec![];
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let cs_id = bcs.get_changeset_id();
-        let changed_files = bcs.file_changes_map().len();
-        new_changeset_ids_and_changed_files_count.push((cs_id, changed_files));
+        changesets_to_log.push((cs_id, ChangedFilesInfo::new(&bcs)));
         new_changesets.insert(cs_id, bcs);
     }
 
@@ -231,7 +231,7 @@ async fn run_push(
         ctx,
         repo,
         maybe_bookmark.as_ref(),
-        new_changeset_ids_and_changed_files_count,
+        changesets_to_log,
         push_params.commit_scribe_category.as_deref(),
     )
     .await;
@@ -339,16 +339,14 @@ async fn run_infinitepush(
         None => None,
     };
 
-    let new_changeset_ids_and_changed_files_count = uploaded_bonsais
-        .iter()
-        .map(|cs| (cs.get_changeset_id(), cs.file_changes_map().len()))
-        .collect();
-
     log_commits_to_scribe(
         ctx,
         repo,
         bookmark.as_ref(),
-        new_changeset_ids_and_changed_files_count,
+        uploaded_bonsais
+            .iter()
+            .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(&bcs)))
+            .collect(),
         infinitepush_params.commit_scribe_category.as_deref(),
     )
     .await;
@@ -378,10 +376,7 @@ async fn run_pushrebase(
         uploaded_bonsais,
         hook_rejection_remapper,
     } = action;
-    let changed_files_count: Vec<usize> = uploaded_bonsais
-        .iter()
-        .map(|b| b.file_changes_map().len())
-        .collect();
+    let changed_files_info: Vec<_> = uploaded_bonsais.iter().map(ChangedFilesInfo::new).collect();
 
     // FIXME: stop cloning when this fn is async
     let bookmark = bookmark_spec.get_bookmark_name().clone();
@@ -418,7 +413,7 @@ async fn run_pushrebase(
                 Some(&bookmark),
                 new_commits
                     .into_iter()
-                    .zip(changed_files_count.into_iter())
+                    .zip(changed_files_info.into_iter())
                     .collect(),
                 pushrebase_params.commit_scribe_category.as_deref(),
             )
@@ -426,12 +421,11 @@ async fn run_pushrebase(
             (pushrebased_rev, pushrebased_changesets)
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
-            let mut new_changeset_ids_and_changed_files_count = Vec::new();
-            for bcs in &uploaded_bonsais {
-                let cs_id = bcs.get_changeset_id();
-                new_changeset_ids_and_changed_files_count
-                    .push((cs_id, bcs.file_changes_map().len()));
-            }
+            let changesets_to_log = uploaded_bonsais
+                .iter()
+                .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(&bcs)))
+                .collect();
+
             let (pushrebased_rev, pushrebased_changesets) = force_pushrebase(
                 ctx,
                 repo,
@@ -454,7 +448,7 @@ async fn run_pushrebase(
                 ctx,
                 repo,
                 Some(&bookmark),
-                new_changeset_ids_and_changed_files_count,
+                changesets_to_log,
                 pushrebase_params.commit_scribe_category.as_deref(),
             )
             .await;

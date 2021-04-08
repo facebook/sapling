@@ -26,7 +26,7 @@ use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scribe_commit_queue::{self, LogToScribe};
+use scribe_commit_queue::{self, ChangedFilesInfo, LogToScribe};
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
@@ -559,13 +559,6 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
 ) {
-    let mut new_changeset_ids_and_changed_files_count = Vec::new();
-    for bcs in commits_to_log {
-        let cs_id = bcs.get_changeset_id();
-        let changed_files = bcs.file_changes_map().len();
-        new_changeset_ids_and_changed_files_count.push((cs_id, changed_files));
-    }
-
     let commit_scribe_category = match kind {
         BookmarkKind::Scratch => &infinitepush_params.commit_scribe_category,
         BookmarkKind::Public => &pushrebase_params.commit_scribe_category,
@@ -575,7 +568,10 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
         ctx,
         repo,
         bookmark,
-        new_changeset_ids_and_changed_files_count,
+        commits_to_log
+            .iter()
+            .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(bcs)))
+            .collect(),
         commit_scribe_category.as_deref(),
     )
     .await;
@@ -585,7 +581,7 @@ pub async fn log_commits_to_scribe(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: Option<&BookmarkName>,
-    changesets_and_changed_files_count: Vec<(ChangesetId, usize)>,
+    changesets_and_changed_files_count: Vec<(ChangesetId, ChangedFilesInfo)>,
     commit_scribe_category: Option<&str>,
 ) {
     let queue = match commit_scribe_category {
@@ -601,7 +597,7 @@ pub async fn log_commits_to_scribe(
 
     let res = stream::iter(changesets_and_changed_files_count)
         .map(Ok)
-        .map_ok(|(changeset_id, changed_files_count)| {
+        .map_ok(|(changeset_id, changed_files_info)| {
             let queue = &queue;
             async move {
                 let get_generation = async {
@@ -629,7 +625,7 @@ pub async fn log_commits_to_scribe(
                     identities,
                     hostname.as_deref(),
                     received_timestamp,
-                    changed_files_count,
+                    changed_files_info,
                 );
                 queue.queue_commit(&ci)
             }
