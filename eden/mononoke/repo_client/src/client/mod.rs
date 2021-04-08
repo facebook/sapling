@@ -1017,6 +1017,17 @@ impl RepoClient {
             {
                 cloned!(ctx);
                 async move {
+                    let max_nodes = tunables()
+                        .get_repo_client_max_nodes_in_known_method()
+                        .try_into()
+                        .unwrap();
+                    if max_nodes > 0 {
+                        if nodes_len > max_nodes {
+                            return Err(format_err!(
+                                "invalid request - too many requests were sent in 'known' method"
+                            ));
+                        }
+                    }
                     let hg_bcs_mapping = blobrepo
                         .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
                         .await?;
