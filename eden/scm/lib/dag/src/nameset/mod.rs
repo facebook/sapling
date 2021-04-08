@@ -360,7 +360,7 @@ impl NameSet {
             Box::new(move |_, v| {
                 let filter_func = filter_func.clone();
                 let this = this.clone();
-                Box::pin(async move { Ok((&filter_func)(v).await? && this.0.contains(v).await?) })
+                Box::pin(async move { Ok(this.0.contains(v).await? && (&filter_func)(v).await?) })
             }),
             hints,
         );
