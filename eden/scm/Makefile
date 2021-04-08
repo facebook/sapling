@@ -65,7 +65,7 @@ help:
 all: build
 
 local:
-	$(PYTHON) setup.py $(PURE) \
+	$(shell $(PYTHON) contrib/pick_python.py $(PYTHON)) setup.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
@@ -80,7 +80,7 @@ else
 endif
 
 local3:
-	HGNAME=$(HGNAME3) $(PYTHON3) setup3.py $(PURE) \
+	HGNAME=$(HGNAME3) $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup3.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
