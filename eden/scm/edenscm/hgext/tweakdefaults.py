@@ -52,6 +52,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 
 from edenscm.mercurial import (
@@ -740,10 +741,15 @@ def get_winpopen4(pipei_bufsize):
         larger than default buffer"""
         import msvcrt
 
-        # pyre-fixme[21]: Could not find module `_subprocess`.
-        import _subprocess
+        if sys.version_info[0] < 3:
+            import _subprocess
 
-        handles = _subprocess.CreatePipe(None, pipei_bufsize)
+            handles = _subprocess.CreatePipe(None, pipei_bufsize)
+        else:
+            import _winapi
+
+            handles = _winapi.CreatePipe(None, pipei_bufsize)
+
         rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
         handles[0].Detach()
         handles[1].Detach()
