@@ -1216,6 +1216,8 @@ def manifestmerge(
         matcher = matchmod.always("", "")
 
     actions = {}
+    # (n1, fl1) = "local"
+    # (n2, fl2) = "remote"
     for f, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(diff):
         if n1 and n2:  # file exists on both local and remote side
             if f not in ma:

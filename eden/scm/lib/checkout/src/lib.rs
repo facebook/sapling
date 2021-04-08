@@ -24,6 +24,15 @@ use tracing::debug;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{AsyncVfsWriter, UpdateFlag, VFS};
 
+#[allow(dead_code)]
+mod actions;
+#[allow(dead_code)]
+mod conflict;
+#[allow(dead_code)]
+mod merge;
+
+pub use merge::{Merge, MergeResult};
+
 const PREFETCH_CHUNK_SIZE: usize = 1000;
 const VFS_BATCH_SIZE: usize = 100;
 
