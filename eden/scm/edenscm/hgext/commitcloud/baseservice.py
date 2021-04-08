@@ -377,7 +377,7 @@ def _makenodes(data):
         if "remote_bookmarks" in nodeinfo:
             bookmarks.extend(
                 "%s/%s" % (ensurestr(bm["remote"]), ensurestr(bm["name"]))
-                for bm in nodeinfo["remote_bookmarks"]
+                for bm in nodeinfo["remote_bookmarks"] or []
             )
         nodes[encodeutf8(node)] = NodeInfo(
             node, bookmarks, parents, author, date, message, phase
