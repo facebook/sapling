@@ -190,15 +190,13 @@ iswindows = os.name == "nt"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
 PIC = "" if iswindows else "-fPIC"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
-SHA1_LIBRARY = "sha1detectcoll"
-SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
 STDC99 = "" if iswindows else "-std=c99"
 STDCPP0X = "" if iswindows else "-std=c++0x"
 STDCPP11 = "" if iswindows else "-std=c++11"
 WALL = "/Wall" if iswindows else "-Wall"
 WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
 
-cflags = [SHA1LIB_DEFINE]
+cflags = []
 
 # if this is set, compile all C extensions with -O0 -g for easy debugging.  note
 # that this is not manifested in any way in the Makefile dependencies.
@@ -1667,21 +1665,6 @@ extmodules += cythonize(
 )
 
 libraries = [
-    (
-        "sha1detectcoll",
-        {
-            "sources": [
-                "lib/third-party/sha1dc/sha1.c",
-                "lib/third-party/sha1dc/ubc_check.c",
-            ],
-            "depends": [
-                "lib/third-party/sha1dc/sha1.h",
-                "lib/third-party/sha1dc/ubc_check.h",
-            ],
-            "include_dirs": ["lib/third-party"] + include_dirs,
-            "extra_args": filter(None, [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
-        },
-    ),
     (
         "mpatch",
         {
