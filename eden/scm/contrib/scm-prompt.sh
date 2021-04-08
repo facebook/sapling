@@ -182,6 +182,9 @@ _git_dirty() {
 _git_prompt() {
   local git br
   git="$1"
+  if [[ -f "$git" ]]; then
+      git=$(awk '/^gitdir:/ {print $2}' < "$git")
+  fi
   if [[ -f "$git/HEAD" ]]; then
     read br < "$git/HEAD"
     case $br in
@@ -234,7 +237,7 @@ _scm_prompt() {
   dir="$PWD"
   while : ; do
     [[ -n "$HOME_IS_NOT_A_REPO" ]] && [[ "$dir" = "/home" ]] && break
-    if [[ -d "$dir/.git" ]]; then
+    if [[ -r "$dir/.git" ]]; then
       br="$(_git_prompt "$dir/.git")"
       break
     elif [[ -d "$dir/.hg" ]]; then
