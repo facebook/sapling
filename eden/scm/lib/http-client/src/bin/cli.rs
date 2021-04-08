@@ -133,8 +133,8 @@ fn configure_tls(mut req: Request) -> Request {
     if let Ok(cert) = env::var(CERT_ENV_VAR) {
         req = req.cert(cert);
     }
-    if let Ok(cert) = env::var(KEY_ENV_VAR) {
-        req = req.cert(cert);
+    if let Ok(key) = env::var(KEY_ENV_VAR) {
+        req = req.key(key);
     }
     if let Ok(ca) = env::var(CA_ENV_VAR) {
         req = req.cainfo(ca);
