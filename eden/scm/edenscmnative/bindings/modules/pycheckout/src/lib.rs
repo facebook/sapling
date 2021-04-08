@@ -9,15 +9,17 @@
 
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
-use checkout::CheckoutPlan;
+use checkout::{CheckoutPlan, Merge, MergeResult};
 use cpython::*;
 use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
+use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher};
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::contentstore;
 use pytreestate::treestate as PyTreeState;
+use std::collections::HashMap;
 use std::time::SystemTime;
 use tracing::warn;
 use treestate::filestate::{FileStateV2, StateFlags};
@@ -28,6 +30,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "checkout"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<checkoutplan>(py)?;
+    m.add_class::<mergeresult>(py)?;
     Ok(m)
 }
 
@@ -103,6 +106,39 @@ py_class!(class checkoutplan |py| {
         Ok(PyString::new(py, &self.plan(py).to_string()))
     }
 
+});
+
+py_class!(class mergeresult |py| {
+    data merge_result: MergeResult<TreeManifest>;
+
+    def __new__(
+        _cls,
+        src_manifest: &treemanifest,
+        dst_manifest: &treemanifest,
+        ancestor_manifest: &treemanifest,
+        // matcher: Option<PyObject> = None,
+        // If sparse profile changes, contains Some((old_sparse_matcher, new_sparse_matcher))
+        // sparse_change: Option<(PyObject, PyObject)> = None,
+    ) -> PyResult<mergeresult> {
+        let src = src_manifest.borrow_underlying(py);
+        let dst = dst_manifest.borrow_underlying(py);
+        let ancestor = ancestor_manifest.borrow_underlying(py);
+        let merge_result = Merge{}.merge(&*src, &*dst, &*ancestor).map_pyerr(py)?;
+        mergeresult::create_instance(py, merge_result)
+    }
+
+    def __str__(&self) -> PyResult<PyString> {
+        Ok(PyString::new(py, &self.merge_result(py).to_string()))
+    }
+
+    def pymerge_actions(&self) -> PyResult<Option<HashMap<String, (&'static str, (&'static str, bool), &'static str)>>> {
+        let actions = self.merge_result(py).try_actions();
+        if let Some(actions) = actions {
+            Ok(Some(actions.iter().map(|(k,v)|(k.to_string(), v.pymerge_action())).collect()))
+        } else {
+            Ok(None)
+        }
+    }
 });
 
 fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
