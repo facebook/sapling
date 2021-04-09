@@ -1183,7 +1183,7 @@ mod tests {
         match cursor.step() {
             Step::Success => panic!("should have reached the end of the tree"),
             Step::End => {} // success
-            Step::Err(error) => panic!(error),
+            Step::Err(error) => panic!("{}", error),
         }
     }
 
@@ -1193,7 +1193,7 @@ mod tests {
             match cursor.step() {
                 Step::Success => {}
                 Step::End => panic!("reached the end too soon"),
-                Step::Err(error) => panic!(error),
+                Step::Err(error) => panic!("{}", error),
             }
         }
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
@@ -1220,7 +1220,7 @@ mod tests {
         match cursor.step() {
             Step::Success => panic!("should have reached the end of the tree"),
             Step::End => {} // success
-            Step::Err(error) => panic!(error),
+            Step::Err(error) => panic!("{}", error),
         }
     }
 

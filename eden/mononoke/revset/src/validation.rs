@@ -55,10 +55,7 @@ impl Stream for ValidateNodeStream {
             Async::Ready(Some((hash, gen))) => (hash, gen),
         };
 
-        assert!(
-            self.seen_hashes.insert(hash),
-            format!("Hash {} seen twice", hash)
-        );
+        assert!(self.seen_hashes.insert(hash), "Hash {} seen twice", hash);
 
         assert!(
             self.last_generation.is_none() || self.last_generation >= Some(gen),

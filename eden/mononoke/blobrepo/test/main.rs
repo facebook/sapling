@@ -166,7 +166,9 @@ async fn create_one_changeset(fb: FacebookInit) {
     let files: Vec<_> = cs.files().into();
     assert!(
         files == expected_files,
-        format!("Got {:?}, expected {:?}", files, expected_files)
+        "Got {:?}, expected {:?}",
+        files,
+        expected_files
     );
 
     // And check the file blob is present
@@ -239,7 +241,9 @@ async fn create_two_changesets(fb: FacebookInit) {
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
     assert!(
         files == expected_files,
-        format!("Got {:?}, expected {:?}", files, expected_files)
+        "Got {:?}, expected {:?}",
+        files,
+        expected_files
     );
 
     assert!(commit1.parents().get_nodes() == (None, None));

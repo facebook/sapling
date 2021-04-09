@@ -554,7 +554,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
                 assert_eq!(entry0.operation_key, entry1.operation_key);
                 assert!(!entry0.operation_key.is_null());
             }
-            x => panic!(format!("two entries expected, got {:?}", x)),
+            x => panic!("two entries expected, got {:?}", x),
         }
     }
     Ok(())
@@ -605,7 +605,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
                     value.len() as u64
                 );
             }
-            x => panic!(format!("two entries expected, got {:?}", x)),
+            x => panic!("two entries expected, got {:?}", x),
         }
     }
     Ok(())

@@ -555,10 +555,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_fail_bcs_id =
         sync_to_master(ctx.clone(), &master_file_config, linear_second_bcs_id).await;
     // Confirm the syncing failed
-    assert!(
-        megarepo_fail_bcs_id.is_err(),
-        format!("{:?}", megarepo_fail_bcs_id)
-    );
+    assert!(megarepo_fail_bcs_id.is_err(), "{:?}", megarepo_fail_bcs_id);
 
     check_mapping(ctx.clone(), &master_file_config, linear_second_bcs_id, None).await;
     Ok(())
