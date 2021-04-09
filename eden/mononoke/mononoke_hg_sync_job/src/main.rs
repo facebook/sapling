@@ -548,22 +548,15 @@ where
             async move {
                 match maybe_id {
                     Some(current_id) => {
-                        let entries = tokio::spawn({
-                            let ctx = ctx.clone();
-                            let bookmarks = bookmarks.clone();
-                            async move {
-                                bookmarks
-                                    .read_next_bookmark_log_entries_same_bookmark_and_reason(
-                                        ctx.clone(),
-                                        current_id as u64,
-                                        fetch_up_to_bundles,
-                                    )
-                                    .try_collect::<Vec<_>>()
-                                    .watched(ctx.logger())
-                                    .await
-                            }
-                        });
-                        let entries = entries.await??;
+                        let entries = bookmarks
+                            .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                                ctx.clone(),
+                                current_id as u64,
+                                fetch_up_to_bundles,
+                            )
+                            .try_collect::<Vec<_>>()
+                            .watched(ctx.logger())
+                            .await?;
 
                         match entries.iter().last().cloned() {
                             None => {
