@@ -1,0 +1,97 @@
+*patchreview.txt* Vim global plugin for doing single, multi-patch or diff code reviews
+                  Version  v0.2.2 (for Vim version 7.0 or higher)
+
+            Author: Manpreet Singh < junkblocker@yahoo.com >
+            Copyright (C) 2006-2010 by Manpreet Singh
+            License : This file is placed in the public domain.
+
+=============================================================================
+
+CONTENTS	                 *patchreview* *diffreview* *patchreview-contents*
+
+  1. Contents.........................................: |patchreview-contents|
+  2. Introduction.....................................: |patchreview-intro|
+  3. PatchReview options..............................: |patchreview-options|
+  4. PatchReview Usage................................: |patchreview-usage|
+     4.1 DiffReview Usage.............................: |:DiffReview|
+     4.2 PatchReview Usage............................: |:PatchReview|
+
+=============================================================================
+
+PatchReview Introduction                                  *patchreview-intro*
+
+The Patch Review plugin allows easy single or multipatch code or diff reviews.
+
+It opens each affected file in the patch or in a workspace diff in a diff view
+in a separate tab.
+
+VIM provides the |:diffpatch| and related commands to do single file reviews
+but can not handle patch files containing multiple patches as is common with
+software development projects. This plugin provides that missing
+functionality.
+
+It also improves on |:diffpatch|'s behavior of creating the patched files in
+the same directory as original file which can lead to project workspace
+pollution.
+
+It does automatic diff generation for various version control systems by
+running their diff command.
+
+=============================================================================
+
+PatchReview Options                                     *patchreview-options*
+
+  g:patchreview_patch = {string}
+      Optional path to patch binary. PatchReview tries to locate patch on
+      system path automatically. If the binary is not on system path, this
+      option tell PatchReview the full path to the binary.  This option, if
+      specified, overrides the default patch binary on the path.
+
+    examples:
+        (On Windows with Cygwin) >
+           let g:patchreview_patch = 'c:\\cygwin\\bin\\patch.exe'
+<
+        (On *nix systems) >
+           let g:patchreview_patch = '/usr/bin/gpatch'
+<
+
+  g:patchreview_filterdiff = {string}
+      Optional path to filterdiff binary. PatchReview tries to locate
+      filterdiff on system path automatically. If the binary is not on system
+      path, this option tell PatchReview the full path to the binary.  This
+      option, if specified, overrides the default filterdiff binary on the
+      path.
+
+     examples:
+        (On Windows with Cygwin)
+>
+           let g:patchreview_filterdiff = 'c:\\cygwin\\bin\\filterdiff.exe'
+<
+        (On *nix systems)
+>
+           let g:patchreview_filterdiff = '/usr/bin/filterdiff'
+<
+=============================================================================
+
+PatchReview Usage                                          *patchreview-usage*
+                                                                *:DiffReview*
+
+  :DiffReview
+
+    Perform a diff review in the current directory under version control.
+    Currently supports Mercurial (hg), Subversion (svn), CVS, Bazaar (bzr) and
+    Monotone.
+
+                                                                *:PatchReview*
+
+  :PatchReview patchfile_path [optional_source_directory]
+
+    Perform a patch review in the current directory based on the supplied
+    patchfile_path. If optional_source_directory is specified, patchreview is
+    done on that directory. Otherwise, the current directory is assumed to be
+    the source directory.
+
+    Only supports context or unified format patches.
+
+------------------------------------------------------------------------------
+ vim: ft=help:ts=2:sts=2:sw=2:tw=78:norl:

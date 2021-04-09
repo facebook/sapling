@@ -1,0 +1,26 @@
+
+== Local
+Ready.
+Un and Deux
+Eins und Zwei
+One and Two
+Eins und Zwei
+Uno und Due
+proper end of results generator
+
+== Remote
+Ready.
+REQ: foo?one=Vo&two=Efvy
+  -> Vo!boe!Efvy
+Un and Deux
+REQ: bar?b=Fjot&a=[xfj
+  -> Fjot!voe![xfj
+Eins und Zwei
+REQ: batch?cmds=foo:one=Pof,two=Uxp;bar:b=Fjot,a=[xfj;bar:b=Vop,a=Evf
+  -> Pof!boe!Uxp;Fjot!voe![xfj;Vop!voe!Evf
+One and Two
+Eins und Zwei
+Uno und Due
+proper end of results generator
+Attempted to batch a non-batchable call to 'greet'
+Attempted to batch a non-batchable call to 'hello'

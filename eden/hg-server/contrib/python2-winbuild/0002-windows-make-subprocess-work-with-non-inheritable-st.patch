@@ -1,0 +1,43 @@
+From e1508a61e65a706296755a800331544a6943f6f0 Mon Sep 17 00:00:00 2001
+From: Kostia Balytskyi <ikostia@fb.com>
+Date: Mon, 3 Jun 2019 22:14:15 +0100
+Subject: [PATCH 2/7] windows: make subprocess work with non-inheritable std
+ handles
+
+Summary:
+See https://our.internmc.facebook.com/intern/diff/D13040695/ for
+detailed explanation.
+
+In a nutshell, the problem arises when the Python process has
+non-inheritable standard handles and we call `Popen`, while
+asking it to inherit all the streams (e.g. `stdin=None, stdout=None, stderr=None`).
+In this case, the shortcut (which this diff removes) will cause no
+new handles to be created, so the child process will not inherit any
+streams. To fix this, we just remove the shortcut. Normal code path
+takes care of each stream being `None` by creating a handle duplicate
+and setting its inheritability to true.
+
+The scenario when standard handles are not inheritable is what we
+will implement in the Rust binary.
+
+@opt-out-review
+---
+ Lib/subprocess.py | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/Lib/subprocess.py b/Lib/subprocess.py
+index 1f2da0ffbe8..24a01411146 100644
+--- a/Lib/subprocess.py
++++ b/Lib/subprocess.py
+@@ -498,8 +498,6 @@ class Popen(object):
+             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
+             """
+             to_close = set()
+-            if stdin is None and stdout is None and stderr is None:
+-                return (None, None, None, None, None, None), to_close
+ 
+             p2cread, p2cwrite = None, None
+             c2pread, c2pwrite = None, None
+-- 
+2.14.1.windows.1
+

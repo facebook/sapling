@@ -1,0 +1,243 @@
+From e4df2b14a7522fd619d913c2ccc07438971ec3ba Mon Sep 17 00:00:00 2001
+From: Jun Wu <quark@fb.com>
+Date: Sat, 1 Dec 2018 19:25:27 -0800
+Subject: [PATCH 6/7] PC: make modules builtin
+
+Move external modules to builtin (python27.dll) so there are less files
+to read to import them.
+
+The remaining external modules are:
+- _sqlite3: requires sqlite3.dll.
+- _msi: Windows specific.
+- winsound: Windows specific.
+---
+ Modules/_ctypes/callbacks.c | 12 ------
+ PC/config.c                 | 23 ++++++++++++
+ PCbuild/pcbuild.proj        |  6 +--
+ PCbuild/pythoncore.vcxproj  | 92 +++++++++++++++++++++++++++++++++++++++++++--
+ 4 files changed, 114 insertions(+), 19 deletions(-)
+
+diff --git a/Modules/_ctypes/callbacks.c b/Modules/_ctypes/callbacks.c
+index ef1f0019db8..9425381a363 100644
+--- a/Modules/_ctypes/callbacks.c
++++ b/Modules/_ctypes/callbacks.c
+@@ -648,18 +648,6 @@ STDAPI DllCanUnloadNow(void)
+     return result;
+ }
+ 
+-#ifndef Py_NO_ENABLE_SHARED
+-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvRes)
+-{
+-    switch(fdwReason) {
+-    case DLL_PROCESS_ATTACH:
+-        DisableThreadLibraryCalls(hinstDLL);
+-        break;
+-    }
+-    return TRUE;
+-}
+-#endif
+-
+ #endif
+ 
+ /*
+diff --git a/PC/config.c b/PC/config.c
+index 35c66085146..6eb7b6bb4f4 100644
+--- a/PC/config.c
++++ b/PC/config.c
+@@ -75,6 +75,18 @@ extern void _PyWarnings_Init(void);
+ extern void PyMarshal_Init(void);
+ extern void initimp(void);
+ 
++extern void initbz2(void);
++extern void init_ctypes(void);
++extern void init_elementtree(void);
++extern void init_hashlib(void);
++extern void init_multiprocessing(void);
++extern void init_socket(void);
++extern void init_ssl(void);
++extern void initpyexpat(void);
++extern void initselect(void);
++extern void initunicodedata(void);
++
++
+ struct _inittab _PyImport_Inittab[] = {
+ 
+     {"array", initarray},
+@@ -165,6 +177,17 @@ struct _inittab _PyImport_Inittab[] = {
+ 
+     {"_io", init_io},
+ 
++    {"bz2", initbz2},
++    {"_ctypes", init_ctypes},
++    {"_elementtree", init_elementtree},
++    {"_hashlib", init_hashlib},
++    {"_multiprocessing", init_multiprocessing},
++    {"_socket", init_socket},
++    {"_ssl", init_ssl},
++    {"pyexpat", initpyexpat},
++    {"select", initselect},
++    {"unicodedata", initunicodedata},
++
+     /* Sentinel */
+     {0, 0}
+ };
+diff --git a/PCbuild/pcbuild.proj b/PCbuild/pcbuild.proj
+index c9bbb0f0dd3..19a6fc26e8c 100644
+--- a/PCbuild/pcbuild.proj
++++ b/PCbuild/pcbuild.proj
+@@ -37,12 +37,10 @@
+     <!-- python[w].exe -->
+     <Projects Include="python.vcxproj;pythonw.vcxproj" />
+     <!-- Extension modules -->
+-    <ExtensionModules Include="_ctypes;_elementtree;_msi;_multiprocessing;pyexpat;select;unicodedata;winsound" />
++    <ExtensionModules Include="_msi;winsound" />
+     <!-- Extension modules that require external sources -->
+-    <ExternalModules Include="bz2;_sqlite3" />
++    <ExternalModules Include="_sqlite3" />
+     <!-- _ssl will build _socket as well, which may cause conflicts in parallel builds -->
+-    <ExtensionModules Include="_socket" Condition="!$(IncludeSSL) or !$(IncludeExternals)" />
+-    <ExternalModules Include="_ssl;_hashlib" Condition="$(IncludeSSL)" />
+     <ExternalModules Include="_tkinter;tix" Condition="$(IncludeTkinter)" />
+     <ExternalModules Include="_bsddb" Condition="$(IncludeBsddb)" />
+     <ExtensionModules Include="@(ExternalModules->'%(Identity)')" Condition="$(IncludeExternals)" />
+diff --git a/PCbuild/pythoncore.vcxproj b/PCbuild/pythoncore.vcxproj
+index 7cae0a54802..066ba1f7167 100644
+--- a/PCbuild/pythoncore.vcxproj
++++ b/PCbuild/pythoncore.vcxproj
+@@ -69,11 +69,11 @@
+   <ItemDefinitionGroup>
+     <ClCompile>
+       <AdditionalOptions>/Zm200  %(AdditionalOptions)</AdditionalOptions>
+-      <AdditionalIncludeDirectories>$(PySourcePath)Python;$(PySourcePath)Modules\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+-      <PreprocessorDefinitions>_USRDLL;Py_BUILD_CORE;Py_ENABLE_SHARED;_CRT_SECURE_NO_WARNINGS;MS_DLL_ID="$(SysWinVer)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <AdditionalIncludeDirectories>$(bz2Dir);$(opensslIncludeDir);$(PySourcePath)Modules\expat;..\Modules\_ctypes\libffi_msvc;$(PySourcePath)Python;$(opensslIncludeDir);$(PySourcePath)Modules\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <PreprocessorDefinitions>_USRDLL;Py_BUILD_CORE;Py_ENABLE_SHARED;_CRT_SECURE_NO_WARNINGS;PYEXPAT_EXPORTS;MS_DLL_ID="$(SysWinVer)";_FILE_OFFSET_BITS=64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>ws2_32.lib;crypt32.lib;$(OutDir)libeay$(PyDebugExt).lib;$(OutDir)ssleay$(PyDebugExt).lib;%(AdditionalDependencies)</AdditionalDependencies>
+       <BaseAddress>0x1e000000</BaseAddress>
+     </Link>
+   </ItemDefinitionGroup>
+@@ -204,8 +204,65 @@
+     <ClInclude Include="..\PC\pyconfig.h" />
+     <ClInclude Include="..\Python\importdl.h" />
+     <ClInclude Include="..\Python\thread_nt.h" />
++    <ClInclude Include="..\Modules\_ctypes\ctypes.h" />
++    <ClInclude Include="..\Modules\_ctypes\ctypes_dlfcn.h" />
++    <ClInclude Include="..\Modules\_ctypes\libffi_msvc\ffi.h" />
++    <ClInclude Include="..\Modules\_ctypes\libffi_msvc\ffi_common.h" />
++    <ClInclude Include="..\Modules\_ctypes\libffi_msvc\fficonfig.h" />
++    <ClInclude Include="..\Modules\_ctypes\libffi_msvc\ffitarget.h" />
++    <ClInclude Include="..\Modules\expat\ascii.h" />
++    <ClInclude Include="..\Modules\expat\asciitab.h" />
++    <ClInclude Include="..\Modules\expat\expat.h" />
++    <ClInclude Include="..\Modules\expat\expat_config.h" />
++    <ClInclude Include="..\Modules\expat\expat_external.h" />
++    <ClInclude Include="..\Modules\expat\iasciitab.h" />
++    <ClInclude Include="..\Modules\expat\internal.h" />
++    <ClInclude Include="..\Modules\expat\latin1tab.h" />
++    <ClInclude Include="..\Modules\expat\macconfig.h" />
++    <ClInclude Include="..\Modules\expat\nametab.h" />
++    <ClInclude Include="..\Modules\expat\pyexpatns.h" />
++    <ClInclude Include="..\Modules\expat\utf8tab.h" />
++    <ClInclude Include="..\Modules\expat\winconfig.h" />
++    <ClInclude Include="..\Modules\expat\xmlrole.h" />
++    <ClInclude Include="..\Modules\expat\xmltok.h" />
++    <ClInclude Include="..\Modules\_multiprocessing\multiprocessing.h" />
++    <ClInclude Include="..\Modules\_multiprocessing\connection.h" />
++    <ClInclude Include="..\Modules\socketmodule.h" />
++    <ClInclude Include="..\Modules\expat\xmlrole.h" />
++    <ClInclude Include="..\Modules\expat\xmltok.h" />
++    <ClInclude Include="..\Modules\unicodedata_db.h" />
++    <ClInclude Include="..\Modules\unicodename_db.h" />
++    <ClInclude Include="$(bz2Dir)\bzlib.h" />
++    <ClInclude Include="$(bz2Dir)\bzlib_private.h" />
+   </ItemGroup>
+   <ItemGroup>
++    <ClCompile Include="..\Modules\_ssl.c" />
++    <ClCompile Include="..\Modules\unicodedata.c" />
++    <ClCompile Include="..\Modules\selectmodule.c" />
++    <ClCompile Include="..\Modules\pyexpat.c" />
++    <ClCompile Include="..\Modules\expat\loadlibrary.c" />
++    <ClCompile Include="..\Modules\expat\xmlparse.c" />
++    <ClCompile Include="..\Modules\expat\xmlrole.c" />
++    <ClCompile Include="..\Modules\expat\xmltok.c" />
++    <ClCompile Include="..\Modules\socketmodule.c" />
++    <ClCompile Include="..\Modules\_multiprocessing\multiprocessing.c" />
++    <ClCompile Include="..\Modules\_multiprocessing\pipe_connection.c" />
++    <ClCompile Include="..\Modules\_multiprocessing\semaphore.c" />
++    <ClCompile Include="..\Modules\_multiprocessing\socket_connection.c" />
++    <ClCompile Include="..\Modules\_multiprocessing\win32_functions.c" />
++    <ClCompile Include="..\Modules\_elementtree.c" />
++    <ClCompile Include="..\Modules\_ctypes\_ctypes.c" />
++    <ClCompile Include="..\Modules\_ctypes\callbacks.c" />
++    <ClCompile Include="..\Modules\_ctypes\callproc.c" />
++    <ClCompile Include="..\Modules\_ctypes\cfield.c" />
++    <ClCompile Include="..\Modules\_ctypes\libffi_msvc\ffi.c" />
++    <ClCompile Include="..\Modules\_ctypes\malloc_closure.c" />
++    <ClCompile Include="..\Modules\_ctypes\libffi_msvc\prep_cif.c" />
++    <ClCompile Include="..\Modules\_ctypes\stgdict.c" />
++    <ClCompile Include="..\Modules\_ctypes\libffi_msvc\win32.c">
++      <ExcludedFromBuild Condition="'$(Platform)'=='x64'">true</ExcludedFromBuild>
++    </ClCompile>
++    <ClCompile Include="..\Modules\_hashopenssl.c" />
+     <ClCompile Include="..\Modules\_bisectmodule.c" />
+     <ClCompile Include="..\Modules\_codecsmodule.c" />
+     <ClCompile Include="..\Modules\_collectionsmodule.c" />
+@@ -224,6 +281,14 @@
+     <ClCompile Include="..\Modules\arraymodule.c" />
+     <ClCompile Include="..\Modules\audioop.c" />
+     <ClCompile Include="..\Modules\binascii.c" />
++    <ClCompile Include="..\Modules\bz2module.c" />
++    <ClCompile Include="$(bz2Dir)\blocksort.c" />
++    <ClCompile Include="$(bz2Dir)\bzlib.c" />
++    <ClCompile Include="$(bz2Dir)\bz2compress.c" />
++    <ClCompile Include="$(bz2Dir)\crctable.c" />
++    <ClCompile Include="$(bz2Dir)\decompress.c" />
++    <ClCompile Include="$(bz2Dir)\huffman.c" />
++    <ClCompile Include="$(bz2Dir)\randtable.c" />
+     <ClCompile Include="..\Modules\cmathmodule.c" />
+     <ClCompile Include="..\Modules\cPickle.c" />
+     <ClCompile Include="..\Modules\cStringIO.c" />
+@@ -384,9 +449,26 @@
+     <ClCompile Include="..\Python\thread.c" />
+     <ClCompile Include="..\Python\traceback.c" />
+   </ItemGroup>
++  <ItemGroup>
++    <CustomBuild Include="..\Modules\_ctypes\libffi_msvc\win64.asm">
++      <ExcludedFromBuild Condition="'$(Platform)'=='Win32'">true</ExcludedFromBuild>
++      <Command>ml64 /nologo /c /Zi /Fo "$(IntDir)win64.obj" "%(FullPath)"</Command>
++      <Outputs>$(IntDir)win64.obj;%(Outputs)</Outputs>
++    </CustomBuild>
++  </ItemGroup>
+   <ItemGroup>
+     <ResourceCompile Include="..\PC\python_nt.rc" />
+   </ItemGroup>
++  <ItemGroup>
++    <ProjectReference Include="ssleay.vcxproj">
++      <Project>{10615b24-73bf-4efa-93aa-236916321317}</Project>
++      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
++    </ProjectReference>
++    <ProjectReference Include="libeay.vcxproj">
++      <Project>{e5b04cc0-eb4c-42ab-b4dc-18ef95f864b0}</Project>
++      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
++    </ProjectReference>
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+@@ -413,6 +495,10 @@
+       </ClCompile>
+     </ItemGroup>
+   </Target>
++  <Target Name="_CopyBz2Compress" BeforeTargets="PrepareForBuild">
++    <!-- bz2/compress.c and zlib/compress.c conflict. Rename one of them -->
++    <Copy SourceFiles="$(bz2Dir)\compress.c" DestinationFiles="$(bz2Dir)\bz2compress.c" />
++  </Target>
+   <Target Name="_WarnAboutToolset" BeforeTargets="PrepareForBuild" Condition="$(PlatformToolset) != 'v90'">
+     <Warning Text="Toolset $(PlatformToolset) is not used for official builds. Your build may have errors or incompatibilities." />
+   </Target>
+-- 
+2.14.1.windows.1
+

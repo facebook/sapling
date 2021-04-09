@@ -1,0 +1,38 @@
+From e0564658aee0f887b01d856f00e7b7b0e86c6ef4 Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Fri, 10 May 2019 01:04:42 +0200
+Subject: [PATCH 7/7] bpo-36778: cp65001 encoding becomes an alias to utf_8
+
+---
+ Doc/library/codecs.rst   | 2 ++
+ Lib/encodings/aliases.py | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/Doc/library/codecs.rst b/Doc/library/codecs.rst
+index 4fd0951e304..e1ec2680668 100644
+--- a/Doc/library/codecs.rst
++++ b/Doc/library/codecs.rst
+@@ -1006,6 +1006,8 @@ particular, the following variants typically exist:
+ +-----------------+--------------------------------+--------------------------------+
+ | cp1258          | windows-1258                   | Vietnamese                     |
+ +-----------------+--------------------------------+--------------------------------+
++| cp65001         |                                | Alias to ``utf_8`` encoding    |
+++-----------------+--------------------------------+--------------------------------+
+ | euc_jp          | eucjp, ujis, u-jis             | Japanese                       |
+ +-----------------+--------------------------------+--------------------------------+
+ | euc_jis_2004    | jisx0213, eucjis2004           | Japanese                       |
+diff --git a/Lib/encodings/aliases.py b/Lib/encodings/aliases.py
+index a54cf774b7b..c752683fcea 100644
+--- a/Lib/encodings/aliases.py
++++ b/Lib/encodings/aliases.py
+@@ -516,6 +516,7 @@ aliases = {
+     'utf8'               : 'utf_8',
+     'utf8_ucs2'          : 'utf_8',
+     'utf8_ucs4'          : 'utf_8',
++    'cp65001'            : 'utf_8',
+ 
+     # uu_codec codec
+     'uu'                 : 'uu_codec',
+-- 
+2.14.1.windows.1
+

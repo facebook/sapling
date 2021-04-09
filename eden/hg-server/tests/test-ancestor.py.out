@@ -1,0 +1,18 @@
+% lazy ancestor set for [], stoprev = 0, inclusive = False
+membership: []
+iteration:  []
+% lazy ancestor set for [11, 13], stoprev = 0, inclusive = False
+membership: [7, 8, 3, 4, 1, 0]
+iteration:  [3, 7, 8, 1, 4, 0, 2]
+% lazy ancestor set for [1, 3], stoprev = 0, inclusive = False
+membership: [1, 0]
+iteration:  [0, 1]
+% lazy ancestor set for [11, 13], stoprev = 0, inclusive = True
+membership: [11, 13, 7, 8, 3, 4, 1, 0]
+iteration:  [11, 13, 3, 7, 8, 1, 4, 0, 2]
+% lazy ancestor set for [11, 13], stoprev = 6, inclusive = False
+membership: [7, 8]
+iteration:  [7, 8]
+% lazy ancestor set for [11, 13], stoprev = 6, inclusive = True
+membership: [11, 13, 7, 8]
+iteration:  [11, 13, 7, 8]

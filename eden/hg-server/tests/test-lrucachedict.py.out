@@ -1,0 +1,62 @@
+'a' in d: True
+d['a']: va
+'b' in d: True
+d['b']: vb
+'c' in d: True
+d['c']: vc
+'d' in d: True
+d['d']: vd
+'a' in d: False
+'b' in d: True
+d['b']: vb
+'c' in d: True
+d['c']: vc
+'d' in d: True
+d['d']: vd
+'e' in d: True
+d['e']: ve
+'b' in d: True
+d['b']: vb2
+'c' in d: True
+d['c']: vc2
+'d' in d: True
+d['d']: vd
+'e' in d: False
+'f' in d: True
+d['f']: vf
+'b' in d: False
+'c' in d: False
+'d' in d: False
+'e' in d: False
+'f' in d: False
+'a' in d: True
+d['a']: 1
+'b' in d: True
+d['b']: 2
+
+All of these should be present:
+'a' in dc: True
+dc['a']: va3
+'b' in dc: True
+dc['b']: vb3
+'c' in dc: True
+dc['c']: vc3
+'d' in dc: True
+dc['d']: vd3
+
+All of these except 'a' should be present:
+'a' in dc: False
+'b' in dc: True
+dc['b']: vb3
+'c' in dc: True
+dc['c']: vc3
+'d' in dc: True
+dc['d']: vd3
+'e' in dc: True
+dc['e']: ve3
+
+These should be in reverse alphabetical order and read 'v?3':
+d['d']: vd3
+d['c']: vc3
+d['b']: vb3
+d['a']: va3

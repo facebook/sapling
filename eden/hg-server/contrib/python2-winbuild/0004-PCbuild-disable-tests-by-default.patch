@@ -1,0 +1,26 @@
+From 15d0bb648d9a72b0dcb60998bc691c7e243370bc Mon Sep 17 00:00:00 2001
+From: Jun Wu <quark@fb.com>
+Date: Thu, 13 Jun 2019 15:42:15 -0700
+Subject: [PATCH 4/7] PCbuild: disable tests by default
+
+This speeds up the build.
+---
+ PCbuild/pcbuild.proj | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/PCbuild/pcbuild.proj b/PCbuild/pcbuild.proj
+index 1f95fa543de..c9bbb0f0dd3 100644
+--- a/PCbuild/pcbuild.proj
++++ b/PCbuild/pcbuild.proj
+@@ -6,7 +6,7 @@
+     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+     <IncludeExtensions Condition="'$(IncludeExtensions)' == ''">true</IncludeExtensions>
+     <IncludeExternals Condition="'$(IncludeExternals)' == ''">true</IncludeExternals>
+-    <IncludeTests Condition="'$(IncludeTest)' == ''">true</IncludeTests>
++    <IncludeTests Condition="'$(IncludeTest)' == ''">false</IncludeTests>
+     <IncludeSSL Condition="'$(IncludeSSL)' == ''">true</IncludeSSL>
+     <IncludeTkinter Condition="'$(IncludeTkinter)' == ''">true</IncludeTkinter>
+     <IncludeBsddb Condition="'$(IncludeBsddb)' == ''">true</IncludeBsddb>
+-- 
+2.14.1.windows.1
+

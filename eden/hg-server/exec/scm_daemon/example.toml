@@ -1,0 +1,10 @@
+# This is a TOML document.
+
+title = "Scm Daemon configuration example"
+
+[owner]
+authors = ["Source Control Team"]
+
+[commitcloud]
+service_url = "https://example.com/commit_cloud"
+notification_url = "https://streaming-example.com/commitcloud_live_updates"

@@ -1,0 +1,32 @@
+From 80e8e682ebf8d76b34e44698950fbb159cbc2512 Mon Sep 17 00:00:00 2001
+From: Jun Wu <quark@fb.com>
+Date: Thu, 20 Jun 2019 13:03:05 -0700
+Subject: [PATCH 9/9] main: make main.c update sys.path for argv[0]
+
+This makes it possible for "python.exe a.py" to import modules relative
+to the directory of "a.py". The patch is necessary because a previous
+patch changes PySys_SetArgv to not update sys.path.
+
+The change is made in "main.c" so it only affects "python.exe". This is
+desirable because other python27.dll users do not necessarily want the
+same behavior (ex. adding argv[0] to sys.path).
+---
+ Modules/main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Modules/main.c b/Modules/main.c
+index a6edf822d03..79b5a35162e 100644
+--- a/Modules/main.c
++++ b/Modules/main.c
+@@ -573,7 +573,7 @@ Py_Main(int argc, char **argv)
+         argv[_PyOS_optind] = "-c";
+     }
+ 
+-    PySys_SetArgv(argc-_PyOS_optind, argv+_PyOS_optind);
++    PySys_SetArgvEx(argc-_PyOS_optind, argv+_PyOS_optind, 1);
+ 
+     if ((Py_InspectFlag || (command == NULL && filename == NULL && module == NULL)) &&
+         isatty(fileno(stdin))) {
+-- 
+2.14.1.windows.1
+

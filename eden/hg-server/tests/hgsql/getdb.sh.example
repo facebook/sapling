@@ -1,0 +1,18 @@
+# This file needs to be named "getdb.sh" to be effective.
+
+# Below is an example. Change the values for your test environment.
+DBHOST=localhost
+DBPORT=3306
+DBENGINE=innodb
+DBUSER=root
+DBPASS=
+
+# If DBNAME is empty, it'll be generated randomly and the test user needs to be
+# able to create a new database. The generated database will be deleted after
+# the test completes.
+#
+# If DBNAME is not empty, be sure to run the tests with "-j 1" to avoid race
+# conditions accessing the same database. The database will not be deleted
+# automatically. If you want to drop it automatically, set DBAUTODROP to 1.
+#
+# DBNAME=hgsql_test

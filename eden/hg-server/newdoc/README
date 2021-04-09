@@ -1,0 +1,8 @@
+This directory contains documentation. They are Sphinx [1] projects.
+
+- dev: Developer-facing documents.
+
+To build them, install Sphinx and python-commonmark, then run `make html` from
+the project directory.  The output can be found at `build/html/index.html`.
+
+[1]: https://www.sphinx-doc.org

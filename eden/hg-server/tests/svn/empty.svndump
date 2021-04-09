@@ -1,0 +1,129 @@
+SVN-fs-dump-format-version: 2
+
+UUID: b70c45d5-2b76-4722-a373-d9babae61626
+
+Revision-number: 0
+Prop-content-length: 260
+Content-length: 260
+
+K 8
+svn:date
+V 27
+2012-04-18T11:35:14.752409Z
+K 17
+svn:sync-from-url
+V 73
+file:///Users/pmezard/dev/hg/hg-pmezard/tests/svn/temp/svn-repo/trunk/dir
+K 18
+svn:sync-from-uuid
+V 36
+56625b9e-e7e9-45be-ab61-052d41f0e1dd
+K 24
+svn:sync-last-merged-rev
+V 1
+4
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 112
+Content-length: 112
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-04-18T11:35:14.769622Z
+K 7
+svn:log
+V 10
+init projA
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 107
+Content-length: 107
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-04-18T11:35:15.052989Z
+K 7
+svn:log
+V 6
+adddir
+PROPS-END
+
+Node-path: trunk/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/dir/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-04-18T11:35:16.050353Z
+K 7
+svn:log
+V 4
+addb
+PROPS-END
+
+Revision-number: 4
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-04-18T11:35:17.050768Z
+K 7
+svn:log
+V 4
+addc
+PROPS-END
+

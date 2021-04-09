@@ -1,0 +1,6 @@
+plus1 b = 5
+plus2 a = 3, b = 5
+plus3 a = 3, b = 5, c = 0
+<error ZeroDivisionError('integer division or modulo by zero',)>
+<error TypeError('<lambda>() takes exactly 1 argument (0 given)',)>
+result = 8

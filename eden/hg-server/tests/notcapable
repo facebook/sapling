@@ -1,0 +1,24 @@
+# Disable the $CAP wire protocol capability.
+
+if test -z "$CAP"
+then
+    echo "CAP environment variable not set."
+fi
+
+cat > notcapable-"${CAP}".py << EOF
+from edenscm.mercurial import extensions, localrepo, repository
+def extsetup():
+    extensions.wrapfunction(repository.peer, 'capable', wrapcapable)
+    extensions.wrapfunction(localrepo.localrepository, 'peer', wrappeer)
+def wrapcapable(orig, self, name, *args, **kwargs):
+    if name in '$CAP'.replace(',', ' ').split(' '):
+        return False
+    return orig(self, name, *args, **kwargs)
+def wrappeer(orig, self):
+    # Since we're disabling some newer features, we need to make sure local
+    # repos add in the legacy features again.
+    return localrepo.locallegacypeer(self)
+EOF
+
+echo '[extensions]' >> $HGRCPATH
+echo "notcapable-$CAP = `pwd`/notcapable-$CAP.py" >> $HGRCPATH
