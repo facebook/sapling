@@ -265,6 +265,10 @@ class HgImporter : public Importer {
   std::shared_ptr<EdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
+
+  // How many trees were fetched since the last time we logged?
+  uint64_t treeRequestsSinceLog_{0};
+
   /**
    * The input and output file descriptors to the helper subprocess.
    */

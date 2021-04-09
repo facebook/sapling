@@ -335,8 +335,18 @@ std::unique_ptr<IOBuf> HgImporter::fetchTree(
     RelativePathPiece path,
     Hash pathManifestNode) {
   // Ask the hg_import_helper script to fetch data for this tree
-  XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
-             << pathManifestNode;
+  static constexpr auto getNumRequestsSinceLastLog =
+      [](uint64_t& treeRequestsSinceLog) {
+        uint64_t numRequests = 0;
+        std::swap(numRequests, treeRequestsSinceLog);
+        return numRequests;
+      };
+  XLOG_EVERY_MS(DBG1, 1000)
+      << "fetching data for tree \"" << path << "\" at manifest node "
+      << pathManifestNode << ". "
+      << getNumRequestsSinceLastLog(treeRequestsSinceLog_)
+      << " trees fetched since last log";
+  treeRequestsSinceLog_++;
 
   auto requestID = sendFetchTreeRequest(
       CMD_CAT_TREE, path, pathManifestNode, "CMD_CAT_TREE");
