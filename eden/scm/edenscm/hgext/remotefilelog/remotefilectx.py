@@ -65,7 +65,7 @@ class remotefilectx(context.filectx):
         if self._filenode is not None and fctx.filenode() is not None:
             try:
                 selfmeta = fileslog.contentstore.metadata(self._path, self._filenode)
-                othermeta = fileslog.contentstore.metadata(fctx._path, fctx._filenode)
+                othermeta = fileslog.contentstore.metadata(fctx.path(), fctx.filenode())
 
                 return selfmeta["sha256"] != othermeta["sha256"]
             except KeyError:
