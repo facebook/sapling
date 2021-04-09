@@ -457,7 +457,7 @@ mod tests {
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
 
         let mut raw_data = vec![];
-        let pack = EmptyPack::new(0);
+        let pack = EmptyPack::new(19);
 
         // Some partially compressible data as base version
         let mut base_version = vec![7u8; 65535];
