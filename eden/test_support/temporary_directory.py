@@ -57,12 +57,15 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             return
 
         try:
+            # func() is the function that failed.
+            # This is usually os.unlink() or os.rmdir().
+            if func not in (os.unlink, os.rmdir):
+                raise ex
+
             # pyre-fixme[6]: Expected `_PathLike[AnyStr]` for 1st param but got
             #  `Union[_PathLike[Any], str]`.
             parent_dir = os.path.dirname(path)
             os.chmod(parent_dir, 0o755)
-            # func() is the function that failed.
-            # This is usually os.unlink() or os.rmdir().
             func(path)
         except OSError as ex:
             logging.warning(f"error removing file in temporary directory {path}: {ex}")
