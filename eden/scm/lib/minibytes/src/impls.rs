@@ -8,7 +8,7 @@
 //! Implement common traits for [`Bytes`] and [`Text`].
 
 use crate::{Bytes, BytesOwner, Text, TextOwner};
-use std::{borrow, cmp, fmt, hash, ops};
+use std::{ascii::escape_default, borrow, cmp, fmt, hash, ops};
 
 impl<T: BytesOwner> From<T> for Bytes {
     fn from(value: T) -> Self {
@@ -83,7 +83,13 @@ impl Ord for Bytes {
 
 impl fmt::Debug for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.as_slice(), f)
+        // Use `[u8]::escape_ascii` when inherent_ascii_escape is stabilized.
+        f.write_str("b\"")?;
+        for &byte in self.as_slice() {
+            fmt::Display::fmt(&escape_default(byte), f)?;
+        }
+        f.write_str("\"")?;
+        Ok(())
     }
 }
 
