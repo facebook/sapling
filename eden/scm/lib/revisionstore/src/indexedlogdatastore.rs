@@ -184,6 +184,16 @@ impl Entry {
     pub fn key(&self) -> &Key {
         &self.key
     }
+
+    /// Replaces the Entry's key in case caller looked up a different path.
+    fn with_key(self, key: Key) -> Self {
+        Entry {
+            key,
+            content: self.content,
+            metadata: self.metadata,
+            compressed_content: self.compressed_content,
+        }
+    }
 }
 
 impl IndexedLogHgIdDataStore {
@@ -294,7 +304,7 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
                         {
                             Err(FetchError::not_found(key.clone()))
                         } else {
-                            Ok(entry)
+                            Ok(entry.with_key(key.clone()))
                         }
                     }
                     Err(e) => Err(FetchError::with_key(key.clone(), e)),
