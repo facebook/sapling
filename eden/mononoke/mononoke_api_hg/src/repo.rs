@@ -159,13 +159,13 @@ impl HgRepoContext {
     /// and from Mercurial types.
     pub async fn many_changeset_ids_to_locations(
         &self,
-        hg_client_head: HgChangesetId,
+        hg_master_heads: Vec<HgChangesetId>,
         hg_ids: Vec<HgChangesetId>,
     ) -> Result<HashMap<HgChangesetId, Location<HgChangesetId>>, MononokeError> {
         let all_hg_ids: Vec<_> = hg_ids
             .iter()
             .cloned()
-            .chain(std::iter::once(hg_client_head))
+            .chain(hg_master_heads.clone().into_iter())
             .collect();
         let hg_to_bonsai: HashMap<HgChangesetId, ChangesetId> = self
             .blob_repo()
@@ -173,12 +173,18 @@ impl HgRepoContext {
             .await?
             .into_iter()
             .collect();
-        let client_head = *hg_to_bonsai.get(&hg_client_head).ok_or_else(|| {
-            MononokeError::InvalidRequest(format!(
-                "failed to find bonsai equivalent for client head {}",
-                hg_client_head
-            ))
-        })?;
+        let master_heads = hg_master_heads
+            .iter()
+            .map(|master_id| {
+                hg_to_bonsai.get(master_id).cloned().ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!(
+                        "failed to find bonsai equivalent for client head {}",
+                        master_id
+                    ))
+                })
+            })
+            .collect::<Result<Vec<_>, MononokeError>>()?;
+
         let cs_ids = hg_ids
             .iter()
             .map(|hg_id| {
@@ -193,7 +199,7 @@ impl HgRepoContext {
 
         let cs_to_blocations = self
             .repo()
-            .many_changeset_ids_to_locations(client_head, cs_ids)
+            .many_changeset_ids_to_locations(master_heads, cs_ids)
             .await?;
 
         let bonsai_to_hg: HashMap<ChangesetId, HgChangesetId> = self

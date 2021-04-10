@@ -1394,13 +1394,13 @@ impl RepoContext {
     /// the shape of the graph, i.e. a location in the graph.
     pub async fn many_changeset_ids_to_locations(
         &self,
-        client_head: ChangesetId,
+        master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>, MononokeError> {
         let blob_repo = self.blob_repo();
         let result = blob_repo
             .segmented_changelog()
-            .many_changeset_ids_to_locations(&self.ctx, vec![client_head], cs_ids)
+            .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
             .await
             .map_err(MononokeError::from)?;
         Ok(result)

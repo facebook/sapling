@@ -74,11 +74,11 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     async fn hash_to_location_chunk(
         hg_repo_ctx: HgRepoContext,
-        client_head: HgChangesetId,
+        master_heads: Vec<HgChangesetId>,
         hg_cs_ids: Vec<HgChangesetId>,
     ) -> Result<impl Stream<Item = Result<CommitHashToLocationResponse, Error>>, Error> {
         let hgcsid_to_location = hg_repo_ctx
-            .many_changeset_ids_to_locations(client_head, hg_cs_ids.clone())
+            .many_changeset_ids_to_locations(master_heads, hg_cs_ids.clone())
             .await?;
         let responses = hgcsid_to_location.into_iter().map(|(hgcsid, location)| {
             let response = CommitHashToLocationResponse {
@@ -110,7 +110,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         .map(|chunk| chunk.into_iter().map(|x| x.into()).collect::<Vec<_>>())
         .map({
             let ctx = hg_repo_ctx.clone();
-            move |chunk| hash_to_location_chunk(ctx.clone(), client_head, chunk)
+            move |chunk| hash_to_location_chunk(ctx.clone(), vec![client_head], chunk)
         })
         .buffer_unordered(3)
         .try_flatten()
