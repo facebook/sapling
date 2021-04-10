@@ -53,8 +53,6 @@ try:
 except AttributeError:
     # pyre-fixme[9]: shlex_quote has type `(s: str) -> str`; used as `(seq:
     #  Sequence[str]) -> str`.
-    # pyre-fixme[9]: shlex_quote has type `(s: str) -> str`; used as `(seq:
-    #  Sequence[str]) -> str`.
     shlex_quote = subprocess.list2cmdline
 
 
