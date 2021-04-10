@@ -20,7 +20,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Bookmarks};
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
-use fixtures::{linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
+use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::{ChangesetId, RepositoryId};
 use phases::mark_reachable_as_public;
 use revset::AncestorsNodeStream;
@@ -378,7 +378,9 @@ async fn validate_changeset_id_to_location(
         }
     };
 
-    let answer = sc.changeset_id_to_location(&ctx, head_cs, cs_id).await?;
+    let answer = sc
+        .changeset_id_to_location(&ctx, vec![head_cs], cs_id)
+        .await?;
     assert_eq!(answer, expected_location);
 
     Ok(())
@@ -450,9 +452,77 @@ async fn test_changeset_id_to_location_random_hash(fb: FacebookInit) -> Result<(
     let random_cs_id = mononoke_types_mocks::changesetid::ONES_CSID;
 
     let answer = sc
-        .changeset_id_to_location(&ctx, head_cs, random_cs_id)
+        .changeset_id_to_location(&ctx, vec![head_cs], random_cs_id)
         .await?;
     assert_eq!(answer, None);
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_changeset_id_to_location_multiple_heads(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = branch_even::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+
+    // Graph looks like:
+    // a -> b -> c
+    //  \-> d -> e
+
+    let a = resolve_cs_id(&ctx, &blobrepo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await?;
+    let b = resolve_cs_id(&ctx, &blobrepo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
+    let c = resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
+    let d = resolve_cs_id(&ctx, &blobrepo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await?;
+    let e = resolve_cs_id(&ctx, &blobrepo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await?;
+
+    seed(&ctx, &blobrepo, &conns, c).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
+
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], a).await?,
+        Some(Location::new(c, 2))
+    );
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], d).await?,
+        None
+    );
+
+    set_bookmark(
+        fb,
+        blobrepo.clone(),
+        "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
+        BOOKMARK_NAME.clone(),
+    )
+    .await;
+    let tailer = new_tailer(&blobrepo, &conns);
+    let _ = tailer.once(&ctx).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
+
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], b).await?,
+        Some(Location::new(c, 1))
+    );
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], d).await?,
+        Some(Location::new(e, 1))
+    );
+    let ambigous = sc
+        .changeset_id_to_location(&ctx, vec![c, e], a)
+        .await?
+        .unwrap();
+    assert!(ambigous == Location::new(c, 2) || ambigous == Location::new(e, 2));
+
+    seed(&ctx, &blobrepo, &conns, e).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
+
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], a).await?,
+        Some(Location::new(e, 2)),
+    );
+    assert_eq!(
+        sc.changeset_id_to_location(&ctx, vec![c, e], b).await?,
+        None
+    );
 
     Ok(())
 }
@@ -557,10 +627,14 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
 
     let sc = new_isolated_on_demand_update(&blobrepo);
     let answer = try_join_all(vec![
-        sc.changeset_id_to_location(&ctx, cs10, cs5),
-        sc.changeset_id_to_location(&ctx, cs6, cs5),
-        sc.changeset_id_to_location(&ctx, cs11, cs5),
-        sc.changeset_id_to_location(&ctx, cs11, mononoke_types_mocks::changesetid::ONES_CSID),
+        sc.changeset_id_to_location(&ctx, vec![cs10], cs5),
+        sc.changeset_id_to_location(&ctx, vec![cs6], cs5),
+        sc.changeset_id_to_location(&ctx, vec![cs11], cs5),
+        sc.changeset_id_to_location(
+            &ctx,
+            vec![cs11],
+            mononoke_types_mocks::changesetid::ONES_CSID,
+        ),
     ])
     .await?;
     assert_eq!(

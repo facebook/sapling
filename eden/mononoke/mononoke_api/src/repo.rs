@@ -1400,7 +1400,7 @@ impl RepoContext {
         let blob_repo = self.blob_repo();
         let result = blob_repo
             .segmented_changelog()
-            .many_changeset_ids_to_locations(&self.ctx, client_head, cs_ids)
+            .many_changeset_ids_to_locations(&self.ctx, vec![client_head], cs_ids)
             .await
             .map_err(MononokeError::from)?;
         Ok(result)

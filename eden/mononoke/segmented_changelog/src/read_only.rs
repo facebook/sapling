@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{bail, format_err, Context, Result};
 use async_trait::async_trait;
 use futures::prelude::*;
 
@@ -19,7 +19,9 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
-use crate::{CloneData, FirstAncestorConstraint, Group, InProcessIdDag, Location, Vertex};
+use crate::{
+    CloneData, DagIdSet, FirstAncestorConstraint, Group, InProcessIdDag, Location, Vertex,
+};
 use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
@@ -53,16 +55,28 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
     async fn many_changeset_ids_to_locations(
         &self,
         ctx: &CoreContext,
-        client_head: ChangesetId,
+        master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        let (head_vertex, cs_to_vertex) = futures::try_join!(
-            self.idmap.get_vertex(ctx, client_head),
+        let (master_head_vertexes, cs_to_vertex) = futures::try_join!(
+            self.idmap.find_many_vertexes(ctx, master_heads.clone()),
             self.idmap.find_many_vertexes(ctx, cs_ids),
         )
         .context("failed fetching changeset to vertex translations")?;
+        if master_head_vertexes.is_empty() {
+            // When the client has multiple heads, we are content with the server finding only one
+            // of the heads. This situation comes up when master moves backwards.  The server may
+            // be reseeded after that and will not have multiple heads. The client then may have
+            // multiple heads and we will have to treat the heads that are not found as non master
+            // heads.
+            bail!(
+                "failed to find idmap entries for all commits listed in \
+                the master heads list: {:?}",
+                master_heads
+            );
+        }
         let constraints = FirstAncestorConstraint::KnownUniversally {
-            heads: head_vertex.into(),
+            heads: DagIdSet::from_spans(master_head_vertexes.into_iter().map(|(_k, v)| v)),
         };
         let cs_to_vlocation = cs_to_vertex
             .into_iter()

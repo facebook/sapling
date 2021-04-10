@@ -38,7 +38,7 @@ mod version_store;
 mod tests;
 
 pub use segmented_changelog_types::{
-    dag, ArcSegmentedChangelog, CloneData, FirstAncestorConstraint, FlatSegment, Group,
+    dag, ArcSegmentedChangelog, CloneData, DagIdSet, FirstAncestorConstraint, FlatSegment, Group,
     InProcessIdDag, Location, PreparedFlatSegments, SegmentedChangelog, StreamCloneData, Vertex,
 };
 
@@ -91,7 +91,7 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
     async fn many_changeset_ids_to_locations(
         &self,
         _ctx: &CoreContext,
-        _client_head: ChangesetId,
+        _master_heads: Vec<ChangesetId>,
         _cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         Err(format_err!(
@@ -137,12 +137,12 @@ macro_rules! segmented_changelog_delegate {
             async fn many_changeset_ids_to_locations(
                 &$self,
                 $ctx: &CoreContext,
-                client_head: ChangesetId,
+                master_heads: Vec<ChangesetId>,
                 cs_ids: Vec<ChangesetId>,
             ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
                 let delegate = $delegate;
                 delegate
-                    .many_changeset_ids_to_locations($ctx, client_head, cs_ids)
+                    .many_changeset_ids_to_locations($ctx, master_heads, cs_ids)
                     .await
             }
         }

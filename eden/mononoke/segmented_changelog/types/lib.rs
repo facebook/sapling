@@ -20,8 +20,8 @@ use mononoke_types::ChangesetId;
 
 pub use dag;
 pub use dag::{
-    CloneData, FirstAncestorConstraint, FlatSegment, Group, Id as Vertex, InProcessIdDag, Location,
-    PreparedFlatSegments,
+    CloneData, FirstAncestorConstraint, FlatSegment, Group, Id as Vertex, IdSet as DagIdSet,
+    InProcessIdDag, Location, PreparedFlatSegments,
 };
 
 pub struct StreamCloneData<T> {
@@ -83,11 +83,11 @@ pub trait SegmentedChangelog: Send + Sync {
     async fn changeset_id_to_location(
         &self,
         ctx: &CoreContext,
-        client_head: ChangesetId,
+        master_heads: Vec<ChangesetId>,
         cs_id: ChangesetId,
     ) -> Result<Option<Location<ChangesetId>>> {
         let mut ids = self
-            .many_changeset_ids_to_locations(ctx, client_head, vec![cs_id])
+            .many_changeset_ids_to_locations(ctx, master_heads, vec![cs_id])
             .await?;
         Ok(ids.remove(&cs_id))
     }
@@ -99,7 +99,7 @@ pub trait SegmentedChangelog: Send + Sync {
     async fn many_changeset_ids_to_locations(
         &self,
         ctx: &CoreContext,
-        client_head: ChangesetId,
+        master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>>;
 

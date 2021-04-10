@@ -247,8 +247,8 @@ impl OnDemandUpdateSegmentedChangelog {
         self.build_up_to_cs(&ctx, bookmark_cs, Group::MASTER).await
     }
 
-    async fn build_up_to_head(&self, ctx: &CoreContext, head: ChangesetId) -> Result<()> {
-        if !self.is_cs_assigned(ctx, head).await? {
+    async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<()> {
+        if !self.is_one_cs_assigned(ctx, heads).await? {
             self.build_up_to_bookmark(ctx).await?;
             // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
             // group is reserved for the ancestors of the master bookmark. The MASTER group should
@@ -258,16 +258,29 @@ impl OnDemandUpdateSegmentedChangelog {
             // to. At the moment we only handle updating the MASTER group.
             // Note for the future. We should pay attention to potential races between a changeset
             // being used and the bookmark being updated.
-            if !self.is_cs_assigned(ctx, head).await? {
+            if !self.is_one_cs_assigned(ctx, heads).await? {
                 bail!(
-                    "repo {}: failed to assign cs {}, not an ancestor of bookmark {}",
+                    "repo {}: failed to assign all cs {:?}, not ancestor of bookmark {}",
                     self.repo_id,
-                    head,
+                    heads,
                     self.master_bookmark
                 );
             }
         }
         Ok(())
+    }
+
+    async fn is_one_cs_assigned(&self, ctx: &CoreContext, cs_ids: &[ChangesetId]) -> Result<bool> {
+        let vertex_map = self.idmap.find_many_vertexes(ctx, cs_ids.to_vec()).await?;
+        if !vertex_map.is_empty() {
+            let iddag = self.iddag.read().await;
+            for (_cs_id, vertex) in vertex_map {
+                if iddag.contains_id(vertex)? {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 
     async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
@@ -344,7 +357,7 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         STATS::location_to_changeset_id.add_value(1);
         // Location descendant may not be the ideal entry to build up to, it could be a good idea
         // to have client_head here too.
-        self.build_up_to_head(ctx, location.descendant)
+        self.build_up_to_heads(ctx, &[location.descendant])
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
@@ -357,17 +370,17 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
     async fn many_changeset_ids_to_locations(
         &self,
         ctx: &CoreContext,
-        client_head: ChangesetId,
+        master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         STATS::changeset_id_to_location.add_value(1);
-        self.build_up_to_head(ctx, client_head)
+        self.build_up_to_heads(ctx, &master_heads)
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag
-            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .many_changeset_ids_to_locations(ctx, master_heads, cs_ids)
             .await
     }
 
