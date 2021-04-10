@@ -89,7 +89,7 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn commit_hash_to_location(
         &self,
         repo: String,
-        repo_master: HgId,
+        master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError>;
@@ -197,12 +197,12 @@ impl EdenApi for Arc<dyn EdenApi> {
     async fn commit_hash_to_location(
         &self,
         repo: String,
-        repo_master: HgId,
+        master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .commit_hash_to_location(repo, repo_master, hgids, progress)
+            .commit_hash_to_location(repo, master_heads, hgids, progress)
             .await
     }
 }

@@ -545,7 +545,7 @@ impl EdenApi for Client {
     async fn commit_hash_to_location(
         &self,
         repo: String,
-        repo_master: HgId,
+        master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
@@ -566,7 +566,7 @@ impl EdenApi for Client {
 
         let formatted = self.prepare(&url, hgids, self.config.max_location_to_hash, |hgids| {
             let batch = CommitHashToLocationRequestBatch {
-                master_heads: vec![repo_master],
+                master_heads: master_heads.clone(),
                 hgids,
             };
             self.log_request(&batch, "commit_hash_to_location");

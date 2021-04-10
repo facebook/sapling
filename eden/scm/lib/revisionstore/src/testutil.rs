@@ -372,7 +372,7 @@ impl EdenApi for FakeEdenApi {
     async fn commit_hash_to_location(
         &self,
         _repo: String,
-        _repo_master: HgId,
+        _master_heads: Vec<HgId>,
         _hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {

@@ -169,22 +169,22 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_location_to_hash_py(py, repo, requests, callback)
     }
 
-    /// commithashtolocation(repo: str, repo_master: bytes, hghds: [bytes], progress = None) ->
+    /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes], progress = None) ->
     ///   [(hgid: bytes, location: (descendant: bytes, distance: u64))], stats
     ///
     /// Fetch the location in the commit graph of a given hash.
     /// WARNING. Only hashes of ancestors of master are supported.
-    /// It is necessary pass in the hash of the master branch in order for the server to be able
-    /// to construct a valid location for the client.
+    /// It is necessary pass in the hashes that Segmented Changelog tracks in the master group in
+    /// order for the server to be able to construct a valid location for the client.
     /// Hashes that cannot be found will be missing from the returned list.
     def commithashtolocation(
         &self,
         repo: String,
-        repo_master: PyBytes,
+        master_heads: Vec<PyBytes>,
         hgids: Vec<PyBytes>,
         callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>, PyFuture)> {
-        self.inner(py).clone().commit_hash_to_location_py(py, repo, repo_master, hgids, callback)
+        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids, callback)
     }
 });
 

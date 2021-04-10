@@ -239,7 +239,7 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        repo_master: PyBytes,
+        master_heads: Vec<PyBytes>,
         hgids: Vec<PyBytes>,
         callback: Option<PyObject>,
     ) -> PyResult<(
@@ -247,13 +247,13 @@ pub trait EdenApiPyExt: EdenApi {
         PyFuture,
     )> {
         let callback = callback.map(wrap_callback);
-        let repo_master = to_hgid(py, &repo_master);
+        let master_heads = to_hgids(py, master_heads);
         let hgids = to_hgids(py, hgids);
         let (responses, stats) = py
             .allow_threads(|| {
                 block_on_future(async move {
                     let response = self
-                        .commit_hash_to_location(repo, repo_master, hgids, callback)
+                        .commit_hash_to_location(repo, master_heads, hgids, callback)
                         .await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })

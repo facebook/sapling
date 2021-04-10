@@ -107,11 +107,11 @@ pub trait EdenApiBlocking: EdenApi {
     fn commit_hash_to_location_blocking(
         &self,
         repo: String,
-        repo_master: HgId,
+        master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<CommitHashToLocationResponse>, EdenApiError> {
-        BlockingFetch::from_async(self.commit_hash_to_location(repo, repo_master, hgids, progress))
+        BlockingFetch::from_async(self.commit_hash_to_location(repo, master_heads, hgids, progress))
     }
 }
 
