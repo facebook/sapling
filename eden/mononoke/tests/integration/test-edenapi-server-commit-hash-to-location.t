@@ -73,7 +73,8 @@ Create and send file data request.
   >     "$B",
   >     "$A",
   >     "$F",
-  >     "$H"
+  >     "$H",
+  >     "000000000000000000000000000000123456789a"
   >   ]
   > }
   > EOF
@@ -90,6 +91,7 @@ Create and send file data request.
           WireHgId("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
           WireHgId("bb56d4161ee371c720dbc8b504810c62a22fe314"),
           WireHgId("06383dd46c9bcbca9300252b4b6cddad88f8af21"),
+          WireHgId("000000000000000000000000000000123456789a"),
       ],
       master_heads: [
           WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),

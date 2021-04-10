@@ -185,17 +185,13 @@ impl HgRepoContext {
             })
             .collect::<Result<Vec<_>, MononokeError>>()?;
 
+        // We should treat hg_ids as being absolutely any hash. It is perfectly valid for the
+        // server to have not encountered the hash that it was given to convert. Filter out the
+        // hashes that we could not convert to bonsai.
         let cs_ids = hg_ids
             .iter()
-            .map(|hg_id| {
-                hg_to_bonsai.get(hg_id).cloned().ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!(
-                        "failed to find bonsaid equivalent for {}",
-                        hg_id
-                    ))
-                })
-            })
-            .collect::<Result<Vec<ChangesetId>, MononokeError>>()?;
+            .filter_map(|hg_id| hg_to_bonsai.get(hg_id).cloned())
+            .collect::<Vec<ChangesetId>>();
 
         let cs_to_blocations = self
             .repo()
