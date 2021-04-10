@@ -19,6 +19,7 @@
 #include <folly/Range.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/lang/ToAscii.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
@@ -319,8 +320,10 @@ InodePath FsOverlay::getFilePath(InodeNumber inodeNumber) {
       MutableStringPiece{outPathArray.data(), kShardDirPathLength});
   outPathArray[kShardDirPathLength] = '/';
   auto numberPathStart = kShardDirPathLength + 1;
-  auto index = folly::uint64ToBufferUnsafe(
-      inodeNumber.get(), outPathArray.data() + numberPathStart);
+  auto index = folly::to_ascii_decimal(
+      outPathArray.data() + numberPathStart,
+      outPathArray.end(),
+      inodeNumber.get());
   XDCHECK_LT(index + numberPathStart, outPathArray.size());
   outPathArray[index + numberPathStart] = '\0';
   return outPath;
@@ -443,8 +446,8 @@ InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
   // than to create it directly in the subtree.
   InodeTmpPath tmpPath;
   memcpy(tmpPath.data(), tmpPrefix.data(), tmpPrefix.size());
-  auto index = folly::uint64ToBufferUnsafe(
-      inodeNumber.get(), tmpPath.data() + tmpPrefix.size());
+  auto index = folly::to_ascii_decimal(
+      tmpPath.data() + tmpPrefix.size(), tmpPath.end(), inodeNumber.get());
   tmpPath[tmpPrefix.size() + index] = '\0';
   return tmpPath;
 }

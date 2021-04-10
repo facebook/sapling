@@ -13,6 +13,7 @@
 #include <fmt/format.h>
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
+#include <folly/lang/ToAscii.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 
@@ -33,7 +34,7 @@ namespace facebook::eden::detail {
 ProcPidCmdLine getProcPidCmdLine(pid_t pid) {
   ProcPidCmdLine path;
   memcpy(path.data(), "/proc/", 6);
-  auto digits = folly::uint64ToBufferUnsafe(pid, path.data() + 6);
+  auto digits = folly::to_ascii_decimal(path.data() + 6, path.end(), pid);
   memcpy(path.data() + 6 + digits, "/cmdline", 9);
   return path;
 }
