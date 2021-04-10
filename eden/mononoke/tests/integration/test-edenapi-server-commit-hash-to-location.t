@@ -63,7 +63,9 @@ Start up EdenAPI server.
 Create and send file data request.
   $ edenapi_make_req commit-hash-to-location > req.cbor <<EOF
   > {
-  >   "client_head": "$G",
+  >   "master_heads": [
+  >     "$G"
+  >   ],
   >   "hgids": [
   >     "$F",
   >     "$D",
@@ -77,7 +79,9 @@ Create and send file data request.
   > EOF
   Reading from stdin
   Generated request: WireCommitHashToLocationRequestBatch {
-      client_head: WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),
+      client_head: Some(
+          WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),
+      ),
       hgids: [
           WireHgId("bb56d4161ee371c720dbc8b504810c62a22fe314"),
           WireHgId("f585351a92f85104bff7c284233c338b10eb1df7"),
@@ -86,6 +90,9 @@ Create and send file data request.
           WireHgId("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
           WireHgId("bb56d4161ee371c720dbc8b504810c62a22fe314"),
           WireHgId("06383dd46c9bcbca9300252b4b6cddad88f8af21"),
+      ],
+      master_heads: [
+          WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),
       ],
   }
 

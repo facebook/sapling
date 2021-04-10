@@ -124,13 +124,21 @@ pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationT
 /// }
 pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLocationRequestBatch> {
     let json = json.as_object().context("input must be a JSON object")?;
-    let client_head = HgId::from_str(
-        json.get("client_head")
-            .context("missing field client_head")?
-            .as_str()
-            .context("field client_heade is not a string")?,
-    )
-    .context("could not be parsed as HgId")?;
+    let master_heads_json = json
+        .get("master_heads")
+        .context("missing files master_heads")?
+        .as_array()
+        .context("field master_heads is not an array")?;
+    let mut master_heads = Vec::new();
+    for master_head_json in master_heads_json {
+        let master_head = HgId::from_str(
+            master_head_json
+                .as_str()
+                .context("field master_heads does not contain strings")?,
+        )
+        .context("could not parse hgid")?;
+        master_heads.push(master_head);
+    }
     let hgids_json = json
         .get("hgids")
         .context("missing field requests")?
@@ -141,12 +149,15 @@ pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLoc
         let hgid = HgId::from_str(
             hgid_json
                 .as_str()
-                .context("field client_heade is not a string")?,
+                .context("field hgids does not contains string")?,
         )
         .context("could not be parsed as HgId")?;
         hgids.push(hgid);
     }
-    Ok(CommitHashToLocationRequestBatch { client_head, hgids })
+    Ok(CommitHashToLocationRequestBatch {
+        master_heads,
+        hgids,
+    })
 }
 /// Parse a `FileRequest` from JSON.
 ///
@@ -640,7 +651,7 @@ impl ToJson for CommitLocationToHashRequestBatch {
 impl ToJson for CommitHashToLocationRequestBatch {
     fn to_json(&self) -> Value {
         json!({
-            "client_head": self.client_head.to_json(),
+            "master_heads": self.master_heads.to_json(),
             "hgids": self.hgids.to_json(),
         })
     }

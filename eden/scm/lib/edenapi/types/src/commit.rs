@@ -81,7 +81,7 @@ impl Arbitrary for CommitLocationToHashRequestBatch {
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitHashToLocationRequestBatch {
-    pub client_head: HgId,
+    pub master_heads: Vec<HgId>,
     pub hgids: Vec<HgId>,
 }
 
@@ -96,7 +96,7 @@ pub struct CommitHashToLocationResponse {
 impl Arbitrary for CommitHashToLocationRequestBatch {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         CommitHashToLocationRequestBatch {
-            client_head: Arbitrary::arbitrary(g),
+            master_heads: Arbitrary::arbitrary(g),
             hgids: Arbitrary::arbitrary(g),
         }
     }

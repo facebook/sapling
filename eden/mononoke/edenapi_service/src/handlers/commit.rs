@@ -103,14 +103,18 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
-    let client_head = batch.client_head.into();
+    let master_heads = batch
+        .master_heads
+        .into_iter()
+        .map(|x| x.into())
+        .collect::<Vec<_>>();
 
     let response = stream::iter(batch.hgids)
         .chunks(HASH_TO_LOCATION_BATCH_SIZE)
         .map(|chunk| chunk.into_iter().map(|x| x.into()).collect::<Vec<_>>())
         .map({
             let ctx = hg_repo_ctx.clone();
-            move |chunk| hash_to_location_chunk(ctx.clone(), vec![client_head], chunk)
+            move |chunk| hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
         })
         .buffer_unordered(3)
         .try_flatten()

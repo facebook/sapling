@@ -177,9 +177,11 @@ impl Arbitrary for WireCommitLocationToHashRequestBatch {
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitHashToLocationRequestBatch {
     #[serde(rename = "1")]
-    pub client_head: WireHgId,
+    pub client_head: Option<WireHgId>,
     #[serde(rename = "2")]
     pub hgids: Vec<WireHgId>,
+    #[serde(rename = "3", default)]
+    pub master_heads: Vec<WireHgId>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -194,9 +196,11 @@ impl ToWire for CommitHashToLocationRequestBatch {
     type Wire = WireCommitHashToLocationRequestBatch;
 
     fn to_wire(self) -> Self::Wire {
+        let client_head = self.master_heads.get(0).copied().to_wire();
         Self::Wire {
-            client_head: self.client_head.to_wire(),
+            client_head,
             hgids: self.hgids.to_wire(),
+            master_heads: self.master_heads.to_wire(),
         }
     }
 }
@@ -206,8 +210,15 @@ impl ToApi for WireCommitHashToLocationRequestBatch {
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let mut master_heads = self.master_heads.to_api()?;
+        if master_heads.is_empty() {
+            let client_head = self.client_head.to_api()?;
+            if let Some(head) = client_head {
+                master_heads = vec![head];
+            }
+        }
         let api = Self::Api {
-            client_head: self.client_head.to_api()?,
+            master_heads,
             hgids: self.hgids.to_api()?,
         };
         Ok(api)

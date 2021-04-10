@@ -566,7 +566,7 @@ impl EdenApi for Client {
 
         let formatted = self.prepare(&url, hgids, self.config.max_location_to_hash, |hgids| {
             let batch = CommitHashToLocationRequestBatch {
-                client_head: repo_master,
+                master_heads: vec![repo_master],
                 hgids,
             };
             self.log_request(&batch, "commit_hash_to_location");
