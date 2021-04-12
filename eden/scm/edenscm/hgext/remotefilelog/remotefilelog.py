@@ -468,6 +468,7 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self._memcachestore = None
+        self._edenapistore = None
 
         def needmaintenance(fname):
             # type: (str) -> bool
@@ -527,9 +528,11 @@ class remotefileslog(filelog.fileslog):
         return self._memcachestore
 
     def edenapistore(self, repo):
-        if repo.edenapi is not None and repo.ui.configbool("remotefilelog", "http"):
-            return repo.edenapi.filestore(repo.name)
-        return None
+        if self._edenapistore is None:
+            if repo.edenapi is not None and repo.ui.configbool("remotefilelog", "http"):
+                self._edenapistore = repo.edenapi.filestore(repo.name)
+
+        return self._edenapistore
 
     def makesharedonlyruststore(self, repo):
         """Build non-local stores.
