@@ -344,12 +344,6 @@ pub mod types {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
-    pub struct ManifestEntry {
-        #[serde(default)]
-        pub mode: ::std::primitive::i32,
-    }
-
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct FuseCall {
         #[serde(default)]
         pub opcode: ::std::primitive::i32,
@@ -1853,11 +1847,7 @@ pub mod types {
                     ::fbthrift::Serialize::write(inner, p);
                     p.write_field_end();
                 }
-                SHA1Result::UnknownField(x) => {
-                    p.write_field_begin("UnknownField", ::fbthrift::TType::I32, *x as ::std::primitive::i16);
-                    x.write(p);
-                    p.write_field_end();
-                }
+                SHA1Result::UnknownField(_) => {}
             }
             p.write_field_stop();
             p.write_struct_end();
@@ -2054,11 +2044,7 @@ pub mod types {
                     ::fbthrift::Serialize::write(inner, p);
                     p.write_field_end();
                 }
-                EntryInformationOrError::UnknownField(x) => {
-                    p.write_field_begin("UnknownField", ::fbthrift::TType::I32, *x as ::std::primitive::i16);
-                    x.write(p);
-                    p.write_field_end();
-                }
+                EntryInformationOrError::UnknownField(_) => {}
             }
             p.write_field_stop();
             p.write_struct_end();
@@ -2207,11 +2193,7 @@ pub mod types {
                     ::fbthrift::Serialize::write(inner, p);
                     p.write_field_end();
                 }
-                FileInformationOrError::UnknownField(x) => {
-                    p.write_field_begin("UnknownField", ::fbthrift::TType::I32, *x as ::std::primitive::i16);
-                    x.write(p);
-                    p.write_field_end();
-                }
+                FileInformationOrError::UnknownField(_) => {}
             }
             p.write_field_stop();
             p.write_struct_end();
@@ -3781,62 +3763,6 @@ pub mod types {
                 vmRSSBytes: field_vmRSSBytes.unwrap_or_default(),
                 blobCacheStats: field_blobCacheStats.unwrap_or_default(),
                 mountPointJournalInfo: field_mountPointJournalInfo.unwrap_or_default(),
-            })
-        }
-    }
-
-
-    impl ::std::default::Default for self::ManifestEntry {
-        fn default() -> Self {
-            Self {
-                mode: ::std::default::Default::default(),
-            }
-        }
-    }
-
-    unsafe impl ::std::marker::Send for self::ManifestEntry {}
-    unsafe impl ::std::marker::Sync for self::ManifestEntry {}
-
-    impl ::fbthrift::GetTType for self::ManifestEntry {
-        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
-    }
-
-    impl<P> ::fbthrift::Serialize<P> for self::ManifestEntry
-    where
-        P: ::fbthrift::ProtocolWriter,
-    {
-        fn write(&self, p: &mut P) {
-            p.write_struct_begin("ManifestEntry");
-            p.write_field_begin("mode", ::fbthrift::TType::I32, 1);
-            ::fbthrift::Serialize::write(&self.mode, p);
-            p.write_field_end();
-            p.write_field_stop();
-            p.write_struct_end();
-        }
-    }
-
-    impl<P> ::fbthrift::Deserialize<P> for self::ManifestEntry
-    where
-        P: ::fbthrift::ProtocolReader,
-    {
-        fn read(p: &mut P) -> ::anyhow::Result<Self> {
-            static FIELDS: &[::fbthrift::Field] = &[
-                ::fbthrift::Field::new("mode", ::fbthrift::TType::I32, 1),
-            ];
-            let mut field_mode = ::std::option::Option::None;
-            let _ = p.read_struct_begin(|_| ())?;
-            loop {
-                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
-                match (fty, fid as ::std::primitive::i32) {
-                    (::fbthrift::TType::Stop, _) => break,
-                    (::fbthrift::TType::I32, 1) => field_mode = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
-                    (fty, _) => p.skip(fty)?,
-                }
-                p.read_field_end()?;
-            }
-            p.read_struct_end()?;
-            ::std::result::Result::Ok(Self {
-                mode: field_mode.unwrap_or_default(),
             })
         }
     }
@@ -7429,139 +7355,6 @@ pub mod services {
         }
 
         #[derive(Clone, Debug)]
-        pub enum GetManifestEntryExn {
-            Success(crate::types::ManifestEntry),
-            ex(crate::types::EdenError),
-            noValueForKeyError(crate::types::NoValueForKeyError),
-            ApplicationException(::fbthrift::ApplicationException),
-        }
-
-        impl ::std::convert::From<crate::types::EdenError> for GetManifestEntryExn {
-            fn from(exn: crate::types::EdenError) -> Self {
-                GetManifestEntryExn::ex(exn)
-            }
-        }
-
-        impl ::std::convert::From<crate::types::NoValueForKeyError> for GetManifestEntryExn {
-            fn from(exn: crate::types::NoValueForKeyError) -> Self {
-                GetManifestEntryExn::noValueForKeyError(exn)
-            }
-        }
-
-        impl ::std::convert::From<::fbthrift::ApplicationException> for GetManifestEntryExn {
-            fn from(exn: ::fbthrift::ApplicationException) -> Self {
-                GetManifestEntryExn::ApplicationException(exn)
-            }
-        }
-
-        impl ::fbthrift::GetTType for GetManifestEntryExn {
-            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
-        }
-
-        impl<P> ::fbthrift::Serialize<P> for GetManifestEntryExn
-        where
-            P: ::fbthrift::ProtocolWriter,
-        {
-            fn write(&self, p: &mut P) {
-                p.write_struct_begin("GetManifestEntry");
-                match self {
-                    GetManifestEntryExn::Success(inner) => {
-                        p.write_field_begin(
-                            "Success",
-                            ::fbthrift::TType::Struct,
-                            0i16,
-                        );
-                        inner.write(p);
-                        p.write_field_end();
-                    }
-                    GetManifestEntryExn::ex(inner) => {
-                        p.write_field_begin(
-                            "ex",
-                            ::fbthrift::TType::Struct,
-                            1,
-                        );
-                        inner.write(p);
-                        p.write_field_end();
-                    }
-                    GetManifestEntryExn::noValueForKeyError(inner) => {
-                        p.write_field_begin(
-                            "noValueForKeyError",
-                            ::fbthrift::TType::Struct,
-                            2,
-                        );
-                        inner.write(p);
-                        p.write_field_end();
-                    }
-                    GetManifestEntryExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
-                }
-                p.write_field_stop();
-                p.write_struct_end();
-            }
-        }
-
-        impl<P> ::fbthrift::Deserialize<P> for GetManifestEntryExn
-        where
-            P: ::fbthrift::ProtocolReader,
-        {
-            fn read(p: &mut P) -> ::anyhow::Result<Self> {
-                static RETURNS: &[::fbthrift::Field] = &[
-                    ::fbthrift::Field::new("Success", ::fbthrift::TType::Struct, 0),
-                    ::fbthrift::Field::new("ex", ::fbthrift::TType::Struct, 1),
-                    ::fbthrift::Field::new("noValueForKeyError", ::fbthrift::TType::Struct, 2),
-                ];
-                let _ = p.read_struct_begin(|_| ())?;
-                let mut once = false;
-                let mut alt = ::std::option::Option::None;
-                loop {
-                    let (_, fty, fid) = p.read_field_begin(|_| (), RETURNS)?;
-                    match ((fty, fid as ::std::primitive::i32), once) {
-                        ((::fbthrift::TType::Stop, _), _) => {
-                            p.read_field_end()?;
-                            break;
-                        }
-                        ((::fbthrift::TType::Struct, 0i32), false) => {
-                            once = true;
-                            alt = ::std::option::Option::Some(GetManifestEntryExn::Success(::fbthrift::Deserialize::read(p)?));
-                        }
-                        ((::fbthrift::TType::Struct, 1), false) => {
-                            once = true;
-                            alt = ::std::option::Option::Some(GetManifestEntryExn::ex(::fbthrift::Deserialize::read(p)?));
-                        }
-                        ((::fbthrift::TType::Struct, 2), false) => {
-                            once = true;
-                            alt = ::std::option::Option::Some(GetManifestEntryExn::noValueForKeyError(::fbthrift::Deserialize::read(p)?));
-                        }
-                        ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
-                            ::fbthrift::ApplicationException::new(
-                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
-                                format!(
-                                    "unwanted extra union {} field ty {:?} id {}",
-                                    "GetManifestEntryExn",
-                                    badty,
-                                    badid,
-                                ),
-                            )
-                        )),
-                    }
-                    p.read_field_end()?;
-                }
-                p.read_struct_end()?;
-                alt.ok_or_else(||
-                    ::fbthrift::ApplicationException::new(
-                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
-                        format!("Empty union {}", "GetManifestEntryExn"),
-                    )
-                    .into(),
-                )
-            }
-        }
-
-        #[derive(Clone, Debug)]
         pub enum GetDaemonInfoExn {
             Success(crate::types::DaemonInfo),
             ex(crate::types::EdenError),
@@ -10791,11 +10584,6 @@ pub mod client {
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + ::std::marker::Send + 'static>>;
-        fn getManifestEntry(
-            &self,
-            arg_mountPoint: &crate::types::PathString,
-            arg_relativePath: &crate::types::PathString,
-        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + ::std::marker::Send + 'static>>;
         fn getDaemonInfo(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + ::std::marker::Send + 'static>>;
@@ -10922,7 +10710,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -10943,11 +10731,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -10983,7 +10772,7 @@ pub mod client {
             arg_info: &crate::types::MountArgument,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::MountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11007,11 +10796,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::MountError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11047,7 +10837,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::UnmountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11071,11 +10861,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::UnmountError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11113,7 +10904,7 @@ pub mod client {
             arg_checkoutMode: &crate::types::CheckoutMode,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11143,11 +10934,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11184,7 +10976,7 @@ pub mod client {
             arg_parents: &crate::types::WorkingDirectoryParents,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11211,11 +11003,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11252,7 +11045,7 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11279,11 +11072,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11319,7 +11113,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11343,11 +11137,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11385,7 +11180,7 @@ pub mod client {
             arg_targetPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11415,11 +11210,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::AddBindMountError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11456,7 +11252,7 @@ pub mod client {
             arg_repoPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11483,11 +11279,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::RemoveBindMountError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11523,7 +11320,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11547,11 +11344,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11588,7 +11386,7 @@ pub mod client {
             arg_fromPosition: &crate::types::JournalPosition,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11615,11 +11413,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11656,7 +11455,7 @@ pub mod client {
             arg_limit: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11683,11 +11482,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11723,7 +11523,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11747,11 +11547,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetJournalMemoryLimitError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11787,7 +11588,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11811,11 +11612,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::FlushJournalError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11851,7 +11653,7 @@ pub mod client {
             arg_params: &crate::types::DebugGetRawJournalParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11875,11 +11677,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11916,7 +11719,7 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -11943,11 +11746,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -11984,7 +11788,7 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12011,11 +11815,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12052,7 +11857,7 @@ pub mod client {
             arg_globs: &[::std::string::String],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12079,11 +11884,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GlobError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12119,7 +11925,7 @@ pub mod client {
             arg_params: &crate::types::GlobParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12143,11 +11949,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12185,7 +11992,7 @@ pub mod client {
             arg_gid: ::std::primitive::i32,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ChownError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12215,11 +12022,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ChownError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12252,7 +12060,7 @@ pub mod client {
             arg_params: &crate::types::GetScmStatusParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12276,11 +12084,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12318,7 +12127,7 @@ pub mod client {
             arg_commit: &crate::types::BinaryHash,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12348,11 +12157,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12390,7 +12200,7 @@ pub mod client {
             arg_newHash: &crate::types::BinaryHash,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12420,11 +12230,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12455,82 +12266,11 @@ pub mod client {
                 }))
                 .boxed()
         }
-        fn getManifestEntry(
-            &self,
-            arg_mountPoint: &crate::types::PathString,
-            arg_relativePath: &crate::types::PathString,
-        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + ::std::marker::Send + 'static>> {
-            use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
-            const_cstr! {
-                SERVICE_NAME = "EdenService";
-                METHOD_NAME = "EdenService.getManifestEntry";
-            }
-            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                p,
-                "getManifestEntry",
-                ::fbthrift::MessageType::Call,
-                // Note: we send a 0 message sequence ID from clients because
-                // this field should not be used by the server (except for some
-                // language implementations).
-                0,
-                |p| {
-                    p.write_struct_begin("args");
-                    p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                    ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                    p.write_field_end();
-                    p.write_field_begin("arg_relativePath", ::fbthrift::TType::String, 2i16);
-                    ::fbthrift::Serialize::write(&arg_relativePath, p);
-                    p.write_field_end();
-                    p.write_field_stop();
-                    p.write_struct_end();
-                },
-            ));
-            self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| ::futures::future::ready({
-                    let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError> {
-                        let p = &mut p;
-                        let (_, message_type, _) = p.read_message_begin(|_| ())?;
-                        let result = match message_type {
-                            ::fbthrift::MessageType::Reply => {
-                                let exn: crate::services::eden_service::GetManifestEntryExn = ::fbthrift::Deserialize::read(p)?;
-                                match exn {
-                                    crate::services::eden_service::GetManifestEntryExn::Success(x) => ::std::result::Result::Ok(x),
-                                    crate::services::eden_service::GetManifestEntryExn::ex(err) => {
-                                        ::std::result::Result::Err(crate::errors::eden_service::GetManifestEntryError::ex(err))
-                                    }
-                                    crate::services::eden_service::GetManifestEntryExn::noValueForKeyError(err) => {
-                                        ::std::result::Result::Err(crate::errors::eden_service::GetManifestEntryError::noValueForKeyError(err))
-                                    }
-                                    crate::services::eden_service::GetManifestEntryExn::ApplicationException(ae) => {
-                                        ::std::result::Result::Err(crate::errors::eden_service::GetManifestEntryError::ApplicationException(ae))
-                                    }
-                                }
-                            }
-                            ::fbthrift::MessageType::Exception => {
-                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
-                                ::std::result::Result::Err(crate::errors::eden_service::GetManifestEntryError::ApplicationException(ae))
-                            }
-                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                ::std::result::Result::Err(crate::errors::eden_service::GetManifestEntryError::ThriftError(err))
-                            }
-                        };
-                        p.read_message_end()?;
-                        result
-                    }(de)
-                }))
-                .boxed()
-        }
         fn getDaemonInfo(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12551,11 +12291,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12590,7 +12331,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetPidError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12611,11 +12352,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetPidError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12651,7 +12393,7 @@ pub mod client {
             arg_reason: &::std::primitive::str,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12675,11 +12417,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::InitiateShutdownError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12715,7 +12458,7 @@ pub mod client {
             arg_params: &crate::types::GetConfigParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12739,11 +12482,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12778,7 +12522,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12799,11 +12543,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ReloadConfigError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12841,7 +12586,7 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12871,11 +12616,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12913,7 +12659,7 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<::std::primitive::u8>, crate::errors::eden_service::DebugGetScmBlobError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -12943,11 +12689,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<::std::primitive::u8>, crate::errors::eden_service::DebugGetScmBlobError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -12985,7 +12732,7 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13015,11 +12762,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13057,7 +12805,7 @@ pub mod client {
             arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13087,11 +12835,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13127,7 +12876,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13151,11 +12900,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13189,7 +12939,7 @@ pub mod client {
             arg_inodeNumber: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13216,11 +12966,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13255,7 +13006,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13276,11 +13027,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13316,7 +13068,7 @@ pub mod client {
             arg_mountPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13340,11 +13092,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13380,7 +13133,7 @@ pub mod client {
             arg_duration: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13404,11 +13157,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13443,7 +13197,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13464,11 +13218,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13503,7 +13258,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13524,11 +13279,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13563,7 +13319,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13584,11 +13340,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13623,7 +13380,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13644,11 +13401,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13683,7 +13441,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13704,11 +13462,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13746,7 +13505,7 @@ pub mod client {
             arg_age: &crate::types::TimeSpec,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnloadInodeForPathError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13776,11 +13535,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnloadInodeForPathError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13815,7 +13575,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13836,11 +13596,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::FlushStatsNowError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13877,7 +13638,7 @@ pub mod client {
             arg_path: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13904,11 +13665,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -13943,7 +13705,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -13964,11 +13726,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14003,7 +13766,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14024,11 +13787,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::EnableTracingError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14060,7 +13824,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14081,11 +13845,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::DisableTracingError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14117,7 +13882,7 @@ pub mod client {
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14138,11 +13903,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14175,7 +13941,7 @@ pub mod client {
             arg_fault: &crate::types::FaultDefinition,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14199,11 +13965,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::InjectFaultError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14239,7 +14006,7 @@ pub mod client {
             arg_fault: &crate::types::RemoveFaultArg,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::bool, crate::errors::eden_service::RemoveFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14263,11 +14030,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::bool, crate::errors::eden_service::RemoveFaultError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14303,7 +14071,7 @@ pub mod client {
             arg_info: &crate::types::UnblockFaultArg,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnblockFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::fbthrift::{ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
             const_cstr! {
                 SERVICE_NAME = "EdenService";
@@ -14327,11 +14095,12 @@ pub mod client {
                 },
             ));
             self.transport()
-                .call(&SERVICE_NAME, &METHOD_NAME, request)
+                .call(SERVICE_NAME, METHOD_NAME, request)
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnblockFaultError> {
+                        use ::fbthrift::{ProtocolReader as _};
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
@@ -14586,16 +14355,6 @@ pub mod client {
                 arg_mountPoint,
                 arg_oldHash,
                 arg_newHash,
-            )
-        }
-        fn getManifestEntry(
-            &self,
-            arg_mountPoint: &crate::types::PathString,
-            arg_relativePath: &crate::types::PathString,
-        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + ::std::marker::Send + 'static>> {
-            self.as_ref().getManifestEntry(
-                arg_mountPoint,
-                arg_relativePath,
             )
         }
         fn getDaemonInfo(
@@ -14992,7 +14751,6 @@ pub mod mock {
         pub getScmStatusV2: r#impl::eden_service::getScmStatusV2<'mock>,
         pub getScmStatus: r#impl::eden_service::getScmStatus<'mock>,
         pub getScmStatusBetweenRevisions: r#impl::eden_service::getScmStatusBetweenRevisions<'mock>,
-        pub getManifestEntry: r#impl::eden_service::getManifestEntry<'mock>,
         pub getDaemonInfo: r#impl::eden_service::getDaemonInfo<'mock>,
         pub getPid: r#impl::eden_service::getPid<'mock>,
         pub initiateShutdown: r#impl::eden_service::initiateShutdown<'mock>,
@@ -15052,7 +14810,6 @@ pub mod mock {
                 getScmStatusV2: r#impl::eden_service::getScmStatusV2::unimplemented(),
                 getScmStatus: r#impl::eden_service::getScmStatus::unimplemented(),
                 getScmStatusBetweenRevisions: r#impl::eden_service::getScmStatusBetweenRevisions::unimplemented(),
-                getManifestEntry: r#impl::eden_service::getManifestEntry::unimplemented(),
                 getDaemonInfo: r#impl::eden_service::getDaemonInfo::unimplemented(),
                 getPid: r#impl::eden_service::getPid::unimplemented(),
                 initiateShutdown: r#impl::eden_service::initiateShutdown::unimplemented(),
@@ -15289,15 +15046,6 @@ pub mod mock {
             let mut closure = self.getScmStatusBetweenRevisions.closure.lock().unwrap();
             let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> _ = &mut **closure;
             ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_oldHash.clone(), arg_newHash.clone())))
-        }
-        fn getManifestEntry(
-            &self,
-            arg_mountPoint: &crate::types::PathString,
-            arg_relativePath: &crate::types::PathString,
-        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + ::std::marker::Send + 'static>> {
-            let mut closure = self.getManifestEntry.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_relativePath.clone())))
         }
         fn getDaemonInfo(
             &self,
@@ -16551,50 +16299,6 @@ pub mod mock {
                 {
                     let mut closure = self.closure.lock().unwrap();
                     *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| ::std::result::Result::Err(exception.clone().into()));
-                }
-            }
-
-            pub struct getManifestEntry<'mock> {
-                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                        crate::types::ManifestEntry,
-                        crate::errors::eden_service::GetManifestEntryError,
-                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-                >>,
-            }
-
-            impl<'mock> getManifestEntry<'mock> {
-                pub fn unimplemented() -> Self {
-                    getManifestEntry {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
-                            "{}::{} is not mocked",
-                            "EdenService",
-                            "getManifestEntry",
-                        ))),
-                    }
-                }
-
-                pub fn ret(&self, value: crate::types::ManifestEntry) {
-                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
-                }
-
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> crate::types::ManifestEntry + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                    let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, relativePath| ::std::result::Result::Ok(mock(mountPoint, relativePath)));
-                }
-
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                    let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, relativePath| mock(mountPoint, relativePath));
-                }
-
-                pub fn throw<E>(&self, exception: E)
-                where
-                    E: ::std::convert::Into<crate::errors::eden_service::GetManifestEntryError>,
-                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-                {
-                    let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
@@ -18495,42 +18199,6 @@ pub mod errors {
         impl ::std::convert::From<::fbthrift::ApplicationException> for GetScmStatusBetweenRevisionsError {
             fn from(ae: ::fbthrift::ApplicationException) -> Self {
                 GetScmStatusBetweenRevisionsError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, ::thiserror::Error)]
-        pub enum GetManifestEntryError {
-            #[error("EdenService::getManifestEntry failed with {0:?}")]
-            ex(crate::types::EdenError),
-            #[error("EdenService::getManifestEntry failed with {0:?}")]
-            noValueForKeyError(crate::types::NoValueForKeyError),
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl ::std::convert::From<crate::types::EdenError> for GetManifestEntryError {
-            fn from(e: crate::types::EdenError) -> Self {
-                GetManifestEntryError::ex(e)
-            }
-        }
-
-        impl ::std::convert::From<crate::types::NoValueForKeyError> for GetManifestEntryError {
-            fn from(e: crate::types::NoValueForKeyError) -> Self {
-                GetManifestEntryError::noValueForKeyError(e)
-            }
-        }
-
-        impl ::std::convert::From<::anyhow::Error> for GetManifestEntryError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetManifestEntryError::ThriftError(err)
-            }
-        }
-
-        impl ::std::convert::From<::fbthrift::ApplicationException> for GetManifestEntryError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetManifestEntryError::ApplicationException(ae)
             }
         }
 

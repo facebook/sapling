@@ -198,11 +198,7 @@ pub mod types {
                     ::fbthrift::Serialize::write(inner, p);
                     p.write_field_end();
                 }
-                Condition::UnknownField(x) => {
-                    p.write_field_begin("UnknownField", ::fbthrift::TType::I32, *x as ::std::primitive::i16);
-                    x.write(p);
-                    p.write_field_end();
-                }
+                Condition::UnknownField(_) => {}
             }
             p.write_field_stop();
             p.write_struct_end();
