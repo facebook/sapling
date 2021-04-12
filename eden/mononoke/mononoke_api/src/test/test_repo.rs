@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use bytes::Bytes;
+use cacheblob::InProcessLease;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
@@ -768,6 +769,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         largerepo.synced_commit_mapping().clone(),
         commit_sync_repos,
         largerepo.live_commit_sync_config(),
+        Arc::new(InProcessLease::new()),
     );
 
     update_mapping_with_version(

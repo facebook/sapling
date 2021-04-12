@@ -19,6 +19,7 @@ use cmdlib::{
 };
 use context::CoreContext;
 use cross_repo_sync::{
+    create_commit_syncer_lease,
     types::{Large, Small},
     validation::{self, BookmarkDiff},
     CommitSyncContext, CommitSyncRepos, CommitSyncer, CHANGE_XREPO_MAPPING_EXTRA,
@@ -99,8 +100,17 @@ pub async fn subcommand_crossrepo<'a>(
                 CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
-            let commit_syncer =
-                CommitSyncer::new(&ctx, mapping, commit_sync_repos, live_commit_sync_config);
+
+            let caching = args::parse_caching(matches.as_ref());
+            let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
+
+            let commit_syncer = CommitSyncer::new(
+                &ctx,
+                mapping,
+                commit_sync_repos,
+                live_commit_sync_config,
+                x_repo_syncer_lease,
+            );
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
             subcommand_map(ctx, commit_syncer, hash).await
         }
@@ -116,6 +126,7 @@ pub async fn subcommand_crossrepo<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
+                matches,
             )
             .await?;
 
@@ -156,6 +167,7 @@ pub async fn subcommand_crossrepo<'a>(
                 mapping,
                 update_large_repo_bookmarks,
                 Arc::new(live_commit_sync_config),
+                matches,
             )
             .await
         }
@@ -234,6 +246,7 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
+                matches,
             )
             .await?;
 
@@ -293,6 +306,7 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
+                matches,
             )
             .await?;
 
@@ -515,6 +529,7 @@ async fn run_insert_subcommand<'a>(
         target_repo.clone(),
         live_commit_sync_config.clone(),
         mapping.clone(),
+        matches,
     )
     .await?;
 
@@ -1003,6 +1018,7 @@ async fn subcommand_verify_bookmarks(
     mapping: SqlSyncedCommitMapping,
     should_update_large_repo_bookmarks: bool,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let commit_syncer = get_large_to_small_commit_syncer(
         &ctx,
@@ -1010,6 +1026,7 @@ async fn subcommand_verify_bookmarks(
         target_repo,
         live_commit_sync_config,
         mapping.clone(),
+        matches,
     )
     .await?;
 
@@ -1384,13 +1401,17 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(insert_subcommand)
 }
 
-async fn get_large_to_small_commit_syncer(
-    ctx: &CoreContext,
+async fn get_large_to_small_commit_syncer<'a>(
+    ctx: &'a CoreContext,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     mapping: SqlSyncedCommitMapping,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    let caching = args::parse_caching(matches.as_ref());
+    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
+
     let commit_sync_config = live_commit_sync_config
         .get_current_commit_sync_config(ctx, source_repo.get_repoid())
         .await?;
@@ -1425,6 +1446,7 @@ async fn get_large_to_small_commit_syncer(
         mapping,
         commit_sync_repos,
         live_commit_sync_config,
+        x_repo_syncer_lease,
     ))
 }
 

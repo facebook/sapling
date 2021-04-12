@@ -28,6 +28,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
@@ -81,6 +82,7 @@ impl PushRedirectorArgs {
         self,
         ctx: &CoreContext,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+        x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Result<PushRedirector, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
@@ -102,6 +104,7 @@ impl PushRedirectorArgs {
             large_repo,
             mapping.clone(),
             live_commit_sync_config,
+            x_repo_sync_lease,
         )?;
 
         let small_to_large_commit_syncer = syncers.small_to_large;

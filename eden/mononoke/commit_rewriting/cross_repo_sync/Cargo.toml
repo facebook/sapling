@@ -18,10 +18,12 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
@@ -34,14 +36,18 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../movers" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+rand = { version = "0.7", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.2"
+repo_factory = { version = "0.1.0", path = "../../repo_factory" }
+scopeguard = "1.0.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 thiserror = "1.0"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
@@ -50,7 +56,6 @@ ascii = "1.0"
 assert_matches = "1.5"
 bytes = { version = "0.5", features = ["serde"] }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
@@ -60,4 +65,3 @@ sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }

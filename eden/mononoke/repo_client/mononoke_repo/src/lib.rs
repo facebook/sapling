@@ -10,6 +10,7 @@
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobstore_factory::ReadOnlyStorage;
+use cacheblob::LeaseOps;
 use fbinit::FacebookInit;
 use futures::future::{FutureExt, TryFutureExt};
 use futures_01_ext::{BoxFuture, FutureExt as _};
@@ -294,6 +295,10 @@ impl MononokeRepo {
 
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
         self.repo.live_commit_sync_config()
+    }
+
+    pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        self.repo.x_repo_sync_lease()
     }
 }
 

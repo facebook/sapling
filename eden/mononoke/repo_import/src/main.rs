@@ -18,8 +18,9 @@ use cmdlib::args::{self, MononokeMatches};
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, find_toposorted_unsynced_ancestors, rewrite_commit,
-    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
+    create_commit_syncer_lease, create_commit_syncers, find_toposorted_unsynced_ancestors,
+    rewrite_commit, CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
+    Syncers,
 };
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
@@ -838,6 +839,9 @@ async fn get_pushredirected_vars(
     matches: &MononokeMatches<'_>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
+    let caching = args::parse_caching(matches.as_ref());
+    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
+
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
     let large_repo_id = large_repo_config.repoid;
     let large_repo =
@@ -866,6 +870,7 @@ async fn get_pushredirected_vars(
         large_repo.clone(),
         mapping.clone(),
         Arc::new(live_commit_sync_config),
+        x_repo_syncer_lease,
     )?;
 
     let large_repo_import_setting =

@@ -16,6 +16,7 @@ blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bytes = { version = "0.5", features = ["serde"] }
+cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 chrono = { version = "0.4", features = ["serde"] }

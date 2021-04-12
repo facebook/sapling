@@ -20,7 +20,7 @@ use cmdlib::{
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
 use cross_repo_sync::{
-    find_toposorted_unsynced_ancestors,
+    create_commit_syncer_lease, find_toposorted_unsynced_ancestors,
     types::{Source, Target},
     validation::verify_working_copy_with_version_fast_path,
     CandidateSelectionHint, CommitSyncContext, CommitSyncer,
@@ -204,6 +204,10 @@ async fn run_sync_diamond_merge<'a>(
 
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+
+    let caching = args::parse_caching(matches.as_ref());
+    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
+
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
         source_repo,
@@ -213,6 +217,7 @@ async fn run_sync_diamond_merge<'a>(
         source_repo_config,
         bookmark,
         Arc::new(live_commit_sync_config),
+        x_repo_syncer_lease,
     )
     .await
     .map(|_| ())

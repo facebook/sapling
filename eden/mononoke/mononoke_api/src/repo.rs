@@ -19,10 +19,12 @@ use blobstore::Loadable;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
+use cacheblob::{InProcessLease, LeaseOps};
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{
-    types::Target, CandidateSelectionHint, CommitSyncContext, CommitSyncRepos, CommitSyncer,
+    create_commit_syncer_lease, types::Target, CandidateSelectionHint, CommitSyncContext,
+    CommitSyncRepos, CommitSyncer,
 };
 use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
@@ -104,6 +106,7 @@ pub struct Repo {
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) hook_manager: Arc<HookManager>,
     pub(crate) readonly_fetcher: RepoReadWriteFetcher,
+    pub(crate) x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
 
 #[derive(Clone)]
@@ -159,6 +162,7 @@ impl Repo {
         )
         .await?;
 
+        let x_repo_sync_lease = create_commit_syncer_lease(env.fb, env.repo_factory.caching())?;
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
             Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &env.config_store)?);
 
@@ -265,6 +269,7 @@ impl Repo {
             live_commit_sync_config,
             hook_manager,
             readonly_fetcher,
+            x_repo_sync_lease,
         })
     }
 
@@ -329,6 +334,7 @@ impl Repo {
             ..Default::default()
         };
 
+        let x_repo_sync_lease = Arc::new(InProcessLease::new());
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
         warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
         // We are constructing a test repo, so ensure the warm bookmark cache
@@ -366,6 +372,7 @@ impl Repo {
             live_commit_sync_config,
             hook_manager,
             readonly_fetcher,
+            x_repo_sync_lease,
         })
     }
 
@@ -422,6 +429,10 @@ impl Repo {
     /// A mutable reference to this repository's config. This is typically only useful for tests.
     pub fn config_mut(&mut self) -> &mut RepoConfig {
         &mut self.config
+    }
+
+    pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        &self.x_repo_sync_lease
     }
 
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
@@ -1293,6 +1304,7 @@ impl RepoContext {
             self.synced_commit_mapping().clone(),
             commit_sync_repos,
             self.live_commit_sync_config(),
+            self.repo.x_repo_sync_lease().clone(),
         );
 
         let maybe_cs_id = commit_syncer

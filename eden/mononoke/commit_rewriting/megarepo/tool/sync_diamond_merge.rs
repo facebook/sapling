@@ -16,6 +16,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -95,6 +96,7 @@ pub async fn do_sync_diamond_merge(
     small_repo_config: RepoConfig,
     onto_bookmark: BookmarkName,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    lease: Arc<dyn LeaseOps>,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -116,6 +118,7 @@ pub async fn do_sync_diamond_merge(
         large_repo.clone(),
         mapping,
         live_commit_sync_config,
+        lease,
     )?;
 
     let small_root = find_root(&new_branch)?;

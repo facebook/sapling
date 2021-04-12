@@ -123,6 +123,7 @@ pub struct MononokeTunables {
     backfill_write_qps: AtomicI64,
     disable_commit_scribe_logging_scs: AtomicBool,
     xrepo_sync_disable_all_syncs: AtomicBool,
+    xrepo_disable_commit_sync_lease: AtomicBool,
 
     // Use Background session class while deriving data. This makes derived data not write
     // data to blobstore sync queue if a write was successful to the main blobstore.

@@ -18,6 +18,7 @@ mod tests {
     use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+    use cacheblob::InProcessLease;
     use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
@@ -613,6 +614,7 @@ mod tests {
             large_repo.clone(),
             mapping.clone(),
             live_commit_sync_config.clone(),
+            Arc::new(InProcessLease::new()),
         )?;
 
         let large_repo_setting_1 =
@@ -638,6 +640,7 @@ mod tests {
             large_repo.clone(),
             mapping.clone(),
             live_commit_sync_config,
+            Arc::new(InProcessLease::new()),
         )?;
 
         let large_repo_setting_2 =
@@ -690,6 +693,7 @@ mod tests {
             large_repo.clone(),
             mapping.clone(),
             live_commit_sync_config,
+            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;
@@ -847,6 +851,7 @@ mod tests {
             large_repo.clone(),
             mapping.clone(),
             live_commit_sync_config,
+            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;
@@ -922,6 +927,7 @@ mod tests {
             large_repo.clone(),
             mapping.clone(),
             live_commit_sync_config,
+            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;

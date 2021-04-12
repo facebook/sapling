@@ -366,6 +366,10 @@ impl RepoFactory {
         Arc::new(RepoIdentity::new(repo_config.repoid, name.to_string()))
     }
 
+    pub fn caching(&self) -> Caching {
+        self.caching
+    }
+
     pub async fn changesets(&self, repo_config: &ArcRepoConfig) -> Result<ArcChangesets> {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)

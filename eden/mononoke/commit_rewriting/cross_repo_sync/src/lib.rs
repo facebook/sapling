@@ -15,13 +15,17 @@ use blobstore::Loadable;
 use blobsync::copy_content;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
+use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::future::{try_join, try_join_all};
 use futures::{
+    channel::oneshot,
     compat::Future01CompatExt,
     future::{self, TryFutureExt},
     stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
+    FutureExt,
 };
 use futures_old::Future;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -35,13 +39,14 @@ use mononoke_types::{
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_factory::Caching;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
@@ -70,6 +75,8 @@ pub use crate::commit_sync_outcome::{
     PluralCommitSyncOutcome,
 };
 pub use commit_sync_data_provider::{CommitSyncDataProvider, SyncData};
+
+const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -510,6 +517,17 @@ impl CommitSyncRepos {
     }
 }
 
+pub fn create_commit_syncer_lease(
+    fb: FacebookInit,
+    caching: Caching,
+) -> Result<Arc<dyn LeaseOps>, Error> {
+    if let Caching::Enabled(_) = caching {
+        Ok(Arc::new(MemcacheOps::new(fb, "x-repo-sync-lease", "")?))
+    } else {
+        Ok(Arc::new(InProcessLease::new()))
+    }
+}
+
 #[derive(Clone)]
 pub struct CommitSyncer<M> {
     // TODO: Finish refactor and remove pub
@@ -517,6 +535,7 @@ pub struct CommitSyncer<M> {
     pub repos: CommitSyncRepos,
     pub commit_sync_data_provider: CommitSyncDataProvider,
     pub scuba_sample: MononokeScubaSampleBuilder,
+    pub x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
 
 impl<M> fmt::Debug for CommitSyncer<M>
@@ -539,9 +558,10 @@ where
         mapping: M,
         repos: CommitSyncRepos,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+        lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-        Self::new_with_provider(ctx, mapping, repos, commit_sync_data_provider)
+        Self::new_with_provider_impl(ctx, mapping, repos, commit_sync_data_provider, lease)
     }
 
     pub fn new_with_provider(
@@ -549,6 +569,22 @@ where
         mapping: M,
         repos: CommitSyncRepos,
         commit_sync_data_provider: CommitSyncDataProvider,
+    ) -> Self {
+        Self::new_with_provider_impl(
+            ctx,
+            mapping,
+            repos,
+            commit_sync_data_provider,
+            Arc::new(InProcessLease::new()),
+        )
+    }
+
+    fn new_with_provider_impl(
+        ctx: &CoreContext,
+        mapping: M,
+        repos: CommitSyncRepos,
+        commit_sync_data_provider: CommitSyncDataProvider,
+        x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
             ctx,
@@ -560,6 +596,7 @@ where
             repos,
             commit_sync_data_provider,
             scuba_sample,
+            x_repo_sync_lease,
         }
     }
 
@@ -774,6 +811,7 @@ where
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
 
         let source_repo = self.repos.get_source_repo();
+        let target_repo = self.repos.get_target_repo();
 
         let small_repo = self.get_small_repo();
         let source_repo_is_small = source_repo.get_repoid() == small_repo.get_repoid();
@@ -797,33 +835,59 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            let parents = self
-                .get_source_repo()
-                .get_changeset_fetcher()
-                .get_parents(ctx.clone(), ancestor)
-                .await?;
-            if parents.is_empty() {
-                let version = self
-                    .get_version_for_syncing_commit_with_no_parent(
+            let lease_key = format!(
+                "sourcerepo_{}_targetrepo_{}.{}",
+                source_repo.get_repoid().id(),
+                target_repo.get_repoid().id(),
+                source_cs_id,
+            );
+
+            let checker = || async {
+                let maybe_outcome = self.get_commit_sync_outcome(ctx, source_cs_id).await?;
+                Result::<_, Error>::Ok(maybe_outcome.is_some())
+            };
+            let sync = || async {
+                let parents = self
+                    .get_source_repo()
+                    .get_changeset_fetcher()
+                    .get_parents(ctx.clone(), ancestor)
+                    .await?;
+                if parents.is_empty() {
+                    let version = self
+                        .get_version_for_syncing_commit_with_no_parent(
+                            ctx,
+                            ancestor,
+                            &synced_ancestors_versions,
+                        )
+                        .await
+                        .with_context(|| {
+                            format_err!("failed to sync ancestor {} of {}", ancestor, source_cs_id)
+                        })?;
+
+                    self.unsafe_sync_commit_impl(
                         ctx,
                         ancestor,
-                        &synced_ancestors_versions,
+                        ancestor_selection_hint.clone(),
+                        Some(version),
                     )
-                    .await
-                    .with_context(|| {
-                        format_err!("failed to sync ancestor {} of {}", ancestor, source_cs_id)
-                    })?;
-
-                self.unsafe_sync_commit_impl(
-                    ctx,
-                    ancestor,
-                    ancestor_selection_hint.clone(),
-                    Some(version),
-                )
-                .await?;
-            } else {
-                self.unsafe_sync_commit_impl(ctx, ancestor, ancestor_selection_hint.clone(), None)
                     .await?;
+                } else {
+                    self.unsafe_sync_commit_impl(
+                        ctx,
+                        ancestor,
+                        ancestor_selection_hint.clone(),
+                        None,
+                    )
+                    .await?;
+                }
+                Ok(())
+            };
+
+            // TODO(stash) - remove after initial rollout
+            if tunables().get_xrepo_disable_commit_sync_lease() {
+                sync().await?;
+            } else {
+                run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;
             }
         }
 
@@ -1840,6 +1904,7 @@ pub fn create_commit_syncers<M>(
     large_repo: BlobRepo,
     mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    x_repo_sync_lease: Arc<dyn LeaseOps>,
 ) -> Result<Syncers<M>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -1859,18 +1924,83 @@ where
         mapping.clone(),
         large_to_small_commit_sync_repos,
         live_commit_sync_config.clone(),
+        x_repo_sync_lease.clone(),
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
         mapping,
         small_to_large_commit_sync_repos,
         live_commit_sync_config,
+        x_repo_sync_lease,
     );
 
     Ok(Syncers {
         large_to_small: large_to_small_commit_syncer,
         small_to_large: small_to_large_commit_syncer,
     })
+}
+
+async fn run_with_lease<CheckerFunc, CheckerFut, Func, Fut>(
+    ctx: &CoreContext,
+    lease: &Arc<dyn LeaseOps>,
+    lease_key: String,
+    checker: CheckerFunc,
+    func: Func,
+) -> Result<(), Error>
+where
+    CheckerFunc: Fn() -> CheckerFut,
+    CheckerFut: futures::Future<Output = Result<bool, Error>>,
+    Func: Fn() -> Fut,
+    Fut: futures::Future<Output = Result<(), Error>>,
+{
+    let lease_start = Instant::now();
+    let mut logged_slow_lease = false;
+    let lease_key = Arc::new(lease_key);
+
+    let mut backoff_ms = 200;
+    loop {
+        if checker().await? {
+            // The operation was already done, nothing to do
+            break;
+        }
+
+        let leased = if tunables().get_xrepo_disable_commit_sync_lease() {
+            true
+        } else {
+            let result = lease.try_add_put_lease(&lease_key).await;
+            // In case of lease unavailability assume it's taken to not block the backsyncer
+            result.unwrap_or(true)
+        };
+
+        if !leased {
+            let elapsed = lease_start.elapsed();
+            if elapsed >= LEASE_WARNING_THRESHOLD && !logged_slow_lease {
+                logged_slow_lease = true;
+                ctx.scuba()
+                    .clone()
+                    .add("x_repo_sync_lease_wait", elapsed.as_secs())
+                    .log_with_msg("Slow x-repo sync lease", None);
+            }
+            // Didn't get the lease - wait a little bit and retry
+            let sleep = rand::random::<u64>() % backoff_ms;
+            tokio::time::delay_for(Duration::from_millis(sleep)).await;
+
+            backoff_ms = std::cmp::min(1000, backoff_ms * 2);
+            continue;
+        }
+
+        // We have the lease and commit is not synced - let's sync it
+        let (sender, receiver) = oneshot::channel();
+        scopeguard::defer! {
+            let _ = sender.send(());
+        };
+        lease.renew_lease_until(ctx.clone(), &lease_key, receiver.map(|_| ()).boxed());
+
+        func().await?;
+        break;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

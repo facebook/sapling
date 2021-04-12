@@ -22,6 +22,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use cacheblob::InProcessLease;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -315,11 +316,13 @@ fn create_small_to_large_commit_syncer(
     source.add_current_version(commit_sync_config.version_name);
 
     let live_commit_sync_config = Arc::new(sync_config);
+    let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
         ctx,
         mapping,
         repos,
         live_commit_sync_config,
+        lease,
     ))
 }
 
@@ -347,8 +350,9 @@ fn create_large_to_small_commit_syncer_and_config_source(
     source.add_current_version(commit_sync_config.version_name);
 
     let live_commit_sync_config = Arc::new(sync_config);
+    let lease = Arc::new(InProcessLease::new());
     Ok((
-        CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config),
+        CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config, lease),
         source,
     ))
 }

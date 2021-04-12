@@ -8,6 +8,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cmdlib = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
