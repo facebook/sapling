@@ -13,7 +13,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use clap::Arg;
 use fbinit::FacebookInit;
 
-use blobstore_factory::{make_sql_blobstore, BlobstoreOptions};
+use blobstore_factory::make_sql_blobstore;
 use cmdlib::args::{self, MononokeClapApp};
 use metaconfig_types::{BlobConfig, BlobstoreId, ShardableRemoteDatabaseConfig};
 
@@ -166,14 +166,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = BlobstoreOptions::default();
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
 
     runtime.block_on(async move {
         let blobstore = make_sql_blobstore(
             fb,
             blobstore_config,
-            &mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &config_store,

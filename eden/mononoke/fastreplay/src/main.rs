@@ -268,7 +268,7 @@ async fn bootstrap_repositories<'a>(
     let RepoConfigs { repos, common } = config;
 
     let repos = future::try_join_all(repos.into_iter().map(|(name, mut config)| {
-        borrowed!(env, common, mysql_options);
+        borrowed!(env, common, mysql_options, blobstore_options);
 
         let logger = logger.new(o!("repo" => name.clone()));
 
@@ -292,11 +292,6 @@ async fn bootstrap_repositories<'a>(
         async move {
             let warmup_params = config.cache_warmup.clone();
 
-            // If we have remote args support for this repo, let's open it now. Note that
-            // this requires using prod configs for Fastreplay since those are the ones with
-            // wireproto logging config.
-            let remote_args_blobstore_options = &Default::default();
-
             let remote_args_blobstore = config
                 .wireproto_logging
                 .storage_config_and_threshold
@@ -307,7 +302,7 @@ async fn bootstrap_repositories<'a>(
                         storage.blobstore.clone(),
                         mysql_options,
                         readonly_storage,
-                        remote_args_blobstore_options,
+                        blobstore_options,
                         &logger,
                         config_store,
                     )

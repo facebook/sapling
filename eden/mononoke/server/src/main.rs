@@ -191,6 +191,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 fb,
                 config.common,
                 mononoke,
+                &blobstore_options,
                 &mysql_options,
                 root_log,
                 host_port,

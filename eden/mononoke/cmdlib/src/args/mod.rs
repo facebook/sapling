@@ -79,6 +79,11 @@ const MYSQL_POOL_AGE_TIMEOUT: &str = "mysql-pool-age-timeout";
 const MYSQL_POOL_IDLE_TIMEOUT: &str = "mysql-pool-idle-timeout";
 const MYSQL_CONN_OPEN_TIMEOUT: &str = "mysql-conn-open-timeout";
 const MYSQL_MAX_QUERY_TIME: &str = "mysql-query-time-limit";
+const MYSQL_SQLBLOB_POOL_LIMIT: &str = "mysql-sqblob-pool-limit";
+const MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT: &str = "mysql-sqblob-pool-per-key-limit";
+const MYSQL_SQLBLOB_POOL_THREADS_NUM: &str = "mysql-sqblob-pool-threads-num";
+const MYSQL_SQLBLOB_POOL_AGE_TIMEOUT: &str = "mysql-sqblob-pool-age-timeout";
+const MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT: &str = "mysql-sqblob-pool-idle-timeout";
 const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
@@ -219,6 +224,7 @@ pub struct MononokeAppData {
     cachelib_settings: CachelibSettings,
     repo_required: Option<RepoRequirement>,
     global_mysql_connection_pool: SharedConnectionPool,
+    sqlblob_mysql_connection_pool: SharedConnectionPool,
     default_scuba_dataset: Option<String>,
 }
 
@@ -664,6 +670,7 @@ impl MononokeAppBuilder {
                 cachelib_settings: self.cachelib_settings,
                 repo_required: self.repo_required,
                 global_mysql_connection_pool: SharedConnectionPool::new(),
+                sqlblob_mysql_connection_pool: SharedConnectionPool::new(),
                 default_scuba_dataset: self.default_scuba_dataset,
             },
             arg_types: self.arg_types,
@@ -1372,6 +1379,42 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true)
             .default_value("4000"),
     )
+    // SQLBlob wants more aggressive timeouts, and does not benefit from sharing a pool with other users.
+    .arg(
+        Arg::with_name(MYSQL_SQLBLOB_POOL_LIMIT)
+            .long(MYSQL_SQLBLOB_POOL_LIMIT)
+            .help("Size of the connection pool")
+            .takes_value(true)
+            .default_value("10000"),
+    )
+    .arg(
+        Arg::with_name(MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT)
+            .long(MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT)
+            .help("Mysql connection pool per key limit")
+            .takes_value(true)
+            .default_value("100"),
+    )
+    .arg(
+        Arg::with_name(MYSQL_SQLBLOB_POOL_THREADS_NUM)
+            .long(MYSQL_SQLBLOB_POOL_THREADS_NUM)
+            .help("Number of threads in Mysql connection pool, i.e. number of real pools")
+            .takes_value(true)
+            .default_value("10"),
+    )
+    .arg(
+        Arg::with_name(MYSQL_SQLBLOB_POOL_AGE_TIMEOUT)
+            .long(MYSQL_SQLBLOB_POOL_AGE_TIMEOUT)
+            .help("Mysql connection pool age timeout in millisecs")
+            .takes_value(true)
+            .default_value("60000"),
+    )
+    .arg(
+        Arg::with_name(MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT)
+            .long(MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT)
+            .help("Mysql connection pool idle timeout in millisecs")
+            .takes_value(true)
+            .default_value("1000"),
+    )
     .arg(
         Arg::with_name(MYSQL_CONN_OPEN_TIMEOUT)
             .long(MYSQL_CONN_OPEN_TIMEOUT)
@@ -1764,6 +1807,91 @@ pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
     }
 }
 
+pub fn get_sqlblob_mysql_connection_pool(matches: &MononokeMatches<'_>) -> SharedConnectionPool {
+    matches.app_data.sqlblob_mysql_connection_pool.clone()
+}
+
+fn parse_mysql_sqlblob_pool_options(matches: &MononokeMatches<'_>) -> PoolConfig {
+    let size: usize = matches
+        .value_of(MYSQL_SQLBLOB_POOL_LIMIT)
+        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
+        .expect("A default is set, should never be None");
+    let threads_num: i32 = matches
+        .value_of(MYSQL_SQLBLOB_POOL_THREADS_NUM)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-threads-num is not i32")
+        })
+        .expect("A default is set, should never be None");
+    let per_key_limit: u64 = matches
+        .value_of(MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-per-key-limit is not u64")
+        })
+        .expect("A default is set, should never be None");
+    let conn_age_timeout: u64 = matches
+        .value_of(MYSQL_SQLBLOB_POOL_AGE_TIMEOUT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-age-timeout is not u64")
+        })
+        .expect("A default is set, should never be None");
+    let conn_idle_timeout: u64 = matches
+        .value_of(MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT)
+        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
+        .expect("A default is set, should never be None");
+    let conn_open_timeout: u64 = matches
+        .value_of(MYSQL_CONN_OPEN_TIMEOUT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-conn-open-timeout is not u64")
+        })
+        .expect("A default is set, should never be None");
+    let max_query_time: Duration = Duration::from_millis(
+        matches
+            .value_of(MYSQL_MAX_QUERY_TIME)
+            .map(|v| {
+                v.parse()
+                    .expect("Provided mysql-query-time-limit is not u64")
+            })
+            .expect("A default is set, should never be None"),
+    );
+
+    PoolConfig::new(
+        size,
+        threads_num,
+        per_key_limit,
+        conn_age_timeout,
+        conn_idle_timeout,
+        conn_open_timeout,
+        max_query_time,
+    )
+}
+
+pub fn parse_sqlblob_mysql_options(matches: &MononokeMatches) -> MysqlOptions {
+    let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
+        let port = port
+            .parse::<u16>()
+            .expect("Provided --myrouter-port is not u16");
+        MysqlConnectionType::Myrouter(port)
+    } else if matches.is_present(MYSQL_USE_CLIENT) {
+        let pool = get_sqlblob_mysql_connection_pool(matches);
+        let pool_config = parse_mysql_sqlblob_pool_options(matches);
+
+        MysqlConnectionType::Mysql(pool, pool_config)
+    } else {
+        MysqlConnectionType::RawXDB
+    };
+
+    let master_only = matches.is_present(MYSQL_MASTER_ONLY);
+
+    MysqlOptions {
+        connection_type,
+        master_only,
+    }
+}
+
 pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOptions, Error> {
     let read_qps: Option<NonZeroU32> = matches
         .value_of(READ_QPS_ARG)
@@ -1876,6 +2004,7 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
+        parse_sqlblob_mysql_options(matches),
     );
 
     let blobstore_options = if matches.arg_types.contains(&ArgType::Scrub) {

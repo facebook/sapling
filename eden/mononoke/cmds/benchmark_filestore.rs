@@ -201,12 +201,11 @@ async fn get_blob<'a>(
                 .value_of(ARG_SHARD_COUNT)
                 .map(|v| v.parse())
                 .transpose()?;
-            let mysql_options = args::parse_mysql_options(&matches);
             let blobstore = make_sql_blobstore_xdb(
                 fb,
                 shardmap_or_tier,
                 shard_count,
-                &mysql_options,
+                &blobstore_options,
                 readonly_storage,
                 blobstore_options.put_behaviour,
                 config_store,

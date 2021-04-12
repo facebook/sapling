@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::{format_err, Context, Error};
 use backsyncer::{open_backsyncer_dbs, TargetRepoDbs};
 use blobrepo::BlobRepo;
-use blobstore_factory::{make_blobstore, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cache_warmup::cache_warmup;
 use cached_config::ConfigStore;
 use cloned::cloned;
@@ -131,6 +131,7 @@ pub struct RepoHandler {
 pub async fn repo_handlers<'a>(
     fb: FacebookInit,
     mononoke: &'a Mononoke,
+    blobstore_options: &'a BlobstoreOptions,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     root_log: &Logger,
@@ -176,6 +177,7 @@ pub async fn repo_handlers<'a>(
         let wireproto_logging = create_wireproto_logging(
             fb,
             reponame.clone(),
+            blobstore_options,
             mysql_options,
             readonly_storage,
             wireproto_logging,
@@ -286,6 +288,7 @@ async fn build_repo_handlers(
 async fn create_wireproto_logging<'a>(
     fb: FacebookInit,
     reponame: String,
+    blobstore_options: &'a BlobstoreOptions,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     wireproto_logging_config: WireprotoLoggingConfig,
@@ -310,7 +313,7 @@ async fn create_wireproto_logging<'a>(
                 storage_config.blobstore,
                 mysql_options,
                 readonly_storage,
-                &Default::default(),
+                blobstore_options,
                 &logger,
                 config_store,
             )

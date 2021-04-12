@@ -34,6 +34,7 @@ use slog::{debug, o, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::sync::{atomic::AtomicBool, Arc};
 
+use blobstore_factory::BlobstoreOptions;
 use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::CommonConfig;
 
@@ -46,6 +47,7 @@ pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
     common_config: CommonConfig,
     mononoke: Mononoke,
+    blobstore_options: &'a BlobstoreOptions,
     mysql_options: &'a MysqlOptions,
     root_log: Logger,
     sockname: String,
@@ -75,6 +77,7 @@ pub async fn create_repo_listeners<'a>(
     let handlers = repo_handlers(
         fb,
         &mononoke,
+        blobstore_options,
         mysql_options,
         readonly_storage,
         &root_log,

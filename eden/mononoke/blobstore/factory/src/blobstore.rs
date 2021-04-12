@@ -46,6 +46,7 @@ pub struct BlobstoreOptions {
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
     pub scrub_options: Option<ScrubOptions>,
+    pub sqlblob_mysql_options: MysqlOptions,
 }
 
 impl BlobstoreOptions {
@@ -56,6 +57,7 @@ impl BlobstoreOptions {
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
+        sqlblob_mysql_options: MysqlOptions,
     ) -> Self {
         Self {
             chaos_options,
@@ -67,6 +69,7 @@ impl BlobstoreOptions {
             put_behaviour: put_behaviour.unwrap_or(DEFAULT_PUT_BEHAVIOUR),
             // These are added via the builder methods
             scrub_options: None,
+            sqlblob_mysql_options,
         }
     }
 
@@ -93,19 +96,6 @@ impl BlobstoreOptions {
         } else {
             self
         }
-    }
-}
-
-impl Default for BlobstoreOptions {
-    fn default() -> Self {
-        Self::new(
-            ChaosOptions::new(None, None),
-            ThrottleOptions::default(),
-            None,
-            PackOptions::default(),
-            CachelibBlobstoreOptions::default(),
-            None,
-        )
     }
 }
 
@@ -143,7 +133,6 @@ pub fn make_blobstore<'a>(
 pub async fn make_sql_blobstore<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
-    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     config_store: &'a ConfigStore,
@@ -168,7 +157,7 @@ pub async fn make_sql_blobstore<'a>(
                 fb,
                 tier_name,
                 shard_count,
-                mysql_options,
+                blobstore_options,
                 readonly_storage,
                 blobstore_options.put_behaviour,
                 config_store,
@@ -184,13 +173,21 @@ pub async fn make_sql_blobstore_xdb<'a>(
     fb: FacebookInit,
     tier_name: String,
     shard_count: Option<NonZeroUsize>,
-    mysql_options: &'a MysqlOptions,
+    blobstore_options: &'a BlobstoreOptions,
     readonly_storage: ReadOnlyStorage,
     put_behaviour: PutBehaviour,
     config_store: &'a ConfigStore,
 ) -> Result<CountedSqlblob, Error> {
-    let read_conn_type = mysql_options.read_connection_type();
-    match (mysql_options.connection_type.clone(), shard_count) {
+    let read_conn_type = blobstore_options
+        .sqlblob_mysql_options
+        .read_connection_type();
+    match (
+        blobstore_options
+            .sqlblob_mysql_options
+            .connection_type
+            .clone(),
+        shard_count,
+    ) {
         (MysqlConnectionType::Myrouter(myrouter_port), None) => {
             Sqlblob::with_myrouter_unsharded(
                 fb,
@@ -288,7 +285,6 @@ fn make_blobstore_put_ops<'a>(
             Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
                 fb,
                 blobconfig,
-                mysql_options,
                 readonly_storage,
                 blobstore_options,
                 config_store,
