@@ -45,7 +45,7 @@ pub fn encode(response: Response) -> OutputStream {
                 .into_iter()
                 .map(move |resp| Bytes::from(batch::escape(&encode_cmd(resp))));
 
-            let separated_results = escaped_results.intersperse(separator);
+            let separated_results = Itertools::intersperse(escaped_results, separator);
             let separated_results: Vec<_> = separated_results.collect();
             let mut len = 0;
             for res in separated_results.iter() {
@@ -153,12 +153,15 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             bytes.freeze()
         }
 
-        ListKeysPatterns(res) => res
-            .into_iter()
-            .map(|(bookmark, hash)| format!("{}\t{}", bookmark, hash))
-            .intersperse(String::from("\n"))
-            .collect::<String>()
-            .into(),
+        ListKeysPatterns(res) => {
+            let it = res
+                .into_iter()
+                .map(|(bookmark, hash)| format!("{}\t{}", bookmark, hash));
+
+            Itertools::intersperse(it, String::from("\n"))
+                .collect::<String>()
+                .into()
+        }
 
         Branchmap(_res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,
