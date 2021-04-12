@@ -144,6 +144,14 @@ impl TimeseriesDelta for usize {
     }
 }
 
+impl TimeseriesInstant<u64> for u64 {}
+
+impl TimeseriesDelta for u64 {
+    fn div(&self, other: Self) -> Result<usize, Error> {
+        (self / other).try_into().map_err(Error::from)
+    }
+}
+
 impl<T> TimeseriesAccumulator for Vec<T> {
     type Value = T;
 
