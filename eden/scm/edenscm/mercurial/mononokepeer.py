@@ -77,7 +77,7 @@ class mononokepipe(object):
             try:
                 buf = self._pipe.read(1)
             except Exception as e:
-                raise error.NetworkError(e.message)
+                raise error.NetworkError("failed reading from pipe: {}".format(e))
             if not buf:
                 raise error.NetworkError("unexpected EOL, expected netstring digit")
             r += buf
