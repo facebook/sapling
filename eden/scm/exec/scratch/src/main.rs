@@ -448,6 +448,34 @@ fn test_valid_curdir() {
     assert!(!valid_curdir("abc/../abc".as_ref()));
 }
 
+/// Checks if the scratch root path has a README.txt file.
+/// If the scratch root path does not exist then successfully returns.
+/// If the file exists then successfully returns.
+/// If README.txt exists but it is not a file then returns an error.
+/// If README.txt does not exist then attemts to create it and reports the status.
+fn readme_in_scratch_path(scratch_root_path: &Path) -> Result<()> {
+    if !scratch_root_path.exists() {
+        return Ok(());
+    }
+
+    let readme_path = scratch_root_path.join("README.txt");
+
+    if readme_path.exists() {
+        return match readme_path.is_file() {
+            true => Ok(()),
+            false => Err(anyhow::anyhow!("README.txt exists but it is not a file.")),
+        };
+    }
+
+    fs::File::create(readme_path)?.write_all(
+        b"This directory is created to store build artifacts. \
+        It is commonly used by Buck and other build systems. \
+        It is okay to delete files from this directory \
+        but it is recommended to clean with buck clean and similar commands.",
+    )?;
+    Ok(())
+}
+
 /// Performs the `path` command
 fn path_command(
     config: &Config,
@@ -470,6 +498,7 @@ fn path_command(
 
     // Get the base scratch path for this repo
     let mut result = scratch_root(&config, repo_root)?;
+    readme_in_scratch_path(&result)?;
     let repo_owner = get_file_owner(repo_root)?;
 
     // If they asked for a subdir, compute it
