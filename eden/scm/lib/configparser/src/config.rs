@@ -15,7 +15,6 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
-use anyhow::Result;
 use indexmap::IndexMap;
 use minibytes::Text;
 use pest::{self, Parser, Span};
@@ -62,6 +61,16 @@ struct ValueLocation {
 pub struct Options {
     source: Text,
     filters: Vec<Arc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
+}
+
+impl crate::Config for ConfigSet {
+    fn keys(&self, section: &str) -> Vec<Text> {
+        ConfigSet::keys(self, section)
+    }
+
+    fn get(&self, section: &str, name: &str) -> Option<Text> {
+        ConfigSet::get(self, section, name)
+    }
 }
 
 impl ConfigSet {
@@ -155,7 +164,11 @@ impl ConfigSet {
     }
 
     /// Get a config item. Convert to type `T`.
-    pub fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+    pub fn get_opt<T: FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+    ) -> crate::Result<Option<T>> {
         self.get(section, name)
             .map(|bytes| T::try_from_str(&bytes))
             .transpose()
@@ -169,7 +182,7 @@ impl ConfigSet {
         section: &str,
         name: &str,
         default_func: impl Fn() -> T,
-    ) -> Result<T> {
+    ) -> crate::Result<T> {
         Ok(self.get_opt(section, name)?.unwrap_or_else(default_func))
     }
 
@@ -180,7 +193,7 @@ impl ConfigSet {
         &self,
         section: &str,
         name: &str,
-    ) -> Result<T> {
+    ) -> crate::Result<T> {
         self.get_or(section, name, Default::default)
     }
 

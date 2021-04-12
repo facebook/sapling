@@ -13,7 +13,6 @@ use std::time::Duration;
 use anyhow::{Context, Error};
 use url::Url;
 
-use anyhow::anyhow;
 use auth::AuthSection;
 use configparser::config::ConfigSet;
 use http_client::HttpVersion;
@@ -76,7 +75,7 @@ impl Builder {
             .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e))?
             .map(parse_headers)
             .transpose()
-            .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e))?
+            .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e.to_string().into()))?
             .unwrap_or_default();
 
         let max_files = config
@@ -115,7 +114,7 @@ impl Builder {
             x => {
                 return Err(EdenApiError::BadConfig(ConfigError::Malformed(
                     "edenapi.http-version".into(),
-                    anyhow!("invalid http version {}", x),
+                    format!("invalid http version {}", x).into(),
                 )));
             }
         });

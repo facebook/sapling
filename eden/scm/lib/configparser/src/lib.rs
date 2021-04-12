@@ -68,13 +68,18 @@
 
 pub mod c_api;
 pub mod config;
-pub mod convert;
 pub mod dynamicconfig;
-pub mod error;
 pub mod hg;
 pub mod parser;
 
-pub use error::{Error, Errors};
+pub use configmodel;
+pub use configmodel::convert;
+pub use configmodel::error;
+pub use configmodel::Config;
+pub use configmodel::Error;
+pub use configmodel::Result;
+
+pub use error::Errors;
 
 // Re-export
 pub use minibytes::Text;
