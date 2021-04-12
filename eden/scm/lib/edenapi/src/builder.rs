@@ -64,7 +64,7 @@ impl Builder {
             .map_err(|e| ConfigError::Malformed("edenapi.validate-certs".into(), e))?
             .unwrap_or_default();
 
-        let (cert, key, ca_bundle) = AuthSection::from_config(&config)
+        let (cert, key, ca_bundle) = AuthSection::from_config(config)
             .validate(validate_certs)
             .best_match_for(&server_url)?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))

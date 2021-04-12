@@ -11,7 +11,7 @@ use anyhow::{Error, Result};
 use indexmap::IndexMap;
 use url::Url;
 
-use configparser::{config::ConfigSet, Text};
+use configmodel::{Config, Text};
 use util::path::expand_path;
 
 pub mod x509;
@@ -113,7 +113,7 @@ impl AuthSection {
     ///
     /// Values are parsed `Auth` structs containing all of the values
     /// found for the given grouping.
-    pub fn from_config(config: &ConfigSet) -> Self {
+    pub fn from_config(config: &dyn Config) -> Self {
         // Use an IndexMap to preserve ordering; needed to correctly handle precedence.
         let mut groups = IndexMap::new();
 
@@ -265,6 +265,7 @@ fn strip_scheme_and_user(url: &Url) -> String {
 mod test {
     use super::*;
 
+    use configparser::config::ConfigSet;
     use configparser::config::Options;
 
     #[test]

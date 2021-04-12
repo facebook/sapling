@@ -56,7 +56,7 @@ fn getauth(
             .map_pyerr(py)?;
     }
 
-    AuthSection::from_config(&cfg)
+    AuthSection::from_config(cfg)
         .validate(validate)
         .best_match_for(&uri)
         .map_pyerr(py)?
