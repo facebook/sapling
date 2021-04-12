@@ -17,7 +17,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher};
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
-use pyrevisionstore::contentstore;
+use pyrevisionstore::{contentstore, filescmstore};
 use pytreestate::treestate as PyTreeState;
 use std::collections::HashMap;
 use std::time::SystemTime;
@@ -68,6 +68,16 @@ py_class!(class checkoutplan |py| {
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
             plan.apply_remote_data_store(&vfs, store, progress_path.map(|p| p.to_path_buf()))
+        )).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def apply_scmstore(&self, root: PyPathBuf, scmstore: &filescmstore, progress_path: Option<PyPathBuf> = None) -> PyResult<PyNone> {
+        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let store = scmstore.extract_inner_ref(py).clone();
+        let plan = self.plan(py);
+        py.allow_threads(|| try_block_unless_interrupted(
+            plan.apply_read_store(&vfs, store, progress_path.map(|p| p.to_path_buf()))
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
