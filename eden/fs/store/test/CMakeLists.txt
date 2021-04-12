@@ -16,4 +16,4 @@ target_link_libraries(
     eden_testharness
     ${LIBGMOCK_LIBRARIES}
 )
-gtest_discover_tests(eden_store_test)
+gtest_discover_tests(eden_store_test NO_PRETTY_VALUES)
