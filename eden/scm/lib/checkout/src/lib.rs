@@ -8,17 +8,21 @@
 use anyhow::{anyhow, bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
+use minibytes::Bytes;
 use parking_lot::Mutex;
 use pathmatcher::{Matcher, XorMatcher};
 use revisionstore::{
-    datastore::strip_metadata, HgIdDataStore, RemoteDataStore, StoreKey, StoreResult,
+    datastore::strip_metadata, scmstore::types::StoreFile, scmstore::ReadStore, RemoteDataStore,
+    StoreKey, StoreResult,
 };
+use std::boxed::Box;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::debug;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -171,7 +175,7 @@ impl CheckoutPlan {
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
     pub async fn apply_stream<
-        S: Stream<Item = Result<StoreResult<Vec<u8>>>> + Unpin,
+        S: Stream<Item = Result<(Bytes, Key)>> + Unpin,
         F: FnOnce(Vec<Key>) -> S,
     >(
         &self,
@@ -215,29 +219,23 @@ impl CheckoutPlan {
             "Skipping checking out {} files since they're already written",
             self.update_content.len() - filtered_update_content.len()
         );
-        let keys: Vec<_> = filtered_update_content
+        let actions: HashMap<_, _> = filtered_update_content
             .iter()
-            .map(|u| Key::new(u.path.clone(), u.content_hgid))
+            .map(|u| (u.make_key(), *u))
             .collect();
+        let keys: Vec<_> = actions.keys().cloned().collect();
 
         let data_stream = f(keys);
 
-        let update_content = data_stream
-            .zip(stream::iter(filtered_update_content.iter()))
-            .map(|(data, action)| {
-                let data = data
-                    .map_err(|err| format_err!("Failed to fetch {:?}: {:?}", action.path, err))?;
-                let data = match data {
-                    StoreResult::Found(data) => data,
-                    StoreResult::NotFound(key) => bail!("Key {:?} not found in data store", key),
-                };
-                // two lines below is a short term fix until we switch to EdenFs store that does stripping for us
-                let (data, _) = strip_metadata(&data.into())?;
-                let data: Vec<_> = data.into_vec();
-                let path = action.path.clone();
-                let flag = type_to_flag(&action.file_type);
-                Ok((path, action.content_hgid, data, flag))
-            });
+        let update_content = data_stream.map(|result| -> Result<_> {
+            let (data, key) = result?;
+            let action = actions
+                .get(&key)
+                .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
+            let path = action.path.clone();
+            let flag = type_to_flag(&action.file_type);
+            Ok((path, action.content_hgid, data, flag))
+        });
 
         let progress = progress.map(|p| Mutex::new(p));
         let progress_ref = progress.as_ref();
@@ -263,15 +261,34 @@ impl CheckoutPlan {
         Ok(stats)
     }
 
-    pub async fn apply_data_store<DS: HgIdDataStore>(
+    pub async fn apply_read_store(
         &self,
         vfs: &VFS,
-        store: &DS,
+        store: Arc<dyn ReadStore<Key, StoreFile>>,
         progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
         self.apply_stream(
             vfs,
-            |keys| stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key)))),
+            |keys| {
+                store
+                    .fetch_stream(Box::pin(stream::iter(keys)))
+                    .map(|r| match r {
+                        Ok(f) => match f.content() {
+                            None => bail!(
+                                "{} not found",
+                                f.key()
+                                    .expect("ReadStore returned not found content without key")
+                            ),
+                            Some(content) => Ok((
+                                content.clone(),
+                                f.key()
+                                    .expect("ReadStore returned content without key")
+                                    .clone(),
+                            )),
+                        },
+                        Err(err) => Err(err.into()),
+                    })
+            },
             progress_path,
         )
         .await
@@ -299,8 +316,23 @@ impl CheckoutPlan {
                                 }
                             }
                             Ok(_) => {
-                                for key in chunk {
-                                    if tx.unbounded_send(store.get(key.clone())).is_err() {
+                                for store_key in chunk {
+                                    let key = match store_key {
+                                        StoreKey::HgId(key) => key,
+                                        _ => unreachable!(),
+                                    };
+                                    let store_result = store.get(store_key.clone());
+                                    let result = match store_result {
+                                        Err(err) => Err(err),
+                                        Ok(StoreResult::Found(data)) => {
+                                            strip_metadata(&data.into())
+                                                .map(|(d, _)| (d, key.clone()))
+                                        }
+                                        Ok(StoreResult::NotFound(k)) => {
+                                            Err(format_err!("{:?} not found in store", k))
+                                        }
+                                    };
+                                    if tx.unbounded_send(result).is_err() {
                                         return;
                                     }
                                 }
@@ -332,7 +364,7 @@ impl CheckoutPlan {
     async fn write_files(
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
-        actions: Vec<(RepoPathBuf, HgId, Vec<u8>, Option<UpdateFlag>)>,
+        actions: Vec<(RepoPathBuf, HgId, Bytes, Option<UpdateFlag>)>,
         progress: Option<&Mutex<CheckoutProgress>>,
     ) -> Result<()> {
         let count = actions.len();
@@ -549,6 +581,10 @@ impl UpdateContentAction {
             content_hgid: meta.hgid,
             file_type: meta.file_type,
         }
+    }
+
+    pub fn make_key(&self) -> Key {
+        Key::new(self.path.clone(), self.content_hgid)
     }
 }
 
@@ -923,8 +959,8 @@ mod test {
         Ok(())
     }
 
-    fn dummy_fs(v: Vec<Key>) -> impl Stream<Item = Result<StoreResult<Vec<u8>>>> {
-        stream::iter(v).map(|key| Ok(StoreResult::Found(hgid_file(&key.hgid))))
+    fn dummy_fs(v: Vec<Key>) -> impl Stream<Item = Result<(Bytes, Key)>> {
+        stream::iter(v).map(|key| Ok((hgid_file(&key.hgid).into(), key)))
     }
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {

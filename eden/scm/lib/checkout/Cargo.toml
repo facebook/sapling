@@ -8,6 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { path = "../manifest", features = ["for-tests"] }
+minibytes = { path = "../minibytes" }
 parking_lot = "0.10.2"
 pathmatcher = { path = "../pathmatcher" }
 revisionstore = { path = "../revisionstore" }
