@@ -25,8 +25,8 @@ pub const MARK_SAFE: &str = "mark";
 const ARG_INITIAL_GENERATION_ONLY: &str = "initial-generation-only";
 const ARG_SKIP_INITIAL_GENERATION: &str = "skip-initial-generation";
 
-const MIN_RETRY_DELAY: Duration = Duration::from_millis(10);
-const MAX_RETRY_DELAY: Duration = Duration::from_millis(100);
+const MIN_RETRY_DELAY: Duration = Duration::from_secs(1);
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(3);
 const RETRIES: usize = 3;
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
