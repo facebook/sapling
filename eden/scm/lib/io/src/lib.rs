@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use configparser::config::ConfigSet;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -341,7 +342,7 @@ impl IO {
         *main_io_ref = Some(Arc::downgrade(&self.inner));
     }
 
-    pub fn start_pager(&self, config: &ConfigSet) -> io::Result<()> {
+    pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if inner.pager_handle.is_some() {
             return Ok(());
