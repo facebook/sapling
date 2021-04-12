@@ -49,6 +49,7 @@ pub fn http_client(client_id: impl ToString) -> HttpClient {
 /// Global configuration settings for Mercurial's HTTP client.
 #[derive(Debug)]
 pub struct HgHttpConfig {
+    pub verbose: bool,
     pub disable_tls_verification: bool,
 }
 
@@ -60,10 +61,9 @@ pub fn set_global_config(config: HgHttpConfig) {
     }
 
     Request::on_new_request(move |req| {
-        // Disable TLS verification if --insecure is specified.
-        if config.disable_tls_verification {
-            req.set_verify_tls_cert(false).set_verify_tls_host(false);
-        }
+        req.set_verify_tls_cert(!config.disable_tls_verification)
+            .set_verify_tls_host(!config.disable_tls_verification)
+            .set_verbose(config.verbose);
     });
 }
 

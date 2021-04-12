@@ -90,6 +90,7 @@ pub struct Request {
     min_transfer_speed: Option<MinTransferSpeed>,
     verify_tls_host: bool,
     verify_tls_cert: bool,
+    verbose: bool,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -162,6 +163,7 @@ impl Request {
             min_transfer_speed: None,
             verify_tls_host: true,
             verify_tls_cert: true,
+            verbose: false,
         }
     }
 
@@ -397,6 +399,24 @@ impl Request {
         self
     }
 
+    /// Turn on libcurl's verbose output. This will cause libcurl to print lots
+    /// of verbose debug messages to stderr. This can be useful when trying to
+    /// understand exactly what libcurl is doing under the hood, which can help
+    /// to debug low-level protocol issues.
+    pub fn verbose(mut self, verbose: bool) -> Self {
+        self.set_verbose(verbose);
+        self
+    }
+
+    /// Turn on libcurl's verbose output. This will cause libcurl to print lots
+    /// of verbose debug messages to stderr. This can be useful when trying to
+    /// understand exactly what libcurl is doing under the hood, which can help
+    /// to debug low-level protocol issues.
+    pub fn set_verbose(&mut self, verbose: bool) -> &mut Self {
+        self.verbose = verbose;
+        self
+    }
+
     /// Execute the request, blocking until completion.
     ///
     /// This method is intended as a simple way to perform
@@ -459,6 +479,7 @@ impl Request {
 
         let mut easy = Easy2::new(handler);
         easy.url(url.as_str())?;
+        easy.verbose(self.verbose)?;
 
         // Configure the handle for the desired HTTP method.
         match easy.get_ref().request_context().method {

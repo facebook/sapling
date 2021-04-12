@@ -522,8 +522,9 @@ mod exitcode {
     pub const IOERR: i32 = 74;
 }
 
-fn setup_http(_config: &ConfigSet, global_opts: &HgGlobalOpts) {
+fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
     let http_config = HgHttpConfig {
+        verbose: config.get_or_default("http", "verbose").unwrap_or_default(),
         disable_tls_verification: global_opts.insecure,
     };
     hg_http::set_global_config(http_config);
