@@ -2369,9 +2369,18 @@ def update(
 
                 with progress.spinner(repo.ui, _("updating")):
                     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
-                    plan.apply(
-                        repo.wvfs.base, repo.fileslog.contentstore, updateprogresspath
-                    )
+                    if repo.ui.configbool("nativecheckout", "usescmstore"):
+                        plan.apply_scmstore(
+                            repo.wvfs.base,
+                            repo.fileslog.filescmstore,
+                            updateprogresspath,
+                        )
+                    else:
+                        plan.apply(
+                            repo.wvfs.base,
+                            repo.fileslog.contentstore,
+                            updateprogresspath,
+                        )
                     repo.ui.debug("Apply done\n")
                 stats = plan.stats()
 
