@@ -14,7 +14,7 @@ use anyhow::{Context, Error};
 use url::Url;
 
 use auth::AuthSection;
-use configparser::config::ConfigSet;
+use configmodel::ConfigExt;
 use http_client::HttpVersion;
 
 use crate::client::Client;
@@ -51,7 +51,7 @@ impl Builder {
     }
 
     /// Populate a `Builder` from a Mercurial configuration.
-    pub fn from_config(config: &ConfigSet) -> Result<Self, EdenApiError> {
+    pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, EdenApiError> {
         let server_url = config
             .get_opt::<String>("edenapi", "url")
             .map_err(|e| ConfigError::Malformed("edenapi.url".into(), e))?

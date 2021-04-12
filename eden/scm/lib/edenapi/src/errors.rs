@@ -41,5 +41,5 @@ pub enum ConfigError {
     #[error("Invalid server URL: {0}")]
     InvalidUrl(#[source] url::ParseError),
     #[error("Config field '{0}' is malformed")]
-    Malformed(String, #[source] configparser::Error),
+    Malformed(String, #[source] configmodel::Error),
 }
