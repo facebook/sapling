@@ -1610,11 +1610,7 @@ sh % "hg log -r ':null'" == r"""
     commit:      65624cd9070a
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
-    summary:     a bunch of weird directories
-
-    commit:      000000000000
-    user:        
-    date:        Thu Jan 01 00:00:00 1970 +0000"""
+    summary:     a bunch of weird directories"""
 sh % "hg log -r 'null:null'" == r"""
     commit:      000000000000
     user:        

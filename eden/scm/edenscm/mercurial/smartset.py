@@ -751,6 +751,27 @@ class nameset(abstractsmartset):
             raise TypeError("nameset requires repo")
         self._reporef = weakref.ref(repo)
 
+    @staticmethod
+    def range(repo, start, end, ascending=False):
+        """start and end are inclusive, repo is used to filter out invalid revs
+
+        If start > end, an empty set will be returned.
+        """
+        cl = repo.changelog
+        dag = cl.dag
+        if dag is None:
+            # legacy revlog, cannot use nameset
+            return idset.range(repo, start, end, ascending=ascending)
+        if start > end:
+            spans = dagmod.spans([])
+        else:
+            spans = dagmod.spans.unsaferange(start, end)
+            # Filter by the fullreposet to remove invalid revs.
+            allspans = cl.torevs(dag.all())
+            spans = spans & allspans
+        s = nameset(cl, cl.tonodes(spans), reverse=ascending, repo=repo)
+        return s
+
     @property
     def fastasc(self):
         hints = self._set.hints()
@@ -1587,7 +1608,7 @@ def spanset(repo, start=0, end=maxrev):
     ascending = start <= end
     if not ascending:
         start, end = min(end, maxrev - 1) + 1, min(start, maxrev - 1) + 1
-    s = idset.range(repo, start, end - 1, ascending)
+    s = nameset.range(repo, start, end - 1, ascending)
     # special handling of nullrev
     if start == nullrev:
         if ascending:

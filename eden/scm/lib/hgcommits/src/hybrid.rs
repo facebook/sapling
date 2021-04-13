@@ -81,11 +81,13 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
             for name in names {
                 hgids.push(Id20::from_slice(name.as_ref()).map_err(to_dag_error)?);
             }
-            let head = &heads[0];
-            let head = Id20::from_slice(head.as_ref()).map_err(to_dag_error)?;
+            let heads: Vec<_> = heads
+                .iter()
+                .map(|v| Id20::from_slice(v.as_ref()).map_err(to_dag_error))
+                .collect::<dag::Result<Vec<_>>>()?;
             let repo = self.reponame.clone();
             self.client
-                .commit_hash_to_location(repo, head, hgids, None)
+                .commit_hash_to_location(repo, heads, hgids, None)
                 .await
                 .map_err(to_dag_error)?
         };
