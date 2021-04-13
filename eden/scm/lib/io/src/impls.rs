@@ -13,17 +13,26 @@ impl IsTty for std::io::Stdin {
     fn is_tty(&self) -> bool {
         atty::is(atty::Stream::Stdin)
     }
+    fn is_stdin(&self) -> bool {
+        true
+    }
 }
 
 impl IsTty for std::io::Stdout {
     fn is_tty(&self) -> bool {
         atty::is(atty::Stream::Stdout)
     }
+    fn is_stdout(&self) -> bool {
+        true
+    }
 }
 
 impl IsTty for std::io::Stderr {
     fn is_tty(&self) -> bool {
         atty::is(atty::Stream::Stderr)
+    }
+    fn is_stderr(&self) -> bool {
+        true
     }
 }
 
@@ -54,6 +63,14 @@ impl IsTty for crate::IOOutput {
         let inner = inner.lock();
         inner.output.is_tty()
     }
+    fn is_stdout(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.lock();
+        inner.output.is_stdout()
+    }
 }
 
 impl IsTty for crate::IOError {
@@ -69,11 +86,24 @@ impl IsTty for crate::IOError {
             false
         }
     }
+    fn is_stderr(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.lock();
+        if let Some(error) = inner.error.as_ref() {
+            error.is_stderr()
+        } else {
+            false
+        }
+    }
 }
 
 pub(crate) struct PipeWriterWithTty {
     inner: pipe::PipeWriter,
-    is_tty: bool,
+    pretend_tty: bool,
+    pub(crate) pretend_stdout: bool,
 }
 
 impl std::io::Write for PipeWriterWithTty {
@@ -88,12 +118,19 @@ impl std::io::Write for PipeWriterWithTty {
 
 impl IsTty for PipeWriterWithTty {
     fn is_tty(&self) -> bool {
-        self.is_tty
+        self.pretend_tty
+    }
+    fn is_stdout(&self) -> bool {
+        self.pretend_stdout
     }
 }
 
 impl PipeWriterWithTty {
-    pub fn new(inner: pipe::PipeWriter, is_tty: bool) -> Self {
-        Self { inner, is_tty }
+    pub fn new(inner: pipe::PipeWriter, pretend_tty: bool) -> Self {
+        Self {
+            inner,
+            pretend_tty,
+            pretend_stdout: false,
+        }
     }
 }

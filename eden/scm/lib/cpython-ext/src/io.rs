@@ -113,6 +113,21 @@ py_class!(pub class PyRustWrite |py| {
         Ok(io.is_tty())
     }
 
+    def isstdin(&self) -> PyResult<bool> {
+        let io = self.io(py).borrow();
+        Ok(io.is_stdin())
+    }
+
+    def isstdout(&self) -> PyResult<bool> {
+        let io = self.io(py).borrow();
+        Ok(io.is_stdout())
+    }
+
+    def isstderr(&self) -> PyResult<bool> {
+        let io = self.io(py).borrow();
+        Ok(io.is_stderr())
+    }
+
     def close(&self) -> PyResult<PyNone> {
         let mut io = self.io(py).borrow_mut();
         io.flush().map_pyerr(py)?;

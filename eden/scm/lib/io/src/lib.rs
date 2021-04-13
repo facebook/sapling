@@ -76,6 +76,16 @@ static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default
 
 pub trait IsTty {
     fn is_tty(&self) -> bool;
+
+    fn is_stdin(&self) -> bool {
+        false
+    }
+    fn is_stdout(&self) -> bool {
+        false
+    }
+    fn is_stderr(&self) -> bool {
+        false
+    }
 }
 
 pub trait Read: io::Read + IsTty + Any + Send + Sync {
@@ -383,6 +393,7 @@ impl IO {
         let (prg_read, prg_write) = pipe();
 
         let out_is_tty = inner.output.is_tty();
+        let out_is_stdout = inner.output.is_stdout();
         let err_is_tty = inner
             .error
             .as_ref()
@@ -390,7 +401,11 @@ impl IO {
             .unwrap_or_else(|| out_is_tty);
 
         inner.flush()?;
-        inner.output = Box::new(PipeWriterWithTty::new(out_write, out_is_tty));
+        inner.output = {
+            let mut pipe = PipeWriterWithTty::new(out_write, out_is_tty);
+            pipe.pretend_stdout = out_is_stdout;
+            Box::new(pipe)
+        };
         inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
         inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
 
