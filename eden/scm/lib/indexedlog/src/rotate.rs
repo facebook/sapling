@@ -354,6 +354,21 @@ impl RotateLog {
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
+    /// Convert a slice to [`Bytes`].
+    ///
+    /// Do not copy the slice if it's from the main on-disk buffer of
+    /// one of the loaded logs.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
+        for log in &self.logs {
+            if let Some(log) = log.get() {
+                if log.disk_buf.range_of_slice(slice).is_some() {
+                    return log.slice_to_bytes(slice);
+                }
+            }
+        }
+        Bytes::copy_from_slice(slice)
+    }
+
     /// Look up an entry using the given index. The `index_id` is the index of
     /// `index_defs` stored in [`OpenOptions`].
     ///
@@ -885,11 +900,28 @@ mod tests {
 
     // lookup via index 0
     fn lookup<'a>(rotate: &'a RotateLog, key: &[u8]) -> Vec<&'a [u8]> {
-        rotate
+        let values = rotate
             .lookup(0, key.to_vec())
             .unwrap()
             .collect::<crate::Result<Vec<&[u8]>>>()
-            .unwrap()
+            .unwrap();
+        for value in &values {
+            let b1 = rotate.slice_to_bytes(value);
+            let b2 = rotate.slice_to_bytes(value);
+            // Dirty entires cannot be zero-copied.
+            if rotate
+                .iter_dirty()
+                .any(|i| i.unwrap().as_ptr() == value.as_ptr())
+            {
+                continue;
+            }
+            assert_eq!(
+                b1.as_ptr(),
+                b2.as_ptr(),
+                "slice_to_bytes should return zero-copy"
+            );
+        }
+        values
     }
 
     fn iter(rotate: &RotateLog) -> Vec<&[u8]> {

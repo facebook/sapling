@@ -96,7 +96,7 @@ const INDEX_CHECKSUM_CHUNK_SIZE_LOGARITHM: u32 = 20;
 /// disk requires taking a flock on the directory.
 pub struct Log {
     pub dir: GenericPath,
-    disk_buf: Bytes,
+    pub(crate) disk_buf: Bytes,
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     pub(crate) meta: LogMetadata,
     indexes: Vec<Index>,
