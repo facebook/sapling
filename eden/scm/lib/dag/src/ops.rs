@@ -176,6 +176,9 @@ pub trait DagAlgorithm: Send + Sync {
     /// Vertexes buffered in memory, not yet written to disk.
     async fn dirty(&self) -> Result<NameSet>;
 
+    /// Returns true if the vertex names might need to be resolved remotely.
+    fn is_vertex_lazy(&self) -> bool;
+
     /// Get a snapshot of the current graph that can operate separately.
     ///
     /// This makes it easier to fight with borrowck.

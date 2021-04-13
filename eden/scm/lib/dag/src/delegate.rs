@@ -271,6 +271,9 @@ macro_rules! delegate {
             {
                 self.$($t)*.dirty()
             }
+            fn is_vertex_lazy(&self) -> bool {
+                self.$($t)*.is_vertex_lazy()
+            }
             fn dag_snapshot(&self)
                 -> $crate::Result<std::sync::Arc<dyn $crate::DagAlgorithm + Send + Sync>>
             {

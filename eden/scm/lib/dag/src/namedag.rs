@@ -1016,6 +1016,10 @@ where
         Ok(set)
     }
 
+    fn is_vertex_lazy(&self) -> bool {
+        !self.remote_protocol.is_local()
+    }
+
     /// Get a snapshot of the current graph.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)

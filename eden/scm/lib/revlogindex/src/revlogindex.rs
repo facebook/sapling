@@ -1678,6 +1678,10 @@ impl DagAlgorithm for RevlogIndex {
         Ok(result)
     }
 
+    fn is_vertex_lazy(&self) -> bool {
+        false
+    }
+
     fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.get_snapshot())
     }

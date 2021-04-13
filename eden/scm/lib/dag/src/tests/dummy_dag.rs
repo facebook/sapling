@@ -141,6 +141,10 @@ impl DagAlgorithm for DummyDag {
         Ok(set)
     }
 
+    fn is_vertex_lazy(&self) -> bool {
+        false
+    }
+
     /// Get a snapshot of the current graph.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(Arc::new(self.clone()))

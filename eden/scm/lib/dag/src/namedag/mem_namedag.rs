@@ -36,7 +36,7 @@ impl Open for MemNameDagPath {
     fn open(&self) -> Result<Self::OpenTarget> {
         let dag = IdDag::new_in_process();
         let map = MemIdMap::new();
-        Ok(AbstractNameDag {
+        let result = AbstractNameDag {
             dag,
             map,
             path: self.clone(),
@@ -48,7 +48,8 @@ impl Open for MemNameDagPath {
             overlay_map_next_id: Id::MIN,
             overlay_map_paths: Default::default(),
             remote_protocol: Arc::new(()),
-        })
+        };
+        Ok(result)
     }
 }
 
