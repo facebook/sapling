@@ -8,6 +8,7 @@
 use crate::namedag::MemNameDag;
 use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
+use crate::ops::Parents;
 use crate::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
@@ -243,7 +244,11 @@ pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: NameSet) ->
     let this = this.dag_snapshot()?;
     Ok(set.filter(Box::new(move |v: &VertexName| {
         let this = this.clone();
-        Box::pin(async move { this.parent_names(v.clone()).await.map(|ps| ps.len() >= 2) })
+        Box::pin(async move {
+            DagAlgorithm::parent_names(&this, v.clone())
+                .await
+                .map(|ps| ps.len() >= 2)
+        })
     })))
 }
 
@@ -345,4 +350,56 @@ pub(crate) async fn is_ancestor(
         }
     }
     Ok(false)
+}
+
+#[tracing::instrument(skip(this), level=tracing::Level::DEBUG)]
+pub(crate) async fn hint_subdag_for_insertion(
+    this: &(impl Parents + ?Sized),
+    scope: &NameSet,
+    heads: &[VertexName],
+) -> Result<MemNameDag> {
+    let count = scope.count().await?;
+    tracing::trace!("hint_subdag_for_insertion: pending vertexes: {}", count);
+
+    // ScopedParents only contains parents within "scope".
+    struct ScopedParents<'a, P: Parents + ?Sized> {
+        parents: &'a P,
+        scope: &'a NameSet,
+    }
+
+    #[async_trait::async_trait]
+    impl<'a, P: Parents + ?Sized> Parents for ScopedParents<'a, P> {
+        async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+            let parents: Vec<VertexName> = self.parents.parent_names(name).await?;
+            // Filter by scope. We don't need to provide a "correct" parents here.
+            // It is only used to optimize network fetches, not used to actually insert
+            // to the graph.
+            let mut filtered_parents = Vec::with_capacity(parents.len());
+            for v in parents {
+                if self.scope.contains(&v).await? {
+                    filtered_parents.push(v)
+                }
+            }
+            Ok(filtered_parents)
+        }
+
+        async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+            // No need to use such a hint (to avoid infinite recursion).
+            // Pending names should exist in the graph without using remote fetching.
+            Ok(MemNameDag::new())
+        }
+    }
+
+    // Insert vertexes in `scope` to `dag`.
+    let mut dag = MemNameDag::new();
+    // The MemNameDag should not be lazy.
+    assert!(!dag.is_vertex_lazy());
+
+    let scoped_parents = ScopedParents {
+        parents: this,
+        scope,
+    };
+    dag.add_heads(&scoped_parents, heads).await?;
+
+    Ok(dag)
 }

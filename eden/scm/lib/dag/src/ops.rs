@@ -194,12 +194,29 @@ pub trait DagAlgorithm: Send + Sync {
 #[async_trait::async_trait]
 pub trait Parents: Send + Sync {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
+
+    /// A hint of a sub-graph for inserting `heads`.
+    ///
+    /// This is used to reduce remote fetches in a lazy graph.
+    /// The roots will be checked first, if a root is unknown locally then
+    /// all its descendants will be considered unknown locally.
+    ///
+    /// The returned graph is only used to optimize network fetches in
+    /// `assign_head`. It is not used to be actually inserted to the graph. So
+    /// returning an empty or "incorrect" graph does not hurt correctness. But
+    /// might hurt performance.
+    async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag>;
 }
 
 #[async_trait::async_trait]
 impl Parents for Arc<dyn DagAlgorithm + Send + Sync> {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         DagAlgorithm::parent_names(self, name).await
+    }
+
+    async fn hint_subdag_for_insertion(&self, heads: &[VertexName]) -> Result<MemNameDag> {
+        let scope = self.dirty().await?;
+        default_impl::hint_subdag_for_insertion(self, &scope, heads).await
     }
 }
 
@@ -208,12 +225,22 @@ impl Parents for &(dyn DagAlgorithm + Send + Sync) {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         DagAlgorithm::parent_names(*self, name).await
     }
+
+    async fn hint_subdag_for_insertion(&self, heads: &[VertexName]) -> Result<MemNameDag> {
+        let scope = self.dirty().await?;
+        default_impl::hint_subdag_for_insertion(self, &scope, heads).await
+    }
 }
 
 #[async_trait::async_trait]
 impl<'a> Parents for Box<dyn Fn(VertexName) -> Result<Vec<VertexName>> + Send + Sync + 'a> {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         (self)(name)
+    }
+
+    async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+        // No clear way to detect the "dirty" scope.
+        Ok(MemNameDag::new())
     }
 }
 
@@ -224,6 +251,13 @@ impl Parents for std::collections::HashMap<VertexName, Vec<VertexName>> {
             Some(v) => Ok(v.clone()),
             None => name.not_found(),
         }
+    }
+
+    async fn hint_subdag_for_insertion(&self, heads: &[VertexName]) -> Result<MemNameDag> {
+        let mut keys: Vec<VertexName> = self.keys().cloned().collect();
+        keys.sort_unstable();
+        let scope = NameSet::from_static_names(keys);
+        default_impl::hint_subdag_for_insertion(self, &scope, heads).await
     }
 }
 
