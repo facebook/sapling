@@ -561,6 +561,58 @@ EDEN_XDR_SERDE_DECL(SYMLINK3resfail, dir_wcc);
 struct SYMLINK3res
     : public detail::Nfsstat3Variant<SYMLINK3resok, SYMLINK3resfail> {};
 
+// MKNOD Procedure:
+
+struct devicedata3 {
+  sattr3 dev_attributes;
+  specdata3 spec;
+};
+EDEN_XDR_SERDE_DECL(devicedata3, dev_attributes, spec);
+
+struct mknoddata3 : XdrVariant<ftype3, devicedata3, sattr3> {};
+
+template <>
+struct XdrTrait<mknoddata3> : public XdrTrait<mknoddata3::Base> {
+  static mknoddata3 deserialize(folly::io::Cursor& cursor) {
+    mknoddata3 ret;
+    ret.tag = XdrTrait<ftype3>::deserialize(cursor);
+    switch (ret.tag) {
+      case ftype3::NF3CHR:
+      case ftype3::NF3BLK:
+        ret.v = XdrTrait<devicedata3>::deserialize(cursor);
+        break;
+      case ftype3::NF3SOCK:
+      case ftype3::NF3FIFO:
+        ret.v = XdrTrait<sattr3>::deserialize(cursor);
+        break;
+      default:
+        break;
+    }
+    return ret;
+  }
+};
+
+struct MKNOD3args {
+  diropargs3 where;
+  mknoddata3 what;
+};
+EDEN_XDR_SERDE_DECL(MKNOD3args, where, what);
+
+struct MKNOD3resok {
+  post_op_fh3 obj;
+  post_op_attr obj_attributes;
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(MKNOD3resok, obj, obj_attributes, dir_wcc);
+
+struct MKNOD3resfail {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(MKNOD3resfail, dir_wcc);
+
+struct MKNOD3res : public detail::Nfsstat3Variant<MKNOD3resok, MKNOD3resfail> {
+};
+
 // REMOVE Procedure:
 
 struct REMOVE3args {

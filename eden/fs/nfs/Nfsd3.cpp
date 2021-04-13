@@ -1361,9 +1361,48 @@ std::string formatSymlink(folly::io::Cursor deser) {
       formatSattr3(args.symlink.symlink_attributes));
 }
 
-std::string formatMknod(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatMknod(folly::io::Cursor deser) {
+  auto args = XdrTrait<MKNOD3args>::deserialize(deser);
+  auto formatFtype = [](const ftype3& type) {
+    switch (type) {
+      case ftype3::NF3REG:
+        return "REG";
+      case ftype3::NF3DIR:
+        return "DIR";
+      case ftype3::NF3BLK:
+        return "BLK";
+      case ftype3::NF3CHR:
+        return "CHR";
+      case ftype3::NF3LNK:
+        return "LNK";
+      case ftype3::NF3SOCK:
+        return "SOCK";
+      case ftype3::NF3FIFO:
+        return "FIFO";
+    }
+  };
+  auto formatWhat = [](const mknoddata3& data) {
+    return std::visit(
+        [](auto&& arg) -> std::string {
+          using ArgType = std::decay_t<decltype(arg)>;
+          if constexpr (std::is_same_v<ArgType, devicedata3>) {
+            // TODO(xavierd): format the specdata3 too.
+            return fmt::format(
+                FMT_STRING(", attr=({})"), formatSattr3(arg.dev_attributes));
+          } else if constexpr (std::is_same_v<ArgType, sattr3>) {
+            return fmt::format(FMT_STRING(", attr=({})"), formatSattr3(arg));
+          } else {
+            return "";
+          }
+        },
+        data.v);
+  };
+  return fmt::format(
+      FMT_STRING("dir={}, name={}, type={}{}"),
+      args.where.dir.ino,
+      args.where.name,
+      formatFtype(args.what.tag),
+      formatWhat(args.what));
 }
 
 std::string formatRemove(folly::io::Cursor deser) {
