@@ -2668,6 +2668,9 @@ def scanunknowns(trees, lookup):
 
     A name is unknown if lookup(name) returns False.
     Does not evaluate the revset.
+
+    >>> list(scanunknowns([revsetlang.parse("limit(a+b,1,2)+c")], lambda x: False))
+    ['a', 'b', 'c']
     """
     for x in trees:
         if isinstance(x, tuple):
@@ -2693,7 +2696,12 @@ def scanunknowns(trees, lookup):
                 args = x[1:]
             elif headname == "func":
                 # ex. (func (symbol parents) (symbol master))
+                #     (func (symbol limit)   (list (x) (symbol 1) (symbol 2)))
                 funcname = x[1][1]
+                if len(x) > 2 and x[2] and x[2][0] == "list":
+                    funcargs = x[2][1:]
+                else:
+                    funcargs = x[2:]
                 if funcname in {
                     "ancestors",
                     "ancestoraged",
@@ -2711,10 +2719,10 @@ def scanunknowns(trees, lookup):
                 }:
                     # 1st argument is a set.
                     # the 2nd argument is not a revset, skip it.
-                    args = x[2:3]
+                    args = funcargs[0:1]
                 elif funcname in {"only", "ancestor", "roots", "p1", "p2", "parents"}:
                     # all arguments are sets.
-                    args = x[2:]
+                    args = funcargs
             elif headname in {"symbol", "string"}:
                 # x[1] is the name to lookup.
                 # SRC is a special name used by rebase.
