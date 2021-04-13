@@ -102,17 +102,11 @@ impl AppendCommits for HgCommits {
         }
 
         // Write commit graph to DAG.
-        let commits_map: HashMap<Vertex, HgCommit> = commits
+        let parents: HashMap<Vertex, Vec<Vertex>> = commits
             .iter()
             .cloned()
-            .map(|c| (c.vertex.clone(), c))
+            .map(|c| (c.vertex, c.parents))
             .collect();
-        let parent_func = move |v: Vertex| -> dag::Result<Vec<Vertex>> {
-            match commits_map.get(&v) {
-                Some(commit) => Ok(commit.parents.clone()),
-                None => v.not_found(),
-            }
-        };
         let heads: Vec<Vertex> = {
             let mut non_heads = HashSet::new();
             for commit in commits {
@@ -127,9 +121,7 @@ impl AppendCommits for HgCommits {
                 .cloned()
                 .collect()
         };
-        let parent_func: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
-            Box::new(parent_func);
-        self.dag.add_heads(&parent_func, &heads).await?;
+        self.dag.add_heads(&parents, &heads).await?;
 
         Ok(())
     }
