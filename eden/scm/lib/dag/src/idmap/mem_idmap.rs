@@ -69,6 +69,25 @@ impl CoreMemIdMap {
         self.id2name.get(&id).cloned()
     }
 
+    pub fn lookup_vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<VertexName>> {
+        let start = VertexName::from_hex(hex_prefix)?;
+        let mut result = Vec::new();
+        for (vertex, _) in self.name2id.range(start..) {
+            if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
+                break;
+            }
+            result.push(vertex.clone());
+            if result.len() >= limit {
+                break;
+            }
+        }
+        Ok(result)
+    }
+
     pub fn has_vertex_name(&self, name: &VertexName) -> bool {
         self.name2id.contains_key(name)
     }
@@ -188,18 +207,7 @@ impl PrefixLookup for MemIdMap {
         hex_prefix: &[u8],
         limit: usize,
     ) -> Result<Vec<VertexName>> {
-        let start = VertexName::from_hex(hex_prefix)?;
-        let mut result = Vec::new();
-        for (vertex, _) in self.core.name2id.range(start..) {
-            if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
-                break;
-            }
-            result.push(vertex.clone());
-            if result.len() >= limit {
-                break;
-            }
-        }
-        Ok(result)
+        self.core.lookup_vertexes_by_hex_prefix(hex_prefix, limit)
     }
 }
 
