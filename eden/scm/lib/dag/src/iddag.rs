@@ -1635,13 +1635,13 @@ mod tests {
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
         assert_eq!(dag.dirty().unwrap().count(), 0);
 
-        let mut syncable = dag.prepare_filesystem_sync().unwrap();
-        syncable
-            .build_segments_volatile(Id(1001), &get_parents)
-            .unwrap();
+        let lock = dag.lock().unwrap();
+        dag.reload(&lock).unwrap();
+        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
 
-        assert_eq!(syncable.dirty().unwrap().count(), 1002);
-        syncable.sync().unwrap();
+        assert_eq!(dag.dirty().unwrap().count(), 1002);
+        dag.persist(&lock).unwrap();
+        drop(lock);
 
         assert_eq!(dag.max_level().unwrap(), 3);
         assert_eq!(

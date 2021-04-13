@@ -171,7 +171,6 @@ mod tests {
     use crate::ops::Persist;
     use crate::ops::PrefixLookup;
     use nonblocking::non_blocking_result as r;
-    use std::ops::Deref;
     use tempfile::tempdir;
 
     #[cfg(all(test, feature = "indexedlog-backend"))]
@@ -179,7 +178,8 @@ mod tests {
     fn test_basic_operations() {
         let dir = tempdir().unwrap();
         let mut map = IdMap::open(dir.path()).unwrap();
-        let mut map = map.prepare_filesystem_sync().unwrap();
+        let lock = map.lock().unwrap();
+        map.reload(&lock).unwrap();
         assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 0);
         map.insert(Id(1), b"abc").unwrap();
         assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 2);
@@ -229,12 +229,12 @@ mod tests {
             assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap().0, 15);
             assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
             // Error: re-assigned ids prevent sync.
-            map.inner.persist(&map.lock).unwrap_err();
+            map.persist(&lock).unwrap_err();
         }
 
         // Test Debug
         assert_eq!(
-            format!("{:?}", map.deref()),
+            format!("{:?}", &map),
             r#"IdMap {
   abc: 1,
   def: 2,

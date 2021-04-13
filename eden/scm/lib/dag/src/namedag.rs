@@ -157,9 +157,10 @@ where
         //
         // Also see comments in `NameDagState::lock()`.
         self.invalidate_missing_vertex_cache();
-        let locked = self.state.prepare_filesystem_sync()?;
+        let lock = self.state.lock()?;
         let map_lock = self.map.lock()?;
         let dag_lock = self.dag.lock()?;
+        self.state.reload(&lock)?;
         self.map.reload(&map_lock)?;
         self.dag.reload(&dag_lock)?;
 
@@ -176,9 +177,10 @@ where
         // Write to disk.
         self.map.persist(&map_lock)?;
         self.dag.persist(&dag_lock)?;
+        self.state.persist(&lock)?;
         drop(dag_lock);
         drop(map_lock);
-        locked.sync()?;
+        drop(lock);
 
         self.invalidate_missing_vertex_cache();
 
@@ -234,20 +236,22 @@ where
 
         // Lock, reload from disk. Use a new state so the existing dag is not affected.
         let mut new: Self = self.path.open()?;
-        let locked = new.state.prepare_filesystem_sync()?;
-        let mut map = new.map.prepare_filesystem_sync()?;
-        let dag = new.dag.prepare_filesystem_sync()?;
+        let lock = new.state.lock()?;
+        let map_lock = new.map.lock()?;
+        let dag_lock = new.dag.lock()?;
+        new.state.reload(&lock)?;
+        new.map.reload(&map_lock)?;
+        new.dag.reload(&dag_lock)?;
 
         let id_names =
-            calculate_id_name_from_paths(&*map, &**dag, new.overlay_map_next_id, &to_insert)
+            calculate_id_name_from_paths(&new.map, &*new.dag, new.overlay_map_next_id, &to_insert)
                 .await?;
         for (id, name) in id_names {
-            map.insert(id, name.as_ref())?;
+            new.map.insert(id, name.as_ref())?;
         }
 
-        map.sync()?;
-        dag.sync()?;
-        locked.sync()?;
+        new.map.persist(&map_lock)?;
+        new.state.persist(&lock)?;
 
         Ok(())
     }
@@ -343,23 +347,27 @@ where
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         // Write directly to disk. Bypassing "flush()" that re-assigns Ids
         // using parent functions.
-        let locked = self.state.prepare_filesystem_sync()?;
-        let mut map = self.map.prepare_filesystem_sync()?;
-        let mut dag = self.dag.prepare_filesystem_sync()?;
+        let lock = self.state.lock()?;
+        let map_lock = self.map.lock()?;
+        let dag_lock = self.dag.lock()?;
+        self.state.reload(&lock)?;
+        self.map.reload(&map_lock)?;
+        self.dag.reload(&dag_lock)?;
 
-        if !dag.all()?.is_empty() {
+        if !self.dag.all()?.is_empty() {
             return programming("Cannot import clone data for non-empty graph");
         }
         for (id, name) in clone_data.idmap {
-            map.insert(id, name.as_ref())?;
+            self.map.insert(id, name.as_ref())?;
         }
-        dag.build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
+        self.dag
+            .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
 
         // Verify that universally known vertexes and heads are present in IdMap.
         let missing: Vec<Id> = {
-            let universal_ids: Vec<Id> = dag.universal_ids()?.into_iter().collect();
+            let universal_ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
             tracing::debug!("clone: {} universally known vertexes", universal_ids.len());
-            let exists = map.contains_vertex_id_locally(&universal_ids).await?;
+            let exists = self.map.contains_vertex_id_locally(&universal_ids).await?;
             universal_ids
                 .into_iter()
                 .zip(exists)
@@ -377,11 +385,11 @@ where
             return programming(msg);
         }
 
-        let next_id = dag.next_free_id(0, Group::MASTER)?;
+        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
 
-        map.sync()?;
-        dag.sync()?;
-        locked.sync()?;
+        self.map.persist(&map_lock)?;
+        self.dag.persist(&dag_lock)?;
+        self.state.persist(&lock)?;
 
         // Reset overlay map state.
         self.overlay_map = Default::default();
