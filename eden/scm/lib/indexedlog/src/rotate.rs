@@ -617,8 +617,8 @@ impl RotateLog {
     }
 
     /// Iterate over all dirty entries.
-    pub fn iter_dirty(&mut self) -> impl Iterator<Item = crate::Result<&[u8]>> {
-        self.writable_log().iter_dirty()
+    pub fn iter_dirty(&self) -> impl Iterator<Item = crate::Result<&[u8]>> {
+        self.logs[0].get().unwrap().iter_dirty()
     }
 }
 
