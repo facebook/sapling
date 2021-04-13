@@ -743,6 +743,34 @@ where
     }
 }
 
+// On "snapshot".
+#[async_trait::async_trait]
+impl<IS, M, P, S> RemoteIdConvertProtocol for Arc<AbstractNameDag<IdDag<IS>, M, P, S>>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    async fn resolve_names_to_relative_paths(
+        &self,
+        heads: Vec<VertexName>,
+        names: Vec<VertexName>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        self.deref()
+            .resolve_names_to_relative_paths(heads, names)
+            .await
+    }
+
+    async fn resolve_relative_paths_to_names(
+        &self,
+        paths: Vec<AncestorPath>,
+    ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>> {
+        self.deref().resolve_relative_paths_to_names(paths).await
+    }
+}
+
 // Dag operations. Those are just simple wrappers around [`IdDag`].
 // See [`IdDag`] for the actual implementations of these algorithms.
 
