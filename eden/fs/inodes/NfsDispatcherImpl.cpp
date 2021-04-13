@@ -201,6 +201,21 @@ folly::Future<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
       });
 }
 
+folly::Future<NfsDispatcher::RmdirRes> NfsDispatcherImpl::rmdir(
+    InodeNumber dir,
+    PathComponent name,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, name = std::move(name)](const TreeInodePtr& inode) {
+        return inode->rmdir(name, InvalidationRequired::No, context)
+            .thenValue([](auto&&) {
+              // TODO(xavierd): Modify rmdir to obtain the pre and post stat of
+              // the directory.
+              return NfsDispatcher::RmdirRes{std::nullopt, std::nullopt};
+            });
+      });
+}
+
 folly::Future<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
     InodeNumber fromIno,
     PathComponent fromName,

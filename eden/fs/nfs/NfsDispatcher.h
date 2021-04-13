@@ -250,6 +250,23 @@ class NfsDispatcher {
   virtual folly::Future<UnlinkRes>
   unlink(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
+  struct RmdirRes {
+    /** Attributes of the directory prior to removing the directory */
+    std::optional<struct stat> preDirStat;
+    /** Attributes of the directory after removing the directory */
+    std::optional<struct stat> postDirStat;
+  };
+
+  /**
+   * Remove the directory name from the directory referenced by the InodeNumber
+   * dir.
+   *
+   * For the pre and post dir stat, refer to the documentation of the create
+   * method above.
+   */
+  virtual folly::Future<RmdirRes>
+  rmdir(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
+
   struct RenameRes {
     /** Attributes of the from directory prior to renaming the file. */
     std::optional<struct stat> fromPreDirStat;

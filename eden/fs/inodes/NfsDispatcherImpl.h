@@ -76,6 +76,11 @@ class NfsDispatcherImpl : public NfsDispatcher {
       PathComponent name,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::RmdirRes> rmdir(
+      InodeNumber dir,
+      PathComponent name,
+      ObjectFetchContext& context) override;
+
   folly::Future<NfsDispatcher::RenameRes> rename(
       InodeNumber fromIno,
       PathComponent fromName,

@@ -920,11 +920,45 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rmdir(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<RMDIR3args>::deserialize(deser);
+
+  // Don't allow removing the special directories.
+  if (args.object.name == "." || args.object.name == "..") {
+    // The NFS spec specifies 2 different error status for "." and ".."
+    auto status = args.object.name == "." ? nfsstat3::NFS3ERR_INVAL
+                                          : nfsstat3::NFS3ERR_EXIST;
+    RMDIR3res res{{{status, RMDIR3resfail{}}}};
+    XdrTrait<RMDIR3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("rmdir");
+
+  return dispatcher_
+      ->rmdir(args.object.dir.ino, PathComponent(args.object.name), *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::RmdirRes> try_) mutable {
+        if (try_.hasException()) {
+          RMDIR3res res{
+              {{exceptionToNfsError(try_.exception()), RMDIR3resfail{}}}};
+          XdrTrait<RMDIR3res>::serialize(ser, res);
+        } else {
+          const auto& rmdirRes = try_.value();
+
+          RMDIR3res res{
+              {{nfsstat3::NFS3_OK,
+                RMDIR3resok{/*dir_wcc*/ statToWccData(
+                    rmdirRes.preDirStat, rmdirRes.postDirStat)}}}};
+          XdrTrait<RMDIR3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
