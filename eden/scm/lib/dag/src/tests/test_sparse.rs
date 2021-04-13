@@ -87,8 +87,7 @@ async fn test_sparse_dag() {
 
 #[tokio::test]
 async fn test_negative_cache() {
-    let mut server = TestDag::new();
-    server.drawdag("A-B", &["B"]);
+    let server = TestDag::draw("A-B  # master: B");
 
     let mut client = server.client().await;
 

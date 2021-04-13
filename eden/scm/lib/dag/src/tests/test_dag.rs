@@ -39,6 +39,23 @@ impl TestDag {
         Self::new_with_segment_size(3)
     }
 
+    /// Crates a `TestDag` using the given ASCII.
+    ///
+    /// This is just `new`, followed by `drawdag`, with an extra rule that
+    /// comments like "# master: M" at the end can be used to specify master
+    /// heads .
+    pub fn draw(text: &str) -> Self {
+        let mut dag = Self::new();
+        let mut split = text.split("# master:");
+        let text = split.next().unwrap_or("");
+        let master = match split.next() {
+            Some(t) => t.split_whitespace().collect::<Vec<_>>(),
+            None => Vec::new(),
+        };
+        dag.drawdag(text, &master);
+        dag
+    }
+
     /// Creates a `TestDag` with a specific segment size.
     pub fn new_with_segment_size(seg_size: usize) -> Self {
         let dir = tempfile::tempdir().unwrap();
