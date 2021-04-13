@@ -1,0 +1,29 @@
+[package]
+name = "all_config_versions"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+build = "thrift_build.rs"
+
+[lib]
+path = "thrift_lib.rs"
+test = false
+doctest = false
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.45"
+codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+const-cstr = "0.3.0"
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+lazy_static = "1.0"
+megarepo_configs = { version = "0.1.0", path = ".." }
+ref-cast = "1.0.2"
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde_derive = "1.0"
+thiserror = "1.0"
+
+[build-dependencies]
+thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
