@@ -131,6 +131,12 @@ pub trait RemoteIdConvertProtocol: Send + Sync + 'static {
         &self,
         paths: Vec<AncestorPath>,
     ) -> Result<Vec<(AncestorPath, Vec<VertexName>)>>;
+
+    /// Return `true` if the protocol is local and queries do not need to
+    /// optimize for batching or latency.
+    fn is_local(&self) -> bool {
+        false
+    }
 }
 
 #[async_trait::async_trait]
@@ -152,6 +158,10 @@ impl RemoteIdConvertProtocol for () {
             paths
         );
         crate::errors::programming(msg)
+    }
+
+    fn is_local(&self) -> bool {
+        true
     }
 }
 
