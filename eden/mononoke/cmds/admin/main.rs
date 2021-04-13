@@ -18,6 +18,7 @@ use context::CoreContext;
 use slog::error;
 
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
+use crate::blobstore_unlink::subcommand_blobstore_unlink;
 use crate::blobstore_upload::subcommand_blobstore_upload;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::content_fetch::subcommand_content_fetch;
@@ -33,6 +34,7 @@ use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
 mod blobstore_fetch;
+mod blobstore_unlink;
 mod blobstore_upload;
 mod bonsai_fetch;
 mod bookmarks_manager;
@@ -69,6 +71,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .build()
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch::build_subcommand())
+        .subcommand(blobstore_unlink::build_subcommand())
         .subcommand(blobstore_upload::build_subcommand())
         .subcommand(bonsai_fetch::build_subcommand())
         .subcommand(create_bonsai::build_subcommand())
@@ -111,6 +114,9 @@ fn main(fb: FacebookInit) -> ExitCode {
         match matches.subcommand() {
             (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {
                 subcommand_blobstore_fetch(fb, logger, &matches, sub_m).await
+            }
+            (blobstore_unlink::BLOBSTORE_UNLINK, Some(sub_m)) => {
+                subcommand_blobstore_unlink(fb, logger, &matches, sub_m).await
             }
             (blobstore_upload::BLOBSTORE_UPLOAD, Some(sub_m)) => {
                 subcommand_blobstore_upload(fb, logger, &matches, sub_m).await
