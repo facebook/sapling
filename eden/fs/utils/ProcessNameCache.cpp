@@ -34,7 +34,8 @@ namespace facebook::eden::detail {
 ProcPidCmdLine getProcPidCmdLine(pid_t pid) {
   ProcPidCmdLine path;
   memcpy(path.data(), "/proc/", 6);
-  auto digits = folly::to_ascii_decimal(path.data() + 6, path.end(), pid);
+  auto digits =
+      folly::to_ascii_decimal(path.data() + 6, path.data() + path.size(), pid);
   memcpy(path.data() + 6 + digits, "/cmdline", 9);
   return path;
 }
