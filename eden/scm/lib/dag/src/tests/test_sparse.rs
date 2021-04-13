@@ -7,46 +7,10 @@
 
 use super::TestDag;
 use crate::ops::DagAlgorithm;
-use crate::ops::DagExportCloneData;
-use crate::ops::DagImportCloneData;
 use crate::ops::IdConvert;
-use crate::protocol;
-use crate::protocol::RemoteIdConvertProtocol;
 use crate::Id;
-use crate::Result;
 use crate::VertexName;
 use futures::TryStreamExt;
-use parking_lot::Mutex;
-use std::sync::Arc;
-
-struct ProtocolMonitor {
-    inner: Box<dyn RemoteIdConvertProtocol>,
-    output: Arc<Mutex<Vec<String>>>,
-}
-
-#[async_trait::async_trait]
-impl RemoteIdConvertProtocol for ProtocolMonitor {
-    async fn resolve_names_to_relative_paths(
-        &self,
-        heads: Vec<VertexName>,
-        names: Vec<VertexName>,
-    ) -> Result<Vec<(protocol::AncestorPath, Vec<VertexName>)>> {
-        let msg = format!("resolve names: {:?}, heads: {:?}", &names, &heads);
-        self.output.lock().push(msg);
-        self.inner
-            .resolve_names_to_relative_paths(heads, names)
-            .await
-    }
-
-    async fn resolve_relative_paths_to_names(
-        &self,
-        paths: Vec<protocol::AncestorPath>,
-    ) -> Result<Vec<(protocol::AncestorPath, Vec<VertexName>)>> {
-        let msg = format!("resolve paths: {:?}", &paths);
-        self.output.lock().push(msg);
-        self.inner.resolve_relative_paths_to_names(paths).await
-    }
-}
 
 #[tokio::test]
 async fn test_sparse_dag() {
@@ -73,9 +37,7 @@ async fn test_sparse_dag() {
     server2.drawdag("A-B-C G-C", &["C"]);
     server2.drawdag("C-D-E-M-X J-E", &["M"]);
 
-    let data = server2.dag.export_clone_data().await.unwrap();
-    let mut client = TestDag::new();
-    client.dag.import_clone_data(data).await.unwrap();
+    let client = server2.client().await;
 
     // Note: some ids (ex. 11) does not have matching name in its IdMap.
     // The server-side non-master (X) is not cloned.
@@ -98,17 +60,7 @@ async fn test_sparse_dag() {
 "#
     );
 
-    // Without remote protocol. Cannot solve id <-> names.
-    assert!(client.dag.vertex_name(Id(9)).await.is_err());
-    assert!(client.dag.vertex_id("A".into()).await.is_err());
-
     // With remote protocol. Be able to resolve id <-> names.
-    let output = Arc::new(Default::default());
-    let protocol = ProtocolMonitor {
-        inner: Box::new(server1.dag),
-        output: Arc::clone(&output),
-    };
-    client.dag.set_remote_protocol(Arc::new(protocol));
     assert_eq!(client.dag.vertex_name(Id(9)).await.unwrap(), "C".into());
     assert_eq!(client.dag.vertex_id("E".into()).await.unwrap(), Id(11));
 
@@ -124,7 +76,7 @@ async fn test_sparse_dag() {
     );
 
     assert_eq!(
-        output.lock().clone(),
+        client.output(),
         [
             "resolve paths: [D~1]",
             "resolve names: [E], heads: [M]",

@@ -457,7 +457,7 @@ where
     }
 
     /// Attempt to get a snapshot of this graph.
-    fn try_snapshot(&self) -> Result<Arc<Self>> {
+    pub(crate) fn try_snapshot(&self) -> Result<Arc<Self>> {
         if let Some(s) = self.snapshot.read().deref() {
             if s.dag.version() == self.dag.version() {
                 return Ok(Arc::clone(s));
