@@ -51,6 +51,7 @@ use dag_types::FlatSegment;
 use futures::future::join_all;
 use futures::future::BoxFuture;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -164,6 +165,18 @@ where
         self.map.reload(&map_lock)?;
         self.dag.reload(&dag_lock)?;
 
+        // Populate vertex negative cache to reduce round-trips doing remote lookups.
+        // Release `self` from being mut borrowed while keeping the lock.
+        if self.is_vertex_lazy() {
+            let heads: Vec<VertexName> = master_names
+                .iter()
+                .cloned()
+                .chain(non_master_names.iter().cloned())
+                .collect();
+            self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
+                .await?;
+        }
+
         // Build.
         self.build(parent_names_func, master_names, non_master_names)
             .await?;
@@ -257,9 +270,9 @@ impl<IS, M, P, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
-    M: TryClone + IdMapAssignHead + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Send + Sync,
+    M: TryClone + IdMapAssignHead + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
 {
     /// Add vertexes and their ancestors to the in-memory DAG.
     ///
@@ -271,6 +284,10 @@ where
     /// can re-assign Ids to the MASTER group.
     async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()> {
         self.invalidate_snapshot();
+
+        // Populate vertex negative cache to reduce round-trips doing remote lookups.
+        self.populate_missing_vertexes_for_add_heads(parents, heads)
+            .await?;
 
         // Assign to the NON_MASTER group unconditionally so we can avoid the
         // complexity re-assigning non-master ids.
@@ -525,6 +542,115 @@ where
     pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
         self.remote_protocol = protocol;
     }
+}
+
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    async fn populate_missing_vertexes_for_add_heads(
+        &mut self,
+        parents: &dyn Parents,
+        heads: &[VertexName],
+    ) -> Result<()> {
+        if self.is_vertex_lazy() {
+            let unassigned = calculate_definitely_unassigned_vertexes(self, parents, heads).await?;
+            let mut missing = self.missing_vertexes_confirmed_by_remote.write();
+            for v in unassigned {
+                missing.insert(v);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Calculate vertexes that are definitely not assigned according to
+/// `hint_pending_subdag`. This does not report all unassigned vertexes.
+/// But the reported vertexes are guaranteed not assigned.
+///
+/// If X is assigned, then X's parents must have been assigned.
+/// If X is not assigned, then all X's descendants are not assigned.
+///
+/// This function visits the "roots" of "parents", and if they are not assigned,
+/// then add their descendants to the "unassigned" result set.
+async fn calculate_definitely_unassigned_vertexes(
+    this: &dyn IdConvert,
+    parents: &dyn Parents,
+    heads: &[VertexName],
+) -> Result<Vec<VertexName>> {
+    let subdag = parents.hint_subdag_for_insertion(heads).await?;
+
+    // remaining:  vertexes to query.
+    // unassigned: vertexes known unassigned.
+    // assigned:   vertexes known assigned.
+    //
+    // This is similar to hg pull/push exchange. In short, loop until "remaining" becomes empty:
+    // - Take a subset of "remaining".
+    // - Check the subset. Divide it into (subset_assigned, subset_unassigned).
+    // - Include ancestors(subset_assigned) in "assigned".
+    // - Include descendants(subset_unassigned) in "unassigned".
+    // - Exclude "assigned" and "unassigned" from "remaining".
+
+    let mut remaining = subdag.all().await?;
+    let mut unassigned = NameSet::empty();
+
+    for i in 1usize.. {
+        let remaining_old_len = remaining.count().await?;
+        if remaining_old_len == 0 {
+            break;
+        }
+
+        // Sample: heads, roots, and the "middle point" from "remaining".
+        let sample = subdag
+            .roots(remaining.clone())
+            .await?
+            .union(&subdag.heads(remaining.clone()).await?)
+            .union(&remaining.skip((remaining_old_len as u64) / 2).take(1));
+        let sample: Vec<VertexName> = sample.iter().await?.try_collect().await?;
+        let assigned_bools: Vec<bool> = {
+            let ids = this.vertex_id_batch(&sample).await?;
+            ids.into_iter().map(|i| i.is_ok()).collect()
+        };
+        debug_assert_eq!(sample.len(), assigned_bools.len());
+
+        let mut new_assigned = Vec::with_capacity(sample.len());
+        let mut new_unassigned = Vec::with_capacity(sample.len());
+        for (v, b) in sample.into_iter().zip(assigned_bools) {
+            if b {
+                new_assigned.push(v);
+            } else {
+                new_unassigned.push(v);
+            }
+        }
+        let new_assigned = NameSet::from_static_names(new_assigned);
+        let new_unassigned = NameSet::from_static_names(new_unassigned);
+
+        let new_assigned = subdag.ancestors(new_assigned).await?;
+        let new_unassigned = subdag.descendants(new_unassigned).await?;
+
+        remaining = remaining.difference(&new_assigned.union(&new_unassigned));
+        let remaining_new_len = remaining.count().await?;
+
+        let unassigned_old_len = unassigned.count().await?;
+        unassigned = unassigned.union(&subdag.descendants(new_unassigned).await?);
+        let unassigned_new_len = unassigned.count().await?;
+
+        tracing::debug!(
+            "calculate_unassigned: #{} remaining {} => {}, unassigned: {} => {}",
+            i,
+            remaining_old_len,
+            remaining_new_len,
+            unassigned_old_len,
+            unassigned_new_len
+        );
+    }
+
+    let unassigned = unassigned.iter().await?.try_collect().await?;
+    Ok(unassigned)
 }
 
 // The "client" Dag. Using a remote protocol to fill lazy part of the vertexes.

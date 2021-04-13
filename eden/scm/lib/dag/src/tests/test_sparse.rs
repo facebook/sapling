@@ -121,34 +121,13 @@ async fn test_add_heads() {
     assert_eq!(
         client.output(),
         [
-            "resolve names: [G], heads: [B]",
-            "resolve names: [F], heads: [B]",
-            "resolve names: [E], heads: [B]",
-            "resolve names: [D], heads: [B]",
-            "resolve names: [C], heads: [B]",
-            "resolve names: [A], heads: [B]",
-            "resolve names: [K], heads: [B]",
-            "resolve names: [J], heads: [B]",
-            "resolve names: [H], heads: [B]",
-            "resolve names: [I], heads: [B]"
+            "resolve names: [K, I, G, F, A], heads: [B]",
+            "resolve names: [H, D, C], heads: [B]"
         ]
     );
 
     client.dag.flush(&["G".into()]).await.unwrap();
-    assert_eq!(
-        client.output(),
-        [
-            "resolve names: [G], heads: [B]",
-            "resolve names: [F], heads: [B]",
-            "resolve names: [E], heads: [B]",
-            "resolve names: [D], heads: [B]",
-            "resolve names: [C], heads: [B]",
-            "resolve names: [K], heads: [B]",
-            "resolve names: [J], heads: [B]",
-            "resolve names: [H], heads: [B]",
-            "resolve names: [I], heads: [B]"
-        ]
-    );
+    assert_eq!(client.output(), ["resolve names: [K, I, G, C], heads: [B]"]);
 
     let mut client = server.client().await;
     client
@@ -159,16 +138,8 @@ async fn test_add_heads() {
     assert_eq!(
         client.output(),
         [
-            "resolve names: [K], heads: [B]",
-            "resolve names: [J], heads: [B]",
-            "resolve names: [H], heads: [B]",
-            "resolve names: [E], heads: [B]",
-            "resolve names: [D], heads: [B]",
-            "resolve names: [C], heads: [B]",
-            "resolve names: [A], heads: [B]",
-            "resolve names: [I], heads: [B]",
-            "resolve names: [G], heads: [B]",
-            "resolve names: [F], heads: [B]"
+            "resolve names: [G, K, I, H, A], heads: [B]",
+            "resolve names: [F, D, C], heads: [B]"
         ]
     );
 }
