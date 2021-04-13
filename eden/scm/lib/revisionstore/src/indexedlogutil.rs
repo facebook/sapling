@@ -59,6 +59,14 @@ impl Store {
         }
     }
 
+    /// Attempt to make slice backed by the mmap buffer to avoid heap allocation.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
+        match self {
+            Store::Local(log) => log.slice_to_bytes(slice),
+            Store::Shared(log) => log.slice_to_bytes(slice),
+        }
+    }
+
     pub fn flush(&mut self) -> Result<()> {
         match self {
             Store::Local(log) => {

@@ -96,7 +96,8 @@ impl Entry {
     /// - Flag: 1 byte,
     /// - Len: 2 unsigned bytes, big-endian
     /// - Value: <Len> bytes, big-endian
-    fn from_slice(data: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: Bytes) -> Result<Self> {
+        let data: &[u8] = bytes.as_ref();
         let mut cur = Cursor::new(data);
         let hgid = cur.read_hgid()?;
 
@@ -113,11 +114,12 @@ impl Entry {
         let compressed_len = cur.read_u64::<BigEndian>()?;
         let compressed =
             data.get_err(cur.position() as usize..(cur.position() + compressed_len) as usize)?;
+        let bytes = bytes.slice_to_bytes(compressed);
 
         Ok(Entry {
             key,
             content: None,
-            compressed_content: Some(Bytes::copy_from_slice(compressed)),
+            compressed_content: Some(bytes),
             metadata,
         })
     }
@@ -130,7 +132,8 @@ impl Entry {
             Some(buf) => buf?,
         };
 
-        Entry::from_slice(buf).map(Some)
+        let bytes = log.slice_to_bytes(buf);
+        Entry::from_bytes(bytes).map(Some)
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
@@ -425,11 +428,12 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
 
 impl ToKeys for IndexedLogHgIdDataStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        self.inner
-            .read()
-            .log
-            .iter()
-            .map(|entry| Entry::from_slice(entry?))
+        let log = &self.inner.read().log;
+        log.iter()
+            .map(|entry| {
+                let bytes = log.slice_to_bytes(entry?);
+                Entry::from_bytes(bytes)
+            })
             .map(|entry| Ok(entry?.key))
             .collect()
     }
