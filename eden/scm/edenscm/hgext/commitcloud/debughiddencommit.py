@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from edenscm.mercurial import cmdutil, scmutil
 from edenscm.mercurial import visibility
 from edenscm.mercurial.context import memctx
 from edenscm.mercurial.i18n import _
@@ -13,10 +14,10 @@ from .commands import command
 
 
 @command(
-    "debugephemeralcommit",
-    [],
+    "debughiddencommit",
+    cmdutil.walkopts,
 )
-def debugephemeralcommit(ui, repo, **opts):
+def debughiddencommit(ui, repo, *pats, **opts):
     """
     commit to commit cloud
 
@@ -34,14 +35,19 @@ def debugephemeralcommit(ui, repo, **opts):
         user = ui.username()
         extra = {}
         date = None
+        wctx = repo[None]
+
+        matcher = scmutil.match(wctx, pats, opts, emptyalways=False)
+        includefiles = [
+            x for ff in repo.dirstate.status(matcher, True, False, True) for x in ff
+        ]
+        files = list(set(files).union(set(includefiles)))
 
         def getfilectx(repo, memctx, path):
             if path in removed:
                 return None
 
             return wctx[path]
-
-        wctx = repo[None]
 
         node = memctx(
             repo,
