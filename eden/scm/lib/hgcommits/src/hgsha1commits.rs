@@ -40,7 +40,7 @@ use zstore::Zstore;
 pub struct HgCommits {
     commits: Arc<RwLock<Zstore>>,
     pub(crate) commits_path: PathBuf,
-    dag: Dag,
+    pub(crate) dag: Dag,
     pub(crate) dag_path: PathBuf,
 }
 

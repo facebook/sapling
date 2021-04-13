@@ -17,8 +17,13 @@ use crate::StreamCommitText;
 use crate::StripCommits;
 use async_trait::async_trait;
 use dag::delegate;
+use dag::ops::DagPersistent;
+use dag::protocol::AncestorPath;
+use dag::protocol::RemoteIdConvertProtocol;
+use dag::Location;
 use dag::Set;
 use dag::Vertex;
+use edenapi::types::CommitLocationToHashRequest;
 use edenapi::EdenApi;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -35,17 +40,107 @@ use tracing::instrument;
 use zstore::Id20;
 use zstore::Zstore;
 
-/// Segmented Changelog + Revlog + Remote.
+/// Segmented Changelog + Revlog (Optional) + Remote.
 ///
 /// Use segmented changelog for the commit graph algorithms and IdMap.
 /// Optionally writes to revlog just for fallback.
 ///
-/// Use edenapi to resolve public commit messages.
+/// Use edenapi to resolve public commit messages and hashes.
 pub struct HybridCommits {
     revlog: Option<RevlogCommits>,
     commits: HgCommits,
     client: Arc<dyn EdenApi>,
     reponame: String,
+    lazy_hash_desc: String,
+}
+
+struct EdenApiProtocol {
+    client: Arc<dyn EdenApi>,
+    reponame: String,
+}
+
+fn to_dag_error<E: Into<anyhow::Error>>(e: E) -> dag::Error {
+    dag::errors::BackendError::Other(e.into()).into()
+}
+
+#[async_trait]
+impl RemoteIdConvertProtocol for EdenApiProtocol {
+    async fn resolve_names_to_relative_paths(
+        &self,
+        heads: Vec<Vertex>,
+        names: Vec<Vertex>,
+    ) -> dag::Result<Vec<(AncestorPath, Vec<Vertex>)>> {
+        let mut pairs = Vec::with_capacity(names.len());
+        let mut response = {
+            if heads.is_empty() {
+                return dag::errors::programming(
+                    "resolve_names_to_relative_paths received empty heads",
+                );
+            }
+            let mut hgids = Vec::with_capacity(names.len());
+            for name in names {
+                hgids.push(Id20::from_slice(name.as_ref()).map_err(to_dag_error)?);
+            }
+            let head = &heads[0];
+            let head = Id20::from_slice(head.as_ref()).map_err(to_dag_error)?;
+            let repo = self.reponame.clone();
+            self.client
+                .commit_hash_to_location(repo, head, hgids, None)
+                .await
+                .map_err(to_dag_error)?
+        };
+        while let Some(response) = response.entries.next().await {
+            let response = response.map_err(to_dag_error)?;
+            let path = AncestorPath {
+                x: Vertex::copy_from(response.location.descendant.as_ref()),
+                n: response.location.distance,
+                batch_size: 1,
+            };
+            let name = Vertex::copy_from(response.hgid.as_ref());
+            pairs.push((path, vec![name]));
+        }
+        Ok(pairs)
+    }
+
+    async fn resolve_relative_paths_to_names(
+        &self,
+        paths: Vec<AncestorPath>,
+    ) -> dag::Result<Vec<(AncestorPath, Vec<Vertex>)>> {
+        let mut pairs = Vec::with_capacity(paths.len());
+        let mut response = {
+            let mut requests = Vec::with_capacity(paths.len());
+            for path in paths {
+                let descendant = Id20::from_slice(path.x.as_ref()).map_err(to_dag_error)?;
+                requests.push(CommitLocationToHashRequest {
+                    location: Location {
+                        descendant,
+                        distance: path.n,
+                    },
+                    count: path.batch_size,
+                });
+            }
+            let repo = self.reponame.clone();
+            self.client
+                .commit_location_to_hash(repo, requests, None)
+                .await
+                .map_err(to_dag_error)?
+        };
+        while let Some(response) = response.entries.next().await {
+            let response = response.map_err(to_dag_error)?;
+            let path = AncestorPath {
+                x: Vertex::copy_from(response.location.descendant.as_ref()),
+                n: response.location.distance,
+                batch_size: response.count,
+            };
+            let names = response
+                .hgids
+                .into_iter()
+                .map(|n| Vertex::copy_from(n.as_ref()))
+                .collect();
+            pairs.push((path, names));
+        }
+        Ok(pairs)
+    }
 }
 
 impl HybridCommits {
@@ -66,7 +161,27 @@ impl HybridCommits {
             commits,
             client,
             reponame,
+            lazy_hash_desc: "not lazy".to_string(),
         })
+    }
+
+    /// Enable fetching commit hashes lazily via EdenAPI.
+    pub fn enable_lazy_commit_hashes(&mut self) {
+        let protocol = EdenApiProtocol {
+            reponame: self.reponame.clone(),
+            client: self.client.clone(),
+        };
+        self.commits.dag.set_remote_protocol(Arc::new(protocol));
+        self.lazy_hash_desc = format!("lazy, using EdenAPI (repo = {})", &self.reponame);
+    }
+
+    /// Enable fetching commit hashes lazily via another "segments".
+    /// directory locally. This is for testing purpose.
+    pub fn enable_lazy_commit_hashes_from_local_segments(&mut self, dag_path: &Path) -> Result<()> {
+        let dag = dag::Dag::open(dag_path)?;
+        self.commits.dag.set_remote_protocol(Arc::new(dag));
+        self.lazy_hash_desc = format!("lazy, using local segments ({})", dag_path.display());
+        Ok(())
     }
 }
 
@@ -93,6 +208,7 @@ impl AppendCommits for HybridCommits {
             revlog.flush_commit_data().await?;
         }
         self.commits.flush_commit_data().await?;
+        self.commits.dag.flush_cached_idmap().await?;
         Ok(())
     }
 }
@@ -237,12 +353,14 @@ Feature Providers:
     Zstore (incomplete, draft)
     EdenAPI (remaining, public)
     Revlog {}
+Commit Hashes: {}
 "#,
             backend,
             self.commits.dag_path.display(),
             self.commits.commits_path.display(),
             revlog_path,
             revlog_usage,
+            &self.lazy_hash_desc,
         )
     }
 

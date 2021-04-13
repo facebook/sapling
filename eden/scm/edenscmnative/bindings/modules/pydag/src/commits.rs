@@ -90,6 +90,7 @@ py_class!(pub class commits |py| {
 
     /// Flush in-memory commit data to disk.
     /// For the revlog backend, this also write the commit graph to disk.
+    /// For the lazy commit hash backend, this also writes the commit hashes.
     def flushcommitdata(&self) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
         block_on(inner.flush_commit_data()).map_pyerr(py)?;
