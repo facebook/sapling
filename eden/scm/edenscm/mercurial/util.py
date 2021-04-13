@@ -102,6 +102,13 @@ def isatty(fp):
         return False
 
 
+def isstdout(fp):
+    try:
+        return fp.isstdout()
+    except AttributeError:
+        return False
+
+
 # glibc determines buffering on first write to stdout - if we replace a TTY
 # destined stdout with a pipe destined stdout (e.g. pager), we want line
 # buffering
@@ -1243,7 +1250,7 @@ def system(cmd, environ=None, cwd=None, out=None):
         pass
     cmd = quotecommand(cmd)
     env = shellenviron(environ)
-    if out is None or isatty(out):
+    if out is None or isatty(out) or isstdout(out):
         # If out is a tty (most likely stdout), then do not use subprocess.PIPE.
         rc = subprocess.call(cmd, shell=True, close_fds=closefds, env=env, cwd=cwd)
     else:
