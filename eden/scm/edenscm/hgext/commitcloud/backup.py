@@ -30,7 +30,10 @@ def backup(
             backupsnapshots=backupsnapshots,
         )
 
-        if revs is None:
+        # developer config: commitcloud.pushbackupbookmarks
+        if revs is None and repo.ui.configbool(
+            "commitcloud", "pushbackupbookmarks", False
+        ):
             # For a full backup, also update the backup bookmarks.
             backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 

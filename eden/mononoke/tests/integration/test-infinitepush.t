@@ -289,12 +289,6 @@ Pushbackup also works
   bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  reusing connection from pool
-  sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
-  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   commitcloud: backed up 1 commit
 
   $ tglogp
@@ -329,22 +323,10 @@ Pushbackup also works
   o  3903775176ed public 'a'
   
 
-Pushbackup that pushes only bookmarks
+Pushbackup that does nothing, as only bookmarks have changed
   $ cd ../repo-push
   $ hg book newbook
   $ hgmn cloud backup --dest ssh://user@dummy/repo --debug
-  running * (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
-  sending clienttelemetry command
-  sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
-  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   nothing to back up
 
   $ tglogp

@@ -43,14 +43,6 @@
   remote: infinitepush: b2x:infinitepush \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   $ cd ..
 
-Check that logging works for b2x:infinitepushscratchbookmarks part
-  $ cd client
-  $ hg cloud backup
-  nothing to back up
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  $ cd ..
-
 Make upload to bundlestore fail
   $ cat >> repo/.hg/hgrc <<EOF
   > [scratchbranch]

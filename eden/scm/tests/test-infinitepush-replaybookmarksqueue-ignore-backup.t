@@ -55,8 +55,5 @@ Backups should be excluded
   repo123	0	scratch/book	db45a2d42cf67d746ba59e17f09df3eb9e8c2f4c
   $ querysqlindex "SELECT reponame, bookmark, node FROM bookmarkstonode ORDER BY node ASC;"
   reponame	bookmark	node
-  repo123	infinitepush/backups/test/*/client/heads/33701f08790f0e038ca262ddb72728754f60ec88	33701f08790f0e038ca262ddb72728754f60ec88 (glob)
-  repo123	infinitepush/backups/test/*/client/heads/b1e07bb9979cf151ae6a05d0cd9008737c77dfea	b1e07bb9979cf151ae6a05d0cd9008737c77dfea (glob)
-  repo123	infinitepush/backups/test/*/client/heads/db45a2d42cf67d746ba59e17f09df3eb9e8c2f4c	db45a2d42cf67d746ba59e17f09df3eb9e8c2f4c (glob)
   repo123	scratch/book	db45a2d42cf67d746ba59e17f09df3eb9e8c2f4c
 #endif

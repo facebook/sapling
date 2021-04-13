@@ -276,7 +276,9 @@ def _sync(
                 )
 
     # Update the backup bookmarks with any changes we have made by syncing.
-    backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
+    # developer config: commitcloud.pushbackupbookmarks
+    if repo.ui.configbool("commitcloud", "pushbackupbookmarks", False):
+        backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 
     backuplock.progresscomplete(repo)
 
