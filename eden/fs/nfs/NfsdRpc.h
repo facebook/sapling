@@ -581,6 +581,26 @@ EDEN_XDR_SERDE_DECL(REMOVE3resfail, dir_wcc);
 struct REMOVE3res
     : public detail::Nfsstat3Variant<REMOVE3resok, REMOVE3resfail> {};
 
+// RMDIR Procedure:
+
+struct RMDIR3args {
+  diropargs3 object;
+};
+EDEN_XDR_SERDE_DECL(RMDIR3args, object);
+
+struct RMDIR3resok {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(RMDIR3resok, dir_wcc);
+
+struct RMDIR3resfail {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(RMDIR3resfail, dir_wcc);
+
+struct RMDIR3res : public detail::Nfsstat3Variant<RMDIR3resok, RMDIR3resfail> {
+};
+
 // RENAME Procedure:
 
 struct RENAME3args {

@@ -1338,9 +1338,10 @@ std::string formatRemove(folly::io::Cursor deser) {
       FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name);
 }
 
-std::string formatRmdir(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatRmdir(folly::io::Cursor deser) {
+  auto args = XdrTrait<RMDIR3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name);
 }
 
 std::string formatRename(folly::io::Cursor deser) {
