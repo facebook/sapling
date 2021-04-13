@@ -668,7 +668,7 @@ void PrivHelperServer::nfsMount(
   if (readOnly) {
     mountFlags |= MS_RDONLY;
   }
-  auto source = fmt::format("127.0.0.1:{}", mountPath);
+  auto source = fmt::format("edenfs:{}", mountPath);
   XLOG(WARN) << "Mounting: " << source << ", opts=" << mountOpts;
 
   int rc = mount(
