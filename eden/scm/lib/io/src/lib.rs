@@ -17,6 +17,7 @@ use std::mem;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::{spawn, JoinHandle};
+use streampager::config::WrappingMode;
 use streampager::{config::InterfaceMode, Pager};
 
 mod impls;
@@ -357,6 +358,8 @@ impl IO {
         let mut interface_mode = InterfaceMode::Hybrid;
         // Similar to "less" default.
         let mut scroll_past_eof = false;
+        // Similar to "less" behavior - lines are wrapped and copy-paste preserves long ines.
+        let mut wrapping_mode = WrappingMode::GraphemeBoundary;
         if let Some(mode_str) = config.get("pager", "interface") {
             let mode = InterfaceMode::from(mode_str.as_ref());
             interface_mode = mode;
@@ -364,6 +367,14 @@ impl IO {
         if let Ok(Some(past_eof)) = config.get_opt("pager", "scroll-past-eof") {
             scroll_past_eof = past_eof;
         }
+        if let Ok(Some(wrapping_mode_str)) = config.get_opt::<String>("pager", "wrapping-mode") {
+            match wrapping_mode_str.to_lowercase().as_str() {
+                "word" => wrapping_mode = WrappingMode::WordBoundary,
+                "unwrapped" => wrapping_mode = WrappingMode::Unwrapped,
+                _ => {}
+            }
+        }
+        pager.set_wrapping_mode(wrapping_mode);
         pager.set_scroll_past_eof(scroll_past_eof);
         pager.set_interface_mode(interface_mode);
 
