@@ -591,6 +591,19 @@ pub trait IdDagAlgorithm: IdDagStore {
         }
     }
 
+    /// Return a [`IdSet`] that covers all ids stored in memory, not persisted.
+    fn dirty(&self) -> Result<IdSet> {
+        let mut result = IdSet::empty();
+        for &group in Group::ALL.iter().rev() {
+            let next = self.next_free_id(0, group)?;
+            let low = self.next_free_id_without_dirty(group)?;
+            if next > low {
+                result.push(low..=(next - 1));
+            }
+        }
+        Ok(result)
+    }
+
     /// Calculate all ancestors reachable from any id from the given set.
     ///
     /// ```plain,ignore
@@ -1627,12 +1640,14 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut dag = IdDag::open(dir.path()).unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
+        assert_eq!(dag.dirty().unwrap().count(), 0);
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         syncable
             .build_segments_volatile(Id(1001), &get_parents)
             .unwrap();
 
+        assert_eq!(syncable.dirty().unwrap().count(), 1002);
         syncable.sync().unwrap();
 
         assert_eq!(dag.max_level().unwrap(), 3);
@@ -1643,6 +1658,7 @@ mod tests {
                 .collect::<Vec<Id>>(),
             vec![Id(1001)]
         );
+        assert_eq!(dag.dirty().unwrap().count(), 0);
     }
 
     #[test]
@@ -1675,5 +1691,6 @@ mod tests {
 
         assert_eq!(test_dag.max_level().unwrap(), 3);
         assert_eq!(test_dag.all().unwrap().count(), 1002);
+        assert_eq!(test_dag.dirty().unwrap().count(), 1002);
     }
 }
