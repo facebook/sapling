@@ -21,7 +21,6 @@ use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
-use crate::Error;
 use crate::Group;
 use crate::Id;
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -31,7 +30,6 @@ use crate::Result;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fmt;
@@ -311,33 +309,49 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
                 .await?;
             IdSet::from_spans(heads)
         };
+        let resolvable = dag.ancestors(heads.clone())?;
 
         let id_names: Vec<(Id, VertexName)> = {
-            let names = stream::iter(request.names.into_iter());
-            names
-                .then(|name| map.vertex_id(name.clone()).map_ok(|i| (i, name)))
-                .try_collect()
-                .await?
+            let ids_result = map.vertex_id_batch(&request.names).await?;
+            let mut id_names = Vec::with_capacity(ids_result.len());
+            for (name, id_result) in request.names.into_iter().zip(ids_result) {
+                match id_result {
+                    // If one of the names cannot be resolved to id, just skip it.
+                    Err(crate::Error::VertexNotFound(n)) => {
+                        tracing::trace!(
+                            "RequestNameToLocation -> ResponseIdNamePair: skip unknown name {:?}",
+                            &n
+                        );
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                    Ok(id) => {
+                        if resolvable.contains(id) {
+                            id_names.push((id, name))
+                        }
+                    }
+                }
+            }
+            id_names
         };
 
         let path_names: Vec<(AncestorPath, Vec<VertexName>)> = {
             let x_n_names: Vec<(Id, u64, VertexName)> = id_names
                 .into_iter()
-                .map(|(id, name)| {
-                    let (x, n) = dag
-                        .to_first_ancestor_nth(
-                            id,
-                            FirstAncestorConstraint::KnownUniversally {
-                                heads: heads.clone(),
-                            },
-                        )?
-                        .ok_or_else(|| {
-                            Error::Programming(format!(
-                                "no x~n path found for {:?} ({})",
-                                &name, id
-                            ))
-                        })?;
-                    Ok((x, n, name))
+                .filter_map(|(id, name)| {
+                    match dag.to_first_ancestor_nth(
+                        id,
+                        FirstAncestorConstraint::KnownUniversally {
+                            heads: heads.clone(),
+                        },
+                    ) {
+                        Err(e) => Some(Err(e)),
+                        // Skip ids that cannot be translated.
+                        Ok(None) => None,
+                        Ok(Some((x, n))) => Some(Ok((x, n, name))),
+                    }
                 })
                 .collect::<Result<Vec<_>>>()?;
 
