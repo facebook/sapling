@@ -67,7 +67,7 @@ queries! {
     }
 
     read SelectSizes(repo_id: RepositoryId) -> (Option<u64>, Option<u64>) {
-        "SELECT SUM(idx_size), SUM(data_size)
+        "SELECT CAST(SUM(idx_size) AS UNSIGNED), CAST(SUM(data_size) AS UNSIGNED)
          FROM streaming_changelog_chunks
          WHERE repo_id = {repo_id}"
     }
