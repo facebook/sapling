@@ -416,9 +416,9 @@ impl<IS, M, P, S> DagExportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
-    M: IdConvert + TryClone + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Send + Sync,
+    M: IdConvert + TryClone + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
 {
     async fn export_clone_data(&self) -> Result<CloneData<VertexName>> {
         let head_id: Id = match self.dag.master_group()?.max() {
@@ -1252,14 +1252,14 @@ impl<IS, M, P, S> IdConvert for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
-    M: IdConvert + TryClone + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Send + Sync,
+    M: IdConvert + TryClone + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
 {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         match self.map.vertex_id(name.clone()).await {
             Ok(id) => Ok(id),
-            Err(crate::Error::VertexNotFound(_)) => {
+            Err(crate::Error::VertexNotFound(_)) if self.is_vertex_lazy() => {
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(id);
                 }
@@ -1290,7 +1290,7 @@ where
         match self.map.vertex_id_with_max_group(name, max_group).await {
             Ok(Some(id)) => Ok(Some(id)),
             Err(err) => Err(err),
-            Ok(None) => {
+            Ok(None) if self.is_vertex_lazy() => {
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(Some(id));
                 }
@@ -1309,13 +1309,14 @@ where
                     Err(e) => Err(e),
                 }
             }
+            Ok(None) => Ok(None),
         }
     }
 
     async fn vertex_name(&self, id: Id) -> Result<VertexName> {
         match self.map.vertex_name(id).await {
             Ok(name) => Ok(name),
-            Err(crate::Error::IdNotFound(_)) => {
+            Err(crate::Error::IdNotFound(_)) if self.is_vertex_lazy() => {
                 if let Some(name) = self.overlay_map.read().lookup_vertex_name(id) {
                     return Ok(name);
                 }
@@ -1338,7 +1339,7 @@ where
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         match self.map.contains_vertex_name(name).await {
             Ok(true) => Ok(true),
-            Ok(false) => {
+            Ok(false) if self.is_vertex_lazy() => {
                 if self.overlay_map.read().lookup_vertex_id(name).is_some() {
                     return Ok(true);
                 }
@@ -1357,6 +1358,7 @@ where
                     Err(e) => Err(e),
                 }
             }
+            Ok(false) => Ok(false),
             Err(e) => Err(e),
         }
     }
@@ -1385,39 +1387,43 @@ where
 
     async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<VertexName>>> {
         let mut list = self.map.vertex_name_batch(ids).await?;
-        let missing_indexes: Vec<usize> = {
-            let max_master_id = self.dag.master_group()?.max();
-            list.iter()
-                .enumerate()
-                .filter_map(|(i, r)| match r {
-                    // Only resolve ids that are <= max(master) remotely.
-                    Err(_) if Some(ids[i]) <= max_master_id => Some(i),
-                    Err(_) | Ok(_) => None,
-                })
-                .collect()
-        };
-        let missing_ids: Vec<Id> = missing_indexes.iter().map(|i| ids[*i]).collect();
-        let resolved = self.resolve_ids_remotely(&missing_ids).await?;
-        for (i, name) in missing_indexes.into_iter().zip(resolved.into_iter()) {
-            list[i] = Ok(name);
+        if self.is_vertex_lazy() {
+            let missing_indexes: Vec<usize> = {
+                let max_master_id = self.dag.master_group()?.max();
+                list.iter()
+                    .enumerate()
+                    .filter_map(|(i, r)| match r {
+                        // Only resolve ids that are <= max(master) remotely.
+                        Err(_) if Some(ids[i]) <= max_master_id => Some(i),
+                        Err(_) | Ok(_) => None,
+                    })
+                    .collect()
+            };
+            let missing_ids: Vec<Id> = missing_indexes.iter().map(|i| ids[*i]).collect();
+            let resolved = self.resolve_ids_remotely(&missing_ids).await?;
+            for (i, name) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+                list[i] = Ok(name);
+            }
         }
         Ok(list)
     }
 
     async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
         let mut list = self.map.vertex_id_batch(names).await?;
-        let missing_indexes: Vec<usize> = list
-            .iter()
-            .enumerate()
-            .filter_map(|(i, r)| if r.is_err() { Some(i) } else { None })
-            .collect();
-        if !missing_indexes.is_empty() {
-            let missing_names: Vec<VertexName> =
-                missing_indexes.iter().map(|i| names[*i].clone()).collect();
-            let resolved = self.resolve_vertexes_remotely(&missing_names).await?;
-            for (i, id) in missing_indexes.into_iter().zip(resolved.into_iter()) {
-                if let Some(id) = id {
-                    list[i] = Ok(id);
+        if self.is_vertex_lazy() {
+            let missing_indexes: Vec<usize> = list
+                .iter()
+                .enumerate()
+                .filter_map(|(i, r)| if r.is_err() { Some(i) } else { None })
+                .collect();
+            if !missing_indexes.is_empty() {
+                let missing_names: Vec<VertexName> =
+                    missing_indexes.iter().map(|i| names[*i].clone()).collect();
+                let resolved = self.resolve_vertexes_remotely(&missing_names).await?;
+                for (i, id) in missing_indexes.into_iter().zip(resolved.into_iter()) {
+                    if let Some(id) = id {
+                        list[i] = Ok(id);
+                    }
                 }
             }
         }
