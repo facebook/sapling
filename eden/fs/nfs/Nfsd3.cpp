@@ -1122,7 +1122,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
                           /*obj_attributes*/ statToPostOpAttr(statTry),
                           /*tbytes*/ statfs.f_blocks * statfs.f_bsize,
                           /*fbytes*/ statfs.f_bfree * statfs.f_bsize,
-                          /*abytes*/ statfs.f_bavail * statfs.f_bavail,
+                          /*abytes*/ statfs.f_bavail * statfs.f_bsize,
                           /*tfiles*/ statfs.f_files,
                           /*ffiles*/ statfs.f_ffree,
                           /*afiles*/ statfs.f_ffree,
