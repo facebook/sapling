@@ -165,14 +165,8 @@ where
         self.dag.reload(&dag_lock)?;
 
         // Build.
-        build(
-            &mut self.map,
-            &mut self.dag,
-            parent_names_func,
-            master_names,
-            non_master_names,
-        )
-        .await?;
+        self.build(parent_names_func, master_names, non_master_names)
+            .await?;
 
         // Write to disk.
         self.map.persist(&map_lock)?;
@@ -1312,112 +1306,103 @@ where
     }
 }
 
-/// Export non-master DAG as parent_names_func on HashMap.
-///
-/// This can be expensive. It is expected to be either called infrequently,
-/// or called with a small amount of data. For example, bounded amount of
-/// non-master commits.
-async fn non_master_parent_names<M, S>(
-    map: &M,
-    dag: &IdDag<S>,
-) -> Result<HashMap<VertexName, Vec<VertexName>>>
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    M: IdConvert + Persist,
-    S: IdDagStore + Persist,
+    IS: IdDagStore,
+    IdDag<IS>: TryClone + 'static,
+    M: TryClone + IdMapAssignHead + IdConvert + Sync + Send + 'static,
+    P: TryClone + Sync + Send + 'static,
+    S: TryClone + Sync + Send + 'static,
 {
-    let parent_ids = dag.non_master_parent_ids()?;
-    // PERF: This is suboptimal async iteration. It might be okay if non-master
-    // part is not lazy.
-    //
-    // Map id to name.
-    let mut parent_names_map = HashMap::with_capacity(parent_ids.len());
-    for (id, parent_ids) in parent_ids.into_iter() {
-        let name = map.vertex_name(id).await?;
-        let parent_names = join_all(parent_ids.into_iter().map(|p| map.vertex_name(p)))
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
-        parent_names_map.insert(name, parent_names);
+    /// Export non-master DAG as parent_names_func on HashMap.
+    ///
+    /// This can be expensive. It is expected to be either called infrequently,
+    /// or called with a small amount of data. For example, bounded amount of
+    /// non-master commits.
+    async fn non_master_parent_names(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
+        let parent_ids = self.dag.non_master_parent_ids()?;
+        // PERF: This is suboptimal async iteration. It might be okay if non-master
+        // part is not lazy.
+        //
+        // Map id to name.
+        let mut parent_names_map = HashMap::with_capacity(parent_ids.len());
+        for (id, parent_ids) in parent_ids.into_iter() {
+            let name = self.vertex_name(id).await?;
+            let parent_names = join_all(parent_ids.into_iter().map(|p| self.vertex_name(p)))
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>>>()?;
+            parent_names_map.insert(name, parent_names);
+        }
+        Ok(parent_names_map)
     }
-    Ok(parent_names_map)
-}
 
-/// Re-assign ids and segments for non-master group.
-pub fn rebuild_non_master<'a: 's, 'b: 's, 's, M, S>(
-    map: &'a mut M,
-    dag: &'b mut IdDag<S>,
-) -> BoxFuture<'s, Result<()>>
-where
-    M: IdMapAssignHead + Persist,
-    S: IdDagStore + Persist,
-    M: Send,
-{
-    let fut = async move {
-        // backup part of the named graph in memory.
-        let parents = non_master_parent_names(map, dag).await?;
-        let mut heads = parents
-            .keys()
-            .collect::<HashSet<_>>()
-            .difference(
-                &parents
-                    .values()
-                    .flat_map(|ps| ps.into_iter())
-                    .collect::<HashSet<_>>(),
-            )
-            .map(|&v| v.clone())
-            .collect::<Vec<_>>();
-        heads.sort_unstable();
+    /// Re-assign ids and segments for non-master group.
+    fn rebuild_non_master<'a: 's, 's>(&'a mut self) -> BoxFuture<'s, Result<()>> {
+        let fut = async move {
+            // backup part of the named graph in memory.
+            let parents = self.non_master_parent_names().await?;
+            let mut heads = parents
+                .keys()
+                .collect::<HashSet<_>>()
+                .difference(
+                    &parents
+                        .values()
+                        .flat_map(|ps| ps.into_iter())
+                        .collect::<HashSet<_>>(),
+                )
+                .map(|&v| v.clone())
+                .collect::<Vec<_>>();
+            heads.sort_unstable();
 
-        // Remove existing non-master data.
-        dag.remove_non_master()?;
-        map.remove_non_master()?;
+            // Remove existing non-master data.
+            self.dag.remove_non_master()?;
+            self.map.remove_non_master()?;
 
-        // Rebuild them.
-        build(map, dag, &parents, &[], &heads[..]).await?;
+            // Rebuild them.
+            self.build(&parents, &[], &heads[..]).await?;
+
+            Ok(())
+        };
+        Box::pin(fut)
+    }
+
+    /// Build IdMap and Segments for the given heads.
+    async fn build(
+        &mut self,
+        parent_names_func: &dyn Parents,
+        master_heads: &[VertexName],
+        non_master_heads: &[VertexName],
+    ) -> Result<()> {
+        // Update IdMap.
+        let mut outcome = PreparedFlatSegments::default();
+        for (nodes, group) in [
+            (master_heads, Group::MASTER),
+            (non_master_heads, Group::NON_MASTER),
+        ]
+        .iter()
+        {
+            for node in nodes.iter() {
+                // Important: do not call self.map.assign_head. It does not trigger
+                // remote protocol properly.
+                outcome.merge(
+                    self.assign_head(node.clone(), parent_names_func, *group)
+                        .await?,
+                );
+            }
+        }
+
+        // Update segments.
+        self.dag
+            .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
+
+        // Rebuild non-master ids and segments.
+        if self.need_rebuild_non_master() {
+            self.rebuild_non_master().await?;
+        }
 
         Ok(())
-    };
-    Box::pin(fut)
-}
-
-/// Build IdMap and Segments for the given heads.
-pub async fn build<IS, M>(
-    map: &mut M,
-    dag: &mut IdDag<IS>,
-    parent_names_func: &dyn Parents,
-    master_heads: &[VertexName],
-    non_master_heads: &[VertexName],
-) -> Result<()>
-where
-    IS: IdDagStore + Persist,
-    M: IdMapAssignHead + Persist,
-    M: Send,
-{
-    // Update IdMap.
-    let mut outcome = PreparedFlatSegments::default();
-    for (nodes, group) in [
-        (master_heads, Group::MASTER),
-        (non_master_heads, Group::NON_MASTER),
-    ]
-    .iter()
-    {
-        for node in nodes.iter() {
-            outcome.merge(
-                map.assign_head(node.clone(), parent_names_func, *group)
-                    .await?,
-            );
-        }
     }
-
-    // Update segments.
-    dag.build_segments_volatile_from_prepared_flat_segments(&outcome)?;
-
-    // Rebuild non-master ids and segments.
-    if map.need_rebuild_non_master() {
-        rebuild_non_master(map, dag).await?;
-    }
-
-    Ok(())
 }
 
 fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
