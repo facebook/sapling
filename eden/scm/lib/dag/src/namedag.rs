@@ -26,7 +26,6 @@ use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
-use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
@@ -52,6 +51,7 @@ use crate::VerLink;
 use dag_types::FlatSegment;
 use futures::future::join_all;
 use futures::future::BoxFuture;
+use futures::StreamExt;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -749,9 +749,13 @@ where
         } else {
             let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
             let mut spans = IdSet::empty();
-            for name in set.iter()? {
-                let id = self.map().vertex_id(name?).await?;
-                spans.push(id);
+            let mut iter = set.iter().await?.chunks(1 << 17);
+            while let Some(names) = iter.next().await {
+                let names = names.into_iter().collect::<Result<Vec<_>>>()?;
+                let ids = self.vertex_id_batch(&names).await?;
+                for id in ids {
+                    spans.push(id?);
+                }
             }
             let result = NameSet::from_spans_dag(spans, self)?;
             result.hints().add_flags(flags);

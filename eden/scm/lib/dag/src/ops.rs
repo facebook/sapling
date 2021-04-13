@@ -18,10 +18,11 @@ use crate::namedag::MemNameDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
-use crate::nameset::SyncNameSetQuery;
 use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use std::sync::Arc;
 
 /// DAG related read-only algorithms.
@@ -268,9 +269,13 @@ pub trait DagPersistent {
     ) -> Result<()> {
         let heads = dag.heads(dag.all().await?).await?;
         let non_master_heads = heads - master_heads.clone();
-        let master_heads: Vec<VertexName> = master_heads.iter()?.collect::<Result<Vec<_>>>()?;
-        let non_master_heads: Vec<VertexName> =
-            non_master_heads.iter()?.collect::<Result<Vec<_>>>()?;
+        let master_heads: Vec<VertexName> =
+            master_heads.iter().await?.try_collect::<Vec<_>>().await?;
+        let non_master_heads: Vec<VertexName> = non_master_heads
+            .iter()
+            .await?
+            .try_collect::<Vec<_>>()
+            .await?;
         self.add_heads_and_flush(&dag.dag_snapshot()?, &master_heads, &non_master_heads)
             .await
     }
@@ -481,10 +486,13 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // Slow path: iterate through the set and convert it to a non-lazy
         // IdSet. Does not bypass hash lookups.
         let mut spans = IdSet::empty();
-        for name in set.iter()? {
-            let name = name?;
-            let id = self.vertex_id(name).await?;
-            spans.push(id);
+        let mut iter = set.iter().await?.chunks(1 << 17);
+        while let Some(names) = iter.next().await {
+            let names = names.into_iter().collect::<Result<Vec<_>>>()?;
+            let ids = self.vertex_id_batch(&names).await?;
+            for id in ids {
+                spans.push(id?);
+            }
         }
         Ok(spans)
     }
