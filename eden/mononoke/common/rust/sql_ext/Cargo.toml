@@ -16,8 +16,11 @@ once_cell = "1.4"
 slog = { version = "2.5", features = ["max_level_debug"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_common = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+timeseries = { version = "0.1.0", path = "../../timeseries" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tunables = { version = "0.1.0", path = "../../../tunables" }
 
 [dev-dependencies]
 assert_matches = "1.5"
