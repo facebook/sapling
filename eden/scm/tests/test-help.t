@@ -1046,6 +1046,8 @@ Test list of internal help commands
    debugpyscmstore
                  test file fetching using new storage API
    debugpython   run python interpreter
+   debugracyoutput
+                 exercise racy stdout / stderr / progress outputs
    debugreadauthforuri
                  (no help text available)
    debugrebuildchangelog

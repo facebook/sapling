@@ -152,6 +152,7 @@ Show debug commands if there are no other candidates
   debugpvec
   debugpyscmstore
   debugpython
+  debugracyoutput
   debugreadauthforuri
   debugrebuildchangelog
   debugrebuilddirstate
@@ -446,6 +447,7 @@ Show all commands + options
   debugpvec: 
   debugpyscmstore: 
   debugpython: 
+  debugracyoutput: time-series, progress-bars, progress-total, progress-interval-ms, output-total, output-interval-ms
   debugreadauthforuri: user
   debugrebuildchangelog: 
   debugrebuilddirstate: rev, minimal

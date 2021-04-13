@@ -22,6 +22,7 @@ commands! {
     mod http;
     mod scmstore;
     mod python;
+    mod racyoutput;
     mod segmentclone;
     mod store;
 }
