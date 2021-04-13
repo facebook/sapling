@@ -106,7 +106,11 @@ class changelog(object):
         return cls._openhybrid(repo, userevlog=False)
 
     @classmethod
-    def _openhybrid(cls, repo, userevlog):
+    def openlazy(cls, repo):
+        return cls._openhybrid(repo, userevlog=False, lazyhash=True)
+
+    @classmethod
+    def _openhybrid(cls, repo, userevlog, lazyhash=False):
         svfs = repo.svfs
         uiconfig = repo.ui.uiconfig()
         if userevlog:
@@ -115,8 +119,16 @@ class changelog(object):
             revlogdir = None
         segmentsdir = svfs.join(SEGMENTS_DIR)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
+        # special file for testing lazy hash backend
+        lazyhashdir = svfs.tryread("lazyhashdir") or None
         inner = bindings.dag.commits.openhybrid(
-            revlogdir, segmentsdir, hgcommitsdir, repo.edenapi, repo.name
+            revlogdir,
+            segmentsdir,
+            hgcommitsdir,
+            repo.edenapi,
+            repo.name,
+            lazyhash=lazyhash,
+            lazyhashdir=lazyhashdir,
         )
         return cls(repo, inner, uiconfig)
 
@@ -642,8 +654,13 @@ class nodemap(object):
 def migrateto(repo, name):
     if "hgsql" in repo.requirements:
         raise error.Abort(_("cannot migrate hgsql repo"))
-    if "lazytextchangelog" in repo.storerequirements and name != "lazytext":
+    if "lazytextchangelog" in repo.storerequirements and name not in {
+        "lazytext",
+        "lazy",
+    }:
         raise error.Abort(_("cannot migrate away from lazytext backend"))
+    if "lazychangelog" in repo.storerequirements and name != "lazy":
+        raise error.Abort(_("cannot migrate away from lazy backend"))
     if name == "revlog":
         migratetorevlog(repo)
     elif name == "rustrevlog":
@@ -656,6 +673,8 @@ def migrateto(repo, name):
         migratetohybird(repo)
     elif name == "lazytext":
         migratetolazytext(repo)
+    elif name == "lazytext":
+        migratetolazy(repo)
     elif name == "fullsegments":
         migratetosegments(repo)
     else:
@@ -703,6 +722,34 @@ def migratetolazytext(repo):
     with repo.lock():
         _removechangelogrequirements(repo)
         repo.storerequirements.add("lazytextchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+
+
+def migratetolazy(repo):
+    """Migrate to "lazy" backend.
+
+    The migration can only be done from hybrid or doublewrite, or lazytext.
+    """
+    if not any(
+        s in repo.storerequirements
+        for s in (
+            "lazytextchangelog",
+            "hybridchangelog",
+            "doublewritechangelog",
+            "lazytext",
+        )
+    ):
+        raise error.Abort(
+            _(
+                "lazy backend can only be migrated from hybrid or doublewrite, or lazytext"
+            )
+        )
+
+    # Migration from doublewrite or hybrid backends is a no-op.
+    with repo.lock():
+        _removechangelogrequirements(repo)
+        repo.storerequirements.add("lazychangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
 
@@ -818,6 +865,7 @@ def _removechangelogrequirements(repo):
     repo.storerequirements.discard("gitchangelog")
     repo.storerequirements.discard("hybridchangelog")
     repo.storerequirements.discard("lazytextchangelog")
+    repo.storerequirements.discard("lazychangelog")
     repo.storerequirements.discard("pythonrevlogchangelog")
     repo.storerequirements.discard("rustrevlogchangelog")
     repo.storerequirements.discard("segmentedchangelog")

@@ -355,6 +355,8 @@ class localrepository(object):
         "gitchangelog",
         # lazy commit message (full idmap, partial hgcommits) + edenapi
         "lazytextchangelog",
+        # lazy commit message (sparse idmap, partial hgcommits) + edenapi
+        "lazychangelog",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -3095,6 +3097,9 @@ def _openchangelog(repo):
     if "lazytextchangelog" in repo.storerequirements:
         repo.ui.log("changelog_info", changelog_backend="lazytext")
         return changelog2.changelog.openlazytext(repo)
+    if "lazychangelog" in repo.storerequirements:
+        repo.ui.log("changelog_info", changelog_backend="lazy")
+        return changelog2.changelog.openlazy(repo)
     if "hybridchangelog" in repo.storerequirements:
         repo.ui.log("changelog_info", changelog_backend="hybrid")
         return changelog2.changelog.openhybrid(repo)

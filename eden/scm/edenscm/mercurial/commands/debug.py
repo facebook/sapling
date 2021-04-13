@@ -499,10 +499,15 @@ def debugchangelog(ui, repo, migrate=None):
       - Commit text is lazy.
       - Revlog is not used.
       - Can only be migrated from doublewrite or hybrid backends.
-      - Cannot migrate away to other backends.
+      - Cannot only migrate to lazy backend.
 
-    In the future there might be lazy backends that use network for commit hashes
-    or text. Right now, none of the above is lazy.
+    - lazy
+
+      - Segments backend for everything. IdMap is not lazy.
+      - Commit text is lazy.
+      - Revlog is not used.
+      - Can only be migrated from doublewrite or hybrid, or lazytext backends.
+      - Cannot migrate away to any other backends.
 
     Migration does not delete old data for easier rolling back.
     """
