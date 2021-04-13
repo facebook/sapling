@@ -48,7 +48,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
     let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
     let clone_data = edenapi_client
-        .full_idmap_clone_data_blocking(reponame.clone(), None)
+        .clone_data_blocking(reponame.clone(), None)
         .context("error cloning segmented changelog")?;
 
     let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));
@@ -97,7 +97,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
 
     fs::write(
         destination.join(".hg/store/requires"),
-        b"lazytextchangelog\n\
+        b"lazychangelog\n\
           narrowheads\n\
           visibleheads\n",
     )
