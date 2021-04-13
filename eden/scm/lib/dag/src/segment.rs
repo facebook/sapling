@@ -8,11 +8,6 @@
 //! # segment
 //!
 //! Segmented DAG. See [`IdDag`] for the main structure.
-//!
-//! There are 2 flavors of DAG: [`IdDag`] and [`SyncableIdDag`]. [`IdDag`] loads
-//! from the filesystem, is responsible for all kinds of queires, and can
-//! have in-memory-only changes. [`SyncableIdDag`] is the only way to update
-//! the filesystem state, and does not support queires.
 
 use crate::errors::bug;
 use crate::id::Id;

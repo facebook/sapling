@@ -11,7 +11,6 @@ use crate::id::{Group, Id};
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::iddagstore::IndexedLogStore;
 use crate::iddagstore::{IdDagStore, InProcessStore};
-use crate::locked::Locked;
 use crate::ops::Persist;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::TryClone;
@@ -57,9 +56,6 @@ pub struct IdDag<Store> {
     #[serde(skip, default = "VerLink::new")]
     version: VerLink,
 }
-
-/// Guard to make sure [`IdDag`] on-disk writes are race-free.
-pub type SyncableIdDag<'a, Store> = Locked<'a, IdDag<Store>>;
 
 /// See benches/segment_sizes.rs (D16660078) for this choice.
 const DEFAULT_SEG_SIZE: usize = 16;
@@ -222,9 +218,6 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// `get_parents` describes the DAG. Its input and output are `Id`s.
     ///
     /// This is often used together with [`crate::idmap::IdMap`].
-    ///
-    /// Note: [`IdDag::prepare_filesystem_sync`] drops pending changes.
-    /// Call this on a [`SyncableIdDag`] struct for it to hit disk.
     pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
@@ -1445,7 +1438,7 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: IdSet },
 }
 
-impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
+impl<Store: IdDagStore> IdDag<Store> {
     /// Export non-master DAG as parent_id_func on HashMap.
     ///
     /// This can be expensive if there are a lot of non-master ids.
