@@ -625,6 +625,10 @@ void PrivHelperServer::nfsMount(
   }
   XdrTrait<nfs_mattr_mntflags>::serialize(attrSer, mountFlags);
 
+  mattrFlags |= NFS_MATTR_MNTFROM;
+  nfs_mattr_mntfrom serverName = "edenfs:";
+  XdrTrait<nfs_mattr_mntfrom>::serialize(attrSer, serverName);
+
   auto mountBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
   folly::io::QueueAppender ser(&mountBuf, 1024);
 
