@@ -99,7 +99,8 @@ async fn rebuild_metadata<B: Blobstore>(
     // the size, nor the ContentId.
     let total_size = file_contents.size();
     let content_stream =
-        fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all());
+        fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all())
+            .map_err(|e| InternalError(content_id, e))?;
 
     let redeemable = alias_stream(ExpectedSize::new(total_size), content_stream)
         .await

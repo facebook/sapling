@@ -178,7 +178,7 @@ async fn do_rechunk_file_contents<B: Blobstore + Clone + 'static>(
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-    let file_stream = fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all());
+    let file_stream = fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all())?;
 
     store(blobstore, filestore_config, ctx, &req, file_stream).await
 }

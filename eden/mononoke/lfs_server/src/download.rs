@@ -67,7 +67,8 @@ fn parse_range(header: &str) -> Result<Range, Error> {
         caps[2]
             .parse()
             .with_context(|| format!("Invalid range end: {}", &caps[2]))?,
-    )?;
+    )?
+    .strict();
 
     Ok(range)
 }
@@ -233,7 +234,9 @@ mod test {
     fn test_parse_range() -> Result<(), Error> {
         // NOTE: This range is inclusive, so here we want bytes 1, 2, 3, 5 (a 5-byte range starting
         // at byte 1).
-        assert_eq!(parse_range("bytes=1-5")?, Range::sized(1, 5));
+        assert_eq!(parse_range("bytes=1-5")?, Range::sized(1, 5).strict());
+        assert!(parse_range("1-5").is_err());
+        assert!(parse_range("foo=1-5").is_err());
         Ok(())
     }
 }

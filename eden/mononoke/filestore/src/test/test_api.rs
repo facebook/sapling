@@ -599,6 +599,57 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn filestore_get_invalid_range(fb: FacebookInit) -> Result<()> {
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+
+    let blob = memblob::Memblob::default();
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
+
+    filestore::store(
+        blob,
+        DEFAULT_CONFIG,
+        ctx,
+        req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await?;
+
+    let res = filestore::fetch_range_with_size(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        filestore::Range::sized(0, 40),
+    )
+    .await;
+
+    assert!(res.is_ok());
+
+    let res = filestore::fetch_range_with_size(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        filestore::Range::sized(0, HELLO_WORLD.len() as u64).strict(),
+    )
+    .await;
+
+    assert!(res.is_ok());
+
+    let res = filestore::fetch_range_with_size(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+        filestore::Range::sized(0, 40).strict(),
+    )
+    .await;
+
+    assert!(res.is_err());
+
+    Ok(())
+}
+
+#[fbinit::test]
 async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     let small = FilestoreConfig {
         chunk_size: Some(3),

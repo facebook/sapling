@@ -64,8 +64,8 @@
 
 # Download with a range
 
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s --range 0-10 -o chunk0
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s --range 11-2048 -o chunk1
+  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 0-10 -o chunk0
+  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 11-2047 -o chunk1
 
   $ wc -c chunk0
   11 chunk0
@@ -74,9 +74,8 @@
   $ cat chunk0 chunk1 | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s --range 2049-2050 -o chunk2
-  $ wc -c chunk2
-  0 chunk2
+  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 2048-2049 -o chunk2
+  [22]
 
   $ cat > request <<EOF
   > {

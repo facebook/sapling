@@ -35,18 +35,34 @@ pub enum ErrorKind {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Range(RangeInner);
+pub struct Range {
+    inner: RangeInner,
+    strict: bool,
+}
 
 impl Range {
     pub fn all() -> Self {
-        Self(RangeInner::All)
+        Self {
+            inner: RangeInner::All,
+            strict: false,
+        }
     }
 
     pub fn sized(start: u64, size: u64) -> Self {
-        Self(RangeInner::Span {
-            start,
-            end: start.saturating_add(size),
-        })
+        Self {
+            inner: RangeInner::Span {
+                start,
+                end: start.saturating_add(size),
+            },
+            strict: false,
+        }
+    }
+
+    pub fn strict(self) -> Self {
+        Self {
+            strict: true,
+            ..self
+        }
     }
 
     pub fn range_inclusive(start: u64, end: u64) -> Result<Self, Error> {
@@ -56,7 +72,10 @@ impl Range {
 
         let end = end + 1;
 
-        Ok(Self(RangeInner::Span { start, end }))
+        Ok(Self {
+            inner: RangeInner::Span { start, end },
+            strict: false,
+        })
     }
 }
 
@@ -78,6 +97,13 @@ impl RangeInner {
             }
         }
     }
+
+    fn exceeds_file_size(&self, file_size: u64) -> bool {
+        match self {
+            RangeInner::All => true,
+            RangeInner::Span { start: _, end } => *end > file_size,
+        }
+    }
 }
 
 pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
@@ -85,10 +111,17 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     file_contents: FileContents,
     range: Range,
-) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
-    let range = range.0;
+) -> Result<impl Stream<Item = Result<Bytes, Error>> + 'a, Error> {
+    let Range {
+        inner: range,
+        strict,
+    } = range;
 
-    match file_contents {
+    if strict && range.exceeds_file_size(file_contents.size()) {
+        return Err(Error::msg("Range exceeds file size"));
+    }
+
+    let stream = match file_contents {
         FileContents::Bytes(bytes) => {
             // File is just a single chunk of bytes. Return the correct
             // slice, based on the requested range.
@@ -203,7 +236,9 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
             .buffered(buffer_size)
             .right_stream()
         }
-    }
+    };
+
+    Ok(stream)
 }
 
 pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
@@ -222,13 +257,14 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
         LoadableError::Missing(_) => Ok(None),
     })?;
 
-    Ok(maybe_file_contents.map(|file_contents| {
-        let file_size = file_contents.size();
-        (
-            stream_file_bytes(blobstore, ctx, file_contents, range),
-            range.0.real_size(file_size),
-        )
-    }))
+    let file_contents = match maybe_file_contents {
+        Some(file_contents) => file_contents,
+        None => return Ok(None),
+    };
+
+    let file_size = file_contents.size();
+    let stream = stream_file_bytes(blobstore, ctx, file_contents, range)?;
+    Ok(Some((stream, range.inner.real_size(file_size))))
 }
 
 #[cfg(test)]
