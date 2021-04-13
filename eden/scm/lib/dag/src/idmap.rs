@@ -112,6 +112,8 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
+                    //
+                    // PERF: This might trigger remote fetch too frequently.
                     match self.vertex_id_with_max_group(&head, group).await? {
                         None => {
                             let parents = parents_by_name.parent_names(head.clone()).await?;
@@ -122,7 +124,8 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             for p in parents.into_iter().rev() {
                                 match self.vertex_id_with_max_group(&p, group).await {
                                     Ok(Some(id)) => todo_stack.push(Todo::AssignedId(id)),
-                                    _ => todo_stack.push(Todo::Visit(p)),
+                                    Ok(None) => todo_stack.push(Todo::Visit(p)),
+                                    Err(e) => return Err(e),
                                 }
                             }
                         }

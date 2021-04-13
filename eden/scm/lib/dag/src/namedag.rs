@@ -21,6 +21,7 @@ use crate::iddag::IdDagAlgorithm;
 use crate::iddagstore::IdDagStore;
 use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
+use crate::idmap::IdMapWrite;
 use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
@@ -280,8 +281,8 @@ where
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = PreparedFlatSegments::default();
         for head in heads.iter() {
-            if !self.map.contains_vertex_name(head).await? {
-                outcome.merge(self.map.assign_head(head.clone(), parents, group).await?);
+            if !self.contains_vertex_name(head).await? {
+                outcome.merge(self.assign_head(head.clone(), parents, group).await?);
                 self.pending_heads.push(head.clone());
             }
         }
@@ -291,6 +292,31 @@ where
             .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
 
         Ok(())
+    }
+}
+
+impl<IS, M, P, S> IdMapWrite for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
+{
+    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
+        self.map.insert(id, name)
+    }
+
+    fn next_free_id(&self, group: Group) -> Result<Id> {
+        self.map.next_free_id(group)
+    }
+
+    fn remove_non_master(&mut self) -> Result<()> {
+        self.map.remove_non_master()
+    }
+
+    fn need_rebuild_non_master(&self) -> bool {
+        self.map.need_rebuild_non_master()
     }
 }
 
@@ -735,11 +761,11 @@ where
 
     /// Get ordered parent vertexes.
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
-        let id = self.map().vertex_id(name).await?;
+        let id = self.vertex_id(name).await?;
         let parent_ids = self.dag().parent_ids(id)?;
         let mut result = Vec::with_capacity(parent_ids.len());
         for id in parent_ids {
-            result.push(self.map().vertex_name(id).await?);
+            result.push(self.vertex_name(id).await?);
         }
         Ok(result)
     }
@@ -817,11 +843,11 @@ where
     async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
         #[cfg(test)]
         let name2 = name.clone();
-        let id = self.map().vertex_id(name).await?;
+        let id = self.vertex_id(name).await?;
         let id = self.dag().try_first_ancestor_nth(id, n)?;
         let result = match id {
             None => None,
-            Some(id) => Some(self.map().vertex_name(id).await?),
+            Some(id) => Some(self.vertex_name(id).await?),
         };
         #[cfg(test)]
         {
@@ -876,7 +902,7 @@ where
     async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
         let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
             None => None,
-            Some(id) => Some(self.map().vertex_name(id).await?),
+            Some(id) => Some(self.vertex_name(id).await?),
         };
         #[cfg(test)]
         {
@@ -914,8 +940,8 @@ where
         #[cfg(test)]
         let result2 =
             crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone()).await?;
-        let ancestor_id = self.map().vertex_id(ancestor).await?;
-        let descendant_id = self.map().vertex_id(descendant).await?;
+        let ancestor_id = self.vertex_id(ancestor).await?;
+        let descendant_id = self.vertex_id(descendant).await?;
         let result = self.dag().is_ancestor(ancestor_id, descendant_id)?;
         #[cfg(test)]
         {
