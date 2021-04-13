@@ -19,9 +19,6 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 
-// TODO(T80017182) enable these tests in TSAN mode.
-#if !FOLLY_SANITIZE_THREAD
-
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
@@ -125,5 +122,3 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
     }
   }
 }
-
-#endif

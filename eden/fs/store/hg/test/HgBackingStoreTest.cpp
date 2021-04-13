@@ -29,9 +29,6 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
-// TODO(T80017182) enable these tests in TSAN mode.
-#if !FOLLY_SANITIZE_THREAD
-
 namespace {
 const auto kTestTimeout = 10s;
 }
@@ -176,5 +173,3 @@ TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
       .get(kTestTimeout);
   EXPECT_TRUE(metadataImporter->getTreeMetadataCalled);
 }
-
-#endif
