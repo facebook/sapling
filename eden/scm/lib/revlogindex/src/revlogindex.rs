@@ -1049,6 +1049,18 @@ impl DagAlgorithm for RevlogIndex {
         Ok(result)
     }
 
+    /// Vertexes buffered, not persisted.
+    async fn dirty(&self) -> dag::Result<Set> {
+        let low = Id(self.data_len() as _);
+        let next = Id(self.len() as _);
+        let mut id_set = IdSet::empty();
+        if next > low {
+            id_set.push(low..=(next - 1));
+        }
+        let set = Set::from_spans_dag(id_set, self)?;
+        Ok(set)
+    }
+
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: Set) -> dag::Result<Set> {
         if set.hints().contains(Flags::ANCESTORS) {

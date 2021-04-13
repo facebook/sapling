@@ -75,6 +75,7 @@ static ASCII_DAG5: &str = r#"
 fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     let dag = from_ascii(dag, ASCII_DAG1);
     assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K L");
+    assert_eq!(expand(r(dag.dirty())?), "A B C D E F G H I J K L");
     assert_eq!(
         expand(r(dag.ancestors(nameset("H I")))?),
         "A B C D E F G H I"

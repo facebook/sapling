@@ -44,6 +44,11 @@ impl DagAlgorithm for DummyDag {
         crate::errors::programming("DummyDag does not support all()")
     }
 
+    /// Vertexes buffered in memory, not yet written to disk.
+    async fn dirty(&self) -> Result<NameSet> {
+        Ok(NameSet::empty())
+    }
+
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         Ok(set)

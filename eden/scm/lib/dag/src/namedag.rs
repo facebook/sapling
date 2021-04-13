@@ -170,6 +170,7 @@ where
         dag.sync()?;
         locked.sync()?;
 
+        debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
     }
 
@@ -990,6 +991,13 @@ where
         let spans = self.dag().descendants(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
+    }
+
+    /// Vertexes buffered in memory, not yet written to disk.
+    async fn dirty(&self) -> Result<NameSet> {
+        let spans = self.dag().dirty()?;
+        let set = NameSet::from_spans_dag(spans, self)?;
+        Ok(set)
     }
 
     /// Get a snapshot of the current graph.

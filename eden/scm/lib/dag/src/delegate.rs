@@ -264,6 +264,13 @@ macro_rules! delegate {
             {
                 self.$($t)*.reachable_roots(roots, heads)
             }
+            fn dirty<'a: 's, 's>(&'a self)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.dirty()
+            }
             fn dag_snapshot(&self)
                 -> $crate::Result<std::sync::Arc<dyn $crate::DagAlgorithm + Send + Sync>>
             {

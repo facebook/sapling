@@ -173,6 +173,9 @@ pub trait DagAlgorithm: Send + Sync {
         default_impl::reachable_roots(self, roots, heads).await
     }
 
+    /// Vertexes buffered in memory, not yet written to disk.
+    async fn dirty(&self) -> Result<NameSet>;
+
     /// Get a snapshot of the current graph that can operate separately.
     ///
     /// This makes it easier to fight with borrowck.
