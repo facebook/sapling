@@ -14,7 +14,7 @@ use changeset_fetcher::ChangesetFetcher;
 use changesets::ChangesetEntry;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{future::try_join, stream, StreamExt, TryStreamExt};
@@ -114,7 +114,11 @@ pub async fn subcommand_skiplist<'a>(
                 .map_err(Error::from)?;
 
             args::init_cachelib(fb, &matches);
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let mut ctx = CoreContext::new_with_logger(fb, logger.clone());
+            // Set background session class so that skiplist building
+            // completes fully.
+            ctx.session_mut()
+                .override_session_class(SessionClass::Background);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             build_skiplist_index(&ctx, &repo, key, &logger, rebuild, skiplist_ty, exponent)
                 .await
