@@ -136,86 +136,6 @@ def _limitsample(sample, desiredlen):
     return sample
 
 
-def fastdiscovery(ui, local, remote):
-    # The normal findcommonheads implementation tries to find the exact boundary
-    # between what the client has and what the server has. But normally we
-    # have pretty good knowledge about what local commits already exist on the
-    # server, so we can short circuit all the discovery logic by just assuming
-    # the current public heads are representative of what's on the server. In the
-    # worst case the data might be slightly out of sync and the server sends us
-    # more data than necessary, but this should be rare.
-    cl = local.changelog
-
-    publicheads = []
-    # That should be equivalent to "heads(public())" but much faster
-    revs = list(local.revs("head() & public() + parents(roots(draft()))"))
-
-    for r in revs:
-        publicheads.append(local[r].node())
-
-    bookmarks = ui.configlist("discovery", "knownserverbookmarks")
-    knownbookmarksvalues = []
-    for book in bookmarks:
-        if book in local:
-            knownbookmarksvalues.append(local[book].node())
-
-    # If we have no remotenames, fallback to normal discovery.
-    if not publicheads:
-        return None
-
-    publicheads = set(publicheads)
-
-    # Check which remote nodes still exist on the server
-    ui.status_err(_("searching for changes\n"))
-    batch = remote.iterbatch()
-    batch.heads()
-    batch.known(knownbookmarksvalues)
-    batch.known(publicheads)
-    batch.submit()
-    srvheadhashes, yesnoknownbookmarks, yesnopublicheads = batch.results()
-
-    if knownbookmarksvalues and not any(yesnoknownbookmarks):
-        ui.status_err(_("No known server bookmarks\n"))
-        # Server doesn't known any remote bookmark. That's odd and it's better
-        # to fallback to normal discovery process. Otherwise we might request
-        # too many commits from the server
-        return None
-
-    common = list(n for i, n in enumerate(publicheads) if yesnopublicheads[i])
-    common.extend(
-        (n for i, n in enumerate(knownbookmarksvalues) if yesnoknownbookmarks[i])
-    )
-
-    # If we don't know of any server commits, fall back to legacy discovery
-    if not common:
-        # If this path is hit, it will print "searching for changes" twice,
-        # which is weird. This should be very rare though, since it only happens
-        # if the client has remote names, but none of those names exist on the
-        # server (i.e. the server has been completely replaced, or stripped).
-        ui.status_err(
-            _(
-                "server has changed since last pull - falling back to the "
-                "default search strategy\n"
-            )
-        )
-        return None
-
-    ui.debug("using fastdiscovery\n")
-    if cl.tip() == nullid:
-        if srvheadhashes != [nullid]:
-            return [nullid], True, srvheadhashes
-        return ([nullid], False, [])
-
-    # early exit if we know all the specified remote heads already
-    clcontains = cl.nodemap.__contains__
-    srvheads = list(n for n in srvheadhashes if clcontains(n))
-    if len(srvheads) == len(srvheadhashes):
-        ui.debug("all remote heads known locally\n")
-        return (srvheadhashes, False, srvheadhashes)
-
-    return (common, True, srvheadhashes)
-
-
 def findcommonheads(
     ui,
     local,
@@ -225,7 +145,6 @@ def findcommonheads(
     abortwhenunrelated=True,
     ancestorsof=None,
     explicitremoteheads=None,
-    needlargestcommonset=True,
 ):
     """Return a tuple (commonheads, anyincoming, remoteheads) used to
     identify missing nodes from or in remote.
@@ -246,8 +165,6 @@ def findcommonheads(
       '::ancestorsof'.
     - explicitremoteheads: if not None, a list of nodes that are known existed
       on the remote server.
-    - needlargestcommonset: do not try heuristic algorithm that can categorize
-      some 'common' commits as 'missing'.
 
     Return values:
     - 'anyincoming' is a boolean. Its usefulness is questionable.
@@ -257,38 +174,16 @@ def findcommonheads(
       remote repo. 'remoteheads' might include commit hashes unknown to the
       local repo.
     """
-
-    # fastdiscovery might returns *some* common set, but it might not be
-    # necessary the largest common set. In some cases (e.g. during `hg push`)
-    # we actually want largest common set
-    if ui.configbool("discovery", "fastdiscovery") and not needlargestcommonset:
-        res = fastdiscovery(ui, local, remote)
-        if res is not None:
-            return res
-
-    # The Rust changelog is incompatible with the old discovery logic
-    # that uses revlog details. Enforce the new discovery logic.
-    if ui.configbool("experimental", "findcommonheadsnew") or local.changelog.userust():
-        return _findcommonheadsnew(
-            ui,
-            local,
-            remote,
-            initialsamplesize,
-            fullsamplesize,
-            abortwhenunrelated,
-            ancestorsof,
-            explicitremoteheads,
-        )
-    else:
-        return _findcommonheadsold(
-            ui,
-            local,
-            remote,
-            initialsamplesize,
-            fullsamplesize,
-            abortwhenunrelated,
-            ancestorsof,
-        )
+    return _findcommonheadsnew(
+        ui,
+        local,
+        remote,
+        initialsamplesize,
+        fullsamplesize,
+        abortwhenunrelated,
+        ancestorsof,
+        explicitremoteheads,
+    )
 
 
 def _findcommonheadsnew(

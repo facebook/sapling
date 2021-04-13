@@ -18,9 +18,7 @@ from . import bookmarks, branchmap, phases, pycompat, setdiscovery, util
 from .node import hex, nullid
 
 
-def findcommonincoming(
-    repo, remote, heads=None, force=False, ancestorsof=None, needlargestcommonset=True
-):
+def findcommonincoming(repo, remote, heads=None, force=False, ancestorsof=None):
     """Return a tuple (common, anyincoming, heads) used to identify the common
     subset of nodes between repo and remote.
 
@@ -34,9 +32,6 @@ def findcommonincoming(
     "ancestorsof" if not None, restrict the discovery to a subset defined by
       these nodes. Changeset outside of this set won't be considered (and
       won't appears in "common")
-    "needlargestcommonset" if set to True then it will return the largest set of common nodes.
-    Otherwise heuristics can be used to speed up discovery but return a smaller
-    common set.
 
     If you pass heads and they are all known locally, the response lists just
     these heads in "common" and in "heads".
@@ -62,7 +57,6 @@ def findcommonincoming(
         abortwhenunrelated=not force,
         ancestorsof=ancestorsof,
         explicitremoteheads=heads,
-        needlargestcommonset=needlargestcommonset,
     )
     common, anyinc, srvheads = res
     unfi = repo
@@ -151,9 +145,7 @@ def findcommonoutgoing(
 
     # get common set if not provided
     if commoninc is None:
-        commoninc = findcommonincoming(
-            repo, other, force=force, ancestorsof=onlyheads, needlargestcommonset=True
-        )
+        commoninc = findcommonincoming(repo, other, force=force, ancestorsof=onlyheads)
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing

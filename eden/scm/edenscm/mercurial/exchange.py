@@ -1498,7 +1498,6 @@ def _pulldiscoverychangegroup(pullop):
         pullop.remote,
         heads=pullop.heads,
         force=pullop.force,
-        needlargestcommonset=False,
     )
     common, fetch, rheads = tmp
     nm = pullop.repo.changelog.nodemap
