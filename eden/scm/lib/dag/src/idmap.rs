@@ -10,8 +10,6 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{Group, Id, VertexName};
-#[cfg(any(test, feature = "indexedlog-backend"))]
-use crate::locked::Locked;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
@@ -25,10 +23,6 @@ mod mem_idmap;
 pub use indexedlog_idmap::IdMap;
 pub(crate) use mem_idmap::CoreMemIdMap;
 pub use mem_idmap::MemIdMap;
-
-/// Guard to make sure [`IdMap`] on-disk writes are race-free.
-#[cfg(any(test, feature = "indexedlog-backend"))]
-pub type SyncableIdMap<'a> = Locked<'a, IdMap>;
 
 /// DAG-aware write operations.
 #[async_trait::async_trait]

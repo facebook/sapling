@@ -21,7 +21,6 @@ use crate::iddagstore::IdDagStore;
 use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapWrite;
-use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
@@ -159,13 +158,14 @@ where
         // Also see comments in `NameDagState::lock()`.
         self.invalidate_missing_vertex_cache();
         let locked = self.state.prepare_filesystem_sync()?;
+        let map_lock = self.map.lock()?;
         let dag_lock = self.dag.lock()?;
-        let mut map = self.map.prepare_filesystem_sync()?;
+        self.map.reload(&map_lock)?;
         self.dag.reload(&dag_lock)?;
 
         // Build.
         build(
-            &mut map,
+            &mut self.map,
             &mut self.dag,
             parent_names_func,
             master_names,
@@ -174,9 +174,10 @@ where
         .await?;
 
         // Write to disk.
-        map.sync()?;
+        self.map.persist(&map_lock)?;
         self.dag.persist(&dag_lock)?;
         drop(dag_lock);
+        drop(map_lock);
         locked.sync()?;
 
         self.invalidate_missing_vertex_cache();
@@ -1309,7 +1310,7 @@ where
 /// or called with a small amount of data. For example, bounded amount of
 /// non-master commits.
 async fn non_master_parent_names<M, S>(
-    map: &Locked<'_, M>,
+    map: &M,
     dag: &IdDag<S>,
 ) -> Result<HashMap<VertexName, Vec<VertexName>>>
 where
@@ -1335,7 +1336,7 @@ where
 
 /// Re-assign ids and segments for non-master group.
 pub fn rebuild_non_master<'a: 's, 'b: 's, 's, M, S>(
-    map: &'a mut Locked<M>,
+    map: &'a mut M,
     dag: &'b mut IdDag<S>,
 ) -> BoxFuture<'s, Result<()>>
 where
@@ -1373,7 +1374,7 @@ where
 
 /// Build IdMap and Segments for the given heads.
 pub async fn build<IS, M>(
-    map: &mut Locked<'_, M>,
+    map: &mut M,
     dag: &mut IdDag<IS>,
     parent_names_func: &dyn Parents,
     master_heads: &[VertexName],
