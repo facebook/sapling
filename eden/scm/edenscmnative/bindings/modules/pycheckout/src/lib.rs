@@ -62,6 +62,17 @@ py_class!(class checkoutplan |py| {
         checkoutplan::create_instance(py, plan)
     }
 
+    def check_unknown_files(&self, root: PyPathBuf, state: &PyTreeState) -> PyResult<Vec<String>> {
+        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let plan = self.plan(py);
+        let state = state.get_state(py);
+        let unknown = py.allow_threads(move || -> Result<_> {
+            let mut state = state.lock();
+            plan.check_unknown_files(&mut state, &vfs)
+        }).map_pyerr(py)?;
+        Ok(unknown.into_iter().map(ToString::to_string).collect())
+    }
+
     def apply(&self, root: PyPathBuf, content_store: &contentstore, progress_path: Option<PyPathBuf> = None) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = content_store.extract_inner_ref(py);
