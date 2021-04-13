@@ -353,6 +353,9 @@ class changelog(revlog.revlog):
     def algorithmbackend(self):
         return "revlog-cpy"
 
+    def isvertexlazy(self):
+        return False
+
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""

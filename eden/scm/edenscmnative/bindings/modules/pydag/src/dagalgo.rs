@@ -131,6 +131,11 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(result))
     }
 
+    /// Return true if the vertexes are lazily fetched from remote.
+    def isvertexlazy(&self) -> PyResult<bool> {
+        Ok(self.dag(py).is_vertex_lazy())
+    }
+
     /// Beautify the graph so `render` might look better.
     def beautify(&self, mainbranch: Option<Names> = None) -> PyResult<Self> {
         let dag = block_on(self.dag(py).beautify(mainbranch.map(|h| h.0))).map_pyerr(py)?;

@@ -67,6 +67,9 @@ class changelog(object):
     def algorithmbackend(self):
         return self.inner.algorithmbackend()
 
+    def isvertexlazy(self):
+        return self.dag.isvertexlazy()
+
     @property
     def opener(self):
         return self.svfs
