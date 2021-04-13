@@ -18,11 +18,14 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
+use dag::ops::DagExportCloneData;
+use dag::ops::DagImportCloneData;
 use dag::ops::IdConvert;
 use dag::ops::IdMapSnapshot;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::ops::ToSet;
+use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use hgcommits::AppendCommits;
@@ -169,6 +172,21 @@ py_class!(pub class commits |py| {
         let inner = self.inner(py).borrow();
         let mut out = cpython_ext::wrap_pyio(out);
         inner.explain_internals(&mut out).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// exportsparsesegments(src, dst).
+    ///
+    /// Load full Dag from src directory, export sparse dag to dst directory.
+    ///
+    /// This can be used to create a commit backend with lazy commit hashes
+    /// from an existing repo.
+    @staticmethod
+    def exportsparsesegments(src: &PyPath, dst: &PyPath) -> PyResult<PyNone> {
+        let src = Dag::open(src.as_path()).map_pyerr(py)?;
+        let mut dst = Dag::open(dst.as_path()).map_pyerr(py)?;
+        let clone_data = py.allow_threads(|| block_on(src.export_clone_data())).map_pyerr(py)?;
+        py.allow_threads(|| block_on(dst.import_clone_data(clone_data))).map_pyerr(py)?;
         Ok(PyNone)
     }
 
