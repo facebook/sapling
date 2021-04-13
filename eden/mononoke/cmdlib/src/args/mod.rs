@@ -107,9 +107,7 @@ const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
 
-// Old version took no args which means it would be no good for overriding default for a binary that defaults to true.
-const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
-const READONLY_STORAGE_NEW_ARG: &str = "with-readonly-storage";
+const WITH_READONLY_STORAGE_ARG: &str = "with-readonly-storage";
 
 const LOG_INCLUDE_TAG: &str = "log-include-tag";
 const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
@@ -800,13 +798,8 @@ impl MononokeAppBuilder {
           put_arg
         )
         .arg(
-            Arg::with_name(READONLY_STORAGE_OLD_ARG)
-                .long(READONLY_STORAGE_OLD_ARG)
-                .help("Error on any attempts to write to storage. DEPRECATED, prefer --with-readonly-storage=<true|false>"),
-        )
-        .arg(
-            Arg::with_name(READONLY_STORAGE_NEW_ARG)
-                .long(READONLY_STORAGE_NEW_ARG)
+            Arg::with_name(WITH_READONLY_STORAGE_ARG)
+                .long(WITH_READONLY_STORAGE_ARG)
                 .takes_value(true)
                 .possible_values(BOOL_VALUES)
                 .default_value(bool_as_str(self.readonly_storage_default.0))
@@ -1707,19 +1700,15 @@ pub async fn open_repo_with_repo_id<'a>(
 }
 
 pub fn parse_readonly_storage<'a>(matches: &MononokeMatches<'a>) -> ReadOnlyStorage {
-    if matches.is_present(READONLY_STORAGE_OLD_ARG) {
-        ReadOnlyStorage(true)
-    } else {
-        ReadOnlyStorage(
-            matches
-                .value_of(READONLY_STORAGE_NEW_ARG)
-                .map_or(false, |v| {
-                    v.parse().unwrap_or_else(|_| {
-                        panic!("Provided {} is not bool", READONLY_STORAGE_NEW_ARG)
-                    })
-                }),
-        )
-    }
+    ReadOnlyStorage(
+        matches
+            .value_of(WITH_READONLY_STORAGE_ARG)
+            .map_or(false, |v| {
+                v.parse().unwrap_or_else(|_| {
+                    panic!("Provided {} is not bool", WITH_READONLY_STORAGE_ARG)
+                })
+            }),
+    )
 }
 
 pub fn get_global_mysql_connection_pool<'a>(matches: &MononokeMatches<'a>) -> SharedConnectionPool {
