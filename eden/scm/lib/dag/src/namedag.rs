@@ -10,7 +10,6 @@
 //! Combination of IdMap and IdDag.
 
 use crate::clone::CloneData;
-use crate::delegate;
 use crate::errors::programming;
 use crate::errors::NotFoundError;
 use crate::id::Group;
@@ -1017,10 +1016,30 @@ fn extract_ancestor_flag_if_compatible(hints: &Hints, dag_version: &VerLink) -> 
     }
 }
 
-delegate! {
-    PrefixLookup {
-        impl<I: Send + Sync, M: PrefixLookup + Send + Sync, P: Send + Sync, S: Send + Sync> PrefixLookup for AbstractNameDag<I, M, P, S>
-    } => self.map
+#[async_trait::async_trait]
+impl<I, M, P, S> PrefixLookup for AbstractNameDag<I, M, P, S>
+where
+    I: Send + Sync,
+    M: PrefixLookup + Send + Sync,
+    P: Send + Sync,
+    S: Send + Sync,
+{
+    async fn vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<VertexName>> {
+        let mut list = self.map.vertexes_by_hex_prefix(hex_prefix, limit).await?;
+        let overlay_list = self
+            .overlay_map
+            .read()
+            .lookup_vertexes_by_hex_prefix(hex_prefix, limit)?;
+        list.extend(overlay_list);
+        list.sort_unstable();
+        list.dedup();
+        list.truncate(limit);
+        Ok(list)
+    }
 }
 
 #[async_trait::async_trait]
