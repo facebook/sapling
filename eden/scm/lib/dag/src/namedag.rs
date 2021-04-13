@@ -207,6 +207,7 @@ where
         let non_master_heads = &self.pending_heads;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
+        new_name_dag.set_remote_protocol(self.remote_protocol.clone());
         new_name_dag
             .add_heads_and_flush(&parents, master_heads, non_master_heads)
             .await?;
