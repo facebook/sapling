@@ -210,18 +210,29 @@ py_class!(pub class commits |py| {
     ///
     /// This is similar to doublewrite backend, except that commit text fallback is edenapi,
     /// not revlog, despite the revlog might have the data.
+    ///
+    /// If lazyhash is True, enable lazy commit hashes or EdenAPI.
+    ///
+    /// If lazyhashdir is set, enable lazy commit hashes backed by the given segments dir
+    /// (for testing).
     @staticmethod
     def openhybrid(
-        revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String
+        revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String,
+        lazyhash: bool = false, lazyhashdir: Option<&PyPath> = None
     ) -> PyResult<Self> {
         let client = edenapi.extract_inner(py);
-        let inner = HybridCommits::new(
+        let mut inner = HybridCommits::new(
             revlogdir.map(|d| d.as_path()),
             segmentsdir.as_path(),
             commitsdir.as_path(),
             client,
             reponame,
         ).map_pyerr(py)?;
+        if let Some(dir) = lazyhashdir {
+            inner.enable_lazy_commit_hashes_from_local_segments( dir.as_path()).map_pyerr(py)?;
+        } else if lazyhash {
+            inner.enable_lazy_commit_hashes();
+        }
         Self::from_commits(py, inner)
     }
 
