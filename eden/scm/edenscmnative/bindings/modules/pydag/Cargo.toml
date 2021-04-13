@@ -9,6 +9,7 @@ async-runtime = { path = "../../../../lib/async-runtime" }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 dag = { path = "../../../../lib/dag" }
+futures = { version = "0.3" }
 hgcommits = { path = "../../../../lib/hgcommits" }
 minibytes = { path = "../../../../lib/minibytes" }
 pyedenapi = { path = "../pyedenapi" }

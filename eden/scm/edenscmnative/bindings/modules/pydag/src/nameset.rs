@@ -13,12 +13,11 @@ use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::nameset::hints::Flags;
 use dag::nameset::hints::Hints;
-use dag::{nameset::NameIter, Set, Vertex};
+use dag::nameset::BoxVertexStream;
+use dag::{Set, Vertex};
+use futures::stream::StreamExt;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
-// TODO: Migrate to blocking / async APIs.
-use dag::nameset::SyncNameSetQuery;
 
 /// A wrapper around [`Set`] with Python integration added.
 ///
@@ -38,11 +37,11 @@ py_class!(pub class nameset |py| {
 
     def __contains__(&self, name: PyBytes) -> PyResult<bool> {
         let name = Vertex::copy_from(name.data(py));
-        Ok(self.inner(py).contains(&name).map_pyerr(py)?)
+        Ok(block_on(self.inner(py).contains(&name)).map_pyerr(py)?)
     }
 
     def __len__(&self) -> PyResult<usize> {
-        Ok(self.inner(py).count().map_pyerr(py)?)
+        Ok(block_on(self.inner(py).count()).map_pyerr(py)?)
     }
 
     def __repr__(&self) -> PyResult<String> {
@@ -78,23 +77,23 @@ py_class!(pub class nameset |py| {
     }
 
     def iterrev(&self) -> PyResult<nameiter> {
-        let iter = self.inner(py).clone().iter_rev().map_pyerr(py)?;
-        let iter: RefCell<Box<dyn NameIter>> = RefCell::new(iter);
+        let iter = block_on(self.inner(py).clone().iter_rev()).map_pyerr(py)?;
+        let iter: RefCell<BoxVertexStream> = RefCell::new(iter);
         nameiter::create_instance(py, iter)
     }
 
     def iter(&self) -> PyResult<nameiter> {
-        let iter = self.inner(py).clone().iter().map_pyerr(py)?;
-        let iter: RefCell<Box<dyn NameIter>> = RefCell::new(iter);
+        let iter = block_on(self.inner(py).clone().iter()).map_pyerr(py)?;
+        let iter: RefCell<BoxVertexStream> = RefCell::new(iter);
         nameiter::create_instance(py, iter)
     }
 
     def first(&self) -> PyResult<Option<PyBytes>> {
-        Ok(self.inner(py).first().map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
+        Ok(block_on(self.inner(py).first()).map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
     def last(&self) -> PyResult<Option<PyBytes>> {
-        Ok(self.inner(py).last().map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
+        Ok(block_on(self.inner(py).last()).map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
     /// Obtain an optional dag bound to this set.
@@ -166,11 +165,11 @@ py_class!(pub class nameset |py| {
 
 // A wrapper to [`NameIter`].
 py_class!(pub class nameiter |py| {
-    data iter: RefCell<Box<dyn NameIter>>;
+    data iter: RefCell<BoxVertexStream>;
 
     def __next__(&self) -> PyResult<Option<PyBytes>> {
         let mut iter = self.iter(py).borrow_mut();
-        let next: Option<Vertex> = iter.next().transpose().map_pyerr(py)?;
+        let next: Option<Vertex> = block_on(iter.next()).transpose().map_pyerr(py)?;
         Ok(next.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
