@@ -2354,6 +2354,20 @@ def update(
                 if repo.ui.debugflag:
                     repo.ui.debug("Native checkout plan:\n%s\n" % plan)
 
+                unknown = plan.check_unknown_files(
+                    repo.wvfs.base, repo.dirstate._map._tree
+                )
+                if unknown:
+                    for f in unknown:
+                        repo.ui.warn(_("%s: untracked file differs\n") % f)
+
+                    raise error.Abort(
+                        _(
+                            "untracked files in working directory "
+                            "differ from files in requested revision"
+                        )
+                    )
+
                 # preserving checks as is, even though wc.isinmemory always false here
                 if not partial and not wc.isinmemory():
                     repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
