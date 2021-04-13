@@ -84,3 +84,23 @@ async fn test_sparse_dag() {
         ]
     );
 }
+
+#[tokio::test]
+async fn test_negative_cache() {
+    let mut server = TestDag::new();
+    server.drawdag("A-B", &["B"]);
+
+    let mut client = server.client().await;
+
+    // Lookup "C" - not found.
+    assert!(client.dag.vertex_id("C".into()).await.is_err());
+    assert_eq!(client.output(), ["resolve names: [C], heads: [B]"]);
+
+    // Lookup again - no need to resolve again.
+    assert!(client.dag.vertex_id("C".into()).await.is_err());
+    assert_eq!(client.output(), Vec::<String>::new());
+
+    // The negative cache does not affect inserting the name.
+    client.drawdag("B-C-D", &[]);
+    assert!(client.dag.vertex_id("C".into()).await.is_ok());
+}

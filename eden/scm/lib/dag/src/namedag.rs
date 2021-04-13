@@ -117,6 +117,10 @@ where
     /// The actual logic probably involves networking like HTTP etc
     /// and is intended to be implemented outside the `dag` crate.
     remote_protocol: Arc<dyn RemoteIdConvertProtocol>,
+
+    /// A negative cache. Vertexes that are looked up remotely, and the remote
+    /// confirmed the vertexes are outside the master group.
+    missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<VertexName>>>,
 }
 
 #[async_trait::async_trait]
@@ -153,6 +157,7 @@ where
         // checked there are no in-memory changes at the beginning.
         //
         // Also see comments in `NameDagState::lock()`.
+        self.invalidate_missing_vertex_cache();
         let locked = self.state.prepare_filesystem_sync()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;
@@ -171,6 +176,8 @@ where
         map.sync()?;
         dag.sync()?;
         locked.sync()?;
+
+        self.invalidate_missing_vertex_cache();
 
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
@@ -456,6 +463,10 @@ where
         *self.snapshot.write() = None;
     }
 
+    fn invalidate_missing_vertex_cache(&mut self) {
+        *self.missing_vertexes_confirmed_by_remote.write() = Default::default();
+    }
+
     /// Attempt to get a snapshot of this graph.
     pub(crate) fn try_snapshot(&self) -> Result<Arc<Self>> {
         if let Some(s) = self.snapshot.read().deref() {
@@ -482,6 +493,9 @@ where
                     overlay_map_next_id: self.overlay_map_next_id,
                     overlay_map_paths: Arc::clone(&self.overlay_map_paths),
                     remote_protocol: self.remote_protocol.clone(),
+                    missing_vertexes_confirmed_by_remote: Arc::clone(
+                        &self.missing_vertexes_confirmed_by_remote,
+                    ),
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(Arc::clone(&result));
@@ -543,10 +557,13 @@ where
         self.insert_relative_paths(path_names).await?;
         let overlay = self.overlay_map.read();
         let mut ids = Vec::with_capacity(names.len());
+        let mut missing = self.missing_vertexes_confirmed_by_remote.write();
         for name in names {
             if let Some(id) = overlay.lookup_vertex_id(name) {
                 ids.push(Some(id));
             } else {
+                tracing::trace!("missing_vertexes_confirmed_by_remote += {:?}", &name);
+                missing.insert(name.clone());
                 ids.push(None);
             }
         }
@@ -1114,6 +1131,13 @@ where
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(id);
                 }
+                if self
+                    .missing_vertexes_confirmed_by_remote
+                    .read()
+                    .contains(&name)
+                {
+                    return name.not_found();
+                }
                 let ids = self.resolve_vertexes_remotely(&[name.clone()]).await?;
                 if let Some(Some(id)) = ids.first() {
                     Ok(*id)
@@ -1137,6 +1161,13 @@ where
             Ok(None) => {
                 if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
                     return Ok(Some(id));
+                }
+                if self
+                    .missing_vertexes_confirmed_by_remote
+                    .read()
+                    .contains(&name)
+                {
+                    return Ok(None);
                 }
                 match self.resolve_vertexes_remotely(&[name.clone()]).await {
                     Ok(ids) => match ids.first() {
@@ -1179,7 +1210,13 @@ where
                 if self.overlay_map.read().lookup_vertex_id(name).is_some() {
                     return Ok(true);
                 }
-                // PERF: Need some kind of negative cache?
+                if self
+                    .missing_vertexes_confirmed_by_remote
+                    .read()
+                    .contains(&name)
+                {
+                    return Ok(false);
+                }
                 match self.resolve_vertexes_remotely(&[name.clone()]).await {
                     Ok(ids) => match ids.first() {
                         Some(Some(_)) => Ok(true),
