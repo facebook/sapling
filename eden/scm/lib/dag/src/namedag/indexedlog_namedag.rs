@@ -49,7 +49,7 @@ impl Open for IndexedLogNameDagPath {
         let dag_log = logs.pop().unwrap();
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
-        let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
+        let dag = IdDag::open_from_store(IndexedLogStore::open_from_clean_log(dag_log)?)?;
         let state = NameDagState { mlog: Some(mlog) };
         let overlay_map_next_id = map.next_free_id(Group::MASTER)?;
         Ok(AbstractNameDag {

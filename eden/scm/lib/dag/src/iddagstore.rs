@@ -56,6 +56,10 @@ pub trait IdDagStore: Send + Sync + 'static {
     /// Useful for building segments incrementally.
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id>;
 
+    /// `next_free_id(0, group)` without dirty entries.
+    /// This is used to select `Id`s that are buffered in memory not yet persisted.
+    fn next_free_id_without_dirty(&self, group: Group) -> Result<Id>;
+
     /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>>;
 

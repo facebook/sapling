@@ -7,6 +7,7 @@
 
 use super::IdDagStore;
 use crate::errors::bug;
+use crate::errors::programming;
 use crate::id::{Group, Id};
 use crate::ops::Persist;
 use crate::segment::describe_segment_bytes;
@@ -32,6 +33,8 @@ pub struct IndexedLogStore {
     log: log::Log,
     path: PathBuf,
     cached_max_level: AtomicU8,
+    // To answer next_free_ids_without_dirty.
+    next_free_ids_without_dirty: (Id, Id),
 }
 
 const MAX_LEVEL_UNKNOWN: u8 = 0;
@@ -138,6 +141,20 @@ impl IdDagStore for IndexedLogStore {
                 }
             }
         }
+    }
+
+    fn next_free_id_without_dirty(&self, group: Group) -> Result<Id> {
+        let id = match group {
+            Group::MASTER => self.next_free_ids_without_dirty.0,
+            Group::NON_MASTER => self.next_free_ids_without_dirty.1,
+            _ => {
+                return programming(format!(
+                    "unknown group {:?} passed to next_free_id_without_dirty",
+                    group
+                ));
+            }
+        };
+        Ok(id)
     }
 
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
@@ -292,6 +309,7 @@ impl Persist for IndexedLogStore {
 
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
         self.log.sync()?;
+        self.reload_next_free_ids_without_dirty()?;
         Ok(())
     }
 }
@@ -489,20 +507,37 @@ impl IndexedLogStore {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
         let log = Self::log_open_options().open(path.clone())?;
-        Ok(Self {
+        let mut iddag = Self {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-        })
+            next_free_ids_without_dirty: default_next_free_ids_without_dirty(),
+        };
+        iddag.reload_next_free_ids_without_dirty()?;
+        Ok(iddag)
     }
 
-    pub fn open_from_log(log: log::Log) -> Self {
+    fn reload_next_free_ids_without_dirty(&mut self) -> Result<()> {
+        self.next_free_ids_without_dirty = (
+            self.next_free_id(0, Group::MASTER)?,
+            self.next_free_id(0, Group::NON_MASTER)?,
+        );
+        Ok(())
+    }
+
+    pub fn open_from_clean_log(log: log::Log) -> Result<Self> {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
-        Self {
+        if log.iter_dirty().next().is_some() {
+            return bug("open_from_clean_log got a dirty log");
+        }
+        let mut iddag = Self {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-        }
+            next_free_ids_without_dirty: default_next_free_ids_without_dirty(),
+        };
+        iddag.reload_next_free_ids_without_dirty()?;
+        Ok(iddag)
     }
 
     pub fn try_clone(&self) -> Result<IndexedLogStore> {
@@ -511,6 +546,7 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(self.cached_max_level.load(Acquire)),
+            next_free_ids_without_dirty: self.next_free_ids_without_dirty,
         };
         Ok(store)
     }
@@ -521,9 +557,14 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+            next_free_ids_without_dirty: self.next_free_ids_without_dirty,
         };
         Ok(store)
     }
+}
+
+fn default_next_free_ids_without_dirty() -> (Id, Id) {
+    (Group::MASTER.min_id(), Group::NON_MASTER.min_id())
 }
 
 #[cfg(test)]

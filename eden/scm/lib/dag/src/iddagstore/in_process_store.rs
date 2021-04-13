@@ -144,6 +144,11 @@ impl IdDagStore for InProcessStore {
         }
     }
 
+    fn next_free_id_without_dirty(&self, group: Group) -> Result<Id> {
+        // Everything is buffered in memory.
+        Ok(group.min_id())
+    }
+
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         match self.get_head_index(level) {
             None => Ok(vec![]),
