@@ -8,6 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 bitflags = "1.2"
 dag = { path = "../dag" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 indexedlog = { path = "../indexedlog" }
 types = { path = "../types" }
 vlqencoding = { path = "../vlqencoding" }

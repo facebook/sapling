@@ -34,11 +34,11 @@ use bitflags::bitflags;
 use dag::namedag::MemNameDag;
 use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
-use dag::nonblocking::non_blocking_result;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::VertexName;
+use futures::stream::StreamExt;
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},
     DefaultOpenOptions,
@@ -53,9 +53,6 @@ use std::sync::Arc;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
-
-// TODO: Migrate to async APIs.
-use dag::nameset::SyncNameSetQuery;
 
 pub use indexedlog::Repair;
 
@@ -151,7 +148,7 @@ impl MutationStore {
         Ok(())
     }
 
-    pub fn flush(&mut self) -> Result<()> {
+    pub async fn flush(&mut self) -> Result<()> {
         // If P -> Q, X -> Y are being added, and there is an existing chain P
         // -> ... -> X, add a Q -> Y marker automatically.
         // Note: P must not equal to X or Y.
@@ -168,7 +165,9 @@ impl MutationStore {
         }
         let pred_set =
             Set::from_static_names(pred_nodes.iter().map(|p| VertexName::copy_from(p.as_ref())));
-        let dag = self.get_dag_advanced(pred_nodes, DagFlags::SUCCESSORS)?;
+        let dag = self
+            .get_dag_advanced(pred_nodes, DagFlags::SUCCESSORS)
+            .await?;
         let mut new_entries = Vec::new();
 
         // Scan through "X"s.
@@ -177,12 +176,13 @@ impl MutationStore {
             // Find all "P"s, as in P -> ... -> X, and X -> Y.
             let x_set = VertexName::copy_from(x.as_ref()).into();
             // "dag" is locally built and should be non-blocking.
-            let x_ancestors = match non_blocking_result(dag.ancestors(x_set)) {
+            let x_ancestors = match dag.ancestors(x_set).await {
                 Ok(set) => set,
                 Err(_) => continue, // might have cycles
             };
             let ps = x_ancestors & pred_set.clone();
-            for p in ps.iter()? {
+            let mut iter = ps.iter().await?;
+            while let Some(p) = iter.next().await {
                 let p = Node::from_slice(p?.as_ref())?;
                 let y = entry.succ;
                 if p == x || p == y {
@@ -254,13 +254,16 @@ impl MutationStore {
         ) -> dag::Result<Set> {
             // Vertex -> Node.
             let draft_nodes = draft
-                .iter()?
-                .filter_map(|v| v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()))
-                .collect::<Vec<Node>>();
+                .iter()
+                .await?
+                .filter_map(|v| async { v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()) })
+                .collect::<Vec<Node>>()
+                .await;
 
             // Obtain the obsolete graph about draft successors.
             let obsdag = this
                 .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
+                .await
                 .map_err(|e| dag::errors::BackendError::Other(e))?;
 
             // Filter out invisible successors.
@@ -291,12 +294,13 @@ impl MutationStore {
             // If "contains" is called a few times, calculate the full "obsolete()"
             // and use that instead.
             if contains_count.fetch_add(1, SeqCst) > 4 {
-                set.evaluate().await?.contains(v)
+                set.evaluate().await?.contains(v).await
             } else if let Ok(id) = Node::from_slice(v.as_ref()) {
                 let obsdag = this
                     .get_dag_advanced(vec![id], DagFlags::SUCCESSORS)
+                    .await
                     .map_err(|e| dag::errors::BackendError::Other(e))?;
-                Ok((obsdag.all().await? & visible).count()? > 1)
+                Ok((obsdag.all().await? & visible).count().await? > 1)
             } else {
                 Ok(false)
             }
@@ -378,13 +382,14 @@ impl MutationStore {
     /// commit replacement relations.  The returned graph supports graph
     /// operations like common ancestors, heads, roots, etc. Parents in the
     /// graph are predecessors.
-    pub fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
+    pub async fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
         self.get_dag_advanced(nodes, DagFlags::SUCCESSORS | DagFlags::PREDECESSORS)
+            .await
     }
 
     /// Advanced version of `get_dag`. Specify whether to include successors or
     /// predecessors explicitly.
-    pub fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemNameDag> {
+    pub async fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemNameDag> {
         // Raw parent map. Might contain cycles.
         let mut parent_map = HashMap::<Node, Vec<Node>>::new();
         let mut non_heads = HashSet::<Node>::new();
@@ -448,7 +453,7 @@ impl MutationStore {
             Box::new(parent_func);
 
         // Inserting to a memory DAG from a fully known parent function is non-blocking.
-        non_blocking_result(dag.add_heads(&parents, &heads))?;
+        dag.add_heads(&parents, &heads).await?;
         Ok(dag)
     }
 }
@@ -456,6 +461,8 @@ impl MutationStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dag::nonblocking::non_blocking_result;
+    use dag::nonblocking::non_blocking_result as r;
     use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -495,7 +502,7 @@ mod tests {
             })
             .expect("can add to the store");
 
-            ms.flush().expect("can flush the store");
+            r(ms.flush()).expect("can flush the store");
         }
         {
             let ms = MutationStore::open(dir.path()).expect("can re-open the store");
@@ -592,8 +599,8 @@ mod tests {
             }
         }
 
-        let dag = ms.get_dag(vec![n("B")])?;
-        assert_eq!(non_blocking_result(dag.all())?.count()?, 5); // A B C D E
+        let dag = r(ms.get_dag(vec![n("B")]))?;
+        assert_eq!(r(non_blocking_result(dag.all())?.count())?, 5); // A B C D E
         assert_eq!(
             renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
             r#"
@@ -618,7 +625,7 @@ mod tests {
         for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")].iter() {
             add(&mut ms, pred, succ)?;
         }
-        ms.flush()?;
+        r(ms.flush())?;
 
         // Nothing - cycles without a head is not rendered.
         assert_eq!(render(&ms, "A")?, "\n");
@@ -627,7 +634,7 @@ mod tests {
 
         // Add a "head" to "revive" the graph.
         add(&mut ms, "C", "D")?;
-        ms.flush()?;
+        r(ms.flush())?;
         assert_eq!(
             render(&ms, "D")?,
             r#"
@@ -651,7 +658,7 @@ mod tests {
         for (pred, succ) in [("P", "E"), ("E", "X")].iter() {
             add(&mut ms, pred, succ)?;
         }
-        ms.flush()?;
+        r(ms.flush())?;
 
         for (pred, succ) in [("P", "Q"), ("X", "Y")].iter() {
             add(&mut ms, pred, succ)?;
@@ -673,7 +680,7 @@ mod tests {
         );
 
         // After flush, Q -> Y is auto created.
-        ms.flush()?;
+        r(ms.flush())?;
         assert_eq!(
             render(&ms, "P")?,
             r#"
@@ -710,25 +717,25 @@ mod tests {
         let obsolete = non_blocking_result(ms.calculate_obsolete(public, draft))?;
 
         // B is obsoleted. It has a visible successor E (draft).
-        assert!(obsolete.contains(&v("B"))?);
+        assert!(r(obsolete.contains(&v("B")))?);
 
         // X is obsoleted. It has a visible successor Y (public).
-        assert!(obsolete.contains(&v("X"))?);
+        assert!(r(obsolete.contains(&v("X")))?);
 
         // C does not have a visible successor.
-        assert!(!obsolete.contains(&v("C"))?);
+        assert!(!r(obsolete.contains(&v("C")))?);
 
         // D is not visible.
-        assert!(!obsolete.contains(&v("D"))?);
+        assert!(!r(obsolete.contains(&v("D")))?);
 
         // A is not a draft.
-        assert!(!obsolete.contains(&v("A"))?);
+        assert!(!r(obsolete.contains(&v("A")))?);
 
         // The set is not evaluated yet.
         assert_eq!(format!("{:?}", &obsolete), "<meta ?>");
 
         // E does not have a successor.
-        assert!(!obsolete.contains(&v("E"))?);
+        assert!(!r(obsolete.contains(&v("E")))?);
 
         // Enough "contains" check. The set should be evaluated now.
         // (0x42 == b'B', 0x58 == b'X')
@@ -763,7 +770,7 @@ mod tests {
 
     /// Render the mutation store for the given nodes.
     fn render(ms: &MutationStore, s: &str) -> Result<String> {
-        let dag = ms.get_dag(s.chars().map(n).collect::<Vec<Node>>())?;
+        let dag = r(ms.get_dag(s.chars().map(n).collect::<Vec<Node>>()))?;
         renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
     }
 }

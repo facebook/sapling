@@ -196,7 +196,7 @@ py_class!(class mutationstore |py| {
 
     def flush(&self) -> PyResult<PyNone> {
         let mut ms = self.mut_store(py).borrow_mut();
-        ms.flush().map_pyerr(py)?;
+        block_on(ms.flush()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -262,7 +262,7 @@ py_class!(class mutationstore |py| {
         if predecessors {
             flags |= DagFlags::PREDECESSORS;
         }
-        let dag = self.mut_store(py).borrow().get_dag_advanced(nodes, flags).map_pyerr(py)?;
+        let dag = block_on(self.mut_store(py).borrow().get_dag_advanced(nodes, flags)).map_pyerr(py)?;
         dagalgo::from_dag(py, dag)
     }
 
