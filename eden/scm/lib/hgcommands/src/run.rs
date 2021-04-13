@@ -303,7 +303,26 @@ fn spawn_progress_thread(config: &ConfigSet, io: &IO, in_scope: Weak<()>) -> Res
 }
 
 fn term_width() -> usize {
-    term_size::dimensions_stderr().map_or(80, |(w, _h)| w)
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        if let Some((w, _h)) = terminal_size::terminal_size_using_fd(std::io::stderr().as_raw_fd())
+        {
+            return w.0 as _;
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        if let Some((w, _h)) =
+            terminal_size::terminal_size_using_handle(std::io::stderr().as_raw_handle())
+        {
+            return w.0 as _;
+        }
+    }
+
+    // Fallback width.
+    80
 }
 
 fn maybe_write_trace(

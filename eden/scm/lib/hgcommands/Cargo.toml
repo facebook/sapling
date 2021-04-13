@@ -37,7 +37,7 @@ pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-f
 rand = { version = "0.7", features = ["small_rng"] }
 revisionstore = { path = "../revisionstore" }
 taggederror = { path = "../taggederror" }
-term_size = "0.3"
+terminal_size = "0.1"
 tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
 tracing-subscriber = "0.2.17"
