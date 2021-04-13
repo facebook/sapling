@@ -6,7 +6,9 @@
  */
 
 use super::TestDag;
+use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::Id;
 use crate::VertexName;
@@ -102,4 +104,71 @@ async fn test_negative_cache() {
     // The negative cache does not affect inserting the name.
     client.drawdag("B-C-D", &[]);
     assert!(client.dag.vertex_id("C".into()).await.is_ok());
+}
+
+#[tokio::test]
+async fn test_add_heads() {
+    let server = TestDag::draw("A-B  # master: B");
+    let mut client = server.client().await;
+
+    let pending = TestDag::draw("A-C B-C-D-E-F-G E-H-K I-J-K");
+    let parents = pending.dag.dag_snapshot().unwrap();
+    client
+        .dag
+        .add_heads(&parents, &["G".into(), "K".into()])
+        .await
+        .unwrap();
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [G], heads: [B]",
+            "resolve names: [F], heads: [B]",
+            "resolve names: [E], heads: [B]",
+            "resolve names: [D], heads: [B]",
+            "resolve names: [C], heads: [B]",
+            "resolve names: [A], heads: [B]",
+            "resolve names: [K], heads: [B]",
+            "resolve names: [J], heads: [B]",
+            "resolve names: [H], heads: [B]",
+            "resolve names: [I], heads: [B]"
+        ]
+    );
+
+    client.dag.flush(&["G".into()]).await.unwrap();
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [G], heads: [B]",
+            "resolve names: [F], heads: [B]",
+            "resolve names: [E], heads: [B]",
+            "resolve names: [D], heads: [B]",
+            "resolve names: [C], heads: [B]",
+            "resolve names: [K], heads: [B]",
+            "resolve names: [J], heads: [B]",
+            "resolve names: [H], heads: [B]",
+            "resolve names: [I], heads: [B]"
+        ]
+    );
+
+    let mut client = server.client().await;
+    client
+        .dag
+        .add_heads_and_flush(&parents, &["K".into()], &["G".into()])
+        .await
+        .unwrap();
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [K], heads: [B]",
+            "resolve names: [J], heads: [B]",
+            "resolve names: [H], heads: [B]",
+            "resolve names: [E], heads: [B]",
+            "resolve names: [D], heads: [B]",
+            "resolve names: [C], heads: [B]",
+            "resolve names: [A], heads: [B]",
+            "resolve names: [I], heads: [B]",
+            "resolve names: [G], heads: [B]",
+            "resolve names: [F], heads: [B]"
+        ]
+    );
 }
