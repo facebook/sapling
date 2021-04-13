@@ -10,6 +10,7 @@ use super::BoxVertexStream;
 use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
+use crate::protocol::disable_remote_protocol;
 use crate::Group;
 use crate::IdSpan;
 use crate::Result;
@@ -136,8 +137,12 @@ impl fmt::Debug for IdStaticSet {
         f.debug_list()
             .entries(spans.iter().take(limit).map(|span| DebugSpan {
                 span: *span,
-                low_name: non_blocking_result(self.map.vertex_name(span.low)).ok(),
-                high_name: non_blocking_result(self.map.vertex_name(span.high)).ok(),
+                low_name: disable_remote_protocol(|| {
+                    non_blocking_result(self.map.vertex_name(span.low)).ok()
+                }),
+                high_name: disable_remote_protocol(|| {
+                    non_blocking_result(self.map.vertex_name(span.high)).ok()
+                }),
             }))
             .finish()?;
         match spans.len().max(limit) - limit {

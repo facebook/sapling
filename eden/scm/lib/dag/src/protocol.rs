@@ -33,7 +33,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::fmt;
+use std::thread_local;
 
 // Request and Response structures -------------------------------------------
 
@@ -412,4 +414,28 @@ impl<'a, DagStore: IdDagStore> Process<ResponseIdNamePair, ()>
         }
         Ok(())
     }
+}
+
+// Disable remote protocol temporarily ---------------------------------------
+// This can be useful for Debug::fmt to disable remote fetching which might
+// panic (ex. calling tokio without tokio runtime) when executing futures
+// via nonblocking.
+
+thread_local! {
+    static NON_BLOCKING_DEPTH: RefCell<usize> = RefCell::new(0);
+}
+
+/// Check if the current future is running inside a "non-blocking" block.
+pub(crate) fn disable_remote_protocol<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    NON_BLOCKING_DEPTH.with(|v| *v.borrow_mut() += 1);
+    let result = f();
+    NON_BLOCKING_DEPTH.with(|v| *v.borrow_mut() -= 1);
+    result
+}
+
+pub(crate) fn is_remote_protocol_disabled() -> bool {
+    NON_BLOCKING_DEPTH.with(|v| *v.borrow() != 0)
 }

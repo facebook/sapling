@@ -11,6 +11,7 @@ use super::BoxVertexStream;
 use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
+use crate::protocol::disable_remote_protocol;
 use crate::Group;
 use crate::Id;
 use crate::IdSet;
@@ -154,7 +155,9 @@ impl fmt::Debug for IdLazySet {
         f.debug_list()
             .entries(inner.visited.iter().take(limit).map(|&id| DebugId {
                 id,
-                name: non_blocking_result(self.map.vertex_name(id)).ok(),
+                name: disable_remote_protocol(|| {
+                    non_blocking_result(self.map.vertex_name(id)).ok()
+                }),
             }))
             .finish()?;
         let remaining = inner.visited.len().max(limit) - limit;

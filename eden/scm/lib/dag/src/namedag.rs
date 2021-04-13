@@ -39,6 +39,7 @@ use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
 use crate::protocol;
+use crate::protocol::is_remote_protocol_disabled;
 use crate::protocol::AncestorPath;
 use crate::protocol::Process;
 use crate::protocol::RemoteIdConvertProtocol;
@@ -56,6 +57,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::io;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -520,6 +522,13 @@ where
         if names.is_empty() {
             return Ok(Vec::new());
         }
+        if is_remote_protocol_disabled() {
+            return Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "resolving vertexes remotely disabled",
+            )
+            .into());
+        }
         if names.len() < 30 {
             tracing::debug!("resolve names {:?} remotely", &names);
         } else {
@@ -549,6 +558,13 @@ where
     async fn resolve_ids_remotely(&self, ids: &[Id]) -> Result<Vec<VertexName>> {
         if ids.is_empty() {
             return Ok(Vec::new());
+        }
+        if is_remote_protocol_disabled() {
+            return Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "resolving ids remotely disabled",
+            )
+            .into());
         }
         if ids.len() < 30 {
             tracing::debug!("resolve ids {:?} remotely", &ids);
