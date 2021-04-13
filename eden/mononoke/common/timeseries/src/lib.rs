@@ -39,8 +39,14 @@ pub trait TimeseriesAccumulator: Default {
 pub struct Timeseries<A, D, I> {
     /// buckets represent [start, start + duration) intervals.
     buckets: Vec<A>,
+    /// The start of this timeseries
     start_instant: I,
+    /// The index in buckets corresponding to start_instant.
     start_idx: usize,
+    /// How many buckets are valid, starting from the start bucket. If this is zero, then no
+    /// buckets are valid at all.
+    valid_count: usize,
+    /// The duration of time that each bucket represents.
     interval: D,
 }
 
@@ -56,11 +62,13 @@ where
         Self {
             start_instant,
             start_idx: 0,
+            valid_count: 0,
             interval,
             buckets,
         }
     }
 
+    /// Insert a new value at ts.
     pub fn insert(&mut self, ts: I, value: A::Value) -> Result<(), TimeseriesError> {
         if let Some(ref mut bucket) = self.bucket_for_ts(ts)? {
             bucket.insert(value);
@@ -69,6 +77,8 @@ where
         Ok(())
     }
 
+    /// Extend the time range to include ts, flagging all buckets before that interval as valid,
+    /// such that they will be returned by [`Self::iter()`].
     pub fn update(&mut self, ts: I) -> Result<(), TimeseriesError> {
         self.bucket_for_ts(ts)?;
 
@@ -79,6 +89,7 @@ where
         self.buckets[self.start_idx..self.buckets.len()]
             .iter()
             .chain(self.buckets[0..self.start_idx].iter())
+            .take(self.valid_count)
     }
 
     fn bucket_for_ts(&mut self, ts: I) -> Result<Option<&mut A>, TimeseriesError> {
@@ -100,6 +111,8 @@ where
             offset - buckets_to_add
         };
 
+        self.valid_count = std::cmp::max(offset + 1, self.valid_count);
+
         let pos = (self.start_idx + offset) % self.buckets.len();
 
         Ok(Some(&mut self.buckets[pos]))
@@ -111,7 +124,8 @@ where
         }
 
         self.start_instant = ts;
-        self.start_idx = 0
+        self.start_idx = 0;
+        self.valid_count = 0;
     }
 
     fn add_buckets(&mut self, n: usize) {
@@ -121,6 +135,7 @@ where
             let next_idx = (idx + 1) % self.buckets.len();
             self.buckets[idx] = A::default();
             self.start_idx = next_idx;
+            self.valid_count = self.valid_count.saturating_sub(1);
             self.start_instant = self.start_instant + self.interval;
             idx = next_idx;
         }
@@ -173,7 +188,7 @@ mod test {
         ts.insert(1, 1)?;
 
         let d = ts.iter().cloned().collect::<Vec<_>>();
-        assert_eq!(d, vec![vec![0], vec![1], vec![]]);
+        assert_eq!(d, vec![vec![0], vec![1]]);
 
         ts.insert(3, 3)?;
         let d = ts.iter().cloned().collect::<Vec<_>>();
@@ -247,15 +262,15 @@ mod test {
 
         ts.insert(20, 20)?;
         let d = ts.iter().cloned().collect::<Vec<_>>();
-        assert_eq!(d, vec![vec![20], vec![], vec![]]);
+        assert_eq!(d, vec![vec![20]]);
 
         ts.insert(22, 22)?;
         let d = ts.iter().cloned().collect::<Vec<_>>();
-        assert_eq!(d, vec![vec![20], vec![22], vec![]]);
+        assert_eq!(d, vec![vec![20], vec![22]]);
 
         ts.insert(30, 30)?;
         let d = ts.iter().cloned().collect::<Vec<_>>();
-        assert_eq!(d, vec![vec![30], vec![], vec![]]);
+        assert_eq!(d, vec![vec![30]]);
 
         Ok(())
     }
@@ -295,6 +310,8 @@ mod test {
                 }
                 last = Some(v);
             }
+
+            assert_eq!(ts.iter().count(), std::cmp::min(i + 1, 15));
 
             // Check that it ends with i (which we just inserted). This will only be true stating
             // from the 14th element since we have 15 buckets so the last bucket is [14-15).
