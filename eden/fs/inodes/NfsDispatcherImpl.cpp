@@ -186,6 +186,31 @@ folly::Future<NfsDispatcher::SymlinkRes> NfsDispatcherImpl::symlink(
       });
 }
 
+folly::Future<NfsDispatcher::MknodRes> NfsDispatcherImpl::mknod(
+    InodeNumber dir,
+    PathComponent name,
+    mode_t mode,
+    dev_t rdev,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, name = std::move(name), mode, rdev](
+          const TreeInodePtr& inode) {
+        // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
+        // directory.
+        auto newFile = inode->mknod(name, mode, rdev, InvalidationRequired::No);
+        auto statFut = newFile->stat(context);
+        return std::move(statFut).thenValue(
+            [newFile = std::move(newFile)](struct stat&& stat) {
+              newFile->incFsRefcount();
+              return MknodRes{
+                  newFile->getNodeId(),
+                  std::move(stat),
+                  std::nullopt,
+                  std::nullopt};
+            });
+      });
+}
+
 folly::Future<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
     InodeNumber dir,
     PathComponent name,

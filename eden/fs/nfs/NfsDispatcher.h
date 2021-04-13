@@ -231,6 +231,35 @@ class NfsDispatcher {
       ObjectFetchContext& context) = 0;
 
   /**
+   * Return value of the mknod method.
+   */
+  struct MknodRes {
+    /** InodeNumber of the created special file */
+    InodeNumber ino;
+    /** Attributes of the created special file */
+    struct stat stat;
+
+    /** Attributes of the directory prior to creating the special file */
+    std::optional<struct stat> preDirStat;
+    /** Attributes of the directory after creating the special file */
+    std::optional<struct stat> postDirStat;
+  };
+
+  /**
+   * Create a special file in the directory referenced by the InodeNumber dir.
+   * The special file will have the name passed in.
+   *
+   * For the pre and post dir stat, refer to the documentation of the create
+   * method above.
+   */
+  virtual folly::Future<MknodRes> mknod(
+      InodeNumber ino,
+      PathComponent name,
+      mode_t mode,
+      dev_t rdev,
+      ObjectFetchContext& context) = 0;
+
+  /**
    * Return value of the unlink method.
    */
   struct UnlinkRes {

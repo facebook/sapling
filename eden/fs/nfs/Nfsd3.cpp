@@ -9,6 +9,10 @@
 
 #include "eden/fs/nfs/Nfsd3.h"
 
+#ifndef __APPLE__
+#include <sys/sysmacros.h>
+#endif
+
 #include <folly/Utility.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -192,6 +196,25 @@ ftype3 modeToFtype3(mode_t mode) {
   } else {
     XDCHECK(S_ISFIFO(mode));
     return ftype3::NF3FIFO;
+  }
+}
+
+mode_t ftype3ToMode(ftype3 type) {
+  switch (type) {
+    case ftype3::NF3REG:
+      return S_IFREG;
+    case ftype3::NF3DIR:
+      return S_IFDIR;
+    case ftype3::NF3BLK:
+      return S_IFBLK;
+    case ftype3::NF3CHR:
+      return S_IFCHR;
+    case ftype3::NF3LNK:
+      return S_IFLNK;
+    case ftype3::NF3SOCK:
+      return S_IFSOCK;
+    case ftype3::NF3FIFO:
+      return S_IFIFO;
   }
 }
 
@@ -686,6 +709,19 @@ bool isEexist(const folly::exception_wrapper& ex) {
   return false;
 }
 
+/**
+ * Convert a set_mode3 into a useable mode_t. When unset, the returned mode
+ * will be writable by the owner, readable by the group and other. This is
+ * consistent with creating a file with a default umask of 022.
+ */
+mode_t setMode3ToMode(const set_mode3& mode) {
+  if (mode.tag) {
+    return std::get<uint32_t>(mode.v);
+  } else {
+    return 0644;
+  }
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
@@ -705,12 +741,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
   }
 
   auto& attr = std::get<sattr3>(args.how.v);
-
-  // If the mode isn't set, make it writable by the owner, readable by the
-  // group and other. This is consistent with creating a file with a default
-  // umask of 022.
-  auto mode =
-      attr.mode.tag ? std::get<uint32_t>(attr.mode.v) : (S_IFREG | 0644);
+  auto mode = S_IFREG | setMode3ToMode(attr.mode);
 
   return dispatcher_
       ->create(
@@ -868,11 +899,83 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mknod(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<MKNOD3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("mknod");
+
+  switch (args.what.tag) {
+    case ftype3::NF3REG:
+    case ftype3::NF3DIR:
+    case ftype3::NF3LNK: {
+      MKNOD3res res{{{nfsstat3::NFS3ERR_BADTYPE, MKNOD3resfail{}}}};
+      XdrTrait<MKNOD3res>::serialize(ser, res);
+      return folly::unit;
+    }
+    default:
+      break;
+  }
+
+  // Don't allow creating a node name . or ..
+  if (args.where.name == "." || args.where.name == "..") {
+    MKNOD3res res{{{nfsstat3::NFS3ERR_INVAL, MKNOD3resfail{}}}};
+    XdrTrait<MKNOD3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  mode_t mode = ftype3ToMode(args.what.tag);
+  dev_t rdev;
+  if (auto devicedata = std::get_if<devicedata3>(&args.what.v)) {
+    mode |= setMode3ToMode(devicedata->dev_attributes.mode);
+    rdev = makedev(devicedata->spec.specdata1, devicedata->spec.specdata2);
+  } else if (auto sattr = std::get_if<sattr3>(&args.what.v)) {
+    mode |= setMode3ToMode(sattr->mode);
+    rdev = 0;
+  } else {
+    // This can only happen if the deserialization code is wrong, but let's be
+    // safe.
+    MKNOD3res res{{{nfsstat3::NFS3ERR_SERVERFAULT, MKNOD3resfail{}}}};
+    XdrTrait<MKNOD3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  // TODO(xavierd): we should probably respect the rest of the sattr3
+  // attributes.
+
+  return dispatcher_
+      ->mknod(
+          args.where.dir.ino,
+          PathComponent(args.where.name),
+          mode,
+          rdev,
+          *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::MknodRes> try_) mutable {
+        if (try_.hasException()) {
+          MKNOD3res res{
+              {{exceptionToNfsError(try_.exception()), MKNOD3resfail{}}}};
+          XdrTrait<MKNOD3res>::serialize(ser, res);
+        } else {
+          const auto& mknodRes = try_.value();
+
+          MKNOD3res res{
+              {{nfsstat3::NFS3_OK,
+                MKNOD3resok{
+                    /*obj*/ post_op_fh3{nfs_fh3{mknodRes.ino}},
+                    /*obj_attributes*/
+                    post_op_attr{statToFattr3(mknodRes.stat)},
+                    /*dir_wcc*/
+                    statToWccData(mknodRes.preDirStat, mknodRes.postDirStat),
+                }}}};
+          XdrTrait<MKNOD3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(

@@ -71,6 +71,13 @@ class NfsDispatcherImpl : public NfsDispatcher {
       std::string data,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::MknodRes> mknod(
+      InodeNumber dir,
+      PathComponent name,
+      mode_t mode,
+      dev_t rdev,
+      ObjectFetchContext& context) override;
+
   folly::Future<NfsDispatcher::UnlinkRes> unlink(
       InodeNumber dir,
       PathComponent name,
