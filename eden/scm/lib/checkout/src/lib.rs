@@ -25,6 +25,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::debug;
+use treestate::filestate::StateFlags;
+use treestate::treestate::TreeState;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{AsyncVfsWriter, UpdateFlag, VFS};
 
@@ -66,6 +68,8 @@ struct UpdateContentAction {
     content_hgid: HgId,
     /// New file type.
     file_type: FileType,
+    /// Whether this is a new file.
+    new_file: bool,
 }
 
 /// Only update metadata on the file, do not update content
@@ -98,7 +102,7 @@ impl CheckoutPlan {
             match item.diff_type {
                 DiffType::LeftOnly(_) => remove.push(item.path),
                 DiffType::RightOnly(meta) => {
-                    update_content.push(UpdateContentAction::new(item.path, meta))
+                    update_content.push(UpdateContentAction::new(item.path, meta, true))
                 }
                 DiffType::Changed(old, new) => {
                     match (old.hgid == new.hgid, old.file_type, new.file_type) {
@@ -115,7 +119,7 @@ impl CheckoutPlan {
                             });
                         }
                         _ => {
-                            update_content.push(UpdateContentAction::new(item.path, new));
+                            update_content.push(UpdateContentAction::new(item.path, new, false));
                         }
                     }
                 }
@@ -149,7 +153,7 @@ impl CheckoutPlan {
             if new_matcher.matches_file(&file.path)? {
                 if !updated_content.contains(&file.path) {
                     self.update_content
-                        .push(UpdateContentAction::new(file.path, file.meta));
+                        .push(UpdateContentAction::new(file.path, file.meta, true));
                 }
             } else {
                 // by definition of xor matcher this means old_matcher.matches_file==true
@@ -347,6 +351,27 @@ impl CheckoutPlan {
         .await
     }
 
+    pub fn check_unknown_files(
+        &self,
+        tree_state: &mut TreeState,
+        vfs: &VFS,
+    ) -> Result<Vec<&RepoPath>> {
+        let mut unknowns = vec![];
+        for file in self.new_files() {
+            let state = tree_state.get(file)?;
+            let unknown = match state {
+                None => true,
+                Some(state) => state.state.intersects(
+                    StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
+                ),
+            };
+            if unknown && vfs.is_file(file)? {
+                unknowns.push(file.as_repo_path());
+            }
+        }
+        Ok(unknowns)
+    }
+
     /// Drains stream returning error if one of futures fail
     async fn process_work_stream<S: Stream<Item = Result<()>> + Unpin>(
         mut stream: S,
@@ -418,6 +443,13 @@ impl CheckoutPlan {
 
     pub fn updated_meta_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
         self.update_meta.iter().map(|u| &u.path)
+    }
+
+    pub fn new_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        // todo - index new files so that this function don't need to be O(total_files_changed)test-update-names.t.err
+        self.update_content
+            .iter()
+            .filter_map(|u| if u.new_file { Some(&u.path) } else { None })
     }
 
     /// Returns (updated, removed)
@@ -575,11 +607,12 @@ fn type_to_flag(ft: &FileType) -> Option<UpdateFlag> {
 }
 
 impl UpdateContentAction {
-    pub fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
+    pub fn new(path: RepoPathBuf, meta: FileMetadata, new_file: bool) -> Self {
         Self {
             path,
             content_hgid: meta.hgid,
             file_type: meta.file_type,
+            new_file,
         }
     }
 
@@ -712,6 +745,7 @@ mod test {
         plan.update_content.push(UpdateContentAction::new(
             rp("b"),
             FileMetadata::regular(hgid(10)),
+            true,
         ));
         plan.update_meta.push(UpdateMetaAction {
             path: rp("b"),
@@ -727,6 +761,7 @@ mod test {
         plan.update_content.push(UpdateContentAction::new(
             rp("c"),
             FileMetadata::regular(hgid(3)),
+            true,
         ));
         let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
         assert_eq!(

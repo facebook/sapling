@@ -86,6 +86,11 @@ impl VFS {
         self.join(path).symlink_metadata().map_err(|e| e.into())
     }
 
+    pub fn is_file(&self, path: &RepoPath) -> Result<bool> {
+        let filepath = self.inner.auditor.audit(path)?;
+        Ok(filepath.is_file())
+    }
+
     /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
     /// be created.
     ///

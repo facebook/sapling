@@ -14,6 +14,7 @@ pathmatcher = { path = "../pathmatcher" }
 revisionstore = { path = "../revisionstore" }
 tokio = { version = "1.4", features = ["full", "test-util"] }
 tracing = "0.1"
+treestate = { path = "../treestate" }
 types = { path = "../types" }
 vfs = { path = "../vfs" }
 
