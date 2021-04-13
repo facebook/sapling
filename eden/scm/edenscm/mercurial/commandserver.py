@@ -614,4 +614,9 @@ class unixforkingservice(object):
         try:
             _serverequest(self.ui, self.repo, conn, h.createcmdserver)
         finally:
+            # Explicitly disable progress. The progress is cleared on dropping
+            # IO in hgmain. However, that "drop" logic does not run with
+            # os._exit here. So let's explicitly clear the progress before
+            # os._exit.
+            util.mainio.disable_progress()
             gc.collect()  # trigger __del__ since worker process uses os._exit
