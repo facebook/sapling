@@ -1511,6 +1511,7 @@ class Test(unittest.TestCase):
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["TESTFILE"] = self.path
+        env["SYSCACHEDIR"] = os.path.join(self._testtmp, b".cache")
         env["HOME"] = self._testtmp
         if self._usechg:
             env["CHGDISABLE"] = "0"
