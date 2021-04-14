@@ -10,6 +10,7 @@
   > }
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ setconfig commitcloud.pushbackupbookmarks=true
 
 With no configuration it should abort
   $ hg init server

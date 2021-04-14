@@ -5,6 +5,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ setconfig commitcloud.pushbackupbookmarks=true
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
