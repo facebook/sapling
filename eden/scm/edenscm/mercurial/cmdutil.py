@@ -4335,7 +4335,7 @@ unfinishedstates = [
         True,
         False,
         _("last update was interrupted"),
-        _("use 'hg update' to get a consistent checkout"),
+        _("use 'hg update DESTINATION' to get a consistent checkout"),
     ),
 ]
 
