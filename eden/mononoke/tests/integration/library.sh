@@ -258,24 +258,6 @@ function init_repo_lock_sqlite3_db {
     "insert into repo_lock (repo, state, reason) values(CAST('repo' AS BLOB), 2, null)";
 }
 
-function mononoke_bookmarks_filler {
-  local sql_source sql_name
-
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    sql_source="xdb"
-    sql_name="$DB_SHARD_NAME"
-  else
-    sql_source="sqlite"
-    sql_name="${TESTTMP}/replaybookmarksqueue/replaybookmarksqueue"
-  fi
-
-  GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --skip-scmquery \
-    "$@" "$sql_source" "$sql_name"  2>&1 | grep mononoke_commitcloud_bookmarks_filler
-}
-
 function create_mutable_counters_sqlite3_db {
   cat >> "$TESTTMP"/mutable_counters.sql <<SQL
   CREATE TABLE mutable_counters (
@@ -1979,67 +1961,6 @@ function quiet() {
   fi
   cat "$log"
   return "$ret"
-}
-
-function commitcloud_fill_one() {
-  # Note: do not use `call_with_certs` here or
-  # put cert paths into env vars, as this causes
-  # the binary to lose access to `getdb.sh`-acquired
-  # database
-  local CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
-  "$MONONOKE_COMMITCLOUD_FILLONE" \
-    hg-to-mononoke \
-    --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "$(mononoke_address)" \
-    --mononoke-server-common-name localhost \
-    --cert-override "$CERTDIR/localhost.crt" \
-    --private-key-override "$CERTDIR/localhost.key" \
-    --ca-pem-override "$CERTDIR/root-ca.crt" \
-    --reponame "$REPONAME" \
-    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --skip-record-pushed-commits \
-    --debug "$@"
-}
-
-function commitcloud_reverse_fill_one() {
-  "$MONONOKE_COMMITCLOUD_FILLONE" \
-    mononoke-to-hg \
-    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --skip-record-pushed-commits \
-    --debug "$@"
-}
-
-function commitcloud_reversefiller_iteration() {
-  local default_sqlite_db="$TESTTMP/monsql/sqlite_dbs"
-  local sqlitedb="${REVERSEFILLER_SQLITE_DB:-"$default_sqlite_db"}"
-  "$MONONOKE_COMMITCLOUD_REVERSEFILLER" \
-    --num-workers 1 \
-    --identity "testfiller" \
-    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --with-sqlite-db="$sqlitedb" \
-    --skip-record-pushed-commits \
-    --debug "$@"
-}
-
-function commitcloud_forwardfiller_iteration() {
-  # Note: do not use `call_with_certs` here or
-  # put cert paths into env vars, as this causes
-  # the binary to lose access to `getdb.sh`-acquired
-  # database
-  local CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
-  "$MONONOKE_COMMITCLOUD_FORWARDFILLER" \
-    --num-workers 1 \
-    --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "$(mononoke_address)" \
-    --mononoke-server-common-name localhost \
-    --cert-override "$CERTDIR/localhost.crt" \
-    --private-key-override "$CERTDIR/localhost.key" \
-    --ca-pem-override "$CERTDIR/root-ca.crt" \
-    --identity "testfiller" \
-    --reponame "$REPONAME" \
-    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --skip-record-pushed-commits \
-    --debug "$@"
 }
 
 function streaming_clone() {
