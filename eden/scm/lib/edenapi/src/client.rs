@@ -67,7 +67,9 @@ pub struct Client {
 impl Client {
     /// Create an EdenAPI client with the given configuration.
     pub(crate) fn with_config(config: Config) -> Self {
-        let client = http_client("edenapi").verbose(config.debug);
+        let client = http_client("edenapi")
+            .verbose(config.debug)
+            .max_concurrent_requests(config.max_requests.unwrap_or(0));
         Self { config, client }
     }
 

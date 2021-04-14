@@ -28,6 +28,7 @@ pub struct Builder {
     key: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
     headers: HashMap<String, String>,
+    max_requests: Option<usize>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
@@ -77,6 +78,10 @@ impl Builder {
             .transpose()
             .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e.to_string().into()))?
             .unwrap_or_default();
+
+        let max_requests = config
+            .get_opt("edenapi", "maxrequests")
+            .map_err(|e| ConfigError::Malformed("edenapi.maxrequests".into(), e))?;
 
         let max_files = config
             .get_opt("edenapi", "maxfiles")
@@ -128,6 +133,7 @@ impl Builder {
             key,
             ca_bundle,
             headers,
+            max_requests,
             max_files,
             max_trees,
             max_history,
@@ -187,6 +193,12 @@ impl Builder {
     /// Add an extra HTTP header that should be sent with each request.
     pub fn header(mut self, name: impl ToString, value: impl ToString) -> Self {
         self.headers.insert(name.to_string(), value.to_string());
+        self
+    }
+
+    /// Maximum number of concurrent HTTP requests allowed.
+    pub fn max_requests(mut self, size: Option<usize>) -> Self {
+        self.max_requests = size;
         self
     }
 
@@ -268,6 +280,7 @@ pub(crate) struct Config {
     pub(crate) key: Option<PathBuf>,
     pub(crate) ca_bundle: Option<PathBuf>,
     pub(crate) headers: HashMap<String, String>,
+    pub(crate) max_requests: Option<usize>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
@@ -290,6 +303,7 @@ impl TryFrom<Builder> for Config {
             key,
             ca_bundle,
             headers,
+            max_requests,
             max_files,
             max_trees,
             max_history,
@@ -323,6 +337,7 @@ impl TryFrom<Builder> for Config {
             key,
             ca_bundle,
             headers,
+            max_requests,
             max_files,
             max_trees,
             max_history,
