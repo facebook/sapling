@@ -547,6 +547,18 @@ impl From<EdenapiSha256> for Sha256 {
     }
 }
 
+impl From<Sha256> for lfs_protocol::Sha256 {
+    fn from(v: Sha256) -> Self {
+        lfs_protocol::Sha256(v.0)
+    }
+}
+
+impl From<lfs_protocol::Sha256> for Sha256 {
+    fn from(v: lfs_protocol::Sha256) -> Self {
+        Sha256::from_byte_array(v.0)
+    }
+}
+
 impl Arbitrary for Sha256 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let mut bytes = [0; 32];
