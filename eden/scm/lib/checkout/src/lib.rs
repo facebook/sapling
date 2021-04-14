@@ -361,7 +361,7 @@ impl CheckoutPlan {
             let state = tree_state.get(file)?;
             let unknown = match state {
                 None => true,
-                Some(state) => state.state.intersects(
+                Some(state) => !state.state.intersects(
                     StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
                 ),
             };
