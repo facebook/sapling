@@ -55,6 +55,13 @@ pub type BoxedWriteStore<K, V> = Arc<dyn WriteStore<K, V>>;
 /// A trait object for stores which support both reading and writing.
 pub type BoxedRWStore<K, V> = Arc<dyn ReadWriteStore<K, V>>;
 
+// Automatic blanket impls for FetchKey and FetchValue. For now they're just used to simplify trait bounds.
+pub trait FetchKey: fmt::Display + fmt::Debug + Clone + Send + Sync + 'static {}
+impl<K> FetchKey for K where K: fmt::Display + fmt::Debug + Clone + Send + Sync + 'static {}
+
+pub trait FetchValue: Send + Sync + Clone + 'static {}
+impl<V> FetchValue for V where V: Send + Sync + Clone + 'static {}
+
 #[derive(Debug, Error)]
 pub enum FetchError<K: fmt::Debug + fmt::Display> {
     #[error("failed to fetch key '{0}': key not found")]
@@ -108,8 +115,8 @@ where
 pub fn fetch_error<K, V, E>(e: E) -> FetchStream<K, V>
 where
     E: Into<Error> + Send + Sync + 'static,
-    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
-    V: Send + Sync + 'static,
+    K: FetchKey,
+    V: FetchValue,
 {
     Box::pin(stream::once(future::ready(Err(FetchError::from(e)))))
 }
@@ -140,34 +147,25 @@ where
 }
 
 /// A typed, key-value store which supports both reading and writing.
-pub trait ReadWriteStore<
-    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
-    V: Send + Sync + 'static,
->: ReadStore<K, V> + WriteStore<K, V>
-{
-}
+pub trait ReadWriteStore<K: FetchKey, V: FetchValue>: ReadStore<K, V> + WriteStore<K, V> {}
 
 impl<T, K, V> ReadWriteStore<K, V> for T
 where
-    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
-    V: Send + Sync + 'static,
+    K: FetchKey,
+    V: FetchValue,
     T: ReadStore<K, V> + WriteStore<K, V>,
 {
 }
 
 // TODO: Add attributes support
 /// A typed, async key-value storage API
-pub trait ReadStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Send + Sync + 'static>:
-    Send + Sync + 'static
-{
+pub trait ReadStore<K: FetchKey, V: FetchValue>: Send + Sync + 'static {
     /// Map a stream of keys to a stream of values by fetching from the underlying store
     fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V>;
 }
 
 // TODO: Add attributes support
 /// A typed, async key-value storage API
-pub trait WriteStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Send + Sync + 'static>:
-    Send + Sync + 'static
-{
+pub trait WriteStore<K: FetchKey, V: FetchValue>: Send + Sync + 'static {
     fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K>;
 }

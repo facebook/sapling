@@ -6,7 +6,6 @@
  */
 
 use std::convert::{From, Into, TryFrom, TryInto};
-use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -16,7 +15,8 @@ use tracing::error;
 use streams::select_drop;
 
 use crate::scmstore::{
-    BoxedReadStore, BoxedWriteStore, FetchError, FetchStream, KeyStream, ReadStore,
+    BoxedReadStore, BoxedWriteStore, FetchError, FetchKey, FetchStream, FetchValue, KeyStream,
+    ReadStore,
 };
 
 /// A combinator which queries a preferred store, then falls back to a fallback store
@@ -39,15 +39,15 @@ const CHANNEL_BUFFER: usize = 200;
 
 impl<K, VP, VF, VW, VO> ReadStore<K, VO> for FallbackCache<K, VP, VF, VW>
 where
-    K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
+    K: FetchKey + Unpin,
     // Preferred Value Type
-    VP: Send + Sync + Clone + 'static,
+    VP: FetchValue,
     // Fallback Value Type
-    VF: Send + Sync + Clone + 'static,
+    VF: FetchValue,
     // Write Value Type (must support conversion from fallback)
-    VW: Send + Sync + Clone + From<VF> + 'static,
+    VW: FetchValue + From<VF>,
     // Output Value Type (must support conversion from preferred & fallback)
-    VO: Send + Sync + Clone + TryFrom<VF> + TryFrom<VP> + 'static,
+    VO: FetchValue + TryFrom<VF> + TryFrom<VP>,
     // TODO(meyer): For now, we just require the conversion errors to convertible to anyhow::Error
     // We can probably loosen this later. In particular, we want to associate the key, at least.
     <VO as TryFrom<VF>>::Error: Into<Error>,
@@ -136,13 +136,13 @@ pub struct Fallback<K, VP, VF> {
 
 impl<K, VP, VF, VO> ReadStore<K, VO> for Fallback<K, VP, VF>
 where
-    K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
+    K: FetchKey + Unpin,
     // Preferred Value Type
-    VP: Send + Sync + Clone + 'static,
+    VP: FetchValue,
     // Fallback Value Type
-    VF: Send + Sync + Clone + 'static,
+    VF: FetchValue,
     // Output Value Type (must support conversion from preferred & fallback)
-    VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
+    VO: FetchValue + From<VF> + From<VP>,
 {
     fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
         // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels

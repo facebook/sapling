@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, fmt, hash::Hash, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use futures::{lock::Mutex, StreamExt};
 
 use crate::scmstore::{
-    FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
+    FetchError, FetchKey, FetchStream, FetchValue, KeyStream, ReadStore, WriteResults, WriteStore,
+    WriteStream,
 };
 
 pub struct HashMapStore<K, V> {
@@ -38,8 +39,8 @@ pub trait KeyedValue {
 
 impl<K, V> ReadStore<K, V> for HashMapStore<K, V>
 where
-    K: fmt::Display + fmt::Debug + std::cmp::Eq + Hash + Send + Sync + 'static,
-    V: Clone + Send + Sync + 'static,
+    K: FetchKey + std::cmp::Eq + Hash,
+    V: FetchValue,
 {
     fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V> {
         Box::pin(keys.then(move |key| {
@@ -59,8 +60,8 @@ where
 
 impl<K, V> WriteStore<K, V> for HashMapStore<K, V>
 where
-    K: Clone + fmt::Display + fmt::Debug + std::cmp::Eq + Hash + Send + Sync + 'static,
-    V: KeyedValue<Key = K> + Send + Sync + 'static,
+    K: FetchKey + std::cmp::Eq + Hash,
+    V: FetchValue + KeyedValue<Key = K>,
 {
     fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
         Box::pin(values.then(move |value| {

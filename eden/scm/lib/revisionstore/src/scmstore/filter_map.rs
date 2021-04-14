@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
 use std::sync::Arc;
 
 use futures::StreamExt;
 
-use crate::scmstore::{BoxedWriteStore, WriteResults, WriteStore, WriteStream};
+use crate::scmstore::{
+    BoxedWriteStore, FetchKey, FetchValue, WriteResults, WriteStore, WriteStream,
+};
 
 /// A minimal "filter_map" store, which filters writes to the associated `write_store`,
 pub struct FilterMapStore<K, V, F> {
@@ -23,8 +24,8 @@ pub struct FilterMapStore<K, V, F> {
 
 impl<K, V, F> WriteStore<K, V> for FilterMapStore<K, V, F>
 where
-    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
-    V: Send + Sync + 'static,
+    K: FetchKey,
+    V: FetchValue,
     F: Fn(V) -> Option<V> + Send + Sync + 'static,
 {
     fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
