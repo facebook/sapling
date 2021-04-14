@@ -528,6 +528,13 @@ class revlog(object):
         except KeyError:
             return False
 
+    def filternodes(self, nodes, inverse=False):
+        contains = self.nodemap.__contains__
+        if inverse:
+            return [n for n in nodes if not contains(n)]
+        else:
+            return [n for n in nodes if contains(n)]
+
     def clearcaches(self):
         self._cache = None
         self._chainbasecache.clear()

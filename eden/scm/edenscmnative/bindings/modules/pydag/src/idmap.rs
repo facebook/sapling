@@ -40,6 +40,33 @@ py_class!(pub class idmap |py| {
         }
     }
 
+    /// Filter out nodes not in the IdMap.
+    /// (nodes, inverse=False) -> nodes.
+    ///
+    /// Use batching internally. Faster than checking `__contains__`
+    /// one by one.
+    ///
+    /// If inverse is set to True, return missing nodes instead of
+    /// present nodes.
+    def filternodes(&self, nodes: Vec<PyBytes>, inverse: bool = false) -> PyResult<Vec<PyBytes>> {
+        let map = self.map(py);
+        let vertexes: Vec<_> = nodes.iter().map(|n| Vertex::copy_from(n.data(py))).collect();
+        let ids = block_on(map.vertex_id_batch(&vertexes)).map_pyerr(py)?;
+        let mut result = Vec::with_capacity(nodes.len());
+        for (node, id) in nodes.into_iter().zip(ids) {
+            let present = match id {
+                Err(dag::Error::VertexNotFound(_)) => false,
+                Ok(_) => true,
+                Err(e) => return Err(e).map_pyerr(py),
+            };
+            match (present, inverse) {
+                (true, false) | (false, true) => result.push(node),
+                _ => {}
+            }
+        }
+        Ok(result)
+    }
+
     /// Lookup nodes by hex prefix.
     def hexprefixmatch(&self, prefix: PyObject, limit: usize = 5) -> PyResult<Vec<PyBytes>> {
         let prefix: Vec<u8> = if let Ok(bytes) = prefix.extract::<PyBytes>(py) {

@@ -198,7 +198,20 @@ class changelog(object):
 
     @property
     def hasnode(self):
+        """Test if a node is in the graph.
+        Can trigger remote request if isvertexlazy() is True.
+        Use filternodes to batch the testing.
+        """
         return self.idmap.__contains__
+
+    def filternodes(self, nodes, inverse=False):
+        """Take a list of nodes, return a list of nodes present in the graph.
+        This will only send one remote request. Therefore more efficient than
+        "hasnode".
+
+        If inverse is True, return nodes not present in the graph instead.
+        """
+        return self.idmap.filternodes(nodes, inverse=inverse)
 
     @property
     def torevs(self):
