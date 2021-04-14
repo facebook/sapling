@@ -384,7 +384,7 @@ def _findcommonheadsnew(
 
     ui.status_err(_("searching for changes\n"))
 
-    commonremoteheads = list(filter(cl.hasnode, remoteheads))
+    commonremoteheads = cl.filternodes(remoteheads)
 
     # Mononoke tests do not want this output.
     ui.debug(
