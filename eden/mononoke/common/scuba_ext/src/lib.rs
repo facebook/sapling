@@ -9,7 +9,8 @@
 
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, StreamStats};
-use observability::{ObservabilityContext, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
+pub use observability::ScubaVerbosityLevel;
+use observability::{ObservabilityContext, ScubaLoggingDecisionFields};
 use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
 pub use scuba::{Sampling, ScubaValue};
 use sshrelay::{Metadata, Preamble};
@@ -79,7 +80,7 @@ impl MononokeScubaSampleBuilder {
         }
     }
 
-    fn should_log_with_level(&self, level: ScubaVerbosityLevel) -> bool {
+    pub fn should_log_with_level(&self, level: ScubaVerbosityLevel) -> bool {
         match level {
             ScubaVerbosityLevel::Normal => true,
             ScubaVerbosityLevel::Verbose => self

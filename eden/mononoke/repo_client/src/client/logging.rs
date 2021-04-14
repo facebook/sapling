@@ -15,9 +15,14 @@ use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_01_ext::FutureExt as _;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
+use hgproto::GettreepackArgs;
+use iterhelpers::chunk_by_accumulation;
+use mercurial_types::HgManifestId;
+use mononoke_types::MPath;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 #[cfg(fbcode_build)]
 use scribe::ScribeClient;
+use scuba_ext::ScubaVerbosityLevel;
 use scuba_ext::{MononokeScubaSampleBuilder, ScribeClientImplementation, ScubaValue};
 use stats::prelude::*;
 use std::collections::HashMap;
@@ -34,6 +39,9 @@ define_stats! {
     wireproto_scribe_failure: timeseries(Rate, Sum),
     wireproto_serialization_failure: timeseries(Rate, Sum),
 }
+
+const COLUMN_SIZE_LIMIT: usize = 500_1000;
+const FULL_ARGS_LOG_TAG: &str = "Full Command Args";
 
 pub struct WireprotoLogging {
     reponame: String,
@@ -312,4 +320,114 @@ fn do_wireproto_logging<'a>(
 
 fn generate_random_string(len: usize) -> String {
     thread_rng().sample_iter(&Alphanumeric).take(len).collect()
+}
+
+fn debug_format_directory<T: AsRef<[u8]>>(directory: &T) -> String {
+    String::from_utf8_lossy(&hgproto::batch::escape(directory)).to_string()
+}
+
+pub fn debug_format_manifest(node: &HgManifestId) -> String {
+    format!("{}", node)
+}
+
+pub fn debug_format_path(path: &Option<MPath>) -> String {
+    match path {
+        Some(p) => format!("{}", p),
+        None => String::new(),
+    }
+}
+
+fn greater_than_column_size(a: usize) -> bool {
+    a > COLUMN_SIZE_LIMIT
+}
+
+pub fn log_gettreepack_params_verbose(ctx: &CoreContext, args: &GettreepackArgs) {
+    if !ctx
+        .scuba()
+        .should_log_with_level(ScubaVerbosityLevel::Verbose)
+    {
+        return;
+    }
+
+    let mut sample = ctx.scuba().clone();
+    sample.add("gettreepack_rootdir", debug_format_path(&args.rootdir));
+
+    if let Some(depth) = args.depth {
+        sample.add("gettreepack_depth", depth);
+    }
+    let msg = "gettreepack rootdir and depth".to_string();
+    sample.log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg);
+
+    let mfnode_chunks = chunk_by_accumulation(
+        args.mfnodes.iter().map(debug_format_manifest),
+        0,
+        |acc, s| acc + s.len(),
+        greater_than_column_size,
+    );
+
+    let msg = "gettreepack mfnodes".to_string();
+    for (i, mfnode_chunk) in mfnode_chunks.into_iter().enumerate() {
+        ctx.scuba()
+            .clone()
+            .add("gettreepack_mfnode_chunk_idx", i)
+            .add("gettreepack_mfnode_chunk", mfnode_chunk)
+            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
+    }
+
+    let basemfnode_chunks = chunk_by_accumulation(
+        args.basemfnodes.iter().map(debug_format_manifest),
+        0,
+        |acc, s| acc + s.len(),
+        greater_than_column_size,
+    );
+
+    let msg = "gettreepack basemfnodes".to_string();
+    for (i, basemfnode_chunk) in basemfnode_chunks.into_iter().enumerate() {
+        ctx.scuba()
+            .clone()
+            .add("gettreepack_basemfnode_chunk_idx", i)
+            .add("gettreepack_basemfnode_chunk", basemfnode_chunk)
+            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
+    }
+
+    let directory_chunks = chunk_by_accumulation(
+        args.directories.iter().map(debug_format_directory),
+        0,
+        |acc, s| acc + s.len(),
+        greater_than_column_size,
+    );
+    let msg = "gettreepack directories".to_string();
+    for (i, directory_chunk) in directory_chunks.into_iter().enumerate() {
+        ctx.scuba()
+            .clone()
+            .add("gettreepack_directory_chunk_idx", i)
+            .add("gettreepack_directory_chunk", directory_chunk)
+            .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
+    }
+}
+
+pub fn log_getpack_params_verbose(ctx: &CoreContext, encoded_params: &[(String, Vec<String>)]) {
+    if !ctx
+        .scuba()
+        .should_log_with_level(ScubaVerbosityLevel::Verbose)
+    {
+        return;
+    }
+
+    for (mpath, filenodes) in encoded_params {
+        let filenode_chunks = chunk_by_accumulation(
+            filenodes.iter().cloned(),
+            0,
+            |acc, s| acc + s.len(),
+            greater_than_column_size,
+        );
+        for (i, filenode_chunk) in filenode_chunks.into_iter().enumerate() {
+            ctx.scuba()
+                .clone()
+                .add("getpack_mpath", mpath.clone())
+                .add("getpack_filenode_chunk_idx", i)
+                .add("getpack_filenode_chunk", filenode_chunk)
+                .log_with_msg_verbose(FULL_ARGS_LOG_TAG, None);
+        }
+    }
 }

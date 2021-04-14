@@ -93,8 +93,11 @@ mod monitor;
 mod session_bookmarks_cache;
 mod tests;
 
-use logging::CommandLogger;
 pub use logging::WireprotoLogging;
+use logging::{
+    debug_format_manifest, debug_format_path, log_getpack_params_verbose,
+    log_gettreepack_params_verbose, CommandLogger,
+};
 use monitor::Monitor;
 use session_bookmarks_cache::SessionBookmarkCache;
 
@@ -162,19 +165,12 @@ fn gettreepack_scuba_sampling_rate(params: &GettreepackArgs) -> SamplingRate {
     }
 }
 
-fn debug_format_path(path: &Option<MPath>) -> String {
-    match path {
-        Some(p) => format!("{}", p),
-        None => String::new(),
-    }
-}
-
 fn debug_format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
     nodes.into_iter().map(|node| format!("{}", node)).join(" ")
 }
 
 fn debug_format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
-    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
+    nodes.into_iter().map(debug_format_manifest).join(" ")
 }
 
 fn debug_format_directories<'a, T: AsRef<[u8]> + 'a>(
@@ -894,7 +890,7 @@ impl RepoClient {
                                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
                             let encoded_params = {
                                 let getpack_params = getpack_params.lock().unwrap();
-                                let mut encoded_params = vec![];
+                                let mut encoded_params: Vec<(String, Vec<String>)> = vec![];
                                 for (path, filenodes) in getpack_params.iter() {
                                     let mut encoded_filenodes = vec![];
                                     for filenode in filenodes {
@@ -913,11 +909,9 @@ impl RepoClient {
                                 encoded_params.len() as i64,
                             );
 
-                            command_logger.finalize_command(
-                                ctx,
-                                &stats,
-                                Some(&json! {encoded_params}),
-                            );
+                            log_getpack_params_verbose(&ctx, &encoded_params);
+                            let json_params = json! {encoded_params};
+                            command_logger.finalize_command(ctx, &stats, Some(&json_params));
 
                             Ok(())
                         }
@@ -1897,6 +1891,8 @@ impl HgCommands for RepoClient {
                     .add("gettreepack_mfnodes", params.mfnodes.len())
                     .add("gettreepack_directories", params.directories.len())
                     .log_with_msg("Gettreepack Params", None);
+
+                log_gettreepack_params_verbose(&ctx, &params);
 
                 let s = self
                     .gettreepack_untimed(ctx.clone(), params)
