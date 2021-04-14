@@ -627,6 +627,8 @@ pub enum NodeData {
     ErrorAsData(Node),
     // Weren't able to find node
     MissingAsData(Node),
+    // Node has an invalid hash
+    HashValidationFailureAsData(Node),
     NotRequired,
     // Bonsai
     Bookmark(ChangesetId),

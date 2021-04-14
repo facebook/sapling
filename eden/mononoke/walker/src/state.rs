@@ -44,6 +44,7 @@ use strum_macros::{EnumIter, EnumString, EnumVariantNames};
 pub struct StepStats {
     pub error_count: usize,
     pub missing_count: usize,
+    pub hash_validation_failure_count: usize,
     pub num_expanded_new: usize,
     pub visited_of_type: usize,
 }
@@ -54,6 +55,8 @@ impl Add<StepStats> for StepStats {
         Self {
             error_count: self.error_count + other.error_count,
             missing_count: self.missing_count + other.missing_count,
+            hash_validation_failure_count: self.hash_validation_failure_count
+                + other.hash_validation_failure_count,
             num_expanded_new: self.num_expanded_new + other.num_expanded_new,
             visited_of_type: cmp::max(self.visited_of_type, other.visited_of_type),
         }
@@ -894,17 +897,28 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         let num_expanded_new = outgoing.len() + queued_roots;
         let node = resolved.target;
 
-        let (error_count, missing_count, node_data) = match node_data {
-            Some(NodeData::ErrorAsData(_key)) => (1, 0, None),
-            Some(NodeData::MissingAsData(_key)) => (0, 1, None),
-            Some(d) => (0, 0, Some(d)),
-            None => (0, 0, None),
-        };
-        let stats = StepStats {
-            error_count,
-            missing_count,
+        let mut stats = StepStats {
+            error_count: 0,
+            missing_count: 0,
+            hash_validation_failure_count: 0,
             num_expanded_new,
             visited_of_type: self.get_visit_count(&node.get_type()),
+        };
+        let node_data = match node_data {
+            Some(NodeData::ErrorAsData(_key)) => {
+                stats.error_count += 1;
+                None
+            }
+            Some(NodeData::MissingAsData(_key)) => {
+                stats.missing_count += 1;
+                None
+            }
+            Some(NodeData::HashValidationFailureAsData(_key)) => {
+                stats.hash_validation_failure_count += 1;
+                None
+            }
+            Some(d) => Some(d),
+            None => None,
         };
 
         ((node, node_data, Some(stats)), EmptyRoute {}, outgoing)

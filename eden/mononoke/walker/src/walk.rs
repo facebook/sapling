@@ -198,6 +198,8 @@ enum StepOutput {
 enum StepError {
     #[error("{0} is missing")]
     Missing(String),
+    #[error("Hash validation failure: {0}")]
+    HashValidationFailure(Error),
     #[error(transparent)]
     Other(#[from] Error),
 }
@@ -1930,7 +1932,7 @@ where
                     .validate_hash(ctx.clone(), repo.clone(), &node_data);
                 match f.await {
                     Ok(()) => Ok(StepOutput::Done(node_data, children)),
-                    Err(err) => Err(StepError::Other(err)),
+                    Err(err) => Err(StepError::HashValidationFailure(err)),
                 }
             } else {
                 Ok(StepOutput::Done(node_data, children))
@@ -1957,6 +1959,7 @@ where
 
             let check_type = match e {
                 StepError::Missing(_) => "missing",
+                StepError::HashValidationFailure(_) => "hash_validation_failure",
                 StepError::Other(_) => "step",
             };
 
@@ -1975,6 +1978,10 @@ where
                     match e {
                         StepError::Missing(_s) => Ok(StepOutput::Done(
                             NodeData::MissingAsData(walk_item.target.clone()),
+                            vec![],
+                        )),
+                        StepError::HashValidationFailure(_s) => Ok(StepOutput::Done(
+                            NodeData::HashValidationFailureAsData(walk_item.target.clone()),
                             vec![],
                         )),
                         StepError::Other(_e) => Ok(StepOutput::Done(

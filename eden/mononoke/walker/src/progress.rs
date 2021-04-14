@@ -29,9 +29,11 @@ define_stats! {
     walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_errors: dynamic_timeseries("{}.progress.{}.errors", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_missing: dynamic_timeseries("{}.progress.{}.missing", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_hash_validation_failure: dynamic_timeseries("{}.progress.{}.hash_validation_failure", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_walked_by_type: dynamic_timeseries("{}.progress.{}.{}.walked", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
     walk_progress_errors_by_type: dynamic_timeseries("{}.progress.{}.{}.errors", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
     walk_progress_missing_by_type: dynamic_timeseries("{}.progress.{}.{}.missing", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
+    walk_progress_hash_validation_failure_by_type: dynamic_timeseries("{}.progress.{}.{}.hash_validation_failure", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
 }
 
 pub trait ProgressRecorderUnprotected<SS> {
@@ -99,6 +101,7 @@ pub struct ProgressSummary {
     queued: u64,
     errors: u64,
     missing: u64,
+    hash_validation_failure: u64,
 }
 
 // Takes a summary type as a parameter. e.g. ProgressSummary
@@ -209,6 +212,14 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
                 node_type.to_string(),
             ),
         );
+        STATS::walk_progress_hash_validation_failure_by_type.add_value(
+            summary.hash_validation_failure as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+                node_type.to_string(),
+            ),
+        );
     }
 
     pub fn report_progress_log(&mut self, mut delta_time: Option<Duration>) {
@@ -224,6 +235,7 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
                     queued: ss.num_expanded_new as u64,
                     errors: ss.error_count as u64,
                     missing: ss.missing_count as u64,
+                    hash_validation_failure: ss.hash_validation_failure_count as u64,
                 };
                 let delta = s - self
                     .reporting_stats
@@ -325,6 +337,14 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
 
         STATS::walk_progress_missing.add_value(
             delta_summary.missing as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+
+        STATS::walk_progress_hash_validation_failure.add_value(
+            delta_summary.hash_validation_failure as i64,
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
