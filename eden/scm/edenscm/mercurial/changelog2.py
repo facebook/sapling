@@ -395,8 +395,6 @@ class changelog(object):
             basetext = textmap.get(deltabase) or self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
             textmap[node] = rawtext
-            if node not in nodemap:
-                tip = node
             commits.append((node, parents, rawtext))
             # Attempt to make memory usage bound for large pulls.
             if len(commits) > buffersize:
@@ -417,6 +415,8 @@ class changelog(object):
                 self.inner.flushcommitdata()
                 commits[:] = []
             nodes.append(node)
+        if nodes:
+            tip = nodes[-1]
         # Call 'addcommits' once with batched commits is important for
         # performance.
         self.inner.addcommits(commits)
