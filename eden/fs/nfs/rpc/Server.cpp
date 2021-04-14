@@ -16,7 +16,6 @@
 #include <tuple>
 
 using folly::AsyncServerSocket;
-using ReleasableDestructor = folly::AsyncSocket::ReleasableDestructor;
 using folly::AsyncSocket;
 using folly::Future;
 using folly::IOBuf;
@@ -192,7 +191,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
  public:
   RpcTcpHandler(
       std::shared_ptr<RpcServerProcessor> proc,
-      std::unique_ptr<AsyncSocket, ReleasableDestructor>&& socket,
+      AsyncSocket::UniquePtr&& socket,
       std::shared_ptr<folly::Executor> threadPool)
       : proc_(proc),
         sock_(std::move(socket)),
