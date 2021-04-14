@@ -44,4 +44,4 @@ tempdir = "0.3"
 
 [features]
 default = []
-fb = ["reqwest", "sha2", "thrift-types", "types", "zstd"]
+fb = ["hostcaps/fb", "reqwest", "sha2", "thrift-types", "types", "zstd"]
