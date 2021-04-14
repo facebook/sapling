@@ -43,6 +43,7 @@ pub struct HttpClient {
     pool: Pool,
     verbose: bool,
     event_listeners: HttpClientEventListeners,
+    max_concurrent_requests: usize,
 }
 
 impl HttpClient {
@@ -51,11 +52,18 @@ impl HttpClient {
             pool: Pool::new(),
             verbose: false,
             event_listeners: Default::default(),
+            max_concurrent_requests: 0, // Unlimited by default.
         }
     }
 
-    pub fn verbose(self, verbose: bool) -> Self {
-        Self { verbose, ..self }
+    pub fn verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
+
+    pub fn max_concurrent_requests(mut self, max: usize) -> Self {
+        self.max_concurrent_requests = max;
+        self
     }
 
     /// Perform multiple HTTP requests concurrently.
@@ -89,7 +97,10 @@ impl HttpClient {
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
         P: FnMut(Progress),
     {
-        let multi = self.pool.multi();
+        let mut multi = self.pool.multi();
+        multi
+            .get_mut()
+            .set_max_total_connections(self.max_concurrent_requests)?;
         let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
         for mut request in requests {
@@ -201,9 +212,11 @@ impl HttpClient {
         R: Receiver,
         P: FnMut(Progress),
     {
-        let multi = self.pool.multi();
+        let mut multi = self.pool.multi();
+        multi
+            .get_mut()
+            .set_max_total_connections(self.max_concurrent_requests)?;
         let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
-
         for mut request in requests {
             self.event_listeners
                 .trigger_new_request(request.request.ctx_mut());

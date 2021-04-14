@@ -65,6 +65,10 @@ impl PoolMulti {
     pub(crate) fn get(&self) -> &Multi {
         &self.entry.as_ref().unwrap().multi
     }
+
+    pub(crate) fn get_mut(&mut self) -> &mut Multi {
+        &mut self.entry.as_mut().unwrap().multi
+    }
 }
 
 impl Drop for PoolMulti {
