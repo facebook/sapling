@@ -30,12 +30,21 @@ pub fn git_lfs_mime() -> Mime {
     GIT_LFS_MIME.clone()
 }
 
-#[derive(Clone, Serialize, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Serialize, Debug, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operation {
     #[serde(rename = "download")]
     Download,
     #[serde(rename = "upload")]
     Upload,
+}
+
+impl Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Download => write!(f, "download"),
+            Self::Upload => write!(f, "upload"),
+        }
+    }
 }
 
 impl Arbitrary for Operation {
