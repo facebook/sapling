@@ -23,7 +23,7 @@ use std::{
     time::Instant,
 };
 
-use anyhow::{bail, ensure, format_err, Context, Result};
+use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use futures::{
     future::FutureExt,
     stream::{iter, StreamExt, TryStreamExt},
@@ -93,8 +93,9 @@ enum LfsBlobsStore {
 
 struct HttpLfsRemote {
     url: Url,
-    concurrent_fetches: usize,
     client: HttpClient,
+    concurrent_fetches: usize,
+    download_chunk_size: Option<u64>,
     http_options: HttpOptions,
 }
 
@@ -963,8 +964,9 @@ impl LfsRemoteInner {
         method: Method,
         url: Url,
         add_extra: impl Fn(Request) -> Request,
+        check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
-    ) -> Result<Option<Bytes>> {
+    ) -> Result<Bytes> {
         let mut backoff = http_options.backoff_times.iter().copied();
         let mut rng = thread_rng();
         let mut attempt = 0;
@@ -1028,6 +1030,8 @@ impl LfsRemoteInner {
                     return Err(TransferError::HttpStatus(status));
                 }
 
+                check_status(status)?;
+
                 let start = Instant::now();
                 let mut body = reply.body;
                 let mut chunks: Vec<Vec<u8>> = vec![];
@@ -1051,11 +1055,7 @@ impl LfsRemoteInner {
                     chunks.push(chunk);
                 }
 
-                let mut result = Vec::with_capacity(chunks.iter().map(|c| c.len()).sum());
-                for chunk in chunks.into_iter() {
-                    result.extend_from_slice(&chunk);
-                }
-                let result: Bytes = result.into();
+                let result = join_chunks(&chunks);
 
                 let content_encoding = headers.get("Content-Encoding");
 
@@ -1079,7 +1079,7 @@ impl LfsRemoteInner {
                     }
                 };
 
-                Result::<_, TransferError>::Ok(Some(result))
+                Result::<_, TransferError>::Ok(result)
             }
             .await;
 
@@ -1094,6 +1094,7 @@ impl LfsRemoteInner {
                 TransferError::EndOfStream => false,
                 TransferError::Timeout(..) => false,
                 TransferError::ChunkTimeout { .. } => false,
+                TransferError::UnexpectedHttpStatus { .. } => false,
                 TransferError::InvalidResponse(..) => false,
             };
 
@@ -1140,17 +1141,13 @@ impl LfsRemoteInner {
                 Method::Post,
                 http.url.join("objects/batch")?,
                 move |builder| builder.body(batch_json.clone()),
+                |_| Ok(()),
                 &http.http_options,
             )
             .await
         };
 
         let response = block_on_future(response_fut)?;
-        let response = match response {
-            None => return Ok(None),
-            Some(response) => response,
-        };
-
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }
 
@@ -1177,6 +1174,7 @@ impl LfsRemoteInner {
                     builder.header("Content-Length", 0)
                 }
             },
+            |_| Ok(()),
             http_options,
         )
         .await?;
@@ -1186,24 +1184,70 @@ impl LfsRemoteInner {
 
     async fn process_download(
         client: &HttpClient,
+        chunk_size: Option<u64>,
         action: ObjectAction,
         oid: Sha256,
+        size: u64,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
         http_options: &HttpOptions,
     ) -> Result<()> {
         let url = Url::from_str(&action.href.to_string())?;
-        let data = LfsRemoteInner::send_with_retry(
-            client,
-            Method::Get,
-            url,
-            move |builder| {
-                let builder = add_action_headers_to_request(builder, &action);
 
-                builder
-            },
-            http_options,
-        )
-        .await;
+        let data = match chunk_size {
+            Some(chunk_size) => {
+                async {
+                    let mut chunks = Vec::new();
+                    let mut chunk_start = 0;
+
+                    let file_end = size.saturating_sub(1);
+
+                    while chunk_start < file_end {
+                        let chunk_end = std::cmp::min(file_end, chunk_start + chunk_size);
+                        let range = format!("bytes={}-{}", chunk_start, chunk_end);
+
+                        let chunk = LfsRemoteInner::send_with_retry(
+                            client,
+                            Method::Get,
+                            url.clone(),
+                            |builder| {
+                                let builder = add_action_headers_to_request(builder, &action);
+                                builder.header("Range", &range)
+                            },
+                            |status| {
+                                if status == http::StatusCode::PARTIAL_CONTENT {
+                                    return Ok(());
+                                }
+
+                                Err(TransferError::UnexpectedHttpStatus {
+                                    expected: http::StatusCode::PARTIAL_CONTENT,
+                                    received: status,
+                                })
+                            },
+                            http_options,
+                        )
+                        .await?;
+
+                        chunks.push(chunk);
+
+                        chunk_start = chunk_end + 1;
+                    }
+
+                    Result::<_, Error>::Ok(join_chunks(&chunks))
+                }
+                .await
+            }
+            None => {
+                LfsRemoteInner::send_with_retry(
+                    client,
+                    Method::Get,
+                    url,
+                    |builder| add_action_headers_to_request(builder, &action),
+                    |_| Ok(()),
+                    http_options,
+                )
+                .await
+            }
+        };
 
         let data = match data {
             Ok(data) => data,
@@ -1211,16 +1255,14 @@ impl LfsRemoteInner {
                 None => return Err(err),
                 Some(fetch_error) => match fetch_error.error {
                     TransferError::HttpStatus(http::StatusCode::GONE) => {
-                        Some(Bytes::from_static(redacted::REDACTED_CONTENT))
+                        Bytes::from_static(redacted::REDACTED_CONTENT)
                     }
                     _ => return Err(err),
                 },
             },
         };
 
-        if let Some(data) = data {
-            spawn_blocking(move || write_to_store(oid, data)).await??
-        }
+        spawn_blocking(move || write_to_store(oid, data)).await??;
 
         Ok(())
     }
@@ -1270,8 +1312,10 @@ impl LfsRemoteInner {
                     .left_future(),
                     Operation::Download => LfsRemoteInner::process_download(
                         &http.client,
+                        http.download_chunk_size,
                         action,
                         oid,
+                        object.object.size,
                         write_to_store.clone(),
                         &http.http_options,
                     )
@@ -1384,6 +1428,8 @@ impl LfsRemote {
                     grace_period: low_speed_grace_period,
                 });
 
+            let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;
+
             let client = http_client("lfs");
 
             Ok(Self {
@@ -1392,8 +1438,9 @@ impl LfsRemote {
                 move_after_upload,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
-                    concurrent_fetches,
                     client,
+                    concurrent_fetches,
+                    download_chunk_size,
                     http_options: HttpOptions {
                         accept_zstd,
                         http_version,
@@ -1762,6 +1809,14 @@ fn add_action_headers_to_request(builder: Request, action: &ObjectAction) -> Req
     }
 
     builder
+}
+
+fn join_chunks<T: AsRef<[u8]>>(chunks: &[T]) -> Bytes {
+    let mut result = Vec::with_capacity(chunks.iter().map(|c| c.as_ref().len()).sum());
+    for chunk in chunks {
+        result.extend_from_slice(chunk.as_ref());
+    }
+    result.into()
 }
 
 #[cfg(test)]
@@ -2510,60 +2565,76 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn test_lfs_remote() -> Result<()> {
-            for http_version in &["1.1", "2"] {
-                let _env_lock = crate::env_lock();
+        fn test_download<C>(configure: C) -> Result<()>
+        where
+            C: for<'a> FnOnce(&'a mut ConfigSet),
+        {
+            let _env_lock = crate::env_lock();
 
-                let cachedir = TempDir::new()?;
-                let lfsdir = TempDir::new()?;
-                let mut config = make_lfs_config(&cachedir);
-                config.set(
-                    "lfs",
-                    "http-version",
-                    Some(http_version),
-                    &Default::default(),
-                );
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+            configure(&mut config);
 
-                let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-                let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-                let blob1 = (
-                    Sha256::from_str(
-                        "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
-                    )?,
-                    6,
-                    Bytes::from(&b"master"[..]),
-                );
-                let blob2 = (
-                    Sha256::from_str(
-                        "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-                    )?,
-                    6,
-                    Bytes::from(&b"1.44.0"[..]),
-                );
+            let blob1 = (
+                Sha256::from_str(
+                    "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+                )?,
+                6,
+                Bytes::from(&b"master"[..]),
+            );
+            let blob2 = (
+                Sha256::from_str(
+                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+                )?,
+                6,
+                Bytes::from(&b"1.44.0"[..]),
+            );
 
-                let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
-                    .iter()
-                    .cloned()
-                    .collect::<HashSet<_>>();
-                let out = Arc::new(Mutex::new(Vec::new()));
-                remote.batch_fetch(&objs, {
-                    let out = out.clone();
-                    move |sha256, blob| {
-                        out.lock().push((sha256, blob));
-                        Ok(())
-                    }
-                })?;
-                out.lock().sort();
+            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
+            let out = Arc::new(Mutex::new(Vec::new()));
+            remote.batch_fetch(&objs, {
+                let out = out.clone();
+                move |sha256, blob| {
+                    out.lock().push((sha256, blob));
+                    Ok(())
+                }
+            })?;
+            out.lock().sort();
 
-                let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
-                expected_res.sort();
+            let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
+            expected_res.sort();
 
-                assert_eq!(*out.lock(), expected_res);
-            }
+            assert_eq!(*out.lock(), expected_res);
 
             Ok(())
+        }
+
+        #[test]
+        fn test_lfs_remote_http1_1() -> Result<()> {
+            test_download(|config| {
+                config.set("lfs", "http-version", Some("1.1"), &Default::default());
+            })
+        }
+
+        #[test]
+        fn test_lfs_remote_http2() -> Result<()> {
+            test_download(|config| {
+                config.set("lfs", "http-version", Some("2"), &Default::default());
+            })
+        }
+
+        #[test]
+        fn test_lfs_remote_chunked() -> Result<()> {
+            test_download(|config| {
+                config.set("lfs", "download-chunk-size", Some("3"), &Default::default());
+            })
         }
 
         #[test]

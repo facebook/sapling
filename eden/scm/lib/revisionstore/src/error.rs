@@ -52,6 +52,12 @@ pub enum TransferError {
         request_id: String,
     },
 
+    #[error("Unexpected HTTP Status. Expected {}, received {}", .expected, .received)]
+    UnexpectedHttpStatus {
+        expected: StatusCode,
+        received: StatusCode,
+    },
+
     #[error(transparent)]
     InvalidResponse(Error),
 }
