@@ -23,7 +23,7 @@ use std::{
     time::Instant,
 };
 
-use anyhow::{bail, ensure, format_err, Context, Error, Result};
+use anyhow::{bail, ensure, format_err, Context, Result};
 use futures::{
     future::FutureExt,
     stream::{iter, StreamExt, TryStreamExt},
@@ -966,7 +966,7 @@ impl LfsRemoteInner {
         add_extra: impl Fn(Request) -> Request,
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
-    ) -> Result<Bytes> {
+    ) -> Result<Bytes, FetchError> {
         let mut backoff = http_options.backoff_times.iter().copied();
         let mut rng = thread_rng();
         let mut attempt = 0;
@@ -1135,11 +1135,13 @@ impl LfsRemoteInner {
 
         let batch_json = serde_json::to_string(&batch)?;
 
+        let batch_url = http.url.join("objects/batch")?;
+
         let response_fut = async move {
             LfsRemoteInner::send_with_retry(
                 &http.client,
                 Method::Post,
-                http.url.join("objects/batch")?,
+                batch_url,
                 move |builder| builder.body(batch_json.clone()),
                 |_| Ok(()),
                 &http.http_options,
@@ -1232,7 +1234,7 @@ impl LfsRemoteInner {
                         chunk_start = chunk_end + 1;
                     }
 
-                    Result::<_, Error>::Ok(join_chunks(&chunks))
+                    Result::<_, FetchError>::Ok(join_chunks(&chunks))
                 }
                 .await
             }
@@ -1251,14 +1253,11 @@ impl LfsRemoteInner {
 
         let data = match data {
             Ok(data) => data,
-            Err(err) => match err.downcast_ref::<FetchError>() {
-                None => return Err(err),
-                Some(fetch_error) => match fetch_error.error {
-                    TransferError::HttpStatus(http::StatusCode::GONE) => {
-                        Bytes::from_static(redacted::REDACTED_CONTENT)
-                    }
-                    _ => return Err(err),
-                },
+            Err(err) => match err.error {
+                TransferError::HttpStatus(http::StatusCode::GONE) => {
+                    Bytes::from_static(redacted::REDACTED_CONTENT)
+                }
+                _ => return Err(err.into()),
             },
         };
 
