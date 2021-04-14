@@ -18,11 +18,11 @@ from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class DiskUsageTest(DoctorTestBase):
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, **kw) -> None:
         super().__init__(*args, **kw)
         self.fs_util = FakeFsUtil()
 
-    def _mock_disk_usage(self, blocks, avail, frsize=1024) -> None:
+    def _mock_disk_usage(self, blocks, avail, frsize: int = 1024) -> None:
         """Mock test for disk usage."""
         self.fs_util.total = blocks * frsize
         self.fs_util.free = avail * frsize
@@ -50,7 +50,7 @@ class DiskUsageTest(DoctorTestBase):
         )
         return problem_collector.problems
 
-    def test_low_free_absolute_disk_is_major(self):
+    def test_low_free_absolute_disk_is_major(self) -> None:
         self._mock_disk_usage(blocks=100000000, avail=500000)
         problems = self._check_disk_usage()
 
@@ -62,7 +62,7 @@ class DiskUsageTest(DoctorTestBase):
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
-    def test_low_percentage_free_but_high_absolute_free_disk_is_minor(self):
+    def test_low_percentage_free_but_high_absolute_free_disk_is_minor(self) -> None:
         self._mock_disk_usage(blocks=100000000, avail=2000000)
         problems = self._check_disk_usage()
 
@@ -74,7 +74,7 @@ class DiskUsageTest(DoctorTestBase):
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ADVICE)
 
-    def test_high_percentage_free_but_small_disk_is_major(self):
+    def test_high_percentage_free_but_small_disk_is_major(self) -> None:
         self._mock_disk_usage(blocks=800000, avail=500000)
         problems = self._check_disk_usage()
 
@@ -86,7 +86,7 @@ class DiskUsageTest(DoctorTestBase):
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
-    def test_disk_usage_normal(self):
+    def test_disk_usage_normal(self) -> None:
         self._mock_disk_usage(blocks=100000000, avail=50000000)
         problems = self._check_disk_usage()
         self.assertEqual(len(problems), 0)
