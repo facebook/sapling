@@ -42,6 +42,7 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 /// it does not contain a mutable store into which to write the fetched data.
 /// Use the methods from the `HgIdRemoteStore` trait to provide an appropriate
 /// mutable store.
+#[derive(Clone)]
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
     repo: String,

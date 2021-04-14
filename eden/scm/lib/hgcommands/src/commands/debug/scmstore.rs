@@ -13,10 +13,13 @@ use futures::stream;
 use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
 use edenapi::Builder;
-use edenapi_types::{FileEntry, TreeEntry};
+use edenapi_types::TreeEntry;
 use revisionstore::{
     indexedlogdatastore::{Entry, IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    scmstore::{edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, KeyStream},
+    scmstore::{
+        edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, FileScmStoreBuilder,
+        KeyStream,
+    },
     ExtStoredPolicy,
 };
 use types::{HgId, Key, RepoPathBuf};
@@ -51,19 +54,6 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
         .unwrap(),
     );
 
-    // IndexedLog file store
-    let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    io.write(&format!("Full file indexedlog path: {}\n", fullpath))?;
-    let file_indexedstore = Arc::new(
-        IndexedLogHgIdDataStore::new(
-            fullpath,
-            ExtStoredPolicy::Use,
-            &config,
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap(),
-    );
-
     // EdenApi tree store
     let edenapi = Arc::new(EdenApiAdapter {
         client: Builder::from_config(config)?.build()?,
@@ -76,13 +66,6 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
         preferred: tree_indexedstore.clone(),
         fallback: edenapi.clone() as BoxedReadStore<Key, TreeEntry>,
         write_store: Some(tree_indexedstore),
-    }) as BoxedReadStore<Key, Entry>;
-
-    // Fallback store combinator (files)
-    let file_fallback = Arc::new(FallbackCache {
-        preferred: file_indexedstore.clone(),
-        fallback: edenapi as BoxedReadStore<Key, FileEntry>,
-        write_store: Some(file_indexedstore),
     }) as BoxedReadStore<Key, Entry>;
 
     // Test trees
@@ -125,6 +108,9 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     }
 
     // Test files
+    let file_builder = FileScmStoreBuilder::new(&config);
+    let file_scmstore = file_builder.build()?;
+
     let file_keystrings = [
         (
             "fbcode/eden/scm/lib/revisionstore/Cargo.toml",
@@ -149,7 +135,7 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     }
 
     let fetched_files = block_on_stream(
-        file_fallback.fetch_stream(Box::pin(stream::iter(file_keys)) as KeyStream<Key>),
+        file_scmstore.fetch_stream(Box::pin(stream::iter(file_keys)) as KeyStream<Key>),
     );
 
     for item in fetched_files {

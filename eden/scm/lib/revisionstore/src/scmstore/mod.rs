@@ -15,6 +15,7 @@ use futures::{
 use thiserror::Error;
 
 pub use self::{
+    builder::FileScmStoreBuilder,
     edenapi::EdenApiAdapter,
     fallback::{Fallback, FallbackCache},
     filter_map::FilterMapStore,
@@ -23,11 +24,13 @@ pub use self::{
     types::{StoreFile, StoreTree},
 };
 
+pub mod builder;
 pub mod edenapi;
 pub mod fallback;
 pub mod filter_map;
 pub mod inmemory;
 pub mod legacy;
+pub mod lfs;
 pub mod types;
 
 /// A pinned, boxed stream of keys to fetch.

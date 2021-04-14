@@ -16,5 +16,4 @@ progress = { path = "../../../../lib/progress" }
 pyprogress = { path = "../pyprogress" }
 pyconfigparser = { path = "../pyconfigparser" }
 revisionstore = { path = "../../../../lib/revisionstore" }
-tracing = "0.1"
 types = { path = "../../../../lib/types" }

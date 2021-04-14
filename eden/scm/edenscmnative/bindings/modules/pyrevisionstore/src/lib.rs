@@ -21,14 +21,13 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use futures::stream;
 use parking_lot::RwLock;
-use tracing::error;
 
 use async_runtime::stream_to_iter as block_on_stream;
-use configparser::{config::ConfigSet, convert::ByteCount};
+use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
-use edenapi_types::{FileEntry, TreeEntry};
+use edenapi_types::TreeEntry;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -36,8 +35,8 @@ use revisionstore::{
     indexedlogdatastore::Entry,
     repack,
     scmstore::{
-        BoxedReadStore, BoxedWriteStore, Fallback, FallbackCache, FilterMapStore, KeyStream,
-        LegacyDatastore, StoreFile, StoreTree,
+        BoxedReadStore, Fallback, FallbackCache, FileScmStoreBuilder, KeyStream, LegacyDatastore,
+        StoreFile, StoreTree,
     },
     util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
@@ -1152,8 +1151,8 @@ fn make_filescmstore<'a>(
     suffix: Option<String>,
     correlator: Option<String>,
 ) -> Result<(BoxedReadStore<Key, StoreFile>, Arc<ContentStore>)> {
-    // Construct ContentStore
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+    let mut scmstore_builder = FileScmStoreBuilder::new(&config);
 
     builder = if let Some(path) = path {
         builder.local_path(path)
@@ -1167,101 +1166,23 @@ fn make_filescmstore<'a>(
         builder
     };
 
+    if let Some(ref suffix) = suffix {
+        builder = builder.suffix(suffix);
+        scmstore_builder = scmstore_builder.suffix(suffix);
+    }
 
-    let suffix = suffix.map(|s| s.into());
-    builder = if let Some(suffix) = suffix.clone() {
-        builder.suffix(suffix)
-    } else {
-        builder
-    };
-
-    let cache_path = &util::get_cache_path(config, &suffix)?;
-    // TODO(meyer): Do check_cache_buster even for scmstore-only (happens as part of ContentStore construction)
-    // revisionstore::contentstore::check_cache_buster(config, &cache_path);
-
-    let enable_lfs = config.get_or_default::<bool>("remotefilelog", "lfs")?;
-    let extstored_policy = if enable_lfs {
-        if config.get_or_default::<bool>("remotefilelog", "useextstored")? {
-            ExtStoredPolicy::Use
-        } else {
-            ExtStoredPolicy::Ignore
-        }
-    } else {
-        ExtStoredPolicy::Use
-    };
-
-    let lfs_threshold = if enable_lfs {
-        config.get_opt::<ByteCount>("lfs", "threshold")?
-    } else {
-        None
-    };
-
-    // Extract EdenApiAdapter for scmstore construction later on
-    let mut edenapi_adapter = None;
     builder = if let Some(edenapi) = edenapi_filestore {
-        edenapi_adapter = Some(edenapi.get_scmstore_adapter(extstored_policy));
+        scmstore_builder = scmstore_builder.shared_edenapi(edenapi.clone());
         builder.remotestore(edenapi)
     } else {
         builder.remotestore(remote)
     };
 
-    let file_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-        util::get_indexedlogdatastore_path(&cache_path)?,
-        extstored_policy,
-        config,
-        IndexedLogDataStoreType::Shared,
-    )?);
-
-    builder = builder.shared_indexedlog(file_indexedlog.clone());
-
+    builder = builder.shared_indexedlog(scmstore_builder.build_shared_indexedlog()?);
     let contentstore = Arc::new(builder.build()?);
 
-    let legacy_adapter = Arc::new(LegacyDatastore(contentstore.clone()));
-    let legacy_fallback = if let Some(edenapi_adapter) = edenapi_adapter {
-        Arc::new(Fallback {
-            preferred: Arc::new(edenapi_adapter) as BoxedReadStore<Key, FileEntry>,
-            fallback: legacy_adapter as BoxedReadStore<Key, Entry>,
-        })
-    } else {
-        legacy_adapter as BoxedReadStore<Key, Entry>
-    };
-
-    let filtered_file_indexedlog = if let Some(lfs_threshold) = lfs_threshold {
-        Arc::new(FilterMapStore {
-            // See [`revisionstore::lfs::LfsMultiplexer`]'s `HgIdMutableDeltaStore` implementation, which this is based on
-            filter_map: move |mut entry: Entry| {
-                if entry.metadata().is_lfs() {
-                    None
-                } else {
-                    match entry.content() {
-                        Ok(content) => {
-                            if content.len() > lfs_threshold.value() as usize {
-                                None
-                            } else {
-                                Some(entry)
-                            }
-                        }
-                        Err(e) => {
-                            // TODO(meyer): This is safe, but is it correct? Should we make the filter_map fn fallible instead?
-                            // If we failed to read `content`, reject the write.
-                            error!({ error = %e }, "error reading entry content for LFS threshold check");
-                            None
-                        }
-                    }
-                }
-            },
-            write_store: file_indexedlog.clone(),
-        }) as BoxedWriteStore<Key, Entry>
-    } else {
-        file_indexedlog.clone() as BoxedWriteStore<Key, Entry>
-    };
-
-    let scmstore = Arc::new(FallbackCache {
-        preferred: file_indexedlog,
-        fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
-        write_store: Some(filtered_file_indexedlog),
-    });
-
+    scmstore_builder = scmstore_builder.legacy_fallback(LegacyDatastore(contentstore.clone()));
+    let scmstore = scmstore_builder.build()?;
 
     Ok((scmstore, contentstore))
 }
