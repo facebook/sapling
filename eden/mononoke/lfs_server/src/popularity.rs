@@ -13,7 +13,7 @@ use std::time::Duration;
 use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
 use tokio::time::{self};
 
-use crate::batch::StoredObject;
+use crate::batch::InternalObject;
 use crate::config::ObjectPopularity;
 use crate::lfs_server_context::RepositoryRequestContext;
 
@@ -52,7 +52,7 @@ impl PopularityBuilder for GlobalTimeWindowCounterBuilder {
 
 async fn increment_and_fetch_object_popularity<B: PopularityBuilder>(
     ctx: &RepositoryRequestContext,
-    obj: StoredObject,
+    obj: InternalObject,
     config: &ObjectPopularity,
     builder: B,
 ) -> Result<u64, Error> {
@@ -73,7 +73,7 @@ async fn increment_and_fetch_object_popularity<B: PopularityBuilder>(
 
 pub async fn allow_consistent_routing<B: PopularityBuilder>(
     ctx: &RepositoryRequestContext,
-    obj: StoredObject,
+    obj: InternalObject,
     builder: B,
 ) -> bool {
     let config = match ctx.config.object_popularity() {
@@ -112,7 +112,7 @@ mod test {
 
     use async_trait::async_trait;
     use futures::future;
-    use mononoke_types_mocks::contentid::ONES_CTID;
+    use mononoke_types_mocks::{contentid::ONES_CTID, hash::ONES_SHA256};
     use std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -121,8 +121,8 @@ mod test {
 
     use crate::config::{ObjectPopularity, ServerConfig};
 
-    fn dummy(size: impl Into<Option<u64>>) -> StoredObject {
-        StoredObject::new(ONES_CTID, size.into())
+    fn dummy(size: impl Into<Option<u64>>) -> InternalObject {
+        InternalObject::new(ONES_CTID, ONES_SHA256, size.into())
     }
 
     #[derive(Clone, Default)]

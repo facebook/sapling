@@ -26,6 +26,7 @@ use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::iter::FromIterator;
 use std::num::NonZeroU16;
 use std::time::Instant;
 use time_ext::DurationExt;
@@ -66,25 +67,77 @@ pub struct BatchParams {
     repository: String,
 }
 
+/// A collection of objects available in a specific server (internal, or upstream).
+struct ServerObjects {
+    objects: HashMap<lfs_protocol::Sha256, (u64, ObjectAction)>,
+}
+
+impl ServerObjects {
+    fn empty() -> Self {
+        Self {
+            objects: HashMap::new(),
+        }
+    }
+
+    fn get(&self, oid: &lfs_protocol::Sha256) -> Option<(RequestObject, ObjectAction)> {
+        let (size, action) = self.objects.get(oid)?;
+        Some((
+            RequestObject {
+                oid: *oid,
+                size: *size,
+            },
+            action.clone(),
+        ))
+    }
+
+    fn contains(&self, oid: &lfs_protocol::Sha256) -> bool {
+        self.objects.contains_key(oid)
+    }
+}
+
+impl FromIterator<(RequestObject, ObjectAction)> for ServerObjects {
+    fn from_iter<I: IntoIterator<Item = (RequestObject, ObjectAction)>>(iter: I) -> Self {
+        let mut objects = HashMap::new();
+
+        for (obj, action) in iter {
+            objects.insert(obj.oid, (obj.size, action));
+        }
+
+        Self { objects }
+    }
+}
+
+impl FromIterator<(InternalObject, ObjectAction)> for ServerObjects {
+    fn from_iter<I: IntoIterator<Item = (InternalObject, ObjectAction)>>(iter: I) -> Self {
+        let mut objects = HashMap::new();
+
+        for (obj, action) in iter {
+            objects.insert(obj.oid.into(), (obj.download_size(), action));
+        }
+
+        Self { objects }
+    }
+}
+
 enum UpstreamObjects {
-    UpstreamPresence(HashMap<RequestObject, ObjectAction>),
+    UpstreamPresence(ServerObjects),
     NoUpstream,
 }
 
 impl UpstreamObjects {
-    fn should_upload(&self, obj: &RequestObject) -> bool {
+    fn should_upload(&self, oid: &lfs_protocol::Sha256) -> bool {
         match self {
             // Upload to upstream if the object is missing there.
-            UpstreamObjects::UpstreamPresence(map) => !map.contains_key(obj),
+            UpstreamObjects::UpstreamPresence(objs) => !objs.contains(oid),
             // Without an upstream, we never need to upload there.
             UpstreamObjects::NoUpstream => false,
         }
     }
 
-    fn download_action(&self, obj: &RequestObject) -> Option<&ObjectAction> {
+    fn download_action(&self, oid: &lfs_protocol::Sha256) -> Option<(RequestObject, ObjectAction)> {
         match self {
             // Passthrough download actions from upstream.
-            UpstreamObjects::UpstreamPresence(map) => map.get(obj),
+            UpstreamObjects::UpstreamPresence(map) => map.get(oid),
             // In the absence of an upstream, we cannot download from there.
             UpstreamObjects::NoUpstream => None,
         }
@@ -140,21 +193,23 @@ async fn upstream_objects(
                 })
                 .collect()
         }
-        Transfer::Unknown => HashMap::new(),
+        Transfer::Unknown => ServerObjects::empty(),
     };
 
     Ok(UpstreamObjects::UpstreamPresence(objects))
 }
 
+/// An object available internally (i.e. on this server).
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct StoredObject {
+pub struct InternalObject {
     id: ContentId,
+    oid: Sha256,
     size: Option<u64>,
 }
 
-impl StoredObject {
-    pub fn new(id: ContentId, size: Option<u64>) -> Self {
-        Self { id, size }
+impl InternalObject {
+    pub fn new(id: ContentId, oid: Sha256, size: Option<u64>) -> Self {
+        Self { id, oid, size }
     }
 
     pub fn id(&self) -> ContentId {
@@ -169,7 +224,7 @@ impl StoredObject {
 async fn resolve_internal_object(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
-) -> Result<Option<StoredObject>, Error> {
+) -> Result<Option<InternalObject>, Error> {
     let blobstore = ctx.repo.blobstore();
 
     let content_id = Alias::Sha256(oid).load(&ctx.ctx, blobstore).await;
@@ -193,8 +248,9 @@ async fn resolve_internal_object(
 
     match meta {
         Ok(Some(meta)) => {
-            return Ok(Some(StoredObject::new(
+            return Ok(Some(InternalObject::new(
                 meta.content_id,
+                meta.sha256,
                 Some(meta.total_size),
             )));
         }
@@ -218,7 +274,7 @@ async fn resolve_internal_object(
         .with_context(|| format!("Failed to check for existence of: {:?}", content_id))?;
 
     if exists {
-        return Ok(Some(StoredObject::new(content_id, None)));
+        return Ok(Some(InternalObject::new(content_id, oid, None)));
     }
 
     Ok(None)
@@ -239,50 +295,41 @@ fn generate_routing_key(tasks_per_content: NonZeroU16, oid: Sha256) -> String {
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
-) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
-    let futs = objects.iter().map(|object| async move {
-        let oid = object.oid.0.into();
+) -> Result<ServerObjects, Error> {
+    let futs = objects.iter().map(|req| async move {
+        let obj = resolve_internal_object(ctx, req.oid.into()).await?;
 
-        let stored = resolve_internal_object(ctx, oid).await?;
-
-        let allow_consistent_routing = match stored {
-            Some(stored) => {
-                allow_consistent_routing(&ctx, stored, GlobalTimeWindowCounterBuilder).await
-            }
+        let allow_consistent_routing = match obj {
+            Some(obj) => allow_consistent_routing(&ctx, obj, GlobalTimeWindowCounterBuilder).await,
             None => true,
         };
 
-        Result::<_, Error>::Ok((stored, object.oid, allow_consistent_routing))
+        Result::<_, Error>::Ok((obj, allow_consistent_routing))
     });
 
-    let content_ids = future::try_join_all(futs).await?;
+    let objs = future::try_join_all(futs).await?;
 
-    let ret: Result<HashMap<RequestObject, ObjectAction>, _> = objects
-        .iter()
-        .zip(content_ids.into_iter())
-        .filter_map(
-            |(obj, (stored, oid, allow_consistent_routing))| match stored {
-                // Map the objects we have locally into an action routing to a Mononoke LFS server.
-                Some(stored) => {
-                    let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing()
-                    {
-                        let routing_key =
-                            generate_routing_key(ctx.config.tasks_per_content(), oid.0.into());
-                        ctx.uri_builder
-                            .consistent_download_uri(&stored.id, routing_key)
-                    } else {
-                        ctx.uri_builder.download_uri(&stored.id)
-                    };
+    let ret = objs
+        .into_iter()
+        .filter_map(|(maybe_obj, allow_consistent_routing)| match maybe_obj {
+            // Map the objects we have locally into an action routing to a Mononoke LFS server.
+            Some(obj) => {
+                let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing() {
+                    let routing_key = generate_routing_key(ctx.config.tasks_per_content(), obj.oid);
+                    ctx.uri_builder
+                        .consistent_download_uri(&obj.id, routing_key)
+                } else {
+                    ctx.uri_builder.download_uri(&obj.id)
+                };
 
-                    let action = uri.map(ObjectAction::new).map(|action| (*obj, action));
-                    Some(action)
-                }
-                None => None,
-            },
-        )
-        .collect();
+                Some(uri.map(|uri| (obj, ObjectAction::new(uri))))
+            }
+            None => None,
+        })
+        .collect::<Result<ServerObjects, Error>>()
+        .context(ErrorKind::GenerateDownloadUrisError.to_string())?;
 
-    Ok(ret.context(ErrorKind::GenerateDownloadUrisError.to_string())?)
+    Ok(ret)
 }
 
 fn batch_upload_response_objects(
@@ -290,17 +337,17 @@ fn batch_upload_response_objects(
     max_upload_size: Option<u64>,
     objects: &[RequestObject],
     upstream: &UpstreamObjects,
-    internal: &HashMap<RequestObject, ObjectAction>,
+    internal: &ServerObjects,
 ) -> Result<Vec<ResponseObject>, Error> {
     let objects: Result<Vec<ResponseObject>, Error> = objects
         .iter()
         .map(|object| {
             let status = match (
-                upstream.should_upload(object),
-                internal.get(object),
+                upstream.should_upload(&object.oid),
+                internal.contains(&object.oid),
                 max_upload_size,
             ) {
-                (false, Some(_), _) => {
+                (false, true, _) => {
                     // Object doesn't need to be uploaded anywhere: move on.
                     STATS::upload_no_redirect.add_value(1);
 
@@ -376,26 +423,26 @@ async fn batch_upload(
 /// available in upstream and downstream.
 fn route_download_for_object<'a>(
     upstream: &'a Result<UpstreamObjects, Error>,
-    internal: &'a HashMap<RequestObject, ObjectAction>,
-    obj: &'_ RequestObject,
-) -> Result<Option<(Source, &'a ObjectAction)>, Error> {
+    internal: &'a ServerObjects,
+    oid: &'_ lfs_protocol::Sha256,
+) -> Result<Option<(Source, RequestObject, ObjectAction)>, Error> {
     // If we have the object internally, then get it from there.
-    if let Some(action) = internal.get(obj) {
-        return Ok(Some((Source::Internal, action)));
+    if let Some((obj, action)) = internal.get(oid) {
+        return Ok(Some((Source::Internal, obj, action)));
     }
 
     match upstream {
         // If our upstream succeded, then we try to get the object from there.
         Ok(ref upstream) => {
-            if let Some(action) = upstream.download_action(obj) {
-                return Ok(Some((Source::Upstream, action)));
+            if let Some((obj, action)) = upstream.download_action(oid) {
+                return Ok(Some((Source::Upstream, obj, action)));
             }
         }
         // If our upstream failed, then we don't know whether the object is available anywhere, so
         // that's an error.
         Err(ref cause) => {
             let err =
-                Error::new(ErrorKind::ObjectNotInternallyAvailableAndUpstreamUnavailable(*obj))
+                Error::new(ErrorKind::ObjectNotInternallyAvailableAndUpstreamUnavailable(*oid))
                     .context(cause.to_string());
             return Err(err);
         }
@@ -409,45 +456,53 @@ fn route_download_for_object<'a>(
 fn batch_download_response_objects(
     objects: &[RequestObject],
     upstream: &Result<UpstreamObjects, Error>,
-    internal: &HashMap<RequestObject, ObjectAction>,
+    internal: &ServerObjects,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<Vec<ResponseObject>, Error> {
     let mut upstream_blobs = vec![];
     let responses = objects
         .iter()
-        .map(|object| {
-            let source_and_action = route_download_for_object(upstream, internal, object)?;
+        .map(|request_object| {
+            let location = route_download_for_object(upstream, internal, &request_object.oid)?;
 
-            let status = match source_and_action {
-                Some((source, action)) => {
+            let res = match location {
+                Some((source, server_object, action)) => {
                     match source {
                         Source::Internal => STATS::download_redirect_internal.add_value(1),
                         Source::Upstream => {
-                            upstream_blobs.push(object.oid.to_string());
+                            upstream_blobs.push(server_object.oid.to_string());
                             STATS::download_redirect_upstream.add_value(1);
                         }
                     };
 
-                    ObjectStatus::Ok {
+                    let status = ObjectStatus::Ok {
                         authenticated: false,
                         actions: hashmap! { Operation::Download => action.clone() },
+                    };
+
+                    ResponseObject {
+                        object: server_object,
+                        status,
                     }
                 }
                 None => {
                     STATS::download_unknown.add_value(1);
-                    ObjectStatus::Err {
+
+                    let status = ObjectStatus::Err {
                         error: ObjectError {
                             code: StatusCode::NOT_FOUND.as_u16(),
                             message: "Object does not exist".to_string(),
                         },
+                    };
+
+                    ResponseObject {
+                        object: *request_object,
+                        status,
                     }
                 }
             };
 
-            Result::<_, Error>::Ok(ResponseObject {
-                object: *object,
-                status,
-            })
+            Result::<_, Error>::Ok(res)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -463,12 +518,12 @@ fn batch_download_response_objects(
 /// Try to prepare a batch response with only internal objects. Returns None if any are missing.
 fn batch_download_internal_only_response_objects(
     objects: &[RequestObject],
-    internal: &HashMap<RequestObject, ObjectAction>,
+    internal: &ServerObjects,
 ) -> Option<Vec<ResponseObject>> {
     let res = objects
         .iter()
-        .map(|object| {
-            let action = internal.get(object)?.clone();
+        .map(|request_object| {
+            let (server_object, action) = internal.get(&request_object.oid)?;
 
             let status = ObjectStatus::Ok {
                 authenticated: false,
@@ -476,7 +531,7 @@ fn batch_download_internal_only_response_objects(
             };
 
             Some(ResponseObject {
-                object: *object,
+                object: server_object,
                 status,
             })
         })
@@ -629,56 +684,51 @@ mod test {
     use hyper::Uri;
     use memblob::Memblob;
     use mononoke_types::ContentMetadataId;
-    use mononoke_types_mocks::hash::ONES_SHA256;
+    use mononoke_types_mocks::hash::{FOURS_SHA256, ONES_SHA256, THREES_SHA256, TWOS_SHA256};
     use redactedblobstore::RedactedMetadata;
     use std::collections::HashSet;
-    use std::iter::FromIterator;
     use std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
     };
     use test_repo_factory::TestRepoFactory;
 
-    use lfs_protocol::Sha256 as LfsSha256;
     use pretty_assertions::assert_eq;
-    use std::str::FromStr;
 
     use crate::lfs_server_context::ServerUris;
 
-    const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
-    const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";
-    const THREES_HASH: &str = "3333333333333333333333333333333333333333333333333333333333333333";
-
-    fn obj(oid: &str, size: u64) -> Result<RequestObject, Error> {
-        let oid = LfsSha256::from_str(oid)?;
-        Ok(RequestObject { oid, size })
+    fn obj(oid: Sha256, size: u64) -> RequestObject {
+        RequestObject {
+            oid: oid.into(),
+            size,
+        }
     }
 
     #[test]
     fn test_download() -> Result<(), Error> {
-        let o1 = obj(ONES_HASH, 111)?;
-        let o2 = obj(TWOS_HASH, 222)?;
-        let o3 = obj(THREES_HASH, 333)?;
-        let o4 = obj(THREES_HASH, 444)?;
-
-        let req = vec![o1, o2, o3, o4];
+        let o1 = obj(ONES_SHA256, 111);
+        let o2 = obj(TWOS_SHA256, 222);
+        let o3 = obj(THREES_SHA256, 333);
+        let o4 = obj(FOURS_SHA256, 444);
 
         let upstream = hashmap! {
             o1 => ObjectAction::new("http://foo.com/1".parse()?),
             o2 => ObjectAction::new("http://foo.com/2".parse()?),
-        };
+        }
+        .into_iter()
+        .collect();
+
+        let upstream = Ok(UpstreamObjects::UpstreamPresence(upstream));
 
         let internal = hashmap! {
             o2 => ObjectAction::new("http://bar.com/2".parse()?),
             o3 => ObjectAction::new("http://bar.com/3".parse()?),
-        };
+        }
+        .into_iter()
+        .collect();
 
-        let res = batch_download_response_objects(
-            &req,
-            &Ok(UpstreamObjects::UpstreamPresence(upstream)),
-            &internal,
-            &mut None,
-        )?;
+        let res =
+            batch_download_response_objects(&[o1, o2, o3, o4], &upstream, &internal, &mut None)?;
 
         assert_eq!(
             vec![
@@ -719,6 +769,35 @@ mod test {
             res
         );
 
+        // Test sending the wrong size. Ensure we still find the object here.
+
+        let res2 = batch_download_response_objects(
+            &[obj(ONES_SHA256, 0), obj(THREES_SHA256, 0)],
+            &upstream,
+            &internal,
+            &mut None,
+        )?;
+
+        assert_eq!(
+            vec![
+                ResponseObject {
+                    object: o1,
+                    status: ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: hashmap! { Operation::Download =>  ObjectAction::new("http://foo.com/1".parse()?) }
+                    }
+                },
+                ResponseObject {
+                    object: o3,
+                    status: ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: hashmap! { Operation::Download =>  ObjectAction::new("http://bar.com/3".parse()?) }
+                    }
+                },
+            ],
+            res2
+        );
+
         Ok(())
     }
 
@@ -743,7 +822,7 @@ mod test {
 
     #[test]
     fn test_download_upstream_failed_and_its_ok() -> Result<(), Error> {
-        let o1 = obj(ONES_HASH, 111)?;
+        let o1 = obj(ONES_SHA256, 111);
 
         let req = vec![o1];
 
@@ -751,7 +830,9 @@ mod test {
 
         let internal = hashmap! {
             o1 => ObjectAction::new("http://foo.com/1".parse()?),
-        };
+        }
+        .into_iter()
+        .collect();
 
         let res = batch_download_response_objects(&req, &upstream, &internal, &mut None)?;
 
@@ -771,13 +852,13 @@ mod test {
 
     #[test]
     fn test_download_upstream_failed_and_its_not_ok() -> Result<(), Error> {
-        let o1 = obj(ONES_HASH, 111)?;
+        let o1 = obj(ONES_SHA256, 111);
 
         let req = vec![o1];
 
         let upstream = Err(Error::msg("Oops"));
 
-        let internal = hashmap! {};
+        let internal = ServerObjects::empty();
 
         let res = batch_download_response_objects(&req, &upstream, &internal, &mut None);
         assert!(res.is_err());
@@ -796,22 +877,26 @@ mod test {
 
     #[test]
     fn test_upload() -> Result<(), Error> {
-        let o1 = obj(ONES_HASH, 123)?;
-        let o2 = obj(TWOS_HASH, 456)?;
-        let o3 = obj(THREES_HASH, 789)?;
-        let o4 = obj(THREES_HASH, 1111)?;
+        let o1 = obj(ONES_SHA256, 123);
+        let o2 = obj(TWOS_SHA256, 456);
+        let o3 = obj(THREES_SHA256, 789);
+        let o4 = obj(FOURS_SHA256, 1111);
 
         let req = vec![o1, o2, o3, o4];
 
         let upstream = hashmap! {
             o1 => ObjectAction::new("http://foo.com/1".parse()?),
             o2 => ObjectAction::new("http://foo.com/2".parse()?),
-        };
+        }
+        .into_iter()
+        .collect();
 
         let internal = hashmap! {
             o2 => ObjectAction::new("http://bar.com/2".parse()?),
             o3 => ObjectAction::new("http://bar.com/3".parse()?),
-        };
+        }
+        .into_iter()
+        .collect();
 
         let server = ServerUris::new(vec!["http://foo.com"], Some("http://bar.com"))?;
         let uri_builder = UriBuilder {
@@ -1009,6 +1094,47 @@ mod test {
         );
 
         assert_eq!(hits.load(Ordering::SeqCst), 1);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_resolve_size(fb: FacebookInit) -> Result<(), Error> {
+        let repo = TestRepoFactory::new()?.build::<BlobRepo>()?;
+
+        let meta = filestore::store(
+            repo.blobstore(),
+            repo.filestore_config(),
+            &CoreContext::test_mock(fb),
+            &StoreRequest::new(6),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
+        )
+        .await?;
+
+        let ctx = RepositoryRequestContext::test_builder(fb)?
+            .repo(repo)
+            .build()?;
+
+        let obj = RequestObject {
+            oid: meta.sha256.into(),
+            size: 6,
+        };
+
+        let (obj1, action1) = internal_objects(&ctx, &[obj])
+            .await?
+            .get(&meta.sha256.into())
+            .context("Missing v1")?;
+
+
+        // Note: give the server the wrong size here.
+        let (obj2, action2) = internal_objects(&ctx, &[RequestObject { size: 0, ..obj }])
+            .await?
+            .get(&meta.sha256.into())
+            .context("Missing v2")?;
+
+        assert_eq!(obj1, obj);
+        assert_eq!(obj2, obj);
+        assert_eq!(action1, action2);
 
         Ok(())
     }
