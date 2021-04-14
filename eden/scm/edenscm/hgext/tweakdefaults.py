@@ -745,12 +745,14 @@ def get_winpopen4(pipei_bufsize):
             import _subprocess
 
             handles = _subprocess.CreatePipe(None, pipei_bufsize)
+            rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
         else:
             import _winapi
 
             handles = _winapi.CreatePipe(None, pipei_bufsize)
+            rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
+            handles = [subprocess.Handle(h) for h in handles]
 
-        rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
         handles[0].Detach()
         handles[1].Detach()
         p = subprocess.Popen(
