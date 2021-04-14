@@ -839,6 +839,9 @@ class localrepository(object):
         if "fileslog" in self.__dict__:
             self.fileslog.commitpending()
 
+        if "changelog" in self.__dict__ and self.changelog.isvertexlazy():
+            self.changelog.inner.flushcommitdata()
+
     def _loadextensions(self):
         extensions.loadall(self.ui)
 
