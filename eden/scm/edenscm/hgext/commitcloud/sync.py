@@ -410,7 +410,13 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     # filter cloudrefs before pull as pull doesn't check if a rev is present
     # locally.
     unfi = repo
-    newheads = [head for head in cloudrefs.heads if head not in unfi]
+    newheads = [
+        nodemod.hex(n)
+        for n in repo.changelog.filternodes(
+            [nodemod.bin(h) for h in cloudrefs.heads], inverse=True
+        )
+    ]
+    assert newheads == newheads
     if maxage is not None and maxage >= 0:
         mindate = time.time() - maxage * 86400
         omittedheads = [
