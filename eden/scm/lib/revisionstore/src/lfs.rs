@@ -120,6 +120,7 @@ pub struct LfsRemote {
     shared: Arc<LfsStore>,
     remote: LfsRemoteInner,
     move_after_upload: bool,
+    ignore_prefetch_errors: bool,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -1383,6 +1384,7 @@ impl LfsRemote {
         let url = Url::parse(&url)?;
 
         let move_after_upload = config.get_or("lfs", "moveafterupload", || false)?;
+        let ignore_prefetch_errors = config.get_or("lfs", "ignore-prefetch-errors", || false)?;
 
         if url.scheme() == "file" {
             let path = url.to_file_path().unwrap();
@@ -1391,6 +1393,7 @@ impl LfsRemote {
             Ok(Self {
                 shared,
                 local,
+                ignore_prefetch_errors,
                 move_after_upload,
                 remote: LfsRemoteInner::File(file),
             })
@@ -1445,6 +1448,7 @@ impl LfsRemote {
                 shared,
                 local,
                 move_after_upload,
+                ignore_prefetch_errors,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
                     client,
@@ -1686,14 +1690,16 @@ impl HgIdDataStore for LfsRemoteStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.prefetch(&[key.clone()]) {
             Ok(_) => self.store.get(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
+            Err(_) if self.remote.ignore_prefetch_errors => Ok(StoreResult::NotFound(key)),
+            Err(e) => Err(e.context(format!("Failed to fetch: {:?}", key))),
         }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         match self.prefetch(&[key.clone()]) {
             Ok(_) => self.store.get_meta(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
+            Err(_) if self.remote.ignore_prefetch_errors => Ok(StoreResult::NotFound(key)),
+            Err(e) => Err(e.context(format!("Failed to fetch: {:?}", key))),
         }
     }
 
