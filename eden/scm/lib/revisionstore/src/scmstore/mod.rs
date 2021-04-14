@@ -15,7 +15,7 @@ use futures::{
 use thiserror::Error;
 
 pub use self::{
-    builder::FileScmStoreBuilder,
+    builder::{FileScmStoreBuilder, TreeScmStoreBuilder},
     edenapi::EdenApiAdapter,
     fallback::{Fallback, FallbackCache},
     filter_map::FilterMapStore,

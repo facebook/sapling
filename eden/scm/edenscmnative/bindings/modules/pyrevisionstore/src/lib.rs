@@ -27,21 +27,19 @@ use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
-use edenapi_types::TreeEntry;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use revisionstore::{
-    indexedlogdatastore::Entry,
     repack,
     scmstore::{
-        BoxedReadStore, Fallback, FallbackCache, FileScmStoreBuilder, KeyStream, LegacyDatastore,
-        StoreFile, StoreTree,
+        BoxedReadStore, FileScmStoreBuilder, KeyStream, LegacyDatastore, StoreFile, StoreTree,
+        TreeScmStoreBuilder,
     },
-    util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
-    DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
-    HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
-    HistoryPackStore, HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
+    ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
+    Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
+    HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
+    HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
     IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType, LocalStore, MemcacheStore, Metadata,
     MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
     RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
@@ -1251,8 +1249,8 @@ fn make_treescmstore<'a>(
     suffix: Option<String>,
     correlator: Option<String>,
 ) -> Result<(BoxedReadStore<Key, StoreTree>, Arc<ContentStore>)> {
-    // Construct ContentStore
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+    let mut scmstore_builder = TreeScmStoreBuilder::new(&config);
 
     builder = if let Some(path) = path {
         builder.local_path(path)
@@ -1266,60 +1264,24 @@ fn make_treescmstore<'a>(
         builder
     };
 
-    let suffix = suffix.map(|s| s.into());
-    builder = if let Some(suffix) = suffix.clone() {
-        builder.suffix(suffix)
-    } else {
-        builder
-    };
+    if let Some(ref suffix) = suffix {
+        builder = builder.suffix(suffix);
+        scmstore_builder = scmstore_builder.suffix(suffix);
+    }
 
-    let cache_path = &util::get_cache_path(config, &suffix)?;
-    // TODO(meyer): Do check_cache_buster even for scmstore-only (happens as part of ContentStore construction)
-    // revisionstore::contentstore::check_cache_buster(config, &cache_path);
-
-    // TODO(meyer): We can eliminate the LFS-related config from the tree flow, right?
-    let enable_lfs = config.get_or_default::<bool>("remotefilelog", "lfs")?;
-    let extstored_policy = if enable_lfs {
-        if config.get_or_default::<bool>("remotefilelog", "useextstored")? {
-            ExtStoredPolicy::Use
-        } else {
-            ExtStoredPolicy::Ignore
-        }
-    } else {
-        ExtStoredPolicy::Use
-    };
-
-    // Extract EdenApiAdapter for scmstore construction later on
-    let edenapi_adapter = edenapi_treestore.map(|s| s.get_scmstore_adapter(extstored_policy));
     // Match behavior of treemanifest contentstore construction (never include EdenApi)
     builder = builder.remotestore(remote);
 
-    let tree_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-        util::get_indexedlogdatastore_path(&cache_path)?,
-        extstored_policy,
-        config,
-        IndexedLogDataStoreType::Shared,
-    )?);
+    // Extract EdenApiAdapter for scmstore construction later on
+    if let Some(edenapi) = edenapi_treestore {
+        scmstore_builder = scmstore_builder.shared_edenapi(edenapi);
+    }
 
-    builder = builder.shared_indexedlog(tree_indexedlog.clone());
+    builder = builder.shared_indexedlog(scmstore_builder.build_shared_indexedlog()?);
 
     let contentstore = Arc::new(builder.build()?);
-
-    let legacy_adapter = Arc::new(LegacyDatastore(contentstore.clone()));
-    let legacy_fallback = if let Some(edenapi_adapter) = edenapi_adapter {
-        Arc::new(Fallback {
-            preferred: Arc::new(edenapi_adapter) as BoxedReadStore<Key, TreeEntry>,
-            fallback: legacy_adapter as BoxedReadStore<Key, Entry>,
-        })
-    } else {
-        legacy_adapter as BoxedReadStore<Key, Entry>
-    };
-
-    let scmstore = Arc::new(FallbackCache {
-        preferred: tree_indexedlog.clone(),
-        fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
-        write_store: Some(tree_indexedlog),
-    });
+    scmstore_builder = scmstore_builder.legacy_fallback(LegacyDatastore(contentstore.clone()));
+    let scmstore = scmstore_builder.build()?;
 
     Ok((scmstore, contentstore))
 }

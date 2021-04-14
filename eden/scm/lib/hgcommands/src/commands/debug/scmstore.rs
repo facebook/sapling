@@ -6,22 +6,11 @@
  */
 
 use std::str::FromStr;
-use std::sync::Arc;
 
 use futures::stream;
 
 use async_runtime::stream_to_iter as block_on_stream;
-use clidispatch::errors;
-use edenapi::Builder;
-use edenapi_types::TreeEntry;
-use revisionstore::{
-    indexedlogdatastore::{Entry, IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    scmstore::{
-        edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, FileScmStoreBuilder,
-        KeyStream,
-    },
-    ExtStoredPolicy,
-};
+use revisionstore::scmstore::{FileScmStoreBuilder, KeyStream, TreeScmStoreBuilder};
 use types::{HgId, Key, RepoPathBuf};
 
 use super::NoOpts;
@@ -32,43 +21,11 @@ use super::IO;
 pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let config = repo.config();
 
-    let reponame = match config.get("remotefilelog", "reponame") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
-    };
-    let cachepath = match config.get("remotefilelog", "cachepath") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),
-    };
-
-    // IndexedLog tree store
-    let fullpath = format!("{}/{}/manifests/indexedlogdatastore", cachepath, reponame);
-    io.write(&format!("Full tree indexedlog path: {}\n", fullpath))?;
-    let tree_indexedstore = Arc::new(
-        IndexedLogHgIdDataStore::new(
-            fullpath,
-            ExtStoredPolicy::Use,
-            &config,
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap(),
-    );
-
-    // EdenApi tree store
-    let edenapi = Arc::new(EdenApiAdapter {
-        client: Builder::from_config(config)?.build()?,
-        repo: reponame,
-        extstored_policy: ExtStoredPolicy::Ignore,
-    });
-
-    // Fallback store combinator (trees)
-    let tree_fallback = Arc::new(FallbackCache {
-        preferred: tree_indexedstore.clone(),
-        fallback: edenapi.clone() as BoxedReadStore<Key, TreeEntry>,
-        write_store: Some(tree_indexedstore),
-    }) as BoxedReadStore<Key, Entry>;
-
     // Test trees
+    let mut tree_builder = TreeScmStoreBuilder::new(&config);
+    tree_builder = tree_builder.suffix("manifests");
+    let tree_scmstore = tree_builder.build()?;
+
     let tree_keystrings = [
         (
             "fbcode/eden/scm/lib",
@@ -90,7 +47,7 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     }
 
     let fetched_trees = block_on_stream(
-        tree_fallback.fetch_stream(Box::pin(stream::iter(tree_keys)) as KeyStream<Key>),
+        tree_scmstore.fetch_stream(Box::pin(stream::iter(tree_keys)) as KeyStream<Key>),
     );
 
     for item in fetched_trees {
