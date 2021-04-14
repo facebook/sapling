@@ -190,6 +190,7 @@ where
         drop(lock);
 
         self.invalidate_missing_vertex_cache();
+        self.invalidate_overlay_map()?;
 
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
@@ -352,9 +353,10 @@ where
 impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
-    M: IdMapAssignHead + Persist + Send + Sync,
-    P: Send + Sync,
-    S: Persist + Send + Sync,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Persist + Send + Sync,
 {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         // Write directly to disk. Bypassing "flush()" that re-assigns Ids
@@ -397,15 +399,11 @@ where
             return programming(msg);
         }
 
-        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
-
         self.map.persist(&map_lock)?;
         self.dag.persist(&dag_lock)?;
         self.state.persist(&lock)?;
 
-        // Reset overlay map state.
-        self.overlay_map = Default::default();
-        self.overlay_map_next_id = next_id;
+        self.invalidate_overlay_map()?;
 
         Ok(())
     }
@@ -488,6 +486,13 @@ where
 
     fn invalidate_missing_vertex_cache(&mut self) {
         *self.missing_vertexes_confirmed_by_remote.write() = Default::default();
+    }
+
+    fn invalidate_overlay_map(&mut self) -> Result<()> {
+        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
+        self.overlay_map = Default::default();
+        self.overlay_map_next_id = next_id;
+        Ok(())
     }
 
     /// Attempt to get a snapshot of this graph.
@@ -808,10 +813,10 @@ async fn calculate_id_name_from_paths(
             let msg = format!(
                 concat!(
                     "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
-                    "local master group. This is not expected and indicates some ",
+                    "local master group {}. This is not expected and indicates some ",
                     "logic error on the server side."
                 ),
-                &path.x, x_id, path.n,
+                &path.x, x_id, path.n, max_id_plus_1
             );
             return programming(msg);
         }

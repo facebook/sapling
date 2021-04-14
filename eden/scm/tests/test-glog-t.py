@@ -1982,14 +1982,9 @@ sh % "hg log -G -r '::2' --template '\\n'" == r"""
 
 sh % "hg log -G -r ':null'" == r"""
     o  commit:      f8035bb17114
-    │  user:        test
-    │  date:        Thu Jan 01 00:00:00 1970 +0000
-    │  summary:     add a
-    │
-    o  commit:      000000000000
-    │  user:
-    │  date:        Thu Jan 01 00:00:00 1970 +0000
-    │"""
+       user:        test
+       date:        Thu Jan 01 00:00:00 1970 +0000
+       summary:     add a"""
 sh % "hg log -G -r 'null:null'" == r"""
     o  commit:      000000000000
     │  user:
