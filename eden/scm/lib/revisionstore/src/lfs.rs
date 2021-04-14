@@ -1289,15 +1289,25 @@ impl LfsRemoteInner {
 
         for object in response.objects {
             let oid = object.object.oid;
-            let mut actions = match object.status {
+            let actions = match object.status {
                 ObjectStatus::Ok {
                     authenticated: _,
                     actions,
-                } => actions,
-                ObjectStatus::Err { error: e } => bail!("Couldn't fetch oid {}: {:?}", oid, e),
+                } => Some(actions),
+                // If the server returns a 404 and we were trying to download, then we don't take
+                // any action here. This will result in us not writing anything, which will simply
+                // yield a KeyError for this Sha256 when we try to read it later.
+                ObjectStatus::Err { error: e }
+                    if operation == Operation::Download && e.code == 404 =>
+                {
+                    None
+                }
+                ObjectStatus::Err { error: e } => {
+                    bail!("Couldn't {} oid {}: {:?}", operation, oid, e)
+                }
             };
 
-            for (op, action) in actions.drain() {
+            for (op, action) in actions.into_iter().map(|h| h.into_iter()).flatten() {
                 let oid = Sha256::from(oid.0);
 
                 let fut = match op {
@@ -1834,6 +1844,15 @@ mod tests {
         localstore::ExtStoredPolicy,
         testutil::make_lfs_config,
     };
+
+    fn example_blob() -> (Sha256, usize, Bytes) {
+        (
+            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")
+                .unwrap(),
+            6,
+            Bytes::from(&b"master"[..]),
+        )
+    }
 
     #[test]
     fn test_new_shared() -> Result<()> {
@@ -2405,10 +2424,38 @@ mod tests {
         use super::*;
         use parking_lot::Mutex;
         use std::env::set_var;
+        use std::sync::atomic::AtomicBool;
+
+        #[derive(Clone)]
+        struct Sentinel(Arc<AtomicBool>);
+
+        impl Sentinel {
+            fn new() -> Self {
+                Self(Arc::new(AtomicBool::new(false)))
+            }
+
+            fn set(&self) {
+                self.0.store(true, Ordering::Relaxed);
+            }
+
+            fn get(&self) -> bool {
+                self.0.load(Ordering::Relaxed)
+            }
+
+            fn as_callback(&self) -> impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static {
+                let this = self.clone();
+                move |_, _| {
+                    this.set();
+                    Ok(())
+                }
+            }
+        }
 
         #[test]
         fn test_lfs_proxy_non_present() -> Result<()> {
             let _env_lock = crate::env_lock();
+
+            let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2416,21 +2463,10 @@ mod tests {
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                1,
-                Bytes::from(&b"nothing"[..]),
-            );
-
+            let blob = example_blob();
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            let err = resp.err().unwrap();
-            assert_eq!(
-                err.to_string(),
-                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
-            );
+            remote.batch_fetch(&objs, sentinel.as_callback())?;
+            assert!(sentinel.get());
 
             Ok(())
         }
@@ -2449,14 +2485,7 @@ mod tests {
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                1,
-                Bytes::from(&b"nothing"[..]),
-            );
-
+            let blob = example_blob();
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
@@ -2480,14 +2509,7 @@ mod tests {
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                1,
-                Bytes::from(&b"nothing"[..]),
-            );
-
+            let blob = example_blob();
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             assert!(resp.is_err());
@@ -2499,6 +2521,7 @@ mod tests {
         fn test_lfs_no_proxy() -> Result<()> {
             let _env_lock = crate::env_lock();
 
+            let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2512,21 +2535,10 @@ mod tests {
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                1,
-                Bytes::from(&b"nothing"[..]),
-            );
-
+            let blob = example_blob();
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            let err = resp.err().unwrap();
-            assert_eq!(
-                err.to_string(),
-                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
-            );
+            remote.batch_fetch(&objs, sentinel.as_callback())?;
+            assert!(sentinel.get());
 
             Ok(())
         }
@@ -2535,6 +2547,7 @@ mod tests {
         fn test_lfs_no_proxy_suffix() -> Result<()> {
             let _env_lock = crate::env_lock();
 
+            let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2545,21 +2558,10 @@ mod tests {
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                1,
-                Bytes::from(&b"nothing"[..]),
-            );
-
+            let blob = example_blob();
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            let err = resp.err().unwrap();
-            assert_eq!(
-                err.to_string(),
-                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
-            );
+            remote.batch_fetch(&objs, sentinel.as_callback())?;
+            assert!(sentinel.get());
 
             Ok(())
         }
@@ -2592,11 +2594,20 @@ mod tests {
                 6,
                 Bytes::from(&b"1.44.0"[..]),
             );
+            let blob3 = (
+                // Does not actually exist
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                0,
+                Bytes::from(&b""[..]),
+            );
 
-            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1), (blob3.0, blob3.1)]
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
+
             let out = Arc::new(Mutex::new(Vec::new()));
             remote.batch_fetch(&objs, {
                 let out = out.clone();
