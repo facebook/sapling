@@ -32,6 +32,7 @@ pub mod inmemory;
 pub mod legacy;
 pub mod lfs;
 pub mod types;
+pub mod util;
 
 /// A pinned, boxed stream of keys to fetch.
 pub type KeyStream<K> = BoxStream<'static, K>;

@@ -12,29 +12,29 @@
 use std::{
     convert::TryInto,
     fs::read_dir,
+    io::Write,
     path::{Path, PathBuf},
-    str::FromStr,
     sync::Arc,
 };
 
 use anyhow::{format_err, Error};
 use cpython::*;
-use futures::stream;
 use parking_lot::RwLock;
 
-use async_runtime::stream_to_iter as block_on_stream;
+use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
 use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
+use io::IO;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use revisionstore::{
     repack,
     scmstore::{
-        BoxedReadStore, FileScmStoreBuilder, KeyStream, LegacyDatastore, StoreFile, StoreTree,
-        TreeScmStoreBuilder,
+        util::file_to_async_key_stream, BoxedReadStore, FileScmStoreBuilder, LegacyDatastore,
+        StoreFile, StoreTree, TreeScmStoreBuilder,
     },
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
@@ -44,7 +44,7 @@ use revisionstore::{
     MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
     RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
 };
-use types::{HgId, Key, NodeInfo, RepoPathBuf};
+use types::{Key, NodeInfo};
 
 use crate::{
     datastorepyext::{
@@ -1214,17 +1214,20 @@ py_class!(pub class filescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_scmstore(&self) -> PyResult<String> {
-        let key = Key::new(
-            RepoPathBuf::from_string("fbcode/eden/scm/lib/revisionstore/Cargo.toml".to_owned()).expect("failed to convert path to RepoPathBuf"),
-            HgId::from_str("4b3d9118300087262fbf6a791b437aa7b46f0c99").expect("failed to parse HgId"),
-        );
+    def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
+        let keys = block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?;
         let store = self.store(py).clone();
-        let mut fetched: Vec<_> = block_on_stream( store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>)).collect();
-        let fetched = fetched[0].as_mut().expect("failed to fetch file");
-        let content = fetched.content().expect("failed to extract Entry content");
-        let content = std::str::from_utf8(&content).expect("failed to convert to convert to string");
-        Ok(content.to_string())
+
+        let io = IO::main().map_pyerr(py)?;
+        let mut stdout = io.output();
+        for item in block_on_stream(store.fetch_stream(Box::pin(keys))) {
+            match item {
+                Ok(file) => write!(stdout, "Successfully fetched file: {:#?}\n", file),
+                Err(err) => write!(stdout, "Received fetch error: {:#?}\n", err),
+            }.map_pyerr(py)?
+        }
+
+        Ok(PyNone)
     }
 });
 
@@ -1315,17 +1318,20 @@ py_class!(pub class treescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_scmstore(&self) -> PyResult<String> {
-        let key = Key::new(
-            RepoPathBuf::from_string("fbcode/eden/scm/lib".to_owned()).expect("failed to convert path to RepoPathBuf"),
-            HgId::from_str("4afe9e15f6eea3b63f23f8d3b58fef8953f0a9e6").expect("failed to parse HgId"),
-        );
+    def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
+        let keys = block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?;
         let store = self.store(py).clone();
-        let mut fetched: Vec<_> = block_on_stream(store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>)).collect();
-        let fetched = fetched[0].as_mut().expect("failed to fetch tree");
-        let content = fetched.content().expect("failed to extract StoreTree content");
-        let content = std::str::from_utf8(&content).expect("failed to convert to convert to string");
-        Ok(content.to_string())
+
+        let io = IO::main().map_pyerr(py)?;
+        let mut stdout = io.output();
+        for item in block_on_stream(store.fetch_stream(Box::pin(keys))) {
+            match item {
+                Ok(file) => write!(stdout, "Successfully fetched tree: {:#?}\n", file),
+                Err(err) => write!(stdout, "Received fetch error: {:#?}\n", err),
+            }.map_pyerr(py)?
+        }
+
+        Ok(PyNone)
     }
 });
 

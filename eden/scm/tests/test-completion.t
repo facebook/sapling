@@ -150,7 +150,6 @@ Show debug commands if there are no other candidates
   debugpull
   debugpushkey
   debugpvec
-  debugpyscmstore
   debugpython
   debugracyoutput
   debugreadauthforuri
@@ -445,7 +444,6 @@ Show all commands + options
   debugpull: bookmark, rev
   debugpushkey: 
   debugpvec: 
-  debugpyscmstore: 
   debugpython: 
   debugracyoutput: time-series, progress-bars, progress-total, progress-interval-ms, output-total, output-interval-ms
   debugreadauthforuri: user
@@ -457,7 +455,7 @@ Show all commands + options
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunshell: cmd
-  debugscmstore: 
+  debugscmstore: mode, path, python
   debugsegmentclone: 
   debugsendunbundle: 
   debugsetparents: 

@@ -3653,8 +3653,27 @@ def debugthrowexception(ui, _repo):
     raise error.IntentionalError("intentional failure in debugthrowexception")
 
 
-@command("debugpyscmstore", [], "")
-def debugpyscmstore(ui, repo):
-    """test file fetching using new storage API"""
-    ui.write(_x(repo.manifestlog.treescmstore.test_scmstore()))
-    ui.write(_x(repo.fileslog.filescmstore.test_scmstore()))
+@command(
+    "debugscmstore",
+    [
+        ("", "mode", "", _("entity type to fetch, 'file' or 'tree'")),
+        (
+            "",
+            "path",
+            "",
+            _("input file containing keys to fetch (hgid,path separated by newlines)"),
+        ),
+        ("", "python", False, _("signal rust command dispatch to fall back to python")),
+    ],
+    _("[OPTION]..."),
+)
+def debugscmstore(ui, repo, mode=None, path=None, python=False):
+    """test file and tree fetching using scmstore"""
+    if mode not in ["file", "tree"]:
+        raise error.Abort("mode must be one of 'file' and 'tree'")
+    if path is None:
+        raise error.Abort("path is required")
+    if mode == "tree":
+        repo.manifestlog.treescmstore.test_fetch(path)
+    if mode == "file":
+        repo.fileslog.filescmstore.test_fetch(path)

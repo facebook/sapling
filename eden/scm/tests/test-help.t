@@ -1043,8 +1043,6 @@ Test list of internal help commands
    debugpull     test repo.pull interface
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
-   debugpyscmstore
-                 test file fetching using new storage API
    debugpython   run python interpreter
    debugracyoutput
                  exercise racy stdout / stderr / progress outputs
@@ -1065,7 +1063,7 @@ Test list of internal help commands
    debugrunshell
                  run a shell command
    debugscmstore
-                 test scmstore storage api
+                 test file and tree fetching using scmstore
    debugsegmentclone
                  clone a repository using segmented changelog
    debugsendunbundle
