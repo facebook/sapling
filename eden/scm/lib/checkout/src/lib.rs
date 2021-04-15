@@ -11,6 +11,8 @@ use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use pathmatcher::{Matcher, XorMatcher};
+use progress_model::ProgressBar;
+use progress_model::Registry;
 use revisionstore::{
     datastore::strip_metadata, scmstore::types::StoreFile, scmstore::ReadStore, RemoteDataStore,
     StoreKey, StoreResult,
@@ -203,18 +205,6 @@ impl CheckoutPlan {
             })
             .transpose()?;
 
-        let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
-        let stats = CheckoutStats::default();
-        let stats_ref = &stats;
-        const PARALLEL_CHECKOUT: usize = 16;
-
-        let remove_files = stream::iter(self.remove.clone().into_iter())
-            .chunks(VFS_BATCH_SIZE)
-            .map(|paths| Self::remove_files(async_vfs, stats_ref, paths));
-        let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
-
-        Self::process_work_stream(remove_files).await?;
-
         let filtered_update_content: Vec<_> = progress
             .as_ref()
             .map(|p| p.filter_already_written(&self.update_content[..]))
@@ -223,6 +213,22 @@ impl CheckoutPlan {
             "Skipping checking out {} files since they're already written",
             self.update_content.len() - filtered_update_content.len()
         );
+        let total = filtered_update_content.len() + self.remove.len() + self.update_meta.len();
+        let bar = &ProgressBar::new("Updating", total as u64, "files");
+        Registry::main().register_progress_bar(bar);
+
+        let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
+        let stats = CheckoutStats::default();
+        let stats_ref = &stats;
+        const PARALLEL_CHECKOUT: usize = 16;
+
+        let remove_files = stream::iter(self.remove.clone().into_iter())
+            .chunks(VFS_BATCH_SIZE)
+            .map(|paths| Self::remove_files(async_vfs, stats_ref, paths, bar));
+        let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
+
+        Self::process_work_stream(remove_files).await?;
+
         let actions: HashMap<_, _> = filtered_update_content
             .iter()
             .map(|u| (u.make_key(), *u))
@@ -247,13 +253,13 @@ impl CheckoutPlan {
             .chunks(VFS_BATCH_SIZE)
             .map(|actions| async move {
                 let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                Self::write_files(async_vfs, stats_ref, actions?, progress_ref).await
+                Self::write_files(async_vfs, stats_ref, actions?, progress_ref, bar).await
             });
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
         let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
-            Self::set_exec_on_file(async_vfs, stats_ref, &action.path, action.set_x_flag)
+            Self::set_exec_on_file(async_vfs, stats_ref, &action.path, action.set_x_flag, bar)
         });
         let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
 
@@ -391,8 +397,17 @@ impl CheckoutPlan {
         stats: &CheckoutStats,
         actions: Vec<(RepoPathBuf, HgId, Bytes, Option<UpdateFlag>)>,
         progress: Option<&Mutex<CheckoutProgress>>,
+        bar: &Arc<ProgressBar>,
     ) -> Result<()> {
         let count = actions.len();
+
+        let first_file = actions
+            .get(0)
+            .expect("Cant have empty actions in write_files")
+            .0
+            .to_string();
+        bar.set_message(first_file);
+
         let paths: Vec<_> = actions
             .iter()
             .map(|(path, hgid, _, _)| (hgid.clone(), path.as_repo_path().to_owned()))
@@ -408,6 +423,8 @@ impl CheckoutPlan {
         if let Some(progress) = progress {
             progress.lock().record_writes(paths);
         }
+        bar.increase_position(count as u64);
+
         Ok(())
     }
 
@@ -415,10 +432,12 @@ impl CheckoutPlan {
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
         paths: Vec<RepoPathBuf>,
+        bar: &Arc<ProgressBar>,
     ) -> Result<()> {
         let count = paths.len();
         async_vfs.remove_batch(paths).await?;
         stats.removed.fetch_add(count, Ordering::Relaxed);
+        bar.increase_position(count as u64);
         Ok(())
     }
 
@@ -427,9 +446,11 @@ impl CheckoutPlan {
         stats: &CheckoutStats,
         path: &RepoPath,
         flag: bool,
+        bar: &Arc<ProgressBar>,
     ) -> Result<()> {
         async_vfs.set_executable(path.to_owned(), flag).await?;
         stats.meta_updated.fetch_add(1, Ordering::Relaxed);
+        bar.increase_position(1);
         Ok(())
     }
 

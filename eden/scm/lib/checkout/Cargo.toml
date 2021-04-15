@@ -11,6 +11,7 @@ manifest = { path = "../manifest", features = ["for-tests"] }
 minibytes = { path = "../minibytes" }
 parking_lot = "0.10.2"
 pathmatcher = { path = "../pathmatcher" }
+progress-model = { path = "../progress/model" }
 revisionstore = { path = "../revisionstore" }
 tokio = { version = "1.4", features = ["full", "test-util"] }
 tracing = "0.1"
