@@ -42,6 +42,7 @@ pub struct CborStream<T, S, B, E> {
     #[pin]
     incoming: BufferedStream<S, B, E>,
     buffer: Vec<u8>,
+    threshold: usize,
     position: usize,
     terminated: bool,
     _phantom: PhantomData<(T, B, E)>,
@@ -56,6 +57,7 @@ impl<T, S, B, E> CborStream<T, S, B, E> {
         Self {
             incoming: BufferedStream::new(body, size),
             buffer: Vec::new(),
+            threshold: size,
             position: 0,
             terminated: false,
             _phantom: PhantomData,
@@ -85,6 +87,8 @@ where
             match T::deserialize(&mut de) {
                 Ok(value) => {
                     *this.position += de.byte_offset();
+                    // Reset the buffer threshold in case we had expanded it to fit a large value.
+                    this.incoming.as_mut().set_threshold(*this.threshold);
                     return Poll::Ready(Some(Ok(value)));
                 }
                 Err(e) if !e.is_eof() => {
@@ -95,17 +99,32 @@ where
                 _ => {}
             }
 
-            // At this point we've deserialized most of the data in the buffer.
-            // Any remaining trailing data is the prefix of a single, incomplete
-            // item. We should move it to the front of the buffer to reclaim the
-            // space from the items that have already been deserialized.
+
             let pos = *this.position;
-            let len = this.buffer.len() - pos;
-            for i in 0..len {
-                this.buffer[i] = this.buffer[pos + i];
+            if pos > 0 {
+                // At this point we've deserialized most of the data in the buffer. Any remaining
+                // trailing data is the prefix of a single, incomplete item. We should move it to
+                // the front of the buffer to reclaim the space from the items that have already
+                // been deserialized.
+                let len = this.buffer.len() - pos;
+                for i in 0..len {
+                    this.buffer[i] = this.buffer[pos + i];
+                }
+                this.buffer.truncate(len);
+                *this.position = 0;
+            } else if this.buffer.len() >= this.incoming.threshold() {
+                // If we get here, that means that we're attempting to deserialize a single value
+                // that is larger than the current buffer size. If the value is significantly larger
+                // than the current buffer size, this will result in accidentally quadratic behavior
+                // as we repeatedly attempt to deserialize the partial value whenever a new chunk
+                // comes in.
+                //
+                // To prevent this situation, whenever we encounter an item that exceeds the current
+                // buffer size, we simply double it. This means that we'll only need to do O(log(n))
+                // deserialization attempts for very large values.
+                let new_threshold = 2 * this.incoming.threshold();
+                this.incoming.as_mut().set_threshold(new_threshold);
             }
-            this.buffer.truncate(len);
-            *this.position = 0;
 
             // Poll the underlying stream for more incoming data.
             match ready!(this.incoming.as_mut().poll_next(cx)) {
@@ -151,6 +170,15 @@ impl<S, B, E> BufferedStream<S, B, E> {
             done: false,
             _phantom: PhantomData,
         }
+    }
+
+    fn threshold(&self) -> usize {
+        self.threshold
+    }
+
+    /// Update the buffer size in the middle of polling the stream.
+    fn set_threshold(self: Pin<&mut Self>, threshold: usize) {
+        *self.project().threshold = threshold;
     }
 }
 
