@@ -40,7 +40,7 @@ pub fn path_component_buf(s: &str) -> PathComponentBuf {
 
 pub fn hgid(hex: &str) -> HgId {
     if hex.len() > HgId::hex_len() {
-        panic!(format!("invalid length for hex hgid: {}", hex));
+        panic!("invalid length for hex hgid: {}", hex);
     }
     if hex == "0" {
         panic!("hgid 0 is special, use HgId::null_id() to build");
