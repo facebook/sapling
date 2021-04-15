@@ -371,6 +371,15 @@ class ActivateProfileCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--prefetch-metadata",
+            help="Prefetch file metadata (sha1 and size) for each file in a "
+            + "tree when we fetch trees during this prefetch. This may send a "
+            + "large amount of requests to the server and should only be used if "
+            + "you understand the risks.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout = args.checkout
