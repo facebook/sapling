@@ -170,6 +170,7 @@ from . import (
 )
 from . import debugephemeralcommit
 
+# pyre-fixme[16]: Module `` has no attribute `debugephemeralcommit`.
 debugephemeralcommit.command  # Suppressing "unused import" lint
 
 cmdtable = cccommands.cmdtable
