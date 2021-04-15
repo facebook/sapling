@@ -137,12 +137,8 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(
-        repo_name: Option<String>,
-        config_dir: PathBuf,
-        user_name: Option<String>,
-    ) -> Result<Self> {
-        let repo = Repo::from_str(repo_name.as_ref().map(|s| s.as_str()));
+    pub fn new(repo_name: String, config_dir: PathBuf, user_name: String) -> Result<Self> {
+        let repo = Repo::from_str(Some(&repo_name));
 
         let mut tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
             fs::read_to_string("/etc/smc.tiers")?
@@ -175,10 +171,7 @@ impl Generator {
             .map_or("".to_string(), |m| m.as_str().to_string());
 
         let shard = get_shard(&hostname);
-        let user_shard = match user_name {
-            Some(user_name) => get_shard(&user_name),
-            None => 100,
-        };
+        let user_shard = get_shard(&user_name);
 
         let group = get_hg_group(&tiers, shard);
 
@@ -423,12 +416,8 @@ pub(crate) mod tests {
     fn test_basic() {
         let repo_name = "test_repo";
         let username = "username";
-        let mut generator = Generator::new(
-            Some(repo_name.to_string()),
-            PathBuf::new(),
-            Some(username.to_string()),
-        )
-        .unwrap();
+        let mut generator =
+            Generator::new(repo_name.to_string(), PathBuf::new(), username.to_string()).unwrap();
 
         let tiers = HashSet::from_iter(["in_tier1", "in_tier2"].iter().map(|s| s.to_string()));
         let group = HgGroup::Alpha;

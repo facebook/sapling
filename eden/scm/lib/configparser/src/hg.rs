@@ -18,8 +18,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-use anyhow::{anyhow, bail, Context, Result};
-use dirs;
+use anyhow::{anyhow, bail, Result};
 use filetime::{set_file_mtime, FileTime};
 use minibytes::Text;
 use tempfile::tempfile_in;
@@ -66,7 +65,7 @@ pub trait ConfigSetHgExt {
 
     /// Load the dynamic config files for the given repo path.
     /// Returns errors parsing, generating, or fetching the configs.
-    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>>;
+    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>>;
 
     /// Load user config files (and environment variables).  If `$HGRCPATH` is
     /// set, load files listed in that environment variable instead.
@@ -233,8 +232,9 @@ impl ConfigSetHgExt for ConfigSet {
         if std::env::var(HGRCPATH).is_err() {
             errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
         }
-
-        errors.append(&mut self.load_dynamic(repo_path, opts.clone())?);
+        if let Some(repo_path) = repo_path {
+            errors.append(&mut self.load_dynamic(&repo_path, opts.clone())?);
+        }
         errors.append(&mut self.load_system(opts.clone()));
         errors.append(&mut self.load_user(opts.clone()));
 
@@ -288,11 +288,11 @@ impl ConfigSetHgExt for ConfigSet {
         errors
     }
 
-    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
+    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>> {
         let mut errors = Vec::new();
 
         // Compute path
-        let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
+        let dynamic_path = get_config_dir(Some(repo_path))?.join("hgrc.dynamic");
 
         // Check version
         let content = read_to_string(&dynamic_path).ok();
@@ -311,25 +311,29 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Synchronously generate the new config if it's out of date with our version
         if version != Some(this_version) {
-            let (repo_name, user_name): (Option<String>, Option<String>) = {
+            let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
                 // We need to know the repo name, but that's stored in the repository configs at
                 // the moment. In the long term we need to move that, but for now let's load the
                 // repo config ahead of time to read the name.
+                let repo_hgrc_path = repo_path.join("hgrc");
                 if !temp_config.load_user(opts.clone()).is_empty() {
                     bail!("unable to read user config to get user name");
                 }
-                if let Some(repo_path) = repo_path {
-                    let repo_hgrc_path = repo_path.join("hgrc");
-                    let opts = opts.clone().source("temp").process_hgplain();
-                    if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
-                        bail!("unable to read repo config to get repo name");
-                    }
+                let opts = opts.clone().source("temp").process_hgplain();
+                if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
+                    bail!("unable to read repo config to get repo name");
                 }
 
                 (
-                    temp_config.get_opt::<String>("remotefilelog", "reponame")?,
-                    temp_config.get_opt::<String>("ui", "username")?,
+                    temp_config
+                        .get("remotefilelog", "reponame")
+                        .unwrap_or_default()
+                        .to_string(),
+                    temp_config
+                        .get("ui", "username")
+                        .unwrap_or_default()
+                        .to_string(),
                 )
             };
 
@@ -375,10 +379,8 @@ impl ConfigSetHgExt for ConfigSet {
                     let mut command = Command::new("hg");
                     command
                         .arg("debugdynamicconfig")
+                        .args(&["--cwd", &repo_path.to_string_lossy()])
                         .env("HG_DEBUGDYNAMICCONFIG", "1");
-                    if let Some(repo_path) = repo_path {
-                        command.args(&["--cwd", &repo_path.to_string_lossy()]);
-                    }
                     let _ = run_background(command);
                 }
             }
@@ -509,46 +511,32 @@ impl ConfigSet {
 }
 
 fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
-    (|| -> Result<PathBuf> {
-        Ok(match repo_path {
-            Some(repo_path) => {
-                let shared_path = repo_path.join("sharedpath");
-                if shared_path.exists() {
-                    let raw = read_to_string(shared_path)?;
-                    let trimmed = raw.trim_end_matches("\n");
-                    // sharedpath can be relative, so join it with repo_path.
-                    repo_path.join(trimmed)
-                } else {
-                    repo_path.to_path_buf()
-                }
+    Ok(match repo_path {
+        Some(repo_path) => {
+            let shared_path = repo_path.join("sharedpath");
+            if shared_path.exists() {
+                let raw = read_to_string(shared_path)?;
+                let trimmed = raw.trim_end_matches("\n");
+                // sharedpath can be relative, so join it with repo_path.
+                repo_path.join(trimmed)
+            } else {
+                repo_path.to_path_buf()
             }
-            None => {
-                let path = if let Ok(tmp) = std::env::var("TESTTMP") {
-                    PathBuf::from(tmp).join(".cache")
-                } else {
-                    dirs::cache_dir().ok_or_else(|| {
-                        anyhow!("unable to find cache_dir for Mercurial configuration")
-                    })?
-                };
-                let path = path.join("edenscm");
-                if !path.exists() {
-                    fs::create_dir_all(&path)?;
-                }
-                path
-            }
-        })
-    })()
-    .with_context(|| format!("while getting the config_dir {:?}", repo_path))
+        }
+        None => dirs::cache_dir()
+            .ok_or_else(|| anyhow!("unable to find cache_dir for Mercurial configuration"))?
+            .join("edenscm"),
+    })
 }
 
 pub fn generate_dynamicconfig(
-    repo_path: Option<&Path>,
-    repo_name: Option<String>,
+    repo_path: &Path,
+    repo_name: String,
     canary: Option<String>,
-    user_name: Option<String>,
+    user_name: String,
 ) -> Result<()> {
     // Resolve sharedpath
-    let config_dir = get_config_dir(repo_path)?;
+    let config_dir = get_config_dir(Some(repo_path))?;
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.

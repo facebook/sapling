@@ -251,7 +251,7 @@ fn applydynamicconfig(
     shared_path: PyPathBuf,
 ) -> PyResult<PyNone> {
     let user_name = get_user_name(py, &config);
-    let dyn_cfg = Generator::new(Some(repo_name), shared_path.to_path_buf(), Some(user_name))
+    let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf(), user_name)
         .map_pyerr(py)?
         .execute(None)
         .map_pyerr(py)?;
@@ -279,13 +279,7 @@ fn generatedynamicconfig(
     shared_path: PyPathBuf,
 ) -> PyResult<PyNone> {
     let user_name = get_user_name(py, &config);
-    generate_dynamicconfig(
-        Some(shared_path.as_path()),
-        Some(repo_name),
-        None,
-        Some(user_name),
-    )
-    .map_pyerr(py)?;
+    generate_dynamicconfig(shared_path.as_path(), repo_name, None, user_name).map_pyerr(py)?;
     Ok(PyNone)
 }
 

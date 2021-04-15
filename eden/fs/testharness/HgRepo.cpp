@@ -81,7 +81,7 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   hgEnv_.set("LC_ALL", "en_US.UTF-8");
   // Trick Mercurial into thinking it's in a test so it doesn't generate
   // prod configs.
-  hgEnv_.set("TESTTMP", (path.dirname() + "cache"_pc).value());
+  hgEnv_.set("TESTTMP", "");
 }
 
 string HgRepo::hg(vector<string> args) {

@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ newrepo repo
+  $ hg init
 
   $ echo a > a
   $ hg ci -Ama

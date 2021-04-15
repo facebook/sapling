@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ newrepo repo
+  $ hg init
   $ touch a
 
   $ unset HGUSER
