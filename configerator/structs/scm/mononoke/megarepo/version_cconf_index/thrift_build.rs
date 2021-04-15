@@ -11,8 +11,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "all_config_versions crate
-megarepo_configs megarepo_configs",
+        "megarepo_configs megarepo_configs
+version_cconf_index crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -38,7 +38,7 @@ megarepo_configs megarepo_configs",
 
     conf
         .run(&[
-            "../all_config_versions.thrift"
+            "../version_cconf_index.thrift"
         ])
         .expect("Failed while running thrift compilation");
 }

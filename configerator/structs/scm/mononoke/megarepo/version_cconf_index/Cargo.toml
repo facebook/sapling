@@ -1,5 +1,5 @@
 [package]
-name = "all_config_versions"
+name = "version_cconf_index"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
