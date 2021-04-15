@@ -20,6 +20,7 @@ use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
+use rand::Rng;
 use sql::queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
@@ -58,9 +59,11 @@ queries! {
     read SelectAllUnordered(
         repo_id: RepositoryId,
         limit: u64,
+        tok: i32,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, i32) {
+        "
+        SELECT name, hg_kind, changeset_id, {tok}
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND hg_kind IN {kinds}
@@ -289,7 +292,15 @@ impl Bookmarks for SqlBookmarks {
                         // Sorting is only useful for pagination. If the query returns all bookmark
                         // names, then skip the sorting.
                         if limit == std::u64::MAX {
-                            SelectAllUnordered::query(&conn, &repo_id, &limit, &kinds).await?
+                            let tok: i32 = {
+                                let mut rng = rand::thread_rng();
+                                rng.gen()
+                            };
+                            SelectAllUnordered::query(&conn, &repo_id, &limit, &tok, &kinds)
+                                .await?
+                                .into_iter()
+                                .map(|(name, kind, id, _)| (name, kind, id))
+                                .collect()
                         } else {
                             SelectAll::query(&conn, &repo_id, &limit, &kinds).await?
                         }
