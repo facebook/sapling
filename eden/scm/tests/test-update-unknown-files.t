@@ -17,3 +17,5 @@
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
+  $ hg up 'desc(B)' --clean
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
