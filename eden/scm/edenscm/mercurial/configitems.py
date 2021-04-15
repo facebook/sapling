@@ -136,6 +136,7 @@ coreconfigitem("annotate", "ignorewseol", default=False)
 coreconfigitem("annotate", "nobinary", default=False)
 coreconfigitem("annotate", "noprefix", default=False)
 coreconfigitem("auth", "cookiefile", default=None)
+coreconfigitem("auth_proxy", "unix_socket_path", default=None)
 coreconfigitem("blackbox", "maxsize", default="100 MB")
 coreconfigitem("blackbox", "maxfiles", default=3)
 # bookmarks.pushing: internal hack for discovery

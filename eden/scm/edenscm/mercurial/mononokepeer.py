@@ -200,19 +200,23 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._port = u.port or 443
         self._path = u.path
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
+        self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
 
-        authdata = httpconnection.readauthforuri(self._ui, path, self._user)
-        if not authdata:
-            errormessage = _("No certificates have been found to connect to Mononoke")
-            helptext = ui.config("help", "tlsauthhelp")
-            if helptext:
-                errormessage += "\n\n" + helptext
-            self._abort(error.ConfigError(errormessage))
+        if not self._unix_socket_proxy:
+            authdata = httpconnection.readauthforuri(self._ui, path, self._user)
+            if not authdata:
+                errormessage = _(
+                    "No certificates have been found to connect to Mononoke"
+                )
+                helptext = ui.config("help", "tlsauthhelp")
+                if helptext:
+                    errormessage += "\n\n" + helptext
+                self._abort(error.ConfigError(errormessage))
 
-        (authname, auth) = authdata
-        self._cert = auth.get("cert")
-        self._key = auth.get("key")
-        self._cn = auth.get("cn") or self._host
+            (authname, auth) = authdata
+            self._cert = auth.get("cert")
+            self._key = auth.get("key")
+            self._cn = auth.get("cn") or self._host
 
         if create:
             self._abort(
@@ -230,9 +234,12 @@ class mononokepeer(stdiopeer.stdiopeer):
         msg += _("failed to connect to ")
         msg += "%s:%s\n" % (self._host, self._port)
         msg += " reason: %s\n" % ex
-        msg += " cn:     %s\n" % self._cn
-        msg += " cert:   %s\n" % self._cert
-        msg += " key:    %s\n" % self._key
+        if self._unix_socket_proxy:
+            msg += " proxy:  %s\n" % self._unix_socket_proxy
+        else:
+            msg += " cn:     %s\n" % self._cn
+            msg += " cert:   %s\n" % self._cert
+            msg += " key:    %s\n" % self._key
 
         if tlserror or isinstance(ex, ssl.SSLError):
             msg += "\n"
@@ -245,24 +252,30 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._cleanup()
 
         try:
-            self.sock = socket.create_connection(
-                (self._host, self._port), self._sockettimeout
-            )
+            if self._unix_socket_proxy:
+                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.sock.settimeout(self._sockettimeout)
+                self.sock.connect(self._unix_socket_proxy)
+            else:
+                self.sock = socket.create_connection(
+                    (self._host, self._port), self._sockettimeout
+                )
         except IOError as ex:
             self._connectionerror(ex)
 
-        try:
-            self.sock = sslutil.wrapsocket(
-                self.sock,
-                self._key,
-                self._cert,
-                ui=self.ui,
-                serverhostname=self._cn,
-            )
-            sslutil.validatesocket(self.sock)
+        if not self._unix_socket_proxy:
+            try:
+                self.sock = sslutil.wrapsocket(
+                    self.sock,
+                    self._key,
+                    self._cert,
+                    ui=self.ui,
+                    serverhostname=self._cn,
+                )
+                sslutil.validatesocket(self.sock)
 
-        except IOError as ex:
-            self._connectionerror(ex, tlserror=True)
+            except IOError as ex:
+                self._connectionerror(ex, tlserror=True)
 
         try:
             headers = [
