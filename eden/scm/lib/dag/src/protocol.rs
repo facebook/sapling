@@ -16,7 +16,6 @@
 //! - Id -> Name: Id -> RequestLocationToName -> ResponseIdNamePair -> Name
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
-use crate::errors::NotFoundError;
 use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
@@ -420,6 +419,8 @@ impl<'a, DagStore: IdDagStore> Process<ResponseIdNamePair, ()>
     for (&'a mut IdMap, &'a IdDag<DagStore>)
 {
     async fn process(mut self, res: ResponseIdNamePair) -> Result<()> {
+        use crate::errors::NotFoundError;
+
         let map = &mut self.0;
         let dag = &self.1;
         for (path, names) in res.path_names.iter() {
