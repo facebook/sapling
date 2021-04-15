@@ -738,10 +738,9 @@ def get_winpopen4(pipei_bufsize):
     def winpopen4(orig, cmd, env=None, newlines=False, bufsize=-1):
         """Same as util.popen4, but manually creates an input pipe with a
         larger than default buffer"""
-        import msvcrt
-
         # pyre-fixme[21]: Could not find module `_subprocess`.
         import _subprocess
+        import msvcrt
 
         handles = _subprocess.CreatePipe(None, pipei_bufsize)
         rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
