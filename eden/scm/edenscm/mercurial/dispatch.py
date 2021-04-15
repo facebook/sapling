@@ -1177,7 +1177,7 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig("ui", "interactive", "off", "-y")
 
-        if cmdoptions.get("insecure", False):
+        if options["insecure"]:
             for ui_ in uis:
                 ui_.insecureconnections = True
 
