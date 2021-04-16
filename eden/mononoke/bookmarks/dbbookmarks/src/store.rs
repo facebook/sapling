@@ -192,10 +192,10 @@ queries! {
         WHERE id > {min_id} AND repo_id = {repo_id} AND NOT reason = {reason}"
     }
 
-    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32) -> (
-        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32, tok: i32) -> (
+        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
-        "SELECT id, to_changeset_id, reason, timestamp
+        "SELECT id, to_changeset_id, reason, timestamp, {tok}
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
@@ -222,10 +222,10 @@ queries! {
          LIMIT {max_records}"
     }
 
-    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32) -> (
-        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32, tok: i32) -> (
+        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
-        "SELECT id, to_changeset_id, reason, timestamp
+        "SELECT id, to_changeset_id, reason, timestamp, {tok}
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
@@ -292,10 +292,7 @@ impl Bookmarks for SqlBookmarks {
                         // Sorting is only useful for pagination. If the query returns all bookmark
                         // names, then skip the sorting.
                         if limit == std::u64::MAX {
-                            let tok: i32 = {
-                                let mut rng = rand::thread_rng();
-                                rng.gen()
-                            };
+                            let tok: i32 = rand::thread_rng().gen();
                             SelectAllUnordered::query(&conn, &repo_id, &limit, &tok, &kinds)
                                 .await?
                                 .into_iter()
@@ -407,14 +404,22 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
+            let tok: i32 = rand::thread_rng().gen();
+
             let rows = match offset {
                 Some(offset) => {
-                    SelectBookmarkLogsWithOffset::query(&conn, &repo_id, &name, &max_rec, &offset)
-                        .await?
+                    SelectBookmarkLogsWithOffset::query(
+                        &conn, &repo_id, &name, &max_rec, &offset, &tok,
+                    )
+                    .await?
                 }
-                None => SelectBookmarkLogs::query(&conn, &repo_id, &name, &max_rec).await?,
+                None => SelectBookmarkLogs::query(&conn, &repo_id, &name, &max_rec, &tok).await?,
             };
-            Ok(stream::iter(rows.into_iter().map(Ok)))
+            Ok(stream::iter(
+                rows.into_iter()
+                    .map(|(from_id, to_id, reason, ts, _)| (from_id, to_id, reason, ts))
+                    .map(Ok),
+            ))
         }
         .try_flatten_stream()
         .boxed()

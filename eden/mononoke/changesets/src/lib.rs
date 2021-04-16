@@ -21,6 +21,7 @@ use futures::{
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
+use rand::Rng;
 use sql::{queries, Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -180,10 +181,10 @@ queries! {
         "INSERT INTO csparents (cs_id, parent_id, seq) VALUES {values}"
     }
 
-    read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64, Option<ChangesetId>, Option<u64>) {
+    read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId, tok: i32) -> (u64, Option<ChangesetId>, Option<u64>, i32) {
         // NOTE: This selects seq even though we don't need it in order to sort by it.
         "
-        SELECT cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq
+        SELECT cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq, {tok}
         FROM csparents
         INNER JOIN changesets cs0 ON cs0.id = csparents.cs_id
         INNER JOIN changesets cs1 ON cs1.id = csparents.parent_id
@@ -191,7 +192,7 @@ queries! {
 
         UNION
 
-        SELECT cs0.gen AS gen, NULL AS parent_id, NULL as seq
+        SELECT cs0.gen AS gen, NULL AS parent_id, NULL as seq, {tok}
         FROM changesets cs0
         WHERE cs0.repo_id = {repo_id} and cs0.cs_id = {cs_id}
 
@@ -199,9 +200,9 @@ queries! {
         "
     }
 
-    read SelectManyChangesets(repo_id: RepositoryId, >list cs_id: ChangesetId) -> (ChangesetId, u64, Option<ChangesetId>, Option<u64>) {
+    read SelectManyChangesets(repo_id: RepositoryId, tok: i32, >list cs_id: ChangesetId) -> (ChangesetId, u64, Option<ChangesetId>, Option<u64>, i32) {
         "
-        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq
+        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, cs1.cs_id AS parent_id, csparents.seq AS seq, {tok}
         FROM csparents
         INNER JOIN changesets cs0 ON cs0.id = csparents.cs_id
         INNER JOIN changesets cs1 ON cs1.id = csparents.parent_id
@@ -209,7 +210,7 @@ queries! {
 
         UNION
 
-        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, NULL AS parent_id, NULL as seq
+        SELECT cs0.cs_id AS cs_id, cs0.gen AS gen, NULL AS parent_id, NULL as seq, {tok}
         FROM changesets cs0
         WHERE cs0.repo_id = {repo_id} and cs0.cs_id IN {cs_id}
 
@@ -632,7 +633,8 @@ async fn select_changeset(
     repo_id: RepositoryId,
     cs_id: ChangesetId,
 ) -> Result<Option<ChangesetEntry>, Error> {
-    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id).await?;
+    let tok: i32 = rand::thread_rng().gen();
+    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id, &tok).await?;
     let result = if rows.is_empty() {
         None
     } else {
@@ -652,10 +654,11 @@ async fn select_many_changesets(
     repo_id: RepositoryId,
     cs_ids: &Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetEntry>, Error> {
+    let tok: i32 = rand::thread_rng().gen();
     let fetched_changesets =
-        SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..]).await?;
+        SelectManyChangesets::query(&connection, &repo_id, &tok, &cs_ids[..]).await?;
     let mut cs_id_to_cs_entry = HashMap::new();
-    for (cs_id, gen, maybe_parent, _) in fetched_changesets {
+    for (cs_id, gen, maybe_parent, _, _) in fetched_changesets {
         cs_id_to_cs_entry
             .entry(cs_id)
             .or_insert(ChangesetEntry {

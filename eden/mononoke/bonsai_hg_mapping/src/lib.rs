@@ -23,6 +23,7 @@ use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
 };
 use mononoke_types::{ChangesetId, RepositoryId};
+use rand::Rng;
 use rendezvous::{MultiRendezVous, RendezVousStats, TunablesMultiRendezVousController};
 use sql::queries;
 use stats::prelude::*;
@@ -199,9 +200,10 @@ queries! {
 
     read SelectMappingByBonsai(
         repo_id: RepositoryId,
+        tok: i32,
         >list bcs_id: ChangesetId
-    ) -> (HgChangesetId, ChangesetId) {
-        "SELECT hg_cs_id, bcs_id
+    ) -> (HgChangesetId, ChangesetId, i32) {
+        "SELECT hg_cs_id, bcs_id, {tok}
          FROM bonsai_hg_mapping
          WHERE repo_id = {repo_id}
            AND bcs_id IN {bcs_id}"
@@ -209,9 +211,10 @@ queries! {
 
     read SelectMappingByHg(
         repo_id: RepositoryId,
+        tok: i32,
         >list hg_cs_id: HgChangesetId
-    ) -> (HgChangesetId, ChangesetId) {
-        "SELECT hg_cs_id, bcs_id
+    ) -> (HgChangesetId, ChangesetId, i32) {
+        "SELECT hg_cs_id, bcs_id, {tok}
          FROM bonsai_hg_mapping
          WHERE repo_id = {repo_id}
            AND hg_cs_id IN {hg_cs_id}"
@@ -266,15 +269,26 @@ impl SqlBonsaiHgMapping {
             bcs_id,
         } = entry.clone();
 
+        let tok: i32 = rand::thread_rng().gen();
         let hg_ids = &[hg_cs_id];
-        let by_hg = SelectMappingByHg::query(&self.read_master_connection.conn, &repo_id, hg_ids);
+        let by_hg =
+            SelectMappingByHg::query(&self.read_master_connection.conn, &repo_id, &tok, hg_ids);
         let bcs_ids = &[bcs_id];
-        let by_bcs =
-            SelectMappingByBonsai::query(&self.read_master_connection.conn, &repo_id, bcs_ids);
+        let by_bcs = SelectMappingByBonsai::query(
+            &self.read_master_connection.conn,
+            &repo_id,
+            &tok,
+            bcs_ids,
+        );
 
         let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
-        match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
+        match by_hg_rows
+            .into_iter()
+            .chain(by_bcs_rows.into_iter())
+            .map(|(hg_cs_id, bcs_id, _)| (hg_cs_id, bcs_id))
+            .next()
+        {
             Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
             Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
                 BonsaiHgMappingEntry {
@@ -410,6 +424,8 @@ async fn select_mapping(
         return Ok((vec![], cs_ids));
     }
 
+    let tok: i32 = rand::thread_rng().gen();
+
     let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
             let ret = connection
@@ -420,11 +436,13 @@ async fn select_mapping(
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
-                        Ok(SelectMappingByBonsai::query(&conn, &repo_id, &bcs_ids[..])
-                            .await?
-                            .into_iter()
-                            .map(|(hg_cs_id, bcs_id)| (bcs_id, hg_cs_id))
-                            .collect())
+                        Ok(
+                            SelectMappingByBonsai::query(&conn, &repo_id, &tok, &bcs_ids[..])
+                                .await?
+                                .into_iter()
+                                .map(|(hg_cs_id, bcs_id, _)| (bcs_id, hg_cs_id))
+                                .collect(),
+                        )
                     }
                 })
                 .await?;
@@ -451,10 +469,13 @@ async fn select_mapping(
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
                         let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
-                        Ok(SelectMappingByHg::query(&conn, &repo_id, &hg_cs_ids[..])
-                            .await?
-                            .into_iter()
-                            .collect())
+                        Ok(
+                            SelectMappingByHg::query(&conn, &repo_id, &tok, &hg_cs_ids[..])
+                                .await?
+                                .into_iter()
+                                .map(|(hg_cs_id, bcs_id, _)| (hg_cs_id, bcs_id))
+                                .collect(),
+                        )
                     }
                 })
                 .await?;
