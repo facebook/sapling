@@ -35,12 +35,13 @@ const ARG_TICKET_SEEDS: &str = "ssl-ticket-seeds";
 const ARG_CSLB_CONFIG: &str = "cslb-config";
 
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
-    let app = args::MononokeAppBuilder::new("mononoke server")
+    args::MononokeAppBuilder::new("mononoke server")
         .with_shutdown_timeout_args()
         .with_all_repos()
         .with_disabled_hooks_args()
         .with_scuba_logging_args()
         .with_mcrouter_args()
+        .with_scribe_args()
         .with_default_scuba_dataset("mononoke_test_perf")
         .build()
         .about("serve repos")
@@ -91,10 +92,7 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("top level Mononoke tier where CSLB publishes routing table"),
-        );
-
-    let app = args::add_scribe_logging_args(app);
-    app
+        )
 }
 
 #[fbinit::main]

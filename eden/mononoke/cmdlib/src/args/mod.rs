@@ -38,14 +38,11 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use crate::helpers::{setup_repo_dir, CreateStorage};
 
 use self::app::{
-    CONFIG_PATH, REPO_ID, REPO_NAME, SOURCE_REPO_ID, SOURCE_REPO_NAME, TARGET_REPO_ID,
-    TARGET_REPO_NAME,
+    CONFIG_PATH, REPO_ID, REPO_NAME, SCRIBE_LOGGING_DIRECTORY, SOURCE_REPO_ID, SOURCE_REPO_NAME,
+    TARGET_REPO_ID, TARGET_REPO_NAME,
 };
 
-// TODO: Move add_FOO_args into MononokeAppBuilder here.
-pub use self::app::{
-    add_scribe_logging_args, ArgType, MononokeAppBuilder, MononokeClapApp, RepoRequirement,
-};
+pub use self::app::{ArgType, MononokeAppBuilder, MononokeClapApp, RepoRequirement};
 pub use self::matches::MononokeMatches;
 
 fn get_repo_id_and_name_from_values<'a>(
@@ -339,7 +336,7 @@ pub fn get_shutdown_timeout<'a>(matches: &MononokeMatches<'a>) -> Result<Duratio
 }
 
 pub fn get_scribe<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Result<Scribe> {
-    match matches.value_of("scribe-logging-directory") {
+    match matches.value_of(SCRIBE_LOGGING_DIRECTORY) {
         Some(dir) => Ok(Scribe::new_to_file(PathBuf::from(dir))),
         None => Ok(Scribe::new(fb)),
     }

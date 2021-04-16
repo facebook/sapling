@@ -65,6 +65,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
         .with_disabled_hooks_args()
+        .with_scribe_args()
         .build()
         .arg(
             Arg::with_name(ARG_HOST)
@@ -83,7 +84,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_name("PORT")
                 .help("Thrift port"),
         );
-    let app = args::add_scribe_logging_args(app);
 
     let matches = app.get_matches(fb)?;
 

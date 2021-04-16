@@ -50,6 +50,7 @@ pub const MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT: &str = "mysql-sqblob-pool-idle-timeou
 pub const RUNTIME_THREADS: &str = "runtime-threads";
 pub const TUNABLES_CONFIG: &str = "tunables-config";
 pub const DISABLE_TUNABLES: &str = "disable-tunables";
+pub const SCRIBE_LOGGING_DIRECTORY: &str = "scribe-logging-directory";
 
 pub const READ_QPS_ARG: &str = "blobstore-read-qps";
 pub const WRITE_QPS_ARG: &str = "blobstore-write-qps";
@@ -116,6 +117,8 @@ pub enum ArgType {
     /// Adds --enable-mcrouter to use McRouter to talk to Memcache for places that support it,
     /// which can boot faster in dev binaries.
     McRouter,
+    /// Adds arguments related to Scribe logging.
+    Scribe,
 }
 
 // Arguments that are enabled by default for MononokeAppBuilder
@@ -337,6 +340,11 @@ impl MononokeAppBuilder {
         self
     }
 
+    pub fn with_scribe_args(mut self) -> Self {
+        self.arg_types.insert(ArgType::Scribe);
+        self
+    }
+
     pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
         self.default_scuba_dataset = Some(default.into());
         self
@@ -545,6 +553,9 @@ impl MononokeAppBuilder {
         }
         if self.arg_types.contains(&ArgType::McRouter) {
             app = add_mcrouter_args(app);
+        }
+        if self.arg_types.contains(&ArgType::Scribe) {
+            app = add_scribe_logging_args(app);
         }
 
         MononokeClapApp {
@@ -989,10 +1000,10 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>, has_default: bool) -> App<'a
     app
 }
 
-pub fn add_scribe_logging_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
+fn add_scribe_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
-        Arg::with_name("scribe-logging-directory")
-            .long("scribe-logging-directory")
+        Arg::with_name(SCRIBE_LOGGING_DIRECTORY)
+            .long(SCRIBE_LOGGING_DIRECTORY)
             .takes_value(true)
             .help("Filesystem directory where to log all scribe writes"),
     )
