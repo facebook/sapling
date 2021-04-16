@@ -502,9 +502,12 @@ mod tests {
             compressed_size > base_compressed_size,
             "Pack shrank as it gained data"
         );
+        let limit = base_compressed_size + 20 * 1000;
         assert!(
-            compressed_size < (base_compressed_size + 20 * 1000),
-            "Pack grew by more than the size of added data"
+            compressed_size < limit,
+            "Pack grew by more than the size of added data. Expected {} < {}",
+            compressed_size,
+            limit,
         );
 
         Ok(())
