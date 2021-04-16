@@ -113,6 +113,9 @@ pub enum ArgType {
     DisableHooks,
     /// Adds --fb303-thrift-port for stats and profiling
     Fb303,
+    /// Adds --enable-mcrouter to use McRouter to talk to Memcache for places that support it,
+    /// which can boot faster in dev binaries.
+    McRouter,
 }
 
 // Arguments that are enabled by default for MononokeAppBuilder
@@ -328,6 +331,12 @@ impl MononokeAppBuilder {
         self
     }
 
+    /// This command has arguments for McRouter
+    pub fn with_mcrouter_args(mut self) -> Self {
+        self.arg_types.insert(ArgType::McRouter);
+        self
+    }
+
     pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
         self.default_scuba_dataset = Some(default.into());
         self
@@ -533,6 +542,9 @@ impl MononokeAppBuilder {
         }
         if self.arg_types.contains(&ArgType::Fb303) {
             app = add_fb303_args(app);
+        }
+        if self.arg_types.contains(&ArgType::McRouter) {
+            app = add_mcrouter_args(app);
         }
 
         MononokeClapApp {
@@ -905,7 +917,7 @@ pub fn bool_as_str(v: bool) -> &'static str {
 
 pub(crate) const BOOL_VALUES: &[&str] = &["false", "true"];
 
-pub fn add_mcrouter_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
+fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(ENABLE_MCROUTER)
             .long(ENABLE_MCROUTER)

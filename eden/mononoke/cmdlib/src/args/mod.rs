@@ -38,14 +38,13 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use crate::helpers::{setup_repo_dir, CreateStorage};
 
 use self::app::{
-    CONFIG_PATH, ENABLE_MCROUTER, REPO_ID, REPO_NAME, SOURCE_REPO_ID, SOURCE_REPO_NAME,
-    TARGET_REPO_ID, TARGET_REPO_NAME,
+    CONFIG_PATH, REPO_ID, REPO_NAME, SOURCE_REPO_ID, SOURCE_REPO_NAME, TARGET_REPO_ID,
+    TARGET_REPO_NAME,
 };
 
 // TODO: Move add_FOO_args into MononokeAppBuilder here.
 pub use self::app::{
-    add_mcrouter_args, add_scribe_logging_args, ArgType, MononokeAppBuilder, MononokeClapApp,
-    RepoRequirement,
+    add_scribe_logging_args, ArgType, MononokeAppBuilder, MononokeClapApp, RepoRequirement,
 };
 pub use self::matches::MononokeMatches;
 
@@ -450,23 +449,6 @@ pub async fn open_repo_with_repo_id<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<BlobRepo, Error> {
     open_repo_internal_with_repo_id(logger, repo_id, matches, false, None).await
-}
-
-pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) {
-    if matches.is_present(ENABLE_MCROUTER) {
-        #[cfg(fbcode_build)]
-        {
-            ::ratelim::use_proxy_if_available(fb);
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            let _ = fb;
-            unimplemented!(
-                "Passed --{}, but it is supported only for fbcode builds",
-                ENABLE_MCROUTER
-            );
-        }
-    }
 }
 
 pub fn get_usize_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<usize> {

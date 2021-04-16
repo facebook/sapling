@@ -45,10 +45,10 @@ use crate::log;
 use super::app::{
     ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,
     BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG, CACHELIB_ATTEMPT_ZSTD_ARG,
-    CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, LOCAL_CONFIGERATOR_PATH_ARG, LOG_EXCLUDE_TAG,
-    LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
-    MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT,
-    MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
+    CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG,
+    LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MYSQL_CONN_OPEN_TIMEOUT,
+    MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT,
+    MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
     MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
     MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, MYSQL_USE_CLIENT,
     READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RUNTIME_THREADS,
@@ -107,6 +107,8 @@ impl<'a> MononokeMatches<'a> {
             .context("Failed to parse blobstore options")?;
         let readonly_storage =
             parse_readonly_storage(&matches).context("Failed to parse readonly storage options")?;
+
+        maybe_enable_mcrouter(fb, &matches, &arg_types);
 
         Ok(MononokeMatches {
             matches: MaybeOwned::from(matches),
@@ -729,5 +731,29 @@ fn create_config_store<'a>(
             CONFIGERATOR_POLL_INTERVAL,
             CONFIGERATOR_REFRESH_TIMEOUT,
         ),
+    }
+}
+
+fn maybe_enable_mcrouter(fb: FacebookInit, matches: &ArgMatches<'_>, arg_types: &HashSet<ArgType>) {
+    if !arg_types.contains(&ArgType::McRouter) {
+        return;
+    }
+
+    if !matches.is_present(ENABLE_MCROUTER) {
+        return;
+    }
+
+    #[cfg(fbcode_build)]
+    {
+        ::ratelim::use_proxy_if_available(fb);
+    }
+
+    #[cfg(not(fbcode_build))]
+    {
+        let _ = fb;
+        unimplemented!(
+            "Passed --{}, but it is supported only for fbcode builds",
+            ENABLE_MCROUTER
+        );
     }
 }

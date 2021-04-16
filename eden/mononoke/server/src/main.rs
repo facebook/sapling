@@ -40,6 +40,7 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
         .with_all_repos()
         .with_disabled_hooks_args()
         .with_scuba_logging_args()
+        .with_mcrouter_args()
         .with_default_scuba_dataset("mononoke_test_perf")
         .build()
         .about("serve repos")
@@ -92,7 +93,6 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
                 .help("top level Mononoke tier where CSLB publishes routing table"),
         );
 
-    let app = args::add_mcrouter_args(app);
     let app = args::add_scribe_logging_args(app);
     app
 }
@@ -100,7 +100,6 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches(fb)?;
-    cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
     let root_log = matches.logger();
     let runtime = matches.runtime();
