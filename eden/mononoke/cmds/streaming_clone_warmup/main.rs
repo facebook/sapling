@@ -166,6 +166,7 @@ impl StreamingCloneWarmup {
             &blobstore_options,
             ctx.logger(),
             config_store,
+            &blobstore_factory::default_scrub_handler(),
         )
         .await?;
         let blobstore = new_memcache_blobstore(ctx.fb, blobstore, "multiplexed", "")?;

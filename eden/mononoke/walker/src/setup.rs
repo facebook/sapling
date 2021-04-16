@@ -1274,7 +1274,7 @@ pub async fn setup_common<'a>(
     }
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let mut blobstore_options = args::parse_blobstore_options(&matches)?;
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 
@@ -1300,15 +1300,6 @@ pub async fn setup_common<'a>(
     let mut repo_id_to_name = HashMap::new();
     for repo in &repos {
         repo_id_to_name.insert(repo.id, repo.name.clone());
-    }
-
-    if let Some(scrub_options) = blobstore_options.scrub_options.as_mut() {
-        scrub_options.scrub_handler = Arc::new(blobstore::StatsScrubHandler::new(
-            false,
-            scuba_builder.clone(),
-            walk_stats_key,
-            repo_id_to_name.clone(),
-        )) as Arc<dyn ScrubHandler>;
     }
 
     let storage_override = if let Some(storage_id) = storage_id {
@@ -1362,6 +1353,13 @@ pub async fn setup_common<'a>(
             Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
         });
     }
+
+    repo_factory.with_scrub_handler(Arc::new(blobstore::StatsScrubHandler::new(
+        false,
+        scuba_builder.clone(),
+        walk_stats_key,
+        repo_id_to_name.clone(),
+    )) as Arc<dyn ScrubHandler>);
 
     let mut parsed_tail_params: HashMap<MetadataDatabaseConfig, TailParams> = HashMap::new();
 

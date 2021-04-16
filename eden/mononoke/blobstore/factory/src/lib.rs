@@ -15,7 +15,10 @@ mod sql;
 pub use ::blobstore::{PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
-pub use multiplexedblob::{scrub::ScrubOptions, ScrubAction};
+pub use multiplexedblob::{
+    scrub::{default_scrub_handler, ScrubOptions},
+    ScrubAction, ScrubHandler,
+};
 pub use packblob::PackOptions;
 pub use throttledblob::ThrottleOptions;
 

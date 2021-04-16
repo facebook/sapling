@@ -17,7 +17,10 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFactory};
+use blobstore_factory::{
+    default_scrub_handler, make_blobstore, make_metadata_sql_factory, MetadataSqlFactory,
+    ScrubHandler,
+};
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{
     ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
@@ -129,6 +132,7 @@ pub struct RepoFactory {
     redacted_blobs:
         RepoFactoryCache<MetadataDatabaseConfig, Arc<HashMap<String, RedactedMetadata>>>,
     blobstore_override: Option<Box<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
+    scrub_handler: Arc<dyn ScrubHandler>,
 }
 
 impl RepoFactory {
@@ -155,6 +159,7 @@ impl RepoFactory {
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
+            scrub_handler: default_scrub_handler(),
         }
     }
 
@@ -163,6 +168,11 @@ impl RepoFactory {
         blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
     ) -> &mut Self {
         self.blobstore_override = Some(Box::new(blobstore_override));
+        self
+    }
+
+    pub fn with_scrub_handler(&mut self, scrub_handler: Arc<dyn ScrubHandler>) -> &mut Self {
+        self.scrub_handler = scrub_handler;
         self
     }
 
@@ -197,6 +207,7 @@ impl RepoFactory {
                     &self.blobstore_options,
                     &self.logger,
                     &self.config_store,
+                    &self.scrub_handler,
                 )
                 .watched(&self.logger)
                 .await?;

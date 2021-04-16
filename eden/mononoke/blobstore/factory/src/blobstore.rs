@@ -23,7 +23,9 @@ use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType,
     ShardableRemoteDatabaseConfig,
 };
-use multiplexedblob::{MultiplexedBlobstore, ScrubAction, ScrubBlobstore, ScrubOptions};
+use multiplexedblob::{
+    MultiplexedBlobstore, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions,
+};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -117,6 +119,7 @@ pub fn make_blobstore<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
+    scrub_handler: &'a Arc<dyn ScrubHandler>,
 ) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
     async move {
         let store = make_blobstore_put_ops(
@@ -127,6 +130,7 @@ pub fn make_blobstore<'a>(
             blobstore_options,
             logger,
             config_store,
+            scrub_handler,
         )
         .await?;
         // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
@@ -407,6 +411,7 @@ fn make_blobstore_put_ops<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
+    scrub_handler: &'a Arc<dyn ScrubHandler>,
 ) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
@@ -499,6 +504,7 @@ fn make_blobstore_put_ops<'a>(
                     blobstore_options,
                     logger,
                     config_store,
+                    scrub_handler,
                 )
                 .watched(logger)
                 .await?
@@ -521,6 +527,7 @@ fn make_blobstore_put_ops<'a>(
                     &blobstore_options,
                     logger,
                     config_store,
+                    scrub_handler,
                 )
                 .watched(logger)
                 .await?;
@@ -586,6 +593,7 @@ async fn make_blobstore_multiplexed<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
+    scrub_handler: &'a Arc<dyn ScrubHandler>,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     let component_readonly = blobstore_options
         .scrub_options
@@ -620,6 +628,7 @@ async fn make_blobstore_multiplexed<'a>(
                     &blobstore_options,
                     logger,
                     config_store,
+                    scrub_handler,
                 )
                 .watched(logger)
                 .await?;
@@ -666,6 +675,7 @@ async fn make_blobstore_multiplexed<'a>(
             }),
             scuba_sample_rate,
             scrub_options.clone(),
+            scrub_handler.clone(),
         )) as Arc<dyn BlobstorePutOps>,
         None => Arc::new(MultiplexedBlobstore::new(
             multiplex_id,

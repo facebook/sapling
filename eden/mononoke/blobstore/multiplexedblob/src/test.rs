@@ -254,9 +254,9 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
-            scrub_handler: Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
             scrub_grace: None,
         },
+        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
     );
 
     let mut fut = bs.get(ctx, "key");
@@ -631,9 +631,9 @@ async fn scrubbed(fb: FacebookInit) {
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
-            scrub_handler: scrub_handler.clone(),
             scrub_grace: None,
         },
+        scrub_handler.clone(),
     );
 
     // non-existing key when one blobstore failing
@@ -704,9 +704,9 @@ async fn scrubbed(fb: FacebookInit) {
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
-            scrub_handler,
             scrub_grace: None,
         },
+        scrub_handler,
     );
 
     // Non-existing key in both blobstores, new blobstore failing

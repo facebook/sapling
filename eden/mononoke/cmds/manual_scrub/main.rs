@@ -191,6 +191,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             &blobstore_options,
             &logger,
             config_store,
+            &blobstore_factory::default_scrub_handler(),
         )
         .await?;
 

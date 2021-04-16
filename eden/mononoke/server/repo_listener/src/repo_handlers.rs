@@ -316,6 +316,7 @@ async fn create_wireproto_logging<'a>(
                 blobstore_options,
                 &logger,
                 config_store,
+                &blobstore_factory::default_scrub_handler(),
             )
             .await?;
 

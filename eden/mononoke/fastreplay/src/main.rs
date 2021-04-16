@@ -293,6 +293,7 @@ async fn bootstrap_repositories<'a>(
 
         async move {
             let warmup_params = config.cache_warmup.clone();
+            let scrub_handler = &blobstore_factory::default_scrub_handler();
 
             let remote_args_blobstore = config
                 .wireproto_logging
@@ -307,6 +308,7 @@ async fn bootstrap_repositories<'a>(
                         blobstore_options,
                         &logger,
                         config_store,
+                        scrub_handler,
                     )
                 });
 
