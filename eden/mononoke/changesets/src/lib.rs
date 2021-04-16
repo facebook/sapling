@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
 use context::{CoreContext, PerfCounterType};
+use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
     stream::{self, BoxStream, StreamExt},
@@ -22,6 +23,9 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
 use rand::Rng;
+use rendezvous::{
+    MultiRendezVous, RendezVousOptions, RendezVousStats, TunablesMultiRendezVousController,
+};
 use sql::{queries, Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -162,10 +166,28 @@ pub trait Changesets: Send + Sync {
 }
 
 #[derive(Clone)]
+struct RendezVousConnection {
+    rdv: MultiRendezVous<RepositoryId, ChangesetId, ChangesetEntry>,
+    conn: Connection,
+}
+
+impl RendezVousConnection {
+    fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
+        Self {
+            conn,
+            rdv: MultiRendezVous::new(
+                TunablesMultiRendezVousController::new(opts),
+                RendezVousStats::new(format!("changesets.{}", name,)),
+            ),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct SqlChangesets {
     write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    read_connection: RendezVousConnection,
+    read_master_connection: RendezVousConnection,
 }
 
 queries! {
@@ -295,21 +317,42 @@ queries! {
 
 }
 
-impl SqlConstruct for SqlChangesets {
+#[derive(Clone)]
+pub struct SqlChangesetsBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlChangesetsBuilder {
     const LABEL: &'static str = "changesets";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-changesets.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
-        }
+        Self { connections }
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlChangesets {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlChangesetsBuilder {}
+
+impl SqlChangesetsBuilder {
+    pub fn build(self, opts: RendezVousOptions) -> SqlChangesets {
+        let SqlConnections {
+            read_connection,
+            read_master_connection,
+            write_connection,
+        } = self.connections;
+
+        SqlChangesets {
+            read_connection: RendezVousConnection::new(read_connection, "read", opts),
+            read_master_connection: RendezVousConnection::new(
+                read_master_connection,
+                "read_master",
+                opts,
+            ),
+            write_connection,
+        }
+    }
+}
 
 #[async_trait]
 impl Changesets for SqlChangesets {
@@ -376,7 +419,8 @@ impl Changesets for SqlChangesets {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let fetched_cs = select_many_changesets(&self.read_connection, repo_id, &cs_ids).await?;
+        let fetched_cs =
+            select_many_changesets(ctx.fb, &self.read_connection, repo_id, &cs_ids).await?;
         let fetched_set: HashSet<_> = fetched_cs
             .clone()
             .into_iter()
@@ -393,9 +437,13 @@ impl Changesets for SqlChangesets {
             STATS::gets_master.add_value(1);
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let mut master_fetched_cs =
-                select_many_changesets(&self.read_master_connection, repo_id, &notfetched_cs_ids)
-                    .await?;
+            let mut master_fetched_cs = select_many_changesets(
+                ctx.fb,
+                &self.read_master_connection,
+                repo_id,
+                &notfetched_cs_ids,
+            )
+            .await?;
             master_fetched_cs.extend(fetched_cs);
             Ok(master_fetched_cs)
         }
@@ -412,12 +460,18 @@ impl Changesets for SqlChangesets {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let resolved_cs =
-            fetch_many_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit).await?;
+            fetch_many_by_prefix(&self.read_connection.conn, repo_id, &cs_prefix, limit).await?;
         match resolved_cs {
             ChangesetIdsResolvedFromPrefix::NoMatch => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                fetch_many_by_prefix(&self.read_master_connection, repo_id, &cs_prefix, limit).await
+                fetch_many_by_prefix(
+                    &self.read_master_connection.conn,
+                    repo_id,
+                    &cs_prefix,
+                    limit,
+                )
+                .await
             }
             _ => Ok(resolved_cs),
         }
@@ -540,9 +594,9 @@ impl SqlChangesets {
 
     fn read_conn(&self, read_from_master: bool) -> &Connection {
         if read_from_master {
-            &self.read_master_connection
+            &self.read_master_connection.conn
         } else {
-            &self.read_connection
+            &self.read_connection.conn
         }
     }
 }
@@ -641,27 +695,48 @@ async fn select_changeset(
 }
 
 async fn select_many_changesets(
-    connection: &Connection,
+    fb: FacebookInit,
+    connection: &RendezVousConnection,
     repo_id: RepositoryId,
     cs_ids: &Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetEntry>, Error> {
-    let tok: i32 = rand::thread_rng().gen();
-    let fetched_changesets =
-        SelectManyChangesets::query(&connection, &repo_id, &tok, &cs_ids[..]).await?;
-    let mut cs_id_to_cs_entry = HashMap::new();
-    for (cs_id, gen, maybe_parent, _, _) in fetched_changesets {
-        cs_id_to_cs_entry
-            .entry(cs_id)
-            .or_insert(ChangesetEntry {
-                repo_id,
-                cs_id,
-                parents: vec![],
-                gen,
-            })
-            .parents
-            .extend(maybe_parent.into_iter());
+    if cs_ids.is_empty() {
+        return Ok(vec![]);
     }
-    Ok(cs_id_to_cs_entry.values().cloned().collect())
+
+    let ret = connection
+        .rdv
+        .get(repo_id)
+        .dispatch(fb, cs_ids.iter().copied().collect(), || {
+            let conn = connection.conn.clone();
+            move |cs_ids| async move {
+                let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+
+                let tok: i32 = rand::thread_rng().gen();
+
+                let fetched_changesets =
+                    SelectManyChangesets::query(&conn, &repo_id, &tok, &cs_ids[..]).await?;
+
+                let mut cs_id_to_cs_entry = HashMap::new();
+                for (cs_id, gen, maybe_parent, _, _) in fetched_changesets {
+                    cs_id_to_cs_entry
+                        .entry(cs_id)
+                        .or_insert(ChangesetEntry {
+                            repo_id,
+                            cs_id,
+                            parents: vec![],
+                            gen,
+                        })
+                        .parents
+                        .extend(maybe_parent.into_iter());
+                }
+
+                Ok(cs_id_to_cs_entry)
+            }
+        })
+        .await?;
+
+    Ok(ret.into_iter().filter_map(|(_, v)| v).collect())
 }
 
 #[cfg(test)]

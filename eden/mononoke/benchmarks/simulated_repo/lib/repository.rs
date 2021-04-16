@@ -26,6 +26,7 @@ use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOpti
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{
     ArcChangesets, CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets,
+    SqlChangesetsBuilder,
 };
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
@@ -137,7 +138,7 @@ impl BenchmarkRepoFactory {
 
     pub fn changesets(&self) -> Result<ArcChangesets> {
         let changesets: Arc<dyn Changesets> = Arc::new(DelayedChangesets::new(
-            SqlChangesets::with_sqlite_in_memory()?,
+            SqlChangesetsBuilder::with_sqlite_in_memory()?.build(RendezVousOptions::for_test()),
             self.delay_settings.db_get_dist,
             self.delay_settings.db_put_dist,
         ));

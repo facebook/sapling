@@ -24,7 +24,7 @@ use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
-use changesets::{ArcChangesets, SqlChangesets};
+use changesets::{ArcChangesets, SqlChangesetsBuilder};
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
@@ -129,7 +129,7 @@ impl TestRepoFactory {
     pub fn with_sqlite_connection(con: SqliteConnection) -> Result<TestRepoFactory> {
         con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-        con.execute_batch(SqlChangesets::CREATION_QUERY)?;
+        con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
@@ -217,9 +217,10 @@ impl TestRepoFactory {
 
     /// Construct Changesets using the in-memory metadata database.
     pub fn changesets(&self) -> Result<ArcChangesets> {
-        Ok(Arc::new(SqlChangesets::from_sql_connections(
-            self.metadata_db.clone(),
-        )))
+        Ok(Arc::new(
+            SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(RendezVousOptions::for_test()),
+        ))
     }
 
     /// Construct a Changeset Fetcher.

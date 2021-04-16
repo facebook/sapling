@@ -36,7 +36,7 @@ use cacheblob::{
     InProcessLease, LeaseOps, MemcacheOps,
 };
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{ArcChangesets, CachingChangesets, SqlChangesets};
+use changesets::{ArcChangesets, CachingChangesets, SqlChangesetsBuilder};
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
@@ -351,10 +351,11 @@ impl RepoFactory {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
-        let changesets = sql_factory
-            .open::<SqlChangesets>()
+        let builder = sql_factory
+            .open::<SqlChangesetsBuilder>()
             .await
             .context(RepoFactoryError::Changesets)?;
+        let changesets = builder.build(self.env.rendezvous_options);
         if let Some(pool) = self.maybe_volatile_pool("changesets")? {
             Ok(Arc::new(CachingChangesets::new(
                 self.env.fb,

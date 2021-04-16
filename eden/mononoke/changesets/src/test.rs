@@ -8,6 +8,7 @@
 //! Tests for the Changesets store.
 use super::{
     CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
+    SqlChangesetsBuilder,
 };
 use anyhow::Error;
 use assert_matches::assert_matches;
@@ -19,6 +20,7 @@ use maplit::hashset;
 use mononoke_types::{ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix};
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
+use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
 
@@ -27,7 +29,13 @@ where
     F: FnOnce(FacebookInit, SqlChangesets) -> FO,
     FO: Future<Output = Result<(), Error>>,
 {
-    test_fn(fb, SqlChangesets::with_sqlite_in_memory().unwrap()).await?;
+    test_fn(
+        fb,
+        SqlChangesetsBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test()),
+    )
+    .await?;
     Ok(())
 }
 
@@ -36,7 +44,11 @@ where
     F: FnOnce(FacebookInit, CachingChangesets) -> FO,
     FO: Future<Output = Result<(), Error>>,
 {
-    let real_changesets = Arc::new(SqlChangesets::with_sqlite_in_memory().unwrap());
+    let real_changesets = Arc::new(
+        SqlChangesetsBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test()),
+    );
     let changesets = CachingChangesets::mocked(real_changesets);
     test_fn(fb, changesets).await?;
     Ok(())

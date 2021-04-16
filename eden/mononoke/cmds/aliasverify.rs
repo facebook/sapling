@@ -24,7 +24,7 @@ use slog::{debug, info, Logger};
 
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, Storable};
-use changesets::SqlChangesets;
+use changesets::{SqlChangesets, SqlChangesetsBuilder};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,
@@ -318,14 +318,14 @@ async fn run_aliasverify<'a>(
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
     let (sqlchangesets, blobrepo) = try_join!(
-        args::open_sql::<SqlChangesets>(fb, config_store, matches),
+        args::open_sql::<SqlChangesetsBuilder>(fb, config_store, matches),
         args::open_repo(fb, &logger, matches),
     )?;
     AliasVerification::new(
         logger.clone(),
         blobrepo,
         repoid,
-        Arc::new(sqlchangesets),
+        Arc::new(sqlchangesets.build(matches.environment().rendezvous_options)),
         mode,
     )
     .verify_all(&ctx, step, min_cs_db_id)
