@@ -53,8 +53,8 @@ use crate::http_service::MononokeHttpService;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
 use crate::security_checker::ConnectionsSecurityChecker;
-use crate::stream::QuietShutdownStream;
 use qps::Qps;
+use quiet_stream::QuietShutdownStream;
 
 define_stats! {
     prefix = "mononoke.connection_acceptor";

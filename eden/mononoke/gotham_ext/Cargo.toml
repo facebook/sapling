@@ -26,6 +26,7 @@ openssl = "0.10"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4"
+quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"

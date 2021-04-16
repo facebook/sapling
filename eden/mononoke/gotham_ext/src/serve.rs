@@ -15,6 +15,7 @@ use gotham::handler::Handler;
 use hyper::server::conn::Http;
 use openssl::ssl::SslAcceptor;
 use permission_checker::MononokeIdentitySet;
+use quiet_stream::QuietShutdownStream;
 use slog::{warn, Logger};
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
@@ -48,6 +49,7 @@ pub async fn https<H>(
                     .await
                     .context("Error performing TLS handshake")?;
 
+
                 let tls_socket_data = TlsSocketData::from_ssl(
                     ssl_socket.ssl(),
                     trusted_proxy_idents.as_ref(),
@@ -55,6 +57,8 @@ pub async fn https<H>(
                 );
 
                 let service = handler.clone().into_service(addr, Some(tls_socket_data));
+
+                let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
                 Http::new()
                     .serve_connection(ssl_socket, service)
@@ -87,6 +91,8 @@ where
                 let addr = socket.peer_addr().context("Error reading peer_addr()")?;
 
                 let service = handler.clone().into_service(addr, None);
+
+                let socket = QuietShutdownStream::new(socket);
 
                 Http::new()
                     .serve_connection(socket, service)

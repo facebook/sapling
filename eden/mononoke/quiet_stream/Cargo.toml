@@ -1,0 +1,11 @@
+[package]
+name = "quiet_stream"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+pin-project = "0.4"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
