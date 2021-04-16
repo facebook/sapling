@@ -1985,3 +1985,14 @@ function sqlite3() {
   # handle on the DB.
   command sqlite3 -cmd '.timeout 1000' "$@"
 }
+
+
+function init_tunables() {
+  if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
+    echo "{}" > "$MONONOKE_TUNABLES_PATH"
+  fi
+}
+
+# Always initialize tunables, since they're required by our binaries to start
+# unless explicitly disabled (but we don't do that in tests).
+init_tunables
