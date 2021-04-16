@@ -90,7 +90,7 @@
   > }
   > EOF
   $ curl -s -w "\n%{http_code}" -H "Host: abcd" "${lfs_uri}/objects/batch/" --data-binary "@request"
-  {"message":"Could not generate download URIs: Host abcd is not allowlisted","request_id":"*"} (glob)
+  {"message":"Host abcd is not allowlisted","request_id":"*"} (glob)
   400 (no-eol)
   $ curl -s -w "\n%{http_code}" "${lfs_uri}/objects/batch/" --data-binary "@request"
   {"transfer":"basic","objects":[{"oid":"ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746","size":2048,"authenticated":false,"actions":{"download":{"href":"http://localhost:*/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"}}}]} (glob)

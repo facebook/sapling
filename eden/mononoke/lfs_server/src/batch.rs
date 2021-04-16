@@ -148,7 +148,7 @@ impl UpstreamObjects {
 async fn upstream_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
-) -> Result<UpstreamObjects, Error> {
+) -> Result<UpstreamObjects, ErrorKind> {
     let objects = objects.iter().map(|o| *o).collect();
 
     let batch = RequestBatch {
@@ -158,10 +158,7 @@ async fn upstream_objects(
         objects,
     };
 
-    let res = ctx
-        .upstream_batch(&batch)
-        .await
-        .context(ErrorKind::UpstreamBatchError)?;
+    let res = ctx.upstream_batch(&batch).await?;
 
     let ResponseBatch { transfer, objects } = match res {
         Some(res) => res,
@@ -295,16 +292,18 @@ fn generate_routing_key(tasks_per_content: NonZeroU16, oid: Sha256) -> String {
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
-) -> Result<ServerObjects, Error> {
+) -> Result<ServerObjects, ErrorKind> {
     let futs = objects.iter().map(|req| async move {
-        let obj = resolve_internal_object(ctx, req.oid.into()).await?;
+        let obj = resolve_internal_object(ctx, req.oid.into())
+            .await
+            .map_err(ErrorKind::Error)?;
 
         let allow_consistent_routing = match obj {
             Some(obj) => allow_consistent_routing(&ctx, obj, GlobalTimeWindowCounterBuilder).await,
             None => true,
         };
 
-        Result::<_, Error>::Ok((obj, allow_consistent_routing))
+        Result::<_, ErrorKind>::Ok((obj, allow_consistent_routing))
     });
 
     let objs = future::try_join_all(futs).await?;
@@ -326,10 +325,9 @@ async fn internal_objects(
             }
             None => None,
         })
-        .collect::<Result<ServerObjects, Error>>()
-        .context(ErrorKind::GenerateDownloadUrisError.to_string())?;
+        .collect::<Result<ServerObjects, ErrorKind>>();
 
-    Ok(ret)
+    ret
 }
 
 fn batch_upload_response_objects(
@@ -338,8 +336,8 @@ fn batch_upload_response_objects(
     objects: &[RequestObject],
     upstream: &UpstreamObjects,
     internal: &ServerObjects,
-) -> Result<Vec<ResponseObject>, Error> {
-    let objects: Result<Vec<ResponseObject>, Error> = objects
+) -> Result<Vec<ResponseObject>, ErrorKind> {
+    let objects: Result<Vec<ResponseObject>, ErrorKind> = objects
         .iter()
         .map(|object| {
             let status = match (
@@ -389,16 +387,13 @@ fn batch_upload_response_objects(
             })
         })
         .collect();
-
-    let objects = objects.context(ErrorKind::GenerateUploadUrisError.to_string())?;
-
-    Ok(objects)
+    objects
 }
 
 async fn batch_upload(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
-) -> Result<ResponseBatch, Error> {
+) -> Result<ResponseBatch, ErrorKind> {
     let (upstream, internal) = future::try_join(
         upstream_objects(ctx, &batch.objects),
         internal_objects(ctx, &batch.objects),
@@ -547,7 +542,7 @@ async fn batch_download(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
-) -> Result<ResponseBatch, Error> {
+) -> Result<ResponseBatch, ErrorKind> {
     let upstream = upstream_objects(ctx, &batch.objects).fuse();
     let internal = internal_objects(ctx, &batch.objects).fuse();
     pin_mut!(upstream, internal);
@@ -564,7 +559,7 @@ async fn batch_download(
             debug!(ctx.logger(), "batch: upstream ready");
             let internal_objects = internal.await?;
             debug!(ctx.logger(), "batch: internal ready");
-            batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects, scuba)
+            batch_download_response_objects(&batch.objects, &upstream_objects.map_err(Error::from), &internal_objects, scuba)
         }
         internal_objects = internal => {
             debug!(ctx.logger(), "batch: internal ready");
@@ -586,10 +581,10 @@ async fn batch_download(
                 update_batch_order("both");
                 let upstream_objects = upstream.await;
                 debug!(ctx.logger(), "batch: upstream ready");
-                batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects, scuba)
+                batch_download_response_objects(&batch.objects, &upstream_objects.map_err(Error::from), &internal_objects, scuba)
             }
         }
-    }?;
+    }.map_err(ErrorKind::Error)?;
 
     Ok(ResponseBatch {
         transfer: Transfer::Basic,
@@ -658,11 +653,9 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         start_time.elapsed().as_micros_unchecked(),
     );
 
-    let res = res.map_err(|e: anyhow::Error| {
-        if let Some(ErrorKind::HostNotAllowlisted(_)) = e.downcast_ref::<ErrorKind>() {
-            return HttpError::e400(e);
-        }
-        HttpError::e500(e)
+    let res = res.map_err(|e| match e {
+        ErrorKind::HostNotAllowlisted(_) => HttpError::e400(e),
+        _ => HttpError::e500(e),
     })?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;
 

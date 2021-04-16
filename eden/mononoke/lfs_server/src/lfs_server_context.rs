@@ -340,7 +340,7 @@ impl RepositoryRequestContext {
     pub async fn upstream_batch(
         &self,
         batch: &RequestBatch,
-    ) -> Result<Option<ResponseBatch>, Error> {
+    ) -> Result<Option<ResponseBatch>, ErrorKind> {
         let uri = match self.uri_builder.upstream_batch_uri()? {
             Some(uri) => uri,
             None => {
@@ -349,20 +349,23 @@ impl RepositoryRequestContext {
         };
 
         let body: Bytes = serde_json::to_vec(&batch)
-            .context(ErrorKind::SerializationFailed)?
+            .map_err(|e| ErrorKind::SerializationFailed(e.into()))?
             .into();
 
-        let req = Request::post(uri).body(body.into())?;
+        let req = Request::post(uri)
+            .body(body.into())
+            .map_err(|e| ErrorKind::Error(e.into()))?;
 
         let res = self
             .dispatch(req)
             .await
-            .context(ErrorKind::UpstreamBatchNoResponse)?
+            .map_err(ErrorKind::UpstreamBatchNoResponse)?
             .concat()
-            .await?;
+            .await
+            .map_err(ErrorKind::UpstreamBatchNoResponse)?;
 
         let batch = serde_json::from_slice::<ResponseBatch>(&res)
-            .context(ErrorKind::UpstreamBatchInvalid)?;
+            .map_err(|e| ErrorKind::UpstreamBatchInvalid(e.into()))?;
 
         Ok(Some(batch))
     }
@@ -376,7 +379,7 @@ pub struct UriBuilder {
 }
 
 impl UriBuilder {
-    fn pick_uri(&self) -> Result<&BaseUri, Error> {
+    fn pick_uri(&self) -> Result<&BaseUri, ErrorKind> {
         Ok(self
             .server
             .self_uris
@@ -385,54 +388,50 @@ impl UriBuilder {
             .ok_or_else(|| ErrorKind::HostNotAllowlisted(self.host.clone()))?)
     }
 
-    pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, Error> {
+    pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, ErrorKind> {
         self.pick_uri()?
             .build(format_args!(
                 "{}/upload/{}/{}",
                 &self.repository, object.oid, object.size
             ))
-            .context(ErrorKind::UriBuilderFailed("upload_uri"))
-            .map_err(Error::from)
+            .map_err(|e| ErrorKind::UriBuilderFailed("upload_uri", e))
     }
 
-    pub fn download_uri(&self, content_id: &ContentId) -> Result<Uri, Error> {
+    pub fn download_uri(&self, content_id: &ContentId) -> Result<Uri, ErrorKind> {
         self.pick_uri()?
             .build(format_args!("{}/download/{}", &self.repository, content_id))
-            .context(ErrorKind::UriBuilderFailed("download_uri"))
-            .map_err(Error::from)
+            .map_err(|e| ErrorKind::UriBuilderFailed("download_uri", e))
     }
 
     pub fn consistent_download_uri(
         &self,
         content_id: &ContentId,
         routing_key: String,
-    ) -> Result<Uri, Error> {
+    ) -> Result<Uri, ErrorKind> {
         self.pick_uri()?
             .build(format_args!(
                 "{}/download/{}?routing={}",
                 &self.repository, content_id, routing_key
             ))
-            .context(ErrorKind::UriBuilderFailed("consistent_download_uri"))
-            .map_err(Error::from)
+            .map_err(|e| ErrorKind::UriBuilderFailed("consistent_download_uri", e))
     }
 
-    pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, Error> {
+    pub fn upstream_batch_uri(&self) -> Result<Option<Uri>, ErrorKind> {
         self.server
             .upstream_uri
             .as_ref()
             .map(|uri| {
                 uri.build(format_args!("objects/batch"))
-                    .context(ErrorKind::UriBuilderFailed("upstream_batch_uri"))
-                    .map_err(Error::from)
+                    .map_err(|e| ErrorKind::UriBuilderFailed("upstream_batch_uri", e))
             })
             .transpose()
     }
 }
 
-fn parse_and_check_uri(src: &str) -> Result<BaseUri, Error> {
+fn parse_and_check_uri(src: &str) -> Result<BaseUri, ErrorKind> {
     let uri = src
         .parse::<Uri>()
-        .with_context(|| ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
+        .map_err(|_e| ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
 
     let Parts {
         scheme,

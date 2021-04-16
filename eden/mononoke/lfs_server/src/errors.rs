@@ -23,11 +23,11 @@ pub enum ErrorKind {
     #[error("An error ocurred receiving a response from upstream ({0}): {1}")]
     UpstreamError(StatusCode, String),
     #[error("Could not serialize")]
-    SerializationFailed,
+    SerializationFailed(#[source] anyhow::Error),
     #[error("Could not initialize HTTP client")]
     HttpClientInitializationFailed,
-    #[error("Could not build {0}")]
-    UriBuilderFailed(&'static str),
+    #[error("Could not build {0}: {1}")]
+    UriBuilderFailed(&'static str, anyhow::Error),
     #[error("Invalid Uri {0}: {1}")]
     InvalidUri(String, &'static str),
     #[error("Host {0} is not allowlisted")]
@@ -35,9 +35,9 @@ pub enum ErrorKind {
     #[error("Object does not exist: {0:?}")]
     ObjectDoesNotExist(FetchKey),
     #[error("Could not dispatch batch request to upstream")]
-    UpstreamBatchNoResponse,
+    UpstreamBatchNoResponse(#[source] anyhow::Error),
     #[error("Upstream batch response is invalid")]
-    UpstreamBatchInvalid,
+    UpstreamBatchInvalid(#[source] anyhow::Error),
     #[error("Could not fetch upstream batch")]
     UpstreamBatchError,
     #[error("Could not perform upstream upload")]
@@ -50,10 +50,6 @@ pub enum ErrorKind {
     UpstreamInvalidObject(ResponseObject),
     #[error("Could not load local alias")]
     LocalAliasLoadError,
-    #[error("Could not generate download URIs")]
-    GenerateDownloadUrisError,
-    #[error("Could not generate upload URIs")]
-    GenerateUploadUrisError,
     #[error("Could not parse Request Batch")]
     InvalidBatch,
     #[error("Could not parse Content ID")]
@@ -74,6 +70,10 @@ pub enum ErrorKind {
     ObjectNotInternallyAvailableAndUpstreamUnavailable(lfs_protocol::Sha256),
     #[error("Object could not be synced from upstream")]
     ObjectCannotBeSynced(RequestObject),
+
+    /// A generic error occurred, and we'd like to propagate it.
+    #[error(transparent)]
+    Error(anyhow::Error),
 }
 
 #[derive(Debug, Error)]
