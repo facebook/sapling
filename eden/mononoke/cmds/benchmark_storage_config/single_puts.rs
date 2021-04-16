@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput};
 use rand::{thread_rng, Rng, RngCore};
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
@@ -20,7 +20,7 @@ pub fn benchmark(
     c: &mut Criterion,
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    runtime: &mut Runtime,
+    runtime: &Handle,
 ) {
     let mut group = c.benchmark_group("single_puts");
 

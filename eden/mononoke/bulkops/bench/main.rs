@@ -15,7 +15,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
 use cmdlib::args;
@@ -28,7 +28,7 @@ const BENCHMARK_FILTER_ARG: &str = "benchmark-filter";
 pub fn bench_stream<'a, F, S, O, E>(
     c: &'a mut Criterion,
     ctx: &'a CoreContext,
-    runtime: &'a mut Runtime,
+    runtime: &Handle,
     group: String,
     fetcher: &'a PublicChangesetBulkFetch,
     to_stream: F,
@@ -92,7 +92,7 @@ fn main(fb: fbinit::FacebookInit) {
                  .multiple(true)
                  .help("limit to benchmarks whose name contains this string. Repetition tightens the filter"),
          );
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb).expect("Failed to start Mononoke");
 
     let mut criterion = Criterion::default()
         .measurement_time(Duration::from_secs(450))
@@ -112,13 +112,13 @@ fn main(fb: fbinit::FacebookInit) {
         }
     }
 
-    let (_caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches).expect("failed to initialise mononoke");
+    let logger = matches.logger();
+    let runtime = matches.runtime();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let blobrepo = args::open_repo(fb, &logger, &matches);
 
     let setup = {
-        |runtime: &mut Runtime| {
+        |runtime: &Handle| {
             runtime.block_on(async move {
                 let blobrepo = blobrepo.await.expect("blobrepo should open");
                 (
@@ -134,12 +134,12 @@ fn main(fb: fbinit::FacebookInit) {
     };
 
     // Tests are run from here
-    let (repo, fetcher) = setup(&mut runtime);
+    let (repo, fetcher) = setup(runtime);
 
     bench_stream(
         &mut criterion,
         &ctx,
-        &mut runtime,
+        runtime,
         format!(
             "{}{}",
             repo, ":PublicChangesetBulkFetch::fetch_best_newest_first_mid"
@@ -158,7 +158,7 @@ fn main(fb: fbinit::FacebookInit) {
     bench_stream(
         &mut criterion,
         &ctx,
-        &mut runtime,
+        runtime,
         format!(
             "{}{}",
             repo, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
@@ -170,7 +170,7 @@ fn main(fb: fbinit::FacebookInit) {
     bench_stream(
         &mut criterion,
         &ctx,
-        &mut runtime,
+        runtime,
         format!(
             "{}{}",
             repo, ":PublicChangesetBulkFetch::fetch_entries_oldest_first"

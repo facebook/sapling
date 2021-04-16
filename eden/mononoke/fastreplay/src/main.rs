@@ -217,7 +217,7 @@ async fn bootstrap_repositories<'a>(
     logger: &Logger,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let mut config = args::load_repo_configs(config_store, &matches)?;
 
     // Update the config to something that makes a little more sense for Fastreplay.
@@ -227,7 +227,7 @@ async fn bootstrap_repositories<'a>(
     };
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
+    let caching = matches.caching();
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
@@ -385,11 +385,7 @@ struct ReplayOpts {
 }
 
 impl ReplayOpts {
-    fn parse<'a>(
-        fb: FacebookInit,
-        logger: Logger,
-        matches: &MononokeMatches<'a>,
-    ) -> Result<Self, Error> {
+    fn parse(matches: &MononokeMatches<'_>) -> Result<Self, Error> {
         let aliases = match matches.values_of(ARG_ALIASES) {
             Some(values) => values
                 .into_iter()
@@ -399,7 +395,7 @@ impl ReplayOpts {
         };
         let aliases = Arc::new(aliases);
 
-        let config_store = cmdlib::args::init_config_store(fb, &logger, matches)?;
+        let config_store = matches.config_store();
 
         let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
             Some(spec) => config_store.get_config_handle(parse_config_spec_to_path(spec)?),
@@ -489,11 +485,11 @@ async fn do_main<'a>(
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
+    let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
 
     // Do this earlier to show errors before we bootstrap repositories
-    let opts = ReplayOpts::parse(fb, logger.clone(), &matches)?;
+    let opts = ReplayOpts::parse(&matches)?;
 
     let repos = bootstrap_repositories(fb, &matches, &logger, &scuba).await?;
     let repos = Arc::new(repos);
@@ -602,16 +598,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
-    args::init_tunables(fb, &matches, logger.clone())?;
+    let logger = matches.logger();
     let service = ReadyFlagService::new();
 
-    let main = do_main(fb, &matches, &logger, &service);
+    let main = do_main(fb, &matches, logger, &service);
 
-    cmdlib::helpers::block_execute(main, fb, "fastreplay", &logger, &matches, service.clone())?;
+    cmdlib::helpers::block_execute(main, fb, "fastreplay", logger, &matches, service.clone())?;
 
     Ok(())
 }

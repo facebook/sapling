@@ -342,18 +342,17 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .help("size of gap to leave in derived data types that support gaps"),
                 ),
         );
-    let matches = app.get_matches();
-    let (_, logger, runtime) = args::init_mononoke(fb, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    helpers::block_execute_on_runtime(
+    helpers::block_execute(
         run_subcmd(fb, ctx, &logger, &matches),
         fb,
         &std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string()),
         &logger,
         &matches,
         cmdlib::monitoring::AliveService,
-        runtime,
     )
 }
 
@@ -366,7 +365,7 @@ async fn run_subcmd<'a>(
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo = args::open_repo_unredacted(fb, logger, matches).await?;
-            let config_store = args::init_config_store(fb, logger, matches)?;
+            let config_store = matches.config_store();
             let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
@@ -504,7 +503,7 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
-            let config_store = args::init_config_store(fb, logger, matches)?;
+            let config_store = matches.config_store();
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);
             let batched = sub_m.is_present(ARG_BATCHED);

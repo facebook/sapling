@@ -121,7 +121,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
 
 enum TailingArgs<M> {
     CatchUpOnce(CommitSyncer<M>),
-    LoopForever(CommitSyncer<M>, &'static ConfigStore),
+    LoopForever(CommitSyncer<M>, ConfigStore),
 }
 
 async fn run_in_tailing_mode<
@@ -391,7 +391,7 @@ async fn run<'a>(
     ctx: CoreContext,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
     let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches);
 
@@ -461,9 +461,9 @@ async fn run<'a>(
             let tailing_args = if sub_m.is_present(ARG_CATCH_UP_ONCE) {
                 TailingArgs::CatchUpOnce(commit_syncer)
             } else {
-                let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
+                let config_store = matches.config_store();
 
-                TailingArgs::LoopForever(commit_syncer, config_store)
+                TailingArgs::LoopForever(commit_syncer, config_store.clone())
             };
 
             let backpressure_params = BackpressureParams::new(&ctx, matches, sub_m).await?;
@@ -507,10 +507,9 @@ fn context_and_matches<'a>(
     fb: FacebookInit,
     app: MononokeClapApp<'a, '_>,
 ) -> Result<(CoreContext, MononokeMatches<'a>), Error> {
-    let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_cachelib(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger);
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     Ok((ctx, matches))
 }
 
@@ -558,7 +557,6 @@ impl BackpressureParams {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app())?;
-    args::init_config_store(fb, ctx.logger(), &matches)?;
 
     let res = helpers::block_execute(
         run(fb, ctx.clone(), &matches),

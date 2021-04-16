@@ -177,7 +177,7 @@ async fn run_sync_diamond_merge<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let source_repo_id = args::get_source_repo_id(config_store, matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, matches)?;
     let maybe_bookmark = sub_m
@@ -202,7 +202,7 @@ async fn run_sync_diamond_merge<'a>(
             .compat()
             .await?;
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     let caching = args::parse_caching(matches.as_ref());
@@ -393,7 +393,7 @@ async fn run_gradual_merge<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
@@ -447,7 +447,7 @@ async fn run_gradual_merge_progress<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
@@ -590,7 +590,7 @@ async fn run_check_push_redirection_prereqs<'a>(
         version,
     );
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     verify_working_copy_with_version_fast_path(
         &ctx,
@@ -630,7 +630,7 @@ async fn run_catchup_delete_head<'a>(
 
     let deletion_chunk_size = args::get_usize(&sub_m, DELETION_CHUNK_SIZE, 10000);
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(&sub_m)?;
     let (_, repo_config) = args::get_config(config_store, &matches)?;
 
@@ -846,7 +846,7 @@ async fn run_diff_mapping_versions<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let source_repo_id = args::get_source_repo_id(&config_store, matches)?;
     let target_repo_id = args::get_target_repo_id(&config_store, matches)?;
 
@@ -854,7 +854,7 @@ async fn run_diff_mapping_versions<'a>(
         .values_of(MAPPING_VERSION_NAME)
         .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     let mut commit_sync_configs = vec![];
@@ -957,7 +957,7 @@ async fn process_stream_and_wait_for_replication<'a>(
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
 
@@ -1096,10 +1096,9 @@ fn get_and_verify_repo_config<'a>(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = setup_app();
-    let matches = app.get_matches();
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let subcommand_future = async {

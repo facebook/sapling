@@ -710,7 +710,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let mysql_options = args::parse_mysql_options(matches);
     let readonly_storage = args::parse_readonly_storage(matches);
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
 
     let repo_id = args::get_repo_id(config_store, matches).expect("need repo id");
     let (repo_name, repo_config) = args::get_config(config_store, matches)?;
@@ -933,7 +933,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let (lock_via, unlock_via) = get_read_write_fetcher(
         ctx.fb,
         &mysql_options,
-        get_repo_sqldb_address(&ctx, &matches, &repo_config.hgsql_name)?.as_deref(),
+        get_repo_sqldb_address(&matches, &repo_config.hgsql_name)?.as_deref(),
         repo_config.hgsql_name.clone(),
         matches.is_present("lock-on-failure"),
         matches.is_present("repo-lock-sqlite"),
@@ -1167,11 +1167,10 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 }
 
 fn get_repo_sqldb_address<'a>(
-    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     repo_name: &HgsqlName,
 ) -> Result<Option<String>, Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     if let Some(db_addr) = matches.value_of("repo-lock-db-address") {
         return Ok(Some(db_addr.to_string()));
     }
@@ -1409,11 +1408,8 @@ fn main(fb: FacebookInit) -> Result<()> {
         );
     let app = app.subcommand(sync_once).subcommand(sync_loop);
 
-    let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-
-    args::init_cachelib(fb, &matches);
-    args::init_config_store(fb, &logger, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
@@ -1423,7 +1419,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         fut,
         fb,
         "hg_sync_job",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

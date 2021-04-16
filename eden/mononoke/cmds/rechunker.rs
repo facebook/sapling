@@ -46,12 +46,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .help("The number of filenodes to rechunk in parallel"),
         )
-        .get_matches();
+        .get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let jobs: usize = matches
@@ -70,7 +67,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .collect();
 
-    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let blobrepo = args::open_repo(fb, logger, &matches);
     let rechunk = async move {
         let blobrepo = blobrepo.await?;
         stream::iter(filenode_ids)
@@ -96,7 +93,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         rechunk,
         fb,
         "rechunker",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

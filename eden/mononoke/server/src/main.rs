@@ -99,17 +99,18 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
-    let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches)?;
-    let config_store = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
-    let observability_context = cmdlib::args::init_observability_context(fb, &matches, &root_log)?;
+    let caching = matches.caching();
+    let root_log = matches.logger();
+    let runtime = matches.runtime();
+    let config_store = matches.config_store().clone();
 
     let cslb_config = matches.value_of(ARG_CSLB_CONFIG).map(|s| s.to_string());
     info!(root_log, "Starting up");
 
-    let config = args::load_repo_configs(config_store, &matches)?;
+    let config = args::load_repo_configs(&config_store, &matches)?;
 
     let acceptor = {
         let cert = matches.value_of(ARG_CERT).unwrap().to_string();
@@ -150,8 +151,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
-    let mut scuba = cmdlib::args::get_scuba_sample_builder(fb, &matches, &root_log)?
-        .with_observability_context(observability_context.clone());
+    let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
 
     let will_exit = Arc::new(AtomicBool::new(false));
@@ -176,7 +176,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 repo_factory,
                 mysql_options: mysql_options.clone(),
                 readonly_storage,
-                config_store,
+                config_store: &config_store,
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
                 warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
@@ -198,7 +198,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 acceptor,
                 service,
                 terminate_receiver,
-                config_store,
+                &config_store,
                 readonly_storage,
                 scribe,
                 &scuba,

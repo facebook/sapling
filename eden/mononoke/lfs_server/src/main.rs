@@ -224,12 +224,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("Whether to disable ACL checks (only use this locally!)"),
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
 
-    let (caching, logger, mut runtime) = matches.init_mononoke(fb)?;
-
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let caching = matches.caching();
+    let logger = matches.logger();
+    let runtime = matches.runtime();
+    let config_store = matches.config_store();
 
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches)?;
@@ -245,7 +246,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
-    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
+    let mut scuba_logger = matches.scuba_sample_builder()?;
 
     let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 

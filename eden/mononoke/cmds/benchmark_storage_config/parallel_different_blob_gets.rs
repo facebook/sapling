@@ -10,7 +10,7 @@ use std::{iter::repeat, sync::Arc};
 use criterion::{BenchmarkId, Criterion, Throughput};
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use rand::{thread_rng, Rng, RngCore};
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
@@ -21,7 +21,7 @@ pub fn benchmark(
     c: &mut Criterion,
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    runtime: &mut Runtime,
+    runtime: &Handle,
 ) {
     let mut group = c.benchmark_group("parallel_different_blob_gets");
 

@@ -109,15 +109,14 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
+    let matches = &matches;
 
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger().clone();
 
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
 
-    args::init_tunables(fb, &matches, logger.clone()).context("failed to initialise tunables")?;
-
-    let mut runtime = args::init_runtime(&matches).context("failed to initialize Tokio runtime")?;
+    let runtime = matches.runtime();
 
     let max_parallelism = matches
         .value_of(ARG_SCHEDULED_MAX)

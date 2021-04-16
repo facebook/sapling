@@ -80,14 +80,14 @@ async fn do_main<'a>(
     matches: &MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
+    let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
-    let config_store = cmdlib::args::init_config_store(fb, logger, matches)?;
+    let caching = matches.caching();
+    let config_store = matches.config_store();
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
     let censored_scuba_params = common.censored_scuba_params;
@@ -212,14 +212,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .about("Write cache priming data to the repository blobstore"),
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
 
-    let main = do_main(fb, &matches, &logger);
+    let main = do_main(fb, &matches, logger);
 
-    cmdlib::helpers::block_execute(main, fb, "microwave", &logger, &matches, AliveService)?;
+    cmdlib::helpers::block_execute(main, fb, "microwave", logger, &matches, AliveService)?;
 
     Ok(())
 }

@@ -50,10 +50,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .help("What head to use for Segmented Changelog."),
         );
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     helpers::block_execute(
         run(ctx, &matches),
@@ -67,7 +66,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let idmap_version_arg: Option<u64> = args::get_u64_opt(matches, IDMAP_VERSION_ARG);
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
 
     // This is a bit weird from the dependency point of view but I think that it is best. The
     // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any way.

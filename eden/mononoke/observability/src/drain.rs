@@ -9,13 +9,13 @@ use slog::{Drain, Level, Never, OwnedKVList, Record};
 
 use crate::context::ObservabilityContext;
 
-pub struct DynamicLevelDrain<'a, D> {
+pub struct DynamicLevelDrain<D> {
     inner: D,
-    observability_context: &'a ObservabilityContext,
+    observability_context: ObservabilityContext,
 }
 
-impl<'a, D> DynamicLevelDrain<'a, D> {
-    pub fn new(inner: D, observability_context: &'a ObservabilityContext) -> Self {
+impl<D> DynamicLevelDrain<D> {
+    pub fn new(inner: D, observability_context: ObservabilityContext) -> Self {
         Self {
             inner,
             observability_context,
@@ -27,7 +27,7 @@ impl<'a, D> DynamicLevelDrain<'a, D> {
     }
 }
 
-impl<D: Drain<Ok = (), Err = Never>> Drain for DynamicLevelDrain<'_, D> {
+impl<D: Drain<Ok = (), Err = Never>> Drain for DynamicLevelDrain<D> {
     type Ok = ();
     type Err = Never;
 

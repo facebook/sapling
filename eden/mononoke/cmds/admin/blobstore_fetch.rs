@@ -144,7 +144,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
     let repo_id = args::get_repo_id(config_store, &matches)?;
     let (_, config) = args::get_config(config_store, &matches)?;
     let redaction = config.redaction;

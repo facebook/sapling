@@ -11,7 +11,7 @@ use once_cell::sync::{Lazy, OnceCell};
 use repo_factory::Caching;
 use std::time::Duration;
 
-use crate::args::{bool_as_str, MononokeMatches, BOOL_VALUES};
+use crate::args::{bool_as_str, BOOL_VALUES};
 
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
@@ -197,19 +197,10 @@ pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     }
 }
 
-/// Usual entry point where binary is happy with CachelibSettings::default()
-pub fn init_cachelib<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Caching {
-    parse_and_init_cachelib(
-        fb,
-        matches.as_ref(),
-        matches.app_data.cachelib_settings.clone(),
-    )
-}
-
 /// Provide a way for binaries to specify if they have different default cachelib settings
-pub(crate) fn parse_and_init_cachelib<'a>(
+pub fn parse_and_init_cachelib(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
     mut settings: CachelibSettings,
 ) -> Caching {
     let caching = parse_caching(matches);

@@ -112,7 +112,6 @@ pub async fn subcommand_derived_data<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 

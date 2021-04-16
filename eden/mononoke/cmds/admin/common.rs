@@ -136,7 +136,7 @@ pub async fn get_source_target_repos_and_mapping<'a>(
     logger: Logger,
     matches: &'a args::MononokeMatches<'_>,
 ) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
 
     let source_repo_id = args::get_source_repo_id(config_store, matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, matches)?;

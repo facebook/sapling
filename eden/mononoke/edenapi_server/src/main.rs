@@ -94,10 +94,10 @@ async fn start(
     fb: FacebookInit,
     caching: Caching,
     logger: Logger,
-    matches: MononokeMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<()> {
     debug!(logger, "Reading args");
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let repo_configs = args::load_repo_configs(config_store, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -105,7 +105,7 @@ async fn start(
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
-    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
+    let mut scuba_logger = matches.scuba_sample_builder()?;
 
     debug!(logger, "Initializing Mononoke API");
     let repo_factory = RepoFactory::new(
@@ -272,9 +272,10 @@ fn main(fb: FacebookInit) -> Result<()> {
                 ),
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let (caching, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
-    runtime.block_on(start(fb, caching, logger, matches))
+    let caching = matches.caching();
+    let logger = matches.logger();
+    let runtime = matches.runtime();
+    runtime.block_on(start(fb, caching, logger.clone(), &matches))
 }

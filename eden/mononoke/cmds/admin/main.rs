@@ -100,16 +100,16 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> ExitCode {
-    let matches = setup_app().get_matches();
+    let matches = setup_app()
+        .get_matches(fb)
+        .expect("Failed to start Mononoke");
 
-    let logger = args::init_logging(fb, &matches).expect("logging to succeed");
+    let logger = matches.logger().clone();
     let error_logger = logger.clone();
-
-    args::init_tunables(fb, &matches, logger.clone()).expect("failed to initialise tunables");
 
     let debug = matches.is_present("debug");
 
-    let mut runtime = args::init_runtime(&matches).expect("failed to initialize Tokio runtime");
+    let runtime = matches.runtime();
     let res = runtime.block_on(async {
         match matches.subcommand() {
             (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {
@@ -131,7 +131,6 @@ fn main(fb: FacebookInit) -> ExitCode {
                 subcommand_content_fetch(fb, logger, &matches, sub_m).await
             }
             (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
-                args::init_cachelib(fb, &matches);
                 let ctx = CoreContext::new_with_logger(fb, logger.clone());
                 let repo = args::open_repo(fb, &logger, &matches).await?;
                 bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await

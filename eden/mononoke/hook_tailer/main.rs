@@ -70,9 +70,9 @@ async fn get_changesets<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
-    let logger = cmdlib::args::init_logging(fb, &matches)?;
-    let config_store = cmdlib::args::init_config_store(fb, &logger, &matches)?;
+    let matches = setup_app().get_matches(fb)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let (repo_name, config) = cmdlib::args::get_config(config_store, &matches)?;
     info!(logger, "Hook tailer is starting");
 
@@ -96,7 +96,7 @@ async fn run_hook_tailer<'a>(
     matches: &'a MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let config_store = cmdlib::args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
@@ -130,7 +130,7 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let caching = cmdlib::args::init_cachelib(fb, matches);
+    let caching = matches.caching();
     let readonly_storage = cmdlib::args::parse_readonly_storage(matches);
     let mysql_options = cmdlib::args::parse_mysql_options(matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(matches)?;

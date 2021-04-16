@@ -113,7 +113,6 @@ pub async fn subcommand_skiplist<'a>(
                 .parse::<u32>()
                 .map_err(Error::from)?;
 
-            args::init_cachelib(fb, &matches);
             let mut ctx = CoreContext::new_with_logger(fb, logger.clone());
             // Set background session class so that skiplist building
             // completes fully.
@@ -130,7 +129,6 @@ pub async fn subcommand_skiplist<'a>(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(fb, &matches);
             let ctx = CoreContext::test_mock(fb);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone()).await?;

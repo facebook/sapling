@@ -244,10 +244,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(backsync_all_subcommand)
         .subcommand(backsync_forever_subcommand)
         .subcommand(sync_loop);
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
+    let runtime = matches.runtime();
+    let config_store = matches.config_store();
 
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
@@ -271,7 +272,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         "syncing from repoid {:?} into repoid {:?}", source_repo_id, target_repo_id,
     );
 
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
 
     match matches.subcommand() {
@@ -329,19 +330,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
             .boxed();
 
-            helpers::block_execute_on_runtime(
-                f,
-                fb,
-                app_name,
-                &logger,
-                &matches,
-                monitoring::AliveService,
-                runtime,
-            )?;
+            helpers::block_execute(f, fb, app_name, &logger, &matches, monitoring::AliveService)?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
-            let ctx =
-                session_container.new_context(logger, MononokeScubaSampleBuilder::with_discard());
+            let ctx = session_container
+                .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)
                 .expect("input file is not set");

@@ -70,7 +70,6 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or(format_err!("RIGHT_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
-            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             let diff = hg_changeset_diff(ctx, repo, left_cs, right_cs).await?;
             serde_json::to_writer(io::stdout(), &diff).map_err(Error::from)?;
@@ -86,7 +85,6 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
-            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             let (start_cs_opt, stop_cs_opt) = futures::try_join!(
                 repo.get_bonsai_from_hg(ctx.clone(), start_cs),

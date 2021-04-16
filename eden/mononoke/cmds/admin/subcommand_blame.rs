@@ -103,8 +103,6 @@ pub async fn subcommand_blame<'a>(
     toplevel_matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, toplevel_matches);
-
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {

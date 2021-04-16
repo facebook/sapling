@@ -163,10 +163,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 ])
                 .help("derived data type"),
         )
-        .get_matches();
+        .get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = new_benchmark_repo(fb, Default::default())?;
 

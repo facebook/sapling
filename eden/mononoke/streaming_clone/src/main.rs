@@ -43,7 +43,7 @@ pub async fn streaming_clone<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 
-    let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, &logger, matches).await?;
+    let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches).await?;
     match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
             // This command works only if there are no streaming chunks at all for a give repo.
@@ -263,10 +263,9 @@ async fn insert_entries_into_db(
 
 async fn create_streaming_chunks_fetcher<'a>(
     fb: FacebookInit,
-    logger: &Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<SqlStreamingChunksFetcher, Error> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let (_, config) = args::get_config(config_store, &matches)?;
     let storage_config = config.storage_config;
     let mysql_options = args::parse_mysql_options(&matches);
@@ -444,9 +443,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(add_common_args(
             SubCommand::with_name(UPDATE_SUB_CMD).about("update existing streaming changelog"),
         ))
-        .get_matches();
+        .get_matches(fb)?;
 
 
-    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
-    runtime.block_on(streaming_clone(fb, logger, &matches))
+    let logger = matches.logger();
+    let runtime = matches.runtime();
+    runtime.block_on(streaming_clone(fb, logger.clone(), &matches))
 }

@@ -339,10 +339,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;

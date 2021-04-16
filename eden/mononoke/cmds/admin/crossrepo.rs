@@ -83,10 +83,9 @@ pub async fn subcommand_crossrepo<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
 
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
@@ -148,7 +147,7 @@ pub async fn subcommand_crossrepo<'a>(
             .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
+            let config_store = matches.config_store();
 
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
@@ -198,7 +197,7 @@ async fn run_config_sub_subcommand<'a>(
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
 
     let repo_id = args::get_repo_id(config_store, matches)?;
 

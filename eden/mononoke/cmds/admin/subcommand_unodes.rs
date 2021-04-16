@@ -83,8 +83,6 @@ pub async fn subcommand_unodes<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
-
     let repo = args::open_repo(fb, &logger, &matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger);
 

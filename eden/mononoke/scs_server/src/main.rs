@@ -85,22 +85,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         );
     let app = args::add_scribe_logging_args(app);
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let (caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches).expect("failed to create tokio runtime");
+    let caching = matches.caching();
+    let logger = matches.logger();
+    let runtime = matches.runtime();
     let port = value_t!(matches.value_of(ARG_PORT), u16)?;
     let host = matches.value_of(ARG_HOST).unwrap_or("::");
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("must set config path");
 
-    let exec = runtime.handle().clone();
+    let exec = runtime.clone();
 
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let repo_configs = load_repo_configs(config_path, config_store)?;
 
-    let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches, &logger)?;
+    let mut scuba_builder = matches.scuba_sample_builder()?;
 
     scuba_builder.add_common_server_data();
 

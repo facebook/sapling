@@ -46,7 +46,7 @@ pub async fn get_validation_helpers<'a>(
 ) -> Result<ValidationHelpers, Error> {
     let repo_id = large_repo.get_repoid();
 
-    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     let commit_sync_config = repo_config.commit_sync_config.clone().ok_or(format_err!(

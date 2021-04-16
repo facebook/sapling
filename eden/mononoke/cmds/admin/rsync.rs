@@ -207,7 +207,6 @@ pub async fn subcommand_rsync<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let (source_repo, target_repo, _) =
         get_source_target_repos_and_mapping(fb, logger, matches).await?;

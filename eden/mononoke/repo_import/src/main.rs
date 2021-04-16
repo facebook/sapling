@@ -842,7 +842,7 @@ async fn get_pushredirected_vars(
     let caching = args::parse_caching(matches.as_ref());
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let large_repo_id = large_repo_config.repoid;
     let large_repo =
         args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
@@ -908,7 +908,6 @@ async fn repo_import(
     ctx: CoreContext,
     mut repo: BlobRepo,
     recovery_fields: &mut RecoveryFields,
-    fb: FacebookInit,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
@@ -921,7 +920,7 @@ async fn repo_import(
                     You can only use alphanumeric and \"./-_\" characters"
         ));
     }
-    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let dest_bookmark = BookmarkName::new(&recovery_fields.dest_bookmark_name)?;
     let changeset_args = ChangesetArgs {
         author: recovery_fields.commit_author.clone(),
@@ -1182,7 +1181,6 @@ async fn repo_import(
 async fn check_additional_setup_steps(
     ctx: CoreContext,
     repo: BlobRepo,
-    fb: FacebookInit,
     sub_arg_matches: &ArgMatches<'_>,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
@@ -1223,7 +1221,7 @@ async fn check_additional_setup_steps(
         dest_bookmark
     );
 
-    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
 
     let repo_import_setting = RepoImportSetting {
         importing_bookmark,
@@ -1291,20 +1289,18 @@ async fn check_additional_setup_steps(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = setup_app();
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::create_repo(fb, &logger, &matches);
+    let repo = args::create_repo(fb, logger, &matches);
 
     block_execute(
         async {
             let repo = repo.await?;
             let mut recovery_fields = match matches.subcommand() {
                 (CHECK_ADDITIONAL_SETUP_STEPS, Some(sub_arg_matches)) => {
-                    check_additional_setup_steps(ctx, repo, fb, &sub_arg_matches, &matches).await?;
+                    check_additional_setup_steps(ctx, repo, &sub_arg_matches, &matches).await?;
                     return Ok(());
                 }
                 (RECOVER_PROCESS, Some(sub_arg_matches)) => {
@@ -1316,7 +1312,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 _ => return Err(format_err!("Invalid subcommand")),
             };
 
-            match repo_import(ctx, repo, &mut recovery_fields, fb, &matches).await {
+            match repo_import(ctx, repo, &mut recovery_fields, &matches).await {
                 Ok(()) => Ok(()),
                 Err(e) => {
                     save_importing_state(&recovery_fields).await?;
@@ -1326,7 +1322,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         },
         fb,
         "repo_import",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

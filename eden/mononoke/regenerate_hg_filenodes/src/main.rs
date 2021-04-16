@@ -96,13 +96,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                --file [FILE]                        'contains list of commit hashes for which we want to regenerate filenodes'
             "#,
         )
-        .get_matches();
+        .get_matches(fb)?;
 
     if matches.values_of("i-know-what-i-am-doing").is_none() {
         bail!("this is a dangerous tool. DO NOT RUN if unsure how it works");
     }
 
-    let (_, logger, mut rt) = args::init_mononoke(fb, &matches)?;
+    let logger = matches.logger();
+    let rt = matches.runtime();
 
     let repo_fut = args::open_repo(fb, &logger, &matches);
     let repo = rt.block_on(repo_fut).unwrap();

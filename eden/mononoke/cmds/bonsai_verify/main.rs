@@ -96,14 +96,13 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_tunables(fb, &matches, logger.clone())?;
+    let matches = setup_app().get_matches(fb)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     match matches.subcommand() {
-        ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger, &matches, sub_m),
+        ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger.clone(), &matches, sub_m),
         ("hg-manifest", Some(sub_m)) => {
-            subcommmand_hg_manifest_verify(&ctx, &logger, &matches, sub_m)
+            subcommmand_hg_manifest_verify(&ctx, logger, &matches, sub_m)
         }
         (subcommand, _) => Err(format_err!("unhandled subcommand {}", subcommand)),
     }
@@ -115,8 +114,7 @@ fn subcommand_round_trip(
     matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, matches);
-    let mut runtime = args::init_runtime(matches)?;
+    let runtime = matches.runtime();
     let repo = runtime.block_on(args::open_repo(ctx.fb, &logger, matches))?;
 
     let config = config::get_config(matches).expect("getting configuration failed");
@@ -296,8 +294,6 @@ fn subcommmand_hg_manifest_verify(
     matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, &matches);
-
     let total = &AtomicUsize::new(0);
     let total_millis = &AtomicU64::new(0);
     let bad = &Mutex::new(HashSet::new());
@@ -407,6 +403,5 @@ fn subcommmand_hg_manifest_verify(
             .await
     };
 
-    let mut runtime = args::init_runtime(&matches)?;
-    runtime.block_on(run)
+    matches.runtime().block_on(run)
 }

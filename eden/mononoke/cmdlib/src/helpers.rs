@@ -17,12 +17,13 @@ use futures::{
 use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
 use slog::{error, info, Logger};
+use tokio::runtime::{Handle, Runtime};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time,
 };
 
-use crate::args::{self, MononokeMatches};
+use crate::args::MononokeMatches;
 use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -140,7 +141,7 @@ pub fn get_root_manifest_id(
 pub fn create_runtime(
     log_thread_name_prefix: Option<&str>,
     core_threads: Option<usize>,
-) -> io::Result<tokio::runtime::Runtime> {
+) -> io::Result<Runtime> {
     let mut builder = tokio::runtime::Builder::new();
     builder.threaded_scheduler();
     builder.enable_all();
@@ -248,7 +249,7 @@ where
 /// Same as "serve_forever_async", but blocks using the provided runtime,
 /// for compatibility with existing sync code using it.
 pub fn serve_forever<Server, QuiesceFn, ShutdownFut>(
-    mut runtime: tokio::runtime::Runtime,
+    handle: &Handle,
     server: Server,
     logger: &Logger,
     quiesce: QuiesceFn,
@@ -261,7 +262,7 @@ where
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
-    runtime.block_on(serve_forever_async(
+    handle.block_on(serve_forever_async(
         server,
         logger,
         quiesce,
@@ -283,24 +284,7 @@ pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
 where
     F: Future<Output = Result<Out, Error>>,
 {
-    let runtime = args::init_runtime(&matches)?;
-    block_execute_impl(future, fb, app_name, logger, matches, service, runtime)
-}
-
-/// Executes the future and waits for it to finish on a provided runtime.
-pub fn block_execute_on_runtime<F, Out, S: Fb303Service + Sync + Send + 'static>(
-    future: F,
-    fb: FacebookInit,
-    app_name: &str,
-    logger: &Logger,
-    matches: &MononokeMatches,
-    service: S,
-    runtime: tokio::runtime::Runtime,
-) -> Result<Out, Error>
-where
-    F: Future<Output = Result<Out, Error>>,
-{
-    block_execute_impl(future, fb, app_name, logger, matches, service, runtime)
+    block_execute_impl(future, fb, app_name, logger, matches, service)
 }
 
 /// Executes the future and waits for it to finish.
@@ -311,14 +295,13 @@ fn block_execute_impl<F, Out, S: Fb303Service + Sync + Send + 'static>(
     logger: &Logger,
     matches: &MononokeMatches,
     service: S,
-    mut runtime: tokio::runtime::Runtime,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>>,
 {
     monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
 
-    let result = runtime.block_on(async {
+    let result = matches.runtime().block_on(async {
         #[cfg(not(test))]
         {
             let stats_agg = schedule_stats_aggregation_preview()
@@ -353,17 +336,25 @@ mod test {
         slog_glog_fmt::facebook_logger().unwrap()
     }
 
-    fn exec_matches<'a>() -> MononokeMatches<'a> {
+    fn exec_matches<'a>(fb: FacebookInit) -> MononokeMatches<'a> {
         let app = args::MononokeAppBuilder::new("test_app").build();
-        let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
-        app.get_matches_from(arg_vec)
+        let arg_vec = vec![
+            "test_prog",
+            "--skip-caching",
+            "--mononoke-config-path",
+            "/tmp/testpath",
+            "--local-configerator-path",
+            "/tmp/testpath",
+            "--disable-tunables",
+        ];
+        app.get_matches_from(fb, arg_vec).unwrap()
     }
 
     #[fbinit::test]
     fn test_block_execute_success(fb: FacebookInit) {
         let future = lazy(|_| -> Result<(), Error> { Ok(()) });
         let logger = create_logger();
-        let matches = exec_matches();
+        let matches = exec_matches(fb);
         let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);
         assert!(res.is_ok());
     }
@@ -372,7 +363,7 @@ mod test {
     fn test_block_execute_error(fb: FacebookInit) {
         let future = lazy(|_| -> Result<(), Error> { Err(Error::msg("Some error")) });
         let logger = create_logger();
-        let matches = exec_matches();
+        let matches = exec_matches(fb);
         let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);
         assert!(res.is_err());
     }

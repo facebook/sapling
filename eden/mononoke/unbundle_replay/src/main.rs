@@ -76,7 +76,7 @@ async fn get_replay_stream<'a>(
     repo: &'a BlobRepo,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<impl Stream<Item = Result<ReplaySpec, Error>> + 'a, Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
 
     match matches.subcommand() {
         (SUBCOMMAND_HG_RECORDING, Some(sub)) => {
@@ -381,7 +381,7 @@ async fn do_main(
 ) -> Result<(), Error> {
     // TODO: Would want Scuba and such here.
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
 
     let unbundle_concurrency = matches
         .value_of(ARG_UNBUNDLE_CONCURRENCY)
@@ -392,7 +392,7 @@ async fn do_main(
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches)?;
     let readonly_storage = args::parse_readonly_storage(&matches);
-    let caching = args::init_cachelib(fb, &matches);
+    let caching = matches.caching();
 
     let repo_id = args::get_repo_id(config_store, matches)?;
     let (repo_name, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
@@ -439,7 +439,7 @@ async fn do_main(
 
     service.set_ready();
 
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
+    let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
 
     let ctx = &ctx;
@@ -702,19 +702,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 ),
         );
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger();
     let service = ReadyFlagService::new();
-    args::init_config_store(fb, &logger, &matches)?;
 
-    let main = do_main(fb, &matches, &logger, &service);
+    let main = do_main(fb, &matches, logger, &service);
 
     cmdlib::helpers::block_execute(
         main,
         fb,
         "unbundle_replay",
-        &logger,
+        logger,
         &matches,
         service.clone(),
     )?;

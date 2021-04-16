@@ -68,7 +68,7 @@ pub async fn subcommand_mutable_counters<'a>(
     matches: &'a MononokeMatches<'_>,
     logger: Logger,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
 
     let repo_id = args::get_repo_id(config_store, &matches)?;
 

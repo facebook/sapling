@@ -20,7 +20,7 @@ use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, Arg};
 use cmdlib::{
-    args::{self, get_scuba_sample_builder, MononokeClapApp},
+    args::{self, MononokeClapApp},
     helpers::block_execute,
 };
 use context::{CoreContext, SessionContainer};
@@ -283,13 +283,13 @@ fn setup_app<'a, 'b>(app_name: &str) -> MononokeClapApp<'a, 'b> {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app_name = "blobstore_healer";
-    let matches = setup_app(app_name).get_matches();
+    let matches = setup_app(app_name).get_matches(fb)?;
 
     let storage_id = matches
         .value_of("storage-id")
         .ok_or(Error::msg("Missing storage-id"))?;
-    let logger = args::init_logging(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches)?;
@@ -316,7 +316,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         info!(logger, "Using storage_config {:?}", storage_config);
     }
 
-    let scuba = get_scuba_sample_builder(fb, &matches, &logger)?;
+    let scuba = matches.scuba_sample_builder()?;
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
     let buffered_params = BufferedParams {

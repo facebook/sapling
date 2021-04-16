@@ -54,51 +54,61 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
 }
 
 #[fbinit::main]
-async fn main(fb: FacebookInit) -> Result<()> {
+fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
-    let matches = setup_app().get_matches();
-    let config_store = args::init_config_store(fb, None, &matches)?;
+    let matches = setup_app().get_matches(fb)?;
+    let matches = &matches;
 
-    let repo_id = args::get_repo_id(config_store, &matches)?;
-    let builder = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches).await?;
-    let bookmarks = builder.with_repo_id(repo_id);
-    let name = matches
-        .value_of(BOOKMARK)
-        .context("no bookmark")?
-        .to_string();
-    let reason = match matches.is_present(BLOBIMPORT) {
-        true => BookmarkUpdateReason::Blobimport,
-        false => BookmarkUpdateReason::TestMove,
+    let fut = async move {
+        let config_store = matches.config_store();
+        let repo_id = args::get_repo_id(config_store, matches)?;
+        let builder = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, matches).await?;
+        let bookmarks = builder.with_repo_id(repo_id);
+        let name = matches
+            .value_of(BOOKMARK)
+            .context("no bookmark")?
+            .to_string();
+        let reason = match matches.is_present(BLOBIMPORT) {
+            true => BookmarkUpdateReason::Blobimport,
+            false => BookmarkUpdateReason::TestMove,
+        };
+
+        let bookmark = BookmarkName::new(name)?;
+
+        let mut txn = bookmarks.create_transaction(ctx);
+
+        match matches.subcommand() {
+            (CREATE, Some(sub_m)) => {
+                txn.create(
+                    &bookmark,
+                    ChangesetId::from_str(&sub_m.value_of(ID).context("no ID")?.to_string())?,
+                    reason,
+                    None,
+                )?;
+            }
+            (UPDATE, Some(sub_m)) => {
+                txn.update(
+                    &bookmark,
+                    ChangesetId::from_str(&sub_m.value_of(TO_ID).context("no TO_ID")?.to_string())?,
+                    ChangesetId::from_str(
+                        &sub_m.value_of(FROM_ID).context("no FROM_ID")?.to_string(),
+                    )?,
+                    reason,
+                    None,
+                )?;
+            }
+            _ => {
+                bail!("{}", matches.usage());
+            }
+        }
+
+        txn.commit().await?;
+
+        Ok(())
     };
 
-    let bookmark = BookmarkName::new(name)?;
+    matches.runtime().block_on(fut)?;
 
-    let mut txn = bookmarks.create_transaction(ctx);
-
-    match matches.subcommand() {
-        (CREATE, Some(sub_m)) => {
-            txn.create(
-                &bookmark,
-                ChangesetId::from_str(&sub_m.value_of(ID).context("no ID")?.to_string())?,
-                reason,
-                None,
-            )?;
-        }
-        (UPDATE, Some(sub_m)) => {
-            txn.update(
-                &bookmark,
-                ChangesetId::from_str(&sub_m.value_of(TO_ID).context("no TO_ID")?.to_string())?,
-                ChangesetId::from_str(&sub_m.value_of(FROM_ID).context("no FROM_ID")?.to_string())?,
-                reason,
-                None,
-            )?;
-        }
-        _ => {
-            bail!("{}", matches.usage());
-        }
-    }
-
-    txn.commit().await?;
     Ok(())
 }

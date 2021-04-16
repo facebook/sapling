@@ -43,10 +43,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_source_and_target_repos()
         .with_fb303_args()
         .build();
-    let matches = app.get_matches();
-    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let runtime = matches.runtime();
     let ctx = create_core_context(fb, logger.clone());
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
 
     // Backsyncer works in large -> small direction, however

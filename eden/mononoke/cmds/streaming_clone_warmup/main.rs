@@ -62,11 +62,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .default_value("900")
                 .help("Period of warmup runs in secods"),
         );
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    args::init_config_store(fb, &logger, &matches)?;
     helpers::block_execute(
         run(ctx, &matches),
         fb,
@@ -94,7 +93,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         return Ok(());
     }
 
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let config_store = matches.config_store();
     let mysql_options = args::parse_mysql_options(matches);
     let blobstore_options = args::parse_blobstore_options(matches)?;
     let configs = args::load_repo_configs(config_store, matches)?;

@@ -52,7 +52,6 @@ pub async fn subcommand_pushrebase<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 
@@ -68,7 +67,7 @@ pub async fn subcommand_pushrebase<'a>(
         .value_of(ARG_BOOKMARK)
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_BOOKMARK))?;
 
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
     let (_, repo_config) = args::get_config(config_store, matches)?;
     let bookmark = BookmarkName::new(bookmark)?;
 

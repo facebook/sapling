@@ -74,7 +74,6 @@ pub async fn subcommand_rebase<'a>(
         return Err(anyhow!("{} is required", ARG_I_KNOW).into());
     }
 
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 

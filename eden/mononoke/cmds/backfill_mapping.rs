@@ -107,9 +107,10 @@ pub async fn backfill<P: AsRef<Path>>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
 
-    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
+    let logger = matches.logger();
+    let runtime = matches.runtime();
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

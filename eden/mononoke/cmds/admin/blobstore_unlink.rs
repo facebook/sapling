@@ -99,7 +99,7 @@ pub async fn subcommand_blobstore_unlink<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
     let (_, config) = args::get_config(config_store, &matches)?;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");

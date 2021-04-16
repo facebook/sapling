@@ -14,7 +14,7 @@ use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::{Arg, ArgGroup};
 use cmdlib::{
-    args::{self, get_scuba_sample_builder, MononokeClapApp, MononokeMatches, RepoRequirement},
+    args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
     helpers::block_execute,
 };
 use context::{CoreContext, SessionContainer};
@@ -230,7 +230,7 @@ async fn run_blobimport<'a>(
     logger: &Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<()> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
 
     let revlogrepo_path = matches
         .value_of("INPUT")
@@ -493,20 +493,18 @@ async fn maybe_update_highest_imported_generation_number(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
-    let scuba = get_scuba_sample_builder(fb, &matches, &logger)?;
+    let logger = matches.logger();
+    let scuba = matches.scuba_sample_builder()?;
 
     let ctx = &SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
-    args::init_config_store(fb, &logger, &matches)?;
 
     block_execute(
-        run_blobimport(fb, ctx, &logger, &matches),
+        run_blobimport(fb, ctx, logger, &matches),
         fb,
         "blobimport",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

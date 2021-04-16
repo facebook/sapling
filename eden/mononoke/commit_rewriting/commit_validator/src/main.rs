@@ -153,7 +153,7 @@ async fn run<'a>(
     ctx: CoreContext,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let config_store = matches.config_store();
     let repo_id = args::get_repo_id(config_store, &matches)?;
     let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
@@ -164,7 +164,7 @@ async fn run<'a>(
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let dbconfig = repo_config.storage_config.metadata.clone();
-    let scuba_sample = args::get_scuba_sample_builder(fb, &matches, logger)?;
+    let scuba_sample = matches.scuba_sample_builder()?;
     let validation_helpers = get_validation_helpers(
         fb,
         ctx.clone(),
@@ -215,17 +215,15 @@ fn context_and_matches<'a>(
     fb: FacebookInit,
     app: MononokeClapApp<'a, '_>,
 ) -> Result<(CoreContext, MononokeMatches<'a>), Error> {
-    let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_cachelib(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger);
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     Ok((ctx, matches))
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app())?;
-    args::init_config_store(fb, ctx.logger(), &matches)?;
     block_execute(
         run(fb, ctx.clone(), &matches),
         fb,

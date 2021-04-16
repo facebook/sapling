@@ -125,7 +125,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut prefs = GitimportPreferences::default();
 
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
@@ -149,12 +149,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo = args::create_repo(fb, &logger, &matches);
+    let repo = args::create_repo(fb, logger, &matches);
     block_execute(
         async {
             let repo = repo.await?;
@@ -216,7 +214,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         },
         fb,
         "gitimport",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

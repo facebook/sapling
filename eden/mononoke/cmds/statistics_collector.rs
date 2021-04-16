@@ -521,13 +521,11 @@ async fn run_statistics<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
     let bookmark = match matches.value_of("bookmark") {
         Some(name) => name.to_string(),
         None => String::from("master"),
@@ -541,18 +539,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     block_execute(
-        run_statistics(
-            fb,
-            ctx,
-            &logger,
-            scuba_logger,
-            &matches,
-            repo_name,
-            bookmark,
-        ),
+        run_statistics(fb, ctx, logger, scuba_logger, &matches, repo_name, bookmark),
         fb,
         "statistics_collector",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

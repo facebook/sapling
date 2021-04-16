@@ -1181,7 +1181,7 @@ pub async fn setup_common<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(JobWalkParams, Vec<(RepoSubcommandParams, RepoWalkParams)>), Error> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
 
     let quiet = sub_m.is_present(QUIET_ARG);
     let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
@@ -1191,7 +1191,7 @@ pub async fn setup_common<'a>(
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
 
-    let caching = matches.parse_and_init_cachelib(fb);
+    let caching = matches.caching();
 
     let include_edge_types = parse_edge_types(
         sub_m,

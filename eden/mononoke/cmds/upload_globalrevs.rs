@@ -81,16 +81,14 @@ pub fn upload<P: AsRef<Path>>(
 }
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
 
-    args::init_cachelib(fb, &matches);
-
-    let logger = args::init_logging(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches);
 
-    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let blobrepo = args::open_repo(fb, logger, &matches);
     let run = async {
         let (repo, globalrevs_store) = try_join(blobrepo, globalrevs_store).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
@@ -105,7 +103,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         run,
         fb,
         "upload_globalrevs",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

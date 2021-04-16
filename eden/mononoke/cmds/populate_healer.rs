@@ -169,9 +169,9 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
                 .help("do not add entries to a queue"),
         );
 
-    let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo_id = args::get_repo_id(config_store, &matches)?;
 

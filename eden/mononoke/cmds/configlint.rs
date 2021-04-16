@@ -24,11 +24,11 @@ fn main(fb: FacebookInit) -> Result<()> {
             -v --verbose 'Dump content of configs'
             "#,
         )
-        .get_matches();
+        .get_matches(fb)?;
 
     let quiet = matches.is_present("quiet");
     let verbose = matches.is_present("verbose");
-    let config_store = args::init_config_store(fb, None, &matches)?;
+    let config_store = matches.config_store();
 
     // Most of the work is done here - this validates that the files are present,
     // are correctly formed, and have the right fields (not too many, not too few).

@@ -316,7 +316,7 @@ async fn run_aliasverify<'a>(
     matches: &'a MononokeMatches<'a>,
     mode: Mode,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let (sqlchangesets, blobrepo) = try_join!(
         args::open_sql::<SqlChangesets>(fb, config_store, matches),
         args::open_repo(fb, &logger, matches),
@@ -334,13 +334,12 @@ async fn run_aliasverify<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
+    let matches = setup_app().get_matches(fb)?;
 
-    let logger = args::init_logging(fb, &matches)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    args::init_cachelib(fb, &matches);
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let config_store = matches.config_store();
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
         "verify" => Mode::Verify,
@@ -361,10 +360,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repoid = args::get_repo_id(config_store, &matches).expect("Need repo id");
 
     block_execute(
-        run_aliasverify(fb, ctx, &logger, step, min_cs_db_id, repoid, &matches, mode),
+        run_aliasverify(fb, ctx, logger, step, min_cs_db_id, repoid, &matches, mode),
         fb,
         "aliasverify",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

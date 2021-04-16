@@ -233,8 +233,7 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
         None => return Err(SubcommandError::InvalidArgs),
     };
 
-    args::init_cachelib(fb, &matches);
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = matches.config_store();
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let redacted_blobs = async move {

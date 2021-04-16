@@ -12,7 +12,7 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{anyhow, Context, Error};
 use clap::Arg;
 use criterion::Criterion;
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
@@ -71,7 +71,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
                 .multiple(true)
                 .help("limit to benchmarks whose name contains this string. Repetition tightens the filter"),
         );
-    let matches = app.get_matches();
+    let matches = app.get_matches(fb)?;
 
     let mut criterion = Criterion::default()
         .measurement_time(Duration::from_secs(60))
@@ -91,11 +91,11 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         }
     }
 
-    let (caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches).context("failed to initialise mononoke")?;
+    let caching = matches.caching();
+    let logger = matches.logger();
+    let runtime = matches.runtime();
 
-    let config_store =
-        args::init_config_store(fb, &logger, &matches).context("failed to start Configerator")?;
+    let config_store = matches.config_store();
 
     let config_name = matches
         .value_of(ARG_STORAGE_CONFIG_NAME)
@@ -149,9 +149,8 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
     // Cut all the repetition around running a benchmark. Note that a fresh cachee shouldn't be needed,
     // as the warmup will fill it, and the key is randomised
     let mut run_benchmark = {
-        let runtime = &mut runtime;
         let criterion = &mut criterion;
-        move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| -> Result<(), Error> {
+        move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &Handle)| -> Result<(), Error> {
             let blobstore = runtime.block_on(blobstore())?;
             bench(criterion, ctx.clone(), blobstore, runtime);
             Ok(())

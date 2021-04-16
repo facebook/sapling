@@ -36,8 +36,6 @@ pub async fn subcommand_bonsai_fetch<'a>(
 ) -> Result<(), SubcommandError> {
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
 
-    args::init_cachelib(fb, &matches);
-
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let json_flag = sub_m.is_present("json");
 

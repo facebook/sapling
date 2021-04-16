@@ -99,7 +99,7 @@ async fn get_things_from_matches(
     let fb = ctx.fb;
     let logger = ctx.logger();
 
-    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
 

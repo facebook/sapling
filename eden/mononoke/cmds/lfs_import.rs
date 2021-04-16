@@ -58,11 +58,8 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("Raw LFS pointers to be imported"),
         );
 
-    let matches = app.get_matches();
-    args::init_cachelib(fb, &matches);
-
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let matches = app.get_matches(fb)?;
+    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let lfs_helper = matches.value_of(ARG_LFS_HELPER).unwrap().to_string();
 
@@ -80,7 +77,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let import = {
         let matches = &matches;
-        let logger = &logger;
         async move {
             let blobrepo = if matches.is_present(ARG_NO_CREATE) {
                 args::open_repo(fb, logger, &matches).await?
@@ -103,7 +99,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         import,
         fb,
         NAME,
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

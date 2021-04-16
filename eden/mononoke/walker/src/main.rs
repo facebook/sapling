@@ -12,10 +12,7 @@ use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::future::{self, FutureExt};
 
-use cmdlib::{
-    args::{self, CachelibSettings},
-    helpers::block_execute,
-};
+use cmdlib::{args::CachelibSettings, helpers::block_execute};
 
 mod blobstore;
 mod checkpoint;
@@ -45,10 +42,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         blobstore_cachelib_only: true,
         ..Default::default()
     };
-    let matches = setup::setup_toplevel_app(app_name, cachelib_defaults.clone()).get_matches();
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
-    args::init_tunables(fb, &matches, logger.clone())?;
+    let matches = setup::setup_toplevel_app(app_name, cachelib_defaults).get_matches(fb)?;
+    let logger = matches.logger();
 
     let sub_matches = &matches.subcommand();
     let future = match sub_matches {
@@ -71,7 +66,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         future,
         fb,
         app_name,
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

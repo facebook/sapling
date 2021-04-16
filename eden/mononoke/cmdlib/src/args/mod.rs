@@ -7,9 +7,9 @@
 
 mod cache;
 #[cfg(fbcode_build)]
-mod facebook;
+pub mod facebook;
 
-pub use self::cache::{init_cachelib, CachelibSettings};
+pub use self::cache::CachelibSettings;
 
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
@@ -32,10 +32,11 @@ use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
+use slog::{debug, info, o, trace, warn, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
 use std::panic::{RefUnwindSafe, UnwindSafe};
+use tokio::runtime::{Handle, Runtime};
 
 use blobrepo::BlobRepo;
 use blobstore_factory::{
@@ -58,6 +59,9 @@ use crate::log;
 
 pub use self::cache::parse_caching;
 use self::cache::{add_cachelib_args, parse_and_init_cachelib};
+
+trait Drain =
+    slog::Drain<Ok = (), Err = Never> + Send + Sync + UnwindSafe + RefUnwindSafe + 'static;
 
 const CONFIG_PATH: &str = "mononoke-config-path";
 const REPO_ID: &str = "repo-id";
@@ -267,45 +271,128 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         }
     }
 
-    pub fn get_matches(self) -> MononokeMatches<'a> {
-        MononokeMatches {
-            matches: MaybeOwned::from(self.clap.get_matches()),
-            app_data: self.app_data,
-            arg_types: self.arg_types,
-        }
+    pub fn get_matches(self, fb: FacebookInit) -> Result<MononokeMatches<'a>, Error> {
+        MononokeMatches::new(fb, self.clap.get_matches(), self.app_data, self.arg_types)
     }
 
-    pub fn get_matches_from<I, T>(self, itr: I) -> MononokeMatches<'a>
+    pub fn get_matches_from<I, T>(
+        self,
+        fb: FacebookInit,
+        itr: I,
+    ) -> Result<MononokeMatches<'a>, Error>
     where
         I: IntoIterator<Item = T>,
         T: Into<OsString> + Clone,
     {
-        MononokeMatches {
-            matches: MaybeOwned::from(self.clap.get_matches_from(itr)),
-            app_data: self.app_data,
-            arg_types: self.arg_types,
-        }
+        MononokeMatches::new(
+            fb,
+            self.clap.get_matches_from(itr),
+            self.app_data,
+            self.arg_types,
+        )
     }
 }
 
-#[derive(Default)]
+struct MononokeEnvironment {
+    fb: FacebookInit,
+    logger: Logger,
+    config_store: ConfigStore,
+    caching: Caching,
+    observability_context: ObservabilityContext,
+    runtime: Runtime,
+}
+
 pub struct MononokeMatches<'a> {
     matches: MaybeOwned<'a, ArgMatches<'a>>,
     app_data: MononokeAppData,
+    environment: MononokeEnvironment,
     arg_types: HashSet<ArgType>,
 }
 
 impl<'a> MononokeMatches<'a> {
-    pub fn parse_and_init_cachelib(&self, fb: FacebookInit) -> Caching {
-        parse_and_init_cachelib(fb, &self.matches, self.app_data.cachelib_settings.clone())
+    pub fn new(
+        fb: FacebookInit,
+        matches: ArgMatches<'a>,
+        app_data: MononokeAppData,
+        arg_types: HashSet<ArgType>,
+    ) -> Result<Self, Error> {
+        let root_log_drain =
+            create_root_log_drain(fb, &matches).context("Failed to create root log drain")?;
+
+        // TODO: FacebookKV for this one?
+        let config_store =
+            create_config_store(fb, Logger::root(root_log_drain.clone(), o![]), &matches)
+                .context("Failed to create config store")?;
+
+        let observability_context = create_observability_context(&matches, &config_store)
+            .context("Faled to initialize observability context")?;
+
+        let logger = create_logger(&matches, root_log_drain, observability_context.clone())
+            .context("Failed to create logger")?;
+
+        let caching = parse_and_init_cachelib(fb, &matches, app_data.cachelib_settings.clone());
+
+        let runtime = init_runtime(&matches).context("Failed to create Tokio runtime")?;
+
+        init_tunables(&matches, &config_store, logger.clone())
+            .context("Failed to initialize tunables")?;
+
+        Ok(MononokeMatches {
+            matches: MaybeOwned::from(matches),
+            environment: MononokeEnvironment {
+                fb,
+                logger,
+                config_store,
+                caching,
+                observability_context,
+                runtime,
+            },
+            app_data,
+            arg_types,
+        })
     }
 
-    pub fn init_mononoke(
-        &'a self,
-        fb: FacebookInit,
-    ) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
-        init_mononoke_with_cache_settings(fb, self, self.app_data.cachelib_settings.clone())
+    pub fn caching(&self) -> Caching {
+        self.environment.caching
     }
+
+    pub fn config_store(&self) -> &ConfigStore {
+        &self.environment.config_store
+    }
+
+    pub fn runtime(&self) -> &Handle {
+        &self.environment.runtime.handle()
+    }
+
+    pub fn logger(&self) -> &Logger {
+        &self.environment.logger
+    }
+
+    pub fn scuba_sample_builder(&self) -> Result<MononokeScubaSampleBuilder> {
+        let mut scuba_logger = if let Some(scuba_dataset) = self.value_of("scuba-dataset") {
+            MononokeScubaSampleBuilder::new(self.environment.fb, scuba_dataset)
+        } else if let Some(default_scuba_dataset) = self.app_data.default_scuba_dataset.as_ref() {
+            if self.is_present("no-default-scuba-dataset") {
+                MononokeScubaSampleBuilder::with_discard()
+            } else {
+                MononokeScubaSampleBuilder::new(self.environment.fb, default_scuba_dataset)
+            }
+        } else {
+            MononokeScubaSampleBuilder::with_discard()
+        };
+        if let Some(scuba_log_file) = self.value_of("scuba-log-file") {
+            scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
+        }
+        let scuba_logger = scuba_logger
+            .with_observability_context(self.environment.observability_context.clone())
+            .with_seq("seq");
+
+
+        // TODO: add_common_server_data?
+
+        Ok(scuba_logger)
+    }
+
 
     // Delegate some common methods to save on .as_ref() calls
     pub fn is_present<S: AsRef<str>>(&self, name: S) -> bool {
@@ -346,31 +433,13 @@ impl<'a> Borrow<ArgMatches<'a>> for MononokeMatches<'a> {
 }
 
 /// Create a default root logger for Facebook services
-fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
+fn glog_drain() -> impl Drain {
     let decorator = TermDecorator::new().build();
     // FacebookCategorizer is used for slog KV arguments.
     // At the time of writing this code FacebookCategorizer and FacebookKV
     // that was added below was mainly useful for logview logging and had no effect on GlogFormat
     let drain = GlogFormat::new(decorator, FacebookCategorizer).ignore_res();
     ::std::sync::Mutex::new(drain).ignore_res()
-}
-
-/// Create a `Drain` whose `Level` is dynamically read from the `ConfigStore`
-fn dynamic_level_drain<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
-    inner_drain: impl Drain<Ok = (), Err = Never>
-    + Clone
-    + Send
-    + Sync
-    + UnwindSafe
-    + RefUnwindSafe
-    + 'static,
-) -> Result<impl Drain<Ok = (), Err = Never>, Error> {
-    let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
-    let logger = Logger::root(inner_drain.clone(), o![kv]);
-    let observability_context = init_observability_context(fb, matches, Some(&logger))?;
-    Ok(DynamicLevelDrain::new(inner_drain, observability_context))
 }
 
 impl MononokeAppBuilder {
@@ -916,7 +985,7 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-fn get_log_level<'a>(matches: &MononokeMatches<'a>) -> Level {
+fn get_log_level(matches: &ArgMatches<'_>) -> Level {
     if matches.is_present("debug") {
         Level::Debug
     } else {
@@ -928,7 +997,7 @@ fn get_log_level<'a>(matches: &MononokeMatches<'a>) -> Level {
     }
 }
 
-pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Result<Logger> {
+fn create_root_log_drain(fb: FacebookInit, matches: &ArgMatches<'_>) -> Result<impl Drain + Clone> {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -985,23 +1054,32 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Resu
 
     // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
-    let stdlog_level =
-        log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
+    let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
+    let stdlog_level = log::init_stdlog_once(stdlog_logger.clone(), stdlog_env);
+    trace!(
+        stdlog_logger,
+        "enabled stdlog with level: {:?} (set {} to configure)",
+        stdlog_level,
+        stdlog_env
+    );
 
-    let root_log_drain = dynamic_level_drain(fb, matches, root_log_drain)
-        .with_context(|| "Failed to initialize DynamicLevelDrain")?;
+    Ok(root_log_drain)
+}
 
-    let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
+fn create_logger(
+    matches: &ArgMatches<'_>,
+    root_log_drain: impl Drain + Clone,
+    observability_context: ObservabilityContext,
+) -> Result<Logger> {
+    let root_log_drain = DynamicLevelDrain::new(root_log_drain, observability_context);
+
+    let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
+
     let logger = if matches.is_present("fb303-thrift-port") {
         Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
     } else {
         Logger::root(root_log_drain, o![kv])
     };
-
-    debug!(
-        logger,
-        "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
-    );
 
     Ok(logger)
 }
@@ -1520,32 +1598,6 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>, has_default: bool) -> App<'a
     app
 }
 
-pub fn get_scuba_sample_builder<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
-    logger: &'a Logger,
-) -> Result<MononokeScubaSampleBuilder> {
-    let octx = init_observability_context(fb, matches, logger)?.clone();
-    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
-        MononokeScubaSampleBuilder::new(fb, scuba_dataset)
-    } else if let Some(default_scuba_dataset) = matches.app_data.default_scuba_dataset.as_ref() {
-        if matches.is_present("no-default-scuba-dataset") {
-            MononokeScubaSampleBuilder::with_discard()
-        } else {
-            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
-        }
-    } else {
-        MononokeScubaSampleBuilder::with_discard()
-    };
-    if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
-        scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
-    }
-    let scuba_logger = scuba_logger
-        .with_observability_context(octx)
-        .with_seq("seq");
-    Ok(scuba_logger)
-}
-
 pub fn add_scribe_logging_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
     app.arg(
         Arg::with_name("scribe-logging-directory")
@@ -1617,7 +1669,7 @@ async fn open_repo_internal(
     caching: Caching,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
-    let config_store = init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let repo_id = get_repo_id(config_store, matches)?;
     open_repo_internal_with_repo_id(
         fb,
@@ -1640,7 +1692,7 @@ async fn open_repo_internal_with_repo_id(
     caching: Caching,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
-    let config_store = init_config_store(fb, logger, matches)?;
+    let config_store = matches.config_store();
     let common_config = load_common_config(config_store, &matches)?;
     let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
@@ -1796,6 +1848,7 @@ pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
     }
 }
 
+// TODO: Put those into MononokeEnvironment
 pub fn get_sqlblob_mysql_connection_pool(matches: &MononokeMatches<'_>) -> SharedConnectionPool {
     matches.app_data.sqlblob_mysql_connection_pool.clone()
 }
@@ -2163,33 +2216,9 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
     disabled_hooks
 }
 
-pub fn init_mononoke<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
-    init_mononoke_with_cache_settings(fb, matches, CachelibSettings::default())
-}
-
-// TODO(ahornby) move into MononokeMatches when all init_mononoke call sites changed to call MononokeMatches::init_mononoke()
-fn init_mononoke_with_cache_settings<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
-    cachelib_settings: CachelibSettings,
-) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
-    let logger = init_logging(fb, matches)?;
-
-    debug!(logger, "Initialising cachelib...");
-    let caching = parse_and_init_cachelib(fb, matches.as_ref(), cachelib_settings);
-    debug!(logger, "Initialising runtime...");
-    let runtime = init_runtime(matches)?;
-    init_tunables(fb, matches, logger.clone())?;
-
-    Ok((caching, logger, runtime))
-}
-
-pub fn init_tunables<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
+fn init_tunables<'a>(
+    matches: &'a ArgMatches<'a>,
+    config_store: &'a ConfigStore,
     logger: Logger,
 ) -> Result<()> {
     if matches.is_present(DISABLE_TUNABLES) {
@@ -2201,16 +2230,14 @@ pub fn init_tunables<'a>(
         .value_of(TUNABLES_CONFIG)
         .unwrap_or(DEFAULT_TUNABLES_PATH);
 
-    let config_store = init_config_store(fb, &logger, matches)?;
-
     let config_handle =
         config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
 
     init_tunables_worker(logger, config_handle)
 }
 
-/// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
-pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio::runtime::Runtime> {
+/// Initialize a new `Runtime` with thread number parsed from the CLI
+fn init_runtime(matches: &ArgMatches<'_>) -> io::Result<Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
 }
@@ -2231,67 +2258,57 @@ pub fn parse_config_spec_to_path(source_spec: &str) -> Result<String, Error> {
     }
 }
 
-static CONFIGERATOR: OnceCell<ConfigStore> = OnceCell::new();
-
-static OBSERVABILITY_CONTEXT: OnceCell<ObservabilityContext> = OnceCell::new();
-
-pub fn init_observability_context<'a>(
-    fb: FacebookInit,
-    matches: &'a MononokeMatches<'a>,
-    root_log: impl Into<Option<&'a Logger>>,
-) -> Result<&'static ObservabilityContext, Error> {
-    OBSERVABILITY_CONTEXT.get_or_try_init(|| match matches.value_of(WITH_DYNAMIC_OBSERVABILITY) {
-        Some("true") => {
-            let config_store = init_config_store(fb, root_log, matches)?;
-            Ok(ObservabilityContext::new(config_store)?)
-        }
+fn create_observability_context<'a>(
+    matches: &'a ArgMatches<'a>,
+    config_store: &'a ConfigStore,
+) -> Result<ObservabilityContext, Error> {
+    match matches.value_of(WITH_DYNAMIC_OBSERVABILITY) {
+        Some("true") => Ok(ObservabilityContext::new(config_store)?),
         Some("false") | None => Ok(ObservabilityContext::new_static(get_log_level(matches))),
         Some(other) => panic!(
             "Unexpected --{} value: {}",
             WITH_DYNAMIC_OBSERVABILITY, other
         ),
-    })
+    }
 }
 
-pub fn init_config_store<'a>(
+fn create_config_store<'a>(
     fb: FacebookInit,
-    root_log: impl Into<Option<&'a Logger>>,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<&'static ConfigStore, Error> {
-    CONFIGERATOR.get_or_try_init(|| {
-        let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);
-        let crypto_regex = matches.values_of(CRYPTO_PATH_REGEX_ARG).map_or(
-            vec![
-                (
-                    "scm/mononoke/tunables/.*".to_string(),
-                    CRYPTO_PROJECT.to_string(),
-                ),
-                (
-                    "scm/mononoke/repos/.*".to_string(),
-                    CRYPTO_PROJECT.to_string(),
-                ),
-            ],
-            |it| {
-                it.map(|regex| (regex.to_string(), CRYPTO_PROJECT.to_string()))
-                    .collect()
-            },
-        );
-        match local_configerator_path {
-            // A local configerator path wins
-            Some(path) => Ok(ConfigStore::file(
-                root_log.into().cloned(),
-                PathBuf::from(path),
-                String::new(),
-                CONFIGERATOR_POLL_INTERVAL,
-            )),
-            // Prod instances do have network configerator, with signature checks
-            None => ConfigStore::regex_signed_configerator(
-                fb,
-                root_log.into().cloned(),
-                crypto_regex,
-                CONFIGERATOR_POLL_INTERVAL,
-                CONFIGERATOR_REFRESH_TIMEOUT,
+    logger: Logger,
+    matches: &'a ArgMatches<'a>,
+) -> Result<ConfigStore, Error> {
+    let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);
+    let crypto_regex = matches.values_of(CRYPTO_PATH_REGEX_ARG).map_or(
+        vec![
+            (
+                "scm/mononoke/tunables/.*".to_string(),
+                CRYPTO_PROJECT.to_string(),
             ),
-        }
-    })
+            (
+                "scm/mononoke/repos/.*".to_string(),
+                CRYPTO_PROJECT.to_string(),
+            ),
+        ],
+        |it| {
+            it.map(|regex| (regex.to_string(), CRYPTO_PROJECT.to_string()))
+                .collect()
+        },
+    );
+    match local_configerator_path {
+        // A local configerator path wins
+        Some(path) => Ok(ConfigStore::file(
+            logger,
+            PathBuf::from(path),
+            String::new(),
+            CONFIGERATOR_POLL_INTERVAL,
+        )),
+        // Prod instances do have network configerator, with signature checks
+        None => ConfigStore::regex_signed_configerator(
+            fb,
+            logger,
+            crypto_regex,
+            CONFIGERATOR_POLL_INTERVAL,
+            CONFIGERATOR_REFRESH_TIMEOUT,
+        ),
+    }
 }
