@@ -100,7 +100,7 @@ pub async fn subcommand_crossrepo<'a>(
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 
-            let caching = args::parse_caching(matches.as_ref());
+            let caching = matches.caching();
             let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
             let commit_syncer = CommitSyncer::new(
@@ -1408,7 +1408,7 @@ async fn get_large_to_small_commit_syncer<'a>(
     mapping: SqlSyncedCommitMapping,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let caching = args::parse_caching(matches.as_ref());
+    let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     let commit_sync_config = live_commit_sync_config

@@ -37,7 +37,7 @@ pub async fn create_commit_syncers_from_matches(
         .get_current_commit_sync_config(ctx, source_repo.0.get_repoid())
         .await?;
 
-    let caching = args::parse_caching(matches.as_ref());
+    let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     let large_repo_id = current_config.large_repo_id;
@@ -159,7 +159,7 @@ async fn create_commit_syncer_from_matches_impl(
         (source_repo, target_repo)
     };
 
-    let caching = args::parse_caching(matches.as_ref());
+    let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     create_commit_syncer(

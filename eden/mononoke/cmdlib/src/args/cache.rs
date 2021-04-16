@@ -168,14 +168,14 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
     .args(&cache_args)
 }
 
-pub(crate) fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
+pub(crate) fn parse_cachelib_shards(matches: &ArgMatches<'_>) -> usize {
     match matches.value_of(CACHELIB_SHARDS) {
         Some(v) => v.parse().unwrap(),
         None => 0,
     }
 }
 
-pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
+fn parse_caching(matches: &ArgMatches<'_>) -> Caching {
     if matches.is_present(SKIP_CACHING) {
         Caching::Disabled
     } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE_OLD) {

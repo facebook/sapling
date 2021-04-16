@@ -839,7 +839,7 @@ async fn get_pushredirected_vars(
     matches: &MononokeMatches<'_>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
-    let caching = args::parse_caching(matches.as_ref());
+    let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     let config_store = matches.config_store();

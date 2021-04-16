@@ -205,7 +205,7 @@ async fn run_sync_diamond_merge<'a>(
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
-    let caching = args::parse_caching(matches.as_ref());
+    let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     sync_diamond_merge::do_sync_diamond_merge(

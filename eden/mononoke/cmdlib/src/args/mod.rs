@@ -58,7 +58,6 @@ use tunables::init_tunables_worker;
 use crate::helpers::{create_runtime, setup_repo_dir, CreateStorage};
 use crate::log;
 
-pub use self::cache::parse_caching;
 use self::cache::{add_cachelib_args, parse_and_init_cachelib};
 
 trait Drain =
