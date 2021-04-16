@@ -143,7 +143,7 @@ pub trait Phases: Send + Sync {
         ephemeral_derive: bool,
     ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>>;
 
-    fn get_sql_phases(&self) -> &SqlPhases;
+    fn get_store(&self) -> &SqlPhases;
 }
 
 pub type HeadsFetcher =
@@ -267,7 +267,7 @@ impl Phases for SqlPhases {
         async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }.boxed()
     }
 
-    fn get_sql_phases(&self) -> &SqlPhases {
+    fn get_store(&self) -> &SqlPhases {
         self
     }
 }

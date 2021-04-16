@@ -208,11 +208,10 @@ impl Repo {
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
         match env.warm_bookmarks_cache_derived_data {
             WarmBookmarksCacheDerivedData::HgOnly => {
-                warm_bookmarks_cache_builder
-                    .add_derived_data_warmers(Some(MappedHgChangesetId::NAME))?;
+                warm_bookmarks_cache_builder.add_hg_warmers()?;
             }
             WarmBookmarksCacheDerivedData::AllKinds => {
-                warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+                warm_bookmarks_cache_builder.add_all_warmers()?;
             }
             WarmBookmarksCacheDerivedData::None => {}
         }
@@ -336,7 +335,7 @@ impl Repo {
 
         let x_repo_sync_lease = Arc::new(InProcessLease::new());
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
-        warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        warm_bookmarks_cache_builder.add_all_warmers()?;
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.
         warm_bookmarks_cache_builder.wait_until_warmed();

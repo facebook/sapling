@@ -42,7 +42,7 @@ use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 mod warmers;
-pub use warmers::create_derived_data_warmer;
+pub use warmers::{create_derived_data_warmer, create_public_phase_warmer};
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -101,11 +101,19 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         }
     }
 
-    pub fn add_all_derived_data_warmers(&mut self) -> Result<(), Error> {
-        self.add_derived_data_warmers(&self.repo.get_derived_data_config().enabled.types)
+    pub fn add_all_warmers(&mut self) -> Result<(), Error> {
+        self.add_derived_data_warmers(&self.repo.get_derived_data_config().enabled.types)?;
+        self.add_public_phase_warmer();
+        Ok(())
     }
 
-    pub fn add_derived_data_warmers<'name, Name>(
+    pub fn add_hg_warmers(&mut self) -> Result<(), Error> {
+        self.add_derived_data_warmers(Some(MappedHgChangesetId::NAME))?;
+        self.add_public_phase_warmer();
+        Ok(())
+    }
+
+    fn add_derived_data_warmers<'name, Name>(
         &mut self,
         types: impl IntoIterator<Item = &'name Name>,
     ) -> Result<(), Error>
@@ -156,6 +164,11 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         }
 
         Ok(())
+    }
+
+    fn add_public_phase_warmer(&mut self) {
+        let warmer = create_public_phase_warmer(&self.ctx);
+        self.warmers.push(warmer);
     }
 
     /// For use in tests to avoid having to wait for the warm bookmark cache

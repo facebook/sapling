@@ -268,7 +268,7 @@ mod test {
     use super::*;
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
-    use maplit::{hashmap, hashset};
+    use maplit::hashmap;
     use tests_utils::{bookmark, CreateCommitContext};
     use warm_bookmarks_cache::{
         BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder,
@@ -330,7 +330,7 @@ mod test {
         // Let's try with WarmBookmarkCache next
         println!("With warm bookmark cache");
         let mut builder = WarmBookmarksCacheBuilder::new(&ctx, &repo);
-        builder.add_derived_data_warmers(&hashset! {"hgchangesets".to_string()})?;
+        builder.add_hg_warmers()?;
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
             repo: repo.clone(),

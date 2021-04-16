@@ -28,6 +28,7 @@ itertools = "0.8"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+phases = { version = "0.1.0", path = "../../phases" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

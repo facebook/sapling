@@ -166,7 +166,7 @@ async fn add_public_phases(
         let count = chunk.len();
         let changesets = repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await?;
         phases
-            .get_sql_phases()
+            .get_store()
             .add_public_raw(&ctx, changesets.into_iter().map(|(_, cs)| cs).collect())
             .await?;
         entries_processed += count;
@@ -183,7 +183,7 @@ async fn subcommand_list_public_impl(
     repo: BlobRepo,
 ) -> Result<(), Error> {
     let phases = repo.get_phases();
-    let sql_phases = phases.get_sql_phases();
+    let sql_phases = phases.get_store();
 
     let public = sql_phases.list_all_public(ctx.clone()).await?;
     if ty == "bonsai" {

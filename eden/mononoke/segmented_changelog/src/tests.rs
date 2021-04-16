@@ -87,7 +87,7 @@ async fn seed(
     // Does it make sense to seed up to the master commit instead of head?
     // Something to consider. Depends how it's used by tests.
     let phases = blobrepo.get_phases();
-    let sql_phases = phases.get_sql_phases();
+    let sql_phases = phases.get_store();
     mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
 
     let seeder = SegmentedChangelogSeeder::new(

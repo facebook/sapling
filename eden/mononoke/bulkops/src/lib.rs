@@ -130,7 +130,7 @@ impl PublicChangesetBulkFetch {
         repo_bounds: Option<(u64, u64)>,
     ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
         let changesets = self.changesets.clone();
-        let phases = self.phases.get_sql_phases();
+        let phases = self.phases.get_store();
         let repo_id = self.repo_id;
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
             future::ok(repo_bounds).left_future()
@@ -255,7 +255,7 @@ mod tests {
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
         let phases = blobrepo.get_phases();
-        let sql_phases = phases.get_sql_phases();
+        let sql_phases = phases.get_store();
         let master = BookmarkName::new("master")?;
         let master = blobrepo
             .get_bonsai_bookmark(ctx.clone(), &master)
