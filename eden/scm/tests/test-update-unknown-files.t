@@ -19,3 +19,8 @@
   [255]
   $ hg up 'desc(B)' --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up 'desc(A)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a > b
+  $ hg up 'desc(B)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved

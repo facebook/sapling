@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::SystemTime;
-use tracing::debug;
+use tracing::{debug, warn};
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -40,6 +40,7 @@ mod conflict;
 mod merge;
 
 pub use merge::{Merge, MergeResult};
+use tokio::runtime::Handle;
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
 const VFS_BATCH_SIZE: usize = 100;
@@ -90,6 +91,9 @@ pub struct CheckoutStats {
     meta_updated: AtomicUsize,
     written_bytes: AtomicUsize,
 }
+
+const PARALLEL_CHECKOUT: usize = 16;
+const MAX_CHECK_UNKNOWN: usize = 5000;
 
 impl CheckoutPlan {
     /// Processes diff into checkout plan.
@@ -220,7 +224,6 @@ impl CheckoutPlan {
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
         let stats = CheckoutStats::default();
         let stats_ref = &stats;
-        const PARALLEL_CHECKOUT: usize = 16;
 
         let remove_files = stream::iter(self.remove.clone().into_iter())
             .chunks(VFS_BATCH_SIZE)
@@ -316,7 +319,7 @@ impl CheckoutPlan {
             |keys| {
                 let (tx, rx) = mpsc::unbounded();
                 let store = store.clone();
-                tokio::runtime::Handle::current().spawn_blocking(move || {
+                Handle::current().spawn_blocking(move || {
                     let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
                     for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
                         match store.prefetch(chunk) {
@@ -357,12 +360,14 @@ impl CheckoutPlan {
         .await
     }
 
-    pub fn check_unknown_files(
+    pub async fn check_unknown_files(
         &self,
+        manifest: &impl Manifest,
+        store: Arc<dyn ReadStore<Key, StoreFile>>,
         tree_state: &mut TreeState,
         vfs: &VFS,
-    ) -> Result<Vec<&RepoPath>> {
-        let mut unknowns = vec![];
+    ) -> Result<Vec<RepoPathBuf>> {
+        let mut check_content = vec![];
         for file in self.new_files() {
             let state = tree_state.get(file)?;
             let unknown = match state {
@@ -372,9 +377,43 @@ impl CheckoutPlan {
                 ),
             };
             if unknown && vfs.is_file(file)? {
-                unknowns.push(file.as_repo_path());
+                let repo_path = file.as_repo_path();
+                let hgid = match manifest.get_file(repo_path)? {
+                    Some(m) => m.hgid,
+                    None => bail!(
+                        "{} not found in manifest when checking for unknown files",
+                        repo_path
+                    ),
+                };
+                let key = Key::new(file.clone(), hgid);
+                check_content.push(key);
             }
         }
+
+        if check_content.len() > MAX_CHECK_UNKNOWN {
+            warn!(
+                "Working directory has {} untracked files, not going to check their content. Use --clean to overwrite files without checking",
+                check_content.len()
+            );
+            let unknowns = check_content.into_iter().map(|k| k.path).collect();
+            return Ok(unknowns);
+        }
+
+        let check_content = store
+            .fetch_stream(Box::pin(stream::iter(check_content)))
+            .chunks(VFS_BATCH_SIZE)
+            .map(|v| {
+                let vfs = vfs.clone();
+                Handle::current().spawn_blocking(move || -> Result<Vec<RepoPathBuf>> {
+                    let v: std::result::Result<Vec<_>, _> = v.into_iter().collect();
+                    Self::check_content(&vfs, v?)
+                })
+            })
+            .buffer_unordered(PARALLEL_CHECKOUT)
+            .map(|r| r?);
+
+        let unknowns = Self::process_vec_work_stream(check_content).await?;
+
         Ok(unknowns)
     }
 
@@ -386,6 +425,41 @@ impl CheckoutPlan {
             result?;
         }
         Ok(())
+    }
+
+    async fn process_vec_work_stream<R: Send, S: Stream<Item = Result<Vec<R>>> + Unpin>(
+        mut stream: S,
+    ) -> Result<Vec<R>> {
+        let mut r = vec![];
+        while let Some(result) = stream.next().await {
+            r.append(&mut result?);
+        }
+        Ok(r)
+    }
+
+    fn check_content(vfs: &VFS, files: Vec<StoreFile>) -> Result<Vec<RepoPathBuf>> {
+        let mut result = vec![];
+        for file in files {
+            let path = &file.key().expect("Store returned file without key").path;
+            match Self::check_file(vfs, &file, path) {
+                Err(err) => {
+                    warn!("Can not check {}: {}", path, err);
+                    result.push(path.clone())
+                }
+                Ok(false) => result.push(path.clone()),
+                Ok(true) => {}
+            }
+        }
+        Ok(result)
+    }
+
+    fn check_file(vfs: &VFS, file: &StoreFile, path: &RepoPath) -> Result<bool> {
+        let expected_content = match file.content() {
+            None => bail!("Did not find content for {} in store", path),
+            Some(c) => c,
+        };
+        let actual_content = vfs.read(path)?;
+        Ok(actual_content.eq(expected_content))
     }
 
     // Functions below use blocking fs operations in spawn_blocking proc.

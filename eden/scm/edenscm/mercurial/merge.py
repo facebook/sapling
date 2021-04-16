@@ -2356,7 +2356,10 @@ def update(
 
                 if not force:
                     unknown = plan.check_unknown_files(
-                        repo.wvfs.base, repo.dirstate._map._tree
+                        repo.wvfs.base,
+                        p2.manifest(),
+                        repo.fileslog.filescmstore,
+                        repo.dirstate._map._tree,
                     )
                     if unknown:
                         for f in unknown:
