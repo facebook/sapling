@@ -446,7 +446,7 @@ async fn run_subcmd<'a>(
             let mut cleaner = None;
 
             if sub_m.is_present(ARG_DRY_RUN) {
-                if !args::parse_readonly_storage(matches).0 {
+                if !matches.readonly_storage().0 {
                     return Err(anyhow!("--dry-run requires readonly storage!"));
                 }
 

@@ -114,8 +114,8 @@ async fn get_things_from_matches(
         ));
     }
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
 
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         ctx.fb,

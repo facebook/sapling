@@ -264,8 +264,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime.block_on(create_commit_syncer_from_matches(&ctx, &matches))?
     };
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
 
     info!(
         logger,
@@ -285,8 +285,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     ctx.clone(),
                     commit_syncer.get_target_repo().clone(),
                     db_config,
-                    mysql_options,
-                    readonly_storage,
+                    mysql_options.clone(),
+                    *readonly_storage,
                 )
                 .boxed(),
             )?;
@@ -306,8 +306,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     ctx,
                     commit_syncer.get_target_repo().clone(),
                     db_config,
-                    mysql_options,
-                    readonly_storage,
+                    mysql_options.clone(),
+                    *readonly_storage,
                 )
                 .boxed(),
             )?;

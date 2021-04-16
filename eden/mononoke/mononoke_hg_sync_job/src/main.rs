@@ -646,8 +646,8 @@ impl LatestReplayedSyncCounter {
             let repo_id = backup_repo.get_repoid();
 
             let (_, config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
-            let mysql_options = args::parse_mysql_options(matches);
-            let readonly_storage = args::parse_readonly_storage(matches);
+            let mysql_options = matches.mysql_options();
+            let readonly_storage = matches.readonly_storage();
             let mutable_counters = SqlMutableCounters::with_metadata_database_config(
                 ctx.fb,
                 &config.storage_config.metadata,
@@ -708,8 +708,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     };
     scuba_sample.add_common_server_data();
 
-    let mysql_options = args::parse_mysql_options(matches);
-    let readonly_storage = args::parse_readonly_storage(matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
     let config_store = matches.config_store();
 
     let repo_id = args::get_repo_id(config_store, matches).expect("need repo id");

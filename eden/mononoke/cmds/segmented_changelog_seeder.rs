@@ -76,7 +76,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .await
         .context("opening repo")?;
 
-    let mysql_options = args::parse_mysql_options(matches);
+    let mysql_options = matches.mysql_options();
     let (_, config) = args::get_config(config_store, matches)?;
     let storage_config = config.storage_config;
     let readonly_storage = ReadOnlyStorage(false);
@@ -98,7 +98,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let sql_factory = make_metadata_sql_factory(
         ctx.fb,
         storage_config.metadata,
-        mysql_options,
+        mysql_options.clone(),
         readonly_storage,
         ctx.logger(),
     )

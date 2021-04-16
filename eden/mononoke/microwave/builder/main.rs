@@ -83,10 +83,6 @@ async fn do_main<'a>(
     let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
 
-    let mysql_options = cmdlib::args::parse_mysql_options(&matches);
-    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
-    let caching = matches.caching();
     let config_store = matches.config_store();
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
@@ -103,13 +99,7 @@ async fn do_main<'a>(
     };
 
     let repo_factory = Arc::new(RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options,
-        blobstore_options,
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         censored_scuba_params,
     ));
 

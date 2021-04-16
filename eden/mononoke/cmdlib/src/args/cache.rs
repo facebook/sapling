@@ -6,9 +6,9 @@
  */
 
 use clap::{App, Arg, ArgMatches};
+use environment::Caching;
 use fbinit::FacebookInit;
 use once_cell::sync::{Lazy, OnceCell};
-use repo_factory::Caching;
 use std::time::Duration;
 
 use crate::args::{bool_as_str, BOOL_VALUES};

@@ -19,7 +19,7 @@ use blobstore_factory::make_blobstore;
 use cacheblob::{new_memcache_blobstore_no_lease, CachelibBlobstoreOptions};
 use cmdlib::args;
 use context::CoreContext;
-use repo_factory::Caching;
+use environment::Caching;
 
 mod parallel_puts;
 mod single_puts;
@@ -106,15 +106,15 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         .storage
         .remove(config_name)
         .ok_or_else(|| anyhow!("unknown storage config"))?;
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let mysql_options = matches.mysql_options();
+    let blobstore_options = matches.blobstore_options();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let blobstore = || async {
         let blobstore = make_blobstore(
             fb,
             storage_config.blobstore.clone(),
-            &mysql_options,
+            mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &logger,

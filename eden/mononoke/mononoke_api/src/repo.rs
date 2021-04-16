@@ -144,27 +144,30 @@ pub async fn open_synced_commit_mapping(
 
 impl Repo {
     pub async fn new(
-        env: &MononokeApiEnvironment<'_>,
+        env: &MononokeApiEnvironment,
         name: String,
         config: RepoConfig,
     ) -> Result<Self, Error> {
-        let logger = env.logger.new(o!("repo" => name.clone()));
+        let fb = env.repo_factory.env.fb;
+
+        let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let synced_commit_mapping = open_synced_commit_mapping(
-            env.fb,
+            fb,
             config.clone(),
-            &env.mysql_options,
-            env.readonly_storage,
+            &env.repo_factory.env.mysql_options,
+            env.repo_factory.env.readonly_storage,
             &logger,
         )
         .await?;
 
-        let x_repo_sync_lease = create_commit_syncer_lease(env.fb, env.repo_factory.caching())?;
-        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &env.config_store)?);
+        let x_repo_sync_lease = create_commit_syncer_lease(fb, env.repo_factory.caching())?;
+        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(
+            CfgrLiveCommitSyncConfig::new(&logger, &env.repo_factory.env.config_store)?,
+        );
 
         let blob_repo = env
             .repo_factory
@@ -172,11 +175,11 @@ impl Repo {
             .watched(&logger)
             .await?;
 
-        let ctx = CoreContext::new_with_logger(env.fb, logger.clone());
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
         let repo_permission_checker = async {
             let checker = match &config.hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_repo(env.fb, acl).await?,
+                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
             Ok(ArcPermissionChecker::from(checker))
@@ -184,7 +187,7 @@ impl Repo {
 
         let service_permission_checker = async {
             let checker = match &config.source_control_service.service_write_hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_tier(env.fb, acl).await?,
+                Some(acl) => PermissionCheckerBuilder::acl_for_tier(fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
             Ok(ArcPermissionChecker::from(checker))
@@ -222,10 +225,10 @@ impl Repo {
         let sql_read_write_status = async {
             if let Some(addr) = &config.write_lock_db_address {
                 let r = SqlRepoReadWriteStatus::with_xdb(
-                    env.fb,
+                    fb,
                     addr.clone(),
-                    &env.mysql_options,
-                    env.readonly_storage.0,
+                    &env.repo_factory.env.mysql_options,
+                    env.repo_factory.env.readonly_storage.0,
                 )
                 .await?;
                 Ok(Some(r))

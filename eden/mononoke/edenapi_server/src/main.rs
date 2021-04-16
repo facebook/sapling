@@ -34,7 +34,7 @@ use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
 };
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
-use repo_factory::{Caching, RepoFactory};
+use repo_factory::RepoFactory;
 use secure_utils::SslConfig;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -90,18 +90,10 @@ fn parse_identities(matches: &MononokeMatches) -> Result<MononokeIdentitySet> {
 }
 
 /// Start the server after parsing arguments and initializing runtime.
-async fn start(
-    fb: FacebookInit,
-    caching: Caching,
-    logger: Logger,
-    matches: &MononokeMatches<'_>,
-) -> Result<()> {
+async fn start(fb: FacebookInit, logger: Logger, matches: &MononokeMatches<'_>) -> Result<()> {
     debug!(logger, "Reading args");
     let config_store = matches.config_store();
     let repo_configs = args::load_repo_configs(config_store, &matches)?;
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
@@ -109,23 +101,12 @@ async fn start(
 
     debug!(logger, "Initializing Mononoke API");
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options.clone(),
-        blobstore_options.clone(),
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         repo_configs.common.censored_scuba_params.clone(),
     );
 
     let env = MononokeApiEnvironment {
-        fb,
-        logger: logger.clone(),
         repo_factory,
-        mysql_options,
-        readonly_storage,
-        config_store,
         disabled_hooks,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
@@ -274,8 +255,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = app.get_matches(fb)?;
 
-    let caching = matches.caching();
     let logger = matches.logger();
     let runtime = matches.runtime();
-    runtime.block_on(start(fb, caching, logger.clone(), &matches))
+    runtime.block_on(start(fb, logger.clone(), &matches))
 }

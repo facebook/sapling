@@ -389,11 +389,6 @@ async fn do_main(
         .transpose()?
         .unwrap_or(1_usize);
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
-    let readonly_storage = args::parse_readonly_storage(&matches);
-    let caching = matches.caching();
-
     let repo_id = args::get_repo_id(config_store, matches)?;
     let (repo_name, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
@@ -403,13 +398,7 @@ async fn do_main(
     );
 
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options,
-        blobstore_options,
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         // We don't need to log redacted access from here
         CensoredScubaParams {
             table: None,

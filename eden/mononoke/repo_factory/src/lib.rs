@@ -35,12 +35,11 @@ use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
 };
-use cached_config::ConfigStore;
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ArcChangesets, CachingChangesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
-use fbinit::FacebookInit;
+use environment::{Caching, MononokeEnvironment};
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
@@ -59,25 +58,10 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 use segmented_changelog_types::ArcSegmentedChangelog;
-use slog::Logger;
-use sql_ext::facebook::MysqlOptions;
 use thiserror::Error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
-
-#[derive(Copy, Clone, PartialEq)]
-pub enum Caching {
-    /// Caching is enabled with the given number of shards.
-    Enabled(usize),
-
-    /// Caching is enabled only for the blobstore via cachelib, with the given
-    /// number of shards.
-    CachelibOnlyBlobstore(usize),
-
-    /// Caching is not enabled.
-    Disabled,
-}
 
 struct RepoFactoryCache<K: Clone + Eq + Hash, V: Clone> {
     cache: Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>,
@@ -119,13 +103,7 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
 pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 
 pub struct RepoFactory {
-    fb: FacebookInit,
-    logger: Logger,
-    config_store: ConfigStore,
-    mysql_options: MysqlOptions,
-    blobstore_options: BlobstoreOptions,
-    readonly_storage: ReadOnlyStorage,
-    caching: Caching,
+    pub env: Arc<MononokeEnvironment>,
     censored_scuba_params: CensoredScubaParams,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
@@ -137,23 +115,11 @@ pub struct RepoFactory {
 
 impl RepoFactory {
     pub fn new(
-        fb: FacebookInit,
-        logger: Logger,
-        config_store: ConfigStore,
-        mysql_options: MysqlOptions,
-        blobstore_options: BlobstoreOptions,
-        readonly_storage: ReadOnlyStorage,
-        caching: Caching,
+        env: Arc<MononokeEnvironment>,
         censored_scuba_params: CensoredScubaParams,
     ) -> RepoFactory {
         RepoFactory {
-            fb,
-            logger,
-            config_store,
-            mysql_options,
-            blobstore_options,
-            readonly_storage,
-            caching,
+            env,
             censored_scuba_params,
             sql_factories: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
@@ -183,13 +149,13 @@ impl RepoFactory {
         self.sql_factories
             .get_or_try_init(config, || async move {
                 let sql_factory = make_metadata_sql_factory(
-                    self.fb,
+                    self.env.fb,
                     config.clone(),
-                    self.mysql_options.clone(),
-                    self.readonly_storage,
-                    &self.logger,
+                    self.env.mysql_options.clone(),
+                    self.env.readonly_storage,
+                    &self.env.logger,
                 )
-                .watched(&self.logger)
+                .watched(&self.env.logger)
                 .await?;
                 Ok(Arc::new(sql_factory))
             })
@@ -200,21 +166,21 @@ impl RepoFactory {
         self.blobstores
             .get_or_try_init(config, || async move {
                 let mut blobstore = make_blobstore(
-                    self.fb,
+                    self.env.fb,
                     config.clone(),
-                    &self.mysql_options,
-                    self.readonly_storage,
-                    &self.blobstore_options,
-                    &self.logger,
-                    &self.config_store,
+                    &self.env.mysql_options,
+                    self.env.readonly_storage,
+                    &self.env.blobstore_options,
+                    &self.env.logger,
+                    &self.env.config_store,
                     &self.scrub_handler,
                 )
-                .watched(&self.logger)
+                .watched(&self.env.logger)
                 .await?;
 
-                match self.caching {
+                match self.env.caching {
                     Caching::Enabled(cache_shards) => {
-                        let fb = self.fb;
+                        let fb = self.env.fb;
                         let memcache_blobstore = tokio::task::spawn_blocking(move || {
                             new_memcache_blobstore(fb, blobstore, "multiplexed", "")
                         })
@@ -222,14 +188,14 @@ impl RepoFactory {
                         blobstore = cachelib_blobstore(
                             memcache_blobstore,
                             cache_shards,
-                            &self.blobstore_options.cachelib_options,
+                            &self.env.blobstore_options.cachelib_options,
                         )?
                     }
                     Caching::CachelibOnlyBlobstore(cache_shards) => {
                         blobstore = cachelib_blobstore(
                             blobstore,
                             cache_shards,
-                            &self.blobstore_options.cachelib_options,
+                            &self.env.blobstore_options.cachelib_options,
                         )?;
                     }
                     Caching::Disabled => {}
@@ -265,7 +231,7 @@ impl RepoFactory {
 
     /// Returns a named volatile pool if caching is enabled.
     fn maybe_volatile_pool(&self, name: &str) -> Result<Option<cachelib::VolatileLruCachePool>> {
-        match self.caching {
+        match self.env.caching {
             Caching::Enabled(_) => Ok(Some(volatile_pool(name)?)),
             _ => Ok(None),
         }
@@ -273,7 +239,7 @@ impl RepoFactory {
 
     fn censored_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
         let mut builder = MononokeScubaSampleBuilder::with_opt_table(
-            self.fb,
+            self.env.fb,
             self.censored_scuba_params.table.clone(),
         );
         builder.add_common_server_data();
@@ -378,7 +344,7 @@ impl RepoFactory {
     }
 
     pub fn caching(&self) -> Caching {
-        self.caching
+        self.env.caching
     }
 
     pub async fn changesets(&self, repo_config: &ArcRepoConfig) -> Result<ArcChangesets> {
@@ -391,7 +357,7 @@ impl RepoFactory {
             .context(RepoFactoryError::Changesets)?;
         if let Some(pool) = self.maybe_volatile_pool("changesets")? {
             Ok(Arc::new(CachingChangesets::new(
-                self.fb,
+                self.env.fb,
                 Arc::new(changesets),
                 pool,
             )))
@@ -447,7 +413,7 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::Phases)?;
         if let Some(pool) = self.maybe_volatile_pool("phases")? {
-            sql_phases_factory.enable_caching(self.fb, pool);
+            sql_phases_factory.enable_caching(self.env.fb, pool);
         }
         Ok(Arc::new(sql_phases_factory))
     }
@@ -466,7 +432,7 @@ impl RepoFactory {
         let bonsai_hg_mapping = builder.build();
         if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
-                self.fb,
+                self.env.fb,
                 Arc::new(bonsai_hg_mapping),
                 pool,
             )))
@@ -504,7 +470,7 @@ impl RepoFactory {
             .context(RepoFactoryError::BonsaiGlobalrevMapping)?;
         if let Some(pool) = self.maybe_volatile_pool("bonsai_globalrev_mapping")? {
             Ok(Arc::new(CachingBonsaiGlobalrevMapping::new(
-                self.fb,
+                self.env.fb,
                 Arc::new(bonsai_globalrev_mapping),
                 pool,
             )))
@@ -528,7 +494,7 @@ impl RepoFactory {
         let bonsai_svnrev_mapping: Arc<dyn BonsaiSvnrevMapping + Send + Sync> =
             if let Some(pool) = self.maybe_volatile_pool("bonsai_svnrev_mapping")? {
                 Arc::new(CachingBonsaiSvnrevMapping::new(
-                    self.fb,
+                    self.env.fb,
                     Arc::new(bonsai_svnrev_mapping),
                     pool,
                 ))
@@ -549,7 +515,7 @@ impl RepoFactory {
             .open_shardable::<NewFilenodesBuilder>()
             .await
             .context(RepoFactoryError::Filenodes)?;
-        if let Caching::Enabled(_) = self.caching {
+        if let Caching::Enabled(_) = self.env.caching {
             let filenodes_tier = sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?;
             let filenodes_pool = self
                 .maybe_volatile_pool("filenodes")?
@@ -558,7 +524,7 @@ impl RepoFactory {
                 .maybe_volatile_pool("filenodes_history")?
                 .ok_or(RepoFactoryError::Filenodes)?;
             filenodes_builder.enable_caching(
-                self.fb,
+                self.env.fb,
                 filenodes_pool,
                 filenodes_history_pool,
                 "newfilenodes",
@@ -601,8 +567,8 @@ impl RepoFactory {
             .context(RepoFactoryError::SegmentedChangelog)?;
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
         let segmented_changelog = new_server_segmented_changelog(
-            self.fb,
-            &CoreContext::new_with_logger(self.fb, self.logger.clone()),
+            self.env.fb,
+            &CoreContext::new_with_logger(self.env.fb, self.env.logger.clone()),
             repo_identity.id(),
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
@@ -620,8 +586,8 @@ impl RepoFactory {
         let config = repo_config.derived_data_config.clone();
         // Derived data leasing is performed through the cache, so is only
         // available if caching is enabled.
-        let lease: Arc<dyn LeaseOps> = if let Caching::Enabled(_) = self.caching {
-            Arc::new(MemcacheOps::new(self.fb, "derived-data-lease", "")?)
+        let lease: Arc<dyn LeaseOps> = if let Caching::Enabled(_) = self.env.caching {
+            Arc::new(MemcacheOps::new(self.env.fb, "derived-data-lease", "")?)
         } else {
             Arc::new(InProcessLease::new())
         };
@@ -637,7 +603,7 @@ impl RepoFactory {
             .blobstore(&repo_config.storage_config.blobstore)
             .await?;
 
-        if self.readonly_storage.0 {
+        if self.env.readonly_storage.0 {
             blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
         }
 

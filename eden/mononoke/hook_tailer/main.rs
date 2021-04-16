@@ -79,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     block_execute(
-        run_hook_tailer(fb, &ctx, config, repo_name, &matches, &logger),
+        run_hook_tailer(&ctx, config, repo_name, &matches, &logger),
         fb,
         "hook_tailer",
         &logger,
@@ -89,7 +89,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 }
 
 async fn run_hook_tailer<'a>(
-    fb: FacebookInit,
     ctx: &CoreContext,
     config: metaconfig_types::RepoConfig,
     repo_name: String,
@@ -130,18 +129,8 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let caching = matches.caching();
-    let readonly_storage = cmdlib::args::parse_readonly_storage(matches);
-    let mysql_options = cmdlib::args::parse_mysql_options(matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(matches)?;
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options,
-        blobstore_options,
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         common_config.censored_scuba_params,
     );
 

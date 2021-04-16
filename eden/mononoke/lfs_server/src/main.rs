@@ -227,14 +227,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches(fb)?;
 
 
-    let caching = matches.caching();
     let logger = matches.logger();
     let runtime = matches.runtime();
     let config_store = matches.config_store();
-
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
-    let readonly_storage = args::parse_readonly_storage(&matches);
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
@@ -271,13 +266,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
     let repo_factory = Arc::new(RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options,
-        blobstore_options,
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         common.censored_scuba_params,
     ));
 

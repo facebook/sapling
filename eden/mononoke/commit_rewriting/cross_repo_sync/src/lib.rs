@@ -18,6 +18,7 @@ use bookmarks::BookmarkName;
 use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
+use environment::Caching;
 use fbinit::FacebookInit;
 use futures::future::{try_join, try_join_all};
 use futures::{
@@ -39,7 +40,6 @@ use mononoke_types::{
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
-use repo_factory::Caching;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use sorted_vector_map::SortedVectorMap;

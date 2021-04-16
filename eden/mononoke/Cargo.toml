@@ -141,6 +141,7 @@ derive_more = "0.99.3"
 derived_data = { version = "0.1.0", path = "derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "derived_data/filenodes" }
 derived_data_utils = { version = "0.1.0", path = "derived_data/utils" }
+environment = { version = "0.1.0", path = "cmdlib/environment" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fastlog = { version = "0.1.0", path = "derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -300,6 +301,7 @@ members = [
   "changesets",
   "changesets/if",
   "cmdlib",
+  "cmdlib/environment",
   "cmdlib/x_repo",
   "commit_rewriting/backsyncer",
   "commit_rewriting/bookmark_renaming",

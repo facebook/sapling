@@ -23,6 +23,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
+environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -39,7 +40,6 @@ pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 rand = { version = "0.7", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.2"
-repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 scopeguard = "1.0.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }

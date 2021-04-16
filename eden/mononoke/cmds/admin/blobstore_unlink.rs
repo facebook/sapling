@@ -75,7 +75,7 @@ async fn get_blobstore(
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
     readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
+    blobstore_options: &BlobstoreOptions,
     config_store: &ConfigStore,
 ) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
@@ -103,14 +103,14 @@ pub async fn subcommand_blobstore_unlink<'a>(
     let (_, config) = args::get_config(config_store, &matches)?;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let blobstore_options = matches.blobstore_options();
 
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let readonly_storage = matches.readonly_storage();
     let blobstore = get_blobstore(
         fb,
         storage_config,
         inner_blobstore_id,
-        readonly_storage,
+        *readonly_storage,
         blobstore_options,
         config_store,
     )

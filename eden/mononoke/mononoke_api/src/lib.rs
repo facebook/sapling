@@ -14,13 +14,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Error};
 pub use bookmarks::BookmarkName;
-use cached_config::ConfigStore;
-use fbinit::FacebookInit;
 use futures::future;
 use futures_watchdog::WatchdogExt;
-use repo_factory::{ReadOnlyStorage, RepoFactory};
-use slog::{debug, info, o, Logger};
-use sql_ext::facebook::MysqlOptions;
+use repo_factory::RepoFactory;
+use slog::{debug, info, o};
 pub use warm_bookmarks_cache::BookmarkUpdateDelay;
 
 use metaconfig_parser::RepoConfigs;
@@ -74,10 +71,7 @@ pub struct Mononoke {
 
 impl Mononoke {
     /// Create a Mononoke instance.
-    pub async fn new(
-        env: &MononokeApiEnvironment<'_>,
-        configs: RepoConfigs,
-    ) -> Result<Self, Error> {
+    pub async fn new(env: &MononokeApiEnvironment, configs: RepoConfigs) -> Result<Self, Error> {
         let repos = future::try_join_all(
             configs
                 .repos
@@ -85,12 +79,13 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| async move {
-                        info!(&env.logger, "Initializing repo: {}", &name);
+                        let logger = &env.repo_factory.env.logger;
+                        info!(logger, "Initializing repo: {}", &name);
                         let repo = Repo::new(env, name.clone(), config)
-                            .watched(env.logger.new(o!("repo" => name.clone())))
+                            .watched(logger.new(o!("repo" => name.clone())))
                             .await
                             .with_context(|| format!("could not initialize repo '{}'", &name))?;
-                        debug!(&env.logger, "Initialized {}", &name);
+                        debug!(logger, "Initialized {}", &name);
                         Ok::<_, Error>((name, Arc::new(repo)))
                     }
                 }),
@@ -149,13 +144,8 @@ impl Mononoke {
     }
 }
 
-pub struct MononokeApiEnvironment<'a> {
-    pub fb: FacebookInit,
-    pub logger: Logger,
+pub struct MononokeApiEnvironment {
     pub repo_factory: RepoFactory,
-    pub mysql_options: MysqlOptions,
-    pub readonly_storage: ReadOnlyStorage,
-    pub config_store: &'a ConfigStore,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
     pub warm_bookmarks_cache_delay: BookmarkUpdateDelay,

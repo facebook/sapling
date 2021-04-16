@@ -87,7 +87,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches(fb)?;
 
-    let caching = matches.caching();
     let logger = matches.logger();
     let runtime = matches.runtime();
     let port = value_t!(matches.value_of(ARG_PORT), u16)?;
@@ -106,23 +105,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     scuba_builder.add_common_server_data();
 
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        args::parse_mysql_options(&matches),
-        args::parse_blobstore_options(&matches)?,
-        args::parse_readonly_storage(&matches),
-        caching,
+        matches.environment().clone(),
         repo_configs.common.censored_scuba_params.clone(),
     );
 
     let env = MononokeApiEnvironment {
-        fb,
-        logger: logger.clone(),
         repo_factory,
-        mysql_options: args::parse_mysql_options(&matches),
-        readonly_storage: args::parse_readonly_storage(&matches),
-        config_store,
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,

@@ -172,8 +172,8 @@ async fn get_blob<'a>(
     matches: &'a MononokeMatches<'a>,
     config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
-    let blobstore_options = args::parse_blobstore_options(matches)?;
-    let readonly_storage = args::parse_readonly_storage(matches);
+    let blobstore_options = matches.blobstore_options();
+    let readonly_storage = matches.readonly_storage();
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {
             #[cfg(fbcode_build)]
@@ -206,7 +206,7 @@ async fn get_blob<'a>(
                 shardmap_or_tier,
                 shard_count,
                 &blobstore_options,
-                readonly_storage,
+                *readonly_storage,
                 blobstore_options.put_behaviour,
                 config_store,
             )

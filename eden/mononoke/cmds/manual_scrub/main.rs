@@ -163,8 +163,8 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         )
         .context("Requested storage config not found")?;
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let mysql_options = matches.mysql_options();
+    let blobstore_options = matches.blobstore_options();
     let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
     let success_file_name = matches
@@ -186,7 +186,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         let blobstore = make_blobstore(
             fb,
             storage_config.blobstore,
-            &mysql_options,
+            mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &logger,

@@ -226,29 +226,17 @@ async fn bootstrap_repositories<'a>(
         local_path: None,
     };
 
-    let mysql_options = cmdlib::args::parse_mysql_options(&matches);
-    let caching = matches.caching();
-    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
+    let blobstore_options = matches.blobstore_options();
 
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options.clone(),
-        blobstore_options.clone(),
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         config.common.censored_scuba_params.clone(),
     );
 
     let env = MononokeApiEnvironment {
-        fb,
-        logger: logger.clone(),
         repo_factory,
-        mysql_options: mysql_options.clone(),
-        readonly_storage,
-        config_store,
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
@@ -304,7 +292,7 @@ async fn bootstrap_repositories<'a>(
                         fb,
                         storage.blobstore.clone(),
                         mysql_options,
-                        readonly_storage,
+                        *readonly_storage,
                         blobstore_options,
                         &logger,
                         config_store,

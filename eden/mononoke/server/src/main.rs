@@ -102,7 +102,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches(fb)?;
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
-    let caching = matches.caching();
     let root_log = matches.logger();
     let runtime = matches.runtime();
     let config_store = matches.config_store().clone();
@@ -141,15 +140,17 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
 
-    let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?;
     let scribe = cmdlib::args::get_scribe(fb, &matches)?;
     let host_port = matches
         .value_of(ARG_LISTENING_HOST_PORT)
         .expect("listening path must be specified")
         .to_string();
-    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
+
+    let mysql_options = matches.mysql_options().clone();
+    let readonly_storage = matches.readonly_storage().clone();
+    let blobstore_options = matches.blobstore_options().clone();
+    let env = matches.environment();
 
     let mut scuba = matches.scuba_sample_builder()?;
     scuba.add_common_server_data();
@@ -157,26 +158,12 @@ fn main(fb: FacebookInit) -> Result<()> {
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = {
-        cloned!(root_log, service, will_exit);
+        cloned!(root_log, service, will_exit, env);
         async move {
-            let repo_factory = RepoFactory::new(
-                fb,
-                root_log.clone(),
-                config_store.clone(),
-                mysql_options.clone(),
-                blobstore_options.clone(),
-                readonly_storage,
-                caching,
-                config.common.censored_scuba_params.clone(),
-            );
+            let repo_factory = RepoFactory::new(env, config.common.censored_scuba_params.clone());
 
             let env = MononokeApiEnvironment {
-                fb,
-                logger: root_log.clone(),
                 repo_factory,
-                mysql_options: mysql_options.clone(),
-                readonly_storage,
-                config_store: &config_store,
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
                 warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,

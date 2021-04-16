@@ -43,11 +43,12 @@ use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
     ScrubAction, ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
 };
+use environment::{Caching, MononokeEnvironment};
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, PackFormat, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
-use repo_factory::{Caching, ReadOnlyStorage, RepoFactory};
+use repo_factory::{ReadOnlyStorage, RepoFactory};
 use slog_ext::make_tag_filter_drain;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
@@ -293,20 +294,10 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
     }
 }
 
-struct MononokeEnvironment {
-    fb: FacebookInit,
-    logger: Logger,
-    config_store: ConfigStore,
-    caching: Caching,
-    observability_context: ObservabilityContext,
-    runtime: Runtime,
-}
-
 pub struct MononokeMatches<'a> {
     matches: MaybeOwned<'a, ArgMatches<'a>>,
     app_data: MononokeAppData,
-    environment: MononokeEnvironment,
-    arg_types: HashSet<ArgType>,
+    environment: Arc<MononokeEnvironment>,
 }
 
 impl<'a> MononokeMatches<'a> {
@@ -337,19 +328,32 @@ impl<'a> MononokeMatches<'a> {
         init_tunables(&matches, &config_store, logger.clone())
             .context("Failed to initialize tunables")?;
 
+        let mysql_options =
+            parse_mysql_options(&matches, &app_data).context("Failed to parse MySQL options")?;
+        let blobstore_options = parse_blobstore_options(&matches, &app_data, &arg_types)
+            .context("Failed to parse blobstore options")?;
+        let readonly_storage =
+            parse_readonly_storage(&matches).context("Failed to parse readonly storage options")?;
+
         Ok(MononokeMatches {
             matches: MaybeOwned::from(matches),
-            environment: MononokeEnvironment {
+            environment: Arc::new(MononokeEnvironment {
                 fb,
                 logger,
                 config_store,
                 caching,
                 observability_context,
                 runtime,
-            },
+                mysql_options,
+                blobstore_options,
+                readonly_storage,
+            }),
             app_data,
-            arg_types,
         })
+    }
+
+    pub fn environment(&self) -> &Arc<MononokeEnvironment> {
+        &self.environment
     }
 
     pub fn caching(&self) -> Caching {
@@ -366,6 +370,18 @@ impl<'a> MononokeMatches<'a> {
 
     pub fn logger(&self) -> &Logger {
         &self.environment.logger
+    }
+
+    pub fn mysql_options(&self) -> &MysqlOptions {
+        &self.environment.mysql_options
+    }
+
+    pub fn blobstore_options(&self) -> &BlobstoreOptions {
+        &self.environment.blobstore_options
+    }
+
+    pub fn readonly_storage(&self) -> &ReadOnlyStorage {
+        &self.environment.readonly_storage
     }
 
     pub fn scuba_sample_builder(&self) -> Result<MononokeScubaSampleBuilder> {
@@ -1270,13 +1286,11 @@ where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
     let (_, config) = get_config(config_store, matches)?;
-    let mysql_options = parse_mysql_options(matches);
-    let readonly_storage = parse_readonly_storage(matches);
     T::with_metadata_database_config(
         fb,
         &config.storage_config.metadata,
-        &mysql_options,
-        readonly_storage.0,
+        matches.mysql_options(),
+        matches.readonly_storage().0,
     )
     .await
 }
@@ -1291,13 +1305,11 @@ where
 {
     let source_repo_id = get_source_repo_id(config_store, matches)?;
     let (_, config) = get_config_by_repoid(config_store, matches, source_repo_id)?;
-    let mysql_options = parse_mysql_options(matches);
-    let readonly_storage = parse_readonly_storage(matches);
     T::with_metadata_database_config(
         fb,
         &config.storage_config.metadata,
-        &mysql_options,
-        readonly_storage.0,
+        matches.mysql_options(),
+        matches.readonly_storage().0,
     )
     .await
 }
@@ -1309,14 +1321,7 @@ pub fn create_repo<'a>(
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
-    open_repo_internal(
-        fb,
-        logger,
-        matches,
-        true,
-        parse_caching(matches.as_ref()),
-        None,
-    )
+    open_repo_internal(fb, logger, matches, true, None)
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
@@ -1327,14 +1332,7 @@ pub fn create_repo_unredacted<'a>(
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
-    open_repo_internal(
-        fb,
-        logger,
-        matches,
-        true,
-        parse_caching(matches.as_ref()),
-        Some(Redaction::Disabled),
-    )
+    open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled))
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
@@ -1344,14 +1342,7 @@ pub fn open_repo<'a>(
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
-    open_repo_internal(
-        fb,
-        logger,
-        matches,
-        false,
-        parse_caching(matches.as_ref()),
-        None,
-    )
+    open_repo_internal(fb, logger, matches, false, None)
 }
 
 /// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
@@ -1362,33 +1353,22 @@ pub fn open_repo_unredacted<'a>(
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
-    open_repo_internal(
-        fb,
-        logger,
-        matches,
-        false,
-        parse_caching(matches.as_ref()),
-        Some(Redaction::Disabled),
-    )
+    open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled))
 }
 
 /// Open an existing `BlobRepo` by ID -- for local instances, expect contents to already be there.
 /// It useful when we need to open more than 1 mononoke repo based on command line arguments
 #[inline]
 pub fn open_repo_by_id<'a>(
-    fb: FacebookInit,
+    _: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal_with_repo_id(
-        fb,
-        logger,
-        repo_id,
-        matches,
+        logger, repo_id, matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
-        parse_caching(matches.as_ref()),
-        None, // do not override redaction config
+        None,  // do not override redaction config
     )
 }
 
@@ -1662,34 +1642,22 @@ pub fn get_config_by_repoid<'a>(
 }
 
 async fn open_repo_internal(
-    fb: FacebookInit,
+    _: FacebookInit,
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     create: bool,
-    caching: Caching,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
     let config_store = matches.config_store();
     let repo_id = get_repo_id(config_store, matches)?;
-    open_repo_internal_with_repo_id(
-        fb,
-        logger,
-        repo_id,
-        matches,
-        create,
-        caching,
-        redaction_override,
-    )
-    .await
+    open_repo_internal_with_repo_id(logger, repo_id, matches, create, redaction_override).await
 }
 
 async fn open_repo_internal_with_repo_id(
-    fb: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
     matches: &MononokeMatches<'_>,
     create: bool,
-    caching: Caching,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
     let config_store = matches.config_store();
@@ -1709,18 +1677,8 @@ async fn open_repo_internal_with_repo_id(
         _ => {}
     };
 
-    let mysql_options = parse_mysql_options(matches);
-    let blobstore_options = parse_blobstore_options(matches)?;
-    let readonly_storage = parse_readonly_storage(matches);
-
     let repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options,
-        blobstore_options,
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         common_config.censored_scuba_params,
     );
 
@@ -1734,87 +1692,64 @@ async fn open_repo_internal_with_repo_id(
 }
 
 pub async fn open_repo_with_repo_id<'a>(
-    fb: FacebookInit,
+    _: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<BlobRepo, Error> {
-    open_repo_internal_with_repo_id(
-        fb,
-        logger,
-        repo_id,
-        matches,
-        false,
-        parse_caching(matches.as_ref()),
-        None,
-    )
-    .await
+    open_repo_internal_with_repo_id(logger, repo_id, matches, false, None).await
 }
 
-pub fn parse_readonly_storage<'a>(matches: &MononokeMatches<'a>) -> ReadOnlyStorage {
-    ReadOnlyStorage(
-        matches
-            .value_of(WITH_READONLY_STORAGE_ARG)
-            .map_or(false, |v| {
-                v.parse().unwrap_or_else(|_| {
-                    panic!("Provided {} is not bool", WITH_READONLY_STORAGE_ARG)
-                })
-            }),
-    )
+fn parse_readonly_storage(matches: &ArgMatches<'_>) -> Result<ReadOnlyStorage, Error> {
+    let ro = matches
+        .value_of(WITH_READONLY_STORAGE_ARG)
+        .map(|v| v.parse())
+        .transpose()
+        .with_context(|| format!("Provided {} is not bool", WITH_READONLY_STORAGE_ARG))?
+        .unwrap_or(false);
+    Ok(ReadOnlyStorage(ro))
 }
 
-pub fn get_global_mysql_connection_pool<'a>(matches: &MononokeMatches<'a>) -> SharedConnectionPool {
-    matches.app_data.global_mysql_connection_pool.clone()
-}
-
-fn parse_mysql_pool_options<'a>(matches: &MononokeMatches<'a>) -> PoolConfig {
+fn parse_mysql_pool_options(matches: &ArgMatches<'_>) -> Result<PoolConfig, Error> {
     let size: usize = matches
         .value_of(MYSQL_POOL_LIMIT)
-        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-limit is not usize")?;
     let threads_num: i32 = matches
         .value_of(MYSQL_POOL_THREADS_NUM)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-threads-num is not i32")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-threads-num is not i32")?;
     let per_key_limit: u64 = matches
         .value_of(MYSQL_POOL_PER_KEY_LIMIT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-per-key-limit is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-per-key-limit is not u64")?;
     let conn_age_timeout: u64 = matches
         .value_of(MYSQL_POOL_AGE_TIMEOUT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-age-timeout is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-age-timeout is not u64")?;
     let conn_idle_timeout: u64 = matches
         .value_of(MYSQL_POOL_IDLE_TIMEOUT)
-        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-limit is not usize")?;
     let conn_open_timeout: u64 = matches
         .value_of(MYSQL_CONN_OPEN_TIMEOUT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-conn-open-timeout is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-conn-open-timeout is not u64")?;
     let max_query_time: Duration = Duration::from_millis(
         matches
             .value_of(MYSQL_MAX_QUERY_TIME)
-            .map(|v| {
-                v.parse()
-                    .expect("Provided mysql-query-time-limit is not u64")
-            })
-            .expect("A default is set, should never be None"),
+            .expect("A default is set, should never be None")
+            .parse()
+            .context("Provided mysql-query-time-limit is not u64")?,
     );
 
-    PoolConfig::new(
+    Ok(PoolConfig::new(
         size,
         threads_num,
         per_key_limit,
@@ -1822,18 +1757,22 @@ fn parse_mysql_pool_options<'a>(matches: &MononokeMatches<'a>) -> PoolConfig {
         conn_idle_timeout,
         conn_open_timeout,
         max_query_time,
-    )
+    ))
 }
 
-pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
+fn parse_mysql_options(
+    matches: &ArgMatches<'_>,
+    app_data: &MononokeAppData,
+) -> Result<MysqlOptions, Error> {
     let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
         let port = port
             .parse::<u16>()
-            .expect("Provided --myrouter-port is not u16");
+            .context("Provided --myrouter-port is not u16")?;
         MysqlConnectionType::Myrouter(port)
     } else if matches.is_present(MYSQL_USE_CLIENT) {
-        let pool = get_global_mysql_connection_pool(matches);
-        let pool_config = parse_mysql_pool_options(matches);
+        let pool = app_data.global_mysql_connection_pool.clone();
+        let pool_config =
+            parse_mysql_pool_options(matches).context("Failed to parse MySQL pool options")?;
 
         MysqlConnectionType::Mysql(pool, pool_config)
     } else {
@@ -1842,65 +1781,52 @@ pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
 
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
 
-    MysqlOptions {
+    Ok(MysqlOptions {
         connection_type,
         master_only,
-    }
+    })
 }
 
-// TODO: Put those into MononokeEnvironment
-pub fn get_sqlblob_mysql_connection_pool(matches: &MononokeMatches<'_>) -> SharedConnectionPool {
-    matches.app_data.sqlblob_mysql_connection_pool.clone()
-}
-
-fn parse_mysql_sqlblob_pool_options(matches: &MononokeMatches<'_>) -> PoolConfig {
+fn parse_mysql_sqlblob_pool_options(matches: &ArgMatches<'_>) -> Result<PoolConfig, Error> {
     let size: usize = matches
         .value_of(MYSQL_SQLBLOB_POOL_LIMIT)
-        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-limit is not usize")?;
     let threads_num: i32 = matches
         .value_of(MYSQL_SQLBLOB_POOL_THREADS_NUM)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-threads-num is not i32")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-threads-num is not i32")?;
     let per_key_limit: u64 = matches
         .value_of(MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-per-key-limit is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-per-key-limit is not u64")?;
     let conn_age_timeout: u64 = matches
         .value_of(MYSQL_SQLBLOB_POOL_AGE_TIMEOUT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-pool-age-timeout is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-age-timeout is not u64")?;
     let conn_idle_timeout: u64 = matches
         .value_of(MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT)
-        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-pool-limit is not usize")?;
     let conn_open_timeout: u64 = matches
         .value_of(MYSQL_CONN_OPEN_TIMEOUT)
-        .map(|v| {
-            v.parse()
-                .expect("Provided mysql-conn-open-timeout is not u64")
-        })
-        .expect("A default is set, should never be None");
+        .expect("A default is set, should never be None")
+        .parse()
+        .context("Provided mysql-conn-open-timeout is not u64")?;
     let max_query_time: Duration = Duration::from_millis(
         matches
             .value_of(MYSQL_MAX_QUERY_TIME)
-            .map(|v| {
-                v.parse()
-                    .expect("Provided mysql-query-time-limit is not u64")
-            })
-            .expect("A default is set, should never be None"),
+            .expect("A default is set, should never be None")
+            .parse()
+            .context("Provided mysql-query-time-limit is not u64")?,
     );
 
-    PoolConfig::new(
+    Ok(PoolConfig::new(
         size,
         threads_num,
         per_key_limit,
@@ -1908,18 +1834,21 @@ fn parse_mysql_sqlblob_pool_options(matches: &MononokeMatches<'_>) -> PoolConfig
         conn_idle_timeout,
         conn_open_timeout,
         max_query_time,
-    )
+    ))
 }
 
-pub fn parse_sqlblob_mysql_options(matches: &MononokeMatches) -> MysqlOptions {
+fn parse_sqlblob_mysql_options(
+    matches: &ArgMatches<'_>,
+    app_data: &MononokeAppData,
+) -> Result<MysqlOptions, Error> {
     let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
         let port = port
             .parse::<u16>()
-            .expect("Provided --myrouter-port is not u16");
+            .context("Provided --myrouter-port is not u16")?;
         MysqlConnectionType::Myrouter(port)
     } else if matches.is_present(MYSQL_USE_CLIENT) {
-        let pool = get_sqlblob_mysql_connection_pool(matches);
-        let pool_config = parse_mysql_sqlblob_pool_options(matches);
+        let pool = app_data.sqlblob_mysql_connection_pool.clone();
+        let pool_config = parse_mysql_sqlblob_pool_options(matches)?;
 
         MysqlConnectionType::Mysql(pool, pool_config)
     } else {
@@ -1928,13 +1857,17 @@ pub fn parse_sqlblob_mysql_options(matches: &MononokeMatches) -> MysqlOptions {
 
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
 
-    MysqlOptions {
+    Ok(MysqlOptions {
         connection_type,
         master_only,
-    }
+    })
 }
 
-pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOptions, Error> {
+fn parse_blobstore_options(
+    matches: &ArgMatches<'_>,
+    app_data: &MononokeAppData,
+    arg_types: &HashSet<ArgType>,
+) -> Result<BlobstoreOptions, Error> {
     let read_qps: Option<NonZeroU32> = matches
         .value_of(READ_QPS_ARG)
         .map(|v| v.parse())
@@ -1949,23 +1882,33 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
 
     let read_bytes: Option<NonZeroUsize> = matches
         .value_of(READ_BYTES_ARG)
-        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Bytes/s is not usize")?;
 
     let write_bytes: Option<NonZeroUsize> = matches
         .value_of(WRITE_BYTES_ARG)
-        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Bytes/s is not usize")?;
 
     let read_burst_bytes: Option<NonZeroUsize> = matches
         .value_of(READ_BURST_BYTES_ARG)
-        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Bytes/s is not usize")?;
 
     let write_burst_bytes: Option<NonZeroUsize> = matches
         .value_of(WRITE_BURST_BYTES_ARG)
-        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Bytes/s is not usize")?;
 
     let bytes_min_count: Option<NonZeroUsize> = matches
         .value_of(BLOBSTORE_BYTES_MIN_THROTTLE_ARG)
-        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Bytes/s is not usize")?;
 
     let read_chaos: Option<NonZeroU32> = matches
         .value_of(READ_CHAOS_ARG)
@@ -2046,10 +1989,11 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
-        parse_sqlblob_mysql_options(matches),
+        parse_sqlblob_mysql_options(matches, app_data)
+            .context("Failed to parse sqlblob MySQL options")?,
     );
 
-    let blobstore_options = if matches.arg_types.contains(&ArgType::Scrub) {
+    let blobstore_options = if arg_types.contains(&ArgType::Scrub) {
         let scrub_action = matches
             .value_of(BLOBSTORE_SCRUB_ACTION_ARG)
             .map(ScrubAction::from_str)

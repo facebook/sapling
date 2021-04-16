@@ -94,14 +94,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     }
 
     let config_store = matches.config_store();
-    let mysql_options = args::parse_mysql_options(matches);
-    let blobstore_options = args::parse_blobstore_options(matches)?;
+    let mysql_options = matches.mysql_options();
+    let blobstore_options = matches.blobstore_options();
     let configs = args::load_repo_configs(config_store, matches)?;
 
     // wait for myrouter
     myrouter_ready(
         Some("xdb.mononoke_production".to_string()),
-        &mysql_options,
+        mysql_options,
         ctx.logger(),
     )
     .await?;
@@ -116,7 +116,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             ctx.clone(),
             reponame,
             config,
-            &mysql_options,
+            mysql_options,
             blobstore_options.clone(),
             config_store,
         )

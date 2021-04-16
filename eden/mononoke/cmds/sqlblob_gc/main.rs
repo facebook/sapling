@@ -165,7 +165,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let blobstore_options = matches.blobstore_options();
 
     runtime.block_on(async move {
         let blobstore = make_sql_blobstore(

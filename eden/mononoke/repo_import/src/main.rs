@@ -950,8 +950,8 @@ async fn repo_import(
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     let configs = args::load_repo_configs(config_store, &matches)?;
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
 
     let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
         &ctx,
@@ -980,8 +980,8 @@ async fn repo_import(
             ctx.clone(),
             repo.clone(),
             repo_config.storage_config.metadata,
-            mysql_options,
-            readonly_storage,
+            mysql_options.clone(),
+            *readonly_storage,
         )
         .await?;
 

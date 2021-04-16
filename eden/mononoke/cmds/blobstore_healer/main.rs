@@ -291,9 +291,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         .ok_or(Error::msg("Missing storage-id"))?;
     let logger = matches.logger();
     let config_store = matches.config_store();
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
+    let blobstore_options = matches.blobstore_options();
     let storage_config = args::load_storage_configs(config_store, &matches)?
         .storage
         .remove(storage_id)
@@ -333,10 +333,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         blobstore_sync_queue_limit,
         buffered_params,
         storage_config,
-        &mysql_options,
+        mysql_options,
         source_blobstore_key.map(|s| s.to_string()),
-        readonly_storage,
-        &blobstore_options,
+        *readonly_storage,
+        blobstore_options,
         iter_limit,
         healing_min_age,
         config_store,

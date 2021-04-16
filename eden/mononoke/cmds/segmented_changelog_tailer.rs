@@ -79,7 +79,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     }
 
     let config_store = matches.config_store();
-    let mysql_options = args::parse_mysql_options(matches);
+    let mysql_options = matches.mysql_options();
     let configs = args::load_repo_configs(config_store, matches)?;
     let readonly_storage = ReadOnlyStorage(false);
     let caching = cachelib::get_volatile_pool("segmented_changelog")?.map(|pool| (ctx.fb, pool));

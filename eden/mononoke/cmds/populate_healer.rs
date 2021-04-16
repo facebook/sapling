@@ -227,8 +227,8 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         ))
         .and_then(|args| Ok(args.clone()))?;
 
-    let connection_type = args::parse_mysql_options(&matches).connection_type;
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let connection_type = matches.mysql_options().connection_type.clone();
+    let readonly_storage = matches.readonly_storage();
     Ok(Config {
         repo_id,
         db_address: db_address.clone(),

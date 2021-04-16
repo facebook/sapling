@@ -161,8 +161,8 @@ async fn run<'a>(
     let blobrepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
         .await
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
     let dbconfig = repo_config.storage_config.metadata.clone();
     let scuba_sample = matches.scuba_sample_builder()?;
     let validation_helpers = get_validation_helpers(

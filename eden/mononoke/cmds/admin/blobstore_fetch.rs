@@ -114,24 +114,24 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
     }
 }
 
-async fn get_blobstore(
+async fn get_blobstore<'a>(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
-    config_store: &ConfigStore,
+    blobstore_options: &'a BlobstoreOptions,
+    config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
     make_blobstore(
         fb,
         blobconfig,
-        &mysql_options,
+        mysql_options,
         readonly_storage,
-        &blobstore_options,
+        blobstore_options,
         &logger,
         config_store,
         &blobstore_factory::default_scrub_handler(),
@@ -151,17 +151,16 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
-
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let blobstore_options = matches.blobstore_options();
+    let readonly_storage = matches.readonly_storage();
     let blobstore_fut = get_blobstore(
         fb,
         storage_config,
         inner_blobstore_id,
         mysql_options,
         logger.clone(),
-        readonly_storage,
+        *readonly_storage,
         blobstore_options,
         config_store,
     );

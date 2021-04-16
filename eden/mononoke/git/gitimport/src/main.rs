@@ -129,7 +129,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
-    let dry_run = args::parse_readonly_storage(&matches).0;
+    let dry_run = matches.readonly_storage().0;
 
     if matches.is_present(ARG_DERIVE_TREES) {
         prefs.enable_derive_trees();

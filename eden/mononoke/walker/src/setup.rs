@@ -1191,8 +1191,6 @@ pub async fn setup_common<'a>(
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
 
-    let caching = matches.caching();
-
     let include_edge_types = parse_edge_types(
         sub_m,
         INCLUDE_EDGE_TYPE_ARG,
@@ -1245,7 +1243,7 @@ pub async fn setup_common<'a>(
         walk_roots.append(&mut roots);
     }
 
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let readonly_storage = matches.readonly_storage();
 
     let error_as_data_node_types = parse_node_types(
         sub_m,
@@ -1273,8 +1271,8 @@ pub async fn setup_common<'a>(
         );
     }
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches)?;
+    let mysql_options = matches.mysql_options();
+    let blobstore_options = matches.blobstore_options();
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 
@@ -1338,13 +1336,7 @@ pub async fn setup_common<'a>(
     };
 
     let mut repo_factory = RepoFactory::new(
-        fb,
-        logger.clone(),
-        config_store.clone(),
-        mysql_options.clone(),
-        blobstore_options.clone(),
-        readonly_storage,
-        caching,
+        matches.environment().clone(),
         common_config.censored_scuba_params.clone(),
     );
 

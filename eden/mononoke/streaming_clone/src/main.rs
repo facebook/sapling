@@ -268,13 +268,13 @@ async fn create_streaming_chunks_fetcher<'a>(
     let config_store = matches.config_store();
     let (_, config) = args::get_config(config_store, &matches)?;
     let storage_config = config.storage_config;
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
+    let mysql_options = matches.mysql_options();
+    let readonly_storage = matches.readonly_storage();
 
     SqlStreamingChunksFetcher::with_metadata_database_config(
         fb,
         &storage_config.metadata,
-        &mysql_options,
+        mysql_options,
         readonly_storage.0,
     )
     .await
