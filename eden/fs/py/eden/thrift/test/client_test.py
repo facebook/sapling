@@ -12,7 +12,7 @@ from eden.thrift.client import EdenNotRunningError, create_thrift_client
 
 
 class EdenClientTest(unittest.IsolatedAsyncioTestCase):
-    async def test_raise_EdenNotRunningError_when_no_socket(self):
+    async def test_raise_EdenNotRunningError_when_no_socket(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             sockname = os.path.join(td, "sock")
             with self.assertRaises(EdenNotRunningError) as cm:
