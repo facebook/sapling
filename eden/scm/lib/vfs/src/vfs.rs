@@ -28,6 +28,7 @@ use util::path::remove_file;
 
 use crate::pathauditor::PathAuditor;
 
+use minibytes::Bytes;
 use once_cell::sync::Lazy;
 
 #[derive(Clone)]
@@ -287,6 +288,13 @@ impl VFS {
             }
         }
         Ok(())
+    }
+
+    // Reads file content
+    pub fn read(&self, path: &RepoPath) -> Result<Bytes> {
+        let filepath = self.inner.auditor.audit(path)?;
+        let content = std::fs::read(filepath)?;
+        Ok(content.into())
     }
 
     /// Removes file, but inlike Self::remove, does not delete empty directories.
