@@ -429,7 +429,7 @@ impl RepoFactory {
             .open::<SqlBonsaiHgMappingBuilder>()
             .await
             .context(RepoFactoryError::BonsaiHgMapping)?;
-        let bonsai_hg_mapping = builder.build();
+        let bonsai_hg_mapping = builder.build(self.env.rendezvous_options);
         if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
                 self.env.fb,

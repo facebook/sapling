@@ -17,3 +17,16 @@ pub use crate::tunables::{TunablesMultiRendezVousController, TunablesRendezVousC
 pub use multi_rendez_vous::{MultiRendezVous, MultiRendezVousController};
 pub use rendez_vous::{RendezVous, RendezVousController};
 pub use rendez_vous_stats::RendezVousStats;
+
+#[derive(Copy, Clone, Debug)]
+pub struct RendezVousOptions {
+    pub free_connections: usize,
+}
+
+impl RendezVousOptions {
+    pub fn for_test() -> Self {
+        Self {
+            free_connections: 0,
+        }
+    }
+}

@@ -6,34 +6,61 @@
  */
 
 use std::convert::TryInto;
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
-use crate::{MultiRendezVousController, RendezVousController};
+use crate::{MultiRendezVousController, RendezVousController, RendezVousOptions};
 
 #[derive(Copy, Clone)]
-pub struct TunablesMultiRendezVousController;
+pub struct TunablesMultiRendezVousController {
+    opts: RendezVousOptions,
+}
+
+impl TunablesMultiRendezVousController {
+    pub fn new(opts: RendezVousOptions) -> Self {
+        Self { opts }
+    }
+}
 
 impl MultiRendezVousController for TunablesMultiRendezVousController {
     type Controller = TunablesRendezVousController;
 
     fn new_controller(&self) -> Self::Controller {
-        TunablesRendezVousController::new()
+        TunablesRendezVousController::new(self.opts)
     }
 }
 
+/// This RendezVousController is parameterized in two ways:
+///
+/// It allows a fixed number of "free" connections. This is how many requests we allow to exist
+/// in flight at any point in time. Batching does not kick in until these are exhausted. This cannot be
+/// changed after the RendezVousController is initialized, so it is not controlled by a tunable.
+///
+/// Tunables control what we do once the free connections are exhausted. there are two relevant
+/// tunables here. Both of those control when batches will depart:
+///
+/// - rendezvous_dispatch_max_threshold: number of keys after which we'll dispatch a full-size batch.
+/// - rendezvous_dispatch_delay_ms: controls how long we wait before dispatching a small batch.
+
+///
+/// Note that if a batch departs when either of those criteria are met, it will not count against
+/// the count of free connections: free connections are just connections not subject to batching,
+/// but once batching kicks in there is no limit to how many batches can be in flight concurrently
+/// (though unless we receive infinite requests the concurrency will tend to approach the free
+/// connection count).
 pub struct TunablesRendezVousController {
-    histogram: Mutex<MiniHistogram>,
+    semaphore: Arc<Semaphore>,
 }
 
 impl TunablesRendezVousController {
-    pub fn new() -> Self {
+    pub fn new(opts: RendezVousOptions) -> Self {
         Self {
-            histogram: Mutex::new(MiniHistogram::new(Instant::now())),
+            semaphore: Arc::new(Semaphore::new(opts.free_connections)),
         }
     }
 
-    pub fn dispatch_delay(&self) -> Duration {
+    pub fn max_dispatch_delay(&self) -> Duration {
         Duration::from_millis(
             ::tunables::tunables()
                 .get_rendezvous_dispatch_delay_ms()
@@ -45,25 +72,16 @@ impl TunablesRendezVousController {
 
 #[async_trait::async_trait]
 impl RendezVousController for TunablesRendezVousController {
-    /// We batch if we received more requests than our minimum threshold in any of the last 2
-    /// batching windows. Concretely, this means that we only batch if we do expect that we'll be
-    /// able to actually build batches of our desired size given the query arrival rate we are
-    /// observing.
-    fn should_batch(&self) -> bool {
-        let threshold = ::tunables::tunables()
-            .get_rendezvous_dispatch_min_threshold()
-            .try_into()
-            .unwrap_or(0);
-
-        let window = self.dispatch_delay();
-
-        let mut hist = self.histogram.lock().unwrap();
-        should_batch(threshold, window, &mut *hist)
-    }
+    type RendezVousToken = Option<OwnedSemaphorePermit>;
 
     /// Wait for the configured dispatch delay.
-    async fn wait_for_dispatch(&self) {
-        tokio::time::delay_for(self.dispatch_delay()).await;
+    async fn wait_for_dispatch(&self) -> Self::RendezVousToken {
+        tokio::time::timeout(
+            self.max_dispatch_delay(),
+            self.semaphore.clone().acquire_owned(),
+        )
+        .await
+        .ok()
     }
 
     fn early_dispatch_threshold(&self) -> usize {
@@ -71,87 +89,5 @@ impl RendezVousController for TunablesRendezVousController {
             .get_rendezvous_dispatch_max_threshold()
             .try_into()
             .unwrap_or(0)
-    }
-}
-
-fn should_batch(min_threshold: usize, window: Duration, hist: &mut MiniHistogram) -> bool {
-    hist.update(Instant::now(), window, 1);
-
-    if min_threshold < hist.current || min_threshold < hist.last {
-        return true;
-    }
-
-    false
-}
-
-struct MiniHistogram {
-    last: usize,
-    current: usize,
-    boundary: Instant,
-}
-
-impl MiniHistogram {
-    pub fn new(boundary: Instant) -> Self {
-        Self {
-            last: 0,
-            current: 0,
-            boundary,
-        }
-    }
-
-    pub fn update(&mut self, instant: Instant, interval: Duration, n: usize) {
-        if let Some(duration) = instant.checked_duration_since(self.boundary) {
-            if duration > interval {
-                self.last = self.current;
-                self.current = 0;
-                self.boundary = instant;
-            }
-
-            self.current += n;
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_mini_histogram() {
-        let t0 = Instant::now();
-        let t5 = t0 + Duration::from_secs(5);
-        let t10 = t0 + Duration::from_secs(10);
-        let t20 = t0 + Duration::from_secs(20);
-
-        let mut hist = MiniHistogram::new(t0);
-
-        hist.update(t5, Duration::from_secs(15), 1);
-        assert_eq!(hist.current, 1);
-        assert_eq!(hist.last, 0);
-
-        hist.update(t10, Duration::from_secs(15), 2);
-        assert_eq!(hist.current, 3);
-        assert_eq!(hist.last, 0);
-
-        hist.update(t20, Duration::from_secs(15), 5);
-        assert_eq!(hist.current, 5);
-        assert_eq!(hist.last, 3);
-        assert_eq!(hist.boundary, t20);
-
-        hist.update(t10, Duration::from_secs(15), 5);
-        assert_eq!(hist.current, 5);
-        assert_eq!(hist.last, 3);
-        assert_eq!(hist.boundary, t20);
-    }
-
-    #[test]
-    fn test_should_batch() {
-        let mut hist = MiniHistogram::new(Instant::now());
-        let threshold = 2;
-        let window = Duration::from_secs(10);
-
-        assert!(!should_batch(threshold, window, &mut hist));
-        assert!(!should_batch(threshold, window, &mut hist));
-        assert!(should_batch(threshold, window, &mut hist));
     }
 }

@@ -9,6 +9,7 @@ use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
+use rendezvous::RendezVousOptions;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tokio::runtime::Runtime;
@@ -37,4 +38,5 @@ pub struct MononokeEnvironment {
     pub mysql_options: MysqlOptions,
     pub blobstore_options: BlobstoreOptions,
     pub readonly_storage: ReadOnlyStorage,
+    pub rendezvous_options: RendezVousOptions,
 }

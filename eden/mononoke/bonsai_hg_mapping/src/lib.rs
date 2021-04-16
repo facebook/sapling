@@ -24,7 +24,9 @@ use mercurial_types::{
 };
 use mononoke_types::{ChangesetId, RepositoryId};
 use rand::Rng;
-use rendezvous::{MultiRendezVous, RendezVousStats, TunablesMultiRendezVousController};
+use rendezvous::{
+    MultiRendezVous, RendezVousOptions, RendezVousStats, TunablesMultiRendezVousController,
+};
 use sql::queries;
 use stats::prelude::*;
 
@@ -166,15 +168,15 @@ struct RendezVousConnection {
 }
 
 impl RendezVousConnection {
-    fn new(conn: Connection, name: &str) -> Self {
+    fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
         Self {
             conn,
             bonsai: MultiRendezVous::new(
-                TunablesMultiRendezVousController,
+                TunablesMultiRendezVousController::new(opts),
                 RendezVousStats::new(format!("bonsai_hg_mapping.bonsai.{}", name,)),
             ),
             hg: MultiRendezVous::new(
-                TunablesMultiRendezVousController,
+                TunablesMultiRendezVousController::new(opts),
                 RendezVousStats::new(format!("bonsai_hg_mapping.hg.{}", name,)),
             ),
         }
@@ -246,14 +248,16 @@ impl SqlConstruct for SqlBonsaiHgMappingBuilder {
 }
 
 impl SqlBonsaiHgMappingBuilder {
-    pub fn build(self) -> SqlBonsaiHgMapping {
+    pub fn build(self, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
         let connections = self.connections;
+
         SqlBonsaiHgMapping {
             write_connection: connections.write_connection,
-            read_connection: RendezVousConnection::new(connections.read_connection, "reader"),
+            read_connection: RendezVousConnection::new(connections.read_connection, "reader", opts),
             read_master_connection: RendezVousConnection::new(
                 connections.read_master_connection,
                 "read_master",
+                opts,
             ),
         }
     }

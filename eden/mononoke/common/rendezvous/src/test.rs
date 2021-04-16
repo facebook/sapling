@@ -43,12 +43,10 @@ impl MockController {
 
 #[async_trait::async_trait]
 impl RendezVousController for MockController {
-    fn should_batch(&self) -> bool {
-        true
-    }
+    type RendezVousToken = ();
 
     /// Blocks until release is called.
-    async fn wait_for_dispatch(&self) {
+    async fn wait_for_dispatch(&self) -> () {
         self.arrive.notify();
         self.depart.notified().await;
     }

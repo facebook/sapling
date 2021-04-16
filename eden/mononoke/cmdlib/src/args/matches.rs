@@ -20,6 +20,7 @@ use clap::{ArgMatches, Values};
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
 use panichandler::{self, Fate};
+use rendezvous::RendezVousOptions;
 use slog::{debug, o, trace, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
@@ -51,9 +52,10 @@ use super::app::{
     MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
     MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
     MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, MYSQL_USE_CLIENT,
-    READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RUNTIME_THREADS,
-    TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG, WRITE_BURST_BYTES_ARG,
-    WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+    READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
+    RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY,
+    WITH_READONLY_STORAGE_ARG, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
+    WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
 };
 use super::cache::parse_and_init_cachelib;
 use super::parse_config_spec_to_path;
@@ -107,6 +109,8 @@ impl<'a> MononokeMatches<'a> {
             .context("Failed to parse blobstore options")?;
         let readonly_storage =
             parse_readonly_storage(&matches).context("Failed to parse readonly storage options")?;
+        let rendezvous_options =
+            parse_rendezvous_options(&matches).context("Failed to parse rendezvous options")?;
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
@@ -122,6 +126,7 @@ impl<'a> MononokeMatches<'a> {
                 mysql_options,
                 blobstore_options,
                 readonly_storage,
+                rendezvous_options,
             }),
             app_data,
         })
@@ -646,6 +651,15 @@ fn parse_blobstore_options(
     };
 
     Ok(blobstore_options)
+}
+
+fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOptions, Error> {
+    let free_connections = matches
+        .value_of(RENDEZVOUS_FREE_CONNECTIONS)
+        .expect("A default is set, should never be None")
+        .parse()
+        .with_context(|| format!("Provided {} is not an integer", RENDEZVOUS_FREE_CONNECTIONS))?;
+    Ok(RendezVousOptions { free_connections })
 }
 
 fn init_tunables<'a>(

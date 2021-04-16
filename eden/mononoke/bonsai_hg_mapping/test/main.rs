@@ -24,6 +24,7 @@ use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 
 use std::str::FromStr;
@@ -363,7 +364,7 @@ async fn test_add_and_get(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(),
+            .build(RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -374,7 +375,7 @@ async fn test_missing(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(),
+            .build(RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -385,7 +386,7 @@ async fn test_caching(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(),
+            .build(RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -396,7 +397,7 @@ async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(),
+            .build(RendezVousOptions::for_test()),
     )
     .await;
 }

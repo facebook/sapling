@@ -46,6 +46,7 @@ use mutable_counters::SqlMutableCounters;
 use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use redactedblobstore::RedactedMetadata;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
@@ -262,7 +263,8 @@ impl TestRepoFactory {
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.
     pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
         Ok(Arc::new(
-            SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone()).build(),
+            SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(RendezVousOptions::for_test()),
         ))
     }
 

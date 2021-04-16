@@ -38,6 +38,7 @@ mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
 phases = { version = "0.1.0", path = "../../phases" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }

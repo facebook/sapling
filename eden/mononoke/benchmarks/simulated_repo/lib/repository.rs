@@ -49,6 +49,7 @@ use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use rand::Rng;
 use rand_distr::Distribution;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
@@ -181,7 +182,8 @@ impl BenchmarkRepoFactory {
 
     pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
         let mapping: Arc<dyn BonsaiHgMapping> = Arc::new(DelayedBonsaiHgMapping::new(
-            SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()?.build(),
+            SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()?
+                .build(RendezVousOptions::for_test()),
             self.delay_settings.db_get_dist,
             self.delay_settings.db_put_dist,
         ));

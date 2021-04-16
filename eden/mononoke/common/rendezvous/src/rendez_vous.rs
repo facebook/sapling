@@ -8,6 +8,7 @@
 use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::future::{BoxFuture, Future, FutureExt, Shared};
+use futures_ext::FbTryFutureExt;
 use futures_stats::TimedFutureExt;
 use shared_error::anyhow::{IntoSharedError, SharedError};
 use std::collections::{HashMap, HashSet};
@@ -22,14 +23,14 @@ use crate::{RendezVousStats, TunablesRendezVousController};
 /// when to wait for a batch to build up and when to kick off queries.
 #[async_trait::async_trait]
 pub trait RendezVousController: Send + Sync + 'static {
-    /// Decide whether we should be starting a new batch. This will be called once per request that
-    /// arrives to the RendezVous instance. It is expected that the RendezVousController might
-    /// store some internal state to make this decision.
-    fn should_batch(&self) -> bool;
+    type RendezVousToken: Sized + Send + Sync + 'static;
 
     /// Delay sending a batch to give ourselves a chance to accumulate some data. The batch will be
-    /// kicked off once this future returns;
-    async fn wait_for_dispatch(&self);
+    /// kicked off once this future returns. Note that dispatch might still proceed if we reach the
+    /// early_dispatch_threshold, in which case the future returned by wait_for_dispatch will be
+    /// dropped. Otherwise, the RendezVousToken that was returned will be dropped once this request
+    /// finishes.
+    async fn wait_for_dispatch(&self) -> Self::RendezVousToken;
 
     /// If our number of queued keys exceeds this threshold, then we'll dispatch the query even if
     /// wait_for_dispatch hasn't returned yet.
@@ -89,9 +90,7 @@ where
         F1: FnOnce(HashSet<K>) -> Fut + Send + 'static, // Actually makes the call
         Fut: Future<Output = Result<HashMap<K, V>, Error>> + Send,
     {
-        if self.inner.controller.should_batch()
-            && keys.len() < self.inner.controller.early_dispatch_threshold()
-        {
+        if keys.len() < self.inner.controller.early_dispatch_threshold() {
             self.dispatch_batched(fb, keys, f0).left_future()
         } else {
             self.dispatch_not_batched(fb, keys, f0).right_future()
@@ -124,27 +123,34 @@ where
                     let notify = notify.clone();
 
                     async move {
-                        let is_early = futures::select! {
-                            _ = inner.controller.wait_for_dispatch().fuse() => false,
-                            _ = notify.notified().fuse() => true,
+                        let token = futures::select! {
+                            token = inner.controller.wait_for_dispatch().fuse() => Some(token),
+                            _ = notify.notified().fuse() => None,
                         };
 
-                        if is_early {
+                        if token.is_none() {
                             inner.stats.dispatch_batch_early.add_value(1);
                         } else {
                             inner.stats.dispatch_batch_scheduled.add_value(1);
                         }
 
-                        let (keys, _, _) = inner
-                            .staging
-                            .lock()
-                            .expect("Poisoned lock")
-                            .take()
-                            .expect("Staging cannot be empty if a task was dispatched");
+                        let ret = tokio::task::spawn(async move {
+                            let (keys, _, _) = inner
+                                .staging
+                                .lock()
+                                .expect("Poisoned lock")
+                                .take()
+                                .expect("Staging cannot be empty if a task was dispatched");
 
-                        let ret = dispatch_with_stats(fb, f1, keys, &inner.stats)
-                            .await
-                            .shared_error()?;
+                            let ret = dispatch_with_stats(fb, f1, keys, &inner.stats).await?;
+
+                            std::mem::drop(token);
+
+                            Result::<_, Error>::Ok(ret)
+                        })
+                        .flatten_err()
+                        .await
+                        .shared_error()?;
 
                         Result::<_, SharedError>::Ok(Arc::new(ret))
                     }
@@ -233,7 +239,7 @@ where
 
     rdv_stats.inflight.increment_value(fb, 1);
     let (stats, ret) = f1(keys).timed().await;
-    rdv_stats.inflight.increment_value(fb, -1);
+    rdv_stats.inflight.increment_value(fb, -1); // TODO: This should use a scopeguard...
 
     rdv_stats
         .fetch_completion_time_ms
