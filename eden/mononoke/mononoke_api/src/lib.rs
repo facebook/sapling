@@ -74,7 +74,10 @@ pub struct Mononoke {
 
 impl Mononoke {
     /// Create a Mononoke instance.
-    pub async fn new(env: &MononokeEnvironment<'_>, configs: RepoConfigs) -> Result<Self, Error> {
+    pub async fn new(
+        env: &MononokeApiEnvironment<'_>,
+        configs: RepoConfigs,
+    ) -> Result<Self, Error> {
         let repos = future::try_join_all(
             configs
                 .repos
@@ -146,7 +149,7 @@ impl Mononoke {
     }
 }
 
-pub struct MononokeEnvironment<'a> {
+pub struct MononokeApiEnvironment<'a> {
     pub fb: FacebookInit,
     pub logger: Logger,
     pub repo_factory: RepoFactory,

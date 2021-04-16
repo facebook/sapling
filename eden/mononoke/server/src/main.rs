@@ -16,7 +16,7 @@ use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::{
-    BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+    BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
 };
 use openssl::ssl::AlpnError;
 use repo_factory::RepoFactory;
@@ -170,7 +170,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 config.common.censored_scuba_params.clone(),
             );
 
-            let env = MononokeEnvironment {
+            let env = MononokeApiEnvironment {
                 fb,
                 logger: root_log.clone(),
                 repo_factory,

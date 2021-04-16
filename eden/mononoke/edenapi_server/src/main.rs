@@ -31,7 +31,7 @@ use cmdlib::{
 use fbinit::FacebookInit;
 use gotham_ext::serve;
 use mononoke_api::{
-    BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+    BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
 };
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use repo_factory::{Caching, RepoFactory};
@@ -119,7 +119,7 @@ async fn start(
         repo_configs.common.censored_scuba_params.clone(),
     );
 
-    let env = MononokeEnvironment {
+    let env = MononokeApiEnvironment {
         fb,
         logger: logger.clone(),
         repo_factory,

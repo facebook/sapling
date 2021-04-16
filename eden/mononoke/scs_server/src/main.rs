@@ -24,7 +24,8 @@ use futures::future::FutureExt;
 use metaconfig_parser::load_repo_configs;
 use metadata_sys::facebook_scm_service_create_metadata as create_metadata;
 use mononoke_api::{
-    BookmarkUpdateDelay, CoreContext, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+    BookmarkUpdateDelay, CoreContext, Mononoke, MononokeApiEnvironment,
+    WarmBookmarksCacheDerivedData,
 };
 use panichandler::Fate;
 use repo_factory::RepoFactory;
@@ -114,7 +115,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         repo_configs.common.censored_scuba_params.clone(),
     );
 
-    let env = MononokeEnvironment {
+    let env = MononokeApiEnvironment {
         fb,
         logger: logger.clone(),
         repo_factory,

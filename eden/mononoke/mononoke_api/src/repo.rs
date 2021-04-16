@@ -75,7 +75,7 @@ use crate::specifiers::{
 };
 use crate::tree::{TreeContext, TreeId};
 use crate::xrepo::CandidateSelectionHintArgs;
-use crate::{MononokeEnvironment, WarmBookmarksCacheDerivedData};
+use crate::{MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 
 define_stats! {
     prefix = "mononoke.api";
@@ -144,7 +144,7 @@ pub async fn open_synced_commit_mapping(
 
 impl Repo {
     pub async fn new(
-        env: &MononokeEnvironment<'_>,
+        env: &MononokeApiEnvironment<'_>,
         name: String,
         config: RepoConfig,
     ) -> Result<Self, Error> {
