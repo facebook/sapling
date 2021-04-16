@@ -11,7 +11,7 @@ use fbinit::FacebookInit;
 use once_cell::sync::{Lazy, OnceCell};
 use std::time::Duration;
 
-use crate::args::{bool_as_str, BOOL_VALUES};
+use super::app::{bool_as_str, BOOL_VALUES};
 
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
