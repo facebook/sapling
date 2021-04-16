@@ -7,7 +7,8 @@
 
 use anyhow::{bail, Context, Error};
 use blobstore::{
-    Blobstore, BlobstorePutOps, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
+    Blobstore, BlobstorePutOps, BlobstoreWithLink, DisabledBlob, ErrorKind, PutBehaviour,
+    DEFAULT_PUT_BEHAVIOUR,
 };
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
@@ -36,6 +37,11 @@ use std::time::Duration;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
 
 use crate::ReadOnlyStorage;
+
+#[cfg(fbcode_build)]
+use crate::facebook::ManifoldBlobstore;
+#[cfg(not(fbcode_build))]
+type ManifoldBlobstore = DisabledBlob;
 
 #[derive(Clone, Debug)]
 pub struct BlobstoreOptions {
@@ -266,6 +272,132 @@ pub async fn make_sql_blobstore_xdb<'a>(
     }
 }
 
+/// Construct a PackBlob according to the spec; you are responsible for
+/// finding a PackBlob config
+pub async fn make_packblob<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+    config_store: &'a ConfigStore,
+) -> Result<PackBlob<Arc<dyn BlobstoreWithLink>>, Error> {
+    if let BlobConfig::Pack {
+        pack_config,
+        blobconfig,
+    } = blobconfig
+    {
+        let store = make_blobstore_with_link(
+            fb,
+            *blobconfig,
+            readonly_storage,
+            &blobstore_options,
+            logger,
+            config_store,
+        )
+        .watched(logger)
+        .await?;
+
+        // Take the user specified option if provided, otherwise use the config
+        let put_format =
+            if let Some(put_format) = blobstore_options.pack_options.override_put_format {
+                put_format
+            } else {
+                pack_config.map(|c| c.put_format).unwrap_or_default()
+            };
+
+        Ok(PackBlob::new(store, put_format))
+    } else {
+        bail!("Not a PackBlob")
+    }
+}
+
+#[cfg(fbcode_build)]
+async fn make_manifold_blobstore(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    blobstore_options: &BlobstoreOptions,
+) -> Result<ManifoldBlobstore, Error> {
+    use BlobConfig::*;
+    match blobconfig {
+        Manifold { bucket, prefix } => crate::facebook::make_manifold_blobstore(
+            fb,
+            &prefix,
+            &bucket,
+            None,
+            blobstore_options.manifold_api_key.as_deref(),
+            blobstore_options.put_behaviour,
+        ),
+        ManifoldWithTtl {
+            bucket,
+            prefix,
+            ttl,
+        } => crate::facebook::make_manifold_blobstore(
+            fb,
+            &prefix,
+            &bucket,
+            Some(ttl),
+            blobstore_options.manifold_api_key.as_deref(),
+            blobstore_options.put_behaviour,
+        ),
+        _ => bail!("Not a Manifold blobstore"),
+    }
+}
+
+#[cfg(not(fbcode_build))]
+async fn make_manifold_blobstore(
+    _fb: FacebookInit,
+    _blobconfig: BlobConfig,
+    _blobstore_options: &BlobstoreOptions,
+) -> Result<ManifoldBlobstore, Error> {
+    unimplemented!("This is implemented only for fbcode_build")
+}
+
+async fn make_files_blobstore(
+    blobconfig: BlobConfig,
+    blobstore_options: &BlobstoreOptions,
+) -> Result<Fileblob, Error> {
+    if let BlobConfig::Files { path } = blobconfig {
+        Fileblob::create(path.join("blobs"), blobstore_options.put_behaviour)
+            .context(ErrorKind::StateOpen)
+    } else {
+        bail!("Not a file blobstore")
+    }
+}
+
+async fn make_blobstore_with_link<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+    config_store: &'a ConfigStore,
+) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+    use BlobConfig::*;
+    match blobconfig {
+        Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
+            fb,
+            blobconfig,
+            readonly_storage,
+            blobstore_options,
+            config_store,
+        )
+        .watched(logger)
+        .await
+        .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>),
+        Manifold { .. } | ManifoldWithTtl { .. } => {
+            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+                .watched(logger)
+                .await
+                .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>)
+        }
+        Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>),
+        _ => bail!("Not a physical blobstore"),
+    }
+}
+
 // Constructs the BlobstorePutOps store implementations for low level blobstore access
 fn make_blobstore_put_ops<'a>(
     fb: FacebookInit,
@@ -282,6 +414,7 @@ fn make_blobstore_put_ops<'a>(
 
         let mut has_components = false;
         let store = match blobconfig {
+            // Physical blobstores
             Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
                 fb,
                 blobconfig,
@@ -292,131 +425,15 @@ fn make_blobstore_put_ops<'a>(
             .watched(logger)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
-
-            Multiplexed {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                queue_db,
-            } => {
-                has_components = true;
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    queue_db,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    minimum_successful_writes,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                    config_store,
-                )
-                .watched(logger)
-                .await?
+            Manifold { .. } | ManifoldWithTtl { .. } => {
+                make_manifold_blobstore(fb, blobconfig, blobstore_options)
+                    .watched(logger)
+                    .await
+                    .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
             }
-            Disabled => {
-                Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn BlobstorePutOps>
-            }
-
-            Files { path } => Fileblob::create(path.join("blobs"), blobstore_options.put_behaviour)
-                .context(ErrorKind::StateOpen)
+            Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
+                .await
                 .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
-
-            Logging {
-                blobconfig,
-                scuba_table,
-                scuba_sample_rate,
-            } => {
-                let scuba = scuba_table
-                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
-                        MononokeScubaSampleBuilder::new(fb, &table)
-                    });
-
-                let store = make_blobstore_put_ops(
-                    fb,
-                    *blobconfig,
-                    mysql_options,
-                    readonly_storage,
-                    &blobstore_options,
-                    logger,
-                    config_store,
-                )
-                .watched(logger)
-                .await?;
-
-                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
-            }
-            Manifold { bucket, prefix } => {
-                #[cfg(fbcode_build)]
-                {
-                    crate::facebook::make_manifold_blobstore(
-                        fb,
-                        &prefix,
-                        &bucket,
-                        None,
-                        blobstore_options.manifold_api_key.as_deref(),
-                        blobstore_options.put_behaviour,
-                    )?
-                }
-                #[cfg(not(fbcode_build))]
-                {
-                    let _ = (bucket, prefix);
-                    unimplemented!("This is implemented only for fbcode_build")
-                }
-            }
-            ManifoldWithTtl {
-                bucket,
-                prefix,
-                ttl,
-            } => {
-                #[cfg(fbcode_build)]
-                {
-                    crate::facebook::make_manifold_blobstore(
-                        fb,
-                        &prefix,
-                        &bucket,
-                        Some(ttl),
-                        blobstore_options.manifold_api_key.as_deref(),
-                        blobstore_options.put_behaviour,
-                    )?
-                }
-                #[cfg(not(fbcode_build))]
-                {
-                    let _ = (bucket, prefix, ttl);
-                    unimplemented!("This is implemented only for fbcode_build")
-                }
-            }
-            Pack {
-                blobconfig,
-                pack_config,
-            } => {
-                let store = make_blobstore_put_ops(
-                    fb,
-                    *blobconfig,
-                    mysql_options,
-                    readonly_storage,
-                    &blobstore_options,
-                    logger,
-                    config_store,
-                )
-                .watched(logger)
-                .await?;
-
-                // Take the user specified option if provided, otherwise use the config
-                let put_format =
-                    if let Some(put_format) = blobstore_options.pack_options.override_put_format {
-                        put_format
-                    } else {
-                        pack_config.map(|c| c.put_format).unwrap_or_default()
-                    };
-
-                Arc::new(PackBlob::new(store, put_format)) as Arc<dyn BlobstorePutOps>
-            }
             S3 {
                 bucket,
                 keychain_group,
@@ -453,6 +470,74 @@ fn make_blobstore_put_ops<'a>(
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
+
+            // Special case
+            Disabled => {
+                Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn BlobstorePutOps>
+            }
+
+            // Wrapper blobstores
+            Multiplexed {
+                multiplex_id,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
+                minimum_successful_writes,
+                queue_db,
+            } => {
+                has_components = true;
+                make_blobstore_multiplexed(
+                    fb,
+                    multiplex_id,
+                    queue_db,
+                    scuba_table,
+                    scuba_sample_rate,
+                    blobstores,
+                    minimum_successful_writes,
+                    mysql_options,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                    config_store,
+                )
+                .watched(logger)
+                .await?
+            }
+            Logging {
+                blobconfig,
+                scuba_table,
+                scuba_sample_rate,
+            } => {
+                let scuba = scuba_table
+                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                        MononokeScubaSampleBuilder::new(fb, &table)
+                    });
+
+                let store = make_blobstore_put_ops(
+                    fb,
+                    *blobconfig,
+                    mysql_options,
+                    readonly_storage,
+                    &blobstore_options,
+                    logger,
+                    config_store,
+                )
+                .watched(logger)
+                .await?;
+
+                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
+            }
+            Pack { .. } => make_packblob(
+                fb,
+                blobconfig,
+                readonly_storage,
+                blobstore_options,
+                logger,
+                config_store,
+            )
+            .watched(logger)
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
         };
 
         let store = if readonly_storage.0 {

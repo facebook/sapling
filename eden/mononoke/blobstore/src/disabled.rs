@@ -10,7 +10,8 @@ use async_trait::async_trait;
 use context::CoreContext;
 
 use super::{
-    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink,
+    OverwriteStatus, PutBehaviour,
 };
 
 /// Disabled blobstore which fails all operations with a reason. Primarily used as a
@@ -73,6 +74,24 @@ impl BlobstorePutOps for DisabledBlob {
         _key: String,
         _value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
+    }
+}
+
+#[async_trait]
+impl BlobstoreWithLink for DisabledBlob {
+    async fn link<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _existing_key: &'a str,
+        _link_key: String,
+    ) -> Result<()> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
+    }
+
+    /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
+    /// An error is returned if the key does not exist
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
         Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
 }

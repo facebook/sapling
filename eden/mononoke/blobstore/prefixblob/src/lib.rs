@@ -13,7 +13,9 @@ use inlinable_string::InlinableString;
 
 use context::CoreContext;
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+};
 use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
@@ -102,6 +104,24 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
         self.blobstore
             .put_with_status(ctx, self.prepend(key), value)
             .await
+    }
+}
+
+#[async_trait]
+impl<T: BlobstoreWithLink> BlobstoreWithLink for PrefixBlobstore<T> {
+    async fn link<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()> {
+        self.blobstore
+            .link(ctx, &self.prepend(existing_key), self.prepend(link_key))
+            .await
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.blobstore.unlink(ctx, &self.prepend(key)).await
     }
 }
 

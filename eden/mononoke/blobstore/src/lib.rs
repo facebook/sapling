@@ -391,7 +391,7 @@ pub trait BlobstorePutOps: Blobstore {
 /// TODO(ahornby) rename to BlobstoreLinkOps for consistency with BlobstorePutOps
 #[async_trait]
 #[auto_impl(Arc, Box)]
-pub trait BlobstoreWithLink: Blobstore {
+pub trait BlobstoreWithLink: Blobstore + BlobstorePutOps {
     // TODO(ahornby) return OverwriteStatus for logging
     async fn link<'a>(
         &'a self,
