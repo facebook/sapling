@@ -40,9 +40,7 @@ pub use errors::ErrorKind;
 define_stats! {
     prefix = "mononoke.changesets";
     gets: timeseries(Rate, Sum),
-    get_many: timeseries(Rate, Sum),
     gets_master: timeseries(Rate, Sum),
-    get_many_master: timeseries(Rate, Sum),
     get_many_by_prefix: timeseries(Rate, Sum),
     adds: timeseries(Rate, Sum),
 }
@@ -357,19 +355,12 @@ impl Changesets for SqlChangesets {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
-        STATS::gets.add_value(1);
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
-        let maybe_mapping = select_changeset(&self.read_connection, repo_id, cs_id).await?;
-        match maybe_mapping {
-            Some(mapping) => Ok(Some(mapping)),
-            None => {
-                STATS::gets_master.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-                select_changeset(&self.read_master_connection, repo_id, cs_id).await
-            }
-        }
+        let res = self
+            .get_many(ctx, repo_id, vec![cs_id])
+            .await?
+            .into_iter()
+            .next();
+        Ok(res)
     }
 
     async fn get_many(
@@ -381,7 +372,7 @@ impl Changesets for SqlChangesets {
         if cs_ids.is_empty() {
             return Ok(vec![]);
         }
-        STATS::get_many.add_value(1);
+        STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
@@ -399,7 +390,7 @@ impl Changesets for SqlChangesets {
         if notfetched_cs_ids.is_empty() {
             Ok(fetched_cs)
         } else {
-            STATS::get_many.add_value(1);
+            STATS::gets_master.add_value(1);
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_fetched_cs =
