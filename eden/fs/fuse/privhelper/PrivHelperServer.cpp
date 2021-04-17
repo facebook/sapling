@@ -574,12 +574,16 @@ void PrivHelperServer::nfsMount(
   // must follow the increasing order of their associated flags.
   uint32_t mattrFlags = 0;
 
+  // Make the client use any source port, disable rdirplus, soft but make the
+  // mount interruptible. While in theory we would want the mount to be soft,
+  // macOS force a maximum timeout of 60s, which in some case is too short for
+  // files to be fetched, thus disable it.
   mattrFlags |= NFS_MATTR_FLAGS;
   nfs_mattr_flags flags{
       NFS_MATTR_BITMAP_LEN,
       NFS_MFLAG_RESVPORT | NFS_MFLAG_RDIRPLUS | NFS_MFLAG_SOFT | NFS_MFLAG_INTR,
       NFS_MATTR_BITMAP_LEN,
-      NFS_MFLAG_SOFT | NFS_MFLAG_INTR};
+      NFS_MFLAG_INTR};
   XdrTrait<nfs_mattr_flags>::serialize(attrSer, flags);
 
   mattrFlags |= NFS_MATTR_NFS_VERSION;
