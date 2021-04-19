@@ -14,9 +14,10 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast, TextIO
 
 from eden.fs.cli import util
 from eden.thrift.legacy import EdenClient, create_thrift_client
@@ -332,7 +333,32 @@ class EdenFS(object):
         logging.info(
             "Invoking eden daemon: %s", " ".join(shlex.quote(arg) for arg in full_args)
         )
-        self._process = subprocess.Popen(full_args)
+        process = subprocess.Popen(
+            full_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+
+        # TODO(T69605343): Until TPX properly knows how to redirect writes done
+        # to filedescriptors directly, we need to manually redirect EdenFS logs
+        # to sys.std{out,err}.
+        def redirect_stream(input_stream: TextIO, output_stream: TextIO) -> None:
+            while True:
+                line = input_stream.readline()
+                if line == "":
+                    input_stream.close()
+                    return
+                output_stream.write(line)
+
+        threading.Thread(
+            target=redirect_stream, args=(process.stdout, sys.stdout), daemon=True
+        ).start()
+        threading.Thread(
+            target=redirect_stream, args=(process.stderr, sys.stderr), daemon=True
+        ).start()
+
+        self._process = process
 
     def shutdown(self) -> None:
         """
