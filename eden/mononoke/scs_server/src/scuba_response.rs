@@ -89,3 +89,11 @@ impl AddScubaResponse for thrift::MegarepoChangeTargetConfigResponse {}
 impl AddScubaResponse for thrift::MegarepoAddTargetResponse {}
 
 impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}
+
+impl AddScubaResponse for thrift::MegarepoRemergeSourcePollResponse {}
+
+impl AddScubaResponse for thrift::MegarepoSyncChangesetPollResponse {}
+
+impl AddScubaResponse for thrift::MegarepoChangeTargetConfigPollResponse {}
+
+impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {}

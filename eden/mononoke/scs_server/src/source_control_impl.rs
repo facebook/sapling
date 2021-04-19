@@ -638,7 +638,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
 
         async fn megarepo_add_sync_target(
             params: thrift::MegarepoAddTargetParams,
-        ) -> Result<thrift::MegarepoAddTargetResponse, service::MegarepoAddSyncTargetExn>;
+        ) -> Result<thrift::MegarepoAddTargetToken, service::MegarepoAddSyncTargetExn>;
+
+        async fn megarepo_add_sync_target_poll(
+            params: thrift::MegarepoAddTargetToken,
+        ) -> Result<thrift::MegarepoAddTargetPollResponse, service::MegarepoAddSyncTargetPollExn>;
 
         async fn megarepo_change_target_config(
             params: thrift::MegarepoChangeTargetConfigParams,
@@ -646,7 +650,7 @@ impl SourceControlService for SourceControlServiceThriftImpl {
 
         async fn megarepo_change_target_config_poll(
             token: thrift::MegarepoChangeConfigToken,
-        ) -> Result<thrift::MegarepoChangeTargetConfigResponse, service::MegarepoChangeTargetConfigPollExn>;
+        ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, service::MegarepoChangeTargetConfigPollExn>;
 
         async fn megarepo_sync_changeset(
             params: thrift::MegarepoSyncChangesetParams,
@@ -654,7 +658,7 @@ impl SourceControlService for SourceControlServiceThriftImpl {
 
         async fn megarepo_sync_changeset_poll(
             token: thrift::MegarepoSyncChangesetToken,
-        ) -> Result<thrift::MegarepoSyncChangesetResponse, service::MegarepoSyncChangesetPollExn>;
+        ) -> Result<thrift::MegarepoSyncChangesetPollResponse, service::MegarepoSyncChangesetPollExn>;
 
         async fn megarepo_remerge_source(
             params: thrift::MegarepoRemergeSourceParams,
@@ -662,7 +666,7 @@ impl SourceControlService for SourceControlServiceThriftImpl {
 
         async fn megarepo_remerge_source_poll(
             token: thrift::MegarepoRemergeSourceToken,
-        ) -> Result<thrift::MegarepoRemergeSourceResponse, service::MegarepoRemergeSourcePollExn>;
+        ) -> Result<thrift::MegarepoRemergeSourcePollResponse, service::MegarepoRemergeSourcePollExn>;
 
         async fn repo_list_hg_manifest(
             repo: thrift::RepoSpecifier,

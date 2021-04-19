@@ -176,6 +176,7 @@ impl_into_thrift_error!(service::CommitLookupXrepoExn);
 impl_into_thrift_error!(service::RepoListHgManifestExn);
 impl_into_thrift_error!(service::MegarepoAddSyncTargetConfigExn);
 impl_into_thrift_error!(service::MegarepoAddSyncTargetExn);
+impl_into_thrift_error!(service::MegarepoAddSyncTargetPollExn);
 impl_into_thrift_error!(service::MegarepoChangeTargetConfigExn);
 impl_into_thrift_error!(service::MegarepoChangeTargetConfigPollExn);
 impl_into_thrift_error!(service::MegarepoSyncChangesetExn);

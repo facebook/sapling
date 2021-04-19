@@ -26,7 +26,17 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _params: thrift::MegarepoAddTargetParams,
-    ) -> Result<thrift::MegarepoAddTargetResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
+        Err(errors::ServiceError::from(errors::not_implemented(
+            "megarepo_add_sync_target is not yet implemented",
+        )))
+    }
+
+    pub(crate) async fn megarepo_add_sync_target_poll(
+        &self,
+        _ctx: CoreContext,
+        _params: thrift::MegarepoAddTargetToken,
+    ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
         Err(errors::ServiceError::from(errors::not_implemented(
             "megarepo_add_sync_target is not yet implemented",
         )))
@@ -46,7 +56,7 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _params: thrift::MegarepoChangeConfigToken,
-    ) -> Result<thrift::MegarepoChangeTargetConfigResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
         Err(errors::ServiceError::from(errors::not_implemented(
             "poll_megarepo_change_config is not yet implemented",
         )))
@@ -66,7 +76,7 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _params: thrift::MegarepoSyncChangesetToken,
-    ) -> Result<thrift::MegarepoSyncChangesetResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
         Err(errors::ServiceError::from(errors::not_implemented(
             "poll_megarepo_sync_changeset is not yet implemented",
         )))
@@ -86,7 +96,7 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _params: thrift::MegarepoRemergeSourceToken,
-    ) -> Result<thrift::MegarepoRemergeSourceResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoRemergeSourcePollResponse, errors::ServiceError> {
         Err(errors::ServiceError::from(errors::not_implemented(
             "poll_megarepo_remerge_source is not yet implemented",
         )))
