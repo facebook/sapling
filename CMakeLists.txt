@@ -103,6 +103,7 @@ set(ENABLE_GIT AUTO CACHE STRING "Enable support for Git repositories")
 set_property(CACHE ENABLE_GIT PROPERTY STRINGS AUTO ON OFF)
 
 include(FBCompilerSettings)
+include(EdenCompilerSettings)
 include(EdenConfigChecks)
 include(FBPythonBinary)
 include(FBThriftLibrary)
