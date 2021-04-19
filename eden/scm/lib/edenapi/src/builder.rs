@@ -66,8 +66,18 @@ impl Builder {
             .unwrap_or_default();
 
         let (cert, key, ca_bundle) = AuthSection::from_config(config)
-            .validate(validate_certs)
-            .best_match_for(&server_url)?
+            .best_match_for(&server_url)
+            .or_else(|e| {
+                // If certificate validation is disabled, ignore errors here and make it appear as
+                // if there simply wasn't a matching cert. This prevents EdenAPI from crashing the
+                // program on startup if the user's certificate is missing.
+                if validate_certs {
+                    Err(e)
+                } else {
+                    tracing::warn!("Ignoring missing client certificates: {}", &e);
+                    Ok(None)
+                }
+            })?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 

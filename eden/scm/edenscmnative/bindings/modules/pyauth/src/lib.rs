@@ -28,7 +28,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
                 cfg: config,
                 uri: &str,
                 user: Option<&str> = None,
-                validate: bool = true
+                raise_if_missing: bool = true
             )
         ),
     )?;
@@ -42,7 +42,7 @@ fn getauth(
     cfg: config,
     uri: &str,
     user: Option<&str>,
-    validate: bool,
+    raise_if_missing: bool,
 ) -> PyResult<PyObject> {
     let cfg = &cfg.get_cfg(py);
     let mut uri = uri
@@ -57,8 +57,8 @@ fn getauth(
     }
 
     AuthSection::from_config(cfg)
-        .validate(validate)
         .best_match_for(&uri)
+        .or_else(|e| if raise_if_missing { Err(e) } else { Ok(None) })
         .map_pyerr(py)?
         .map_or_else(
             || Ok(PyNone.to_py_object(py).into_object()),

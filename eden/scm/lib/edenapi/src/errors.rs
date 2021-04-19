@@ -7,7 +7,7 @@
 
 use thiserror::Error;
 
-use auth::X509Error;
+use auth::{MissingCerts, X509Error};
 use edenapi_types::{wire::WireToApiConversionError, EdenApiServerError};
 use http::status::StatusCode;
 use http_client::HttpClientError;
@@ -18,6 +18,8 @@ pub enum EdenApiError {
     RequestSerializationFailed(#[source] serde_cbor::Error),
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
+    #[error(transparent)]
+    MissingCertificate(#[from] MissingCerts),
     #[error(transparent)]
     BadCertificate(#[from] X509Error),
     #[error(transparent)]

@@ -9,6 +9,7 @@ use std::{collections::HashMap, path::PathBuf, str};
 
 use anyhow::{Error, Result};
 use indexmap::IndexMap;
+use thiserror::Error;
 use url::Url;
 
 use configmodel::{Config, Text};
@@ -17,6 +18,12 @@ use util::path::expand_path;
 pub mod x509;
 
 pub use x509::{check_certs, X509Error};
+
+#[derive(Debug, Error)]
+#[error("Certificate(s) or private key(s) not found: {missing:?}")]
+pub struct MissingCerts {
+    missing: Vec<PathBuf>,
+}
 
 /// A group of client authentiation settings from the user's config.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -100,7 +107,6 @@ impl AuthGroup {
 #[derive(Clone, Debug)]
 pub struct AuthSection {
     groups: Vec<AuthGroup>,
-    validate: bool,
 }
 
 impl AuthSection {
@@ -138,48 +144,19 @@ impl AuthSection {
             .filter_map(|(group, settings)| AuthGroup::new(group, settings).ok())
             .collect();
 
-        Self {
-            groups,
-            validate: false,
-        }
-    }
-
-    /// Specify whether certificates should be checked for validity.
-    ///
-    /// If enabled, each candidate auth group will be checked to ensure that the
-    /// certificate is present and valid, resulting in an error if the best
-    /// candidate certificate is missing or invalid.
-    ///
-    /// If disabled (the default), groups with missing or invalid certificates
-    /// will simply be ignored, which means that in the case that all candidate
-    /// auth groups are invalid, `best_match_for` will report that there are no
-    /// matching auth groups instead of returning an error.
-    ///
-    /// This option exists to ensure backwards-compatibility with the old
-    /// behavior in the case of missing certificates, which was to ignore them.
-    /// The behavior will still be different in the case of invalid certificates
-    /// because the old behavior did not check validity at all, meaning that
-    /// invalid certificates will now be ignored if validation is disabled.
-    ///
-    /// TODO(kulshrax): This is a hack intended to address the fact that our
-    /// configs in some environments do specify missing certificates (which
-    /// were previously ignored). This option should be removed entirely once
-    /// those configs have been fixed.
-    pub fn validate(&mut self, enable: bool) -> &Self {
-        self.validate = enable;
-        self
+        Self { groups }
     }
 
     /// Find the best matching auth group for the given URL.
-    pub fn best_match_for(&self, url: &Url) -> Result<Option<AuthGroup>, X509Error> {
+    pub fn best_match_for(&self, url: &Url) -> Result<Option<AuthGroup>, MissingCerts> {
         let mut best: Option<&AuthGroup> = None;
-        let mut error: Option<X509Error> = None;
+        let mut missing = Vec::new();
 
         let scheme = url.scheme().to_string();
         let username = url.username();
         let url_suffix = strip_scheme_and_user(&url);
 
-        for group in &self.groups {
+        'groups: for group in &self.groups {
             if !group.schemes.contains(&scheme) {
                 continue;
             }
@@ -217,29 +194,36 @@ impl AuthSection {
                 }
             }
 
-            // Skip if the cert is missing or invalid since there may be other
-            // matching auth groups with valid certs, but hang on to the error
-            // in case there aren't any others.
-            if let Some(path) = &group.cert {
-                if let Err(e) = check_certs(path) {
-                    // If validatation is disabled, just pretend this auth group
-                    // doesn't exist instead of reporting the error.
-                    if self.validate {
-                        error = Some(e);
+            // Skip this group is any of the files are missing.
+            for (label, path) in &[
+                ("client certificate", &group.cert),
+                ("private key", &group.key),
+                ("CA certificate bundle", &group.cacerts),
+            ] {
+                match path {
+                    Some(path) if !path.is_file() => {
+                        tracing::debug!(
+                            "Ignoring [auth] group {:?} because of missing {}: {:?}",
+                            &group.name,
+                            &label,
+                            &path
+                        );
+                        missing.push(path.to_path_buf());
+                        continue 'groups;
                     }
-                    continue;
+                    _ => {}
                 }
             }
 
             best = Some(group);
         }
 
-        // If we encountered a missing or invalid cert, only return an error
-        // if there were no other matching valid certs.
-        match (best, error) {
-            (Some(best), _) => Ok(Some(best.clone())),
-            (None, Some(e)) => Err(e),
-            (None, None) => Ok(None),
+        if let Some(best) = best {
+            Ok(Some(best.clone()))
+        } else if !missing.is_empty() {
+            Err(MissingCerts { missing })
+        } else {
+            Ok(None)
         }
     }
 }
