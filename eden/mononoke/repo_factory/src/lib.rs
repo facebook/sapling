@@ -30,7 +30,7 @@ use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, BonsaiSvnrevMapping, CachingBonsaiSvnrevMapping,
     RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
-use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
+use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
@@ -391,11 +391,25 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::Bookmarks)?
             .with_repo_id(repo_identity.id());
+
         Ok(Arc::new(sql_bookmarks))
     }
 
-    pub fn bookmarks(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarks {
-        sql_bookmarks.clone()
+    pub fn bookmarks(
+        &self,
+        sql_bookmarks: &ArcSqlBookmarks,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> ArcBookmarks {
+        if let Some(ttl) = repo_config.bookmarks_cache_ttl {
+            Arc::new(CachedBookmarks::new(
+                sql_bookmarks.clone(),
+                ttl,
+                repo_identity.id(),
+            ))
+        } else {
+            sql_bookmarks.clone()
+        }
     }
 
     pub fn bookmark_update_log(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarkUpdateLog {
