@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import ctypes
 import socket
 import sys
+from typing import List, Tuple, Type, Union
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
@@ -37,8 +38,8 @@ SOL_SOCKET = 0xFFFF
 #     WORD      wVersionRequired,
 #     LPWSADATA lpWSAData
 # );
-WSADESCRIPTION_LEN = 256 + 1
-WSASYS_STATUS_LEN = 128 + 1
+WSADESCRIPTION_LEN: int = 256 + 1
+WSASYS_STATUS_LEN: int = 128 + 1
 
 
 class WSAData64(ctypes.Structure):
@@ -126,7 +127,10 @@ WinSetIntSockOpt.restype = ctypes.c_int
 
 
 class SOCKADDR_UN(ctypes.Structure):
-    _fields_ = [("sun_family", ctypes.c_ushort), ("sun_path", ctypes.c_char * 108)]
+    _fields_: List[Tuple[str, Union[Type[ctypes.c_ushort], int]]] = [
+        ("sun_family", ctypes.c_ushort),
+        ("sun_path", ctypes.c_char * 108),
+    ]
 
 
 class WindowsSocketException(Exception):
