@@ -91,8 +91,6 @@ pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "
 
 pub const FAILUPUSHREBASE_EXTRA: &str = "failpushrebase";
 
-pub const PREPUSHREBASE_CHANGESET_ID_EXTRA: &str = "prepushrebase_changeset_id";
-
 #[derive(Debug, Error)]
 pub enum PushrebaseInternalError {
     #[error("Bonsai not found for hg changeset: {0}")]
@@ -1007,13 +1005,6 @@ async fn rebase_changeset(
     file_changes.extend(new_file_changes);
     bcs.file_changes = file_changes;
 
-    if tunables().get_enable_storing_prepushrebase_cs_id_in_extra() {
-        bcs.extra.insert(
-            PREPUSHREBASE_CHANGESET_ID_EXTRA.to_string(),
-            orig_cs_id.as_ref().to_vec(),
-        );
-    }
-
     for hook in hooks.iter_mut() {
         hook.post_rebase_changeset(orig_cs_id, &mut bcs)?;
     }
@@ -1297,7 +1288,6 @@ mod tests {
     use std::{collections::BTreeMap, str::FromStr};
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
-    use tunables::{with_tunables_async, MononokeTunables};
 
     async fn fetch_bonsai_changesets(
         ctx: &CoreContext,
@@ -1703,87 +1693,6 @@ mod tests {
 
             Ok(())
         })
-    }
-
-    #[fbinit::test]
-    async fn pushrebase_stack_save_prepushrebase_cs_id(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
-        // Bottom commit of the repo
-        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-
-        let book = master_bookmark();
-        set_bookmark(
-            ctx.clone(),
-            repo.clone(),
-            &book,
-            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-        )
-        .await?;
-
-        let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
-            .add_file("file", "content")
-            .commit()
-            .await?;
-
-        let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-            .add_file("file2", "content")
-            .commit()
-            .await?;
-
-        let bcss = try_join_all(
-            [bcs_id_1, bcs_id_2]
-                .iter()
-                .map(|bcs_id| bcs_id.load(&ctx, repo.blobstore())),
-        )
-        .await?;
-
-        let tunables = MononokeTunables::default();
-        tunables.update_bools(
-            &hashmap! { "enable_storing_prepushrebase_cs_id_in_extra".into() => true },
-        );
-        let res = with_tunables_async(
-            tunables,
-            {
-                do_pushrebase_bonsai(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &HashSet::from_iter(bcss),
-                    None,
-                    &[],
-                )
-            }
-            .boxed(),
-        )
-        .await?;
-
-        let bcs_rebased_2 = res.head.load(&ctx, repo.blobstore()).await?.into_mut();
-        assert_eq!(
-            bcs_rebased_2
-                .extra
-                .get(PREPUSHREBASE_CHANGESET_ID_EXTRA)
-                .expect("Prepushrebase changeset id not found in extra"),
-            &bcs_id_2.as_ref().to_vec(),
-        );
-
-        let bcs_rebased_1 = bcs_rebased_2
-            .parents
-            .first()
-            .expect("Pushrebased stack head has no parents")
-            .load(&ctx, repo.blobstore())
-            .await?
-            .into_mut();
-        assert_eq!(
-            bcs_rebased_1
-                .extra
-                .get(PREPUSHREBASE_CHANGESET_ID_EXTRA)
-                .expect("Prepushrebase changeset id not found in extra"),
-            &bcs_id_1.as_ref().to_vec(),
-        );
-
-        Ok(())
     }
 
     #[fbinit::test]

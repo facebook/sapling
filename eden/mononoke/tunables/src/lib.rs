@@ -138,9 +138,6 @@ pub struct MononokeTunables {
     // Disable putting hydrating manifests in .hg
     disable_hydrating_manifests_in_dot_hg: AtomicBool,
 
-    // Enable storing prepushrebase changeset id in bonsai changeset extra
-    enable_storing_prepushrebase_cs_id_in_extra: AtomicBool,
-
     // Rendez vous configuration.
     rendezvous_dispatch_delay_ms: AtomicI64,
     rendezvous_dispatch_max_threshold: AtomicI64,
