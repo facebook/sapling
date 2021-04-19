@@ -200,6 +200,17 @@ pub struct RepoConfig {
     pub repo_client_knobs: RepoClientKnobs,
     /// Callsign to check phabricator commits
     pub phabricator_callsign: Option<String>,
+    /// If it's a backup repo, then this field stores information
+    /// about the backup configuration
+    pub backup_repo_config: Option<BackupRepoConfig>,
+}
+
+/// Backup repo configuration
+#[derive(Eq, Clone, Default, Debug, PartialEq)]
+pub struct BackupRepoConfig {
+    /// Name of the repo that's a "source" of the backup
+    /// i.e. what we are actually backing up
+    pub source_repo_name: String,
 }
 
 /// Configuration for repo_client module

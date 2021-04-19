@@ -20,8 +20,8 @@ use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
-    AllowlistEntry, CensoredScubaParams, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName,
-    HgsqlName, Redaction, RepoConfig, RepoReadOnly, StorageConfig,
+    AllowlistEntry, BackupRepoConfig, CensoredScubaParams, CommitSyncConfig, CommonConfig,
+    HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig, RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -224,6 +224,7 @@ fn parse_repo_config(
         segmented_changelog_config,
         repo_client_knobs,
         phabricator_callsign,
+        backup_config,
         ..
     } = repo_config;
 
@@ -344,6 +345,21 @@ fn parse_repo_config(
 
     let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
 
+    let backup_repo_config = match backup_config {
+        Some(backup_repo_config) => {
+            // Logic we have in config is if source name is not equal to name of the repo
+            // then this is actually a backup repo
+            if backup_repo_config.backup_source_name != reponame {
+                Some(BackupRepoConfig {
+                    source_repo_name: backup_repo_config.backup_source_name,
+                })
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -382,6 +398,7 @@ fn parse_repo_config(
         segmented_changelog_config,
         repo_client_knobs,
         phabricator_callsign,
+        backup_repo_config,
     })
 }
 
@@ -796,6 +813,11 @@ mod test {
             skip_dag_load_at_startup = true
             reload_dag_save_period_secs = 0
             update_to_master_bookmark_period_secs = 120
+
+            [backup_config]
+            backup_source_name = "source"
+            verification_enabled = false
+            create_backup_repo = false
         "#;
         let www_content = r#"
             repoid=1
@@ -1047,6 +1069,9 @@ mod test {
                     allow_short_getpack_history: true,
                 },
                 phabricator_callsign: Some("FBS".to_string()),
+                backup_repo_config: Some(BackupRepoConfig {
+                    source_repo_name: "source".to_string(),
+                }),
             },
         );
 
@@ -1105,6 +1130,7 @@ mod test {
                 },
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
+                backup_repo_config: None,
             },
         );
         assert_eq!(
