@@ -1206,11 +1206,12 @@ void EdenMount::resetParents(const ParentCommits& parents) {
 }
 
 EdenTimestamp EdenMount::getLastCheckoutTime() const {
-  return *lastCheckoutTime_.rlock();
+  static_assert(std::atomic<EdenTimestamp>::is_always_lock_free);
+  return lastCheckoutTime_.load(std::memory_order_acquire);
 }
 
 void EdenMount::setLastCheckoutTime(EdenTimestamp time) {
-  *lastCheckoutTime_.wlock() = time;
+  lastCheckoutTime_.store(time, std::memory_order_release);
 }
 
 void EdenMount::resetParent(const Hash& parent) {

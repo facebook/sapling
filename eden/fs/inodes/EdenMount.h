@@ -879,13 +879,8 @@ class EdenMount {
    * this mount.  This is used to initialize the timestamps of newly loaded
    * inodes.  (Since the file contents might have logically been update by the
    * checkout operation.)
-   *
-   * This is managed with its own Synchronized lock separate from other state
-   * since it needs to be accessed when constructing inodes.  This is a very
-   * low level lock in our lock ordering hierarchy: No other locks should be
-   * acquired while holding this lock.
    */
-  folly::Synchronized<EdenTimestamp> lastCheckoutTime_;
+  std::atomic<EdenTimestamp> lastCheckoutTime_;
 
   struct MountingUnmountingState {
     bool channelMountStarted() const noexcept;
