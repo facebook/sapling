@@ -674,6 +674,8 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
+    // Check that we get the data we expect (6 bytes starting from the one at offset 4, i.e. the
+    // 5th one).
     let res = async {
         let stream = filestore::fetch_range_with_size(
             blob,
@@ -700,6 +702,50 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Bytes::from(&b"arbazq"[..]));
+
+    // Check that we don't fetch things we do not need (extra chunks to the left).
+    let res = async {
+        let stream = filestore::fetch_range_with_size(
+            blob,
+            ctx,
+            &FetchKey::Canonical(full_id),
+            filestore::Range::sized(3, 2),
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Object does not exist"))?
+        .0;
+
+        stream.try_collect::<Vec<_>>().await
+    }
+    .await;
+
+    println!("res = {:#?}", res);
+
+    let res = res?;
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0], Bytes::from(&b"ba"[..]));
+
+    // Check that we don't fetch things we do not need (extra chunks to the right).
+    let res = async {
+        let stream = filestore::fetch_range_with_size(
+            blob,
+            ctx,
+            &FetchKey::Canonical(full_id),
+            filestore::Range::sized(0, 3),
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Object does not exist"))?
+        .0;
+
+        stream.try_collect::<Vec<_>>().await
+    }
+    .await;
+
+    println!("res = {:#?}", res);
+
+    let res = res?;
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0], Bytes::from(&b"foo"[..]));
 
     Ok(())
 }

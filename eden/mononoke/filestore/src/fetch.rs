@@ -175,7 +175,7 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                         })
                         .skip_while(move |(_chunk_start, chunk_end, _chunk)| {
                             // Skip chunks from before the range.
-                            *chunk_end < range_start
+                            *chunk_end <= range_start
                         })
                         .take_while(move |(chunk_start, _chunk_end, _chunk)| {
                             // Take chunks that overlap the range.
