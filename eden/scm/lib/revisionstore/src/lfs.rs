@@ -33,6 +33,7 @@ use minibytes::Bytes;
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
 use serde_derive::{Deserialize, Serialize};
+use std::num::NonZeroU64;
 use tokio::{
     task::spawn_blocking,
     time::{sleep, timeout},
@@ -95,7 +96,7 @@ struct HttpLfsRemote {
     url: Url,
     client: HttpClient,
     concurrent_fetches: usize,
-    download_chunk_size: Option<u64>,
+    download_chunk_size: Option<NonZeroU64>,
     http_options: HttpOptions,
 }
 
@@ -1187,7 +1188,7 @@ impl LfsRemoteInner {
 
     async fn process_download(
         client: &HttpClient,
-        chunk_size: Option<u64>,
+        chunk_size: Option<NonZeroU64>,
         action: ObjectAction,
         oid: Sha256,
         size: u64,
@@ -1198,6 +1199,8 @@ impl LfsRemoteInner {
 
         let data = match chunk_size {
             Some(chunk_size) => {
+                let chunk_increment = chunk_size.get() - 1;
+
                 async {
                     let mut chunks = Vec::new();
                     let mut chunk_start = 0;
@@ -1205,7 +1208,7 @@ impl LfsRemoteInner {
                     let file_end = size.saturating_sub(1);
 
                     while chunk_start < file_end {
-                        let chunk_end = std::cmp::min(file_end, chunk_start + chunk_size);
+                        let chunk_end = std::cmp::min(file_end, chunk_start + chunk_increment);
                         let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
                         let chunk = LfsRemoteInner::send_with_retry(
@@ -1441,6 +1444,9 @@ impl LfsRemote {
                 });
 
             let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;
+            let download_chunk_size = download_chunk_size
+                .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
+                .transpose()?;
 
             let client = http_client("lfs");
 
