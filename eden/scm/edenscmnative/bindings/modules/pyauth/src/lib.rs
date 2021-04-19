@@ -66,7 +66,7 @@ fn getauth(
                 let dict = PyDict::new(py);
 
                 dict.set_item(py, "prefix", &group.prefix)?;
-                dict.set_item(py, "schemes", &group.schemes)?;
+                dict.set_item(py, "schemes", group.schemes.join(" "))?;
 
                 if let Some(cert) = group.cert {
                     dict.set_item(py, "cert", cert.to_string_lossy())?;

@@ -19,9 +19,10 @@ import logging
 import os
 import socket
 
+from bindings import auth as rustauth
+
 from . import httpclient, pycompat, sslutil, urllibcompat, util
 from .i18n import _
-
 
 urlerr = util.urlerr
 urlreq = util.urlreq
@@ -66,89 +67,7 @@ class httpsendfile(object):
 
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
-    # Read configuration
-    groups = {}
-    for key, val in ui.configitems("auth"):
-        if key in ("cookiefile",):
-            continue
-
-        if "." not in key:
-            ui.warn(_("ignoring invalid [auth] key '%s'\n") % key)
-            continue
-        group, setting = key.rsplit(".", 1)
-        gdict = groups.setdefault(group, {})
-        if setting in ("username", "cert", "key"):
-            val = util.expandpath(val)
-        gdict[setting] = val
-
-    filtered = {}
-    for group, auth in sorted(pycompat.iteritems(groups)):
-        ok = True
-        for key in ("cert", "key"):
-            val = auth.get(key)
-            if val is not None and not os.path.exists(val):
-                ui.debug(
-                    _("ignoring [auth] key '%s': %s does not exist at %s\n")
-                    % (group, key, val)
-                )
-                ok = False
-        if ok:
-            filtered[group] = auth
-
-    # Find the best match
-    scheme, hostpath = uri.split("://", 1)
-    bestuser = None
-    bestlen = 0
-    bestpriority = 0
-    bestauth = None
-    for group, auth in pycompat.iteritems(filtered):
-        if user and user != auth.get("username", user):
-            # If a username was set in the URI, the entry username
-            # must either match it or be unset
-            continue
-        prefix = auth.get("prefix")
-        if not prefix:
-            continue
-        p = prefix.split("://", 1)
-        if len(p) > 1:
-            schemes, prefix = [p[0]], p[1]
-        else:
-            schemes = (auth.get("schemes") or "https").split()
-
-        try:
-            priority = int(auth.get("priority", "0"))
-        except ValueError:
-            ui.warn(
-                _("priority is not an integer: auth.%s.priority=%s\n")
-                % (group, auth.get("priority", "0"))
-            )
-            continue
-
-        if (
-            (prefix == "*" or hostpath.startswith(prefix))
-            and (
-                # Longer prefix wins.
-                len(prefix) > bestlen
-                # If the prefixes are the same, highest priority wins.
-                or (len(prefix) == bestlen and priority > bestpriority)
-                # If the prefixes and priorities are the same, entry with a user
-                # wins.
-                or (
-                    len(prefix) == bestlen
-                    and priority == bestpriority
-                    and not bestuser
-                    and "username" in auth
-                )
-            )
-            and scheme in schemes
-        ):
-            bestlen = len(prefix)
-            bestpriority = priority
-            bestauth = group, auth
-            bestuser = auth.get("username")
-            if user and not bestuser:
-                auth["username"] = user
-    return bestauth
+    return rustauth.getauth(ui._rcfg._rcfg, uri, user=user, raise_if_missing=False)
 
 
 # Mercurial (at least until we can remove the old codepath) requires

@@ -3,10 +3,11 @@
 
   $ hg init repo
   $ cd repo
+  $ export EDENSCM_LOG=auth=debug
 
 No credentials
 
-  $ hg --debug debugreadauthforuri https://example.com
+  $ hg debugreadauthforuri https://example.com
   no match found
 
 Single credential
@@ -17,7 +18,7 @@ Single credential
   > first.schemes=https
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
+  $ hg debugreadauthforuri https://example.com
   auth.first.prefix=example.com
   auth.first.schemes=https
 
@@ -33,9 +34,9 @@ Non-existent credentials are ignored
   > second.schemes=https
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
-  ignoring [auth] key 'first': cert does not exist at foocert
-  ignoring [auth] key 'second': key does not exist at fookey
+  $ hg debugreadauthforuri https://example.com
+   DEBUG auth: Ignoring [auth] group "first" because of missing client certificate: "foocert"
+   DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
   no match found
 
 Valid credentials are used
@@ -48,7 +49,7 @@ Valid credentials are used
   > first.schemes=https
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
+  $ hg debugreadauthforuri https://example.com
   auth.first.cert=foocert
   auth.first.prefix=example.com
   auth.first.schemes=https
@@ -66,8 +67,8 @@ Valid credentials are preferred
   > second.priority=1
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
-  ignoring [auth] key 'second': key does not exist at fookey
+  $ hg debugreadauthforuri https://example.com
+   DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
   auth.first.cert=foocert
   auth.first.prefix=example.com
   auth.first.schemes=https
@@ -82,7 +83,7 @@ Longest prefixes are used
   > second.schemes=https
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com/foo
+  $ hg debugreadauthforuri https://example.com/foo
   auth.first.prefix=example.com/foo
   auth.first.schemes=https
 
@@ -97,7 +98,7 @@ Prefixes take precedence over priorities
   > second.priority=1
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com/foo
+  $ hg debugreadauthforuri https://example.com/foo
   auth.first.prefix=example.com/foo
   auth.first.schemes=https
 
@@ -113,7 +114,7 @@ Priorities take precedence over user names
   > second.priority=1
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
+  $ hg debugreadauthforuri https://example.com
   auth.second.prefix=example.com
   auth.second.priority=1
   auth.second.schemes=https
@@ -131,7 +132,7 @@ User names are used if everything else matches
   > second.priority=1
   > EOF
 
-  $ hg --debug debugreadauthforuri https://example.com
+  $ hg debugreadauthforuri https://example.com
   auth.first.prefix=example.com
   auth.first.priority=1
   auth.first.schemes=https
