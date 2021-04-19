@@ -368,6 +368,7 @@ members = [
   "lfs_server",
   "load_limiter",
   "manifest",
+  "megarepo_api/configo_client",
   "mercurial/bundle_replay_data",
   "mercurial/bundles",
   "mercurial/mutation",
