@@ -48,13 +48,14 @@ just in case somebody has a strange $TMPDIR
   $ cd repo
 
   $ chmod 0770 .hg/store
+  $ chmod 0770 .hg
 
 before commit
 store can be written by the group, other files cannot
 store is setgid
 
   $ $PYTHON ../printmodes.py .
-  00700 ./.hg/
+  00770 ./.hg/
   00600 ./.hg/00changelog.i
   00600 ./.hg/hgrc.dynamic
   00600 ./.hg/requires
@@ -72,7 +73,7 @@ files created in .hg can be written by the group
 new directories are setgid
 
   $ $PYTHON ../printmodes.py .
-  00700 ./.hg/
+  00770 ./.hg/
   00600 ./.hg/00changelog.i
   00660 ./.hg/checkoutidentifier
   00660 ./.hg/dirstate
@@ -193,7 +194,9 @@ just check that directories have the same mode.
   $ hg init setgid
   $ cd setgid
   $ chmod g+rwx .hg/store
+  $ chmod g+rwx .hg
   $ chmod g+s .hg/store 2> /dev/null || true
+  $ chmod g+s .hg 2> /dev/null || true
   $ mkdir dir
   $ touch dir/file
   $ hg ci -qAm 'add dir/file'

@@ -428,14 +428,18 @@ _data = (
 )
 
 
+def setvfsmode(vfs):
+    vfs.createmode = _calcmode(vfs)
+
+
 class basicstore(object):
     """base class for local repository stores"""
 
     def __init__(self, path, vfstype):
         vfs = vfstype(path)
+        setvfsmode(vfs)
         self.path = vfs.base
-        self.createmode = _calcmode(vfs)
-        vfs.createmode = self.createmode
+        self.createmode = vfs.createmode
         self.rawvfs = vfs
         self.vfs = vfsmod.filtervfs(vfs, encodedir)
         self.opener = self.vfs

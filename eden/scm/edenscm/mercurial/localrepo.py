@@ -533,10 +533,10 @@ class localrepository(object):
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
-        self.localvfs.createmode = self.store.createmode
-        self.sharedvfs.createmode = self.store.createmode
+        store.setvfsmode(self.localvfs)
+        store.setvfsmode(self.sharedvfs)
         self.cachevfs = vfsmod.vfs(cachepath, cacheaudited=True)
-        self.cachevfs.createmode = self.store.createmode
+        store.setvfsmode(self.cachevfs)
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
         ):
