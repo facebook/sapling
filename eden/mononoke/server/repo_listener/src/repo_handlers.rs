@@ -17,7 +17,9 @@ use cached_config::ConfigStore;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig};
+use metaconfig_types::{
+    BackupRepoConfig, CommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig,
+};
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
 use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
@@ -45,6 +47,8 @@ struct IncompleteRepoHandler {
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
     repo_client_knobs: RepoClientKnobs,
+    /// This is used for repositories that are backups of another prod repository
+    backup_repo_config: Option<BackupRepoConfig>,
 }
 
 #[derive(Clone)]
@@ -96,6 +100,7 @@ impl IncompleteRepoHandler {
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
             repo_client_knobs,
+            backup_repo_config,
         } = self;
 
         let maybe_push_redirector_args = match maybe_incomplete_push_redirector_args {
@@ -103,6 +108,17 @@ impl IncompleteRepoHandler {
             Some(incomplete_push_redirector_args) => Some(
                 incomplete_push_redirector_args.try_into_push_redirector_args(repo_lookup_table)?,
             ),
+        };
+
+        let maybe_backup_repo_source = match backup_repo_config {
+            None => None,
+            Some(backup_repo_config) => {
+                let backup_repo_source = try_find_repo_by_name(
+                    &backup_repo_config.source_repo_name,
+                    repo_lookup_table.values(),
+                )?;
+                Some(backup_repo_source)
+            }
         };
 
         Ok(RepoHandler {
@@ -113,8 +129,23 @@ impl IncompleteRepoHandler {
             preserve_raw_bundle2,
             maybe_push_redirector_args,
             repo_client_knobs,
+            maybe_backup_repo_source,
         })
     }
+}
+
+fn try_find_repo_by_name<'a>(
+    name: &str,
+    iter: impl Iterator<Item = &'a IncompleteRepoHandler>,
+) -> Result<BlobRepo, Error> {
+    for handler in iter {
+        let blobrepo = handler.repo.blobrepo();
+        if blobrepo.name() == name {
+            return Ok(blobrepo.clone());
+        }
+    }
+
+    Err(format_err!("{} not found", name))
 }
 
 #[derive(Clone)]
@@ -126,6 +157,7 @@ pub struct RepoHandler {
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub repo_client_knobs: RepoClientKnobs,
+    pub maybe_backup_repo_source: Option<BlobRepo>,
 }
 
 pub async fn repo_handlers<'a>(
@@ -154,6 +186,7 @@ pub async fn repo_handlers<'a>(
         let wireproto_logging = config.wireproto_logging.clone();
         let commit_sync_config = config.commit_sync_config.clone();
         let repo_client_knobs = config.repo_client_knobs.clone();
+        let backup_repo_config = config.backup_repo_config.clone();
 
         let blobrepo = repo.blob_repo().clone();
 
@@ -255,6 +288,7 @@ pub async fn repo_handlers<'a>(
                 preserve_raw_bundle2,
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
+                backup_repo_config,
             },
         ))
     });

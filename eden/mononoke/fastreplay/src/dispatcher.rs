@@ -66,6 +66,7 @@ impl FastReplayDispatcher {
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
             self.repo_client_knobs.clone(),
+            None, // No backup repo source
         )
     }
 

@@ -8,7 +8,7 @@
 use ::manifest::Entry;
 use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::{ChangesetHandle, CreateChangeset};
+use blobrepo_hg::{create_bonsai_changeset_hook, ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use futures::{
     future::{self, BoxFuture},
@@ -275,6 +275,7 @@ pub(crate) async fn upload_changeset(
     mut uploaded_changesets: UploadedChangesets,
     filelogs: &Filelogs,
     manifests: &Manifests,
+    maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
         root_manifest,
@@ -293,6 +294,7 @@ pub(crate) async fn upload_changeset(
     let p1 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1);
     let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2);
 
+    let create_bonsai_changeset_hook = Some(create_bonsai_changeset_hook(maybe_backup_repo_source));
     let create_changeset = CreateChangeset {
         expected_nodeid: Some(node.into_nodehash()),
         expected_files: Some(Vec::from(revlog_cs.files())),
@@ -302,7 +304,7 @@ pub(crate) async fn upload_changeset(
         sub_entries,
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
-        create_bonsai_changeset_hook: None,
+        create_bonsai_changeset_hook,
     };
     let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
 

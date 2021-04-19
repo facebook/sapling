@@ -84,6 +84,7 @@ pub async fn request_handler(
         preserve_raw_bundle2,
         maybe_push_redirector_args,
         repo_client_knobs,
+        maybe_backup_repo_source,
     } = handler;
 
     // Upgrade log to include server drain
@@ -152,6 +153,7 @@ pub async fn request_handler(
         wireproto_logging,
         maybe_push_redirector_args,
         repo_client_knobs,
+        maybe_backup_repo_source,
     );
     let request_perf_counters = repo_client.request_perf_counters();
 

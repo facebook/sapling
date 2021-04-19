@@ -419,6 +419,9 @@ pub struct RepoClient {
     unhydrated_commits: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
     request_perf_counters: Arc<PerfCounters>,
+    // In case `repo` is a backup of another repository `maybe_backup_repo_source` points to
+    // a source for this repository.
+    maybe_backup_repo_source: Option<BlobRepo>,
 }
 
 impl RepoClient {
@@ -430,6 +433,7 @@ impl RepoClient {
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         knobs: RepoClientKnobs,
+        maybe_backup_repo_source: Option<BlobRepo>,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 
@@ -445,6 +449,7 @@ impl RepoClient {
             unhydrated_commits: Arc::new(AtomicBool::new(false)),
             knobs,
             request_perf_counters: Arc::new(PerfCounters::default()),
+            maybe_backup_repo_source,
         }
     }
 
@@ -1681,6 +1686,7 @@ impl HgCommands for RepoClient {
                         let push_params = client.repo.push_params().clone();
                         let pure_push_allowed = push_params.pure_push_allowed;
                         let reponame = client.repo.reponame().clone();
+                        let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                         let pushrebase_flags = pushrebase_params.flags.clone();
                         let res = unbundle::resolve(
@@ -1692,6 +1698,7 @@ impl HgCommands for RepoClient {
                             maybe_full_content,
                             pure_push_allowed,
                             pushrebase_flags,
+                            maybe_backup_repo_source,
                         )
                         .await;
                         match res {

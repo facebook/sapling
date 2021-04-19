@@ -256,6 +256,7 @@ pub async fn resolve<'a>(
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
+    maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<(PostResolveAction, bool), BundleResolverError> {
     UNBUNDLE_STATS::total_unbundles.add_value(1, (repo.name().to_string(),));
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
@@ -324,6 +325,7 @@ pub async fn resolve<'a>(
                 maybe_pushvars,
                 maybe_full_content,
                 changegroup_always_unacceptable,
+                maybe_backup_repo_source,
             )
             .await
         }
@@ -337,6 +339,7 @@ pub async fn resolve<'a>(
             maybe_full_content,
             move || pure_push_allowed,
             is_cross_backend_sync,
+            maybe_backup_repo_source,
         )
         .await
         .context("bundle2_resolver error")
@@ -396,6 +399,7 @@ async fn resolve_push<'r>(
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
     is_cross_backend_sync: bool,
+    maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<PostResolveAction, Error> {
     let (cg_push, bundle2) = resolver
         .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
@@ -445,8 +449,9 @@ async fn resolve_push<'r>(
     let (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids) =
         if let Some((cg_push, manifests)) = cg_and_manifests {
             let changegroup_id = Some(cg_push.part_id);
-            let (uploaded_bonsais, uploaded_hg_changeset_ids) =
-                resolver.upload_changesets(cg_push, manifests).await?;
+            let (uploaded_bonsais, uploaded_hg_changeset_ids) = resolver
+                .upload_changesets(cg_push, manifests, maybe_backup_repo_source)
+                .await?;
             // Note: we do not run hooks on pure pushes. This probably has to be changed later.
             (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids)
         } else {
@@ -590,6 +595,7 @@ async fn resolve_pushrebase<'r>(
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
+    maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let (manifests, bundle2) = resolver
         .resolve_b2xtreegroup2(bundle2)
@@ -625,8 +631,9 @@ async fn resolve_pushrebase<'r>(
         }
     }
 
-    let (uploaded_bonsais, _uploaded_hg_changeset_ids) =
-        resolver.upload_changesets(cg_push, manifests).await?;
+    let (uploaded_bonsais, _uploaded_hg_changeset_ids) = resolver
+        .upload_changesets(cg_push, manifests, maybe_backup_repo_source)
+        .await?;
 
     let (pushkeys, bundle2) = resolver
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -1206,6 +1213,7 @@ impl<'r> Bundle2Resolver<'r> {
         &self,
         cg_push: ChangegroupPush,
         manifests: Manifests,
+        maybe_backup_repo_source: Option<BlobRepo>,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;
@@ -1250,6 +1258,7 @@ impl<'r> Bundle2Resolver<'r> {
                     uploaded_changesets,
                     &filelogs,
                     &manifests,
+                    maybe_backup_repo_source.clone(),
                 )
                 .await
                 .with_context(err_context)?;

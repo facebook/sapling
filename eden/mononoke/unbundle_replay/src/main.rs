@@ -267,6 +267,7 @@ async fn maybe_unbundle(
                 None,  // maybe_full_content
                 false, // pure_push_allowed
                 pushrebase_flags,
+                None, // No backup repo source,
             )
             .await
         }

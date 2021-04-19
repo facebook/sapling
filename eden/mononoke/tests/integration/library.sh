@@ -1006,6 +1006,13 @@ master_bookmark="master_bookmark"
 skip_dag_load_at_startup=true
 CONFIG
 fi
+
+if [[ -n "${BACKUP_FROM:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[backup_config]
+backup_source_name="$BACKUP_FROM"
+CONFIG
+fi
 }
 
 function write_infinitepush_config {

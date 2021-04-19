@@ -444,6 +444,7 @@ async fn run_and_check_if_lfs(
         Arc::new(noop_wireproto),
         None, // No PushRedirectorArgs
         Default::default(),
+        None, // No backup repo source
     );
 
     let bytes = repo_client
