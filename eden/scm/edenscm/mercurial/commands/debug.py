@@ -3632,6 +3632,9 @@ def debugresetheads(ui, repo):
 
     # Remove all draft heads
     metalog["visibleheads"] = visibility.encodeheads([])
+
+    # Remove all local bookmarks
+    metalog["bookmarks"] = b""
     metalog.commit("debugresetheads")
 
 

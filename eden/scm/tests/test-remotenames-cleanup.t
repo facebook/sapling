@@ -121,3 +121,12 @@ Notice that only the "master" head is left:
   │
   o  Z  public
   
+Resethead command removes local bookmarks too:
+
+  $ hg bookmark -r 'desc(A)' book-A
+  $ hg bookmarks
+     book-A                    ac2f7407182b
+  $ hg debugresetheads
+  $ hg bookmarks
+  no bookmarks set
+
