@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use ::manifest::Entry;
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{bail, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -30,8 +30,7 @@ use futures_old::{
 use tokio::runtime::Handle;
 
 use blobrepo::BlobRepo;
-use blobrepo_hg::{ChangesetHandle, CreateChangeset};
-use blobstore::Loadable;
+use blobrepo_hg::{create_bonsai_changeset_hook, ChangesetHandle, CreateChangeset};
 use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{manifest, revlog::RevIdx, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
@@ -42,11 +41,10 @@ use mercurial_types::{
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
     NULL_HASH,
 };
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentMetadata};
+use mononoke_types::{BonsaiChangeset, ContentMetadata};
 use slog::info;
 
 use crate::concurrency::JobProcessor;
-use blobrepo_hg::{create_bonsai_changeset_object, BlobRepoHg};
 
 struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
@@ -269,33 +267,6 @@ fn upload_entry(
         .boxify()
 }
 
-async fn verify_bonsai_changeset_with_origin(
-    ctx: CoreContext,
-    bcs: BonsaiChangeset,
-    cs: HgBlobChangeset,
-    origin_repo: Option<BlobRepo>,
-) -> Result<BonsaiChangeset, Error> {
-    match origin_repo {
-        Some(origin_repo) => {
-            // There are some non-canonical bonsai changesets in the prod repos.
-            // To make the blobimported backup repos exactly the same, we will
-            // fetch bonsai from the prod in case of mismatch
-            let origin_bonsai_id = origin_repo
-                .get_bonsai_from_hg(ctx.clone(), cs.get_changeset_id())
-                .await?;
-            match origin_bonsai_id {
-                Some(id) if id != bcs.get_changeset_id() => {
-                    id.load(&ctx, origin_repo.blobstore())
-                        .map_err(|e| anyhow!(e))
-                        .await
-                }
-                _ => Ok(bcs),
-            }
-        }
-        None => Ok(bcs),
-    }
-}
-
 pub struct UploadChangesets {
     pub ctx: CoreContext,
     pub blobrepo: BlobRepo,
@@ -365,29 +336,7 @@ impl UploadChangesets {
             concurrent_blobs,
         )));
 
-        let create_and_verify_bonsai = Arc::new(
-            move |
-                ctx: CoreContext,
-                hg_cs: HgBlobChangeset,
-                parent_manifest_hashes: Vec<HgManifestId>,
-                bonsai_parents: Vec<ChangesetId>,
-                repo: BlobRepo,
-            | {
-                cloned!(origin_repo);
-                async move {
-                    let bonsai_cs = create_bonsai_changeset_object(
-                        &ctx,
-                        hg_cs.clone(),
-                        parent_manifest_hashes,
-                        bonsai_parents,
-                        &repo,
-                    )
-                    .await?;
-                    verify_bonsai_changeset_with_origin(ctx, bonsai_cs, hg_cs, origin_repo).await
-                }
-                .boxed()
-            },
-        );
+        let create_and_verify_bonsai = create_bonsai_changeset_hook(origin_repo);
 
         changesets
             .and_then({

@@ -10,7 +10,6 @@ anyhow = "1.0"
 ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
-blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "0.5", features = ["serde"] }

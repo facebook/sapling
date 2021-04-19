@@ -18,7 +18,7 @@ pub use crate::repo_commit::{compute_changed_files, UploadEntries};
 pub mod errors {
     pub use blobrepo_errors::*;
 }
-pub use create_changeset::CreateChangeset;
+pub use create_changeset::{create_bonsai_changeset_hook, CreateChangeset};
 pub mod file_history {
     pub use blobrepo_common::file_history::*;
 }
