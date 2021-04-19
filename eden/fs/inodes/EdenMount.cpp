@@ -213,7 +213,7 @@ EdenMount::EdenMount(
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
-      lastCheckoutTime_{serverState_->getClock()->getRealtime()},
+      lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
       clock_{serverState_->getClock()} {
 }
@@ -894,7 +894,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   // This ensures that any inode objects created once the checkout starts will
   // get the current checkout time, rather than the time from the previous
   // checkout
-  *lastCheckoutTime_.wlock() = clock_->getRealtime();
+  setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   return serverState_->getFaultInjector()
@@ -1205,13 +1205,12 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   journal_->recordHashUpdate(oldParents.parent1(), parents.parent1());
 }
 
-struct timespec EdenMount::getLastCheckoutTime() const {
+EdenTimestamp EdenMount::getLastCheckoutTime() const {
   return *lastCheckoutTime_.rlock();
 }
 
-void EdenMount::setLastCheckoutTime(
-    std::chrono::system_clock::time_point time) {
-  *lastCheckoutTime_.wlock() = folly::to<struct timespec>(time);
+void EdenMount::setLastCheckoutTime(EdenTimestamp time) {
+  *lastCheckoutTime_.wlock() = time;
 }
 
 void EdenMount::resetParent(const Hash& parent) {

@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
@@ -540,14 +541,12 @@ class EdenMount {
   /**
    * Returns the last checkout time in the Eden mount.
    */
-  struct timespec getLastCheckoutTime() const;
+  EdenTimestamp getLastCheckoutTime() const;
 
   /**
    * Set the last checkout time.
-   *
-   * This is intended primarily for use in test code.
    */
-  void setLastCheckoutTime(std::chrono::system_clock::time_point time);
+  void setLastCheckoutTime(EdenTimestamp time);
 
   /**
    * Returns the key value to an fb303 counter.
@@ -881,15 +880,12 @@ class EdenMount {
    * inodes.  (Since the file contents might have logically been update by the
    * checkout operation.)
    *
-   * We store this as a struct timespec rather than a std::chrono::time_point
-   * since this is primarily used by FUSE APIs which need a timespec.
-   *
    * This is managed with its own Synchronized lock separate from other state
    * since it needs to be accessed when constructing inodes.  This is a very
    * low level lock in our lock ordering hierarchy: No other locks should be
    * acquired while holding this lock.
    */
-  folly::Synchronized<struct timespec> lastCheckoutTime_;
+  folly::Synchronized<EdenTimestamp> lastCheckoutTime_;
 
   struct MountingUnmountingState {
     bool channelMountStarted() const noexcept;

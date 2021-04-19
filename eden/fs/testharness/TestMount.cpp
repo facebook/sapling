@@ -150,7 +150,8 @@ void TestMount::initialize(
   createMount();
 
   initializeEdenMount();
-  edenMount_->setLastCheckoutTime(lastCheckoutTime);
+  edenMount_->setLastCheckoutTime(
+      EdenTimestamp{folly::to<struct timespec>(lastCheckoutTime)});
 }
 
 void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {

@@ -379,7 +379,7 @@ class InodeBase {
   /**
    * Returns current time from EdenMount's clock.
    */
-  timespec getNow() const;
+  EdenTimestamp getNow() const;
 
   /**
    * Convenience method to return the mount point's Clock.
@@ -399,7 +399,7 @@ class InodeBase {
 #endif
 
   void updateAtime();
-  void updateMtimeAndCtime(timespec now);
+  void updateMtimeAndCtime(EdenTimestamp now);
 
   template <typename InodeType>
   friend class InodePtrImpl;
@@ -615,7 +615,7 @@ class InodeBaseMetadata : public InodeBase {
    * Updates this inode's mtime and ctime to the given timestamp. The inode's
    * state lock must be held.
    */
-  void updateMtimeAndCtimeLocked(InodeState&, timespec now) {
+  void updateMtimeAndCtimeLocked(InodeState&, EdenTimestamp now) {
     InodeBase::updateMtimeAndCtime(now);
   }
 };

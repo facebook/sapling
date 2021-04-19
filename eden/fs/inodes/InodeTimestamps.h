@@ -134,8 +134,8 @@ struct InodeTimestamps {
   /**
    * Initializes all timestamps from the same value.
    */
-  explicit InodeTimestamps(const timespec& ts) noexcept
-      : atime{ts}, mtime{ts}, ctime{ts} {}
+  explicit InodeTimestamps(const EdenTimestamp time) noexcept
+      : atime{time}, mtime{time}, ctime{time} {}
 
   /**
    * Assigns the specified ts to atime, mtime, and ctime.
@@ -167,7 +167,6 @@ static_assert(noexcept(EdenTimestamp{timespec{}}), "");
 static_assert(noexcept(EdenTimestamp{uint64_t{}}), "");
 
 static_assert(noexcept(InodeTimestamps{}), "");
-static_assert(noexcept(InodeTimestamps{timespec{}}), "");
 
 } // namespace eden
 } // namespace facebook

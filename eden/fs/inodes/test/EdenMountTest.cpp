@@ -439,7 +439,8 @@ TEST(EdenMount, testLastCheckoutTime) {
 
   testMount.initialize(makeTestHash("1"), currentTime);
   const auto& edenMount = testMount.getEdenMount();
-  struct timespec lastCheckoutTime = edenMount->getLastCheckoutTime();
+  struct timespec lastCheckoutTime =
+      edenMount->getLastCheckoutTime().toTimespec();
 
   // Check if EdenMount is updating lastCheckoutTime correctly
   EXPECT_EQ(sec.count(), lastCheckoutTime.tv_sec);

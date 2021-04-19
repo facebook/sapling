@@ -369,7 +369,7 @@ void InodeBase::updateAtime() {
 #endif
 }
 
-void InodeBase::updateMtimeAndCtime(timespec now) {
+void InodeBase::updateMtimeAndCtime(EdenTimestamp now) {
 #ifndef _WIN32
   getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(), [&](auto& record) {
@@ -379,8 +379,8 @@ void InodeBase::updateMtimeAndCtime(timespec now) {
 #endif
 }
 
-timespec InodeBase::getNow() const {
-  return getClock().getRealtime();
+EdenTimestamp InodeBase::getNow() const {
+  return EdenTimestamp{getClock().getRealtime()};
 }
 
 const Clock& InodeBase::getClock() const {
