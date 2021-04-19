@@ -29,8 +29,6 @@ import traceback
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import bindings
-from bindings import configparser
 from edenscm import tracing
 
 from . import (

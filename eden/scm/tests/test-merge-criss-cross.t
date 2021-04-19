@@ -89,10 +89,12 @@ Criss cross merging
    ancestor: d1d156401c1b, local: 6373bbfdae1d+, remote: e673248094b1
    preserving f1 for resolve of f1
    f1: versions differ -> m (premerge)
+  picktool() forcemerge toolpath internal:dump
   picked tool ':dump' for f1 (binary False symlink False changedelete False)
   merging f1
   my f1@6373bbfdae1d+ other f1@e673248094b1 ancestor f1@d1d156401c1b
    f1: versions differ -> m (merge)
+  picktool() forcemerge toolpath internal:dump
   picked tool ':dump' for f1 (binary False symlink False changedelete False)
   my f1@6373bbfdae1d+ other f1@e673248094b1 ancestor f1@d1d156401c1b
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved

@@ -186,20 +186,25 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     if force:
         toolpath = _findtool(ui, repo, force)
         if changedelete and not supportscd(toolpath):
+            ui.debug("picktool() forcemerge :prompt\n")
             return ":prompt", None
         else:
             if toolpath:
+                ui.debug("picktool() forcemerge toolpath %s\n" % toolpath)
                 return (force, util.shellquote(toolpath))
             else:
                 # mimic HGMERGE if given tool not found
+                ui.debug("picktool() forcemerge toolpath not found %s\n" % force)
                 return (force, force)
 
     # HGMERGE takes next precedence
     hgmerge = encoding.environ.get("HGMERGE")
     if hgmerge:
         if changedelete and not supportscd(hgmerge):
+            ui.debug("picktool() hgmerge :prompt %s\n" % hgmerge)
             return ":prompt", None
         else:
+            ui.debug("picktool() hgmerge %s\n" % hgmerge)
             return (hgmerge, hgmerge)
 
     # then patterns
@@ -207,6 +212,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
         mf = match.match(repo.root, "", [pat])
         if mf(path) and check(tool, pat, symlink, False, changedelete):
             toolpath = _findtool(ui, repo, tool)
+            ui.debug("picktool() merge-patterns tool=%s pat=%s\n" % (toolpath, pat))
             return (tool, util.shellquote(toolpath))
 
     # then merge tools
@@ -221,6 +227,9 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     names = tools.keys()
     tools = sorted([(-p, tool) for tool, p in tools.items() if tool not in disabled])
     interactive = ui.interactive() and ui.formatted
+    ui.debug(
+        "picktool() interactive=%s formatted=%s\n" % (ui.interactive(), ui.formatted)
+    )
     uimerge = None
     if interactive:
         uimerge = ui.config("ui", "merge:interactive")
@@ -230,12 +239,17 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
         # external tools defined in uimerge won't be able to handle
         # change/delete conflicts
         if uimerge not in names and not changedelete:
+            ui.debug(
+                "picktool() uimerge merge:interactive=%s merge=%s\n"
+                % (ui.config("ui", "merge:interactive"), ui.config("ui", "merge"))
+            )
             return (uimerge, uimerge)
         tools.insert(0, (None, uimerge))  # highest priority
     tools.append((None, "hgmerge"))  # the old default, if found
     for p, t in tools:
         if check(t, None, symlink, binary, changedelete):
             toolpath = _findtool(ui, repo, t)
+            ui.debug("picktool() tools\n")
             return (t, util.shellquote(toolpath))
 
     # internal merge or prompt as last resort
@@ -244,6 +258,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
             # any tool is rejected by capability for symlink or binary
             ui.warn(_("no tool found to merge %s\n") % path)
         return ":prompt", None
+    ui.debug("picktool() :merge\n")
     return ":merge", None
 
 

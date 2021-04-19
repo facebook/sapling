@@ -1377,7 +1377,9 @@ specified file as expected
 
   $ hg debugpickmergetool --config merge-patterns.f=true --config merge-tools.true.executable=nonexistentmergetool --debug f
   couldn't find merge tool true (for pattern f)
+  picktool() interactive=False formatted=False
   couldn't find merge tool true
+  picktool() tools
   f = false
 
 test ui.merge:interactive

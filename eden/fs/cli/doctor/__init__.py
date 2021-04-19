@@ -330,7 +330,7 @@ class EdenDoctor(EdenDoctorChecker):
             )
         if fixer.num_manual_fixes:
             if fixer.num_manual_fixes == 1:
-                msg = f"1 issue requires manual attention."
+                msg = "1 issue requires manual attention."
             else:
                 msg = f"{fixer.num_manual_fixes} issues require manual attention."
             out.writeln(msg, fg=out.YELLOW)
@@ -398,7 +398,7 @@ def check_mount(
         tracker.add_problem(
             Problem(
                 f"Checkout {checkout.path} is currently starting up.",
-                f"If this checkout does not successfully finish starting soon, "
+                "If this checkout does not successfully finish starting soon, "
                 'try running "eden restart"',
                 severity=ProblemSeverity.ADVICE,
             )
@@ -411,7 +411,7 @@ def check_mount(
         tracker.add_problem(
             Problem(
                 f"Checkout {checkout.path} is currently shutting down.",
-                f"If this checkout does not successfully finish shutting down soon, "
+                "If this checkout does not successfully finish shutting down soon, "
                 'try running "eden restart"',
             )
         )
@@ -486,7 +486,7 @@ The running configuration for {checkout_info.path} is different than "
 the on-disk state in Eden's configuration file:
 - Running state directory:    {checkout_info.running_state_dir}
 - Configured state directory: {checkout_info.configured_state_dir}"""
-        remediation = f"""\
+        remediation = """\
 Running `eden restart` will cause Eden to restart and use the data from the
 on-disk configuration."""
         super().__init__(msg, remediation)

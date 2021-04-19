@@ -26,7 +26,7 @@ __all__ = []
 
 if getattr(sys, "platform") == "win32":
     configdir = os.path.join(
-        getattr(os, "environ").get("PROGRAMDATA") or "\ProgramData",
+        getattr(os, "environ").get("PROGRAMDATA") or r"\ProgramData",
         "Facebook",
         "Mercurial",
     )
