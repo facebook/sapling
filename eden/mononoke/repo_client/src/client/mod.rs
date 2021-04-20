@@ -1009,6 +1009,8 @@ impl RepoClient {
             let blobrepo = self.repo.blobrepo().clone();
 
             let nodes_len = nodes.len();
+            ctx.perf_counters()
+                .add_to_counter(PerfCounterType::NumKnownRequested, nodes_len as i64);
             let args = json!({
                 "nodes_count": nodes_len,
             });

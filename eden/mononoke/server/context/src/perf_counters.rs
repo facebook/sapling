@@ -85,6 +85,7 @@ define_perf_counters! {
         MemcacheMisses,
         NullLinknode,
         NumKnown,
+        NumKnownRequested,
         NumUnknown,
         SkiplistAncestorGen,
         SkiplistDescendantGen,
@@ -174,6 +175,7 @@ impl PerfCounterType {
             | MemcacheMisses
             | NullLinknode
             | NumKnown
+            | NumKnownRequested
             | NumUnknown
             | SkiplistAncestorGen
             | SkiplistDescendantGen
