@@ -266,6 +266,7 @@ class ListTest(unittest.TestCase):
                 default_revision=DEFAULT_REVISION["hg"],
                 redirections={},
                 active_prefetch_profiles=[],
+                enable_tree_overlay=False,
             )
         )
 
@@ -285,6 +286,7 @@ class ListTest(unittest.TestCase):
                 default_revision=DEFAULT_REVISION["git"],
                 redirections={},
                 active_prefetch_profiles=[],
+                enable_tree_overlay=False,
             )
         )
 
@@ -304,6 +306,7 @@ class ListTest(unittest.TestCase):
                 default_revision=DEFAULT_REVISION["hg"],
                 redirections={},
                 active_prefetch_profiles=[],
+                enable_tree_overlay=False,
             )
         )
 
@@ -415,6 +418,7 @@ class ListTest(unittest.TestCase):
                 default_revision=DEFAULT_REVISION["hg"],
                 redirections={},
                 active_prefetch_profiles=[],
+                enable_tree_overlay=False,
             )
         )
 
@@ -434,6 +438,7 @@ class ListTest(unittest.TestCase):
                 default_revision=DEFAULT_REVISION["git"],
                 redirections={},
                 active_prefetch_profiles=[],
+                enable_tree_overlay=False,
             )
         )
 

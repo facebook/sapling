@@ -154,6 +154,7 @@ class CheckoutConfig(typing.NamedTuple):
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
+    enable_tree_overlay: bool
 
 
 class EdenInstance:
@@ -970,6 +971,7 @@ class EdenCheckout:
                 "protocol": checkout_config.mount_protocol,
                 "case-sensitive": checkout_config.case_sensitive,
                 "require-utf8-path": checkout_config.require_utf8_path,
+                "enable-tree-overlay": checkout_config.enable_tree_overlay,
             },
             "redirections": redirections,
             "profiles": {"active": checkout_config.active_prefetch_profiles},
@@ -1073,6 +1075,11 @@ class EdenCheckout:
 
                     prefetch_profiles.append(profile)
 
+        enable_tree_overlay = config.get("enable-tree-overlay")
+        # Older mount that doesn't have tree overlay setting should remain disabled.
+        if not isinstance(enable_tree_overlay, bool):
+            enable_tree_overlay = False
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
@@ -1085,6 +1092,7 @@ class EdenCheckout:
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
             active_prefetch_profiles=prefetch_profiles,
+            enable_tree_overlay=enable_tree_overlay,
         )
 
     def get_snapshot(self) -> str:
@@ -1133,6 +1141,7 @@ class EdenCheckout:
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
+            enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
         self.save_config(new_config)
@@ -1166,6 +1175,7 @@ class EdenCheckout:
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
+            enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
         self.save_config(new_config)

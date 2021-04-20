@@ -529,6 +529,15 @@ class EdenConfig : private ConfigSettingManager {
       "prefetch-profiles:prefetching-enabled",
       false,
       this};
+
+  /**
+   * Only used in CLI to control if new clones are using TreeOverlay by default.
+   * Adding here to avoid unknown configuration warning.
+   */
+  ConfigSetting<bool> cliOnlyOverlayEnableTreeOverlay{
+      "overlay:enable_tree_overlay",
+      false,
+      this};
 };
 } // namespace eden
 } // namespace facebook

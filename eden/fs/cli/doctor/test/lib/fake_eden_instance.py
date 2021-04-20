@@ -114,6 +114,7 @@ class FakeEdenInstance:
             default_revision=snapshot,
             redirections={},
             active_prefetch_profiles=[],
+            enable_tree_overlay=True,
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout

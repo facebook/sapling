@@ -720,6 +720,14 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
+        # This option only works on Windows for now
+        parser.add_argument(
+            "--overlay-type",
+            choices=("sqlite", "tree"),
+            default=None,
+            help="(Windows only) specify overlay type",
+        )
+
     async def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
@@ -747,7 +755,7 @@ class CloneCmd(Subcmd):
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(
-                instance, args.repo, args.rev, args.nfs
+                instance, args.repo, args.rev, args.nfs, args.overlay_type
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
@@ -813,12 +821,26 @@ re-run `eden clone` with --allow-empty-repo"""
             print_stderr("error: {}", ex)
             return 1
 
+    def _get_enable_tree_overlay(
+        self, instance: EdenInstance, overlay_type: Optional[str]
+    ) -> bool:
+        if sys.platform != "win32":
+            # Tree overlay does not support non-Windows platform yet
+            return False
+
+        if overlay_type is None:
+            # If no flag is specified from the user, follow system configuration
+            return instance.get_config_bool("overlay.enable_tree_overlay", False)
+
+        return overlay_type == "tree"
+
     def _get_repo_info(
         self,
         instance: EdenInstance,
         repo_arg: str,
         rev: Optional[str],
         nfs: bool,
+        overlay_type: Optional[str],
     ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
@@ -844,6 +866,8 @@ re-run `eden clone` with --allow-empty-repo"""
         else:
             mount_protocol = "nfs" if nfs else "fuse"
 
+        enable_tree_overlay = self._get_enable_tree_overlay(instance, overlay_type)
+
         # New clones on macOS and Windows are case insensitive.
         case_sensitive = sys.platform == "linux"
 
@@ -861,6 +885,7 @@ re-run `eden clone` with --allow-empty-repo"""
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],
+            enable_tree_overlay=enable_tree_overlay,
         )
 
         return repo, repo_type, repo_config
