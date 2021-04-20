@@ -22,6 +22,7 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
@@ -108,7 +109,7 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
     }
 
     pub fn add_hg_warmers(&mut self) -> Result<(), Error> {
-        self.add_derived_data_warmers(Some(MappedHgChangesetId::NAME))?;
+        self.add_derived_data_warmers(vec![MappedHgChangesetId::NAME, FilenodesOnlyPublic::NAME])?;
         self.add_public_phase_warmer();
         Ok(())
     }
