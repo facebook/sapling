@@ -2365,7 +2365,7 @@ def _discoverrevisions(repo, startrev):
     revisions = []
 
     mfrevlog = repo.manifestlog._revlog
-    for rev in repo.revs("%s:", startrev):
+    for rev in repo.revs("%d:", startrev):
         # Changelog
         revisions.append(("00changelog.i", rev))
 
@@ -2547,7 +2547,7 @@ def sqlstrip(ui, rev, *args, **opts):
             cursor = repo.sqlcursor
             changelog = repo.changelog
 
-            revs = repo.revs("%s:" % rev)
+            revs = repo.revs("%d:" % rev)
             # strip locally
             ui.status("stripping locally\n")
             repair.strip(
