@@ -84,7 +84,7 @@ function random_int() {
   max_value=$1
 
   VAL=$RANDOM
-  (( VAL %= $max_value ))
+  (( VAL %= max_value ))
   (( VAL += 1 ))
 
   echo $VAL
@@ -1993,7 +1993,6 @@ function sqlite3() {
   command sqlite3 -cmd '.timeout 1000' "$@"
 }
 
-
 function init_tunables() {
   if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
     echo "{}" > "$MONONOKE_TUNABLES_PATH"
@@ -2003,3 +2002,11 @@ function init_tunables() {
 # Always initialize tunables, since they're required by our binaries to start
 # unless explicitly disabled (but we don't do that in tests).
 init_tunables
+
+function packer() {
+  "$MONONOKE_PACKER" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}

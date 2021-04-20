@@ -199,7 +199,12 @@ impl BlobstoreWithLink for Fileblob {
         // from std::fs::hard_link: The dst path will be a link pointing to the src path
         let src_path = self.path(existing_key);
         let dst_path = self.path(&link_key);
-        Ok(hard_link(src_path, dst_path).await?)
+        // hard_link will fail if dst_path exists. Race it in a task of its own
+        Ok(tokio::task::spawn(async move {
+            let _ = remove_file(&dst_path).await;
+            hard_link(src_path, dst_path).await
+        })
+        .await??)
     }
 
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {

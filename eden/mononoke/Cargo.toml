@@ -67,6 +67,10 @@ name = "manual_scrub"
 path = "cmds/manual_scrub/main.rs"
 
 [[bin]]
+name = "packer"
+path = "cmds/packer/main.rs"
+
+[[bin]]
 name = "rechunker"
 path = "cmds/rechunker.rs"
 
@@ -173,6 +177,7 @@ metaconfig_types = { version = "0.1.0", path = "metaconfig/types" }
 mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "mononoke_hg_sync_job" }
 mononoke_types = { version = "0.1.0", path = "mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "mutable_counters" }
+packblob = { version = "0.1.0", path = "blobstore/packblob" }
 prefixblob = { version = "0.1.0", path = "blobstore/prefixblob" }
 pushrebase = { version = "0.1.0", path = "pushrebase" }
 rand = { version = "0.7", features = ["small_rng"] }

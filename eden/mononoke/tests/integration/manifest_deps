@@ -25,6 +25,7 @@ MONONOKE_BINS = {
     "MONONOKE_LFS_IMPORT": "lfs_import",
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",
     "MONONOKE_MICROWAVE_BUILDER": "builder",
+    "MONONOKE_PACKER": "packer",
     "MONONOKE_RECHUNKER": "rechunker",
     "MONONOKE_REGENERATE_HG_FILENODES": "regenerate_hg_filenodes",
     "MONONOKE_REPO_IMPORT": "repo_import",

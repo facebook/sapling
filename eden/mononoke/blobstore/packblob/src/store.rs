@@ -169,6 +169,7 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
     // Put packed content, returning the pack's key if successful.
     // `prefix` is in the control of the packer, e.g. if packing only
     // filecontent together packer can chose "repoXXXX.packed.file_content."
+    // `prefix` is only used for the temporary pack file
     pub async fn put_packed<'a>(
         &'a self,
         ctx: &'a CoreContext,
