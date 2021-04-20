@@ -31,7 +31,7 @@ use crate::walk::{
 
 use anyhow::Error;
 use async_trait::async_trait;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -433,8 +433,9 @@ impl TailingWalkVisitor for ValidatingVisitor {
     fn start_chunk(
         &mut self,
         chunk_members: &HashSet<ChangesetId>,
+        mapping_prepop: Vec<BonsaiHgMappingEntry>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
-        self.inner.start_chunk(chunk_members)
+        self.inner.start_chunk(chunk_members, mapping_prepop)
     }
 
     fn clear_state(

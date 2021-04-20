@@ -20,7 +20,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, LoadableError};
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
@@ -188,6 +188,7 @@ pub trait TailingWalkVisitor {
     fn start_chunk(
         &mut self,
         chunk_members: &HashSet<ChangesetId>,
+        mapping_prepop: Vec<BonsaiHgMappingEntry>,
     ) -> Result<HashSet<OutgoingEdge>, Error>;
 
     // WalkVisitor needs to be Arc for clone/move into spawn in walk.rs so we can't use &mut self to restrict this.

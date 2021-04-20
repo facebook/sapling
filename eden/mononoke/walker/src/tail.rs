@@ -16,14 +16,18 @@ use crate::walk::{
 };
 
 use anyhow::{anyhow, bail, Error};
+use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP, MIN_FETCH_STEP};
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerivable;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Future},
     stream::{self, BoxStream, StreamExt, TryStreamExt},
 };
+use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
 use slog::info;
 use std::{
@@ -107,6 +111,11 @@ where
     let repo_id = repo_params.repo.get_repoid();
 
     let mut state_start = Timestamp::now();
+
+    let with_hg = repo_params.include_node_types.iter().any(|n| {
+        let n = n.derived_data_name();
+        n == Some(MappedHgChangesetId::NAME) || n == Some(FilenodesOnlyPublic::NAME)
+    });
 
     loop {
         cloned!(job_params, tail_params, type_params, make_run);
@@ -249,7 +258,7 @@ where
             // convert from stream of (id, bounds) to ids plus overall bounds
             let mut chunk_low: u64 = u64::MAX;
             let mut chunk_upper: u64 = 0;
-            let chunk_members = chunk_members
+            let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
                 .map(|(cs_id, (fetch_low, fetch_upper))| {
                     chunk_low = min(chunk_low, fetch_low);
@@ -264,7 +273,22 @@ where
             }
 
             cloned!(mut repo_params);
-            let extra_roots = visitor.start_chunk(&chunk_members)?.into_iter();
+            let hg_mapping_prepop = if with_hg && is_chunking {
+                // bulk prepopulate the hg/bonsai mappings
+                let ids =
+                    BonsaiOrHgChangesetIds::Bonsai(chunk_members.clone().into_iter().collect());
+                repo_params
+                    .repo
+                    .bonsai_hg_mapping()
+                    .get(&ctx, repo_id, ids)
+                    .await?
+            } else {
+                vec![]
+            };
+
+            let extra_roots = visitor
+                .start_chunk(&chunk_members, hg_mapping_prepop)?
+                .into_iter();
             let chunk_roots =
                 roots_for_chunk(chunk_members, &tail_params.public_changeset_chunk_by)?;
             repo_params.walk_roots.extend(chunk_roots);

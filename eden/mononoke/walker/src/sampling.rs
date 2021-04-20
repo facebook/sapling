@@ -11,7 +11,7 @@ use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, Visit
 
 use anyhow::Error;
 use async_trait::async_trait;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
 use mercurial_types::HgChangesetId;
@@ -246,8 +246,9 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
     fn start_chunk(
         &mut self,
         chunk_members: &HashSet<ChangesetId>,
+        mapping_prepop: Vec<BonsaiHgMappingEntry>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
-        self.inner.start_chunk(chunk_members)
+        self.inner.start_chunk(chunk_members, mapping_prepop)
     }
 
     fn clear_state(

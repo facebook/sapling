@@ -16,7 +16,7 @@ use ahash::RandomState;
 use anyhow::{bail, Error};
 use array_init::array_init;
 use async_trait::async_trait;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
 use futures::future::TryFutureExt;
@@ -776,6 +776,7 @@ impl TailingWalkVisitor for WalkState {
     fn start_chunk(
         &mut self,
         new_chunk_bcs: &HashSet<ChangesetId>,
+        mapping_prepop: Vec<BonsaiHgMappingEntry>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         // Reset self.chunk_bcs
         let mut chunk_interned = HashSet::new();
@@ -796,6 +797,13 @@ impl TailingWalkVisitor for WalkState {
         }
         self.deferred_bcs
             .retain(|k, _v| !chunk_interned.contains(k));
+
+        for i in mapping_prepop {
+            let bcs_int = self.bcs_ids.interned(&i.bcs_id);
+            let hg_int = self.hg_cs_ids.interned(&i.hg_cs_id);
+            self.bcs_to_hg.insert(bcs_int, i.hg_cs_id);
+            self.hg_to_bcs.insert(hg_int, i.bcs_id);
+        }
 
         Ok(in_new_chunk)
     }
