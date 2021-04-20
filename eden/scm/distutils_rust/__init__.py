@@ -362,9 +362,7 @@ replace-with = "vendored-sources"
                 "LongPathsAware manifest successfully merged into %s", fname
             )
         except subprocess.CalledProcessError as e:
-            no_resource_err = (
-                b"The specified image file did not contain a resource section".lower()
-            )
+            no_resource_err = b"c101008c"
             if no_resource_err not in e.output.lower():
                 distutils.log.error(
                     "Setting LongPathsAware manifest failed: %r", e.output
