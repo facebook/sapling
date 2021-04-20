@@ -52,7 +52,7 @@ def _checkextension(name, ui):
         return None
 
 
-def _showrev(ui, repo, revid):
+def _showrev(ui, repo, node):
     """pretty print the changeset to drop"""
     showopts = {
         "template": "Dropping changeset "
@@ -60,7 +60,7 @@ def _showrev(ui, repo, revid):
         ": {desc|firstline}\n"
     }
     displayer = cmdutil.show_changeset(ui, repo, showopts)
-    displayer.show(repo[revid])
+    displayer.show(repo[node])
 
 
 def extsetup(ui):
@@ -90,15 +90,16 @@ def drop(ui, repo, *revs, **opts):
     if changectx.phase() == phases.public:
         raise error.Abort(_("public changeset which landed cannot be dropped"))
 
-    parents = repo.revs("parents(%s)", revid)
+    node = changectx.node()
+    parents = repo.revs("parents(%n)", node)
     if len(parents) > 1:
         raise error.Abort(_("merge changeset cannot be dropped"))
     elif len(parents) == 0:
         raise error.Abort(_("root changeset cannot be dropped"))
 
-    _showrev(ui, repo, revid)
+    _showrev(ui, repo, node)
 
-    descendants = repo.revs("(%d::) - %d", revid, revid)
+    descendants = repo.revs("(%n::) - %n", node, node)
     parent = parents.first()
     with repo.wlock():
         with repo.lock():
