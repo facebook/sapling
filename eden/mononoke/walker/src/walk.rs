@@ -127,6 +127,12 @@ pub trait VisitOne {
         bcs_id: &ChangesetId,
     ) -> Result<bool, Error>;
 
+    /// This only checks if its in the state, it doesn't load it from storage as unlike get_bonsai_from_hg it might require derivation
+    fn get_hg_from_bonsai(&self, bcs_id: &ChangesetId) -> Option<HgChangesetId>;
+
+    /// Record the derived HgChangesetId in the visitor state if we know it
+    fn record_hg_from_bonsai(&self, bcs_id: &ChangesetId, hg_cs_id: HgChangesetId);
+
     /// Gets the (possibly preloaded) hg to bonsai mapping
     async fn get_bonsai_from_hg(
         &self,
@@ -698,14 +704,24 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     }
 
     let maybe_hg_cs_id = if filenode_known_derived || !checker.with_filenodes {
-        maybe_derived::<MappedHgChangesetId>(ctx, repo, bcs_id, enable_derive).await?
+        let from_state = checker.get_hg_from_bonsai(&bcs_id);
+        if from_state.is_some() {
+            from_state
+        } else {
+            let derived = maybe_derived::<MappedHgChangesetId>(ctx, repo, bcs_id, enable_derive)
+                .await?
+                .map(|v| v.0);
+            if let Some(derived) = derived {
+                checker.record_hg_from_bonsai(&bcs_id, derived);
+            }
+            derived
+        }
     } else {
         None
     };
 
     Ok(match maybe_hg_cs_id {
         Some(hg_cs_id) => {
-            let hg_cs_id = hg_cs_id.0;
             let mut edges = vec![];
             // This seems like a nonsense edge, but its a way to establish HgChangesetId on the way to Bonsai Changeset
             // which is useful in LFS validation.  The edge is disabled by default.
@@ -1528,6 +1544,14 @@ impl<V: VisitOne> Checker<V> {
 
     fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
         self.visitor.in_chunk(bcs_id)
+    }
+
+    fn get_hg_from_bonsai(&self, bcs_id: &ChangesetId) -> Option<HgChangesetId> {
+        self.visitor.get_hg_from_bonsai(bcs_id)
+    }
+
+    fn record_hg_from_bonsai(&self, bcs_id: &ChangesetId, hg_cs_id: HgChangesetId) {
+        self.visitor.record_hg_from_bonsai(bcs_id, hg_cs_id)
     }
 
     async fn get_bonsai_from_hg(

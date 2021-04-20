@@ -180,6 +180,7 @@ pub struct WalkState {
     // State
     chunk_bcs: StateMap<InternedId<ChangesetId>>,
     deferred_bcs: ValueMap<InternedId<ChangesetId>, HashSet<OutgoingEdge>>,
+    bcs_to_hg: ValueMap<InternedId<ChangesetId>, HgChangesetId>,
     hg_to_bcs: ValueMap<InternedId<HgChangesetId>, ChangesetId>,
     visited_bcs: StateMap<InternedId<ChangesetId>>,
     visited_bcs_mapping: StateMap<InternedId<ChangesetId>>,
@@ -237,6 +238,7 @@ impl WalkState {
             // State
             chunk_bcs: StateMap::with_hasher(fac.clone()),
             deferred_bcs: ValueMap::with_hasher(fac.clone()),
+            bcs_to_hg: ValueMap::with_hasher(fac.clone()),
             hg_to_bcs: ValueMap::with_hasher(fac.clone()),
             visited_bcs: StateMap::with_hasher(fac.clone()),
             visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
@@ -402,6 +404,7 @@ impl WalkState {
             InternedType::HgChangesetId => {
                 self.hg_cs_ids.clear();
                 self.hg_to_bcs.clear();
+                self.bcs_to_hg.clear();
                 self.clear_mapping(NodeType::HgChangeset);
                 self.clear_mapping(NodeType::HgBonsaiMapping);
                 self.clear_mapping(NodeType::HgChangesetViaBonsai);
@@ -671,6 +674,16 @@ impl VisitOne for WalkState {
         }
     }
 
+    fn get_hg_from_bonsai(&self, bcs_id: &ChangesetId) -> Option<HgChangesetId> {
+        let bcs_int = self.bcs_ids.interned(bcs_id);
+        self.bcs_to_hg.get(&bcs_int).map(|v| *v.value())
+    }
+
+    fn record_hg_from_bonsai(&self, bcs_id: &ChangesetId, hg_cs_id: HgChangesetId) {
+        let bcs_int = self.bcs_ids.interned(bcs_id);
+        self.bcs_to_hg.insert(bcs_int, hg_cs_id);
+    }
+
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
@@ -686,7 +699,9 @@ impl VisitOne for WalkState {
                 .get_bonsai_from_hg(ctx, repo_id, hg_cs_id.clone())
                 .await?;
             if let Some(bcs_id) = bcs_id {
+                let bcs_int = self.bcs_ids.interned(&bcs_id);
                 self.hg_to_bcs.insert(hg_int, bcs_id);
+                self.bcs_to_hg.insert(bcs_int, *hg_cs_id);
                 bcs_id
             } else {
                 bail!("Can't have hg without bonsai for {}", hg_cs_id);

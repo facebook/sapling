@@ -93,6 +93,12 @@ impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
     ) -> Result<bool, Error> {
         self.inner.is_public(ctx, phases_store, bcs_id).await
     }
+    fn get_hg_from_bonsai(&self, bcs_id: &ChangesetId) -> Option<HgChangesetId> {
+        self.inner.get_hg_from_bonsai(bcs_id)
+    }
+    fn record_hg_from_bonsai(&self, bcs_id: &ChangesetId, hg_cs_id: HgChangesetId) {
+        self.inner.record_hg_from_bonsai(bcs_id, hg_cs_id)
+    }
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
