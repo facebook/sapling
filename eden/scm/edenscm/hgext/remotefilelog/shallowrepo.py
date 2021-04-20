@@ -149,7 +149,7 @@ def wraprepo(repo):
                 localrevs = self.revs("draft()")
                 if base is not None and base != nullrev:
                     serverbase = list(
-                        self.revs("first(reverse(::%s) - %ld)", base, localrevs)
+                        self.revs("first(reverse(::%d) - %ld)", base, localrevs)
                     )
                     if serverbase:
                         base = serverbase[0]
