@@ -23,7 +23,7 @@ pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
 [target.'cfg(windows)'.dependencies]
 anyhow = "1.0.20"
-winapi = {version = "0.3.7", features = ["handleapi", "processenv", "winbase"]}
+winapi = {version = "0.3.7", features = ["consoleapi", "handleapi", "processenv", "winbase", "wincon"]}
 
 [dependencies.encoding]
 path = "../../lib/encoding"

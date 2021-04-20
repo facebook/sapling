@@ -76,6 +76,9 @@ fn main() {
     #[cfg(windows)]
     disable_standard_handle_inheritability().unwrap();
 
+    #[cfg(windows)]
+    windows::enable_vt_processing().unwrap();
+
     let mut io = clidispatch::io::IO::stdio();
     io.set_main();
     let mut code = hgcommands::run_command(full_args, &mut io);

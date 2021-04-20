@@ -8,12 +8,15 @@
 use anyhow::{format_err, Error};
 use std::path::Path;
 use winapi::shared::minwindef::DWORD;
+use winapi::um::consoleapi::GetConsoleMode;
+use winapi::um::consoleapi::SetConsoleMode;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::handleapi::{SetHandleInformation, INVALID_HANDLE_VALUE};
 use winapi::um::processenv::GetStdHandle;
 use winapi::um::winbase::{
     HANDLE_FLAG_INHERIT, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
 };
+use winapi::um::wincon::ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 use winapi::um::winnt::HANDLE;
 
 fn std_handle(handle: DWORD) -> Result<HANDLE, Error> {
@@ -40,10 +43,28 @@ fn set_handle_inheritability(handle: HANDLE, inherit: bool) -> Result<(), Error>
     Ok(())
 }
 
+fn set_handle_vt_processing(handle: HANDLE) {
+    if !handle.is_null() {
+        let mut mode: DWORD = 0;
+        if unsafe { GetConsoleMode(handle, &mut mode) } != 0 {
+            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            unsafe {
+                SetConsoleMode(handle, mode);
+            }
+        }
+    }
+}
+
 pub fn disable_standard_handle_inheritability() -> Result<(), Error> {
     set_handle_inheritability(std_handle(STD_INPUT_HANDLE)?, false)?;
     set_handle_inheritability(std_handle(STD_OUTPUT_HANDLE)?, false)?;
     set_handle_inheritability(std_handle(STD_ERROR_HANDLE)?, false)?;
+    Ok(())
+}
+
+pub fn enable_vt_processing() -> Result<(), Error> {
+    set_handle_vt_processing(std_handle(STD_OUTPUT_HANDLE)?);
+    set_handle_vt_processing(std_handle(STD_ERROR_HANDLE)?);
     Ok(())
 }
 
