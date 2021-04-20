@@ -671,16 +671,13 @@ impl VisitOne for WalkState {
         }
     }
 
-    async fn defer_from_hg(
+    async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
-    ) -> Result<Option<ChangesetId>, Error> {
-        if self.chunk_bcs.is_empty() {
-            return Ok(None);
-        }
+    ) -> Result<ChangesetId, Error> {
         let hg_int = self.hg_cs_ids.interned(hg_cs_id);
         let bcs_id = if let Some(bcs_id) = self.hg_to_bcs.get(&hg_int) {
             *bcs_id
@@ -695,6 +692,22 @@ impl VisitOne for WalkState {
                 bail!("Can't have hg without bonsai for {}", hg_cs_id);
             }
         };
+        Ok(bcs_id)
+    }
+
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        if self.chunk_bcs.is_empty() {
+            return Ok(None);
+        }
+        let bcs_id = self
+            .get_bonsai_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .await?;
         let id = self.bcs_ids.interned(&bcs_id);
         if self.chunk_bcs.contains_key(&id) {
             Ok(None)

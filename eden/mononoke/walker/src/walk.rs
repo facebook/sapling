@@ -127,6 +127,15 @@ pub trait VisitOne {
         bcs_id: &ChangesetId,
     ) -> Result<bool, Error>;
 
+    /// Gets the (possibly preloaded) hg to bonsai mapping
+    async fn get_bonsai_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<ChangesetId, Error>;
+
     /// returns ChangesetId to defer with if deferral is needed
     async fn defer_from_hg(
         &self,
@@ -729,45 +738,33 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
 }
 
 async fn hg_to_bonsai_mapping_step<V: VisitOne>(
-    ctx: CoreContext,
-    repo: &BlobRepo,
+    ctx: &CoreContext,
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, StepError> {
-    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, key.inner).await?;
-    match maybe_bcs_id {
-        Some(bcs_id) => {
-            let mut edges = vec![];
-            checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
-                Node::Changeset(ChangesetKey {
-                    inner: bcs_id,
-                    filenode_known_derived: key.filenode_known_derived,
-                })
-            });
-            Ok(StepOutput::Done(
-                checker.step_data(NodeType::HgBonsaiMapping, || {
-                    NodeData::HgBonsaiMapping(Some(bcs_id))
-                }),
-                edges,
-            ))
-        }
-        None => Err(StepError::Missing(format!(
-            "bonsai not found for hg changeset {}",
-            key.inner
-        ))),
-    }
+    let bcs_id = checker.get_bonsai_from_hg(ctx, &key.inner).await?;
+
+    let mut edges = vec![];
+    checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
+        Node::Changeset(ChangesetKey {
+            inner: bcs_id,
+            filenode_known_derived: key.filenode_known_derived,
+        })
+    });
+    Ok(StepOutput::Done(
+        checker.step_data(NodeType::HgBonsaiMapping, || {
+            NodeData::HgBonsaiMapping(Some(bcs_id))
+        }),
+        edges,
+    ))
 }
 
 async fn hg_changeset_via_bonsai_step<V: VisitOne>(
-    ctx: CoreContext,
-    repo: &BlobRepo,
+    ctx: &CoreContext,
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, StepError> {
-    let bcs_id = repo
-        .get_bonsai_from_hg(ctx, key.inner)
-        .await?
-        .ok_or_else(|| StepError::Missing("Can't have hg without bonsai".to_string()))?;
+    let bcs_id = checker.get_bonsai_from_hg(&ctx, &key.inner).await?;
 
     if !checker.in_chunk(&bcs_id) {
         return Ok(StepOutput::Deferred(bcs_id));
@@ -1533,6 +1530,16 @@ impl<V: VisitOne> Checker<V> {
         self.visitor.in_chunk(bcs_id)
     }
 
+    async fn get_bonsai_from_hg(
+        &self,
+        ctx: &CoreContext,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<ChangesetId, Error> {
+        self.visitor
+            .get_bonsai_from_hg(ctx, self.repo_id, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
+            .await
+    }
+
     async fn defer_from_hg(
         &self,
         ctx: &CoreContext,
@@ -1843,12 +1850,10 @@ where
             published_bookmarks_step(published_bookmarks.clone(), &checker).await
         }
         // Hg
-        Node::HgBonsaiMapping(key) => {
-            hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, key).await
-        }
+        Node::HgBonsaiMapping(key) => hg_to_bonsai_mapping_step(&ctx, &checker, key).await,
         Node::HgChangeset(hg_csid) => hg_changeset_step(&ctx, &repo, &checker, hg_csid).await,
         Node::HgChangesetViaBonsai(hg_csid) => {
-            hg_changeset_via_bonsai_step(ctx.clone(), &repo, &checker, hg_csid).await
+            hg_changeset_via_bonsai_step(&ctx, &checker, hg_csid).await
         }
         Node::HgFileEnvelope(hg_file_node_id) => {
             hg_file_envelope_step(

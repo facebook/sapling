@@ -93,6 +93,17 @@ impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
     ) -> Result<bool, Error> {
         self.inner.is_public(ctx, phases_store, bcs_id).await
     }
+    async fn get_bonsai_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<ChangesetId, Error> {
+        self.inner
+            .get_bonsai_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .await
+    }
     async fn defer_from_hg(
         &self,
         ctx: &CoreContext,
