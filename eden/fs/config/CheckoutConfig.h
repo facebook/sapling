@@ -121,6 +121,11 @@ class CheckoutConfig {
     return requireUtf8Path_;
   }
 
+  /** Whether this repository is using tree overlay */
+  bool getEnableTreeOverlay() const {
+    return enableTreeOverlay_;
+  }
+
 #ifdef _WIN32
   /** Guid for that repository */
   Guid getRepoGuid() const {
@@ -136,6 +141,7 @@ class CheckoutConfig {
   MountProtocol mountProtocol_;
   bool caseSensitive_{!folly::kIsWindows};
   bool requireUtf8Path_{true};
+  bool enableTreeOverlay_{false};
 #ifdef _WIN32
   Guid repoGuid_;
 #endif

@@ -69,6 +69,8 @@ class OverlayFile;
  */
 class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
+  enum class OverlayType : bool { Legacy = false, Tree = true };
+
   /**
    * Create a new Overlay object.
    *
@@ -78,6 +80,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   static std::shared_ptr<Overlay> create(
       AbsolutePathPiece localDir,
       bool caseSensitive,
+      OverlayType overlayType,
       std::shared_ptr<StructuredLogger> logger);
 
   ~Overlay();
@@ -247,6 +250,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   explicit Overlay(
       AbsolutePathPiece localDir,
       bool caseSensitive,
+      OverlayType overlayType,
       std::shared_ptr<StructuredLogger> logger);
 
   /**

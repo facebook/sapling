@@ -206,6 +206,7 @@ EdenMount::EdenMount(
       overlay_{Overlay::create(
           config_->getOverlayPath(),
           config_->getCaseSensitive(),
+          static_cast<Overlay::OverlayType>(config_->getEnableTreeOverlay()),
           serverState_->getStructuredLogger())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},

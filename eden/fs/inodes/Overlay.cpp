@@ -31,8 +31,6 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #endif // !_WIN32
 
-DEFINE_bool(use_tree_overlay, false, "[experimental] use TreeOverlay");
-
 namespace facebook {
 namespace eden {
 
@@ -40,8 +38,10 @@ namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
 
-std::unique_ptr<IOverlay> makeOverlay(AbsolutePathPiece localDir) {
-  if (FLAGS_use_tree_overlay) {
+std::unique_ptr<IOverlay> makeOverlay(
+    AbsolutePathPiece localDir,
+    Overlay::OverlayType overlayType) {
+  if (overlayType == Overlay::OverlayType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
   }
 #ifdef _WIN32
@@ -58,22 +58,27 @@ using std::optional;
 std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     bool caseSensitive,
+    OverlayType overlayType,
     std::shared_ptr<StructuredLogger> logger) {
+  // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
     explicit MakeSharedEnabler(
         AbsolutePathPiece localDir,
         bool caseSensitive,
+        OverlayType overlayType,
         std::shared_ptr<StructuredLogger> logger)
-        : Overlay(localDir, caseSensitive, logger) {}
+        : Overlay(localDir, caseSensitive, overlayType, logger) {}
   };
-  return std::make_shared<MakeSharedEnabler>(localDir, caseSensitive, logger);
+  return std::make_shared<MakeSharedEnabler>(
+      localDir, caseSensitive, overlayType, logger);
 }
 
 Overlay::Overlay(
     AbsolutePathPiece localDir,
     bool caseSensitive,
+    OverlayType overlayType,
     std::shared_ptr<StructuredLogger> logger)
-    : backingOverlay_{makeOverlay(localDir)},
+    : backingOverlay_{makeOverlay(localDir, overlayType)},
       supportsSemanticOperations_{
           backingOverlay_->supportsSemanticOperations()},
       caseSensitive_{caseSensitive},

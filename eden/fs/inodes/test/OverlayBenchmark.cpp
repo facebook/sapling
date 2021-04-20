@@ -30,6 +30,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapDefaultCaseSensitive,
+      Overlay::OverlayType::Legacy,
       std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
 

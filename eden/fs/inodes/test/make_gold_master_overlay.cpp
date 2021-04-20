@@ -41,6 +41,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapCaseSensitive,
+      Overlay::OverlayType::Legacy,
       std::make_shared<NullStructuredLogger>());
 
   auto fileInode = overlay->allocateInodeNumber();
