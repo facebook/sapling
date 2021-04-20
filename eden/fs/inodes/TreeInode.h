@@ -485,8 +485,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static DirContents
-  buildDirFromTree(const Tree* tree, Overlay* overlay, bool caseSensitive);
+  static DirContents buildDirFromTree(
+      const Tree* tree,
+      Overlay* overlay,
+      CaseSensitivity caseSensitive);
 
   void updateAtime();
 

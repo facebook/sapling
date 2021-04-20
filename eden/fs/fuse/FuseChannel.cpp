@@ -781,7 +781,7 @@ FuseChannel::FuseChannel(
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* notifications,
-    bool caseSensitive,
+    CaseSensitivity caseSensitive,
     bool requireUtf8Path)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
@@ -1412,7 +1412,7 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_NO_OPENDIR_SUPPORT;
 #endif
 #ifdef FUSE_CASE_INSENSITIVE
-  if (!caseSensitive_) {
+  if (caseSensitive_ == CaseSensitivity::Insensitive) {
     want |= FUSE_CASE_INSENSITIVE;
   }
 #else

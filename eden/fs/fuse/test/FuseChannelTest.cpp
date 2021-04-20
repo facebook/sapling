@@ -16,6 +16,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
@@ -77,7 +78,7 @@ class FuseChannelTest : public ::testing::Test {
         std::make_shared<ProcessNameCache>(),
         std::chrono::seconds(60),
         nullptr,
-        true,
+        CaseSensitivity::Sensitive,
         true));
   }
 

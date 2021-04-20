@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathMap.h"
 
@@ -238,7 +239,8 @@ static_assert(sizeof(DirEntry) == 32, "DirEntry is four words");
  * Represents a directory in the overlay.
  */
 struct DirContents : PathMap<DirEntry> {
-  explicit DirContents(bool caseSensitive) : PathMap(caseSensitive) {}
+  explicit DirContents(CaseSensitivity caseSensitive)
+      : PathMap(caseSensitive) {}
 };
 
 } // namespace eden

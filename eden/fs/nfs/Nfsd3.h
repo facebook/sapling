@@ -14,6 +14,7 @@
 
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 namespace folly {
@@ -52,7 +53,7 @@ class Nfsd3 {
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       uint32_t iosize);
 
   ~Nfsd3();

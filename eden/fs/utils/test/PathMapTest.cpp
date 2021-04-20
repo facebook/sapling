@@ -14,7 +14,7 @@ using namespace facebook::eden::path_literals;
 
 TEST(PathMap, caseSensitive) {
   // Explicitly a case sensitive map, regardless of the host OS
-  PathMap<bool> map(kPathMapCaseSensitive);
+  PathMap<bool> map(CaseSensitivity::Sensitive);
 
   map.insert(std::make_pair(PathComponent("foo"), true));
   EXPECT_TRUE(map.at("foo"_pc));
@@ -33,14 +33,14 @@ TEST(PathMap, caseSensitive) {
 }
 
 TEST(PathMap, caseSensitiveCopyMove) {
-  PathMap<bool> map(kPathMapCaseSensitive);
+  PathMap<bool> map(CaseSensitivity::Sensitive);
   map.insert(std::make_pair(PathComponent("foo"), true));
 
   PathMap<bool> copied(map);
   EXPECT_TRUE(copied.at("foo"_pc));
   EXPECT_EQ(copied.find("Foo"_pc), copied.end());
 
-  PathMap<bool> copy_assign(kPathMapCaseInSensitive);
+  PathMap<bool> copy_assign(CaseSensitivity::Insensitive);
   copy_assign = map;
   EXPECT_TRUE(copy_assign.at("foo"_pc));
   EXPECT_EQ(copy_assign.find("Foo"_pc), copy_assign.end());
@@ -49,7 +49,7 @@ TEST(PathMap, caseSensitiveCopyMove) {
   EXPECT_TRUE(moved.at("foo"_pc));
   EXPECT_EQ(moved.find("Foo"_pc), moved.end());
 
-  PathMap<bool> move_assign(kPathMapCaseInSensitive);
+  PathMap<bool> move_assign(CaseSensitivity::Insensitive);
   move_assign = std::move(moved);
   EXPECT_TRUE(move_assign.at("foo"_pc));
   EXPECT_EQ(move_assign.find("Foo"_pc), move_assign.end());
@@ -57,7 +57,7 @@ TEST(PathMap, caseSensitiveCopyMove) {
 
 TEST(PathMap, caseInSensitive) {
   // Explicitly a case IN-sensitive map, regardless of the host OS
-  PathMap<bool> map(kPathMapCaseInSensitive);
+  PathMap<bool> map(CaseSensitivity::Insensitive);
 
   map.insert(std::make_pair(PathComponent("foo"), true));
   EXPECT_TRUE(map.at("foo"_pc));
@@ -84,14 +84,14 @@ TEST(PathMap, caseInSensitive) {
 }
 
 TEST(PathMap, caseInSensitiveCopyMove) {
-  PathMap<bool> map(kPathMapCaseInSensitive);
+  PathMap<bool> map(CaseSensitivity::Insensitive);
   map.insert(std::make_pair(PathComponent("foo"), true));
 
   PathMap<bool> copied(map);
   EXPECT_TRUE(copied.at("foo"_pc));
   EXPECT_TRUE(copied.at("Foo"_pc));
 
-  PathMap<bool> copy_assign(kPathMapCaseSensitive);
+  PathMap<bool> copy_assign(CaseSensitivity::Sensitive);
   copy_assign = map;
   EXPECT_TRUE(copy_assign.at("foo"_pc));
   EXPECT_TRUE(copy_assign.at("Foo"_pc));
@@ -100,7 +100,7 @@ TEST(PathMap, caseInSensitiveCopyMove) {
   EXPECT_TRUE(moved.at("foo"_pc));
   EXPECT_TRUE(moved.at("Foo"_pc));
 
-  PathMap<bool> move_assign(kPathMapCaseSensitive);
+  PathMap<bool> move_assign(CaseSensitivity::Sensitive);
   move_assign = std::move(moved);
   EXPECT_TRUE(move_assign.at("foo"_pc));
   EXPECT_TRUE(move_assign.at("Foo"_pc));

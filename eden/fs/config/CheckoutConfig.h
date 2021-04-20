@@ -11,6 +11,7 @@
 #include <optional>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef _WIN32
@@ -114,7 +115,7 @@ class CheckoutConfig {
   const AbsolutePath& getClientDirectory() const;
 
   /** Whether this repository is mounted in case-sensitive mode */
-  bool getCaseSensitive() const;
+  CaseSensitivity getCaseSensitive() const;
 
   /** Whether this repository should allow non-utf8 path */
   bool getRequireUtf8Path() const {
@@ -139,7 +140,7 @@ class CheckoutConfig {
   std::string repoType_;
   std::string repoSource_;
   MountProtocol mountProtocol_;
-  bool caseSensitive_{!folly::kIsWindows};
+  CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   bool requireUtf8Path_{true};
   bool enableTreeOverlay_{false};
 #ifdef _WIN32

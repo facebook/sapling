@@ -25,6 +25,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
@@ -39,7 +40,7 @@ static TreeEntry makeTreeEntry(folly::StringPiece name) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
-  DirContents dir(kPathMapCaseSensitive);
+  DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}};
@@ -48,7 +49,7 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
 }
 
 TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
-  DirContents dir(kPathMapCaseSensitive);
+  DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}};
@@ -59,7 +60,7 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
-  DirContents dir(kPathMapCaseSensitive);
+  DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one")}};
@@ -70,7 +71,7 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneAddition) {
-  DirContents dir(kPathMapCaseSensitive);
+  DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{

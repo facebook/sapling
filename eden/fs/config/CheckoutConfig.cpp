@@ -164,7 +164,7 @@ const AbsolutePath& CheckoutConfig::getClientDirectory() const {
   return clientDirectory_;
 }
 
-bool CheckoutConfig::getCaseSensitive() const {
+CaseSensitivity CheckoutConfig::getCaseSensitive() const {
   return caseSensitive_;
 }
 
@@ -199,8 +199,9 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 
   // Read optional case-sensitivity.
   auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());
-  config->caseSensitive_ =
-      caseSensitive ? *caseSensitive : kPathMapDefaultCaseSensitive;
+  config->caseSensitive_ = caseSensitive
+      ? static_cast<CaseSensitivity>(*caseSensitive)
+      : kPathMapDefaultCaseSensitive;
 
   auto requireUtf8Path = repository->get_as<bool>(kRequireUtf8Path.str());
   config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;

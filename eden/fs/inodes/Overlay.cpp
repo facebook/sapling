@@ -57,14 +57,14 @@ using std::optional;
 
 std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
-    bool caseSensitive,
+    CaseSensitivity caseSensitive,
     OverlayType overlayType,
     std::shared_ptr<StructuredLogger> logger) {
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
     explicit MakeSharedEnabler(
         AbsolutePathPiece localDir,
-        bool caseSensitive,
+        CaseSensitivity caseSensitive,
         OverlayType overlayType,
         std::shared_ptr<StructuredLogger> logger)
         : Overlay(localDir, caseSensitive, overlayType, logger) {}
@@ -75,7 +75,7 @@ std::shared_ptr<Overlay> Overlay::create(
 
 Overlay::Overlay(
     AbsolutePathPiece localDir,
-    bool caseSensitive,
+    CaseSensitivity caseSensitive,
     OverlayType overlayType,
     std::shared_ptr<StructuredLogger> logger)
     : backingOverlay_{makeOverlay(localDir, overlayType)},

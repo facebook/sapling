@@ -21,6 +21,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessNameCache.h"
@@ -133,7 +134,7 @@ int main(int argc, char** argv) {
       std::make_shared<ProcessNameCache>(),
       std::chrono::seconds(60),
       nullptr,
-      true,
+      CaseSensitivity::Sensitive,
       true));
 
   XLOG(INFO) << "Starting FUSE...";

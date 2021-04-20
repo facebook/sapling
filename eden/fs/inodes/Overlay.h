@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -79,7 +80,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   static std::shared_ptr<Overlay> create(
       AbsolutePathPiece localDir,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       OverlayType overlayType,
       std::shared_ptr<StructuredLogger> logger);
 
@@ -249,7 +250,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
  private:
   explicit Overlay(
       AbsolutePathPiece localDir,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       OverlayType overlayType,
       std::shared_ptr<StructuredLogger> logger);
 
@@ -343,7 +344,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   mutable std::atomic<uint64_t> outstandingIORequests_{0};
 
   folly::Baton<> lastOutstandingRequestIsComplete_;
-  bool caseSensitive_;
+  CaseSensitivity caseSensitive_;
 
   std::shared_ptr<StructuredLogger> structuredLogger_;
 

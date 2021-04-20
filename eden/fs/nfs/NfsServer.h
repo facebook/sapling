@@ -12,6 +12,7 @@
 #include <tuple>
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 
 namespace folly {
 class Executor;
@@ -70,7 +71,7 @@ class NfsServer {
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       uint32_t iosize);
 
   /**

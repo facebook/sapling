@@ -79,7 +79,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* FOLLY_NULLABLE notifications,
-    bool caseSensitive,
+    CaseSensitivity caseSensitive,
     uint32_t iosize) {
   auto nfsd = std::make_unique<Nfsd3>(
       false,

@@ -30,6 +30,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/TraceBus.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -226,7 +227,7 @@ class FuseChannel {
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       bool requireUtf8Path);
 
   /**
@@ -739,7 +740,7 @@ class FuseChannel {
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
   Notifications* const notifications_;
-  bool caseSensitive_;
+  CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
 
   /*

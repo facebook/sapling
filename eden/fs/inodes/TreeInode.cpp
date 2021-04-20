@@ -37,6 +37,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -858,7 +859,7 @@ DirContents TreeInode::saveDirFromTree(
 DirContents TreeInode::buildDirFromTree(
     const Tree* tree,
     Overlay* overlay,
-    bool caseSensitive) {
+    CaseSensitivity caseSensitive) {
   XCHECK(tree);
 
   // A future optimization is for this code to allocate all of the inode numbers

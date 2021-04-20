@@ -31,7 +31,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   explicit Nfsd3ServerProcessor(
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      bool caseSensitive,
+      CaseSensitivity caseSensitive,
       uint32_t iosize)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
@@ -101,7 +101,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
  private:
   std::unique_ptr<NfsDispatcher> dispatcher_;
   const folly::Logger* straceLogger_;
-  bool caseSensitive_;
+  CaseSensitivity caseSensitive_;
   uint32_t iosize_;
 };
 
@@ -1322,7 +1322,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
             /*name_max=*/NAME_MAX,
             /*no_trunc=*/true,
             /*chown_restricted=*/true,
-            /*case_insensitive=*/!caseSensitive_,
+            /*case_insensitive=*/caseSensitive_ == CaseSensitivity::Insensitive,
             /*case_preserving=*/true,
         }}}};
 
@@ -1696,7 +1696,7 @@ Nfsd3::Nfsd3(
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/,
-    bool caseSensitive,
+    CaseSensitivity caseSensitive,
     uint32_t iosize)
     : server_(
           std::make_shared<Nfsd3ServerProcessor>(
