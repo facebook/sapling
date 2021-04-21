@@ -10,8 +10,6 @@
 //! This program allows querying the contents of
 //! EdenAPI CBOR file, tree, and history responses.
 
-#![deny(warnings)]
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};

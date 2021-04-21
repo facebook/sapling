@@ -122,8 +122,6 @@
 //! The produced stores must implement the `HgIdDataStore` trait.
 //!
 
-#![deny(warnings)]
-
 mod contentstore;
 mod dataindex;
 #[cfg(all(fbcode_build, target_os = "linux"))]

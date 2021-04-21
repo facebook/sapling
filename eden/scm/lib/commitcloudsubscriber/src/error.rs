@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use lazy_static::lazy_static;
 use regex::Regex;
 use thiserror::Error;

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub use anyhow::{Error, Result};
 use thiserror::Error;
 

@@ -12,8 +12,6 @@
 //! like curl to send test requests to the EdenAPI server. This
 //! is primarily useful for integration tests and ad-hoc testing.
 
-#![deny(warnings)]
-
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};

@@ -7,7 +7,6 @@
 
 //! An async-compatible HTTP client built on top of libcurl.
 
-#![deny(warnings)]
 #![allow(dead_code)]
 
 mod client;

@@ -23,8 +23,6 @@
 //! TYPES MAY CAUSE VERSION SKEW, so any changes should proceed
 //! with caution.
 
-#![deny(warnings)]
-
 pub mod bookmark;
 pub mod commit;
 pub mod complete_tree;

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::{fmt, io, path::Path};
 
 use anyhow::{Context, Result};
