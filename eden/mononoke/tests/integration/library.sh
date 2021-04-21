@@ -764,12 +764,6 @@ hipster_acl = "$ACL_NAME"
 CONFIG
 fi
 
-if [[ -z "${NO_BOOKMARKS_CACHE:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-bookmarks_cache_ttl=2000
-CONFIG
-fi
-
 if [[ -n "${READ_ONLY_REPO:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 readonly=true

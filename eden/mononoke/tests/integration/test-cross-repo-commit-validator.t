@@ -10,9 +10,9 @@
 setup configuration
 Disable bookmarks cache because bookmarks are modified by two separate processes
   $ REPOTYPE="blob_files"
-  $ NO_BOOKMARKS_CACHE=1 REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
-  $ NO_BOOKMARKS_CACHE=1 REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
-  $ NO_BOOKMARKS_CACHE=1 REPOID=2 REPONAME=ovr-mon setup_common_config $REPOTYPE  # ovr-mon just exists here to make the test sync config work
+  $ REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
+  $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
+  $ REPOID=2 REPONAME=ovr-mon setup_common_config $REPOTYPE  # ovr-mon just exists here to make the test sync config work
 
   $ cat >> "$HGRCPATH" <<EOF
   > [ui]

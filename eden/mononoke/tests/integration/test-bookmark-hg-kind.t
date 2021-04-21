@@ -8,7 +8,7 @@
 
 setup configuration
 Disable boookmarks cache because we manually modify bookmarks table
-  $ LIST_KEYS_PATTERNS_MAX=6 NO_BOOKMARKS_CACHE=1 setup_common_config
+  $ LIST_KEYS_PATTERNS_MAX=6 setup_common_config
   $ cd $TESTTMP
 
 setup common configuration for these tests
@@ -65,6 +65,7 @@ create new bookmarks, then update their properties
   exporting bookmark scratch
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'scratch';"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('publishing' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'not_pull_default';"
+  $ flush_mononoke_bookmarks
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind FROM bookmarks;'
   master_bookmark|pull_default
   not_pull_default|publishing
@@ -118,6 +119,7 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
      not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
      scratch                   b2d646f64a9978717516887968786c6b7a33edf9
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'more/%';"
+  $ flush_mononoke_bookmarks
 Exercise the limit (6 bookmarks should fail)
   $ hgmn push ssh://user@dummy/repo -r . --to "more/3" --create >/dev/null 2>&1
   $ hgmn bookmarks --list-remote "*"
