@@ -47,7 +47,7 @@ pub use warmers::{create_derived_data_warmer, create_public_phase_warmer};
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
-    bookmarks_fetch_failures: timeseries(Rate, Sum),
+    bookmark_discover_failures: timeseries(Rate, Sum),
     bookmark_update_failures: timeseries(Rate, Sum),
     max_staleness_secs: dynamic_singleton_counter("{}.max_staleness_secs", (reponame: String)),
 }
@@ -210,16 +210,14 @@ impl WarmBookmarksCache {
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers, init_mode).await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
-        let loop_sleep = Duration::from_millis(1000);
-        spawn_bookmarks_coordinator(
+        BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver,
-            ctx.clone(),
             repo.clone(),
             warmers.clone(),
-            loop_sleep,
             bookmark_update_delay,
-        );
+        )
+        .spawn(ctx.clone(), receiver);
+
         Ok(Self {
             bookmarks,
             terminate: Some(sender),
@@ -495,139 +493,161 @@ pub async fn find_all_underived_and_latest_derived(
     Ok((LatestDerivedBookmarkEntry::NotFound, res))
 }
 
-// Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
-fn spawn_bookmarks_coordinator(
+struct BookmarksCoordinator {
     bookmarks: Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
-    terminate: oneshot::Receiver<()>,
-    ctx: CoreContext,
     repo: BlobRepo,
     warmers: Arc<Vec<Warmer>>,
-    loop_sleep: Duration,
     bookmark_update_delay: BookmarkUpdateDelay,
-) {
-    // ignore JoinHandle, because we want it to run until `terminate` receives a signal
-    let _ = tokio::spawn(async move {
-        info!(ctx.logger(), "Started warm bookmark cache updater");
-        let infinite_loop = async {
-            // This set is used to keep track of which bookmark is being updated
-            // and make sure that we don't have more than a single updater for a bookmark.
-            let live_updaters = Arc::new(RwLock::new(
-                HashMap::<BookmarkName, BookmarkUpdaterState>::new(),
-            ));
-            loop {
-                // Report delay and remove finished updaters
-                report_delay_and_remove_finished_updaters(&ctx, &live_updaters, &repo.name());
+    live_updaters: Arc<RwLock<HashMap<BookmarkName, BookmarkUpdaterState>>>,
+}
 
-                let cur_bookmarks = bookmarks.with_read(|bookmarks| bookmarks.clone());
+impl BookmarksCoordinator {
+    fn new(
+        bookmarks: Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
+        repo: BlobRepo,
+        warmers: Arc<Vec<Warmer>>,
+        bookmark_update_delay: BookmarkUpdateDelay,
+    ) -> Self {
+        Self {
+            bookmarks,
+            repo,
+            warmers,
+            bookmark_update_delay,
+            live_updaters: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
 
-                let res = repo
-                    .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-                    .map_ok(|(book, cs_id)| {
-                        let kind = *book.kind();
-                        (book.into_name(), (cs_id, kind))
-                    })
-                    .try_collect::<HashMap<_, _>>()
-                    .await;
+    async fn update(&self, ctx: &CoreContext) -> Result<(), Error> {
+        // Report delay and remove finished updaters
+        report_delay_and_remove_finished_updaters(&ctx, &self.live_updaters, &self.repo.name());
 
-                let new_bookmarks = match res {
-                    Ok(bookmarks) => bookmarks,
-                    Err(err) => {
-                        STATS::bookmarks_fetch_failures.add_value(1);
-                        warn!(ctx.logger(), "failed to fetch bookmarks {:?}", err);
-                        tokio::time::delay_for(loop_sleep).await;
-                        continue;
-                    }
-                };
+        let cur_bookmarks = self.bookmarks.with_read(|bookmarks| bookmarks.clone());
 
-                let mut changed_bookmarks = vec![];
-                // Find bookmarks that were moved/created and spawn an updater
-                // for them
-                for (key, new_value) in &new_bookmarks {
-                    let cur_value = cur_bookmarks.get(key);
-                    if Some(new_value) != cur_value {
-                        let book = Bookmark::new(key.clone(), new_value.1);
-                        changed_bookmarks.push(book);
-                    }
-                }
+        let new_bookmarks = self
+            .repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
+            .try_collect::<HashMap<_, _>>()
+            .await
+            .context("Error fetching bookmarks")?;
 
-                // Find bookmarks that were deleted
-                for (key, cur_value) in &cur_bookmarks {
-                    // There's a potential race condition if a bookmark was deleted
-                    // and then immediately recreated with another kind (e.g. Publishing instead of
-                    // PullDefault). Because of the race WarmBookmarksCache might store a
-                    // bookmark with an old Kind.
-                    // I think this is acceptable because it's going to be fixed on next iteration
-                    // of the loop, and because fixing it properly is hard if not impossible -
-                    // change of bookmark kind is not reflected in update log.
-                    if !new_bookmarks.contains_key(key) {
-                        let book = Bookmark::new(key.clone(), cur_value.1);
-                        changed_bookmarks.push(book);
-                    }
-                }
-
-                for book in changed_bookmarks {
-                    let need_spawning = live_updaters.with_write(|live_updaters| {
-                        if !live_updaters.contains_key(book.name()) {
-                            live_updaters
-                                .insert(book.name().clone(), BookmarkUpdaterState::Started);
-                            true
-                        } else {
-                            false
-                        }
-                    });
-                    // It's possible that bookmark updater removes a bookmark right after
-                    // we tried to insert it. That means we won't spawn a new updater,
-                    // but that's not a big deal though - we'll do it on the next iteration
-                    // of the loop
-                    if need_spawning {
-                        cloned!(ctx, repo, bookmarks, live_updaters, warmers);
-                        let _ = tokio::spawn(async move {
-                            let res = single_bookmark_updater(
-                                &ctx,
-                                &repo,
-                                &book,
-                                &bookmarks,
-                                &warmers,
-                                |ts: Timestamp| {
-                                    live_updaters.with_write(|live_updaters| {
-                                        live_updaters.insert(
-                                            book.name().clone(),
-                                            BookmarkUpdaterState::InProgress {
-                                                oldest_underived_ts: ts,
-                                            },
-                                        );
-                                    });
-                                },
-                                bookmark_update_delay,
-                            )
-                            .await;
-                            if let Err(ref err) = res {
-                                STATS::bookmark_update_failures.add_value(1);
-                                warn!(ctx.logger(), "update of {} failed: {:?}", book.name(), err);
-                            };
-
-                            live_updaters.with_write(|live_updaters| {
-                                let maybe_state = live_updaters.remove(&book.name());
-                                if let Some(state) = maybe_state {
-                                    live_updaters
-                                        .insert(book.name().clone(), state.into_finished(&res));
-                                }
-                            });
-                        });
-                    }
-                }
-
-                tokio::time::delay_for(loop_sleep).await;
+        let mut changed_bookmarks = vec![];
+        // Find bookmarks that were moved/created and spawn an updater
+        // for them
+        for (key, new_value) in &new_bookmarks {
+            let cur_value = cur_bookmarks.get(key);
+            if Some(new_value) != cur_value {
+                let book = Bookmark::new(key.clone(), new_value.1);
+                changed_bookmarks.push(book);
             }
         }
-        .boxed();
 
-        let _ = select(infinite_loop, terminate).await;
+        // Find bookmarks that were deleted
+        for (key, cur_value) in &cur_bookmarks {
+            // There's a potential race condition if a bookmark was deleted
+            // and then immediately recreated with another kind (e.g. Publishing instead of
+            // PullDefault). Because of the race WarmBookmarksCache might store a
+            // bookmark with an old Kind.
+            // I think this is acceptable because it's going to be fixed on next iteration
+            // of the loop, and because fixing it properly is hard if not impossible -
+            // change of bookmark kind is not reflected in update log.
+            if !new_bookmarks.contains_key(key) {
+                let book = Bookmark::new(key.clone(), cur_value.1);
+                changed_bookmarks.push(book);
+            }
+        }
 
-        info!(ctx.logger(), "Stopped warm bookmark cache updater");
-        let res: Result<_, Error> = Ok(());
-        res
-    });
+        for book in changed_bookmarks {
+            let need_spawning = self.live_updaters.with_write(|live_updaters| {
+                if !live_updaters.contains_key(book.name()) {
+                    live_updaters.insert(book.name().clone(), BookmarkUpdaterState::Started);
+                    true
+                } else {
+                    false
+                }
+            });
+            // It's possible that bookmark updater removes a bookmark right after
+            // we tried to insert it. That means we won't spawn a new updater,
+            // but that's not a big deal though - we'll do it on the next iteration
+            // of the loop
+            if need_spawning {
+                cloned!(
+                    ctx,
+                    self.repo,
+                    self.bookmarks,
+                    self.live_updaters,
+                    self.warmers,
+                    self.bookmark_update_delay
+                );
+                let _ = tokio::spawn(async move {
+                    let res = single_bookmark_updater(
+                        &ctx,
+                        &repo,
+                        &book,
+                        &bookmarks,
+                        &warmers,
+                        |ts: Timestamp| {
+                            live_updaters.with_write(|live_updaters| {
+                                live_updaters.insert(
+                                    book.name().clone(),
+                                    BookmarkUpdaterState::InProgress {
+                                        oldest_underived_ts: ts,
+                                    },
+                                );
+                            });
+                        },
+                        bookmark_update_delay,
+                    )
+                    .await;
+                    if let Err(ref err) = res {
+                        STATS::bookmark_update_failures.add_value(1);
+                        warn!(ctx.logger(), "update of {} failed: {:?}", book.name(), err);
+                    };
+
+                    live_updaters.with_write(|live_updaters| {
+                        let maybe_state = live_updaters.remove(&book.name());
+                        if let Some(state) = maybe_state {
+                            live_updaters.insert(book.name().clone(), state.into_finished(&res));
+                        }
+                    });
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    // Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
+    pub fn spawn(self, ctx: CoreContext, terminate: oneshot::Receiver<()>) {
+        let fut = async move {
+            info!(ctx.logger(), "Started warm bookmark cache updater");
+            let infinite_loop = async {
+                let loop_sleep = Duration::from_millis(1000);
+
+                loop {
+                    let res = self.update(&ctx).await;
+
+                    if let Err(err) = res.as_ref() {
+                        STATS::bookmark_discover_failures.add_value(1);
+                        warn!(ctx.logger(), "failed to update bookmarks {:?}", err);
+                    }
+
+                    tokio::time::delay_for(loop_sleep).await;
+                }
+            }
+            .boxed();
+
+            let _ = select(infinite_loop, terminate).await;
+
+            info!(ctx.logger(), "Stopped warm bookmark cache updater");
+        };
+
+        // Detach the handle. This will terminate using the `terminate` receiver.
+        let _ = tokio::task::spawn(fut);
+    }
 }
 
 fn report_delay_and_remove_finished_updaters(
@@ -836,8 +856,6 @@ mod tests {
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio::time;
 
-    const TEST_LOOP_SLEEP: Duration = Duration::from_millis(1);
-
     #[fbinit::test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
@@ -1009,29 +1027,24 @@ mod tests {
             .await?;
         bookmark(&ctx, &repo, "master").set_to(master).await?;
 
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver_cancel,
-            ctx.clone(),
             repo.clone(),
             warmers,
-            TEST_LOOP_SLEEP,
             BookmarkUpdateDelay::Disallow,
         );
 
         let master_book = BookmarkName::new("master")?;
-        wait_for_bookmark(
-            &bookmarks,
+        update_and_wait_for_bookmark(
+            &ctx,
+            &coordinator,
             &master_book,
             Some((master, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
 
         bookmark(&ctx, &repo, "master").delete().await?;
-        wait_for_bookmark(&bookmarks, &master_book, None).await?;
-
-        let _ = cancel.send(());
+        update_and_wait_for_bookmark(&ctx, &coordinator, &master_book, None).await?;
 
         Ok(())
     }
@@ -1091,13 +1104,19 @@ mod tests {
         Ok(())
     }
 
-    async fn wait_for_bookmark(
-        bookmarks: &Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
+    async fn update_and_wait_for_bookmark(
+        ctx: &CoreContext,
+        coordinator: &BookmarksCoordinator,
         book: &BookmarkName,
         expected_value: Option<(ChangesetId, BookmarkKind)>,
     ) -> Result<(), Error> {
+        coordinator.update(ctx).await?;
+
         wait(|| async move {
-            Ok(bookmarks.with_read(|bookmarks| bookmarks.get(book).cloned()) == expected_value)
+            let val = coordinator
+                .bookmarks
+                .with_read(|bookmarks| bookmarks.get(book).cloned());
+            Ok(val == expected_value)
         })
         .await
     }
@@ -1183,55 +1202,48 @@ mod tests {
         warmers.push(warmer);
         let warmers = Arc::new(warmers);
 
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver_cancel,
-            ctx.clone(),
             repo.clone(),
             warmers,
-            TEST_LOOP_SLEEP,
             BookmarkUpdateDelay::Disallow,
         );
 
         let master_book = BookmarkName::new("master")?;
-        wait_for_bookmark(
-            &bookmarks,
+        update_and_wait_for_bookmark(
+            &ctx,
+            &coordinator,
             &master_book,
             Some((master, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
-        let _ = cancel.send(());
+
+        // This needs to split a bit because we don't know how long it would take for failing_book
+        // to actually show up. :/
+        tokio::time::delay_for(Duration::from_secs(5)).await;
 
         let failing_book = BookmarkName::new("failingbook")?;
         bookmarks.with_read(|bookmarks| assert_eq!(bookmarks.get(&failing_book), None));
-
-        // Give a chance to first coordinator to finish
-        tokio::time::delay_for(TEST_LOOP_SLEEP * 5).await;
 
         // Now change the warmer and make sure it derives successfully
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver_cancel,
-            ctx,
-            repo,
+            repo.clone(),
             warmers,
-            TEST_LOOP_SLEEP,
             BookmarkUpdateDelay::Disallow,
         );
-        wait_for_bookmark(
-            &bookmarks,
+
+        update_and_wait_for_bookmark(
+            &ctx,
+            &coordinator,
             &failing_book,
             Some((failing_cs_id, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
-
-        let _ = cancel.send(());
 
         Ok(())
     }
@@ -1299,16 +1311,14 @@ mod tests {
             .await?;
         bookmark(&ctx, &repo, "master").set_to(master).await?;
 
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver_cancel,
-            ctx.clone(),
             repo.clone(),
             warmers.clone(),
-            TEST_LOOP_SLEEP,
             BookmarkUpdateDelay::Disallow,
         );
+        coordinator.update(&ctx).await?;
+
         // Give it a chance to derive
         wait({
             move || {
@@ -1320,8 +1330,6 @@ mod tests {
             }
         })
         .await?;
-
-        let _ = cancel.send(());
 
         how_many_derived.with_read(|derived| {
             assert_eq!(derived.get(&master), Some(&1));
@@ -1360,20 +1368,17 @@ mod tests {
             .create_publishing(new_cs_id)
             .await?;
 
-        let (cancel, receiver_cancel) = oneshot::channel();
-        spawn_bookmarks_coordinator(
+        let coordinator = BookmarksCoordinator::new(
             bookmarks.clone(),
-            receiver_cancel,
-            ctx.clone(),
             repo.clone(),
             warmers,
-            TEST_LOOP_SLEEP,
             BookmarkUpdateDelay::Disallow,
         );
 
         let publishing_book = BookmarkName::new("publishing")?;
-        wait_for_bookmark(
-            &bookmarks,
+        update_and_wait_for_bookmark(
+            &ctx,
+            &coordinator,
             &publishing_book,
             Some((new_cs_id, BookmarkKind::Publishing)),
         )
@@ -1385,14 +1390,13 @@ mod tests {
             .set_to(new_cs_id)
             .await?;
 
-        wait_for_bookmark(
-            &bookmarks,
+        update_and_wait_for_bookmark(
+            &ctx,
+            &coordinator,
             &publishing_book,
             Some((new_cs_id, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
-
-        let _ = cancel.send(());
 
         Ok(())
     }
