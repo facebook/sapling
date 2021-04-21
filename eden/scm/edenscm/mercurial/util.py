@@ -4625,21 +4625,15 @@ def _render(
     return result
 
 
-def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
-    """Get a friendly traceback as a string.
-
-    Based on some methods in the traceback.format_stack.
-    The friendly traceback shows some local variables.
-    """
-    # No need to pay the import overhead for other use-cases.
-    import linecache
-
+def _getframes(frameortb=None, depth=3):
     # Get the frame. See traceback.format_stack
     if frameortb is None:
         try:
             raise ZeroDivisionError
         except ZeroDivisionError:
-            frameortb = sys.exc_info()[2].tb_frame.f_back
+            frameortb = sys.exc_info()[2].tb_frame
+            for _i in range(depth):
+                frameortb = frameortb.f_back
 
     frames = []  # [(frame, lineno)]
     if isinstance(frameortb, types.TracebackType):
@@ -4659,6 +4653,20 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
         frames.reverse()
     else:
         raise TypeError("frameortb is not a frame or traceback")
+
+    return frames
+
+
+def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
+    """Get a friendly traceback as a string.
+
+    Based on some methods in the traceback.format_stack.
+    The friendly traceback shows some local variables.
+    """
+    # No need to pay the import overhead for other use-cases.
+    import linecache
+
+    frames = _getframes(frameortb)
 
     # Similar to traceback.extract_stack
     frameinfos = []
