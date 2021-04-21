@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -12,6 +13,8 @@ use serde_derive::{Deserialize, Serialize};
 
 use dag_types::Location;
 use types::hgid::HgId;
+
+use crate::ServerError;
 
 /// Given a graph location, return `count` hashes following first parent links.
 ///
@@ -83,13 +86,14 @@ impl Arbitrary for CommitLocationToHashRequestBatch {
 pub struct CommitHashToLocationRequestBatch {
     pub master_heads: Vec<HgId>,
     pub hgids: Vec<HgId>,
+    pub unfiltered: Option<bool>,
 }
 
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize)] // used to convert to Python
 pub struct CommitHashToLocationResponse {
     pub hgid: HgId,
-    pub location: Location<HgId>,
+    pub result: Result<Option<Location<HgId>>, ServerError>,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -98,6 +102,7 @@ impl Arbitrary for CommitHashToLocationRequestBatch {
         CommitHashToLocationRequestBatch {
             master_heads: Arbitrary::arbitrary(g),
             hgids: Arbitrary::arbitrary(g),
+            unfiltered: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -107,7 +112,7 @@ impl Arbitrary for CommitHashToLocationResponse {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         CommitHashToLocationResponse {
             hgid: Arbitrary::arbitrary(g),
-            location: Arbitrary::arbitrary(g),
+            result: Arbitrary::arbitrary(g),
         }
     }
 }

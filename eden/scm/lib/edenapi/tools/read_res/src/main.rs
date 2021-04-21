@@ -442,14 +442,24 @@ fn cmd_commit_hash_to_location(args: CommitHashToLocationArgs) -> Result<()> {
     let mut response_list: Vec<WireCommitHashToLocationResponse> = read_input(args.input, None)?;
     response_list.sort_by_key(|r| r.hgid);
     let iter = response_list
-        .iter()
+        .into_iter()
         .skip(args.start.unwrap_or(0))
         .take(args.limit.unwrap_or(usize::MAX));
     for response in iter {
-        println!(
-            "{} =>\n    Location(descendant={}, dist={})",
-            response.hgid, response.location.descendant, response.location.distance
-        );
+        if let Some(result) = response.result {
+            let s = match result {
+                Ok(Some(l)) => format!(
+                    "Ok(Some(Location(descendant={}, dist={})))",
+                    l.descendant, l.distance
+                ),
+                Ok(None) => String::from("Ok(None)"),
+                Err(e) => format!(
+                    "Err({})",
+                    e.message.unwrap_or_else(|| String::from("error"))
+                ),
+            };
+            println!("{} =>\n    {}", response.hgid, s);
+        }
     }
     Ok(())
 }

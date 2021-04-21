@@ -570,6 +570,7 @@ impl EdenApi for Client {
             let batch = CommitHashToLocationRequestBatch {
                 master_heads: master_heads.clone(),
                 hgids,
+                unfiltered: Some(true),
             };
             self.log_request(&batch, "commit_hash_to_location");
             batch.to_wire()

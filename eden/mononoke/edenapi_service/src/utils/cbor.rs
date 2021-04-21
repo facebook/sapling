@@ -55,6 +55,17 @@ where
     StreamBody::new(content_stream, cbor_mime())
 }
 
+pub fn simple_cbor_stream<S, T>(rctx: RequestContext, stream: S) -> impl TryIntoResponse
+where
+    S: Stream<Item = T> + Send + 'static,
+    T: Serialize + Send + 'static,
+{
+    let byte_stream = stream.then(|item| async { to_cbor_bytes(item) });
+    let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
+
+    StreamBody::new(content_stream, cbor_mime())
+}
+
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {
     let body = get_request_body(state).await?;
     serde_cbor::from_slice(&body)

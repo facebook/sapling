@@ -154,9 +154,11 @@ pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLoc
         .context("could not be parsed as HgId")?;
         hgids.push(hgid);
     }
+    let unfiltered = json.get("unfiltered").map(|v| v.as_bool()).flatten();
     Ok(CommitHashToLocationRequestBatch {
         master_heads,
         hgids,
+        unfiltered,
     })
 }
 /// Parse a `FileRequest` from JSON.
@@ -653,6 +655,7 @@ impl ToJson for CommitHashToLocationRequestBatch {
         json!({
             "master_heads": self.master_heads.to_json(),
             "hgids": self.hgids.to_json(),
+            "unfiltered": self.unfiltered,
         })
     }
 }

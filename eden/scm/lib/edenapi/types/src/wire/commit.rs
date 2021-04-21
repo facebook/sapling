@@ -16,7 +16,7 @@ use crate::commit::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
 };
-use crate::wire::{ToApi, ToWire, WireHgId, WireToApiConversionError};
+use crate::wire::{ToApi, ToWire, WireHgId, WireResult, WireToApiConversionError};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {
@@ -182,6 +182,8 @@ pub struct WireCommitHashToLocationRequestBatch {
     pub hgids: Vec<WireHgId>,
     #[serde(rename = "3", default)]
     pub master_heads: Vec<WireHgId>,
+    #[serde(rename = "4")]
+    pub unfiltered: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -189,7 +191,9 @@ pub struct WireCommitHashToLocationResponse {
     #[serde(rename = "1")]
     pub hgid: WireHgId,
     #[serde(rename = "2")]
-    pub location: WireCommitLocation,
+    pub location: Option<WireCommitLocation>,
+    #[serde(rename = "3")]
+    pub result: Option<WireResult<Option<WireCommitLocation>>>,
 }
 
 impl ToWire for CommitHashToLocationRequestBatch {
@@ -201,6 +205,7 @@ impl ToWire for CommitHashToLocationRequestBatch {
             client_head,
             hgids: self.hgids.to_wire(),
             master_heads: self.master_heads.to_wire(),
+            unfiltered: self.unfiltered,
         }
     }
 }
@@ -220,6 +225,7 @@ impl ToApi for WireCommitHashToLocationRequestBatch {
         let api = Self::Api {
             master_heads,
             hgids: self.hgids.to_api()?,
+            unfiltered: self.unfiltered,
         };
         Ok(api)
     }
@@ -236,9 +242,14 @@ impl ToWire for CommitHashToLocationResponse {
     type Wire = WireCommitHashToLocationResponse;
 
     fn to_wire(self) -> Self::Wire {
+        let location = match self.result {
+            Ok(Some(x)) => Some(x.to_wire()),
+            _ => None,
+        };
         Self::Wire {
             hgid: self.hgid.to_wire(),
-            location: self.location.to_wire(),
+            location,
+            result: Some(self.result.to_wire()),
         }
     }
 }
@@ -248,9 +259,16 @@ impl ToApi for WireCommitHashToLocationResponse {
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let result = match self.result {
+            Some(x) => x.to_api()?,
+            None => match self.location {
+                None => Ok(None),
+                Some(l) => Ok(Some(l.to_api()?)),
+            },
+        };
         let api = Self::Api {
             hgid: self.hgid.to_api()?,
-            location: self.location.to_api()?,
+            result,
         };
         Ok(api)
     }

@@ -104,6 +104,7 @@ Create and send file data request.
       master_heads: [
           WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),
       ],
+      unfiltered: None,
   }
 
   $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/commit/hash_to_location" --data-binary @req.cbor > res.cbor
@@ -112,12 +113,14 @@ Check files in response.
   $ edenapi_read_res commit-hash-to-location res.cbor
   Reading from file: "res.cbor"
   112478962961147124edd43549aedd1a335e44bf =>
-      Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=1)
+      Ok(Some(Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=1)))
   26805aba1e600a82e93661149f2313866a221a7b =>
-      Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=1)
+      Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=1)))
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 =>
-      Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=2)
+      Ok(Some(Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=2)))
   bb56d4161ee371c720dbc8b504810c62a22fe314 =>
-      Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=1)
+      Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=1)))
+  bb56d4161ee371c720dbc8b504810c62a22fe314 =>
+      Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=1)))
   f585351a92f85104bff7c284233c338b10eb1df7 =>
-      Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=0)
+      Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=0)))

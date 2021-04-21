@@ -93,13 +93,15 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
         };
         while let Some(response) = response.entries.next().await {
             let response = response.map_err(to_dag_error)?;
-            let path = AncestorPath {
-                x: Vertex::copy_from(response.location.descendant.as_ref()),
-                n: response.location.distance,
-                batch_size: 1,
-            };
-            let name = Vertex::copy_from(response.hgid.as_ref());
-            pairs.push((path, vec![name]));
+            if let Some(location) = response.result.map_err(to_dag_error)? {
+                let path = AncestorPath {
+                    x: Vertex::copy_from(location.descendant.as_ref()),
+                    n: location.distance,
+                    batch_size: 1,
+                };
+                let name = Vertex::copy_from(response.hgid.as_ref());
+                pairs.push((path, vec![name]));
+            }
         }
         Ok(pairs)
     }

@@ -24,7 +24,9 @@ use types::HgId;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request, parse_wire_request};
+use crate::utils::{
+    cbor_stream, get_repo, parse_cbor_request, parse_wire_request, simple_cbor_stream,
+};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -76,18 +78,21 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         hg_repo_ctx: HgRepoContext,
         master_heads: Vec<HgChangesetId>,
         hg_cs_ids: Vec<HgChangesetId>,
-    ) -> Result<impl Stream<Item = Result<CommitHashToLocationResponse, Error>>, Error> {
+    ) -> impl Stream<Item = CommitHashToLocationResponse> {
         let hgcsid_to_location = hg_repo_ctx
             .many_changeset_ids_to_locations(master_heads, hg_cs_ids.clone())
-            .await?;
-        let responses = hgcsid_to_location.into_iter().map(|(hgcsid, location)| {
-            let response = CommitHashToLocationResponse {
+            .await;
+        let responses = hg_cs_ids.into_iter().map(move |hgcsid| {
+            let result = hgcsid_to_location
+                .as_ref()
+                .map(|hsh| hsh.get(&hgcsid).map(|l| l.map_descendant(|x| x.into())))
+                .map_err(|e| (&*e).into());
+            CommitHashToLocationResponse {
                 hgid: hgcsid.into(),
-                location: location.map_descendant(|x| x.into()),
-            };
-            Ok(response)
+                result,
+            }
         });
-        Ok(stream::iter(responses))
+        stream::iter(responses)
     }
 
     let params = HashToLocationParams::take_from(state);
@@ -103,6 +108,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
+    let unfiltered = batch.unfiltered;
     let master_heads = batch
         .master_heads
         .into_iter()
@@ -117,9 +123,22 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
             move |chunk| hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
         })
         .buffer_unordered(3)
-        .try_flatten()
-        .map_ok(|response| response.to_wire());
-    Ok(cbor_stream(rctx, response))
+        .flatten()
+        .filter(move |v| {
+            // The old behavior is to filter out error and None results. We want to preserve that
+            // behavior for old clients since they will not be able to deserialize other results.
+            let to_keep = if unfiltered == Some(true) {
+                true
+            } else {
+                match v.result {
+                    Ok(Some(_)) => true,
+                    _ => false,
+                }
+            };
+            futures::future::ready(to_keep)
+        })
+        .map(|response| response.to_wire());
+    Ok(simple_cbor_stream(rctx, response))
 }
 
 pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
