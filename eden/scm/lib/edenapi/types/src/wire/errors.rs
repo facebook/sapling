@@ -16,12 +16,26 @@ pub type WireResult<T> = Result<T, WireError>;
 pub struct WireError {
     #[serde(rename = "1")]
     pub message: Option<String>,
+    #[serde(rename = "2")]
+    pub code: Option<u64>,
 }
 
 impl WireError {
-    pub fn new<M: Into<String>>(m: M) -> Self {
+    pub fn new<M: Into<String>>(m: M, code: u64) -> Self {
         Self {
             message: Some(m.into()),
+            code: Some(code),
+        }
+    }
+}
+
+impl ToWire for ServerError {
+    type Wire = WireError;
+
+    fn to_wire(self) -> Self::Wire {
+        WireError {
+            message: Some(self.message),
+            code: Some(self.code),
         }
     }
 }
@@ -34,7 +48,8 @@ impl ToApi for WireError {
         let message = self
             .message
             .ok_or_else(|| WireToApiConversionError::CannotPopulateRequiredField("message"))?;
-        Ok(ServerError::new(message))
+        let code = self.code.unwrap_or(0);
+        Ok(ServerError::new(message, code))
     }
 }
 
@@ -75,7 +90,7 @@ where
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for WireError {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        WireError::new(String::arbitrary(g))
+        WireError::new(String::arbitrary(g), u64::arbitrary(g))
     }
 }
 

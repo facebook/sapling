@@ -928,3 +928,29 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = branch_even::getrepo(fb).await;
+
+    let dag = new_isolated_on_demand_update(&blobrepo);
+    let h1 = resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
+    let h1_parent =
+        resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
+
+    assert_eq!(
+        dag.changeset_id_to_location(&ctx, vec![h1], h1_parent)
+            .await?,
+        Some(Location::new(h1, 1))
+    );
+    let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
+    let err = dag
+        .changeset_id_to_location(&ctx, vec![h1, h2], h1_parent)
+        .await
+        .err()
+        .unwrap();
+    assert!(err.is::<crate::MismatchedHeadsError>());
+
+    Ok(())
+}

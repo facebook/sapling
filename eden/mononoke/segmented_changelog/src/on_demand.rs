@@ -30,8 +30,10 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use crate::idmap::IdMap;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
-use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
-use crate::{CloneData, Group, InProcessIdDag, Location};
+use crate::{
+    segmented_changelog_delegate, CloneData, Group, InProcessIdDag, Location, MismatchedHeadsError,
+    SegmentedChangelog, StreamCloneData,
+};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";
@@ -248,7 +250,7 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<()> {
-        if !self.is_one_cs_assigned(ctx, heads).await? {
+        if !self.are_heads_assigned(ctx, heads).await? {
             self.build_up_to_bookmark(ctx).await?;
             // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
             // group is reserved for the ancestors of the master bookmark. The MASTER group should
@@ -258,29 +260,27 @@ impl OnDemandUpdateSegmentedChangelog {
             // to. At the moment we only handle updating the MASTER group.
             // Note for the future. We should pay attention to potential races between a changeset
             // being used and the bookmark being updated.
-            if !self.is_one_cs_assigned(ctx, heads).await? {
-                bail!(
-                    "repo {}: failed to assign all cs {:?}, not ancestor of bookmark {}",
-                    self.repo_id,
-                    heads,
-                    self.master_bookmark
-                );
+            if !self.are_heads_assigned(ctx, heads).await? {
+                let err = MismatchedHeadsError::new(self.repo_id, heads.to_vec());
+                return Err(err.into());
             }
         }
         Ok(())
     }
 
-    async fn is_one_cs_assigned(&self, ctx: &CoreContext, cs_ids: &[ChangesetId]) -> Result<bool> {
-        let vertex_map = self.idmap.find_many_vertexes(ctx, cs_ids.to_vec()).await?;
-        if !vertex_map.is_empty() {
-            let iddag = self.iddag.read().await;
-            for (_cs_id, vertex) in vertex_map {
-                if iddag.contains_id(vertex)? {
-                    return Ok(true);
-                }
+    async fn are_heads_assigned(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
+        let vertex_map = self.idmap.find_many_vertexes(ctx, heads.to_vec()).await?;
+        if vertex_map.len() != heads.len() {
+            return Ok(false);
+        }
+        // It is safer to check that the vertexes we got are also in the iddag.
+        let iddag = self.iddag.read().await;
+        for (_cs_id, vertex) in vertex_map {
+            if !iddag.contains_id(vertex)? {
+                return Ok(false);
             }
         }
-        Ok(false)
+        Ok(true)
     }
 
     async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {

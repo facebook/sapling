@@ -39,7 +39,8 @@ mod tests;
 
 pub use segmented_changelog_types::{
     dag, ArcSegmentedChangelog, CloneData, DagIdSet, FirstAncestorConstraint, FlatSegment, Group,
-    InProcessIdDag, Location, PreparedFlatSegments, SegmentedChangelog, StreamCloneData, Vertex,
+    InProcessIdDag, Location, MismatchedHeadsError, PreparedFlatSegments, SegmentedChangelog,
+    StreamCloneData, Vertex,
 };
 
 pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};

@@ -116,12 +116,21 @@ impl From<BookmarkMovementError> for MononokeError {
 
 impl From<MononokeError> for edenapi_types::ServerError {
     fn from(e: MononokeError) -> Self {
-        Self::new(format!("{:?}", e))
+        edenapi_types::ServerError::from(&e)
     }
 }
 
 impl From<&MononokeError> for edenapi_types::ServerError {
     fn from(e: &MononokeError) -> Self {
-        Self::new(format!("{:?}", e))
+        let message = format!("{:?}", e);
+        let code = match e {
+            MononokeError::InternalError(e)
+                if e.0.is::<segmented_changelog::MismatchedHeadsError>() =>
+            {
+                1
+            }
+            _ => 0,
+        };
+        Self::new(message, code)
     }
 }

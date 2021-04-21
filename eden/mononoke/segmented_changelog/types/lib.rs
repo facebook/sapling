@@ -16,19 +16,14 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
 use futures::stream::BoxStream;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
+use thiserror::Error;
 
 pub use dag;
 pub use dag::{
     CloneData, FirstAncestorConstraint, FlatSegment, Group, Id as Vertex, IdSet as DagIdSet,
     InProcessIdDag, Location, PreparedFlatSegments,
 };
-
-pub struct StreamCloneData<T> {
-    pub head_id: Vertex,
-    pub flat_segments: PreparedFlatSegments,
-    pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
-}
 
 #[facet::facet]
 #[async_trait]
@@ -116,4 +111,26 @@ pub trait SegmentedChangelog: Send + Sync {
         &self,
         ctx: &CoreContext,
     ) -> Result<StreamCloneData<ChangesetId>>;
+}
+
+pub struct StreamCloneData<T> {
+    pub head_id: Vertex,
+    pub flat_segments: PreparedFlatSegments,
+    pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
+}
+
+#[derive(Debug, Error)]
+#[error("server cannot match the clients heads, repo {repo_id}, client_heads: {client_heads:?}")]
+pub struct MismatchedHeadsError {
+    pub repo_id: RepositoryId,
+    pub client_heads: Vec<ChangesetId>,
+}
+
+impl MismatchedHeadsError {
+    pub fn new(repo_id: RepositoryId, client_heads: Vec<ChangesetId>) -> Self {
+        Self {
+            repo_id,
+            client_heads,
+        }
+    }
 }
