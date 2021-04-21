@@ -43,7 +43,9 @@ WSASYS_STATUS_LEN: int = 128 + 1
 
 
 class WSAData64(ctypes.Structure):
-    _fields_ = [
+    _fields_: List[
+        Tuple[str, Union[Type[Union[ctypes.c_char_p, ctypes.c_ushort]], int]]
+    ] = [
         ("wVersion", ctypes.c_ushort),
         ("wHighVersion", ctypes.c_ushort),
         ("iMaxSockets", ctypes.c_ushort),
