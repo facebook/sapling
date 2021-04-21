@@ -149,7 +149,6 @@ impl StoreOpenOptions {
     fn into_local_open_options(self) -> log::OpenOptions {
         log::OpenOptions::new()
             .create(self.create)
-            .fsync(true)
             .index_defs(self.indexes)
             .auto_sync_threshold(self.auto_sync_threshold)
     }
