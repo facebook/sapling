@@ -406,7 +406,11 @@ impl IO {
             pipe.pretend_stdout = out_is_stdout;
             Box::new(pipe)
         };
-        inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
+        // Only use the pager for error stream if error stream is a tty.
+        // This makes `hg 2>foo` works as expected.
+        if err_is_tty {
+            inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
+        }
         inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
 
         inner.pager_handle = Some(spawn(|| {
