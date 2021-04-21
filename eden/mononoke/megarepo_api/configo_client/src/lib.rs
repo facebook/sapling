@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![feature(trait_alias)]
 
 #[cfg(fbcode_build)]
 mod facebook;
