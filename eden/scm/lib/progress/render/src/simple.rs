@@ -183,7 +183,7 @@ fn render_cache_stats(lines: &mut Vec<String>, list: &[Arc<CacheStats>]) {
 
 fn human_rx_tx_per_second(rx: u64, tx: u64) -> String {
     let mut result = Vec::new();
-    for (speed, symbol) in [(rx, '⬇'), (tx, '⬆')].iter() {
+    for (speed, symbol) in [(rx, '▼'), (tx, '▲')].iter() {
         if *speed > 0 {
             result.push(format!("{} {}", symbol, human_bytes_per_second(*speed)));
         }
