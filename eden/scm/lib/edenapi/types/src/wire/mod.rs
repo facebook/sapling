@@ -49,6 +49,7 @@ pub mod bookmark;
 pub mod clone;
 pub mod commit;
 pub mod complete_tree;
+pub mod errors;
 pub mod file;
 pub mod history;
 pub mod metadata;
@@ -65,6 +66,7 @@ pub use crate::wire::{
         WireCommitLocationToHashResponse,
     },
     complete_tree::WireCompleteTreeRequest,
+    errors::{WireError, WireResult},
     file::{WireFileEntry, WireFileRequest},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{

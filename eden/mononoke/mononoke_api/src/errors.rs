@@ -113,3 +113,15 @@ impl From<BookmarkMovementError> for MononokeError {
         }
     }
 }
+
+impl From<MononokeError> for edenapi_types::ServerError {
+    fn from(e: MononokeError) -> Self {
+        Self::new(format!("{:?}", e))
+    }
+}
+
+impl From<&MononokeError> for edenapi_types::ServerError {
+    fn from(e: &MononokeError) -> Self {
+        Self::new(format!("{:?}", e))
+    }
+}

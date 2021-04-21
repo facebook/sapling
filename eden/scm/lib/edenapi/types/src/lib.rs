@@ -28,6 +28,7 @@
 pub mod bookmark;
 pub mod commit;
 pub mod complete_tree;
+pub mod errors;
 pub mod file;
 pub mod history;
 pub mod json;
@@ -42,6 +43,7 @@ pub use crate::commit::{
     CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
+pub use crate::errors::ServerError;
 pub use crate::file::{FileEntry, FileError, FileRequest};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
