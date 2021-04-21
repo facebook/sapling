@@ -152,6 +152,32 @@ info_span = partial(span, level=LEVEL_INFO)
 warn_span = partial(span, level=LEVEL_WARN)
 error_span = partial(span, level=LEVEL_ERROR)
 
+
+# ---- test if a callsite is enabled ----
+
+
+def isenabled(level, name=None, target=None, depth=0):
+    """Test if a callsite is enabled."""
+    frame = sys._getframe(1 + depth)
+    ident = (id(frame.f_code), frame.f_lineno)
+    callsite = _callsites.get(ident)
+    if callsite is None:
+        # Create the callsite.
+        # The field name "message" matches Rust tracing macros behavior.
+        fieldnames = []
+        callsite = _insertcallsite(
+            ident,
+            _tracing.EventCallsite(
+                obj=frame,
+                name=name,
+                target=target,
+                level=level,
+                fieldnames=fieldnames,
+            ),
+        )
+    return callsite.isenabled()
+
+
 # ---- local cache of callsites ----
 
 _callsites = {}
