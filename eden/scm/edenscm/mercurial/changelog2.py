@@ -326,6 +326,7 @@ class changelog(object):
             self.svfs.tryunlink("00changelog.i.nodemap")
         self.inner.strip([self.node(minlink)])
 
+    @util.recordtracebacks()
     def rev(self, node):
         if node == wdirid:
             raise error.WdirUnsupported
@@ -334,6 +335,7 @@ class changelog(object):
         except error.CommitLookupError:
             raise error.LookupError(node, self.indexfile, _("no node"))
 
+    @util.recordtracebacks()
     def node(self, rev):
         if rev == wdirrev:
             raise error.WdirUnsupported
