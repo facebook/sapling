@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::convert::TryInto;
 use std::ops::RangeBounds;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -625,8 +626,6 @@ impl BookmarksCoordinator {
         let fut = async move {
             info!(ctx.logger(), "Started warm bookmark cache updater");
             let infinite_loop = async {
-                let loop_sleep = Duration::from_millis(1000);
-
                 loop {
                     let res = self.update(&ctx).await;
 
@@ -635,7 +634,15 @@ impl BookmarksCoordinator {
                         warn!(ctx.logger(), "failed to update bookmarks {:?}", err);
                     }
 
-                    tokio::time::delay_for(loop_sleep).await;
+                    let delay_ms = match tunables()
+                        .get_warm_bookmark_cache_poll_interval_ms()
+                        .try_into()
+                    {
+                        Ok(duration) if duration > 0 => duration,
+                        _ => 1000,
+                    };
+
+                    tokio::time::delay_for(Duration::from_millis(delay_ms)).await;
                 }
             }
             .boxed();
