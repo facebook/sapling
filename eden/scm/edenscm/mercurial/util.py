@@ -66,6 +66,7 @@ from typing import (
 )
 
 import bindings
+from edenscm import tracing
 from edenscmnative import base85, osutil
 
 from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
@@ -4751,6 +4752,55 @@ def shorttraceback(frameortb=None):
             result.append("%s:%s" % (filename, lineno))
             lastfilename = filename
     return " > ".join(reversed(result))
+
+
+_recordedtracebacks = {}
+
+
+def recordtracebacks(target=None, name=None, level=tracing.LEVEL_TRACE):
+    """Decorator to a function to track callsite tracebacks.
+    Tracebacks will be collected to _recordedtracebacks.
+
+    This is a no-op by default. To enable printing the callsites, set
+    EDENSCM_LOG to enable "trace" level logging. For example:
+
+        EDENSCM_LOG=edenscm::mercurial=trace ./hg log -r .
+    """
+    if not tracing.isenabled(level=level, name=name, target=target):
+        return lambda f: f
+    else:
+
+        def decorate(func):
+            calls = collections.defaultdict(int)
+            _recordedtracebacks[func.__name__] = calls
+
+            def wrapper(*args, **kwargs):
+                tb = shorttraceback()
+                calls[tb] += 1
+                return func(*args, **kwargs)
+
+            return wrapper
+
+        return decorate
+
+
+def printrecordedtracebacks():
+    """Print out the recorded callsites.
+
+    Printed output looks like:
+
+    Callsites for node:
+     3 util:4766 > localrepo:2805 > phases:347,332,212 > ...
+     1 util:4766 > localrepo:2805 > phases:346,332,212 > ...
+    Callsites for rev:
+     2 util:4766 > localrepo:1177 > dirstate:393 > context:1632 > ...
+     2 util:4766 > localrepo:1177 > dirstate:393 > ...
+     ...
+    """
+    for funcname, calls in sorted(_recordedtracebacks.items()):
+        mainio.write_err("Callsites for %s:\n" % (funcname,))
+        for tb, count in sorted(calls.items(), key=lambda i: (-i[1], i[0])):
+            mainio.write_err(" %d %s\n" % (count, tb))
 
 
 class wrapped_stat_result(object):

@@ -963,6 +963,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
         raise
     if getattr(repo, "_txnreleased", False):
         hook.hook(lui, repo, "postwritecommand", False)
+    util.printrecordedtracebacks()
     return ret
 
 
