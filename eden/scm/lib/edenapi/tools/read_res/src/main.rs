@@ -454,8 +454,12 @@ fn cmd_commit_hash_to_location(args: CommitHashToLocationArgs) -> Result<()> {
                 ),
                 Ok(None) => String::from("Ok(None)"),
                 Err(e) => format!(
-                    "Err({})",
-                    e.message.unwrap_or_else(|| String::from("error"))
+                    "Err(code={}, msg='{}')",
+                    e.code.unwrap_or(0),
+                    e.message
+                        .map(|m| m.lines().next().map(|s| s.into()))
+                        .flatten()
+                        .unwrap_or_else(|| String::from("no message"))
                 ),
             };
             println!("{} =>\n    {}", response.hgid, s);
