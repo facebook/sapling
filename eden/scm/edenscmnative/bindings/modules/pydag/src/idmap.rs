@@ -40,6 +40,38 @@ py_class!(pub class idmap |py| {
         }
     }
 
+    /// Translate id to node in batch.
+    def id2nodebatch(&self, ids: Vec<i64>) -> PyResult<Vec<PyBytes>> {
+        let non_negative_ids: Vec<Id> = ids.iter().filter_map(|&i| if i >= 0 {
+            Some(Id(i as _))
+        } else {
+            None
+        }).collect();
+        let nodes = block_on(self.map(py).vertex_name_batch(&non_negative_ids)).map_pyerr(py)?;
+        let mut result = Vec::with_capacity(ids.len());
+        let mut iter = nodes.into_iter();
+        for id in ids {
+            if id == -1 {
+                result.push(PyBytes::new(py, &NULL_NODE));
+            } else if id >= 0 {
+                if let Some(node) = iter.next() {
+                    let node = node.map_pyerr(py)?;
+                    result.push(PyBytes::new(py, node.as_ref()));
+                } else {
+                    let msg = "vertex_name_batch does not return enough number of results".to_string();
+                    return Err(PyErr::new::<exc::ValueError, _>(py, msg));
+                }
+            } else {
+                return Err(PyErr::new::<exc::ValueError, _>(py, format!("invalid id: {}", id)));
+            }
+        }
+        if iter.next().is_some() {
+            let msg = "vertex_name_batch returned more results than expected".to_string();
+            return Err(PyErr::new::<exc::ValueError, _>(py, msg));
+        }
+        Ok(result)
+    }
+
     /// Filter out nodes not in the IdMap.
     /// (nodes, inverse=False) -> nodes.
     ///
