@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use env_logger::filter::{Builder, Filter};
 use log;
 use slog::{BorrowedKV, Level, Logger, SingleKV};
@@ -78,16 +79,16 @@ impl log::Log for LinkedLogger {
 }
 
 /// Wire up a slog Logger as the destination for std logs as per an env_logger filter spec. This
-/// sets the global logger, so it'll panic if called more than once.
-pub fn init_stdlog_once(logger: Logger, var: &str) -> log::LevelFilter {
+/// sets the global logger, so it'll error if called more than once.
+pub fn init_stdlog_once(logger: Logger, var: &str) -> Result<log::LevelFilter, Error> {
     // NOTE: The default level is ERROR, which should be fairly reasonable.
     let filter = Builder::from_env(var).build();
     let level = filter.filter();
 
-    log::set_boxed_logger(Box::new(LinkedLogger { logger, filter })).unwrap();
+    log::set_boxed_logger(Box::new(LinkedLogger { logger, filter }))?;
 
     // set_max_level ensures we don't produce logs that won't pass any filter at all.
     log::set_max_level(level);
 
-    level
+    Ok(level)
 }

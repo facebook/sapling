@@ -76,6 +76,7 @@ pub struct MononokeMatches<'a> {
 }
 
 impl<'a> MononokeMatches<'a> {
+    /// Due to global log init this can be called only once per process and will error otherwise
     pub fn new(
         fb: FacebookInit,
         matches: ArgMatches<'a>,
@@ -312,7 +313,7 @@ fn create_root_log_drain(fb: FacebookInit, matches: &ArgMatches<'_>) -> Result<i
     // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
     let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
-    let stdlog_level = log::init_stdlog_once(stdlog_logger.clone(), stdlog_env);
+    let stdlog_level = log::init_stdlog_once(stdlog_logger.clone(), stdlog_env)?;
     trace!(
         stdlog_logger,
         "enabled stdlog with level: {:?} (set {} to configure)",
