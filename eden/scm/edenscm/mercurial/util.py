@@ -4720,6 +4720,39 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
     return "".join(result)
 
 
+def shorttraceback(frameortb=None):
+    """Return a single-line string for traceback
+
+    For example::
+
+        remotenames:629 > tweakdefaults:648 > remotefilelog:890 > commands:4214
+        > streams:28 > util:4985 > smartset:101,1059 > dagop:131,150,160 >
+        context:809 > util:984 > remotefilectx:471,471,288,98
+    """
+    frames = _getframes(frameortb)
+    result = []
+    lastfilename = None
+    for frame, lineno in reversed(frames):
+        co = frame.f_code
+        name = co.co_name
+        filename = co.co_filename
+        if name == "check" and filename.endswith("util.py"):
+            # util.check is boring
+            continue
+        if filename.endswith("dispatch.py"):
+            # dispatch and above is boring
+            break
+        if filename.endswith("__init__.py"):
+            filename = os.path.dirname(filename)
+        filename = os.path.basename(filename).replace(".py", "")
+        if filename == lastfilename:
+            result[-1] += ",%s" % lineno
+        else:
+            result.append("%s:%s" % (filename, lineno))
+            lastfilename = filename
+    return " > ".join(reversed(result))
+
+
 class wrapped_stat_result(object):
     """Mercurial assumes that st_[amc]time is an integer, but both Python2 and
     Python3 are returning a float value. This class overrides these attributes
