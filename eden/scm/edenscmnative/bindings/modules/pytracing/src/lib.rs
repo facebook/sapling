@@ -697,6 +697,11 @@ py_class!(pub class SpanCallsite |py| {
         let span = self.inner(py).create_span(&values);
         TracingSpan::create_instance(py, Default::default(), span)
     }
+
+    /// Check if this callsite is enabled for logging.
+    def isenabled(&self) -> PyResult<bool> {
+        Ok(self.inner(py).is_enabled())
+    }
 });
 
 py_class!(pub class EventCallsite |py| {
@@ -727,6 +732,11 @@ py_class!(pub class EventCallsite |py| {
         };
         self.inner(py).create_event(&values);
         Ok(PyNone)
+    }
+
+    /// Check if this callsite is enabled for logging.
+    def isenabled(&self) -> PyResult<bool> {
+        Ok(self.inner(py).is_enabled())
     }
 });
 

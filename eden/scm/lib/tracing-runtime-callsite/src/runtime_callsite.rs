@@ -211,7 +211,7 @@ impl<K: KindType> RuntimeCallsite<K> {
 
     /// Test if the callsite is enabled. This has some caching, fast paths,
     /// mimics the behavior of the static macro.
-    fn is_enabled(&'static self) -> bool {
+    pub fn is_enabled(&'static self) -> bool {
         match self.interest.load(Ordering::Relaxed) {
             0 => Some(false),
             1 => None, /* sometimes */
