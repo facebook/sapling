@@ -1064,6 +1064,8 @@ def remoteui(src, opts):
         "http_proxy",
         "help",
         "edenapi",
+        "infinitepush",
+        "lfs",
     ):
         for key, val in src.configitems(sect):
             dst.setconfig(sect, key, val, "copied")
