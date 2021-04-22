@@ -40,6 +40,7 @@ mod conflict;
 mod merge;
 
 pub use actions::{Action, ActionMap};
+pub use conflict::Conflict;
 pub use merge::{Merge, MergeResult};
 use tokio::runtime::Handle;
 

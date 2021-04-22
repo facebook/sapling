@@ -191,6 +191,10 @@ impl<M: Manifest> MergeResult<M> {
         &self.conflicts
     }
 
+    pub fn actions(&self) -> &ActionMap {
+        &self.actions
+    }
+
     pub fn into_actions_and_conflicts(self) -> (ActionMap, ConflictState) {
         (self.actions, self.conflicts)
     }

@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
-use checkout::{Action, ActionMap, CheckoutPlan, Merge, MergeResult};
+use checkout::{Action, ActionMap, CheckoutPlan, Conflict, Merge, MergeResult};
 use cpython::*;
 use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
@@ -166,13 +166,24 @@ py_class!(class mergeresult |py| {
     }
 
     def manifestbuilder(&self) -> PyResult<Option<manifestbuilder>> {
-        let actions = self.merge_result(py).try_actions();
-        if let Some(actions) = actions {
-            let actions = actions.clone();
-            Ok(Some(manifestbuilder::create_instance(py, actions)?))
-        } else {
-            Ok(None)
+        let mut modifiedconflicts = vec![];
+        for (path, conflict) in self.merge_result(py).conflicts().iter() {
+            match conflict {
+                Conflict::BothChanged{ancestor, dest, src} => {
+                    if ancestor.is_some() && src.file_type == dest.file_type {
+                        modifiedconflicts.push(path.to_string()); // both modified
+                    } else {
+                        // This is either both created(ancestor.is_none), no way to do 3-way merge
+                        // Or, file type differs between src and dst - needs special handling
+                        return Ok(None);
+                    }
+                },
+                _ => return Ok(None)
+            }
         }
+        let actions = self.merge_result(py).actions();
+        let actions = actions.clone();
+        Ok(Some(manifestbuilder::create_instance(py, actions, modifiedconflicts)?))
     }
 
     def conflict_paths(&self) -> PyResult<Vec<String>> {
@@ -182,6 +193,7 @@ py_class!(class mergeresult |py| {
 
 py_class!(class manifestbuilder |py| {
     data actions: ActionMap;
+    data _modifiedconflicts: Vec<String>;
 
     def removed(&self) -> PyResult<Vec<String>> {
         let actions = self.actions(py);
@@ -203,6 +215,10 @@ py_class!(class manifestbuilder |py| {
                 None
             })
         .collect())
+    }
+
+    def modifiedconflicts(&self) -> PyResult<Vec<String>> {
+        Ok(self._modifiedconflicts(py).clone())
     }
 });
 
