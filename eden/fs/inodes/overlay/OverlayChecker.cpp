@@ -693,11 +693,15 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
   repair.log("Beginning fsck repair for ", fs_->getLocalDir());
   repair.log(errors_.size(), " problems detected");
 
+  constexpr size_t maxPrintedErrors = 50;
+
   size_t errnum = 0;
   for (const auto& error : errors_) {
     ++errnum;
     auto description = error->getMessage(this);
-    XLOG(ERR) << "fsck:" << fs_->getLocalDir() << ": error: " << description;
+    if (errnum < maxPrintedErrors) {
+      XLOG(ERR) << "fsck:" << fs_->getLocalDir() << ": error: " << description;
+    }
     repair.log("error ", errnum, ": ", description);
     try {
       bool repaired = error->repair(repair);
