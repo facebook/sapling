@@ -24,10 +24,12 @@ from __future__ import absolute_import
 import errno
 import os
 
+from bindings import checkout as nativecheckout
 from edenscm.mercurial import (
     bookmarks,
     cmdutil,
     commands,
+    context,
     copies,
     destutil,
     dirstateguard,
@@ -555,7 +557,13 @@ class rebaseruntime(object):
                 pos += 1
                 prog.value = (pos, "%s" % (ctx))
                 try:
-                    self._performrebaseone(rev, ctx, desc, tr, dest)
+                    if (
+                        repo.ui.configbool("nativecheckout", "rebaseonenative")
+                        and not self.collapsef
+                    ):
+                        self._performrebaseonenative(rev, ctx, desc, dest)
+                    else:
+                        self._performrebaseone(rev, ctx, desc, tr, dest)
                     inmemoryerror = None
                 except error.InMemoryMergeConflictsError as e:
                     inmemoryerror = e
@@ -627,6 +635,87 @@ class rebaseruntime(object):
                     _("already rebased %s as %s\n") % (desc, repo[self.state[rev]])
                 )
         return pos
+
+    def _performrebaseonenative(self, rev, ctx, desc, dest):
+        repo, ui, opts = self.repo, self.ui, self.opts
+        ui.status(_("rebasing %s\n") % desc)
+        p1, p2, base = defineparents(
+            repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
+        )
+        p1ctx = repo[p1]
+        basectx = repo[base]
+        mergeresult = nativecheckout.mergeresult(
+            ctx.manifest(), p1ctx.manifest(), basectx.manifest()
+        )
+        manifestbuilder = mergeresult.manifestbuilder()
+        if manifestbuilder is None:
+            raise error.InMemoryMergeConflictsError(
+                "Native merge returned conflicts",
+                error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+                mergeresult.conflict_paths(),
+            )
+
+        commitmsg = ctx.description()
+        extra = {"rebase_source": ctx.hex()}
+        mutinfo = None
+        if not self.keepf:
+            mutop = "rebase"
+            preds = [ctx.node()]
+            mutinfo = mutation.record(repo, extra, preds, mutop)
+
+        _makeextrafn(self.extrafns)(ctx, extra)
+
+        loginfo = {"predecessors": ctx.hex(), "mutation": "rebase"}
+
+        if "narrowheads" in repo.storerequirements:
+            # with narrow-heads, phases.new-commit is meaningless
+            overrides = {}
+        else:
+            destphase = max(ctx.phase(), phases.draft)
+            overrides = {("phases", "new-commit"): destphase}
+        with repo.ui.configoverride(overrides, "rebase"):
+            # # Replicates the empty check in ``repo.commit``.
+            # if wctx.isempty() and not repo.ui.configbool("ui", "allowemptycommit"):
+            #     return None
+            if self.date is None:
+                date = ctx.date()
+            else:
+                date = self.date
+
+            branch = repo[p1].branch()
+
+            removed = manifestbuilder.removed()
+            removedset = set(removed)
+            modified = manifestbuilder.modified()
+
+            def getfilectx(repo, memctx, path):
+                if path in removedset:
+                    return None
+
+                return ctx[path]
+
+            merging = p2 != nullrev
+            editform = cmdutil.mergeeditform(merging, "rebase")
+            editor = cmdutil.getcommiteditor(editform=editform, **opts)
+
+            memctx = context.memctx(
+                repo,
+                parents=(p1, p2),
+                text=commitmsg,
+                files=sorted(removed + modified),
+                filectxfn=getfilectx,
+                date=date,
+                extra=extra,
+                user=ctx.user(),
+                branch=branch,
+                editor=editor,
+                loginfo=loginfo,
+                mutinfo=mutinfo,
+            )
+            newnode = repo.commitctx(memctx)
+
+        self.state[rev] = repo[newnode].rev()
+        ui.debug("rebased as %s\n" % short(newnode))
 
     def _performrebaseone(self, rev, ctx, desc, tr, dest):
         repo, ui, opts = self.repo, self.ui, self.opts
