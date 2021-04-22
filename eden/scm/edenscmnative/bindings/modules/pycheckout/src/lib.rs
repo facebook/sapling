@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
-use checkout::{CheckoutPlan, Merge, MergeResult};
+use checkout::{Action, ActionMap, CheckoutPlan, Merge, MergeResult};
 use cpython::*;
 use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
@@ -31,6 +31,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<checkoutplan>(py)?;
     m.add_class::<mergeresult>(py)?;
+    m.add_class::<manifestbuilder>(py)?;
     Ok(m)
 }
 
@@ -162,6 +163,46 @@ py_class!(class mergeresult |py| {
         } else {
             Ok(None)
         }
+    }
+
+    def manifestbuilder(&self) -> PyResult<Option<manifestbuilder>> {
+        let actions = self.merge_result(py).try_actions();
+        if let Some(actions) = actions {
+            let actions = actions.clone();
+            Ok(Some(manifestbuilder::create_instance(py, actions)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    def conflict_paths(&self) -> PyResult<Vec<String>> {
+        Ok(self.merge_result(py).conflicts().keys().map(|k|k.to_string()).collect())
+    }
+});
+
+py_class!(class manifestbuilder |py| {
+    data actions: ActionMap;
+
+    def removed(&self) -> PyResult<Vec<String>> {
+        let actions = self.actions(py);
+        Ok(actions.iter().filter_map(|(f, a)|
+            if matches!(a, Action::Remove) {
+                Some(f.to_string())
+            } else {
+                None
+            })
+        .collect())
+    }
+
+    def modified(&self) -> PyResult<Vec<String>> {
+        let actions = self.actions(py);
+        Ok(actions.iter().filter_map(|(f, a)|
+            if !matches!(a, Action::Remove) {
+                Some(f.to_string())
+            } else {
+                None
+            })
+        .collect())
     }
 });
 

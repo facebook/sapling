@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut};
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ActionMap {
     map: HashMap<RepoPathBuf, Action>,
 }

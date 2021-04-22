@@ -39,6 +39,7 @@ mod conflict;
 #[allow(dead_code)]
 mod merge;
 
+pub use actions::{Action, ActionMap};
 pub use merge::{Merge, MergeResult};
 use tokio::runtime::Handle;
 
