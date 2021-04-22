@@ -1428,6 +1428,7 @@ def fscasesensitive(path):
     Requires a path (like /foo/.hg) ending with a foldable final
     directory component.
     """
+    # If changing this function, also update VFS::case_sensitive because it has similar logic
     fstype = getfstype(path)
     if fstype is not None and fscap.getfscap(fstype, fscap.ALWAYSCASESENSITIVE):
         return True

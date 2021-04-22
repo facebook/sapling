@@ -41,6 +41,7 @@ struct Inner {
     auditor: PathAuditor,
     supports_symlinks: bool,
     supports_executables: bool,
+    case_sensitive: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -64,6 +65,7 @@ impl VFS {
             fstype(&root).with_context(|| format!("Can't construct a VFS for {:?}", root))?;
         let supports_symlinks = supports_symlinks(&fs_type);
         let supports_executables = supports_executables(&fs_type);
+        let case_sensitive = case_sensitive(&root, &fs_type)?;
 
         Ok(Self {
             inner: Arc::new(Inner {
@@ -71,12 +73,17 @@ impl VFS {
                 auditor,
                 supports_symlinks,
                 supports_executables,
+                case_sensitive,
             }),
         })
     }
 
     pub fn root(&self) -> &Path {
         &self.inner.root
+    }
+
+    pub fn case_sensitive(&self) -> bool {
+        self.inner.case_sensitive
     }
 
     pub fn join(&self, path: &RepoPath) -> PathBuf {
@@ -396,6 +403,47 @@ fn supports_executables(fs_type: &FsType) -> bool {
     }
 }
 
+/// determines whether FS located at root is case sensitive
+fn case_sensitive(root: &Path, fs_type: &FsType) -> Result<bool> {
+    // Logic in this function is consistent with util.fscasesensitive in Python
+    // For some FS we know they are case (in)sensitive, so we just return based on fs type
+    // For rest of the FS we see if lstat on the upper/lower case variant differs
+    match *fs_type {
+        FsType::EDENFS => return Ok(cfg!(linux)),
+        FsType::BTRFS => return Ok(true),
+        FsType::EXT4 => return Ok(true),
+        FsType::XFS => return Ok(true),
+        FsType::TMPFS => return Ok(true),
+        _ => {}
+    }
+    detect_case_sensitive(root)
+}
+
+fn detect_case_sensitive(root: &Path) -> Result<bool> {
+    let original_lstat = root.symlink_metadata()?;
+    let root_str = root.to_str().expect("Can't convert root path to string");
+    let mut case_different = root_str.to_lowercase();
+    if case_different == root_str {
+        case_different = root_str.to_uppercase();
+    }
+    let case_different = PathBuf::from(case_different);
+    let case_different_lstat = case_different.symlink_metadata();
+    if let Ok(case_different_lstat) = case_different_lstat {
+        Ok(!metadata_eq(&case_different_lstat, &original_lstat)?)
+    } else {
+        Ok(true)
+    }
+}
+
+/// Roughly compares metadata, only for internal vfs usage
+/// Do not make this fn public
+fn metadata_eq(m1: &Metadata, m2: &Metadata) -> Result<bool> {
+    Ok(m1.modified()? == m2.modified()?
+        && m1.accessed()? == m2.accessed()?
+        && m1.created()? == m2.created()?
+        && m1.file_type() == m2.file_type())
+}
+
 pub fn is_executable(metadata: &Metadata) -> bool {
     #[cfg(unix)]
     return metadata.permissions().mode() & 0o111 != 0;
@@ -415,5 +463,22 @@ pub fn is_symlink(metadata: &Metadata) -> bool {
     {
         let _ = metadata;
         panic!("is_symlink is not supported on Windows");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_case_sensitive() {
+        let tmp = tempfile::tempdir().unwrap();
+        let case_sensitive = detect_case_sensitive(tmp.path()).unwrap();
+        #[cfg(target_os = "linux")]
+        assert!(case_sensitive);
+        #[cfg(windows)]
+        assert!(!case_sensitive);
+        #[cfg(target_os = "macos")]
+        assert!(!case_sensitive);
     }
 }
