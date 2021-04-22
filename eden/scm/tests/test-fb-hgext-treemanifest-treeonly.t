@@ -265,7 +265,6 @@ Test peer-to-peer push/pull of tree only commits
   running * 'user@dummy' 'hg -R client serve --stdio' (glob)
   running * 'user@dummy' 'hg -R master serve --stdio' (glob)
   bundle2-input-part: total payload size 831
-  bundle2-input-part: total payload size 24
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
   $ hg up tip

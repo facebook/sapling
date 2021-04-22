@@ -77,9 +77,7 @@ Clone with background file closing enabled
   sending getbundle command
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size 24
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   checking for updated bookmarks
 
 Stream clone while repo is changing:

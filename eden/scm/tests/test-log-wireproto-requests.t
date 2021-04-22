@@ -21,7 +21,7 @@
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, reponame=unknown, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', ''), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', ''), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
   $ cd ../repo
   $ echo b > b && hg add b && hg ci -m b
   $ echo c > c && hg add c && hg ci -m c
@@ -30,7 +30,7 @@
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, reponame=unknown, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('heads', '177f92b773850b59254aa5e923436f921b55483b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('heads', '177f92b773850b59254aa5e923436f921b55483b'), ('listkeys', 'bookmarks')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
   $ hg up tip -q
 
 Looks like `ui.warn()` after getfiles might not make it's way to client hg. Let's read from file
@@ -60,7 +60,7 @@ Enable clienttelemetry and change reponame
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=repo, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=repo, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], client_fullcommand=pull, client_hostname=*, command=batch, duration=*, reponame=repo, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '0'), ('common', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('heads', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('listkeys', 'bookmarks'), ('phases', '1')], client_fullcommand=pull, client_hostname=*, command=getbundle, duration=*, reponame=repo, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '0'), ('common', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('heads', 'cc27a19b3db0a292460298a71c413840f27f6a37'), ('listkeys', 'bookmarks')], client_fullcommand=pull, client_hostname=*, command=getbundle, duration=*, reponame=repo, responselen=*) (glob)
   $ cd ../repo
   $ echo xxx > xxx && hg add xxx && hg ci -m xxx
   $ cd -

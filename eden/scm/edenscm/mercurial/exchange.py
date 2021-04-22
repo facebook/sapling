@@ -1541,11 +1541,16 @@ def _pullbundle2(pullop):
     kwargs["cg"] = pullop.fetch
 
     ui = pullop.repo.ui
-    legacyphase = "phases" in ui.configlist("devel", "legacy.exchange")
-    hasbinaryphase = "heads" in pullop.remotebundle2caps.get("phases", ())
-    if not legacyphase and hasbinaryphase:
-        kwargs["phases"] = True
+
+    # if narrow-heads enabled, phases exchange is not needed
+    if ui.configbool("experimental", "narrow-heads"):
         pullop.stepsdone.add("phases")
+    else:
+        legacyphase = "phases" in ui.configlist("devel", "legacy.exchange")
+        hasbinaryphase = "heads" in pullop.remotebundle2caps.get("phases", ())
+        if not legacyphase and hasbinaryphase:
+            kwargs["phases"] = True
+            pullop.stepsdone.add("phases")
 
     bookmarksrequested = False
     legacybookmark = "bookmarks" in ui.configlist("devel", "legacy.exchange")

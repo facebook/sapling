@@ -148,9 +148,7 @@ check unhydrated infinitepush pulls
   adding file changes
   added 2 changesets with 0 changes to 0 files
   bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   remotenames: skipped syncing local bookmarks
 
 -- update to the recently pulled draft commit
@@ -234,9 +232,7 @@ check hydrated infinitepush pulls
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 1 parts total
   remotenames: skipped syncing local bookmarks
 
 -- update to the draft commit in the middle of the stack
@@ -313,9 +309,7 @@ check unhydrated infinitepush pulls if special config option is passed
   adding file changes
   added 2 changesets with 0 changes to 0 files
   bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   remotenames: skipped syncing local bookmarks
 
 -- update to the recently pulled draft commit

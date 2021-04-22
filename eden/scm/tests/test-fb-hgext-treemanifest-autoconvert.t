@@ -24,8 +24,8 @@
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2002},
-                        write : { bytes : 976}}}}
+                        read : { bytes : 1948},
+                        write : { bytes : 966}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
@@ -50,8 +50,8 @@ Test auto creating trees for merge commit
   adding file changes
   added 2 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1135},
-                        write : { bytes : 667}}}}
+                        read : { bytes : 1081},
+                        write : { bytes : 657}}}}
   $ hg manifest -r tip
   fetching tree '' 13532a59874531175abc845749c0491b36effb18, found via 92f4ca0e667c
   1 trees fetched over 0.00s

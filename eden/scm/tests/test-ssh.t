@@ -460,9 +460,7 @@ debug output
   bundle2-input-part: total payload size 26
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: total payload size 45
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size 48
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
 
   $ cd ..
