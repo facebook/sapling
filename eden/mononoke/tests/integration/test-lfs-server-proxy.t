@@ -14,8 +14,9 @@
 # Start a LFS server (lfs_upstream is an upstream of lfs_proxy)
   $ log_proxy="$TESTTMP/lfs_proxy.log"
   $ log_upstream="$TESTTMP/lfs_upstream.log"
+  $ SCUBA="$TESTTMP/scuba.json"
 
-  $ lfs_upstream="$(lfs_server --log "$log_upstream")/lfs_upstream"
+  $ lfs_upstream="$(lfs_server --log "$log_upstream" --scuba-log-file "$SCUBA")/lfs_upstream"
   $ lfs_proxy="$(lfs_server --always-wait-for-upstream --upstream "$lfs_upstream" --log "$log_proxy")/lfs_proxy"
 
 # Upload data to upstream only
@@ -64,7 +65,8 @@
   IN  > POST /lfs_upstream/objects/batch -
   OUT < POST /lfs_upstream/objects/batch 200 OK
 
-  $ truncate -s 0 "$log_proxy" "$log_upstream"
+  $ wait_for_json_record_count "$SCUBA" 6
+  $ truncate -s 0 "$log_proxy" "$log_upstream" "$SCUBA"
 
 # Uploading should make data available in both locations
   $ yes B 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "$lfs_proxy"
@@ -85,6 +87,12 @@
   IN  > PUT /lfs_upstream/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 -
   OUT < PUT /lfs_upstream/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
 
+# Proper user agent should be sent to proxy.
+  $ wait_for_json_record_count "$SCUBA" 3
+  $ format_single_scuba_sample < "$SCUBA" | grep agent
+      "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
+      "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
+      "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
   $ hg --config extensions.lfs= debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_proxy" | sha256sum

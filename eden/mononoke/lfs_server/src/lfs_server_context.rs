@@ -27,7 +27,7 @@ use http::{
     header::HeaderMap,
     uri::{Authority, Parts, PathAndQuery, Scheme, Uri},
 };
-use hyper::{Body, Request};
+use hyper::{header, Body, Request};
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet};
 use slog::Logger;
 use tokio::runtime::Handle;
@@ -48,6 +48,8 @@ pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
 // For some reason Source Control uses the read action to decide if a user can write to a repo...
 const ACL_CHECK_ACTION: &str = "read";
+// The user agent string presented to upstream
+const CLIENT_USER_AGENT: &str = "mononoke-lfs-server/0.1.0 git/2.15.1";
 
 struct LfsServerContextInner {
     repositories: HashMap<String, (BlobRepo, ArcPermissionChecker, RepoConfig)>,
@@ -294,7 +296,7 @@ impl RepositoryRequestContext {
 
     pub async fn dispatch(
         &self,
-        request: Request<Body>,
+        mut request: Request<Body>,
     ) -> Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>>>, Error> {
         #[allow(clippy::infallible_destructuring_match)]
         let client = match self.client {
@@ -303,6 +305,10 @@ impl RepositoryRequestContext {
             HttpClient::Disabled => panic!("HttpClient is disabled in test"),
         };
 
+        request.headers_mut().insert(
+            header::USER_AGENT,
+            header::HeaderValue::from_static(CLIENT_USER_AGENT),
+        );
         let res = client.request(request);
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if
