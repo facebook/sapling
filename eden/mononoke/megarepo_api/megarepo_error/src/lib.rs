@@ -53,9 +53,9 @@ cloneable_error!(RequestError);
 
 #[derive(Clone, Debug, Error)]
 pub enum MegarepoError {
-    #[error("invalid request: {0}")]
+    #[error("{0}")]
     RequestError(#[source] RequestError),
-    #[error("internal error: {0}")]
+    #[error("{0}")]
     InternalError(#[source] InternalError),
 }
 
@@ -72,7 +72,13 @@ impl MegarepoError {
 /// By default, let's treat errors as internal
 impl From<Error> for MegarepoError {
     fn from(e: Error) -> Self {
-        MegarepoError::InternalError(InternalError(Arc::new(e)))
+        match e.downcast::<MegarepoError>() {
+            Ok(megarepo_error) => match megarepo_error {
+                Self::RequestError(e) => Self::RequestError(e),
+                Self::InternalError(e) => Self::InternalError(e),
+            },
+            Err(orig) => Self::internal(orig),
+        }
     }
 }
 

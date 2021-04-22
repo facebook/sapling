@@ -1,0 +1,21 @@
+[package]
+name = "megarepo_config"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.45"
+configo_client = { version = "0.1.0", path = "../configo_client" }
+context = { version = "0.1.0", path = "../../server/context" }
+faster-hex = "0.4"
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+maplit = "1.0"
+megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
+megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
+sha-1 = "0.8"
+slog = { version = "2.5", features = ["max_level_debug"] }
+version_cconf_index = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo/version_cconf_index" }
