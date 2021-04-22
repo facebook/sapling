@@ -131,6 +131,15 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, callback)
     }
 
+    def bookmarks(
+        &self,
+        repo: String,
+        bookmarks: Vec<String>,
+        callback: Option<PyObject> = None
+    ) -> PyResult<(PyDict, stats)> {
+        self.inner(py).clone().bookmarks_py(py, repo, bookmarks, callback)
+    }
+
     def filestore(
         &self,
         repo: String

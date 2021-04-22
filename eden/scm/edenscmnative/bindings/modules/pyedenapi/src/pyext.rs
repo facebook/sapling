@@ -201,6 +201,25 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((commits_py.into(), stats_py))
     }
 
+    fn bookmarks_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        bookmarks: Vec<String>,
+        callback: Option<PyObject>,
+    ) -> PyResult<(PyDict, stats)> {
+        let callback = callback.map(wrap_callback);
+        let response = self
+            .bookmarks_blocking(repo, bookmarks, callback)
+            .map_pyerr(py)?;
+        let bookmarks = PyDict::new(py);
+        for entry in response.entries.into_iter() {
+            bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
+        }
+        let stats = stats::new(py, response.stats)?;
+        Ok((bookmarks, stats))
+    }
+
     fn commit_location_to_hash_py(
         self: Arc<Self>,
         py: Python,
