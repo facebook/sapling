@@ -503,10 +503,8 @@ impl MultiplexedBlobstoreBase {
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
         let mut needed_handlers: usize = self.minimum_successful_writes.into();
-        let run_handlers_on_success = match ctx.session().session_class() {
-            SessionClass::UserWaiting => true,
-            SessionClass::Background => false,
-        };
+        let run_handlers_on_success =
+            !matches!(ctx.session().session_class(), SessionClass::Background);
 
         let mut puts: FuturesUnordered<_> = self
             .blobstores

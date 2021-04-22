@@ -38,6 +38,8 @@ pub enum SessionClass {
     /// Wherever reasonable, prefer to slow down and wait for work to complete
     /// fully rather than pushing work out to other tasks.
     Background,
+    /// This session is used by the warm bookmarks cache.
+    WarmBookmarksCache,
 }
 
 struct SessionContainerInner {

@@ -329,7 +329,7 @@ mod test {
 
         // Let's try with WarmBookmarkCache next
         println!("With warm bookmark cache");
-        let mut builder = WarmBookmarksCacheBuilder::new(&ctx, &repo);
+        let mut builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &repo);
         builder.add_hg_warmers()?;
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {

@@ -208,7 +208,8 @@ impl Repo {
         let blobstore = blob_repo.get_blobstore().boxed();
         let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
 
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
+        let mut warm_bookmarks_cache_builder =
+            WarmBookmarksCacheBuilder::new(ctx.clone(), &blob_repo);
         match env.warm_bookmarks_cache_derived_data {
             WarmBookmarksCacheDerivedData::HgOnly => {
                 warm_bookmarks_cache_builder.add_hg_warmers()?;
@@ -337,7 +338,8 @@ impl Repo {
         };
 
         let x_repo_sync_lease = Arc::new(InProcessLease::new());
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
+        let mut warm_bookmarks_cache_builder =
+            WarmBookmarksCacheBuilder::new(ctx.clone(), &blob_repo);
         warm_bookmarks_cache_builder.add_all_warmers()?;
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.

@@ -20,7 +20,7 @@ use bookmarks::{BookmarkName, Freshness};
 use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -87,14 +87,17 @@ pub enum InitMode {
 }
 
 pub struct WarmBookmarksCacheBuilder<'a> {
-    ctx: &'a CoreContext,
+    ctx: CoreContext,
     repo: &'a BlobRepo,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
 }
 
 impl<'a> WarmBookmarksCacheBuilder<'a> {
-    pub fn new(ctx: &'a CoreContext, repo: &'a BlobRepo) -> Self {
+    pub fn new(mut ctx: CoreContext, repo: &'a BlobRepo) -> Self {
+        ctx.session_mut()
+            .override_session_class(SessionClass::WarmBookmarksCache);
+
         Self {
             ctx,
             repo,
