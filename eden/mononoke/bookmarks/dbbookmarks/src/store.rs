@@ -14,7 +14,7 @@ use bookmarks::{
     RawBundleReplayData,
 };
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
+use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use futures_watchdog::WatchdogExt;
@@ -31,6 +31,8 @@ define_stats! {
     prefix = "mononoke.dbbookmarks";
     list: timeseries(Rate, Sum),
     list_maybe_stale: timeseries(Rate, Sum),
+    list_wbc: timeseries(Rate, Sum),
+    list_maybe_stale_wbc: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
 }
 
@@ -267,15 +269,26 @@ impl Bookmarks for SqlBookmarks {
         pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
+        let is_wbc = matches!(
+            ctx.session().session_class(),
+            SessionClass::WarmBookmarksCache
+        );
+
         let conn = match freshness {
             Freshness::MaybeStale => {
                 STATS::list_maybe_stale.add_value(1);
+                if is_wbc {
+                    STATS::list_maybe_stale_wbc.add_value(1);
+                }
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
                 self.connections.read_connection.clone()
             }
             Freshness::MostRecent => {
                 STATS::list.add_value(1);
+                if is_wbc {
+                    STATS::list_wbc.add_value(2);
+                }
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
                 self.connections.read_master_connection.clone()
