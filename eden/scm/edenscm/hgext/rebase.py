@@ -655,6 +655,8 @@ class rebaseruntime(object):
                 mergeresult.conflict_paths(),
             )
 
+        resolved = _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder)
+
         commitmsg = ctx.description()
         extra = {"rebase_source": ctx.hex()}
         mutinfo = None
@@ -686,13 +688,23 @@ class rebaseruntime(object):
 
             removed = manifestbuilder.removed()
             removedset = set(removed)
-            modified = manifestbuilder.modified()
+            modified = manifestbuilder.modified() + list(resolved)
 
             def getfilectx(repo, memctx, path):
                 if path in removedset:
                     return None
+                fctx = ctx[path]
 
-                return ctx[path]
+                data = resolved.get(path, None)
+                if data is not None:
+                    return context.overlayfilectx(
+                        fctx,
+                        datafunc=lambda: data,
+                        copied=False,
+                        ctx=memctx,
+                    )
+
+                return fctx
 
             merging = p2 != nullrev
             editform = cmdutil.mergeeditform(merging, "rebase")
@@ -935,6 +947,34 @@ class rebaseruntime(object):
             and repo["."].node() == repo._bookmarks[self.activebookmark]
         ):
             bookmarks.activate(repo, self.activebookmark)
+
+
+def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
+    from ..mercurial.simplemerge import Merge3Text
+
+    conflicts = []
+    resolved = {}
+    for file in manifestbuilder.modifiedconflicts():
+        basetext = basectx[file].data()
+        localtext = ctx[file].data()
+        othertext = p1ctx[file].data()
+        ui.status(_("merging %s\n") % file)
+        m3 = Merge3Text(basetext, localtext, othertext)
+        # merge_lines() has side effect setting conflicts
+        merged = b"".join(m3.merge_lines())
+        if m3.conflicts:
+            conflicts.append(file)
+        else:
+            resolved[file] = merged
+
+    if conflicts:
+        raise error.InMemoryMergeConflictsError(
+            _("textural merge returned conflicts"),
+            error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS,
+            conflicts,
+        )
+
+    return resolved
 
 
 @command(
