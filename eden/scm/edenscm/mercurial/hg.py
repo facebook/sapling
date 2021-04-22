@@ -599,19 +599,17 @@ def clone(
                 and not rev
                 and shallow
                 and stream is not False
-                and ui.configbool("experimental", "new-clone-path")
                 and ui.configbool("remotenames", "selectivepull")
             ):
                 clonecodepath = "modern"
                 clonemod.revlogclone(srcpeer.url(), destrepo)
             elif destrepo:
-                if ui.configbool("experimental", "new-clone-path"):
-                    ui.log(
-                        "features",
-                        fullargs=repr(pycompat.sysargv),
-                        feature="legacy-clone",
-                        traceback=util.smarttraceback(),
-                    )
+                ui.log(
+                    "features",
+                    fullargs=repr(pycompat.sysargv),
+                    feature="legacy-clone",
+                    traceback=util.smarttraceback(),
+                )
                 with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
                     if not stream:
                         if pull:
