@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use edenapi_types::{
-    CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
     TreeAttributes, TreeEntry,
 };
@@ -93,6 +93,13 @@ pub trait EdenApi: Send + Sync + 'static {
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError>;
+
+    async fn bookmarks(
+        &self,
+        repo: String,
+        bookmarks: Vec<String>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<BookmarkEntry>, EdenApiError>;
 }
 
 #[async_trait]
@@ -203,6 +210,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_hash_to_location(repo, master_heads, hgids, progress)
+            .await
+    }
+
+    async fn bookmarks(
+        &self,
+        repo: String,
+        bookmarks: Vec<String>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .bookmarks(repo, bookmarks, progress)
             .await
     }
 }

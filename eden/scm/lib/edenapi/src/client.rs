@@ -23,15 +23,15 @@ use auth::check_certs;
 use edenapi_types::{
     json::ToJson,
     wire::{
-        WireCloneData, WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
-        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireToApiConversionError,
-        WireTreeEntry,
+        WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
+        WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
+        WireToApiConversionError, WireTreeEntry,
     },
-    CloneData, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry,
-    FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeAttributes, TreeEntry,
-    TreeRequest,
+    BookmarkEntry, BookmarkRequest, CloneData, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
+    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire,
+    TreeAttributes, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -57,6 +57,7 @@ mod paths {
     pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
+    pub const BOOKMARKS: &str = "bookmarks";
 }
 
 pub struct Client {
@@ -434,6 +435,28 @@ impl EdenApi for Client {
 
         self.fetch_raw::<CommitRevlogData>(vec![req], progress)
             .await
+    }
+
+    async fn bookmarks(
+        &self,
+        repo: String,
+        bookmarks: Vec<String>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
+        let msg = format!("Requesting '{}' bookmarks", bookmarks.len());
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+        let url = self.url(paths::BOOKMARKS, Some(&repo))?;
+        let bookmark_req = BookmarkRequest { bookmarks };
+        self.log_request(&bookmark_req, "bookmarks");
+        let req = self
+            .configure(Request::post(url))?
+            .cbor(&bookmark_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        Ok(self.fetch::<WireBookmarkEntry>(vec![req], progress).await?)
     }
 
     async fn clone_data(

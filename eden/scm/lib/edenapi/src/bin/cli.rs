@@ -22,8 +22,8 @@ use tokio::io::AsyncWriteExt;
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
-    json::FromJson, wire::ToWire, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest,
-    HistoryRequest, TreeRequest,
+    json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, CompleteTreeRequest,
+    FileRequest, HistoryRequest, TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -43,6 +43,8 @@ enum Command {
     CompleteTrees(Args),
     #[structopt(about = "Request commit revlog data")]
     CommitRevlogData(Args),
+    #[structopt(about = "Request Bookmarks")]
+    Bookmarks(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -85,6 +87,7 @@ async fn main() -> Result<()> {
         Command::Trees(args) => cmd_trees(args).await,
         Command::CompleteTrees(args) => cmd_complete_trees(args).await,
         Command::CommitRevlogData(args) => cmd_commit_revlog_data(args).await,
+        Command::Bookmarks(args) => cmd_bookmarks(args).await,
     }
 }
 
@@ -108,6 +111,25 @@ async fn cmd_files(args: Args) -> Result<()> {
 
         let (bar, cb) = progress_bar();
         let response = client.files(repo.clone(), req.keys, Some(cb)).await?;
+        handle_response(response, bar).await?;
+    }
+
+    Ok(())
+}
+
+async fn cmd_bookmarks(args: Args) -> Result<()> {
+    let Setup {
+        repo,
+        client,
+        requests,
+    } = <Setup<BookmarkRequest>>::from_args(args)?;
+    for req in requests {
+        log::info!("Requesting values for {} bookmarks", req.bookmarks.len(),);
+
+        let (bar, cb) = progress_bar();
+        let response = client
+            .bookmarks(repo.clone(), req.bookmarks, Some(cb))
+            .await?;
         handle_response(response, bar).await?;
     }
 
