@@ -41,9 +41,6 @@ COMMON_ARGS=(
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
 )
-if [[ -n "$MYSQL_CLIENT" ]]; then
-  COMMON_ARGS+=(--use-mysql-client)
-fi
 
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 

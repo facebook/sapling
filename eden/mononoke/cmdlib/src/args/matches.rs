@@ -51,11 +51,10 @@ use super::app::{
     MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT,
     MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
     MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
-    MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, MYSQL_USE_CLIENT,
-    READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
-    RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY,
-    WITH_READONLY_STORAGE_ARG, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
-    WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+    MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
+    READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
+    TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG, WRITE_BURST_BYTES_ARG,
+    WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
 };
 use super::cache::parse_and_init_cachelib;
 use super::parse_config_spec_to_path;
@@ -411,14 +410,12 @@ fn parse_mysql_options(
             .parse::<u16>()
             .context("Provided --myrouter-port is not u16")?;
         MysqlConnectionType::Myrouter(port)
-    } else if matches.is_present(MYSQL_USE_CLIENT) {
+    } else {
         let pool = app_data.global_mysql_connection_pool.clone();
         let pool_config =
             parse_mysql_pool_options(matches).context("Failed to parse MySQL pool options")?;
 
         MysqlConnectionType::Mysql(pool, pool_config)
-    } else {
-        MysqlConnectionType::RawXDB
     };
 
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
@@ -488,13 +485,11 @@ fn parse_sqlblob_mysql_options(
             .parse::<u16>()
             .context("Provided --myrouter-port is not u16")?;
         MysqlConnectionType::Myrouter(port)
-    } else if matches.is_present(MYSQL_USE_CLIENT) {
+    } else {
         let pool = app_data.sqlblob_mysql_connection_pool.clone();
         let pool_config = parse_mysql_sqlblob_pool_options(matches)?;
 
         MysqlConnectionType::Mysql(pool, pool_config)
-    } else {
-        MysqlConnectionType::RawXDB
     };
 
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);

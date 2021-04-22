@@ -97,7 +97,6 @@ pub mod facebook {
     #[derive(Clone)]
     pub enum MysqlConnectionType {
         Myrouter(u16),
-        RawXDB,
         Mysql(SharedConnectionPool, PoolConfig),
     }
 
@@ -110,7 +109,6 @@ pub mod facebook {
             #[cfg(fbcode_build)]
             match self {
                 Self::Myrouter(_) => None,
-                Self::RawXDB => None,
                 Self::Mysql(_, pool_config) => Some(pool_config.per_key_limit as usize),
             }
         }
@@ -121,7 +119,6 @@ pub mod facebook {
             match &self {
                 Self::Myrouter(port) => write!(f, "MyRouter(port: {:?})", port),
                 Self::Mysql(_, config) => write!(f, "MySQL with config {:?}", config),
-                Self::RawXDB => write!(f, "RawXDB"),
             }
         }
     }

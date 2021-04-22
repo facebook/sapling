@@ -7,7 +7,6 @@
 
 use anyhow::{bail, Error};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use metaconfig_types::{
     LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
 };
@@ -18,9 +17,8 @@ use sql_construct::{
 };
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_connections_unsharded,
-        create_raw_xdb_connections, myrouter_ready, MysqlConnectionType, MysqlOptions,
-        PoolSizeConfig,
+        create_myrouter_connections, create_mysql_connections_unsharded, myrouter_ready,
+        MysqlConnectionType, MysqlOptions, PoolSizeConfig,
     },
     open_sqlite_path, SqlConnections,
 };
@@ -117,16 +115,6 @@ impl MetadataSqlFactory {
                         self.mysql_options.read_connection_type(),
                         self.readonly.0,
                     )
-                }
-                MysqlConnectionType::RawXDB => {
-                    create_raw_xdb_connections(
-                        self.fb,
-                        config.primary.db_address.clone(),
-                        self.mysql_options.read_connection_type(),
-                        self.readonly.0,
-                    )
-                    .compat()
-                    .await
                 }
             },
         }

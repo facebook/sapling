@@ -373,12 +373,6 @@ def run_tests(
     help="Use Ephemeral DB or optionally devdb to run tests with MySQL using MySQL client",
 )
 @click.option(
-    "--mysql-raw-xdb",
-    default=False,
-    is_flag=True,
-    help="Use Ephemeral DB or optionally devdb to run tests with MySQL using raw XDB connections",
-)
-@click.option(
     "mysql_schemas",
     "--mysql-schema",
     multiple=True,
@@ -412,7 +406,6 @@ def run(
     keep_tmpdir,
     tmpdir,
     mysql_client,
-    mysql_raw_xdb,
     mysql_schemas,
     devdb,
     py3_skip_list,
@@ -432,14 +425,10 @@ def run(
 
     maybe_use_local_test_paths(manifest_env)
 
-    if mysql_client and mysql_raw_xdb:
-        raise click.BadParameter(
-            "Can't use both raw XDB connections and MySQL client, choose one", ctx
-        )
-
-    is_mysql = mysql_client or mysql_raw_xdb
     if dry_run:
-        return run_discover_tests(ctx, manifest_env, output, is_mysql, py3_skip_list)
+        return run_discover_tests(
+            ctx, manifest_env, output, mysql_client, py3_skip_list
+        )
 
     test_flags: TestFlags = TestFlags(
         interactive,
@@ -450,7 +439,7 @@ def run(
         disable_all_network_access=(
             # NOTE: We need network to talk to MySQL
             not debug
-            and not is_mysql
+            and not mysql_client
             and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
         ),
     )
@@ -475,9 +464,8 @@ def run(
     if is_libfb_present():
         from eden.mononoke.tests.integration.facebook.lib_runner import fb_test_context
 
-        mysql_type = "mysql" if mysql_client else "raw_xdb"
         with fb_test_context(
-            ctx, dry_run, is_mysql, mysql_type, mysql_schemas, devdb, selected_tests
+            ctx, dry_run, mysql_client, mysql_schemas, devdb, selected_tests
         ) as test_env:
             run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
     else:

@@ -32,18 +32,15 @@ use bytes::BytesMut;
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
-};
+use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
 use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use nonzero_ext::nonzero;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
         create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, create_raw_xdb_connections, PoolConfig, PoolSizeConfig,
-        ReadConnectionType, SharedConnectionPool,
+        create_mysql_connections_unsharded, PoolConfig, PoolSizeConfig, ReadConnectionType,
+        SharedConnectionPool,
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections,
 };
@@ -264,65 +261,6 @@ impl Sqlblob {
                     readonly,
                 );
                 async { res }
-            },
-            config_store,
-        )
-        .await
-    }
-
-    pub async fn with_raw_xdb_shardmap(
-        fb: FacebookInit,
-        shardmap: String,
-        read_con_type: ReadConnectionType,
-        shard_num: NonZeroUsize,
-        readonly: bool,
-        put_behaviour: PutBehaviour,
-        config_store: &ConfigStore,
-    ) -> Result<CountedSqlblob, Error> {
-        let delay = if readonly {
-            BlobDelay::dummy(shard_num)
-        } else {
-            myadmin_delay::sharded(fb, shardmap.clone(), shard_num)?
-        };
-        Self::with_connection_factory(
-            delay,
-            shardmap.clone(),
-            shard_num,
-            put_behaviour,
-            move |shard_id| {
-                create_raw_xdb_connections(
-                    fb,
-                    format!("{}.{}", shardmap, shard_id),
-                    read_con_type,
-                    readonly,
-                )
-                .compat()
-            },
-            config_store,
-        )
-        .await
-    }
-
-    pub async fn with_raw_xdb_unsharded(
-        fb: FacebookInit,
-        db_address: String,
-        read_con_type: ReadConnectionType,
-        readonly: bool,
-        put_behaviour: PutBehaviour,
-        config_store: &ConfigStore,
-    ) -> Result<CountedSqlblob, Error> {
-        let delay = if readonly {
-            BlobDelay::dummy(SINGLE_SHARD_NUM)
-        } else {
-            myadmin_delay::single(fb, db_address.clone())?
-        };
-        Self::with_connection_factory(
-            delay,
-            db_address.clone(),
-            SINGLE_SHARD_NUM,
-            put_behaviour,
-            move |_shard_id| {
-                create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).compat()
             },
             config_store,
         )

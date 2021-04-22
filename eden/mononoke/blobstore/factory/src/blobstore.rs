@@ -250,29 +250,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
             )
             .await
         }
-        (MysqlConnectionType::RawXDB, None) => {
-            Sqlblob::with_raw_xdb_unsharded(
-                fb,
-                tier_name,
-                read_conn_type,
-                readonly_storage.0,
-                put_behaviour,
-                config_store,
-            )
-            .await
-        }
-        (MysqlConnectionType::RawXDB, Some(shard_num)) => {
-            Sqlblob::with_raw_xdb_shardmap(
-                fb,
-                tier_name,
-                read_conn_type,
-                shard_num,
-                readonly_storage.0,
-                put_behaviour,
-                config_store,
-            )
-            .await
-        }
     }
 }
 

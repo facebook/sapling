@@ -253,9 +253,6 @@ fn get_read_write_fetcher(
                         mysql_options.read_connection_type(),
                         readonly_storage,
                     ),
-                    MysqlConnectionType::RawXDB => Err(Error::msg(
-                        "neither myrouter_port nor use-mysql-client not specified in mysql mode",
-                    )),
                 }
             };
             sql_repo_read_write_status.and_then(|connection| {

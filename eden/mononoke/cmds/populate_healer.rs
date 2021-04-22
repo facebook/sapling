@@ -417,11 +417,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     )?;
                     Arc::new(queue)
                 }
-                MysqlConnectionType::RawXDB => {
-                    return Err(Error::msg(
-                        "raw XDB connections are not supported, provide either myrouter port or use mysql client",
-                    ));
-                }
             };
             let mut runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(populate_healer_queue(blobstore, queue, config))?;
