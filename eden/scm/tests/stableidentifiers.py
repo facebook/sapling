@@ -7,7 +7,7 @@
 # incrementing sequence.
 import os
 
-from edenscm.hgext import extutil, clienttelemetry
+from edenscm.hgext import extutil
 from edenscm.mercurial import extensions, util
 
 
@@ -26,4 +26,5 @@ def makestableidentifier(orig, length=16):
 
 def uisetup(ui):
     extensions.wrapfunction(util, "makerandomidentifier", makestableidentifier)
-    clienttelemetry._correlator = "stableidentifiers:correlator"
+    assert ui._correlator.get() is None
+    ui._correlator.swap("stableidentifiers:correlator")

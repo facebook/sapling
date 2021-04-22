@@ -696,6 +696,9 @@ class refcell(object):
         self._obj = obj
         return origobj
 
+    def get(self):
+        return self._obj
+
 
 @contextlib.contextmanager
 def acceptintervention(tr=None):

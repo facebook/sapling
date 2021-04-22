@@ -44,9 +44,6 @@ def hostname(ui):
     return socket.gethostname()
 
 
-_correlator = None
-
-
 @clienttelemetryfunc
 def correlator(ui):
     """
@@ -54,11 +51,7 @@ def correlator(ui):
     server.  This can be used to correlate the client logging to the server
     logging.
     """
-    global _correlator
-    if _correlator is None:
-        _correlator = util.makerandomidentifier()
-        ui.log("clienttelemetry", client_correlator=_correlator)
-    return _correlator
+    return ui.correlator()
 
 
 @clienttelemetryfunc
