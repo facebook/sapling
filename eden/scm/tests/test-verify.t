@@ -2,10 +2,6 @@
 
   $ disable treemanifest
 
-Verify works on revlog repos. It is incompatible with zstore-backed changelog.d:
-
-  $ setconfig format.use-zstore-commit-data=false
-
 prepare repo
 
   $ hg init a

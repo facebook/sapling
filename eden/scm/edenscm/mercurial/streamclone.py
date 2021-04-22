@@ -174,9 +174,6 @@ def maybeperformlegacystreamclone(pullop):
 
         repo.invalidate()
 
-        if "zstorecommitdata" in repo.storerequirements:
-            repo._syncrevlogtozstore()
-
     return True
 
 

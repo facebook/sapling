@@ -561,7 +561,6 @@ class localrepository(object):
             self.ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
             self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
             self.ui.setconfig("experimental", "rust-commits", "false", "hgsql")
-            self.ui.setconfig("format", "use-zstore-commit-data", "false", "hgsql")
             self.ui.setconfig("visibility", "enabled", "false", "hgsql")
 
         self._dirstatevalidatewarned = False
@@ -605,7 +604,6 @@ class localrepository(object):
             self._visibilitymigration()
             self._svfsmigration()
             self._narrowheadsmigration()
-            self._zstorecommitdatamigration()
         except errormod.LockHeld:
             self.ui.debug("skipping automigrate because lock is held\n")
         except errormod.AbandonedTransactionFoundError:
@@ -684,60 +682,6 @@ class localrepository(object):
         self._eventreporting = False
         yield
         self._eventreporting = True
-
-    def _zstorecommitdatamigration(self):
-        """Migrate if 'narrow-heads' config has changed."""
-        zstorecommitdatadesired = self.ui.configbool("format", "use-zstore-commit-data")
-        zstorecommitdatacurrent = "zstorecommitdata" in self.storerequirements
-        if zstorecommitdatadesired != zstorecommitdatacurrent:
-            if zstorecommitdatadesired:
-                # Migrating up. Read all commits in revlog and store them in
-                # zstore.
-                with self.lock(wait=False):
-                    self._syncrevlogtozstore()
-                    self.storerequirements.add("zstorecommitdata")
-                    self._writestorerequirements()
-            else:
-                # Migrating down is just removing the store requirement.
-                with self.lock(wait=False):
-                    self.storerequirements.remove("zstorecommitdata")
-                    self._writestorerequirements()
-
-    def _syncrevlogtozstore(self):
-        """Sync commit data from revlog to zstore"""
-        zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
-        self.changelog.zstore = zstore
-
-        if self.ui.configbool(
-            "format", "use-zstore-commit-data-revlog-fallback"
-        ) or self.ui.configbool("format", "use-zstore-commit-data-server-fallback"):
-            revs = list(self.revs("not public()"))
-        else:
-            revs = self
-
-        with progress.bar(
-            self.ui, _("migrating commit data"), _("commits"), len(revs)
-        ) as prog:
-            cl = self.changelog
-            cl.zstore = None
-            textwithheader = revlog.textwithheader
-            clrevision = cl.revision
-            clparents = cl.parents
-            clnode = cl.node
-            insert = zstore.insert
-            contains = zstore.__contains__
-            for rev in revs:
-                prog.value += 1
-                node = clnode(rev)
-                if contains(node):
-                    continue
-                text = clrevision(rev)
-                p1, p2 = clparents(node)
-                newnode = insert(textwithheader(text, p1, p2))
-                assert node == newnode
-                if (rev + 1) % 1000000 == 0:
-                    zstore.flush()
-            zstore.flush()
 
     @property
     def vfs(self):
@@ -1600,11 +1544,6 @@ class localrepository(object):
 
         def releasefn(tr, success):
             repo = reporef()
-            # Flush changelog zstore unconditionally. This makes the commit
-            # data available even if the transaction gets rolled back.
-            zstore = getattr(repo.changelog, "zstore", None)
-            if zstore is not None:
-                zstore.flush()
             if success:
                 # this should be explicitly invoked here, because
                 # in-memory changes aren't written out at closing
@@ -3055,9 +2994,6 @@ def newrepostorerequirements(repo):
     ):
         requirements.add("narrowheads")
 
-    if ui.configbool("format", "use-zstore-commit-data"):
-        requirements.add("zstorecommitdata")
-
     if ui.configbool("format", "use-segmented-changelog"):
         requirements.add("segmentedchangelog")
         # linkrev are not going to work with segmented changelog,
@@ -3132,14 +3068,9 @@ def _openchangelog(repo):
         repo.ui.log("changelog_info", changelog_backend="rustrevlog")
         return changelog2.changelog.openrevlog(repo, repo.ui.uiconfig())
 
-    if "zstorecommitdata" in repo.storerequirements:
-        zstore = bindings.zstore.zstore(repo.svfs.join("hgcommits/v1"))
-    else:
-        zstore = None
     repo.ui.log("changelog_info", changelog_backend="pythonrevlog")
     return changelog.changelog(
         repo.svfs,
         uiconfig=repo.ui.uiconfig(),
         trypending=txnutil.mayhavesharedpending(repo.root, repo.sharedroot),
-        zstore=zstore,
     )

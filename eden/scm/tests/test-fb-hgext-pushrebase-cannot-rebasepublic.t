@@ -10,7 +10,6 @@ pushrebase.
   $ setconfig hgsql.verbose=True
   $ setconfig visibility.enabled=False
   $ setconfig pushrebase.verbose=True
-  $ setconfig format.use-zstore-commit-data=False
   $ enable pushrebase
   $ enable strip
   $ commit() {

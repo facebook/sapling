@@ -54,7 +54,6 @@ Invalid dest '' must abort:
 No update, with debug option:
 
 #if hardlink
- (XXX: zstore migration is done twice)
   $ hg --debug clone -U . ../c --config progress.debug=true
   progress: linking: 1
   progress: linking: 2

@@ -1,9 +1,8 @@
 # coding=utf-8
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -13,7 +12,7 @@ from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 sh.enable("remotenames")
 sh % ". '$TESTDIR/hgsql/library.sh'"
 sh % "initdb"
-sh % "setconfig 'extensions.treemanifest=!' 'format.use-zstore-commit-data=0'"
+sh % "setconfig 'extensions.treemanifest=!'"
 
 # Test operations on server repository with bad configuration fail in expected
 # ways.

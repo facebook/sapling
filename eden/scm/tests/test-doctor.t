@@ -3,10 +3,6 @@
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1
 
-Enable writing to hgcommits/v1:
-
-  $ setconfig format.use-zstore-commit-data=1 format.use-zstore-commit-data-revlog-fallback=1
-
 Test indexedlogdatapack
 
   $ . "$TESTDIR/library.sh"

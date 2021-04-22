@@ -1250,12 +1250,6 @@ Separate sections from subsections
   
       "usefncache"
   
-      "use-zstore-commit-data"
-  
-      "use-zstore-commit-data-revlog-fallback"
-  
-      "use-zstore-commit-data-server-fallback"
-  
       "dirstate"
   
       "uselz4"

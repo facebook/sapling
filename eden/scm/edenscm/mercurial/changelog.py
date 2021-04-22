@@ -286,7 +286,7 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-    def __init__(self, opener, uiconfig, trypending=False, zstore=None):
+    def __init__(self, opener, uiconfig, trypending=False):
         """Load a changelog revlog using an opener.
 
         If ``trypending`` is true, we attempt to load the index from a
@@ -336,15 +336,6 @@ class changelog(revlog.revlog):
         self._delayed = False
         self._delaybuf = None
         self._divert = False
-
-        if uiconfig.configbool("format", "use-zstore-commit-data-revlog-fallback"):
-            self._zstorefallback = "revlog"
-        elif uiconfig.configbool("format", "use-zstore-commit-data-server-fallback"):
-            self._zstorefallback = "server"
-        else:
-            self._zstorefallback = None
-
-        self.zstore = zstore
 
     def userust(self, name=None):
         return False
@@ -529,18 +520,11 @@ class changelog(revlog.revlog):
         self._invalidaterustrevlog()
         text = hgcommittext(manifest, files, desc, user, date, extra)
         result = self.addrevision(text, transaction, len(self), p1, p2)
-
-        zstore = self.zstore
-        if zstore is not None:
-            zstore.flush()
         return result
 
     def addgroup(self, deltas, linkmapper, transaction):
         self._invalidaterustrevlog()
         result = super(changelog, self).addgroup(deltas, linkmapper, transaction)
-        zstore = self.zstore
-        if zstore is not None:
-            zstore.flush()
         return result
 
     def _invalidaterustrevlog(self):
@@ -592,55 +576,10 @@ class changelog(revlog.revlog):
             **kwargs
         )
 
-        # Also write (key=node, data=''.join(sorted([p1,p2]))+text) to zstore
-        # if zstore exists.
-        # `_addrevision` is the single API that writes to revlog `.d`.
-        # It is used by `add` and `addgroup`.
-        zstore = self.zstore
-        if zstore is not None:
-            # `rawtext` can be None (code path: revlog.addgroup), in that case
-            # `cachedelta` is the way to get `text`.
-            if rawtext is None:
-                baserev, delta = cachedelta
-                basetext = self.revision(baserev, _df=dfh, raw=False)
-                text = rawtext = mdiff.patch(basetext, delta)
-            else:
-                # text == rawtext only if there is no flags.
-                # We need 'text' to calculate commit SHA1.
-                assert not flags, "revlog flags on changelog is unexpected"
-                text = rawtext
-            sha1text = textwithheader(text, p1, p2)
-            # Use `p1` as a potential delta-base.
-            zstorenode = zstore.insert(sha1text, [p1])
-            assert zstorenode == node, "zstore SHA1 should match node"
-
         nodes = transaction.changes.get("nodes")
         if nodes is not None:
             nodes.append(node)
         return node
-
-    def revision(self, nodeorrev, _df=None, raw=False):
-        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
-        # "revision" is the single API that reads `.d` from revlog.
-        # Use zstore if possible.
-        zstore = self.zstore
-        if zstore is None:
-            return super(changelog, self).revision(nodeorrev, _df=_df, raw=raw)
-        else:
-            if isint(nodeorrev):
-                node = self.node(nodeorrev)
-            else:
-                node = nodeorrev
-            if node == nullid:
-                return b""
-            text = zstore[node]
-            if text is None:
-                # fallback to revlog
-                if self._zstorefallback == "revlog":
-                    return super(changelog, self).revision(nodeorrev, _df=_df, raw=raw)
-                raise error.LookupError(node, self.indexfile, _("no data for node"))
-            # Strip the p1, p2 header
-            return text[40:]
 
 
 class nodemap(object):

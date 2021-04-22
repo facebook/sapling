@@ -58,7 +58,3 @@ def revlogclone(source, repo):
         repo.pull(
             source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
         )
-
-        # Data migration.
-        if "zstorecommitdata" in repo.storerequirements:
-            repo._syncrevlogtozstore()

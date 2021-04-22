@@ -13,7 +13,6 @@ Create a repository:
   extensions.patchrmdir=
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
-  format.use-zstore-commit-data=false
   format.use-segmented-changelog=1
   fsmonitor.detectrace=1 (fsmonitor !)
   mutation.record=False

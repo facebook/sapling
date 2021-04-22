@@ -315,10 +315,6 @@ def unshare(ui, repo):
     repo.invalidatedirstate()
     repo.__init__(repo.baseui, repo.root)
 
-    # reinitialize zstore
-    if repo.ui.configbool("format", "use-zstore-commit-data"):
-        repo._syncrevlogtozstore()
-
 
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
@@ -653,9 +649,6 @@ def clone(
 
         if destrepo:
             with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
-                if destrepo.ui.configbool("format", "use-zstore-commit-data"):
-                    destrepo._syncrevlogtozstore()
-
                 if update:
                     if update is not True:
                         checkout = srcpeer.lookup(update)
