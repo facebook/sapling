@@ -37,6 +37,7 @@ from . import (
     dirstateguard,
     discovery,
     edenfs,
+    edenapi,
     encoding,
     error as errormod,
     exchange,
@@ -1063,6 +1064,14 @@ class localrepository(object):
                     # Reopen
                     cl = loadchangelog(self)
         return cl
+
+    @util.propertycache
+    def edenapi(self):
+        if self.ui.config("edenapi", "url"):
+            return edenapi.getclient(self.ui)
+        else:
+            # NOTE: Consider making this an error instead.
+            return None
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to

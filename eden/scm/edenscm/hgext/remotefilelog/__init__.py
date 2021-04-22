@@ -388,11 +388,6 @@ def setupclient(ui, repo):
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
 
-    repo.edenapi = None
-    if ui.config("edenapi", "url"):
-        correlator = clienttelemetry.correlator(ui)
-        repo.edenapi = edenapi.client(ui._rcfg._rcfg, ui, correlator)
-
 
 clientonetime = False
 
