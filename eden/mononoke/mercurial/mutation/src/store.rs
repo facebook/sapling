@@ -10,7 +10,7 @@ use std::collections::{hash_map, HashMap, HashSet};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
-use futures::future;
+use futures::future::{self, FutureExt};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{DateTime, RepositoryId};
 use slog::debug;
@@ -344,8 +344,9 @@ impl SqlHgMutationStore {
             .filter(|hg_cs_id| !entry_set.entries.contains_key(hg_cs_id))
             .collect();
         if !to_fetch.is_empty() {
-            let rows =
-                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()).await?;
+            let rows = SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice())
+                .await
+                .with_context(|| format!("Error fetching successors: {:?}", to_fetch))?;
             self.collect_entries(connection, entry_set, rows).await?;
         }
         Ok(())
@@ -373,8 +374,12 @@ impl SqlHgMutationStore {
             // mutation entries which extend the history of a commit backwards
             // beyond the original primordial.
             let (primordial_rows, successor_rows) = future::try_join(
-                SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice()),
-                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()),
+                SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice()).map(
+                    |r| r.with_context(|| format!("Error fetching primordials: {:?}", &to_fetch)),
+                ),
+                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()).map(|r| {
+                    r.with_context(|| format!("Error fetching successors: {:?}", &to_fetch))
+                }),
             )
             .await?;
             let rows = primordial_rows
