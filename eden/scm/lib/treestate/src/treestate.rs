@@ -15,6 +15,7 @@ use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
 
+const FILTER_LOWERCASE: u64 = 0x1;
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
 /// See the comment about `FileStateV2` for the difference.
 /// In short, `TreeState` combines dirstate and fsmonitor state.
@@ -92,6 +93,22 @@ impl TreeState {
 
     pub fn get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<&FileStateV2>> {
         self.tree.get(&self.store, path.as_ref())
+    }
+
+    pub fn get_keys_ignorecase<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Vec<Key>> {
+        fn map_lowercase(k: KeyRef) -> Result<Key> {
+            let s = std::str::from_utf8(k);
+            Ok(if let Ok(s) = s {
+                s.to_lowercase().into_bytes().into_boxed_slice()
+            } else {
+                k.to_vec().into_boxed_slice()
+            })
+        }
+        self.get_filtered_key(
+            &map_lowercase(path.as_ref())?,
+            &mut map_lowercase,
+            FILTER_LOWERCASE,
+        )
     }
 
     /// Get the aggregated state of a directory. This is useful, for example, to tell if a
@@ -405,5 +422,24 @@ mod tests {
                 assert_eq!(files, expected);
             }
         }
+    }
+
+    #[test]
+    fn test_get_keys_ignorecase() {
+        let dir = TempDir::new("treestate").expect("tempdir");
+        let mut state = new_treestate(dir.path().join("1"));
+        let expected = vec![b"hgext3rd/__init__.py".to_vec().into_boxed_slice()];
+        assert_eq!(
+            state.get_keys_ignorecase(b"hgext3rd/__init__.py").unwrap(),
+            expected
+        );
+        assert_eq!(
+            state.get_keys_ignorecase(b"hGext3rd/__init__.py").unwrap(),
+            expected
+        );
+        assert_eq!(
+            state.get_keys_ignorecase(b"hgext3rd/__Init__.py").unwrap(),
+            expected
+        );
     }
 }
