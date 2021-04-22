@@ -371,7 +371,25 @@ impl CheckoutPlan {
     ) -> Result<Vec<RepoPathBuf>> {
         let mut check_content = vec![];
         for file in self.new_files() {
-            let state = tree_state.get(file)?;
+            let state = if vfs.case_sensitive() {
+                tree_state.get(file)?
+            } else {
+                let matches = tree_state.get_keys_ignorecase(file)?;
+                let mut matches = matches.into_iter();
+                let next = matches.next();
+                match next {
+                    None => None,
+                    Some(next) => {
+                        if let Some(extra) = matches.next() {
+                            warn!(
+                                "TreeState::get_ignorecase found multiple files on case insensitive fs for {}: {:?}, {:?}",
+                                file, next, extra
+                            );
+                        }
+                        tree_state.get(next)?
+                    }
+                }
+            };
             let unknown = match state {
                 None => true,
                 Some(state) => !state.state.intersects(

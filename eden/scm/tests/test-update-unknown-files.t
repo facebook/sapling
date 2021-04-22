@@ -24,3 +24,14 @@
   $ echo a > b
   $ hg up 'desc(B)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm b
+  $ hg rm b
+  $ echo X > B
+  $ hg add B
+  warning: possible case-folding collision for B
+  $ hg commit -m 'C'
+  $ hg up 'desc(B)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ ls
+  a
+  b
