@@ -10,7 +10,7 @@ doc = false
 
 [dependencies]
 libc = "0.2.86"
-zstd-sys = { version = "=1.4.19+zstd.1.4.8", features = ["experimental"] }
+zstd-sys = { version = "=1.5.0+zstd.1.4.9", features = ["experimental"] }
 
 [dev-dependencies]
 quickcheck = "0.9"

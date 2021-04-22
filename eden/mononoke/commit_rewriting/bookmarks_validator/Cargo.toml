@@ -32,6 +32,7 @@ tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
+async-compression = { git = "https://github.com/ahornby/async-compression", rev = "c7fe7f9512e742f0c0097a19de0fca89da140b31" }
 bytecount = { git = "https://github.com/llogiq/bytecount", rev = "469eaf8395c99397cd64d059737a9054aa014088" }
 chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }

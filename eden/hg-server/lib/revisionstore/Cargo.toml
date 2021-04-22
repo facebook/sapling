@@ -49,7 +49,7 @@ tracing = "0.1"
 types = { path = "../types" }
 url = "2.1.0"
 util = { path = "../util" }
-zstd = "=0.6.0+zstd.1.4.8"
+zstd = "=0.7.0+zstd.1.4.9"
 
 [dev-dependencies]
 lazy_static = "1.0"

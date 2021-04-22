@@ -43,7 +43,7 @@ tracing-subscriber = "0.2"
 types = { path = "../types" }
 util = { path = "../util" }
 version = { path = "../version" }
-zstd = "=0.6.0+zstd.1.4.8"
+zstd = "=0.7.0+zstd.1.4.9"
 
 [features]
 default = ["python3"]
