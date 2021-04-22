@@ -26,6 +26,8 @@ REPONAME=${REPONAME:-repo}
 
 export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
 mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
+
+# The path for tunables. Do not write directly to this! Use merge_tunables instead.
 export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
 
 function get_configerator_relative_path {
@@ -522,11 +524,6 @@ function get_bonsai_globalrev_mapping {
 
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
-  if [[ -z "$MONONOKE_TUNABLES" ]]; then
-    echo "{}" > "${MONONOKE_TUNABLES_PATH}"
-  else
-    echo "$MONONOKE_TUNABLES" > "${MONONOKE_TUNABLES_PATH}"
-  fi
 
   mkdir -p mononoke-config
   REPOTYPE="blob_sqlite"
@@ -1985,6 +1982,12 @@ function sqlite3() {
   # Set a longer timeout so that we don't break if Mononoke currently has a
   # handle on the DB.
   command sqlite3 -cmd '.timeout 1000' "$@"
+}
+
+function merge_tunables() {
+  local new
+  new="$(jq -s '.[0] * .[1]' "$MONONOKE_TUNABLES_PATH" -)"
+  printf "%s" "$new" > "$MONONOKE_TUNABLES_PATH"
 }
 
 function init_tunables() {

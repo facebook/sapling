@@ -4,14 +4,15 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-  $ MONONOKE_TUNABLES="
+  $ . "${TEST_FIXTURES}/library.sh"
+
+  $ merge_tunables <<EOF
   > {
-  >   \"ints\": {
-  >      \"hash_validation_percentage\": 100
+  >   "ints": {
+  >     "hash_validation_percentage": 100
   >   }
   > }
-  > "
-  $ . "${TEST_FIXTURES}/library.sh"
+  > EOF
 
 setup configuration
   $ setup_common_config "blob_files"

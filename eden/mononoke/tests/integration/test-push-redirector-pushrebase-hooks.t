@@ -93,7 +93,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   [255]
 
 Let's check that disabling running pushredirected hooks work
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "killswitches": {
   >     "disable_running_hooks_in_pushredirected_repo": true

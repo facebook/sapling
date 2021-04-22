@@ -15,7 +15,7 @@ setup configuration
   >   setup_common_config
   $ cd $TESTTMP
 
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "killswitches": {
   >     "mutation_advertise_for_infinitepush": true,

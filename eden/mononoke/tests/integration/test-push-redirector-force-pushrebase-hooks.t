@@ -37,7 +37,7 @@
   >   ]
   > CONFIG
 
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "killswitches": {
   >     "run_hooks_on_additional_changesets": true

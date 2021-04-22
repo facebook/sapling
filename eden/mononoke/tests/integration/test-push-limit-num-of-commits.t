@@ -40,7 +40,7 @@ setup push source repo
 
 start mononoke
 
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "ints": {
   >     "unbundle_limit_num_of_commits_in_push": 2

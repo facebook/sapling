@@ -8,7 +8,7 @@
 
 setup configuration 
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "killswitches": {
   >     "mutation_advertise_for_infinitepush": true,

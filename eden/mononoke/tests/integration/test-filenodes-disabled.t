@@ -10,7 +10,7 @@ setup configuration
   $ export CACHE_WARMUP_BOOKMARK="master_bookmark"
   $ setup_common_config
   $ cd $TESTTMP
-  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
+  $ merge_tunables <<EOF
   > {
   >   "killswitches": {
   >     "filenodes_disabled": true
