@@ -12,7 +12,6 @@ use std::{
     convert::TryInto,
     path::Path,
     str,
-    time::Duration,
 };
 
 use crate::convert::Convert;
@@ -190,7 +189,6 @@ fn parse_repo_config(
         enabled,
         readonly,
         bookmarks,
-        bookmarks_cache_ttl,
         hook_manager_params,
         hooks,
         write_lock_db_address,
@@ -262,10 +260,6 @@ fn parse_repo_config(
     let hook_manager_params = hook_manager_params.convert()?;
 
     let bookmarks = bookmarks.unwrap_or_default().convert()?;
-
-    let bookmarks_cache_ttl = bookmarks_cache_ttl
-        .map(|ttl| -> Result<_> { Ok(Duration::from_millis(ttl.try_into()?)) })
-        .transpose()?;
 
     let push = push.convert()?.unwrap_or_default();
 
@@ -370,7 +364,6 @@ fn parse_repo_config(
         cache_warmup,
         hook_manager_params,
         bookmarks,
-        bookmarks_cache_ttl,
         hooks,
         push,
         pushrebase,
@@ -462,6 +455,7 @@ mod test {
     use std::num::NonZeroUsize;
     use std::str::FromStr;
     use std::sync::Arc;
+    use std::time::Duration;
     use tempdir::TempDir;
 
     fn write_files(
@@ -706,7 +700,6 @@ mod test {
             repoid=0
             scuba_table_hooks="scm_hooks"
             skiplist_index_blobstore_key="skiplist_key"
-            bookmarks_cache_ttl=5000
             storage_config="main"
             list_keys_patterns_max=123
             hook_max_file_size=456
@@ -922,7 +915,6 @@ mod test {
                     all_hooks_bypassed: false,
                     bypassed_commits_scuba_table: Some("commits_bypassed_hooks".to_string()),
                 }),
-                bookmarks_cache_ttl: Some(Duration::from_millis(5000)),
                 bookmarks: vec![
                     BookmarkParams {
                         bookmark: BookmarkName::new("master").unwrap().into(),
@@ -1095,7 +1087,6 @@ mod test {
                 cache_warmup: None,
                 hook_manager_params: None,
                 bookmarks: vec![],
-                bookmarks_cache_ttl: None,
                 hooks: vec![],
                 push: Default::default(),
                 pushrebase: Default::default(),

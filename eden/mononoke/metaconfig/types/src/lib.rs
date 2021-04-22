@@ -144,8 +144,6 @@ pub struct RepoConfig {
     pub bookmarks: Vec<BookmarkParams>,
     /// Infinitepush configuration
     pub infinitepush: InfinitepushParams,
-    /// Enables bookmarks cache with specified ttl (time to live)
-    pub bookmarks_cache_ttl: Option<Duration>,
     /// Configuration for hooks
     pub hooks: Vec<HookParams>,
     /// Push configuration options

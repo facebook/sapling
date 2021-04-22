@@ -153,6 +153,8 @@ pub struct MononokeTunables {
 
     // Frequency at which to collect SQL connection pool stats
     sql_connection_pool_stats_collection_interval_ms: AtomicI64,
+
+    bookmarks_cache_ttl_ms: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

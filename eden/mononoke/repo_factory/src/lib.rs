@@ -398,18 +398,12 @@ impl RepoFactory {
     pub fn bookmarks(
         &self,
         sql_bookmarks: &ArcSqlBookmarks,
-        repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
     ) -> ArcBookmarks {
-        if let Some(ttl) = repo_config.bookmarks_cache_ttl {
-            Arc::new(CachedBookmarks::new(
-                sql_bookmarks.clone(),
-                ttl,
-                repo_identity.id(),
-            ))
-        } else {
-            sql_bookmarks.clone()
-        }
+        Arc::new(CachedBookmarks::new(
+            sql_bookmarks.clone(),
+            repo_identity.id(),
+        ))
     }
 
     pub fn bookmark_update_log(&self, sql_bookmarks: &ArcSqlBookmarks) -> ArcBookmarkUpdateLog {

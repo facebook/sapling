@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -19,6 +20,7 @@ use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::{ChangesetId, RepositoryId};
 use shared_error::anyhow::{IntoSharedError, SharedError};
 use stats::prelude::*;
+use tunables::tunables;
 
 use crate::log::{BookmarkUpdateReason, BundleReplay};
 use crate::transaction::{BookmarkTransaction, BookmarkTransactionHook};
@@ -92,23 +94,31 @@ impl Cache {
 #[derive(Clone)]
 pub struct CachedBookmarks {
     repo_id: RepositoryId,
-    ttl: Duration,
     cache: Arc<Mutex<Option<Cache>>>,
     bookmarks: Arc<dyn Bookmarks>,
 }
 
+fn ttl() -> Option<Duration> {
+    let ttl_ms = match tunables().get_bookmarks_cache_ttl_ms().try_into() {
+        Ok(0) => 2000,            // 0 means default.
+        Ok(duration) => duration, // Use provided duration.
+        Err(_) => return None,    // Negative values mean no cache.
+    };
+
+    Some(Duration::from_millis(ttl_ms))
+}
+
 impl CachedBookmarks {
-    pub fn new(bookmarks: Arc<dyn Bookmarks>, ttl: Duration, repo_id: RepositoryId) -> Self {
+    pub fn new(bookmarks: Arc<dyn Bookmarks>, repo_id: RepositoryId) -> Self {
         Self {
             repo_id,
-            ttl,
             bookmarks,
             cache: Arc::new(Mutex::new(None)),
         }
     }
 
     /// Gets or creates the cache
-    fn cache(&self, ctx: CoreContext) -> Cache {
+    fn cache(&self, ctx: CoreContext, ttl: Duration) -> Cache {
         let mut cache = self.cache.lock().expect("lock poisoned");
         let now = Instant::now();
         match *cache {
@@ -121,7 +131,7 @@ impl CachedBookmarks {
                     *cache = Cache::new(
                         ctx.clone(),
                         self.bookmarks.clone(),
-                        now + self.ttl,
+                        now + ttl,
                         // NOTE: We want freshness to behave as follows:
                         //  - if we are asking for maybe-stale bookmarks we
                         //    want to keep asking for this type of bookmarks
@@ -151,7 +161,7 @@ impl CachedBookmarks {
                 let new_cache = Cache::new(
                     ctx,
                     self.bookmarks.clone(),
-                    now + self.ttl,
+                    now + ttl,
                     Freshness::MaybeStale,
                 );
                 *cache = Some(new_cache.clone());
@@ -162,10 +172,12 @@ impl CachedBookmarks {
 
     /// Removes old cache and replaces with a new one which will go through master region
     fn purge(&self, ctx: CoreContext) -> Cache {
+        let ttl = ttl().unwrap_or_else(|| Duration::from_secs(0));
+
         let new_cache = Cache::new(
             ctx,
             self.bookmarks.clone(),
-            Instant::now() + self.ttl,
+            Instant::now() + ttl,
             Freshness::MostRecent,
         );
         let mut cache = self.cache.lock().expect("lock poisoned");
@@ -181,9 +193,12 @@ impl CachedBookmarks {
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
+        ttl: Duration,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let range = prefix.to_range().with_pagination(pagination.clone());
-        let cache = self.cache(ctx);
+
+        let cache = self.cache(ctx, ttl);
+
         let filter_kinds = if BookmarkKind::ALL_PUBLISHING
             .iter()
             .all(|kind| kinds.iter().any(|k| k == kind))
@@ -262,15 +277,19 @@ impl Bookmarks for CachedBookmarks {
         pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        if freshness == Freshness::MaybeStale {
-            if kinds
-                .iter()
-                .all(|kind| BookmarkKind::ALL_PUBLISHING.iter().any(|k| k == kind))
-            {
-                // All requested kinds are supported by the cache.
-                return self.list_from_publishing_cache(ctx, prefix, kinds, pagination, limit);
+        if let Some(ttl) = ttl() {
+            if freshness == Freshness::MaybeStale {
+                if kinds
+                    .iter()
+                    .all(|kind| BookmarkKind::ALL_PUBLISHING.iter().any(|k| k == kind))
+                {
+                    // All requested kinds are supported by the cache.
+                    return self
+                        .list_from_publishing_cache(ctx, prefix, kinds, pagination, limit, ttl);
+                }
             }
         }
+
         // Bypass the cache as it cannot serve this request.
         self.bookmarks
             .list(ctx, freshness, prefix, kinds, pagination, limit)
@@ -442,11 +461,13 @@ mod tests {
         future::{Either, Future},
         stream::{Stream, StreamFuture},
     };
+    use maplit::hashmap;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::fmt::Debug;
     use tokio::runtime::Runtime;
+    use tunables::{with_tunables_async, MononokeTunables};
 
     fn bookmark(name: impl AsRef<str>) -> Bookmark {
         Bookmark::new(
@@ -682,31 +703,50 @@ mod tests {
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let bookmarks = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(3), repo_id);
+        let bookmarks = CachedBookmarks::new(Arc::new(mock), repo_id);
 
-        let spawn_query = |prefix: &'static str, rt: &mut Runtime| {
+        let spawn_query = |prefix: &'static str, ttl: Option<i64>, rt: &mut Runtime| {
             let (sender, receiver) = oneshot::channel();
 
-            let fut = bookmarks
-                .list(
-                    ctx.clone(),
-                    Freshness::MaybeStale,
-                    &BookmarkPrefix::new(prefix).unwrap(),
-                    BookmarkKind::ALL_PUBLISHING,
-                    &BookmarkPagination::FromStart,
-                    std::u64::MAX,
-                )
-                .try_collect()
-                .map_ok(move |r: Vec<_>| sender.send(r).unwrap());
+            // Tunables are read in list(), which is a sync function. We wrap this into a future to
+            // make ita little more refactoring friendly.
+            let bookmarks = bookmarks.clone();
+            let ctx = ctx.clone();
 
-            rt.spawn(fut);
+            let fut = async move {
+                let res = bookmarks
+                    .list(
+                        ctx.clone(),
+                        Freshness::MaybeStale,
+                        &BookmarkPrefix::new(prefix).unwrap(),
+                        BookmarkKind::ALL_PUBLISHING,
+                        &BookmarkPagination::FromStart,
+                        std::u64::MAX,
+                    )
+                    .try_collect::<Vec<_>>()
+                    .await;
+
+                if let Ok(res) = res {
+                    let _ = sender.send(res);
+                }
+            }
+            .boxed();
+
+            let tunables = MononokeTunables::default();
+            if let Some(ttl) = ttl {
+                tunables.update_ints(&hashmap! {"bookmarks_cache_ttl_ms".to_string() => ttl});
+            }
+
+            rt.spawn(with_tunables_async(tunables, fut));
 
             receiver
         };
 
+        let ttl = Some(3000);
+
         // multiple requests should create only one underlying request
-        let res0 = spawn_query("a", &mut rt);
-        let res1 = spawn_query("b", &mut rt);
+        let res0 = spawn_query("a", ttl, &mut rt);
+        let res1 = spawn_query("b", ttl, &mut rt);
 
         let (request, requests) = next_request(requests, &mut rt, 100);
         assert_eq!(request.freshness, Freshness::MaybeStale);
@@ -741,14 +781,14 @@ mod tests {
         let transaction = bookmarks.create_transaction(ctx.clone());
         rt.block_on(transaction.commit()).unwrap();
 
-        let _ = spawn_query("c", &mut rt);
+        let _ = spawn_query("c", ttl, &mut rt);
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // successfull transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
         rt.block_on(transaction.commit()).unwrap();
 
-        let res = spawn_query("a", &mut rt);
+        let res = spawn_query("a", ttl, &mut rt);
 
         let (request, requests) = next_request(requests, &mut rt, 100);
         assert_eq!(request.freshness, Freshness::MostRecent);
@@ -761,7 +801,7 @@ mod tests {
         rt.block_on(res).expect_err("cache did not bubble up error");
 
         // If request to master failed, next request should go to master too
-        let res = spawn_query("a", &mut rt);
+        let res = spawn_query("a", ttl, &mut rt);
 
         let (request, requests) = next_request(requests, &mut rt, 100);
         assert_eq!(request.freshness, Freshness::MostRecent);
@@ -780,7 +820,7 @@ mod tests {
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // request should be resolved with cache
-        let res = spawn_query("b", &mut rt);
+        let res = spawn_query("b", ttl, &mut rt);
 
         assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("b"), TWOS_CSID)]);
 
@@ -790,7 +830,7 @@ mod tests {
         // cache should expire and request go to replica
         std::thread::sleep(Duration::from_secs(3));
 
-        let res = spawn_query("b", &mut rt);
+        let res = spawn_query("b", ttl, &mut rt);
 
         let (request, requests) = next_request(requests, &mut rt, 100);
         assert_eq!(request.freshness, Freshness::MaybeStale);
@@ -806,7 +846,19 @@ mod tests {
         );
 
         // No further requests should be made.
-        let _ = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+
+        // Spawn two queries, but without the cache being turned on. We expect 2 requests.
+        let _ = spawn_query("a", Some(-1), &mut rt);
+        let _ = spawn_query("b", Some(-1), &mut rt);
+
+        let (request, requests) = next_request(requests, &mut rt, 100);
+        assert_eq!(request.prefix, BookmarkPrefix::new("a").unwrap());
+
+        let (request, requests) = next_request(requests, &mut rt, 100);
+        assert_eq!(request.prefix, BookmarkPrefix::new("b").unwrap());
+
+        let _ = requests;
     }
 
     fn mock_bookmarks_response(
@@ -850,9 +902,12 @@ mod tests {
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let store = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(100), repo_id);
+        let store = CachedBookmarks::new(Arc::new(mock), repo_id);
 
         let (sender, receiver) = oneshot::channel();
+
+        let tunables = MononokeTunables::default();
+        tunables.update_ints(&hashmap! {"bookmarks_cache_ttl_ms".to_string() => 100_000});
 
         // Send the query to our cache.
         let fut = store
@@ -866,7 +921,7 @@ mod tests {
             )
             .try_collect()
             .map_ok(|r: Vec<_>| sender.send(r).unwrap());
-        rt.spawn(fut);
+        rt.spawn(with_tunables_async(tunables, fut));
 
         // Wait for the underlying MockBookmarks to receive the request. We
         // expect it to have a freshness consistent with the one we send.
