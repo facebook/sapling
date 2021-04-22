@@ -134,6 +134,7 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
             and autobackupenabled(repo)
             and getattr(repo, "txnwasopened", False)
             and not getattr(repo, "ignoreautobackup", False)
+            and "emergencychangelog" not in repo.storerequirements
         ):
             lui.debug("starting commit cloud autobackup in the background\n")
             backgroundbackup(repo)

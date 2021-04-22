@@ -1359,6 +1359,12 @@ def mainbookmark(repo):
 
 def selectivepullinitbookmarknames(repo):
     """Returns set of initial remote bookmarks names"""
+    if "emergencychangelog" in repo.storerequirements:
+        # In emergencychangelog mode, only care about the main bookmark.
+        # Checking other bookmarks is likely going to make the server
+        # do more work, or trigger commit graph code paths on the server
+        # that is likely broken or slow.
+        return {mainbookmark(repo)}
     return set(repo.ui.configlist("remotenames", "selectivepulldefault"))
 
 
@@ -1372,8 +1378,8 @@ def selectivepullinitbookmarkfullnames(repo):
 
 def selectivepullbookmarknames(repo, remote=None):
     """Returns the bookmark names that should be pulled during a pull."""
-    initbooks = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
-    if remote is not None:
+    initbooks = set(selectivepullinitbookmarknames(repo))
+    if remote is not None and "emergencychangelog" not in repo.storerequirements:
         for node, nametype, remotepath, name in readremotenames(repo):
             if nametype == "bookmarks" and remotepath == remote:
                 initbooks.add(name)

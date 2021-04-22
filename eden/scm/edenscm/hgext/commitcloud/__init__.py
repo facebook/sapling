@@ -257,7 +257,11 @@ def reposetup(ui, repo):
 
         def automigratefinish(self):
             super(commitcloudrepo, self).automigratefinish()
-            automigrate = self.ui.configbool("commitcloud", "automigrate")
+            # Do not auto rejoin if the repo has "broken" (incomplete) commit
+            # graph.
+            automigrate = self.ui.configbool("commitcloud", "automigrate") and (
+                "emergencychangelog" not in self.storerequirements
+            )
             if (
                 automigrate
                 and not workspace.disconnected(self)

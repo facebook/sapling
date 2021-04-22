@@ -5,8 +5,9 @@
 
 """clone utilities that aims for Mononoke compatibility"""
 
-from . import bookmarks as bookmod, error, streamclone
+from . import bookmarks as bookmod, error, streamclone, changelog2
 from .i18n import _
+from .node import hex
 
 
 def revlogclone(source, repo):
@@ -58,3 +59,61 @@ def revlogclone(source, repo):
         repo.pull(
             source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
         )
+
+
+def emergencyclone(source, repo):
+    """clone only 1 single commit for emergency commit+push use-cases
+
+    The commit graph will be incomplete and there is no way to complete the
+    history without reclone. Accessing older commits (ex. checking out an
+    older commit, logging file or directory history) is likely broken!
+
+    This can be potentially useful if the server has issues with its commit
+    graph components.
+    """
+    with repo.wlock(), repo.lock(), repo.transaction("emergencyclone"):
+        if any(repo.svfs.tryread(name) for name in ["bookmarks", "remotenames", "tip"]):
+            raise error.Abort(_("clone: repo %s is not empty") % repo.root)
+
+        repo.requirements.add("remotefilelog")
+        repo._writerequirements()
+
+        repo.storerequirements.add("lazytextchangelog")
+        repo.storerequirements.add("emergencychangelog")
+        repo._writestorerequirements()
+
+        mainbookmark = bookmod.mainbookmark(repo)
+
+        repo.ui.warn(
+            _(
+                "warning: cloning as emergency commit+push use-case only! "
+                "accessing older commits is broken!\n"
+            )
+        )
+
+        repo.ui.status(_("resolving %s\n") % mainbookmark)
+        with repo.conn(source) as conn:
+            peer = conn.peer
+            mainnode = peer.lookup(mainbookmark)
+
+            # Write a DAG with one commit.
+            cl = changelog2.changelog.opensegments(repo, repo.ui.uiconfig())
+            # Pretend the "mainnode" does not have parents.
+            cl.inner.addgraphnodes([(mainnode, [])])
+            # Write to the "master" group.
+            cl.inner.flush([mainnode])
+
+            # Update references
+            remote = bookmod.remotenameforurl(
+                repo.ui, repo.ui.paths.getpath(source).rawloc
+            )
+            fullname = "%s/%s" % (remote, mainbookmark)
+            repo.svfs.write(
+                "remotenames", bookmod.encoderemotenames({fullname: mainnode})
+            )
+            repo.svfs.write("tip", mainnode)
+
+            repo.ui.status(_("added %s: %s\n") % (mainbookmark, hex(mainnode)))
+
+            repo.invalidate()
+            repo.invalidatechangelog()

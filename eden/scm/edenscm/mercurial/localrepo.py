@@ -358,6 +358,9 @@ class localrepository(object):
         "lazytextchangelog",
         # lazy commit message (sparse idmap, partial hgcommits) + edenapi
         "lazychangelog",
+        # commit graph is truncated for emergency use-case. The first commit
+        # has wrong parents.
+        "emergencychangelog",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -3039,6 +3042,13 @@ def _remotenodes(repo):
 
 
 def _openchangelog(repo):
+    if "emergencychangelog" in repo.storerequirements:
+        repo.ui.warn(
+            _(
+                "warning: this repo was cloned for emergency commit+push use-case only! "
+                "accessing older commits is broken!\n"
+            )
+        )
     if "gitchangelog" in repo.storerequirements:
         repo.ui.log("changelog_info", changelog_backend="git")
         return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())

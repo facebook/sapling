@@ -602,7 +602,10 @@ def clone(
                 and ui.configbool("remotenames", "selectivepull")
             ):
                 clonecodepath = "modern"
-                clonemod.revlogclone(srcpeer.url(), destrepo)
+                if ui.configbool("unsafe", "emergency-clone"):
+                    clonemod.emergencyclone(srcpeer.url(), destrepo)
+                else:
+                    clonemod.revlogclone(srcpeer.url(), destrepo)
             elif destrepo:
                 reasons = []
                 if pull:

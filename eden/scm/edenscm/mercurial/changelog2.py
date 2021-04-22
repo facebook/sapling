@@ -465,6 +465,13 @@ class changelog(object):
         if self._verifyhghash:
             p1, p2 = self.parents(node)[:2]
             if revlog.hash(text, p1, p2) != node:
+                if (
+                    "emergencychangelog" in self._reporef().storerequirements
+                    and self.rev(node) == 0
+                ):
+                    # The first node in an emergencychangelog repo has the
+                    # wrong parents.
+                    return text
                 raise error.RevlogError(
                     _("integrity check failed on commit %s") % hex(node)
                 )
