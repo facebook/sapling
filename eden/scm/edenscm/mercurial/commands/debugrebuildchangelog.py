@@ -119,7 +119,7 @@ def _clonetotmp(repo, tmprepopath):
                 b"\n%%include %s\n" % pycompat.encodeutf8(repo.localvfs.join("hgrc"))
             )
     tmprepo = hg.repository(repo.ui, path=tmprepopath)
-    clone.shallowclone("default", tmprepo)
+    clone.revlogclone("default", tmprepo)
     return tmprepo
 
 

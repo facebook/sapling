@@ -607,7 +607,7 @@ def clone(
                 and ui.configbool("remotenames", "selectivepull")
             ):
                 clonecodepath = "modern"
-                clonemod.shallowclone(srcpeer.url(), destrepo)
+                clonemod.revlogclone(srcpeer.url(), destrepo)
             elif destrepo:
                 if ui.configbool("experimental", "new-clone-path"):
                     ui.log(

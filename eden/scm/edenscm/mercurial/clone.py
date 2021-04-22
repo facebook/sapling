@@ -9,8 +9,8 @@ from . import bookmarks as bookmod, error, streamclone
 from .i18n import _
 
 
-def shallowclone(source, repo):
-    """clone from source into an empty shallow repo"""
+def revlogclone(source, repo):
+    """clone from source into an empty remotefilelog repo using revlog changelog"""
 
     with repo.wlock(), repo.lock(), repo.transaction("clone"):
         if any(
