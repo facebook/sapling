@@ -70,3 +70,29 @@ mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks
 quickcheck_async = "0.1.1"
 quickcheck_macros = "0.8"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
+
+[patch.crates-io]
+addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
+bytecount = { git = "https://github.com/llogiq/bytecount", rev = "469eaf8395c99397cd64d059737a9054aa014088" }
+chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
+const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
+curl = { git = "https://github.com/kulshrax/curl-rust", rev = "2a15bbd8dbbd54734313fa703a64db7ce6ddaff0" }
+curl-sys = { git = "https://github.com/kulshrax/curl-rust", rev = "2a15bbd8dbbd54734313fa703a64db7ce6ddaff0" }
+enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
+gotham-02 = { package = "gotham", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
+gotham_derive-02 = { package = "gotham_derive", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
+hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/krallin/hyper-02.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6" }
+lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
+openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+petgraph = { git = "https://github.com/jkeljo/petgraph", rev = "e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384" }
+prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
+rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+tokio-02 = { package = "tokio", version = "0.2.25", git = "https://github.com/krallin/tokio.git", rev = "818f943db36e32b7c928351c32fe69ac913409f9" }
+tokio-compat = { package = "tokio-compat", version = "0.1.6", git = "https://github.com/krallin/tokio-compat.git", rev = "c2330c2a0141353e467cc5861988daa2eae7cb54" }
+tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
+toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
