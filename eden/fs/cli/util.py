@@ -18,7 +18,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, TypeVar, Union
+from typing import Dict, TYPE_CHECKING, Any, Callable, List, Optional, TypeVar, Union
 
 import thrift.transport
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
@@ -621,7 +621,7 @@ def write_file_atomically(path: Path, contents: bytes) -> None:
         raise
 
 
-def format_cmd(cmd):
+def format_cmd(cmd) -> str:
     args = os.fsdecode(cmd)
 
     # remove trailing null which would cause the command to show up with an
@@ -639,7 +639,7 @@ def format_cmd(cmd):
     return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
 
 
-def format_mount(mount):
+def format_mount(mount) -> str:
     return os.fsdecode(os.path.basename(mount))
 
 
@@ -647,7 +647,7 @@ def is_edenfs_mount_device(device: bytes) -> bool:
     return device == b"edenfs" or device.startswith(b"edenfs:")
 
 
-def get_eden_cli_cmd(argv=sys.argv) -> List[str]:
+def get_eden_cli_cmd(argv: List[str] = sys.argv) -> List[str]:
     # We likely only need to do this on windows to make sure we run the
     # edenfsctl in a python environment that isn't frozen. But this should
     # be safe to do on all platforms, so for sake of uniformity, do it
@@ -658,7 +658,7 @@ def get_eden_cli_cmd(argv=sys.argv) -> List[str]:
 # some processes like hg and arc are sensitive about their environments, we
 # clear variables that might make problems for their dynamic linking.
 # note buck is even more sensitive see buck.run_buck_command
-def get_environment_suitable_for_subprocess():
+def get_environment_suitable_for_subprocess() -> Dict[str, str]:
     env = os.environ.copy()
 
     # Clean out par related environment so that we don't cause problems
