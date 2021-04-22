@@ -795,7 +795,7 @@ folly::SemiFuture<ProcessStatus> SpawnedProcess::future_wait(
   // We need to be running in a thread with an eventBase, so switch
   // over to the IOExecutor eventbase
   return folly::via(
-             folly::getIOExecutor().get(),
+             folly::getGlobalIOExecutor().get(),
              [process = std::move(*this),
               poll_interval,
               max_poll_interval]() mutable {
