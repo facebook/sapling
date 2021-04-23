@@ -13,14 +13,11 @@ use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
 };
-use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
-use packblob_thrift::{SingleValue, StorageEnvelope, StorageFormat};
 use std::convert::TryInto;
-use zstd::block::Compressor;
 
 #[derive(Clone, Debug, Default)]
 pub struct PackOptions {
@@ -53,17 +50,6 @@ impl<T: std::fmt::Display> std::fmt::Display for PackBlob<T> {
 impl<T> PackBlob<T> {
     pub fn new(inner: T, put_format: PackFormat) -> Self {
         Self { inner, put_format }
-    }
-}
-
-// If compressed version is smaller, use it, otherwise return raw
-fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue> {
-    let mut compressor = Compressor::new();
-    let compressed = compressor.compress(&value, zstd_level)?;
-    if compressed.len() < value.len() {
-        Ok(SingleValue::Zstd(Bytes::from(compressed)))
-    } else {
-        Ok(SingleValue::Raw(value))
     }
 }
 
@@ -121,24 +107,21 @@ impl<T: BlobstorePutOps> PackBlob<T> {
     ) -> Result<OverwriteStatus> {
         key.push_str(ENVELOPE_SUFFIX);
 
-        let value = value.into_bytes();
+        let bytes = match self.put_format {
+            PackFormat::ZstdIndividual(zstd_level) => {
+                pack::SingleCompressed::new(zstd_level, value)?
+            }
+            PackFormat::Raw => pack::SingleCompressed::new_uncompressed(value),
+        }
+        .into_blobstore_bytes();
 
-        let single = match self.put_format {
-            PackFormat::ZstdIndividual(zstd_level) => compress_if_worthwhile(value, zstd_level)?,
-            PackFormat::Raw => SingleValue::Raw(value),
-        };
-
-        // Wrap in thrift encoding
-        let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
-            storage: StorageFormat::Single(single),
-        });
         // pass through the put after wrapping
         if let Some(put_behaviour) = put_behaviour {
             self.inner
-                .put_explicit(ctx, key, envelope.into(), put_behaviour)
+                .put_explicit(ctx, key, bytes, put_behaviour)
                 .await
         } else {
-            self.inner.put_with_status(ctx, key, envelope.into()).await
+            self.inner.put_with_status(ctx, key, bytes).await
         }
     }
 }
@@ -194,6 +177,23 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         self.inner.unlink(ctx, &pack_key).await?;
 
         Ok(pack_key)
+    }
+
+    pub async fn put_single<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        mut key: String,
+        value: pack::SingleCompressed,
+    ) -> Result<OverwriteStatus> {
+        key.push_str(ENVELOPE_SUFFIX);
+        self.inner
+            .put_explicit(
+                ctx,
+                key,
+                value.into_blobstore_bytes(),
+                PutBehaviour::Overwrite,
+            )
+            .await
     }
 }
 
@@ -350,6 +350,35 @@ mod tests {
             // Make sure the thrift wrapper is not still there
             assert_eq!(expected, fetched_value.unwrap().into_bytes());
         }
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn single_precompressed_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+        let innerblob = Arc::new(Memblob::default());
+        let packblob = PackBlob::new(innerblob, PackFormat::ZstdIndividual(0));
+
+        let bytes_in = Bytes::from(vec![7u8; 65535]);
+        let value = BlobstoreBytes::from_bytes(bytes_in.clone());
+
+        let key = "repo0000.compressible";
+        let compressed = pack::SingleCompressed::new(19, value.clone())?;
+
+        assert!(
+            compressed.get_compressed_size() < 65535,
+            "Blob grew in compression"
+        );
+
+        packblob
+            .put_single(ctx, key.to_string(), compressed)
+            .await?;
+
+        assert_eq!(
+            packblob.get(ctx, &key).await?.map(|b| b.into_bytes()),
+            Some(value)
+        );
         Ok(())
     }
 }

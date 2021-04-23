@@ -20,9 +20,47 @@ use std::{
     collections::HashMap,
     io::{self, Cursor, Write},
 };
+use zstd::block::Compressor;
 use zstd::dict::EncoderDictionary;
 use zstd::stream::read::Decoder as ZstdDecoder;
 use zstd::stream::write::Encoder as ZstdEncoder;
+
+/// A block of data compressed on its own, rather than in pack format
+pub struct SingleCompressed {
+    value: SingleValue,
+}
+
+impl SingleCompressed {
+    /// Tries to compress the given blob with the given zstd level; will not compress
+    /// if the result of compression is an increase in size
+    pub fn new(zstd_level: i32, blob: BlobstoreBytes) -> Result<SingleCompressed> {
+        let value = blob.into_bytes();
+        let mut compressor = Compressor::new();
+        let compressed = compressor.compress(&value, zstd_level)?;
+        let value = if compressed.len() < value.len() {
+            SingleValue::Zstd(Bytes::from(compressed))
+        } else {
+            SingleValue::Raw(value)
+        };
+        Ok(Self { value })
+    }
+    /// Always stores the value raw and uncompressed
+    pub(crate) fn new_uncompressed(blob: BlobstoreBytes) -> SingleCompressed {
+        let value = SingleValue::Raw(blob.into_bytes());
+        Self { value }
+    }
+    /// Gets the size of this blob in compressed form, minus framing overheads
+    pub fn get_compressed_size(&self) -> usize {
+        get_value_compressed_size(&self.value)
+    }
+    pub(crate) fn into_blobstore_bytes(self) -> BlobstoreBytes {
+        // Wrap in thrift encoding
+        PackEnvelope(StorageEnvelope {
+            storage: StorageFormat::Single(self.value),
+        })
+        .into()
+    }
+}
 
 /// An empty pack with no data. Cannot be uploaded, takes a dictionary blob
 #[derive(Debug)]
@@ -100,9 +138,9 @@ impl Pack {
 
     /// Returns the compressed size of the pack contents, minus framing overheads
     pub fn get_compressed_size(&self) -> usize {
-        self.entries
-            .iter()
-            .fold(0, |size, entry| size + get_entry_compressed_size(entry))
+        self.entries.iter().fold(0, |size, entry| {
+            size + get_entry_compressed_size(entry) + entry.key.len()
+        })
     }
 
     /// Converts the pack into something that can go into a blobstore
@@ -144,16 +182,22 @@ impl Pack {
     }
 }
 
+// Not to be used with a SingleValue loaded from a blobstore - panics instead of handling errors
+fn get_value_compressed_size(value: &SingleValue) -> usize {
+    match value {
+        SingleValue::Raw(bytes) | SingleValue::Zstd(bytes) => bytes.len(),
+        // Can't happen, by construction - this only takes values created by this module
+        SingleValue::UnknownField(_) => panic!("Unknown field"),
+    }
+}
+
 // Not to be used with a PackedEntry loaded from a blobstore - panics instead of handling errors
 fn get_entry_compressed_size(entry: &PackedEntry) -> usize {
     match &entry.data {
-        PackedValue::Single(SingleValue::Raw(bytes))
-        | PackedValue::Single(SingleValue::Zstd(bytes)) => bytes.len(),
+        PackedValue::Single(value) => get_value_compressed_size(value),
         PackedValue::ZstdFromDict(ZstdFromDictValue { zstd, .. }) => zstd.len(),
         // Can't happen, by construction - this only takes values created by this module
-        PackedValue::Single(SingleValue::UnknownField(_)) | PackedValue::UnknownField(_) => {
-            panic!("Unknown field")
-        }
+        PackedValue::UnknownField(_) => panic!("Unknown field"),
     }
 }
 
