@@ -144,11 +144,12 @@ impl ScrubBlobstore {
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
-        scuba: MononokeScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
         scrub_options: ScrubOptions,
         scrub_handler: Arc<dyn ScrubHandler>,
     ) -> Self {
+        scuba.add_common_server_data();
         let inner = MultiplexedBlobstore::new(
             multiplex_id,
             blobstores.clone(),

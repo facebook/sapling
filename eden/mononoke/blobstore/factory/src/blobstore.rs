@@ -491,11 +491,6 @@ fn make_blobstore_put_ops<'a>(
                 scuba_table,
                 scuba_sample_rate,
             } => {
-                let scuba = scuba_table
-                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
-                        MononokeScubaSampleBuilder::new(fb, &table)
-                    });
-
                 let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
@@ -508,6 +503,11 @@ fn make_blobstore_put_ops<'a>(
                 )
                 .watched(logger)
                 .await?;
+
+                let scuba = scuba_table
+                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                        MononokeScubaSampleBuilder::new(fb, &table)
+                    });
 
                 Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
             }
