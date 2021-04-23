@@ -37,6 +37,7 @@
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
+#include "eden/fs/utils/WinStackTrace.h"
 
 // This has to be placed after eden-config.h
 #ifdef EDEN_HAVE_CURL
@@ -177,6 +178,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
   //// Root privileges dropped
   ////////////////////////////////////////////////////////////////////
+
+#ifdef _WIN32
+  installWindowsExceptionFilter();
+#endif
 
   folly::stop_watch<> daemonStart;
 

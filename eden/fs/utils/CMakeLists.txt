@@ -36,6 +36,7 @@ if (WIN32)
     PUBLIC
       Userenv.lib
       Rpcrt4.lib
+      dbghelp.lib
   )
 endif()
 
