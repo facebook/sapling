@@ -8,7 +8,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 
 #include <folly/Exception.h>
 #include <folly/logging/xlog.h>
@@ -273,29 +272,22 @@ void validatePathComponentLength(PathComponentPiece name) {
   }
 }
 
-namespace {
-boost::filesystem::path toBoostPath(AbsolutePathPiece path) {
-  auto piece = path.stringPiece();
-  return boost::filesystem::path(piece.begin(), piece.end());
-}
-} // namespace
-
 bool ensureDirectoryExists(AbsolutePathPiece path) {
-  return boost::filesystem::create_directories(toBoostPath(path));
+  return boost::filesystem::create_directories(path.as_boost());
 }
 
 bool removeRecursively(AbsolutePathPiece path) {
-  return boost::filesystem::remove_all(toBoostPath(path));
+  return boost::filesystem::remove_all(path.as_boost());
 }
 
 bool removeFileWithAbsolutePath(AbsolutePathPiece path) {
-  return boost::filesystem::remove(toBoostPath(path));
+  return boost::filesystem::remove(path.as_boost());
 }
 
 void renameWithAbsolutePath(
     AbsolutePathPiece srcPath,
     AbsolutePathPiece destPath) {
-  boost::filesystem::rename(toBoostPath(srcPath), toBoostPath(destPath));
+  boost::filesystem::rename(srcPath.as_boost(), destPath.as_boost());
 }
 
 AbsolutePath expandUser(
