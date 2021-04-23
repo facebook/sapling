@@ -264,6 +264,7 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  FILECOUNT=$(($FILECOUNT_1 + $FILECOUNT_2))
   >  echo "file count is: $FILECOUNT"
   >  REPOID=$FBS_REPOID mononoke_admin --log-level=ERROR bookmarks set master_bookmark $HGMERGE
+  >  flush_mononoke_bookmarks
   >  echo "intermediate" >> fbcode/fbcodefile_fbsource
   >  REPONAME=fbs-mon hgmn ci -qm "intermediate commit between gradual merge commits"
   >  REPONAME=fbs-mon hgmn push -q --to master_bookmark
@@ -330,6 +331,7 @@ into fbsource
   >   }
   > }
   > EOF
+  $ force_update_configerator
 
 Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP/ovr-hg-cnt"
@@ -342,6 +344,9 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   @  pushredirected_3 [public;rev=5;4355e6b9eafb] default/master_bookmark
   │
   ~
+-- make the bookmark change visible to other repos. the cache invalidates
+-- itself on push but not across repos.
+  $ flush_mononoke_bookmarks
 -- pushredirected_3 is also present in megarepo
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ REPONAME=fbs-mon hgmn pull -q

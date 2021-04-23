@@ -103,6 +103,8 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   * processing log entry * (glob)
   * processing log entry * (glob)
 
+  $ flush_mononoke_bookmarks
+
 
 Record new fbsource master
   $ FBSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark 1 master_bookmark)

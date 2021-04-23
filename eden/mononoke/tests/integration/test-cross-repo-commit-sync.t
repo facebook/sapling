@@ -99,6 +99,7 @@
   $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark -q
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
+  $ flush_mononoke_bookmarks
 
   $ flush_mononoke_bookmarks
 
