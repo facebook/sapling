@@ -76,13 +76,13 @@ impl CoreContext {
 
     pub fn with_mutated_scuba(
         &self,
-        sample: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
+        mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
     ) -> Self {
-        self.session.new_context_with_scribe(
-            self.logger().clone(),
-            sample(self.scuba().clone()),
-            self.scribe().clone(),
-        )
+        Self {
+            fb: self.fb,
+            session: self.session.clone(),
+            logging: self.logging.with_mutated_scuba(mutator),
+        }
     }
 
     pub(crate) fn new_with_containers(

@@ -98,4 +98,17 @@ impl LoggingContainer {
     pub fn scribe(&self) -> &Scribe {
         &self.scribe
     }
+
+    pub fn with_mutated_scuba(
+        &self,
+        mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
+    ) -> Self {
+        Self {
+            logger: self.logger.clone(),
+            scuba: Arc::new(mutator(self.scuba().clone())),
+            perf_counters: self.perf_counters.clone(),
+            sampling_key: self.sampling_key.clone(),
+            scribe: self.scribe.clone(),
+        }
+    }
 }
