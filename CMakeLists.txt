@@ -161,11 +161,19 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.cpp.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.cpp
 )
+
 if(EDEN_HAVE_GIT)
   set(EDEN_HAVE_GIT_PY "True")
 else()
   set(EDEN_HAVE_GIT_PY "False")
 endif()
+
+if(LINUX)
+  set(EDEN_HAVE_NFS_PY "True")
+else()
+  set(EDEN_HAVE_NFS_PY "False")
+endif()
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/py/eden/config.py

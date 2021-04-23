@@ -222,7 +222,7 @@ class EdenTestCase(EdenTestCaseBase):
         The format is the following:
         {"namespace": ["key1=value1", "key2=value2"}
         """
-        return None
+        return {"experimental": ["enable-nfs-server = true"]}
 
     def create_hg_repo(
         self, name: str, hgrc: Optional[configparser.ConfigParser] = None
@@ -312,6 +312,16 @@ class EdenTestCase(EdenTestCaseBase):
         else:
             return fn
 
+    def use_nfs(self):
+        """
+        Should this test case mount the repo using NFS. This is used by the
+        test replication logic to run our integration tests using the default
+        mounting method in addition to NFS. This can not be used to disable
+        individual tests from using NFS. Individual tests can be disabled
+        from running with NFS via skip lists in eden/integration/lib/skip.py.
+        """
+        return False
+
 
 # pyre-ignore[13]: T62487924
 class EdenRepoTest(EdenTestCase):
@@ -338,7 +348,7 @@ class EdenRepoTest(EdenTestCase):
         self.populate_repo()
         self.report_time("repository setup done")
 
-        self.eden.clone(self.repo.path, self.mount)
+        self.eden.clone(self.repo.path, self.mount, nfs=self.use_nfs())
         self.report_time("eden clone done")
 
     def populate_repo(self) -> None:
@@ -455,14 +465,24 @@ def _replicate_eden_repo_test(
     class HgRepoTest(HgRepoTestMixin, test_class):
         pass
 
+    class NFSHgRepoTest(NFSTestMixin, HgRepoTestMixin, test_class):
+        pass
+
     class GitRepoTest(GitRepoTestMixin, test_class):
         pass
 
+    class NFSGitRepoTest(NFSTestMixin, GitRepoTestMixin, test_class):
+        pass
+
     variants = [("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest))]
+    if eden.config.HAVE_NFS:
+        variants.append(("NFSHg", typing.cast(Type[EdenRepoTest], NFSHgRepoTest)))
+
     # Only run the git tests if EdenFS was built with git support.
     if eden.config.HAVE_GIT:
         variants.append(("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)))
-
+        if eden.config.HAVE_NFS:
+            variants.append(("NFSGit", typing.cast(Type[EdenRepoTest], NFSGitRepoTest)))
     return variants
 
 
@@ -490,3 +510,8 @@ class GitRepoTestMixin:
     def create_repo(self, name: str) -> repobase.Repository:
         # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `create_git_repo`.
         return self.create_git_repo(name)
+
+
+class NFSTestMixin:
+    def use_nfs(self) -> bool:
+        return True

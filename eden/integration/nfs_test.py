@@ -20,9 +20,6 @@ class NfsTest(testcase.EdenRepoTest):
     def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
         return {"eden.fs.nfs": "DBG7", "eden.strace": "DBG7"}
 
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        return {"experimental": ["enable-nfs-server = true"]}
-
     def test_clone(self) -> None:
         clone_dir = self.make_temporary_directory()
         self.eden.clone(self.repo.path, clone_dir, nfs=True)

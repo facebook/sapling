@@ -157,6 +157,43 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_post_clone_permissions"
     ]
 
+# We only run tests on linux currently, so we only need to disable them there.
+if sys.platform.startswith("linux"):
+    # tests to skip on nfs, this list allows us to avoid writing the nfs postfix
+    # on the test and disables them for both Hg and Git as nfs tests generally
+    # fail for both if they fail.
+    NFS_TEST_DISABLED = {
+        "takeover_test.TakeoverTest": True,  # T89344844
+        "materialized_query_test.MaterializedQueryTest": [  # T89437962
+            "test_getFileInformation",
+            "test_getFileInformation",
+        ],
+        # These won't be fixed anythime soon, this requires NFSv4
+        "xattr_test.XattrTest": [  # T89439481
+            "test_get_sha1_xattr",
+            "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
+        ],
+        "setattr_test.SetAttrTest": [  # T89439721
+            "test_chown_gid_as_nonroot_fails_if_not_member",
+            "test_chmod",
+            "test_chown_uid_as_nonroot_fails",
+            "test_umask",
+            "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
+        ],
+        "unicode_test.UnicodeTest": True,  # T89439956
+        "stats_test.CountersTest": True,  # T89440036
+        "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
+        "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
+        "basic_test.PosixTest": ["test_mkdir_umask"],  # T89440718
+        "debug_getpath_test.DebugGetPathTest": [  # T89440930
+            "test_getpath_unlinked_inode"
+        ],
+    }
+
+    for (testModule, disabled) in NFS_TEST_DISABLED.items():
+        for vcs in ["Hg", "Git"]:
+            TEST_DISABLED[testModule + "NFS" + vcs] = disabled
+
 
 def skip_if_disabled(test_case: unittest.TestCase) -> None:
     if _is_disabled(test_case):
