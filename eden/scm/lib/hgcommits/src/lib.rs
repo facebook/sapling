@@ -61,6 +61,11 @@ pub trait AppendCommits {
     ///
     /// For the revlog backend, this also write the commit graph to disk.
     async fn flush_commit_data(&mut self) -> Result<()>;
+
+    /// Add nodes to the graph without data (commit message).
+    /// This is only supported by lazy backends.
+    /// Use `flush` to write changes to disk.
+    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()>;
 }
 
 pub trait DescribeBackend {
@@ -73,6 +78,12 @@ pub trait DescribeBackend {
     /// Write human-readable internal data to `w`.
     /// For segments backend, this writes segments data.
     fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()>;
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GraphNode {
+    pub vertex: Vertex,
+    pub parents: Vec<Vertex>,
 }
 
 /// Parameter used by `add_commits`.

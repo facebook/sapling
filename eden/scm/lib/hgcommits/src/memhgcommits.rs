@@ -8,6 +8,7 @@
 use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
+use crate::GraphNode;
 use crate::HgCommit;
 use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
@@ -53,29 +54,14 @@ impl AppendCommits for MemHgCommits {
         }
 
         // Write commit graph to DAG.
-        let commits: HashMap<Vertex, HgCommit> = commits
+        let graph_nodes = commits
             .iter()
-            .cloned()
-            .map(|c| (c.vertex.clone(), c))
-            .collect();
-        let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
-            match commits.get(&v) {
-                Some(commit) => Ok(commit.parents.clone()),
-                None => v.not_found(),
-            }
-        };
-        let heads: Vec<Vertex> = {
-            let mut heads: HashSet<Vertex> = commits.keys().cloned().collect();
-            for commit in commits.values() {
-                for parent in commit.parents.iter() {
-                    heads.remove(parent);
-                }
-            }
-            heads.into_iter().collect()
-        };
-        let parent_func: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
-            Box::new(parent_func);
-        self.dag.add_heads(&parent_func, &heads).await?;
+            .map(|c| GraphNode {
+                vertex: c.vertex.clone(),
+                parents: c.parents.clone(),
+            })
+            .collect::<Vec<_>>();
+        self.add_graph_nodes(&graph_nodes).await?;
 
         Ok(())
     }
@@ -85,6 +71,31 @@ impl AppendCommits for MemHgCommits {
     }
 
     async fn flush_commit_data(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
+        // Write commit graph to DAG.
+        let parents: HashMap<Vertex, Vec<Vertex>> = graph_nodes
+            .iter()
+            .cloned()
+            .map(|c| (c.vertex, c.parents))
+            .collect();
+        let heads: Vec<Vertex> = {
+            let mut non_heads = HashSet::new();
+            for graph_node in graph_nodes {
+                for parent in graph_node.parents.iter() {
+                    non_heads.insert(parent);
+                }
+            }
+            graph_nodes
+                .iter()
+                .map(|c| &c.vertex)
+                .filter(|v| !non_heads.contains(v))
+                .cloned()
+                .collect()
+        };
+        self.dag.add_heads(&parents, &heads).await?;
         Ok(())
     }
 }

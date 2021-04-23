@@ -59,6 +59,12 @@ impl AppendCommits for DoubleWriteCommits {
         self.commits.flush_commit_data().await?;
         Ok(())
     }
+
+    async fn add_graph_nodes(&mut self, _graph_nodes: &[crate::GraphNode]) -> Result<()> {
+        Err(crate::Error::Unsupported(
+            "add_graph_nodes is not supported for revlog backend",
+        ))
+    }
 }
 
 #[async_trait::async_trait]

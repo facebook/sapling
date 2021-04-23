@@ -32,6 +32,7 @@ use hgcommits::AppendCommits;
 use hgcommits::DescribeBackend;
 use hgcommits::DoubleWriteCommits;
 use hgcommits::GitSegmentedCommits;
+use hgcommits::GraphNode;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::HybridCommits;
@@ -79,6 +80,19 @@ py_class!(pub class commits |py| {
         }).collect();
         let mut inner = self.inner(py).borrow_mut();
         block_on(inner.add_commits(&commits)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Add a list of graph nodes (node, [parent]) in-memory.
+    /// This is only supported by backends with lazy commit message support.
+    def addgraphnodes(&self, commits: Vec<(PyBytes, Vec<PyBytes>)>) -> PyResult<PyNone> {
+        let graph_nodes: Vec<GraphNode> = commits.into_iter().map(|(node, parents)| {
+            let vertex = node.data(py).to_vec().into();
+            let parents = parents.into_iter().map(|p| p.data(py).to_vec().into()).collect();
+            GraphNode { vertex, parents }
+        }).collect();
+        let mut inner = self.inner(py).borrow_mut();
+        block_on(inner.add_graph_nodes(&graph_nodes)).map_pyerr(py)?;
         Ok(PyNone)
     }
 

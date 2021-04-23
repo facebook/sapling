@@ -8,6 +8,7 @@
 use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
+use crate::GraphNode;
 use crate::HgCommit;
 use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
@@ -102,19 +103,33 @@ impl AppendCommits for HgCommits {
         }
 
         // Write commit graph to DAG.
-        let parents: HashMap<Vertex, Vec<Vertex>> = commits
+        let graph_nodes = commits
+            .iter()
+            .map(|c| GraphNode {
+                vertex: c.vertex.clone(),
+                parents: c.parents.clone(),
+            })
+            .collect::<Vec<_>>();
+        self.add_graph_nodes(&graph_nodes).await?;
+
+        Ok(())
+    }
+
+    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
+        // Write commit graph to DAG.
+        let parents: HashMap<Vertex, Vec<Vertex>> = graph_nodes
             .iter()
             .cloned()
             .map(|c| (c.vertex, c.parents))
             .collect();
         let heads: Vec<Vertex> = {
             let mut non_heads = HashSet::new();
-            for commit in commits {
-                for parent in commit.parents.iter() {
+            for graph_node in graph_nodes {
+                for parent in graph_node.parents.iter() {
                     non_heads.insert(parent);
                 }
             }
-            commits
+            graph_nodes
                 .iter()
                 .map(|c| &c.vertex)
                 .filter(|v| !non_heads.contains(v))
@@ -122,7 +137,6 @@ impl AppendCommits for HgCommits {
                 .collect()
         };
         self.dag.add_heads(&parents, &heads).await?;
-
         Ok(())
     }
 

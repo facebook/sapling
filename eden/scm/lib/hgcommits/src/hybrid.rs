@@ -215,6 +215,16 @@ impl AppendCommits for HybridCommits {
         self.commits.dag.flush_cached_idmap().await?;
         Ok(())
     }
+
+    async fn add_graph_nodes(&mut self, graph_nodes: &[crate::GraphNode]) -> Result<()> {
+        if self.revlog.is_some() {
+            return Err(crate::Error::Unsupported(
+                "add_graph_nodes is not supported for revlog backend",
+            ));
+        }
+        self.commits.add_graph_nodes(graph_nodes).await?;
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]

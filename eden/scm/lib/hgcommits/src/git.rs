@@ -113,6 +113,12 @@ impl AppendCommits for GitSegmentedCommits {
     async fn flush_commit_data(&mut self) -> Result<()> {
         Ok(())
     }
+
+    async fn add_graph_nodes(&mut self, _graph_nodes: &[crate::GraphNode]) -> Result<()> {
+        Err(crate::Error::Unsupported(
+            "add_graph_nodes is not supported for git backend",
+        ))
+    }
 }
 
 #[async_trait::async_trait]
