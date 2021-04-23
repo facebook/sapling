@@ -100,6 +100,8 @@
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
 
+  $ flush_mononoke_bookmarks
+
   $ cd "$TESTTMP/meg-hg-cnt"
   $ REPONAME=meg-mon hgmn pull -q
   $ REPONAME=meg-mon hgmn up master_bookmark -q
