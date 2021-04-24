@@ -42,7 +42,7 @@ async fn find_best_pack(mut blobs: BlobsWithKeys, zstd_level: i32) -> Result<Opt
     for _ in 0..blobs.len() {
         build_packs.push({
             let blobs = blobs.clone();
-            async { tokio::task::spawn_blocking({ move || try_pack(zstd_level, blobs) }).await? }
+            async { tokio::task::spawn_blocking(move || try_pack(zstd_level, blobs)).await? }
         });
         blobs.rotate_left(1);
     }
