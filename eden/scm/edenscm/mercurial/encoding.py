@@ -418,20 +418,23 @@ def _upper(s):
 
 
 def upperfallback(s):
-    try:
-        if isinstance(s, localstr):
-            u = s._utf8.decode("utf-8")
-        else:
-            u = s.decode(encoding, encodingmode)
+    if sys.version_info[0] < 3:
+        try:
+            if isinstance(s, localstr):
+                u = s._utf8.decode("utf-8")
+            else:
+                u = s.decode(encoding, encodingmode)
 
-        uu = u.upper()
-        if u == uu:
-            return s  # preserve localstring
-        return uu.encode(encoding)
-    except UnicodeError:
-        return s.upper()  # we don't know how to fold this except in ASCII
-    except LookupError as k:
-        raise error.Abort(k, hint="please check your locale settings")
+            uu = u.upper()
+            if u == uu:
+                return s  # preserve localstring
+            return uu.encode(encoding)
+        except UnicodeError:
+            return s.upper()  # we don't know how to fold this except in ASCII
+        except LookupError as k:
+            raise error.Abort(k, hint="please check your locale settings")
+    else:
+        return s.upper()
 
 
 class normcasespecs(object):
