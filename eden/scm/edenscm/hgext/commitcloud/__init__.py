@@ -270,7 +270,12 @@ def reposetup(ui, repo):
                 workspacename = None
                 if self.ui.configbool("commitcloud", "automigratehostworkspace"):
                     workspacename = workspace.hostnameworkspace(self.ui)
-                cccommands.cloudrejoin(self.ui, self, raw_workspace=workspacename)
+                try:
+                    cccommands.cloudrejoin(self.ui, self, raw_workspace=workspacename)
+                except Exception as ex:
+                    self.ui.warn(
+                        _("warning: failed to auto-join cloud workspace: '%s'\n") % ex
+                    )
 
     repo.__class__ = commitcloudrepo
 
