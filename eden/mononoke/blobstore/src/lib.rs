@@ -10,6 +10,7 @@
 mod counted_blobstore;
 mod disabled;
 mod errors;
+pub mod macros;
 
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
@@ -28,6 +29,20 @@ use thiserror::Error;
 pub use crate::counted_blobstore::CountedBlobstore;
 pub use crate::disabled::DisabledBlob;
 pub use crate::errors::ErrorKind;
+
+// This module exists to namespace re-exported
+// imports, needed for macto exports.
+pub mod private {
+    pub use crate::{
+        Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable,
+    };
+    pub use anyhow::Error;
+    pub use async_trait::async_trait;
+    pub use context::CoreContext;
+    pub use fbthrift::compact_protocol;
+    pub use std::convert::TryFrom;
+    pub use std::convert::TryInto;
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobstoreGetData {
