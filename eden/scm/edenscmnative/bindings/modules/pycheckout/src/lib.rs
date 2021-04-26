@@ -40,11 +40,13 @@ py_class!(class checkoutplan |py| {
 
     def __new__(
         _cls,
+        root: PyPathBuf,
         current_manifest: &treemanifest,
         target_manifest: &treemanifest,
         matcher: Option<PyObject> = None,
         // If sparse profile changes, contains Some((old_sparse_matcher, new_sparse_matcher))
         sparse_change: Option<(PyObject, PyObject)> = None,
+        progress_path: Option<PyPathBuf> = None,
     ) -> PyResult<checkoutplan> {
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
@@ -55,6 +57,12 @@ py_class!(class checkoutplan |py| {
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
         let mut plan = CheckoutPlan::from_diff(diff).map_pyerr(py)?;
+        if let Some(progress_path) = progress_path {
+            plan.add_progress(
+                &VFS::new(root.to_path_buf()).map_pyerr(py)?,
+                progress_path.to_path_buf()
+            ).map_pyerr(py)?;
+        }
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
             let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));
             let new_matcher = Box::new(PythonMatcher::new(py, new_sparse_matcher));
@@ -77,22 +85,22 @@ py_class!(class checkoutplan |py| {
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }
 
-    def apply(&self, root: PyPathBuf, content_store: &contentstore, progress_path: Option<PyPathBuf> = None) -> PyResult<PyNone> {
+    def apply(&self, root: PyPathBuf, content_store: &contentstore) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = content_store.extract_inner_ref(py);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store(&vfs, store, progress_path.map(|p| p.to_path_buf()))
+            plan.apply_remote_data_store(&vfs, store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def apply_scmstore(&self, root: PyPathBuf, scmstore: &filescmstore, progress_path: Option<PyPathBuf> = None) -> PyResult<PyNone> {
+    def apply_scmstore(&self, root: PyPathBuf, scmstore: &filescmstore) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = scmstore.extract_inner_ref(py).clone();
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_read_store(&vfs, store, progress_path.map(|p| p.to_path_buf()))
+            plan.apply_read_store(&vfs, store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }

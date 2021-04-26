@@ -2346,9 +2346,18 @@ def update(
                 if matcher is not None and matcher.always():
                     matcher = None
 
+                updateprogresspath = None
+                if repo.ui.configbool("checkout", "resumable"):
+                    updateprogresspath = repo.localvfs.join("updateprogress")
+
                 with progress.spinner(repo.ui, _("calculating")):
                     plan = nativecheckout.checkoutplan(
-                        p1.manifest(), p2.manifest(), matcher, sparsematchers
+                        repo.wvfs.base,
+                        p1.manifest(),
+                        p2.manifest(),
+                        matcher,
+                        sparsematchers,
+                        updateprogresspath,
                     )
 
                 if repo.ui.debugflag:
@@ -2381,22 +2390,16 @@ def update(
                 fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
                 cwd = pycompat.getcwdsafe()
 
-                updateprogresspath = None
-                if repo.ui.configbool("checkout", "resumable"):
-                    updateprogresspath = repo.localvfs.join("updateprogress")
-
                 repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
                 if repo.ui.configbool("nativecheckout", "usescmstore"):
                     plan.apply_scmstore(
                         repo.wvfs.base,
                         repo.fileslog.filescmstore,
-                        updateprogresspath,
                     )
                 else:
                     plan.apply(
                         repo.wvfs.base,
                         repo.fileslog.contentstore,
-                        updateprogresspath,
                     )
                 repo.ui.debug("Apply done\n")
                 stats = plan.stats()

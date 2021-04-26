@@ -55,6 +55,7 @@ pub struct CheckoutPlan {
     update_content: Vec<UpdateContentAction>,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
+    progress: Option<Mutex<CheckoutProgress>>,
 }
 
 struct CheckoutProgress {
@@ -137,7 +138,24 @@ impl CheckoutPlan {
             remove,
             update_content,
             update_meta,
+            progress: None,
         })
+    }
+
+    pub fn add_progress(&mut self, vfs: &VFS, path: PathBuf) -> Result<()> {
+        let progress = if path.exists() {
+            match CheckoutProgress::load(&path, vfs.clone()) {
+                Ok(p) => p,
+                Err(e) => {
+                    debug!("Failed to load CheckoutProgress with {:?}", e);
+                    CheckoutProgress::new(&path, vfs.clone())?
+                }
+            }
+        } else {
+            CheckoutProgress::new(&path, vfs.clone())?
+        };
+        self.progress = Some(Mutex::new(progress));
+        Ok(())
     }
 
     /// Updates current plan to account for sparse profile change
@@ -193,27 +211,11 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         f: F,
-        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
-        let progress = progress_path
-            .map(|path| {
-                if path.exists() {
-                    match CheckoutProgress::load(&path, vfs.clone()) {
-                        Ok(p) => Ok(p),
-                        Err(e) => {
-                            debug!("Failed to load CheckoutProgress with {:?}", e);
-                            CheckoutProgress::new(&path, vfs.clone())
-                        }
-                    }
-                } else {
-                    CheckoutProgress::new(&path, vfs.clone())
-                }
-            })
-            .transpose()?;
-
-        let filtered_update_content: Vec<_> = progress
+        let filtered_update_content: Vec<_> = self
+            .progress
             .as_ref()
-            .map(|p| p.filter_already_written(&self.update_content[..]))
+            .map(|p| p.lock().filter_already_written(&self.update_content[..]))
             .unwrap_or_else(|| self.update_content.iter().collect());
         debug!(
             "Skipping checking out {} files since they're already written",
@@ -222,7 +224,6 @@ impl CheckoutPlan {
         let total = filtered_update_content.len() + self.remove.len() + self.update_meta.len();
         let bar = &ProgressBar::new("Updating", total as u64, "files");
         Registry::main().register_progress_bar(bar);
-
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
         let stats = CheckoutStats::default();
         let stats_ref = &stats;
@@ -252,8 +253,7 @@ impl CheckoutPlan {
             Ok((path, action.content_hgid, data, flag))
         });
 
-        let progress = progress.map(|p| Mutex::new(p));
-        let progress_ref = progress.as_ref();
+        let progress_ref = self.progress.as_ref();
         let update_content = update_content
             .chunks(VFS_BATCH_SIZE)
             .map(|actions| async move {
@@ -280,32 +280,27 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: Arc<dyn ReadStore<Key, StoreFile>>,
-        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
-        self.apply_stream(
-            vfs,
-            |keys| {
-                store
-                    .fetch_stream(Box::pin(stream::iter(keys)))
-                    .map(|r| match r {
-                        Ok(f) => match f.content() {
-                            None => bail!(
-                                "{} not found",
-                                f.key()
-                                    .expect("ReadStore returned not found content without key")
-                            ),
-                            Some(content) => Ok((
-                                content.clone(),
-                                f.key()
-                                    .expect("ReadStore returned content without key")
-                                    .clone(),
-                            )),
-                        },
-                        Err(err) => Err(err.into()),
-                    })
-            },
-            progress_path,
-        )
+        self.apply_stream(vfs, |keys| {
+            store
+                .fetch_stream(Box::pin(stream::iter(keys)))
+                .map(|r| match r {
+                    Ok(f) => match f.content() {
+                        None => bail!(
+                            "{} not found",
+                            f.key()
+                                .expect("ReadStore returned not found content without key")
+                        ),
+                        Some(content) => Ok((
+                            content.clone(),
+                            f.key()
+                                .expect("ReadStore returned content without key")
+                                .clone(),
+                        )),
+                    },
+                    Err(err) => Err(err.into()),
+                })
+        })
         .await
     }
 
@@ -313,52 +308,46 @@ impl CheckoutPlan {
         &self,
         vfs: &VFS,
         store: &DS,
-        progress_path: Option<PathBuf>,
     ) -> Result<CheckoutStats> {
         use futures::channel::mpsc;
-        self.apply_stream(
-            vfs,
-            |keys| {
-                let (tx, rx) = mpsc::unbounded();
-                let store = store.clone();
-                Handle::current().spawn_blocking(move || {
-                    let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
-                    for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-                        match store.prefetch(chunk) {
-                            Err(e) => {
-                                if tx.unbounded_send(Err(e)).is_err() {
-                                    return;
-                                }
+        self.apply_stream(vfs, |keys| {
+            let (tx, rx) = mpsc::unbounded();
+            let store = store.clone();
+            Handle::current().spawn_blocking(move || {
+                let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
+                for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+                    match store.prefetch(chunk) {
+                        Err(e) => {
+                            if tx.unbounded_send(Err(e)).is_err() {
+                                return;
                             }
-                            Ok(_) => {
-                                for store_key in chunk {
-                                    let key = match store_key {
-                                        StoreKey::HgId(key) => key,
-                                        _ => unreachable!(),
-                                    };
-                                    let store_result = store.get(store_key.clone());
-                                    let result = match store_result {
-                                        Err(err) => Err(err),
-                                        Ok(StoreResult::Found(data)) => {
-                                            strip_metadata(&data.into())
-                                                .map(|(d, _)| (d, key.clone()))
-                                        }
-                                        Ok(StoreResult::NotFound(k)) => {
-                                            Err(format_err!("{:?} not found in store", k))
-                                        }
-                                    };
-                                    if tx.unbounded_send(result).is_err() {
-                                        return;
+                        }
+                        Ok(_) => {
+                            for store_key in chunk {
+                                let key = match store_key {
+                                    StoreKey::HgId(key) => key,
+                                    _ => unreachable!(),
+                                };
+                                let store_result = store.get(store_key.clone());
+                                let result = match store_result {
+                                    Err(err) => Err(err),
+                                    Ok(StoreResult::Found(data)) => {
+                                        strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
                                     }
+                                    Ok(StoreResult::NotFound(k)) => {
+                                        Err(format_err!("{:?} not found in store", k))
+                                    }
+                                };
+                                if tx.unbounded_send(result).is_err() {
+                                    return;
                                 }
                             }
                         }
                     }
-                });
-                rx
-            },
-            progress_path,
-        )
+                }
+            });
+            rx
+        })
         .await
     }
 
@@ -581,6 +570,7 @@ impl CheckoutPlan {
             remove: vec![],
             update_content: vec![],
             update_meta: vec![],
+            progress: None,
         }
     }
 }
@@ -981,7 +971,7 @@ mod test {
 
         // Use clean vfs for test
         let vfs = VFS::new(working_path.clone())?;
-        plan.apply_stream(&vfs, dummy_fs, None)
+        plan.apply_stream(&vfs, dummy_fs)
             .await
             .context("Plan execution failed")?;
 
