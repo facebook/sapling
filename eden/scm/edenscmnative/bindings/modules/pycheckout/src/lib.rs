@@ -56,12 +56,10 @@ py_class!(class checkoutplan |py| {
         let current = current_manifest.borrow_underlying(py);
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
-        let mut plan = CheckoutPlan::from_diff(diff).map_pyerr(py)?;
+        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let mut plan = CheckoutPlan::from_diff(vfs, diff).map_pyerr(py)?;
         if let Some(progress_path) = progress_path {
-            plan.add_progress(
-                &VFS::new(root.to_path_buf()).map_pyerr(py)?,
-                progress_path.to_path_buf()
-            ).map_pyerr(py)?;
+            plan.add_progress(progress_path.to_path_buf()).map_pyerr(py)?;
         }
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
             let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));
@@ -71,8 +69,7 @@ py_class!(class checkoutplan |py| {
         checkoutplan::create_instance(py, plan)
     }
 
-    def check_unknown_files(&self, root: PyPathBuf, manifest: &treemanifest, scmstore: &filescmstore, state: &PyTreeState) -> PyResult<Vec<String>> {
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+    def check_unknown_files(&self, manifest: &treemanifest, scmstore: &filescmstore, state: &PyTreeState) -> PyResult<Vec<String>> {
         let plan = self.plan(py);
         let state = state.get_state(py);
         let manifest = manifest.borrow_underlying(py).clone();
@@ -80,27 +77,25 @@ py_class!(class checkoutplan |py| {
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             try_block_unless_interrupted(
-            plan.check_unknown_files(&manifest, store, &mut state, &vfs))
+            plan.check_unknown_files(&manifest, store, &mut state))
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }
 
-    def apply(&self, root: PyPathBuf, content_store: &contentstore) -> PyResult<PyNone> {
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+    def apply(&self, content_store: &contentstore) -> PyResult<PyNone> {
         let store = content_store.extract_inner_ref(py);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store(&vfs, store)
+            plan.apply_remote_data_store(store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def apply_scmstore(&self, root: PyPathBuf, scmstore: &filescmstore) -> PyResult<PyNone> {
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+    def apply_scmstore(&self, scmstore: &filescmstore) -> PyResult<PyNone> {
         let store = scmstore.extract_inner_ref(py).clone();
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_read_store(&vfs, store)
+            plan.apply_read_store(store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -113,9 +108,9 @@ py_class!(class checkoutplan |py| {
         Ok((updated, merged, removed, unresolved))
     }
 
-    def record_updates(&self, root: PyPathBuf, state: &PyTreeState) -> PyResult<PyNone> {
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+    def record_updates(&self, state: &PyTreeState) -> PyResult<PyNone> {
         let plan = self.plan(py);
+        let vfs = plan.vfs();
         let state = state.get_state(py);
         py.allow_threads(move || -> Result<()> {
             let mut state = state.lock();
@@ -125,7 +120,7 @@ py_class!(class checkoutplan |py| {
             }
 
             for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
-                let fstate = file_state(&vfs, updated)?;
+                let fstate = file_state(vfs, updated)?;
                 state.insert(updated, &fstate)?;
             }
 

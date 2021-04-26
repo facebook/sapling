@@ -56,6 +56,7 @@ pub struct CheckoutPlan {
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
     progress: Option<Mutex<CheckoutProgress>>,
+    vfs: VFS,
 }
 
 struct CheckoutProgress {
@@ -102,7 +103,7 @@ impl CheckoutPlan {
     /// Processes diff into checkout plan.
     /// Left in the diff is a current commit.
     /// Right is a commit to be checked out.
-    pub fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(iter: D) -> Result<Self> {
+    pub fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(vfs: VFS, iter: D) -> Result<Self> {
         let mut remove = vec![];
         let mut update_content = vec![];
         let mut update_meta = vec![];
@@ -139,20 +140,21 @@ impl CheckoutPlan {
             update_content,
             update_meta,
             progress: None,
+            vfs,
         })
     }
 
-    pub fn add_progress(&mut self, vfs: &VFS, path: PathBuf) -> Result<()> {
+    pub fn add_progress(&mut self, path: PathBuf) -> Result<()> {
         let progress = if path.exists() {
-            match CheckoutProgress::load(&path, vfs.clone()) {
+            match CheckoutProgress::load(&path, self.vfs.clone()) {
                 Ok(p) => p,
                 Err(e) => {
                     debug!("Failed to load CheckoutProgress with {:?}", e);
-                    CheckoutProgress::new(&path, vfs.clone())?
+                    CheckoutProgress::new(&path, self.vfs.clone())?
                 }
             }
         } else {
-            CheckoutProgress::new(&path, vfs.clone())?
+            CheckoutProgress::new(&path, self.vfs.clone())?
         };
         self.progress = Some(Mutex::new(progress));
         Ok(())
@@ -209,9 +211,9 @@ impl CheckoutPlan {
         F: FnOnce(Vec<Key>) -> S,
     >(
         &self,
-        vfs: &VFS,
         f: F,
     ) -> Result<CheckoutStats> {
+        let vfs = &self.vfs;
         let filtered_update_content: Vec<_> = self
             .progress
             .as_ref()
@@ -278,10 +280,9 @@ impl CheckoutPlan {
 
     pub async fn apply_read_store(
         &self,
-        vfs: &VFS,
         store: Arc<dyn ReadStore<Key, StoreFile>>,
     ) -> Result<CheckoutStats> {
-        self.apply_stream(vfs, |keys| {
+        self.apply_stream(|keys| {
             store
                 .fetch_stream(Box::pin(stream::iter(keys)))
                 .map(|r| match r {
@@ -306,11 +307,10 @@ impl CheckoutPlan {
 
     pub async fn apply_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
         &self,
-        vfs: &VFS,
         store: &DS,
     ) -> Result<CheckoutStats> {
         use futures::channel::mpsc;
-        self.apply_stream(vfs, |keys| {
+        self.apply_stream(|keys| {
             let (tx, rx) = mpsc::unbounded();
             let store = store.clone();
             Handle::current().spawn_blocking(move || {
@@ -356,8 +356,8 @@ impl CheckoutPlan {
         manifest: &impl Manifest,
         store: Arc<dyn ReadStore<Key, StoreFile>>,
         tree_state: &mut TreeState,
-        vfs: &VFS,
     ) -> Result<Vec<RepoPathBuf>> {
+        let vfs = &self.vfs;
         let mut check_content = vec![];
         for file in self.new_files() {
             let state = if vfs.case_sensitive() {
@@ -564,13 +564,18 @@ impl CheckoutPlan {
         )
     }
 
+    pub fn vfs(&self) -> &VFS {
+        &self.vfs
+    }
+
     #[cfg(test)]
-    pub fn empty() -> Self {
+    pub fn empty(vfs: VFS) -> Self {
         Self {
             remove: vec![],
             update_content: vec![],
             update_meta: vec![],
             progress: None,
+            vfs,
         }
     }
 }
@@ -829,14 +834,19 @@ mod test {
         let ac_profile = TreeMatcher::from_rules(["a/**", "c/**"].iter())?;
         let manifest = make_tree_manifest_from_meta(vec![a, b, c]);
 
-        let plan = CheckoutPlan::empty().with_sparse_profile_change(
+        let tempdir = tempfile::tempdir()?;
+        let working_path = tempdir.path().to_path_buf().join("workingdir");
+        create_dir(working_path.as_path()).unwrap();
+        let vfs = VFS::new(working_path.clone())?;
+
+        let plan = CheckoutPlan::empty(vfs.clone()).with_sparse_profile_change(
             &ab_profile,
             &ab_profile,
             &manifest,
         )?;
         assert_eq!("", &plan.to_string());
 
-        let plan = CheckoutPlan::empty().with_sparse_profile_change(
+        let plan = CheckoutPlan::empty(vfs.clone()).with_sparse_profile_change(
             &ab_profile,
             &ac_profile,
             &manifest,
@@ -846,7 +856,7 @@ mod test {
             &plan.to_string()
         );
 
-        let mut plan = CheckoutPlan::empty();
+        let mut plan = CheckoutPlan::empty(vfs.clone());
         plan.update_content.push(UpdateContentAction::new(
             rp("b"),
             FileMetadata::regular(hgid(10)),
@@ -862,7 +872,7 @@ mod test {
             &plan.to_string()
         );
 
-        let mut plan = CheckoutPlan::empty();
+        let mut plan = CheckoutPlan::empty(vfs.clone());
         plan.update_content.push(UpdateContentAction::new(
             rp("c"),
             FileMetadata::regular(hgid(3)),
@@ -967,11 +977,11 @@ mod test {
         let left_tree = make_tree_manifest_from_meta(from.iter().cloned());
         let right_tree = make_tree_manifest_from_meta(to.iter().cloned());
         let diff = Diff::new(&left_tree, &right_tree, &matcher);
-        let plan = CheckoutPlan::from_diff(diff).context("Plan construction failed")?;
+        let vfs = VFS::new(working_path.clone())?;
+        let plan = CheckoutPlan::from_diff(vfs, diff).context("Plan construction failed")?;
 
         // Use clean vfs for test
-        let vfs = VFS::new(working_path.clone())?;
-        plan.apply_stream(&vfs, dummy_fs)
+        plan.apply_stream(dummy_fs)
             .await
             .context("Plan execution failed")?;
 

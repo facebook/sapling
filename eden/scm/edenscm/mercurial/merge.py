@@ -2365,7 +2365,6 @@ def update(
 
                 if not force:
                     unknown = plan.check_unknown_files(
-                        repo.wvfs.base,
                         p2.manifest(),
                         repo.fileslog.filescmstore,
                         repo.dirstate._map._tree,
@@ -2393,12 +2392,10 @@ def update(
                 repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
                 if repo.ui.configbool("nativecheckout", "usescmstore"):
                     plan.apply_scmstore(
-                        repo.wvfs.base,
                         repo.fileslog.filescmstore,
                     )
                 else:
                     plan.apply(
-                        repo.wvfs.base,
                         repo.fileslog.contentstore,
                     )
                 repo.ui.debug("Apply done\n")
@@ -2420,7 +2417,7 @@ def update(
                         repo.setparents(fp1, fp2)
                         with progress.spinner(repo.ui, "recording"):
                             plan.record_updates(
-                                repo.wvfs.base, repo.dirstate._map._tree
+                                repo.dirstate._map._tree
                             )
                         # update completed, clear state
                         repo.localvfs.unlink("updatestate")
