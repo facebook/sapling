@@ -30,3 +30,48 @@ impl RendezVousOptions {
         }
     }
 }
+
+#[cfg(test)]
+mod demo {
+    use super::*;
+
+    use anyhow::Error;
+    use fbinit::FacebookInit;
+    use maplit::{hashmap, hashset};
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    // NOTE: I'd make this a doctest, but we don't have support for running those at the moment
+    #[fbinit::test]
+    async fn demo(fb: FacebookInit) -> Result<(), Error> {
+        // RendezVousOptions would typically be instantiated from CLI args via cmdlib.
+        let opts = RendezVousOptions::for_test();
+
+        let stats = Arc::new(RendezVousStats::new("stats_prefix".into()));
+
+        // Callers sharing a RendezVous instance will be eligible to have their calls batched
+        // together.
+        let rdv = RendezVous::new(TunablesRendezVousController::new(opts), stats);
+
+        let out = rdv
+            .dispatch(fb, hashset! { 1u64 }, || {
+                |keys| async move {
+                    // Keys will include your own query (`1` in this example), and potentially
+                    // other queries batched with yours via the RendezVous instance. Return a
+                    // HashMap mapping keys to values as your output. You only need to return a
+                    // value for keys that were found.
+                    Ok(keys
+                        .into_iter()
+                        .map(|k| (k, k + 1))
+                        .collect::<HashMap<_, _>>())
+                }
+            })
+            .await?;
+
+        // The output from dispatch will include only the keys your requested. If a key is missing,
+        // you'll get `None` back as the value.
+        assert_eq!(out, hashmap! { 1 => Some(2) });
+
+        Ok(())
+    }
+}
