@@ -1104,7 +1104,7 @@ class localrepository(object):
             )
         istreedirstate = "treedirstate" in self.requirements
 
-        return dirstate.dirstate(
+        ds = dirstate.dirstate(
             self.localvfs,
             self.ui,
             self.root,
@@ -1113,6 +1113,29 @@ class localrepository(object):
             istreestate=istreestate,
             istreedirstate=istreedirstate,
         )
+
+        try:
+            # If the dirstate was successfuly loaded, let's check if it's pointed at
+            # the nullid to warn the user that a clone may not have succeeded.
+            if (
+                self.localvfs.exists("updatestate")
+                and (
+                    self.ui.configbool("experimental", "nativecheckout")
+                    or self.ui.configbool("clone", "nativecheckout")
+                )
+                and ds.parents()[0] == nullid
+            ):
+                self.ui.warn(
+                    _(
+                        "warning: this repository appears to have not "
+                        "finished cloning - run '@prog@ checkout --continue' to resume the "
+                        "clone\n"
+                    )
+                )
+        except Exception:
+            pass
+
+        return ds
 
     @util.propertycache
     def _eden_dirstate(self):

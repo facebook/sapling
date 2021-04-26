@@ -2421,7 +2421,7 @@ def update(
                             )
                         # update completed, clear state
                         repo.localvfs.unlink("updatestate")
-                        repo.localvfs.unlink("updateprogress")
+                        repo.localvfs.tryunlink("updateprogress")
 
                 if not partial:
                     repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])

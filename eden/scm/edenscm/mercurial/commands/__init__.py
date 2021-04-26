@@ -6515,6 +6515,17 @@ def update(
                 repo.localvfs.unlink("updatemergestate")
                 ms.reset()
                 return 0
+            elif repo.localvfs.exists("updatestate") and (
+                repo.ui.configbool("experimental", "nativecheckout")
+                or repo.ui.configbool("clone", "nativecheckout")
+            ):
+                if rev or node:
+                    raise error.Abort(
+                        _("cannot specify --continue and a update revision")
+                    )
+
+                rev = repo.localvfs.readutf8("updatestate")
+                repo.ui.warn(_("continuing checkout to '%s'\n") % rev)
             else:
                 raise error.Abort(_("not in an interrupted update --merge state"))
 

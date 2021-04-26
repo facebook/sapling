@@ -4335,7 +4335,11 @@ unfinishedstates = [
         True,
         False,
         _("last update was interrupted"),
-        _("use 'hg update DESTINATION' to get a consistent checkout"),
+        _(
+            "use '@prog@ update DESTINATION' to get a consistent checkout\n"
+            "note: '@prog@ update --continue' is supported in some cases, such as "
+            "during clone, and will resume the checkout where it left off"
+        ),
     ),
 ]
 
