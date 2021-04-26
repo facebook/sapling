@@ -23,6 +23,7 @@ use mononoke_types::{
 };
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
+use std::iter::FromIterator;
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -107,58 +108,61 @@ async fn find_file_changes(
     repo: &BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
 ) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error> {
-    find_bonsai_diff(ctx, repo, cs, parent_manifests.iter().cloned().collect())
-        .context("While finding bonsai diff")?
-        .map_ok(|diff| {
-            cloned!(parent_manifests, bonsai_parents);
-            async move {
-                match diff {
-                    BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
-                        let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-                        let envelope = file_node_id
-                            .load(ctx, repo.blobstore())
-                            .await
-                            .context("While fetching bonsai file changes")?;
-                        let size = envelope.content_size();
-                        let content_id = envelope.content_id();
+    let diff: Result<_, Error> =
+        find_bonsai_diff(ctx, repo, cs, parent_manifests.iter().cloned().collect())
+            .context("While finding bonsai diff")?
+            .map_ok(|diff| {
+                cloned!(parent_manifests, bonsai_parents);
+                async move {
+                    match diff {
+                        BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
+                            let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                            let envelope = file_node_id
+                                .load(ctx, repo.blobstore())
+                                .await
+                                .context("While fetching bonsai file changes")?;
+                            let size = envelope.content_size();
+                            let content_id = envelope.content_id();
 
-                        let copyinfo = get_copy_info(
-                            ctx.clone(),
-                            repo.clone(),
-                            bonsai_parents,
-                            path.clone(),
-                            envelope,
-                            parent_manifests,
-                        )
-                        .await
-                        .context("While fetching copy information")?;
-                        Ok((
-                            path,
-                            Some(FileChange::new(content_id, ty, size as u64, copyinfo)),
-                        ))
-                    }
-                    BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
-                        let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-                        let envelope = file_node_id
-                            .load(ctx, repo.blobstore())
+                            let copyinfo = get_copy_info(
+                                ctx.clone(),
+                                repo.clone(),
+                                bonsai_parents,
+                                path.clone(),
+                                envelope,
+                                parent_manifests,
+                            )
                             .await
-                            .context("While fetching bonsai file changes")?;
-                        let size = envelope.content_size();
-                        let content_id = envelope.content_id();
+                            .context("While fetching copy information")?;
+                            Ok((
+                                path,
+                                Some(FileChange::new(content_id, ty, size as u64, copyinfo)),
+                            ))
+                        }
+                        BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
+                            let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                            let envelope = file_node_id
+                                .load(ctx, repo.blobstore())
+                                .await
+                                .context("While fetching bonsai file changes")?;
+                            let size = envelope.content_size();
+                            let content_id = envelope.content_id();
 
-                        // Reused ID means copy info is *not* stored.
-                        Ok((
-                            path,
-                            Some(FileChange::new(content_id, ty, size as u64, None)),
-                        ))
+                            // Reused ID means copy info is *not* stored.
+                            Ok((
+                                path,
+                                Some(FileChange::new(content_id, ty, size as u64, None)),
+                            ))
+                        }
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
                     }
-                    BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
                 }
-            }
-        })
-        .try_buffer_unordered(100) // TODO(stash): magic number?
-        .try_collect::<SortedVectorMap<_, _>>()
-        .await
+            })
+            .try_buffer_unordered(100) // TODO(stash): magic number?
+            .try_collect::<std::collections::BTreeMap<_, _>>()
+            .await;
+
+    Ok(SortedVectorMap::from_iter(diff?))
 }
 
 // Returns copy information for a given path and node if this file was copied.
