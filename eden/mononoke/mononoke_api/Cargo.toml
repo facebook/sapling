@@ -38,6 +38,7 @@ itertools = "0.8"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
+megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }

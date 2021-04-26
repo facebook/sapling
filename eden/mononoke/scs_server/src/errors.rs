@@ -8,6 +8,7 @@
 use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
+use megarepo_error::MegarepoError;
 use mononoke_api::MononokeError;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
@@ -72,6 +73,38 @@ where
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into().context(context_fn().as_str())),
+        }
+    }
+}
+
+impl From<MegarepoError> for ServiceError {
+    fn from(e: MegarepoError) -> Self {
+        match e {
+            MegarepoError::RequestError(e) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::INVALID_REQUEST,
+                reason: format!("{}", e),
+            }),
+            MegarepoError::InternalError(error) => {
+                let reason = error.to_string();
+                let backtrace = error
+                    .backtrace()
+                    .and_then(|backtrace| match backtrace.status() {
+                        BacktraceStatus::Captured => Some(backtrace.to_string()),
+                        _ => None,
+                    });
+                let mut source_chain = Vec::new();
+                let mut error: &dyn StdError = &error;
+                while let Some(source) = error.source() {
+                    source_chain.push(source.to_string());
+                    error = source;
+                }
+
+                Self::Internal(thrift::InternalError {
+                    reason,
+                    backtrace,
+                    source_chain,
+                })
+            }
         }
     }
 }
