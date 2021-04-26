@@ -217,7 +217,7 @@ impl CheckoutPlan {
         let filtered_update_content: Vec<_> = self
             .progress
             .as_ref()
-            .map(|p| p.lock().filter_already_written(&self.update_content[..]))
+            .map(|p| p.lock().filter_already_written(self.update_content.iter()))
             .unwrap_or_else(|| self.update_content.iter().collect());
         debug!(
             "Skipping checking out {} files since they're already written",
@@ -359,7 +359,16 @@ impl CheckoutPlan {
     ) -> Result<Vec<RepoPathBuf>> {
         let vfs = &self.vfs;
         let mut check_content = vec![];
-        for file in self.new_files() {
+
+        let new_files = self.new_file_actions();
+        let new_files = if let Some(progress) = self.progress.as_ref() {
+            progress.lock().filter_already_written(new_files)
+        } else {
+            new_files.collect()
+        };
+
+        for file_action in new_files {
+            let file = &file_action.path;
             let state = if vfs.case_sensitive() {
                 tree_state.get(file)?
             } else {
@@ -549,11 +558,9 @@ impl CheckoutPlan {
         self.update_meta.iter().map(|u| &u.path)
     }
 
-    pub fn new_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+    fn new_file_actions(&self) -> impl Iterator<Item = &UpdateContentAction> {
         // todo - index new files so that this function don't need to be O(total_files_changed)test-update-names.t.err
-        self.update_content
-            .iter()
-            .filter_map(|u| if u.new_file { Some(&u.path) } else { None })
+        self.update_content.iter().filter(|u| u.new_file)
     }
 
     /// Returns (updated, removed)
@@ -675,11 +682,10 @@ impl CheckoutProgress {
 
     fn filter_already_written<'a>(
         &self,
-        actions: &'a [UpdateContentAction],
+        actions: impl Iterator<Item = &'a UpdateContentAction>,
     ) -> Vec<&'a UpdateContentAction> {
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
         actions
-            .iter()
             .filter(|action| {
                 let path = &action.path;
                 if let Some((hgid, time, size)) = &self.state.get(path) {
