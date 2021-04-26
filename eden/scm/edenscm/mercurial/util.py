@@ -1256,7 +1256,21 @@ def system(cmd, environ=None, cwd=None, out=None):
     env = shellenviron(environ)
     if out is None or isatty(out) or isstdout(out):
         # If out is a tty (most likely stdout), then do not use subprocess.PIPE.
-        rc = subprocess.call(cmd, shell=True, close_fds=closefds, env=env, cwd=cwd)
+        rc = subprocess.call(
+            cmd,
+            shell=True,
+            close_fds=closefds,
+            env=env,
+            cwd=cwd,
+            # Pass stdin, stdout, and stderr explicitly to work around a bug in
+            # Windows where it doesn't pass the std handles to the subprocess
+            # if stdin=None, stdout=None, and stderr=None when the std handles
+            # are marked as non-inheritable.
+            # See D15764537 for details.
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
     else:
         proc = subprocess.Popen(
             cmd,
