@@ -113,6 +113,12 @@ class PrefetchCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "--background",
+            help="Run the prefetch in the background",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = find_checkout_and_patterns(args)
@@ -126,9 +132,10 @@ class PrefetchCmd(Subcmd):
                     prefetchFiles=not args.no_prefetch,
                     suppressFileList=args.silent,
                     prefetchMetadata=args.prefetch_metadata,
+                    background=args.background,
                 )
             )
-            if not args.silent:
+            if not args.background and not args.silent:
                 for name in result.matchingFiles:
                     print(os.fsdecode(name))
         return 0
