@@ -398,6 +398,7 @@ members = [
   "permission_checker",
   "phases",
   "pushrebase",
+  "pushrebase/pushrebase_hook",
   "quiet_stream",
   "reachabilityindex",
   "reachabilityindex/common",

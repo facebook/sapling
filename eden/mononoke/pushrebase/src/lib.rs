@@ -81,9 +81,9 @@ use std::sync::Arc;
 use thiserror::Error;
 use tunables::tunables;
 
-pub use hook::{PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook};
-
-mod hook;
+pub use pushrebase_hook::{
+    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
+};
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
 
@@ -217,8 +217,6 @@ impl From<PushrebaseInternalError> for PushrebaseError {
         PushrebaseError::Error(error.into())
     }
 }
-
-pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
 #[derive(Debug, Clone)]
 pub struct PushrebaseChangesetPair {

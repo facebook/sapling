@@ -1,49 +1,20 @@
 [package]
-name = "pushrebase"
+name = "pushrebase_hook"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 anyhow = "1.0"
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
-blobrepo_utils = { version = "0.1.0", path = "../blobrepo_utils" }
-blobstore = { version = "0.1.0", path = "../blobstore" }
-bookmarks = { version = "0.1.0", path = "../bookmarks" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-context = { version = "0.1.0", path = "../server/context" }
-derived_data = { version = "0.1.0", path = "../derived_data" }
-derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
-manifest = { version = "0.1.0", path = "../manifest" }
-maplit = "1.0"
-mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
-mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-pushrebase_hook = { version = "0.1.0", path = "pushrebase_hook" }
-revset = { version = "0.1.0", path = "../revset" }
-slog = { version = "2.5", features = ["max_level_debug"] }
-thiserror = "1.0"
-tunables = { version = "0.1.0", path = "../tunables" }
-
-[dev-dependencies]
 async-trait = "0.1.45"
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-filestore = { version = "0.1.0", path = "../filestore" }
-fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
-rand = { version = "0.7", features = ["small_rng"] }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+context = { version = "0.1.0", path = "../../server/context" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
-tests_utils = { version = "0.1.0", path = "../tests/utils" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

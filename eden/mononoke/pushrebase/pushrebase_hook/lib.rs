@@ -9,10 +9,11 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, Timestamp};
 use sql::Transaction;
+use std::collections::HashMap;
 
-use crate::RebasedChangesets;
+pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 
 #[async_trait]
 pub trait PushrebaseHook: Send + Sync + 'static {
