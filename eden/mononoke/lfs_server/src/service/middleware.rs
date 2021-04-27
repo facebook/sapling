@@ -14,8 +14,7 @@ use gotham::{
     state::{FromState, State},
 };
 use gotham_derive::NewMiddleware;
-use gotham_ext::error::HttpError;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::{error::HttpError, middleware::ClientIdentity, response::build_error_response};
 use hyper::Uri;
 use permission_checker::MononokeIdentitySet;
 use rand::Rng;
@@ -96,7 +95,7 @@ impl Middleware for ThrottleMiddleware {
                         tokio::time::delay_for(Duration::from_millis(total_sleep_ms)).await;
                     }
 
-                    err.into_handler_response(state, &LfsErrorFormatter)
+                    build_error_response(err, state, &LfsErrorFormatter)
                 }
                 .boxed();
 

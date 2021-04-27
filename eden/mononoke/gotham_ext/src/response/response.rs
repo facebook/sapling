@@ -13,7 +13,7 @@ use futures::{
     channel::oneshot,
     stream::{Stream, StreamExt},
 };
-use gotham::{handler::HandlerError, state::State};
+use gotham::{handler::HandlerError, helpers::http::response::create_response, state::State};
 use hyper::{
     header::{HeaderValue, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
@@ -41,9 +41,24 @@ pub fn build_response<IR: TryIntoResponse, F: ErrorFormatter>(
             .context("try_into_response failed!")
             .map_err(HttpError::e500)
     });
+
     match res {
         Ok(res) => Ok((state, res)),
-        Err(e) => e.into_handler_response(state, formatter),
+        Err(err) => build_error_response(err, state, formatter),
+    }
+}
+
+pub fn build_error_response<F: ErrorFormatter>(
+    err: HttpError,
+    mut state: State,
+    formatter: &F,
+) -> Result<(State, Response<Body>), (State, HandlerError)> {
+    match formatter.format(&err.error, &mut state) {
+        Ok((body, mime)) => {
+            let res = create_response(&state, err.status_code, mime, body);
+            Ok((state, res))
+        }
+        Err(error) => Err((state, error.into())),
     }
 }
 

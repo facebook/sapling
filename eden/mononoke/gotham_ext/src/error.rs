@@ -6,8 +6,8 @@
  */
 
 use anyhow::Error;
-use gotham::{handler::HandlerError, helpers::http::response::create_response, state::State};
-use hyper::{Body, Response, StatusCode};
+use gotham::state::State;
+use hyper::{Body, StatusCode};
 use load_limiter::ThrottleReason;
 use mime::Mime;
 
@@ -72,23 +72,6 @@ impl HttpError {
         Self {
             error: err.into(),
             status_code: StatusCode::SERVICE_UNAVAILABLE,
-        }
-    }
-
-    /// Turn this error into a type corresponding to the return type
-    /// of a Gotham handler, so that it may be directly returned from
-    /// a handler function.
-    pub fn into_handler_response<F: ErrorFormatter>(
-        self,
-        mut state: State,
-        formatter: &F,
-    ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-        match formatter.format(&self.error, &mut state) {
-            Ok((body, mime)) => {
-                let res = create_response(&state, self.status_code, mime, body);
-                Ok((state, res))
-            }
-            Err(error) => Err((state, error.into())),
         }
     }
 }
