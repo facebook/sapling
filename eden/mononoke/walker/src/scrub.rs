@@ -168,7 +168,7 @@ where
                 blobstore_key,
                 node_type: n.get_type(),
                 node_fingerprint: n.sampling_fingerprint(),
-                similarity_key: n.stats_path().and_then(|p| p.sampling_fingerprint()),
+                similarity_key: n.stats_path().map(|p| p.sampling_fingerprint()),
                 relatedness_key: None, // TODO(ahornby) track mtime like in corpus
                 uncompressed_size,
             })

@@ -298,7 +298,7 @@ where
                     sample_rate => {
                         let sampling_fingerprint = repo_path.map_or_else(
                             || step.target.sampling_fingerprint(),
-                            |r| r.sampling_fingerprint(),
+                            |r| Some(r.sampling_fingerprint()),
                         );
                         sampling_fingerprint
                             .map_or(self.options.sample_offset % sample_rate == 0, |fp| {

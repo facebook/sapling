@@ -501,15 +501,32 @@ impl NodeType {
     }
 }
 
-// Memoize the hash of the path as it is used frequently
+const ROOT_FINGERPRINT: u64 = 0;
 
-#[derive(Debug)]
-pub struct MPathHashMemo {
-    mpath: MPath,
-    memoized_hash: OnceCell<MPathHash>,
+/// Represent root or non root path hash.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum WrappedPathHash {
+    Root,
+    NonRoot(MPathHash),
 }
 
-impl MPathHashMemo {
+impl WrappedPathHash {
+    pub fn sampling_fingerprint(&self) -> u64 {
+        match self {
+            WrappedPathHash::Root => ROOT_FINGERPRINT,
+            WrappedPathHash::NonRoot(path_hash) => path_hash.sampling_fingerprint(),
+        }
+    }
+}
+
+// Memoize the hash of the path as it is used frequently
+#[derive(Debug)]
+pub struct MPathWithHashMemo {
+    mpath: MPath,
+    memoized_hash: OnceCell<WrappedPathHash>,
+}
+
+impl MPathWithHashMemo {
     fn new(mpath: MPath) -> Self {
         Self {
             mpath,
@@ -517,9 +534,9 @@ impl MPathHashMemo {
         }
     }
 
-    pub fn get_path_hash(&self) -> &MPathHash {
+    pub fn get_path_hash_memo(&self) -> &WrappedPathHash {
         self.memoized_hash
-            .get_or_init(|| self.mpath.get_path_hash())
+            .get_or_init(|| WrappedPathHash::NonRoot(self.mpath.get_path_hash()))
     }
 
     pub fn mpath(&self) -> &MPath {
@@ -527,15 +544,15 @@ impl MPathHashMemo {
     }
 }
 
-impl PartialEq for MPathHashMemo {
+impl PartialEq for MPathWithHashMemo {
     fn eq(&self, other: &Self) -> bool {
         self.mpath == other.mpath
     }
 }
 
-impl Eq for MPathHashMemo {}
+impl Eq for MPathWithHashMemo {}
 
-impl Hash for MPathHashMemo {
+impl Hash for MPathWithHashMemo {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.mpath.hash(state);
     }
@@ -544,7 +561,7 @@ impl Hash for MPathHashMemo {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WrappedPath {
     Root,
-    NonRoot(ArcIntern<EagerHashMemoizer<MPathHashMemo>>),
+    NonRoot(ArcIntern<EagerHashMemoizer<MPathWithHashMemo>>),
 }
 
 impl WrappedPath {
@@ -555,15 +572,15 @@ impl WrappedPath {
         }
     }
 
-    pub fn get_path_hash(&self) -> Option<&MPathHash> {
+    pub fn get_path_hash(&self) -> &WrappedPathHash {
         match self {
-            WrappedPath::Root => None,
-            WrappedPath::NonRoot(path) => Some(path.get_path_hash()),
+            WrappedPath::Root => &WrappedPathHash::Root,
+            WrappedPath::NonRoot(path) => path.get_path_hash_memo(),
         }
     }
 
-    pub fn sampling_fingerprint(&self) -> Option<u64> {
-        self.get_path_hash().map(|h| h.sampling_fingerprint())
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.get_path_hash().sampling_fingerprint()
     }
 }
 
@@ -583,7 +600,7 @@ impl From<Option<MPath>> for WrappedPath {
         let hasher_fac = PATH_HASHER_FACTORY.get_or_init(|| RandomState::default());
         match mpath {
             Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(
-                MPathHashMemo::new(mpath),
+                MPathWithHashMemo::new(mpath),
                 hasher_fac,
             ))),
             None => WrappedPath::Root,

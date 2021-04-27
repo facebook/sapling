@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath, WrappedPathHash};
 use crate::log;
 use crate::progress::sort_by_string;
 use crate::walk::{
@@ -23,7 +23,7 @@ use futures::future::TryFutureExt;
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
-    ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPathHash,
+    ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId,
     ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
@@ -173,7 +173,7 @@ pub struct WalkState {
     bcs_ids: InternMap<ChangesetId, InternedId<ChangesetId>>,
     hg_cs_ids: InternMap<HgChangesetId, InternedId<HgChangesetId>>,
     hg_filenode_ids: InternMap<HgFileNodeId, InternedId<HgFileNodeId>>,
-    mpath_hashs: InternMap<Option<MPathHash>, InternedId<Option<MPathHash>>>,
+    path_hashes: InternMap<WrappedPathHash, InternedId<WrappedPathHash>>,
     hg_manifest_ids: InternMap<HgManifestId, InternedId<HgManifestId>>,
     unode_file_ids: InternMap<FileUnodeId, InternedId<FileUnodeId>>,
     unode_manifest_ids: InternMap<ManifestUnodeId, InternedId<ManifestUnodeId>>,
@@ -191,8 +191,8 @@ pub struct WalkState {
     visited_hg_cs_mapping: StateMap<InternedId<HgChangesetId>>,
     visited_hg_cs_via_bonsai: StateMap<InternedId<HgChangesetId>>,
     visited_hg_file_envelope: StateMap<InternedId<HgFileNodeId>>,
-    visited_hg_filenode: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgFileNodeId>)>,
-    visited_hg_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgManifestId>)>,
+    visited_hg_filenode: StateMap<(InternedId<WrappedPathHash>, InternedId<HgFileNodeId>)>,
+    visited_hg_manifest: StateMap<(InternedId<WrappedPathHash>, InternedId<HgManifestId>)>,
     // Derived
     visited_blame: StateMap<InternedId<FileUnodeId>>,
     visited_changeset_info: StateMap<InternedId<ChangesetId>>,
@@ -231,7 +231,7 @@ impl WalkState {
             bcs_ids: InternMap::with_hasher(fac.clone()),
             hg_cs_ids: InternMap::with_hasher(fac.clone()),
             hg_filenode_ids: InternMap::with_hasher(fac.clone()),
-            mpath_hashs: InternMap::with_hasher(fac.clone()),
+            path_hashes: InternMap::with_hasher(fac.clone()),
             hg_manifest_ids: InternMap::with_hasher(fac.clone()),
             unode_file_ids: InternMap::with_hasher(fac.clone()),
             unode_manifest_ids: InternMap::with_hasher(fac.clone()),
@@ -301,14 +301,14 @@ impl WalkState {
     /// If the state did not have this value present, true is returned.
     fn record_with_path<K>(
         &self,
-        visited_with_path: &StateMap<(InternedId<Option<MPathHash>>, K)>,
+        visited_with_path: &StateMap<(InternedId<WrappedPathHash>, K)>,
         k: (&WrappedPath, &K),
     ) -> bool
     where
         K: Eq + Hash + Copy,
     {
         let (path, id) = k;
-        let path = self.mpath_hashs.interned(&path.get_path_hash().cloned());
+        let path = self.path_hashes.interned(path.get_path_hash());
         let key = (path, *id);
         if visited_with_path.contains_key(&key) {
             false
@@ -424,7 +424,7 @@ impl WalkState {
                 self.clear_mapping(NodeType::UnodeManifest);
             }
             InternedType::MPathHash => {
-                self.mpath_hashs.clear();
+                self.path_hashes.clear();
                 self.clear_mapping(NodeType::HgFileNode);
                 self.clear_mapping(NodeType::HgManifest);
             }
