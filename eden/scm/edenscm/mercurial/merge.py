@@ -18,6 +18,7 @@ import shutil
 import struct
 
 from bindings import checkout as nativecheckout
+from bindings import status as nativestatus
 from bindings import worker as rustworker
 
 from . import (
@@ -2308,8 +2309,10 @@ def update(
                 fallbackcheckout = "ancestor is not supported: %s" % ancestor
             elif wc is not None and wc.isinmemory():
                 fallbackcheckout = "Native checkout does not work inmemory"
-            elif wc.dirty(missing=True):
-                fallbackcheckout = "Working copy is not clean"
+            elif (force or updatecheck != "noconflict") and wc.dirty(missing=True):
+                fallbackcheckout = (
+                    "Working copy is dirty and --clean specified - not supported yet"
+                )
             elif not util.safehasattr(repo.fileslog, "contentstore"):
                 fallbackcheckout = "Repo does not have remotefilelog"
             elif type(repo.dirstate._map) != treestate.treestatemap:
@@ -2619,6 +2622,17 @@ def donativecheckout(
                     "differ from files in requested revision"
                 )
             )
+
+        status = nativestatus.status(repo.status())
+        conflicts = plan.check_conflicts(status)
+        if conflicts:
+            msg = _("%d conflicting file changes:\n") % len(conflicts)
+            msg += " " + "\n ".join(i18n.limititems(conflicts)) + "\n"
+            hint = _(
+                "commit, shelve, update --clean to discard them"
+                ", or update --merge to merge them"
+            )
+            raise error.Abort(msg.strip(), hint=hint)
 
     # preserving checks as is, even though wc.isinmemory always false here
     if not partial and not wc.isinmemory():

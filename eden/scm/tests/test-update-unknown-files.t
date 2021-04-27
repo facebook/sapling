@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.nativecheckout=true
+  $ setconfig commands.update.check=noconflict
   $ newserver server
 
   $ newremoterepo myrepo
@@ -35,3 +36,13 @@
   $ ls
   a
   b
+  $ echo Z > a
+  $ hg up 'desc(C)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg status
+  M a
+  $ hg up null
+  abort: 1 conflicting file changes:
+   a
+  (commit, shelve, update --clean to discard them, or update --merge to merge them)
+  [255]
