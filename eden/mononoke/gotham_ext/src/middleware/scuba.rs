@@ -20,7 +20,7 @@ use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use crate::{
-    middleware::{ClientIdentity, Middleware, PostRequestCallbacks},
+    middleware::{ClientIdentity, Middleware, PostResponseCallbacks},
     response::ResponseContentMeta,
 };
 
@@ -268,7 +268,7 @@ fn log_stats<H: ScubaHandler>(
 
     let handler = H::from_state(state);
 
-    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
+    let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     callbacks.add(move |info| {
         if let Some(duration) = info.duration {
             scuba.add(HttpScubaKey::DurationMs, duration.as_millis_unchecked());

@@ -23,10 +23,10 @@ use crate::response::ResponseContentMeta;
 
 use super::{ClientIdentity, Middleware, RequestStartTime};
 
-type Callback = Box<dyn FnOnce(&PostRequestInfo) + Send + 'static>;
+type Callback = Box<dyn FnOnce(&PostResponseInfo) + Send + 'static>;
 
 /// Information passed to each post-request callback.
-pub struct PostRequestInfo {
+pub struct PostResponseInfo {
     pub duration: Option<Duration>,
     pub bytes_sent: Option<u64>,
     pub content_meta: Option<ResponseContentMeta>,
@@ -34,7 +34,7 @@ pub struct PostRequestInfo {
 }
 
 /// Trait allowing post-request callbacks to be configured dynamically.
-pub trait PostRequestConfig: Clone + Send + Sync + RefUnwindSafe + 'static {
+pub trait PostResponseConfig: Clone + Send + Sync + RefUnwindSafe + 'static {
     /// Specify whether the middleware should perform a potentially
     /// expensive reverse DNS lookup of the client's hostname.
     fn resolve_hostname(&self) -> bool {
@@ -45,9 +45,9 @@ pub trait PostRequestConfig: Clone + Send + Sync + RefUnwindSafe + 'static {
 #[derive(Clone)]
 pub struct DefaultConfig;
 
-impl PostRequestConfig for DefaultConfig {}
+impl PostResponseConfig for DefaultConfig {}
 
-impl<C: PostRequestConfig> PostRequestConfig for ConfigHandle<C> {
+impl<C: PostResponseConfig> PostResponseConfig for ConfigHandle<C> {
     fn resolve_hostname(&self) -> bool {
         self.get().resolve_hostname()
     }
@@ -55,26 +55,26 @@ impl<C: PostRequestConfig> PostRequestConfig for ConfigHandle<C> {
 
 /// Middleware that allows the application to register callbacks which will
 /// be run upon request completion.
-pub struct PostRequestMiddleware<C> {
+pub struct PostResponseMiddleware<C> {
     config: C,
 }
 
-impl<C> PostRequestMiddleware<C> {
+impl<C> PostResponseMiddleware<C> {
     pub fn with_config(config: C) -> Self {
         Self { config }
     }
 }
 
-impl Default for PostRequestMiddleware<DefaultConfig> {
+impl Default for PostResponseMiddleware<DefaultConfig> {
     fn default() -> Self {
-        PostRequestMiddleware::with_config(DefaultConfig)
+        PostResponseMiddleware::with_config(DefaultConfig)
     }
 }
 
 #[async_trait]
-impl<C: PostRequestConfig> Middleware for PostRequestMiddleware<C> {
+impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        state.put(PostRequestCallbacks::new());
+        state.put(PostResponseCallbacks::new());
         None
     }
 
@@ -84,7 +84,7 @@ impl<C: PostRequestConfig> Middleware for PostRequestMiddleware<C> {
         let content_meta = ResponseContentMeta::try_borrow_from(&state).copied();
         let hostname_future = ClientIdentity::try_borrow_from(&state).map(|id| id.hostname());
 
-        if let Some(callbacks) = state.try_take::<PostRequestCallbacks>() {
+        if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
             task::spawn(callbacks.run(config, start_time, content_meta, hostname_future));
         }
     }
@@ -92,12 +92,12 @@ impl<C: PostRequestConfig> Middleware for PostRequestMiddleware<C> {
 
 /// A collection of callbacks that will run once the request has completed.
 #[derive(StateData)]
-pub struct PostRequestCallbacks {
+pub struct PostResponseCallbacks {
     callbacks: Vec<Callback>,
     delay_signal: Option<Receiver<u64>>,
 }
 
-impl PostRequestCallbacks {
+impl PostResponseCallbacks {
     fn new() -> Self {
         Self {
             callbacks: Vec::new(),
@@ -113,7 +113,7 @@ impl PostRequestCallbacks {
     /// this could block the server from handling other requests.
     pub fn add<F>(&mut self, callback: F)
     where
-        F: FnOnce(&PostRequestInfo) + Send + 'static,
+        F: FnOnce(&PostResponseInfo) + Send + 'static,
     {
         self.callbacks.push(Box::new(callback));
     }
@@ -139,7 +139,7 @@ impl PostRequestCallbacks {
         content_meta: Option<ResponseContentMeta>,
         hostname_future: Option<H>,
     ) where
-        C: PostRequestConfig,
+        C: PostResponseConfig,
         H: Future<Output = Option<String>> + Send + 'static,
     {
         let Self {
@@ -166,7 +166,7 @@ impl PostRequestCallbacks {
             _ => None,
         };
 
-        let info = PostRequestInfo {
+        let info = PostResponseInfo {
             duration,
             bytes_sent,
             content_meta,

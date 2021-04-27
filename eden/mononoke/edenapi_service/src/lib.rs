@@ -20,7 +20,7 @@ use gotham::router::Router;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
+        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostResponseMiddleware,
         ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
     },
 };
@@ -69,7 +69,7 @@ pub fn build(
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))
-        .add(PostRequestMiddleware::default())
+        .add(PostResponseMiddleware::default())
         .add(RequestContextMiddleware::new(fb, logger, load_limiter))
         .add(LoadMiddleware::new())
         .add(log_middleware)

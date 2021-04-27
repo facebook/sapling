@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use gotham_ext::middleware::PostRequestConfig;
+use gotham_ext::middleware::PostResponseConfig;
 use permission_checker::MononokeIdentitySet;
 use serde::de::{Deserializer, Error as _};
 use serde::ser::Serializer;
@@ -216,7 +216,7 @@ impl Limit {
     }
 }
 
-impl PostRequestConfig for ServerConfig {
+impl PostResponseConfig for ServerConfig {
     fn resolve_hostname(&self) -> bool {
         !self.disable_hostname_logging()
     }

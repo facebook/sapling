@@ -15,7 +15,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use hyper::{Body, Response};
 
-use super::{Middleware, PostRequestCallbacks};
+use super::{Middleware, PostResponseCallbacks};
 
 #[derive(StateData, Debug, Copy, Clone)]
 pub struct RequestLoad(pub i64);
@@ -57,7 +57,7 @@ impl Middleware for LoadMiddleware {
             headers.insert("X-Load", request_load.0.into());
         }
 
-        if let Some(callbacks) = state.try_borrow_mut::<PostRequestCallbacks>() {
+        if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
             callbacks.add({
                 let requests = self.requests.clone();
                 move |_| {

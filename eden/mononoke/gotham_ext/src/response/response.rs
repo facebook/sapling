@@ -20,7 +20,7 @@ use mime::Mime;
 
 use crate::content_encoding::{ContentCompression, ContentEncoding};
 use crate::error::{ErrorFormatter, HttpError};
-use crate::middleware::PostRequestCallbacks;
+use crate::middleware::PostResponseCallbacks;
 
 use super::content_meta::ContentMeta;
 use super::signal_stream::SignalStream;
@@ -169,9 +169,9 @@ where
 
         state.put(meta);
 
-        // If PostRequestMiddleware is in use, arrange for post-request
+        // If PostResponseMiddleware is in use, arrange for post-request
         // callbacks to be delayed until the entire stream has been sent.
-        let stream = match state.try_borrow_mut::<PostRequestCallbacks>() {
+        let stream = match state.try_borrow_mut::<PostResponseCallbacks>() {
             Some(callbacks) => SignalStream::new(stream, callbacks.delay()).left_stream(),
             None => stream.right_stream(),
         };

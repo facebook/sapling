@@ -13,7 +13,7 @@ use std::fmt::{self, Debug, Display};
 use std::time::Duration;
 use time_ext::DurationExt;
 
-use super::{ClientIdentity, Middleware, PostRequestCallbacks, RequestLoad};
+use super::{ClientIdentity, Middleware, PostResponseCallbacks, RequestLoad};
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
@@ -91,7 +91,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
         .flatten()
         .map(|addr| addr.to_string());
 
-    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
+    let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     let logger = logger.new(o!("request_id" => request_id));
 
     match entry {

@@ -22,7 +22,7 @@ pub mod tls_session_data;
 pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use self::load::{LoadMiddleware, RequestLoad};
 pub use self::log::LogMiddleware;
-pub use self::post_request::{PostRequestCallbacks, PostRequestConfig, PostRequestMiddleware};
+pub use self::post_request::{PostResponseCallbacks, PostResponseConfig, PostResponseMiddleware};
 pub use self::scuba::{
     DefaultScubaHandler, HttpScubaKey, ScubaHandler, ScubaMiddleware, ScubaMiddlewareState,
 };

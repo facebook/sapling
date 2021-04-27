@@ -6,7 +6,7 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::{ClientIdentity, Middleware, PostRequestCallbacks};
+use gotham_ext::middleware::{ClientIdentity, Middleware, PostResponseCallbacks};
 use hyper::StatusCode;
 use hyper::{Body, Response};
 use stats::prelude::*;
@@ -46,7 +46,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let repo = hander_info.repo.clone()?;
     let repo_and_method = format!("{}.{}", &repo, method.to_string());
 
-    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
+    let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
     callbacks.add(move |info| {
         if let Some(duration) = info.duration {

@@ -23,7 +23,7 @@ use futures_util::try_join;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
+        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostResponseMiddleware,
         ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
     },
     serve,
@@ -346,7 +346,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new())
-        .add(PostRequestMiddleware::with_config(config_handle))
+        .add(PostResponseMiddleware::with_config(config_handle))
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
         .add(log_middleware)
