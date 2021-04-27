@@ -7,12 +7,12 @@
 
 mod content_meta;
 mod response;
+mod response_meta;
 mod signal_stream;
 mod stream;
 mod stream_ext;
 
-pub use response::{
-    build_response, BytesBody, EmptyBody, ResponseContentMeta, StreamBody, TryIntoResponse,
-};
+pub use response::{build_response, BytesBody, EmptyBody, StreamBody, TryIntoResponse};
+pub use response_meta::{BodyMeta, HeadersMeta, PendingResponseMeta, ResponseMeta};
 pub use stream::{CompressedResponseStream, ResponseStream};
 pub use stream_ext::ResponseTryStreamExt;

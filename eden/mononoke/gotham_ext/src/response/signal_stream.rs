@@ -17,6 +17,8 @@ use futures::{
 };
 use pin_project::{pin_project, pinned_drop};
 
+use super::response_meta::BodyMeta;
+
 pub trait Sizeable {
     fn size(&self) -> u64;
 }
@@ -35,12 +37,12 @@ impl Sizeable for Bytes {
 pub struct SignalStream<S> {
     #[pin]
     stream: S,
-    sender: Option<Sender<u64>>,
+    sender: Option<Sender<BodyMeta>>,
     size_sent: u64,
 }
 
 impl<S> SignalStream<S> {
-    pub fn new(stream: S, sender: Sender<u64>) -> Self {
+    pub fn new(stream: S, sender: Sender<BodyMeta>) -> Self {
         Self {
             stream,
             sender: Some(sender),
@@ -67,7 +69,9 @@ where
             // No items left: signal our receiver.
             None => {
                 if let Some(sender) = this.sender.take() {
-                    let _ = sender.send(*this.size_sent);
+                    let _ = sender.send(BodyMeta {
+                        bytes_sent: *this.size_sent,
+                    });
                 }
             }
         }
@@ -82,7 +86,9 @@ impl<S> PinnedDrop for SignalStream<S> {
         let this = self.project();
 
         if let Some(sender) = this.sender.take() {
-            let _ = sender.send(*this.size_sent);
+            let _ = sender.send(BodyMeta {
+                bytes_sent: *this.size_sent,
+            });
         }
     }
 }

@@ -123,7 +123,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                     uri,
                     version,
                     status.as_u16(),
-                    info.bytes_sent.unwrap_or(0),
+                    info.meta.as_ref().map(|m| m.body().bytes_sent).unwrap_or(0),
                     DurationForDisplay::from(info.duration),
                     load,
                 );

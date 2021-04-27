@@ -10,16 +10,13 @@ use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
-use futures::{
-    channel::oneshot::{self, Receiver, Sender},
-    prelude::*,
-};
+use futures::prelude::*;
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use hyper::{body::Body, Response};
 use tokio::task;
 
-use crate::response::ResponseContentMeta;
+use crate::response::{PendingResponseMeta, ResponseMeta};
 
 use super::{ClientIdentity, Middleware, RequestStartTime};
 
@@ -28,9 +25,8 @@ type Callback = Box<dyn FnOnce(&PostResponseInfo) + Send + 'static>;
 /// Information passed to each post-request callback.
 pub struct PostResponseInfo {
     pub duration: Option<Duration>,
-    pub bytes_sent: Option<u64>,
-    pub content_meta: Option<ResponseContentMeta>,
     pub client_hostname: Option<String>,
+    pub meta: Option<ResponseMeta>,
 }
 
 /// Trait allowing post-request callbacks to be configured dynamically.
@@ -81,11 +77,11 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         let config = self.config.clone();
         let start_time = RequestStartTime::try_borrow_from(&state).map(|t| t.0);
-        let content_meta = ResponseContentMeta::try_borrow_from(&state).copied();
         let hostname_future = ClientIdentity::try_borrow_from(&state).map(|id| id.hostname());
+        let meta = PendingResponseMeta::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
-            task::spawn(callbacks.run(config, start_time, content_meta, hostname_future));
+            task::spawn(callbacks.run(config, start_time, meta, hostname_future));
         }
     }
 }
@@ -94,14 +90,12 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
 #[derive(StateData)]
 pub struct PostResponseCallbacks {
     callbacks: Vec<Callback>,
-    delay_signal: Option<Receiver<u64>>,
 }
 
 impl PostResponseCallbacks {
     fn new() -> Self {
         Self {
             callbacks: Vec::new(),
-            delay_signal: None,
         }
     }
 
@@ -118,43 +112,21 @@ impl PostResponseCallbacks {
         self.callbacks.push(Box::new(callback));
     }
 
-    /// Delay execution of post-request callbacks until a value is sent over the
-    /// given channel. This will typically be used in conjunction with something
-    /// like `SignalStream` to delay execution until the entire request body has
-    /// been sent. The value sent over the channel should be the number of bytes
-    /// actually sent to the client (which may differ from the Content-Length).
-    ///
-    /// Note: If this method is called multiple times, only the channel from the
-    /// most recent call will have any effect.
-    pub fn delay(&mut self) -> Sender<u64> {
-        let (sender, receiver) = oneshot::channel();
-        self.delay_signal = Some(receiver);
-        sender
-    }
-
     async fn run<C, H>(
         self,
         config: C,
         start_time: Option<Instant>,
-        content_meta: Option<ResponseContentMeta>,
+        meta: Option<PendingResponseMeta>,
         hostname_future: Option<H>,
     ) where
         C: PostResponseConfig,
         H: Future<Output = Option<String>> + Send + 'static,
     {
-        let Self {
-            callbacks,
-            delay_signal,
-        } = self;
+        let Self { callbacks } = self;
 
-        // If a delay has been set, wait until the entire response has been
-        // sent before running the callbacks. If the delay channel returns
-        // an error (meaning the sender was dropped), the callbacks will
-        // still run, but the bytes sent will be reported as `None` as this
-        // suggests that the response body may not have been fully sent.
-        let bytes_sent = match delay_signal {
-            Some(rx) => rx.await.ok(),
-            None => content_meta.and_then(|m| m.content_length()),
+        let meta = match meta {
+            Some(meta) => Some(meta.finish().await),
+            None => None,
         };
 
         // Capture elapsed time before waiting for the client hostname to resolve.
@@ -168,9 +140,8 @@ impl PostResponseCallbacks {
 
         let info = PostResponseInfo {
             duration,
-            bytes_sent,
-            content_meta,
             client_hostname,
+            meta,
         };
 
         for callback in callbacks {

@@ -21,7 +21,7 @@ use time_ext::DurationExt;
 
 use crate::{
     middleware::{ClientIdentity, Middleware, PostResponseCallbacks},
-    response::ResponseContentMeta,
+    response::HeadersMeta,
 };
 
 use super::{HeadersDuration, RequestLoad};
@@ -179,11 +179,7 @@ where
     None
 }
 
-fn log_stats<H: ScubaHandler>(
-    state: &mut State,
-    status_code: &StatusCode,
-    content_meta: Option<ResponseContentMeta>,
-) -> Option<()> {
+fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Option<()> {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
     scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
@@ -223,16 +219,6 @@ fn log_stats<H: ScubaHandler>(
             header::USER_AGENT,
             |header| header.to_string(),
         );
-    }
-
-    match content_meta {
-        Some(ResponseContentMeta::Sized(content_length)) => {
-            scuba.add(HttpScubaKey::ResponseContentLength, content_length);
-        }
-        Some(ResponseContentMeta::Compressed(compression)) => {
-            scuba.add(HttpScubaKey::ResponseContentEncoding, compression.as_str());
-        }
-        Some(ResponseContentMeta::Chunked) | None => {}
     }
 
     if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
@@ -278,8 +264,18 @@ fn log_stats<H: ScubaHandler>(
             scuba.add(HttpScubaKey::ClientHostname, client_hostname);
         }
 
-        if let Some(bytes_sent) = info.bytes_sent {
-            scuba.add(HttpScubaKey::ResponseBytesSent, bytes_sent);
+        if let Some(meta) = info.meta.as_ref() {
+            match *meta.headers() {
+                HeadersMeta::Sized(content_length) => {
+                    scuba.add(HttpScubaKey::ResponseContentLength, content_length);
+                }
+                HeadersMeta::Compressed(compression) => {
+                    scuba.add(HttpScubaKey::ResponseContentEncoding, compression.as_str());
+                }
+                HeadersMeta::Chunked => {}
+            }
+
+            scuba.add(HttpScubaKey::ResponseBytesSent, meta.body().bytes_sent);
         }
 
         handler.add_stats(&mut scuba);
@@ -347,8 +343,6 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
             }
         }
 
-        let content_meta = ResponseContentMeta::try_borrow_from(&state).copied();
-
-        log_stats::<H>(state, &response.status(), content_meta);
+        log_stats::<H>(state, &response.status());
     }
 }

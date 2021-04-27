@@ -81,7 +81,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::failure_5xx.add_value(1, (repo_and_method.clone(),));
         }
 
-        if let Some(response_bytes_sent) = info.bytes_sent {
+        if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
             STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (repo_and_method,))
         }
     });

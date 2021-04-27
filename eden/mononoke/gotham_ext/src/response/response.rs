@@ -9,20 +9,22 @@ use std::convert::TryInto;
 
 use anyhow::{Context, Error};
 use bytes::Bytes;
-use futures::stream::{Stream, StreamExt};
+use futures::{
+    channel::oneshot,
+    stream::{Stream, StreamExt},
+};
 use gotham::{handler::HandlerError, state::State};
-use gotham_derive::StateData;
 use hyper::{
     header::{HeaderValue, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
 };
 use mime::Mime;
 
-use crate::content_encoding::{ContentCompression, ContentEncoding};
+use crate::content_encoding::ContentEncoding;
 use crate::error::{ErrorFormatter, HttpError};
-use crate::middleware::PostResponseCallbacks;
 
 use super::content_meta::ContentMeta;
+use super::response_meta::{HeadersMeta, PendingResponseMeta};
 use super::signal_stream::SignalStream;
 
 pub trait TryIntoResponse {
@@ -45,23 +47,6 @@ pub fn build_response<IR: TryIntoResponse, F: ErrorFormatter>(
     }
 }
 
-#[derive(StateData, Copy, Clone, Debug)]
-pub enum ResponseContentMeta {
-    Sized(u64),
-    Chunked,
-    Compressed(ContentCompression),
-}
-
-impl ResponseContentMeta {
-    pub fn content_length(&self) -> Option<u64> {
-        match self {
-            Self::Sized(s) => Some(*s),
-            Self::Compressed(..) => None,
-            Self::Chunked => None,
-        }
-    }
-}
-
 pub struct EmptyBody;
 
 impl EmptyBody {
@@ -72,7 +57,7 @@ impl EmptyBody {
 
 impl TryIntoResponse for EmptyBody {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        state.put(ResponseContentMeta::Sized(0));
+        state.put(PendingResponseMeta::immediate(0));
 
         Response::builder()
             .status(StatusCode::OK)
@@ -101,7 +86,8 @@ where
         let bytes = self.bytes.into();
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
 
-        state.put(ResponseContentMeta::Sized(bytes.len().try_into()?));
+        let size = bytes.len().try_into()?;
+        state.put(PendingResponseMeta::immediate(size));
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
@@ -154,27 +140,22 @@ where
             .header(CONTENT_ENCODING, content_encoding)
             .status(status);
 
-        let (res, meta) = match content_encoding {
-            ContentEncoding::Compressed(compression) => {
-                (res, ResponseContentMeta::Compressed(compression))
-            }
+        let (res, headers_meta) = match content_encoding {
+            ContentEncoding::Compressed(compression) => (res, HeadersMeta::Compressed(compression)),
             ContentEncoding::Identity => match content_length {
                 Some(content_length) => (
                     res.header(CONTENT_LENGTH, content_length),
-                    ResponseContentMeta::Sized(content_length),
+                    HeadersMeta::Sized(content_length),
                 ),
-                None => (res, ResponseContentMeta::Chunked),
+                None => (res, HeadersMeta::Chunked),
             },
         };
 
-        state.put(meta);
+        let (sender, receiver) = oneshot::channel();
+        state.put(PendingResponseMeta::deferred(headers_meta, receiver));
 
-        // If PostResponseMiddleware is in use, arrange for post-request
-        // callbacks to be delayed until the entire stream has been sent.
-        let stream = match state.try_borrow_mut::<PostResponseCallbacks>() {
-            Some(callbacks) => SignalStream::new(stream, callbacks.delay()).left_stream(),
-            None => stream.right_stream(),
-        };
+        // Set up a SignalStream to send the PostSendMeta.
+        let stream = SignalStream::new(stream, sender);
 
         // Turn the stream into a TryStream, as expected by hyper::Body.
         let stream = stream.map(<Result<_, Error>>::Ok);
