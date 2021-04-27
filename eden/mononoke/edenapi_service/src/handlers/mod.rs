@@ -8,6 +8,7 @@
 use std::fmt;
 use std::pin::Pin;
 
+use anyhow::{Context, Error};
 use futures::FutureExt;
 use gotham::{
     handler::HandlerFuture,
@@ -17,11 +18,13 @@ use gotham::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::{FromState, State},
+    state::{request_id, FromState, State},
 };
 use gotham_derive::StateData;
+use mime::Mime;
+use serde::{Deserialize, Serialize};
 
-use gotham_ext::response::build_response;
+use gotham_ext::{error::ErrorFormatter, response::build_response};
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
@@ -88,6 +91,37 @@ impl HandlerInfo {
     }
 }
 
+/// JSON representation of an error to send to the client.
+#[derive(Clone, Serialize, Debug, Deserialize)]
+struct JsonError {
+    message: String,
+    request_id: String,
+}
+
+struct JsonErrorFomatter;
+
+impl ErrorFormatter for JsonErrorFomatter {
+    type Body = Vec<u8>;
+
+    fn format(&self, error: &Error, state: &mut State) -> Result<(Self::Body, Mime), Error> {
+        let message = format!("{:#}", error);
+
+        if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
+            log_ctx.handler_error_msg = Some(message.clone());
+        }
+
+        // Package the error message into a JSON response.
+        let res = JsonError {
+            message,
+            request_id: request_id(&state).to_string(),
+        };
+
+        let body = serde_json::to_vec(&res).context("Failed to serialize error")?;
+
+        Ok((body, mime::APPLICATION_JSON))
+    }
+}
+
 /// Macro to create a Gotham handler function from an async function.
 ///
 /// The expected signature of the input function is:
@@ -104,14 +138,7 @@ macro_rules! define_handler {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
             async move {
                 let res = $func(&mut state).await;
-
-                if let Err(e) = res.as_ref() {
-                    if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
-                        log_ctx.handler_error_msg = Some(e.message());
-                    }
-                }
-
-                build_response(res, state)
+                build_response(res, state, &JsonErrorFomatter)
             }
             .boxed()
         }

@@ -27,7 +27,7 @@ use std::time::Duration;
 use crate::config::{Limit, ServerConfig};
 use crate::errors::ErrorKind;
 
-use super::util::http_error_to_handler_error;
+use super::error_formatter::LfsErrorFormatter;
 
 define_stats! {
     // We use a dynamic singleton counter here instead of direct usage of FB API to make use of
@@ -95,7 +95,8 @@ impl Middleware for ThrottleMiddleware {
                     if total_sleep_ms > 0 {
                         tokio::time::delay_for(Duration::from_millis(total_sleep_ms)).await;
                     }
-                    http_error_to_handler_error(err, state)
+
+                    err.into_handler_response(state, &LfsErrorFormatter)
                 }
                 .boxed();
 

@@ -26,7 +26,6 @@ gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = "0.13.10"
 hyper-openssl = "0.8"
-itertools = "0.8"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 lfs_server_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/lfs_server" }
 maplit = "1.0"

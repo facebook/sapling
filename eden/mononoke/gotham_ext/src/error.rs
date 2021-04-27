@@ -5,18 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::iter;
-
 use anyhow::Error;
-use gotham::{
-    handler::HandlerError,
-    helpers::http::response::create_response,
-    state::{request_id, State},
-};
+use gotham::{handler::HandlerError, helpers::http::response::create_response, state::State};
 use hyper::{Body, Response, StatusCode};
-use itertools::Itertools;
 use load_limiter::ThrottleReason;
-use serde_derive::{Deserialize, Serialize};
+use mime::Mime;
+
+pub trait ErrorFormatter {
+    type Body: Into<Body>;
+
+    // TODO: Don't take &mut State here, once we've hoisted the error reporting into gotham_ext.
+    fn format(&self, error: &Error, state: &mut State) -> Result<(Self::Body, Mime), Error>;
+}
 
 /// Wrapper around an anyhow::Error to indicate which
 /// HTTP status code should be returned to the client.
@@ -75,33 +75,17 @@ impl HttpError {
         }
     }
 
-    /// Get this error formatted as a String
-    pub fn message(&self) -> String {
-        iter::once(self.error.to_string())
-            .chain(self.error.chain().skip(1).map(|c| c.to_string()))
-            .join(": ")
-    }
-
     /// Turn this error into a type corresponding to the return type
     /// of a Gotham handler, so that it may be directly returned from
     /// a handler function.
-    pub fn into_handler_response(
+    pub fn into_handler_response<F: ErrorFormatter>(
         self,
-        state: State,
+        mut state: State,
+        formatter: &F,
     ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-        // Concatenate all chained errors into a single string.
-        let message = self.message();
-
-        // Package the error message into a JSON response.
-        let res = JsonError {
-            message,
-            request_id: request_id(&state).to_string(),
-        };
-
-        // Convert to JSON; should not fail but return a handler error if so.
-        match serde_json::to_string(&res) {
-            Ok(res) => {
-                let res = create_response(&state, self.status_code, mime::APPLICATION_JSON, res);
+        match formatter.format(&self.error, &mut state) {
+            Ok((body, mime)) => {
+                let res = create_response(&state, self.status_code, mime, body);
                 Ok((state, res))
             }
             Err(error) => Err((state, error.into())),
@@ -113,11 +97,4 @@ impl From<ThrottleReason> for HttpError {
     fn from(r: ThrottleReason) -> Self {
         Self::e429(r)
     }
-}
-
-/// JSON representation of an error to send to the client.
-#[derive(Clone, Serialize, Debug, Deserialize)]
-struct JsonError {
-    message: String,
-    request_id: String,
 }

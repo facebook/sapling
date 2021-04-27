@@ -7,7 +7,7 @@
 
 use std::convert::TryInto;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::stream::{Stream, StreamExt};
 use gotham::{handler::HandlerError, state::State};
@@ -19,7 +19,7 @@ use hyper::{
 use mime::Mime;
 
 use crate::content_encoding::{ContentCompression, ContentEncoding};
-use crate::error::HttpError;
+use crate::error::{ErrorFormatter, HttpError};
 use crate::middleware::PostRequestCallbacks;
 
 use super::content_meta::ContentMeta;
@@ -29,14 +29,19 @@ pub trait TryIntoResponse {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;
 }
 
-pub fn build_response<IR: TryIntoResponse>(
+pub fn build_response<IR: TryIntoResponse, F: ErrorFormatter>(
     res: Result<IR, HttpError>,
     mut state: State,
+    formatter: &F,
 ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-    let res = res.and_then(|c| c.try_into_response(&mut state).map_err(HttpError::e500));
+    let res = res.and_then(|c| {
+        c.try_into_response(&mut state)
+            .context("try_into_response failed!")
+            .map_err(HttpError::e500)
+    });
     match res {
         Ok(res) => Ok((state, res)),
-        Err(e) => e.into_handler_response(state),
+        Err(e) => e.into_handler_response(state, formatter),
     }
 }
 

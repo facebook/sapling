@@ -18,8 +18,8 @@ use gotham::{
     },
     state::{FromState, State},
 };
+use gotham_ext::response::build_response;
 use hyper::{Body, Response, StatusCode};
-use mime;
 use std::pin::Pin;
 
 use crate::batch;
@@ -27,15 +27,15 @@ use crate::download;
 use crate::lfs_server_context::LfsServerContext;
 use crate::upload;
 
+use super::error_formatter::LfsErrorFormatter;
 use super::middleware::ThrottleMiddleware;
-use super::util::build_response;
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
 // as well as creating HTTP responses using build_response().
 fn batch_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = batch::batch(&mut state).await;
-        build_response(res, state)
+        build_response(res, state, &LfsErrorFormatter)
     }
     .boxed()
 }
@@ -43,7 +43,7 @@ fn batch_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 fn download_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = download::download(&mut state).await;
-        build_response(res, state)
+        build_response(res, state, &LfsErrorFormatter)
     }
     .boxed()
 }
@@ -51,7 +51,7 @@ fn download_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 fn download_sha256_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = download::download_sha256(&mut state).await;
-        build_response(res, state)
+        build_response(res, state, &LfsErrorFormatter)
     }
     .boxed()
 }
@@ -59,7 +59,7 @@ fn download_sha256_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 fn upload_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = upload::upload(&mut state).await;
-        build_response(res, state)
+        build_response(res, state, &LfsErrorFormatter)
     }
     .boxed()
 }

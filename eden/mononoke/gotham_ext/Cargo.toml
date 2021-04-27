@@ -18,7 +18,6 @@ gotham_derive = "=0.5.0"
 hex = "0.4"
 http = "0.2"
 hyper = "0.13.10"
-itertools = "0.8"
 lazy_static = "1.0"
 load_limiter = { version = "0.1.0", path = "../load_limiter" }
 mime = "0.3.14"
@@ -28,9 +27,6 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
-serde_derive = "1.0"
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

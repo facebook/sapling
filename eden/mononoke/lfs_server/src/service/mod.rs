@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod error_formatter;
 mod middleware;
 mod router;
-mod util;
 
 pub use router::build_router;
