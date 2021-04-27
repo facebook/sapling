@@ -9,10 +9,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    channel::mpsc,
-    stream::{Stream, StreamExt},
-};
+use futures::stream::{Stream, StreamExt};
 use gotham::{handler::HandlerError, state::State};
 use gotham_derive::StateData;
 use hyper::{
@@ -168,18 +165,11 @@ where
 
         state.put(meta);
 
-        // This is kind of annoying, but right now Hyper requires a Body's stream to be Sync (even
-        // though it doesn't actually need it). For now, we have to work around by spawning the
-        // stream on its own task, and giving Hyper a channel that receives from it.
-        // TODO: This is fixed now in Hyper: https://github.com/hyperium/hyper/pull/2187
-        let (sender, receiver) = mpsc::channel(0);
-        tokio::spawn(stream.map(Ok).forward(sender));
-
         // If PostRequestMiddleware is in use, arrange for post-request
         // callbacks to be delayed until the entire stream has been sent.
         let stream = match state.try_borrow_mut::<PostRequestCallbacks>() {
-            Some(callbacks) => SignalStream::new(receiver, callbacks.delay()).left_stream(),
-            None => receiver.right_stream(),
+            Some(callbacks) => SignalStream::new(stream, callbacks.delay()).left_stream(),
+            None => stream.right_stream(),
         };
 
         // Turn the stream into a TryStream, as expected by hyper::Body.
