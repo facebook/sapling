@@ -305,6 +305,7 @@ members = [
   "cmdlib",
   "cmdlib/environment",
   "cmdlib/x_repo",
+  "cmds/copy_blobstore_keys",
   "commit_rewriting/backsyncer",
   "commit_rewriting/bookmark_renaming",
   "commit_rewriting/bookmarks_validator",
