@@ -18,7 +18,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use gotham_ext::{
     error::HttpError,
-    response::{ContentStream, ResponseTryStreamExt},
+    response::{ResponseStream, ResponseTryStreamExt},
     response::{StreamBody, TryIntoResponse},
 };
 
@@ -49,7 +49,7 @@ where
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
-    let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
 
     StreamBody::new(content_stream, cbor_mime())
 }
@@ -60,7 +60,7 @@ where
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.then(|item| async { to_cbor_bytes(item) });
-    let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
 
     StreamBody::new(content_stream, cbor_mime())
 }

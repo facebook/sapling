@@ -14,7 +14,7 @@ use serde::Deserialize;
 use edenapi_types::wire::{ToWire, WireCloneData, WireIdMapEntry};
 use gotham_ext::error::HttpError;
 use gotham_ext::response::{BytesBody, StreamBody, TryIntoResponse};
-use gotham_ext::response::{ContentStream, ResponseTryStreamExt};
+use gotham_ext::response::{ResponseStream, ResponseTryStreamExt};
 use types::HgId;
 
 use crate::context::ServerContext;
@@ -99,7 +99,7 @@ pub async fn full_idmap_clone_data(state: &mut State) -> Result<impl TryIntoResp
     });
 
     let byte_stream = iddag_byte_stream.chain(idmap_byte_stream);
-    let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
 
     Ok(StreamBody::new(content_stream, cbor::cbor_mime()))
 }

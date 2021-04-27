@@ -20,7 +20,7 @@ use gotham_ext::{
     error::HttpError,
     middleware::ScubaMiddlewareState,
     response::{
-        CompressedContentStream, ContentStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
+        CompressedResponseStream, ResponseStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
     },
 };
 use http::header::{HeaderMap, RANGE};
@@ -116,10 +116,10 @@ async fn fetch_by_key(
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
 
     let stream = match content_encoding {
-        ContentEncoding::Identity => ContentStream::new(stream)
-            .content_length(size)
+        ContentEncoding::Identity => ResponseStream::new(stream)
+            .set_content_length(size)
             .left_stream(),
-        ContentEncoding::Compressed(c) => CompressedContentStream::new(stream, c).right_stream(),
+        ContentEncoding::Compressed(c) => CompressedResponseStream::new(stream, c).right_stream(),
     };
 
     let stream = if ctx.config.track_bytes_sent() {
