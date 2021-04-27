@@ -101,6 +101,30 @@ const PARALLEL_CHECKOUT: usize = 16;
 const MAX_CHECK_UNKNOWN: usize = 5000;
 
 impl CheckoutPlan {
+    pub fn from_action_map(vfs: VFS, map: ActionMap) -> Self {
+        let mut remove = vec![];
+        let mut update_content = vec![];
+        let mut update_meta = vec![];
+        for (path, action) in map.into_iter() {
+            match action {
+                Action::Remove => remove.push(path),
+                Action::UpdateExec(set_x_flag) => {
+                    update_meta.push(UpdateMetaAction { path, set_x_flag })
+                }
+                Action::Update(up) => {
+                    update_content.push(UpdateContentAction::new(path, up.to, up.from.is_none()))
+                }
+            }
+        }
+        Self {
+            remove,
+            update_content,
+            update_meta,
+            progress: None,
+            vfs,
+        }
+    }
+
     /// Processes diff into checkout plan.
     /// Left in the diff is a current commit.
     /// Right is a commit to be checked out.
