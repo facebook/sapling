@@ -10,7 +10,7 @@ use crate::content_encoding::ContentEncoding;
 use super::stream::{CompressedResponseStream, ResponseStream};
 use super::stream_ext::{EndOnErr, ForwardErr};
 
-pub trait ContentMeta {
+pub trait ContentMetaProvider {
     /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent
     /// to the client.
     fn content_encoding(&self) -> ContentEncoding;
@@ -21,7 +21,7 @@ pub trait ContentMeta {
     fn content_length(&self) -> Option<u64>;
 }
 
-impl<S> ContentMeta for ResponseStream<S> {
+impl<S> ContentMetaProvider for ResponseStream<S> {
     fn content_length(&self) -> Option<u64> {
         ResponseStream::content_length(self)
     }
@@ -31,7 +31,7 @@ impl<S> ContentMeta for ResponseStream<S> {
     }
 }
 
-impl ContentMeta for CompressedResponseStream<'_> {
+impl ContentMetaProvider for CompressedResponseStream<'_> {
     fn content_length(&self) -> Option<u64> {
         None
     }
@@ -41,12 +41,12 @@ impl ContentMeta for CompressedResponseStream<'_> {
     }
 }
 
-/// Provide an implementation of ContentMeta that propagates through Either (i.e. left_stream(),
+/// Provide an implementation of ContentMetaProvider that propagates through Either (i.e. left_stream(),
 /// right_stream()).
-impl<A, B> ContentMeta for futures::future::Either<A, B>
+impl<A, B> ContentMetaProvider for futures::future::Either<A, B>
 where
-    A: ContentMeta,
-    B: ContentMeta,
+    A: ContentMetaProvider,
+    B: ContentMetaProvider,
 {
     fn content_length(&self) -> Option<u64> {
         // left_stream(), right_stream() doesn't change the stream data.
@@ -65,9 +65,9 @@ where
     }
 }
 
-impl<S, F> ContentMeta for futures::stream::InspectOk<S, F>
+impl<S, F> ContentMetaProvider for futures::stream::InspectOk<S, F>
 where
-    S: ContentMeta,
+    S: ContentMetaProvider,
 {
     fn content_length(&self) -> Option<u64> {
         // inspect_ok doesn't change the stream data.
@@ -80,9 +80,9 @@ where
     }
 }
 
-impl<St, Si, E> ContentMeta for ForwardErr<St, Si, E>
+impl<St, Si, E> ContentMetaProvider for ForwardErr<St, Si, E>
 where
-    St: ContentMeta,
+    St: ContentMetaProvider,
 {
     fn content_length(&self) -> Option<u64> {
         // forward_err doesn't change the stream data.
@@ -95,9 +95,9 @@ where
     }
 }
 
-impl<S, F> ContentMeta for EndOnErr<S, F>
+impl<S, F> ContentMetaProvider for EndOnErr<S, F>
 where
-    S: ContentMeta,
+    S: ContentMetaProvider,
 {
     fn content_length(&self) -> Option<u64> {
         // If an error occurs, the stream will end prematurely, so the content
