@@ -399,6 +399,7 @@ members = [
   "phases",
   "pushrebase",
   "pushrebase/pushrebase_hook",
+  "pushrebase_mutation_mapping",
   "quiet_stream",
   "reachabilityindex",
   "reachabilityindex/common",

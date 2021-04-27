@@ -229,5 +229,10 @@ pub fn get_pushrebase_hooks(
         pushrebase_hooks.push(hook);
     }
 
+    match repo.pushrebase_mutation_mapping().get_hook() {
+        Some(hook) => pushrebase_hooks.push(hook),
+        None => {}
+    }
+
     Ok(pushrebase_hooks)
 }

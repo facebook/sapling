@@ -50,6 +50,9 @@ use metaconfig_types::{
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use pushrebase_mutation_mapping::{
+    ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
+};
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
@@ -320,6 +323,9 @@ pub enum RepoFactoryError {
     #[error("Error opening bonsai-svnrev mapping")]
     BonsaiSvnrevMapping,
 
+    #[error("Error opening pushrebase mutation mapping")]
+    PushrebaseMutationMapping,
+
     #[error("Error opening filenodes")]
     Filenodes,
 
@@ -486,6 +492,20 @@ impl RepoFactory {
         } else {
             Ok(Arc::new(bonsai_globalrev_mapping))
         }
+    }
+
+    pub async fn pushrebase_mutation_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcPushrebaseMutationMapping> {
+        let sql_factory = self
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let conn = sql_factory
+            .open::<SqlPushrebaseMutationMappingConnection>()
+            .await
+            .context(RepoFactoryError::PushrebaseMutationMapping)?;
+        Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
     }
 
     pub async fn repo_bonsai_svnrev_mapping(

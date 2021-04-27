@@ -36,6 +36,7 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
+use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
@@ -92,6 +93,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
 
     #[facet]
     pub repo_bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
@@ -153,6 +157,7 @@ impl BlobRepo {
         bonsai_git_mapping: ArcBonsaiGitMapping,
         bonsai_globalrev_mapping: ArcBonsaiGlobalrevMapping,
         bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+        pushrebase_mutation_mapping: ArcPushrebaseMutationMapping,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
@@ -183,6 +188,7 @@ impl BlobRepo {
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
             repo_bonsai_svnrev_mapping,
+            pushrebase_mutation_mapping,
             repoid,
             filestore_config,
             sql_phases_factory,
@@ -340,6 +346,10 @@ impl BlobRepo {
 
     pub fn bonsai_svnrev_mapping(&self) -> &RepoBonsaiSvnrevMapping {
         self.inner.repo_bonsai_svnrev_mapping.as_ref()
+    }
+
+    pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {
+        &self.inner.pushrebase_mutation_mapping
     }
 
     pub async fn get_bonsai_from_globalrev(

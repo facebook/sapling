@@ -155,6 +155,9 @@ pub struct MononokeTunables {
     sql_connection_pool_stats_collection_interval_ms: AtomicI64,
 
     bookmarks_cache_ttl_ms: AtomicI64,
+
+    // Disable running SaveMappingPushrebaseHook on every Pushrebase
+    disable_save_mapping_pushrebase_hook: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

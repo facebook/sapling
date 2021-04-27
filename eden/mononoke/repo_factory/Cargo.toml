@@ -31,6 +31,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
 parking_lot = "0.10.2"
 phases = { version = "0.1.0", path = "../phases" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 readonlyblob = { version = "0.1.0", path = "../blobstore/readonlyblob" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }

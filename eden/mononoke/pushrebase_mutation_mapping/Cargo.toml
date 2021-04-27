@@ -1,5 +1,5 @@
 [package]
-name = "test_repo_factory"
+name = "pushrebase_mutation_mapping"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
@@ -7,50 +7,28 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blame = { version = "0.1.0", path = "../../derived_data/blame" }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
-bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
-changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-changesets = { version = "0.1.0", path = "../../changesets" }
-dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
-deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
-derived_data = { version = "0.1.0", path = "../../derived_data" }
-derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
+async-trait = "0.1.45"
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
-filenodes = { version = "0.1.0", path = "../../filenodes" }
-filestore = { version = "0.1.0", path = "../../filestore" }
-fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-git_types = { version = "0.1.0", path = "../../git/git_types" }
-maplit = "1.0"
-memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
-mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
-mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
-newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
-phases = { version = "0.1.0", path = "../../phases" }
-pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
-redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
-rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
-segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
-skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+pushrebase_hook = { version = "0.1.0", path = "../pushrebase/pushrebase_hook" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+tunables = { version = "0.1.0", path = "../tunables" }
+
+[dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+pushrebase = { version = "0.1.0", path = "../pushrebase" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

@@ -45,6 +45,9 @@ use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use pushrebase_mutation_mapping::{
+    ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
+};
 use redactedblobstore::RedactedMetadata;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
@@ -136,6 +139,7 @@ impl TestRepoFactory {
         con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
         con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
+        con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(Connection::with_sqlite(con));
 
         Ok(TestRepoFactory {
@@ -286,6 +290,18 @@ impl TestRepoFactory {
         Ok(Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
             self.metadata_db.clone(),
         )))
+    }
+
+    /// Construct Pushrebase Mutation Mapping using the in-memory metadata
+    /// database.
+    pub fn pushrebase_mutation_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcPushrebaseMutationMapping> {
+        Ok(Arc::new(
+            SqlPushrebaseMutationMappingConnection::from_sql_connections(self.metadata_db.clone())
+                .with_repo_id(repo_identity.id()),
+        ))
     }
 
     /// Construct Repo Bonsai Svnrev Mapping using the in-memory metadata

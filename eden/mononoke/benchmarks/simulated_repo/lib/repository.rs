@@ -48,6 +48,9 @@ use mononoke_types::{
 };
 use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use pushrebase_mutation_mapping::{
+    ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
+};
 use rand::Rng;
 use rand_distr::Distribution;
 use rendezvous::RendezVousOptions;
@@ -207,6 +210,16 @@ impl BenchmarkRepoFactory {
 
     pub fn bonsai_globalrev_mapping(&self) -> Result<ArcBonsaiGlobalrevMapping> {
         Ok(Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?))
+    }
+
+    pub fn pushrebase_mutation_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcPushrebaseMutationMapping> {
+        Ok(Arc::new(
+            SqlPushrebaseMutationMappingConnection::with_sqlite_in_memory()?
+                .with_repo_id(repo_identity.id()),
+        ))
     }
 
     pub fn repo_bonsai_svnrev_mapping(
