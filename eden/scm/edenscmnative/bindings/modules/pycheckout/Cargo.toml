@@ -14,6 +14,7 @@ pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
 pymanifest = { path = "../pymanifest" }
 pyrevisionstore = { path = "../pyrevisionstore" }
+pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
 vfs = { path = "../../../../lib/vfs" }
 tracing = "0.1"

@@ -18,6 +18,7 @@ use pathmatcher::{AlwaysMatcher, Matcher};
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::{contentstore, filescmstore};
+use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
 use std::collections::HashMap;
 use std::time::SystemTime;
@@ -80,6 +81,14 @@ py_class!(class checkoutplan |py| {
             plan.check_unknown_files(&manifest, store, &mut state))
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
+    }
+
+    def check_conflicts(&self, status: &PyStatus) -> PyResult<Vec<String>> {
+        let status = status.extract_inner_ref(py);
+        let plan = self.plan(py);
+        let conflicts = plan.check_conflicts(status);
+        let conflicts = conflicts.into_iter().map(ToString::to_string).collect();
+        Ok(conflicts)
     }
 
     def apply(&self, content_store: &contentstore) -> PyResult<PyNone> {
