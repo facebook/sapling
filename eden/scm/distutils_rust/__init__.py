@@ -217,11 +217,24 @@ rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
-
+"""
+        if os.path.exists("/usr/bin/lld"):
+            # lld is the fastest.
+            # https://llvm.org/devmtg/2017-10/slides/Ueyama-lld.pdf
+            config += """
+# Use lld on Linux to improve build time.
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-fuse-ld=lld"]
+"""
+        elif os.path.exists("/usr/bin/ld.gold"):
+            # ld.gold is faster than ld.
+            config += """
 # Use ld.gold on Linux to improve build time.
-
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-args=-fuse-ld=gold"]
+"""
+
+        config += """
 
 [build]
 """
