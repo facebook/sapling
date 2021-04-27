@@ -46,7 +46,6 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
     let request = parse_wire_request::<WireCompleteTreeRequest>(state).await?;
 
     Ok(cbor_stream(
-        rctx,
         fetch_trees_under_path(&repo, request)?.map(|r| Ok(r.to_wire())),
     ))
 }

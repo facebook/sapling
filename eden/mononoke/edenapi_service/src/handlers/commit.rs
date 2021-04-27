@@ -70,7 +70,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
     let response = stream::iter(hgid_list)
         .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
         .map_ok(|response| response.to_wire());
-    Ok(cbor_stream(rctx, response))
+    Ok(cbor_stream(response))
 }
 
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -138,7 +138,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
             futures::future::ready(to_keep)
         })
         .map(|response| response.to_wire());
-    Ok(simple_cbor_stream(rctx, response))
+    Ok(simple_cbor_stream(response))
 }
 
 pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -161,7 +161,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map(move |hg_id| commit_revlog_data(hg_repo_ctx.clone(), hg_id));
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
-    Ok(cbor_stream(rctx, response))
+    Ok(cbor_stream(response))
 }
 
 async fn translate_location(

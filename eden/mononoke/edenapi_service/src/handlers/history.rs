@@ -54,7 +54,6 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
     let request = parse_wire_request::<WireHistoryRequest>(state).await?;
 
     Ok(cbor_stream(
-        rctx,
         fetch_history(repo, request)
             .await
             .map(|r| r.map(|e| e.to_wire())),

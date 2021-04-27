@@ -49,7 +49,6 @@ pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let request = parse_wire_request::<WireFileRequest>(state).await?;
 
     Ok(cbor_stream(
-        rctx,
         fetch_all_files(repo, request).map(|r| r.map(|v| v.to_wire())),
     ))
 }

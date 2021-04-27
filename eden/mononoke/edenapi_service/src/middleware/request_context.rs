@@ -5,57 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use futures::{
-    channel::mpsc::{self, Sender},
-    prelude::*,
-};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
 use load_limiter::LoadLimiterEnvironment;
-use slog::{error, o, Logger};
+use slog::{o, Logger};
 
-use cloned::cloned;
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
 use scuba_ext::MononokeScubaSampleBuilder;
 use sshrelay::Metadata;
 
-const ERROR_CHANNEL_CAPACITY: usize = 1000;
-
 #[derive(StateData, Clone)]
 pub struct RequestContext {
     pub ctx: CoreContext,
     pub logger: Logger,
-    pub error_tx: Sender<Error>,
 }
 
 impl RequestContext {
     async fn new(ctx: CoreContext, logger: Logger) -> Self {
-        let (error_tx, mut error_rx) = mpsc::channel(ERROR_CHANNEL_CAPACITY);
-
-        let rctx = Self {
-            ctx,
-            logger,
-            error_tx,
-        };
-
-        // Spawn error logging task.
-        //
-        // NOTE: Make sure that rctx isn't cloned and then moved into this task as it will lead to
-        // a memory leak due to error_rx never returning None. See D26451527 for more information.
-        let _ = tokio::spawn({
-            cloned!(rctx.logger);
-            async move {
-                while let Some(error) = error_rx.next().await {
-                    error!(&logger, "{:?}", error);
-                }
-            }
-        });
-
-        rctx
+        Self { ctx, logger }
     }
 }
 

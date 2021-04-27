@@ -99,7 +99,7 @@ pub async fn full_idmap_clone_data(state: &mut State) -> Result<impl TryIntoResp
     });
 
     let byte_stream = iddag_byte_stream.chain(idmap_byte_stream);
-    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).capture_first_err();
 
     Ok(StreamBody::new(content_stream, cbor::cbor_mime()))
 }

@@ -45,7 +45,6 @@ pub async fn bookmarks(state: &mut State) -> Result<impl TryIntoResponse, HttpEr
 
     let request = parse_wire_request::<WireBookmarkRequest>(state).await?;
     Ok(cbor_stream(
-        rctx,
         fetch_all_bookmarks(repo, request).map(|r| r.map(|v| v.to_wire())),
     ))
 }

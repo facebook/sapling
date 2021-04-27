@@ -58,7 +58,6 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     }
 
     Ok(cbor_stream(
-        rctx,
         fetch_all_trees(repo, request).map(|r| Ok(r.to_wire())),
     ))
 }

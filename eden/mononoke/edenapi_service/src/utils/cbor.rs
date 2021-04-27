@@ -23,7 +23,6 @@ use gotham_ext::{
 };
 
 use crate::errors::ErrorKind;
-use crate::middleware::RequestContext;
 
 use super::get_request_body;
 
@@ -40,27 +39,25 @@ pub fn to_cbor_bytes<S: Serialize>(s: S) -> Result<Bytes, Error> {
 }
 
 /// Serialize each item of the input stream as CBOR and return a streaming
-/// response. Any errors yielded by the stream will be filtered out and reported
-/// to the request context; this ensures that a mid-stream error will not
-/// prematurely terminate the response.
-pub fn cbor_stream<S, T>(rctx: RequestContext, stream: S) -> impl TryIntoResponse
+/// response. Any errors yielded by the stream will be filtered out.
+pub fn cbor_stream<S, T>(stream: S) -> impl TryIntoResponse
 where
     S: Stream<Item = Result<T, Error>> + Send + 'static,
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
-    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).capture_first_err();
 
     StreamBody::new(content_stream, cbor_mime())
 }
 
-pub fn simple_cbor_stream<S, T>(rctx: RequestContext, stream: S) -> impl TryIntoResponse
+pub fn simple_cbor_stream<S, T>(stream: S) -> impl TryIntoResponse
 where
     S: Stream<Item = T> + Send + 'static,
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.then(|item| async { to_cbor_bytes(item) });
-    let content_stream = ResponseStream::new(byte_stream).forward_err(rctx.error_tx);
+    let content_stream = ResponseStream::new(byte_stream).capture_first_err();
 
     StreamBody::new(content_stream, cbor_mime())
 }
