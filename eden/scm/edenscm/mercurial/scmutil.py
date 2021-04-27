@@ -630,7 +630,10 @@ def revrange(repo, specs, localalias=None):
     allspecs = []
     for spec in specs:
         if isint(spec):
-            spec = revsetlang.formatspec("rev(%d)", spec)
+            # specs are usually strings. int means legacy code using rev
+            # numbers. revsetlang no longer accepts int revs. Wrap it before
+            # passing to revsetlang.
+            spec = revsetlang.formatspec("%d", spec)
         allspecs.append(spec)
     legacyrevnum = repo.ui.config("devel", "legacy.revnum")
     with repo.ui.configoverride({("devel", "legacy.revnum:real"): legacyrevnum}):
