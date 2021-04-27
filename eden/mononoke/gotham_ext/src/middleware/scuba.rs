@@ -20,7 +20,7 @@ use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use crate::{
-    middleware::{ClientIdentity, Middleware, PostResponseCallbacks},
+    middleware::{ClientIdentity, Middleware, PostResponseCallbacks, PostResponseInfo},
     response::HeadersMeta,
 };
 
@@ -108,7 +108,7 @@ impl Into<String> for HttpScubaKey {
 pub trait ScubaHandler: Send + 'static {
     fn from_state(state: &State) -> Self;
 
-    fn add_stats(self, scuba: &mut MononokeScubaSampleBuilder);
+    fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder);
 }
 
 #[derive(Clone)]
@@ -119,7 +119,7 @@ impl ScubaHandler for DefaultScubaHandler {
         DefaultScubaHandler
     }
 
-    fn add_stats(self, _scuba: &mut MononokeScubaSampleBuilder) {}
+    fn populate_scuba(self, _: &PostResponseInfo, _scuba: &mut MononokeScubaSampleBuilder) {}
 }
 
 #[derive(Clone)]
@@ -278,7 +278,7 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
             scuba.add(HttpScubaKey::ResponseBytesSent, meta.body().bytes_sent);
         }
 
-        handler.add_stats(&mut scuba);
+        handler.populate_scuba(info, &mut scuba);
 
         scuba.log();
     });

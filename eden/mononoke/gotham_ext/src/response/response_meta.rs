@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use futures::channel::oneshot::Receiver;
 use gotham_derive::StateData;
 
@@ -29,6 +30,7 @@ impl HeadersMeta {
 
 pub struct BodyMeta {
     pub bytes_sent: u64,
+    pub errors: Vec<Error>,
 }
 
 pub struct ResponseMeta {
@@ -49,6 +51,7 @@ impl ResponseMeta {
 enum PendingBodyMeta {
     Immediate(u64),
     Deferred(Receiver<BodyMeta>),
+    Error(Error),
 }
 
 #[derive(StateData)]
@@ -76,15 +79,32 @@ impl PendingResponseMeta {
         }
     }
 
+    pub fn error(error: Error) -> Self {
+        Self {
+            headers: HeadersMeta::Sized(0),
+            body: PendingBodyMeta::Error(error),
+        }
+    }
+
     /// Wait for this response to finish, and return the associated ResponseMeta. For a
     pub async fn finish(self) -> ResponseMeta {
         let Self { headers, body } = self;
 
         let body = match body {
-            PendingBodyMeta::Immediate(bytes_sent) => BodyMeta { bytes_sent },
+            PendingBodyMeta::Immediate(bytes_sent) => BodyMeta {
+                bytes_sent,
+                errors: Vec::new(),
+            },
             PendingBodyMeta::Deferred(receiver) => match receiver.await {
                 Ok(body) => body,
-                Err(_) => BodyMeta { bytes_sent: 0 },
+                Err(_) => BodyMeta {
+                    bytes_sent: 0,
+                    errors: vec![Error::msg("Deferred body meta was not sent")],
+                },
+            },
+            PendingBodyMeta::Error(e) => BodyMeta {
+                bytes_sent: 0,
+                errors: vec![e],
             },
         };
 

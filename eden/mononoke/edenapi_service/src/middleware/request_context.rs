@@ -30,7 +30,6 @@ pub struct RequestContext {
     pub ctx: CoreContext,
     pub logger: Logger,
     pub error_tx: Sender<Error>,
-    pub handler_error_msg: Option<String>,
 }
 
 impl RequestContext {
@@ -41,7 +40,6 @@ impl RequestContext {
             ctx,
             logger,
             error_tx,
-            handler_error_msg: None,
         };
 
         // Spawn error logging task.

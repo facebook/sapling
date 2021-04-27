@@ -27,7 +27,6 @@ use serde::{Deserialize, Serialize};
 use gotham_ext::{error::ErrorFormatter, response::build_response};
 
 use crate::context::ServerContext;
-use crate::middleware::RequestContext;
 
 mod bookmarks;
 mod clone;
@@ -103,12 +102,8 @@ struct JsonErrorFomatter;
 impl ErrorFormatter for JsonErrorFomatter {
     type Body = Vec<u8>;
 
-    fn format(&self, error: &Error, state: &mut State) -> Result<(Self::Body, Mime), Error> {
+    fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error> {
         let message = format!("{:#}", error);
-
-        if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
-            log_ctx.handler_error_msg = Some(message.clone());
-        }
 
         // Package the error message into a JSON response.
         let res = JsonError {

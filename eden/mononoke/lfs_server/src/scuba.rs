@@ -7,7 +7,7 @@
 
 use gotham::state::State;
 
-use gotham_ext::middleware::ScubaHandler;
+use gotham_ext::middleware::{PostResponseInfo, ScubaHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::middleware::RequestContext;
@@ -86,7 +86,7 @@ impl ScubaHandler for LfsScubaHandler {
         }
     }
 
-    fn add_stats(self, scuba: &mut MononokeScubaSampleBuilder) {
+    fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add_opt(LfsScubaKey::ClientAttempt, self.client_attempt);
 
         if let Some(ctx) = self.ctx {
@@ -98,8 +98,8 @@ impl ScubaHandler for LfsScubaHandler {
                 scuba.add(LfsScubaKey::Method, method.to_string());
             }
 
-            if let Some(err_msg) = ctx.error_msg {
-                scuba.add(LfsScubaKey::ErrorMessage, err_msg.as_ref());
+            if let Some(err) = info.first_error() {
+                scuba.add(LfsScubaKey::ErrorMessage, format!("{:?}", err));
             }
 
             ctx.ctx.perf_counters().insert_perf_counters(scuba);

@@ -86,6 +86,7 @@ fn send_body_meta<S>(this: SignalStreamProjection<S>) {
     if let Some(sender) = this.sender.take() {
         let _ = sender.send(BodyMeta {
             bytes_sent: *this.size_sent,
+            errors: Vec::new(),
         });
     }
 }

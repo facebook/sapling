@@ -53,7 +53,11 @@ pub fn build_error_response<F: ErrorFormatter>(
     mut state: State,
     formatter: &F,
 ) -> Result<(State, Response<Body>), (State, HandlerError)> {
-    match formatter.format(&err.error, &mut state) {
+    let formatted = formatter.format(&err.error, &state);
+
+    state.put(PendingResponseMeta::error(err.error));
+
+    match formatted {
         Ok((body, mime)) => {
             let res = create_response(&state, err.status_code, mime, body);
             Ok((state, res))

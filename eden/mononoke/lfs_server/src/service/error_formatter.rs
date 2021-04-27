@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::middleware::RequestContext;
 use anyhow::{Context, Error};
 use gotham::state::{request_id, State};
 use gotham_ext::error::ErrorFormatter;
@@ -17,12 +16,8 @@ pub struct LfsErrorFormatter;
 impl ErrorFormatter for LfsErrorFormatter {
     type Body = Vec<u8>;
 
-    fn format(&self, error: &Error, state: &mut State) -> Result<(Self::Body, Mime), Error> {
+    fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error> {
         let message = format!("{:#}", error);
-
-        if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
-            log_ctx.set_error_msg(message.clone());
-        }
 
         let res = ResponseError {
             message,

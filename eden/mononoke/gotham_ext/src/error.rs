@@ -14,8 +14,7 @@ use mime::Mime;
 pub trait ErrorFormatter {
     type Body: Into<Body>;
 
-    // TODO: Don't take &mut State here, once we've hoisted the error reporting into gotham_ext.
-    fn format(&self, error: &Error, state: &mut State) -> Result<(Self::Body, Mime), Error>;
+    fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error>;
 }
 
 /// Wrapper around an anyhow::Error to indicate which

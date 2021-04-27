@@ -60,10 +60,6 @@ impl RequestContext {
         self.repository = Some(repository);
         self.method = Some(method);
     }
-
-    pub fn set_error_msg(&mut self, error_msg: String) {
-        self.error_msg = Some(error_msg);
-    }
 }
 
 #[derive(Clone)]

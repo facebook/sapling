@@ -8,6 +8,7 @@
 use std::panic::RefUnwindSafe;
 use std::time::{Duration, Instant};
 
+use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use futures::prelude::*;
@@ -27,6 +28,12 @@ pub struct PostResponseInfo {
     pub duration: Option<Duration>,
     pub client_hostname: Option<String>,
     pub meta: Option<ResponseMeta>,
+}
+
+impl PostResponseInfo {
+    pub fn first_error(&self) -> Option<&Error> {
+        self.meta.as_ref()?.body().errors.first()
+    }
 }
 
 /// Trait allowing post-request callbacks to be configured dynamically.
