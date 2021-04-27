@@ -51,8 +51,8 @@ macro_rules! impl_blobstore_conversions {
 }
 
 /// You can use this macro under the following conditions:
-/// 1. handle_thrift_type can be serialized into handle_type using thrift compact protocol
-/// 2. value_thrift_type can be serialized into value_type using thrift compact protocol
+/// 1. handle_type needs to implement TryFrom<handle_thrift_type> and Into<handle_thrift_type>
+/// 2. same for value_type and value_thrift_type
 /// 3. value_type has method `fn handle(&self) -> handle_type`
 /// 4. handle_type has method `fb blobstore_key(&self) -> String`
 #[macro_export]
