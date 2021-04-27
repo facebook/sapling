@@ -55,6 +55,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     )?;
     m.add(py, "revlogindex", pyrevlogindex::init_module(py, &name)?)?;
     m.add(py, "sptui", pysptui::init_module(py, &name)?)?;
+    m.add(py, "status", pystatus::init_module(py, &name)?)?;
     m.add(py, "threading", pythreading::init_module(py, &name)?)?;
     m.add(py, "tracing", pytracing::init_module(py, &name)?)?;
     m.add(py, "treestate", pytreestate::init_module(py, &name)?)?;
