@@ -15,7 +15,7 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, Timestamp};
 use slog::info;
 
-use pushrebase::{
+use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use sql::Transaction;

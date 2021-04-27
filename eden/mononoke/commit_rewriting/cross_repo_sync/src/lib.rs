@@ -54,7 +54,7 @@ use thiserror::Error;
 use topo_sort::sort_topological;
 use tunables::tunables;
 
-use pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use reporting::log_rewrite;
 pub use reporting::CommitSyncContext;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;

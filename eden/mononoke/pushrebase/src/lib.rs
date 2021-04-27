@@ -81,7 +81,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tunables::tunables;
 
-pub use pushrebase_hook::{
+use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 

@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use mononoke_types::{hash::GitSha1, BonsaiChangesetMut, ChangesetId};
-use pushrebase::{
+use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use sql::Transaction;

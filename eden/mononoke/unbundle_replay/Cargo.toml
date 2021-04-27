@@ -30,6 +30,7 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
+pushrebase_hook = { version = "0.1.0", path = "../pushrebase/pushrebase_hook" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }

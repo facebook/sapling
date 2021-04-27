@@ -15,7 +15,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::RepoReadOnly;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId};
-use pushrebase::{
+use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use repo_read_write_status::RepoReadWriteFetcher;

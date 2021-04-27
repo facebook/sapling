@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use ::pushrebase_hook::{
+    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
+};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use pushrebase::{
-    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
-};
 use sql::Transaction;
 use tunables::tunables;
 

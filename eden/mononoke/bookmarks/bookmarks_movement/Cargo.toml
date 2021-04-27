@@ -30,6 +30,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_read_write_status" }
 revset = { version = "0.1.0", path = "../../revset" }

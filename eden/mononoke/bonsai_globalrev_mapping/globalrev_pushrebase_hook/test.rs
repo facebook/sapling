@@ -19,9 +19,9 @@ use mononoke_types::{
     globalrev::{Globalrev, START_COMMIT_GLOBALREV},
     BonsaiChangesetMut, ChangesetId, RepositoryId,
 };
-use pushrebase::{
-    do_pushrebase_bonsai, PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook,
-    RebasedChangesets,
+use pushrebase::do_pushrebase_bonsai;
+use pushrebase_hook::{
+    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use rand::Rng;
 use sql::Transaction;

@@ -13,7 +13,7 @@ use mononoke_types::{
     globalrev::{Globalrev, GLOBALREV_EXTRA, START_COMMIT_GLOBALREV},
     BonsaiChangesetMut, ChangesetId, RepositoryId,
 };
-use pushrebase::{
+use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use sql::Transaction;

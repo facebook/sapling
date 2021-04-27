@@ -22,7 +22,7 @@ use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
 };
 use mononoke_types::BonsaiChangeset;
-use pushrebase::PushrebaseHook;
+use pushrebase_hook::PushrebaseHook;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 
