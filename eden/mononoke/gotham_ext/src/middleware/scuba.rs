@@ -112,17 +112,6 @@ pub trait ScubaHandler: Send + 'static {
 }
 
 #[derive(Clone)]
-pub struct DefaultScubaHandler;
-
-impl ScubaHandler for DefaultScubaHandler {
-    fn from_state(_state: &State) -> Self {
-        DefaultScubaHandler
-    }
-
-    fn populate_scuba(self, _: &PostResponseInfo, _scuba: &mut MononokeScubaSampleBuilder) {}
-}
-
-#[derive(Clone)]
 pub struct ScubaMiddleware<H> {
     scuba: MononokeScubaSampleBuilder,
     _phantom: PhantomHandler<H>,

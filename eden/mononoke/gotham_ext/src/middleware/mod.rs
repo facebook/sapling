@@ -25,9 +25,7 @@ pub use self::log::LogMiddleware;
 pub use self::post_request::{
     PostResponseCallbacks, PostResponseConfig, PostResponseInfo, PostResponseMiddleware,
 };
-pub use self::scuba::{
-    DefaultScubaHandler, HttpScubaKey, ScubaHandler, ScubaMiddleware, ScubaMiddlewareState,
-};
+pub use self::scuba::{HttpScubaKey, ScubaHandler, ScubaMiddleware, ScubaMiddlewareState};
 pub use self::server_identity::ServerIdentityMiddleware;
 pub use self::timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
 pub use self::tls_session_data::TlsSessionDataMiddleware;
