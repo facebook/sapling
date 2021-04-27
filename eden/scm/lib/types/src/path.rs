@@ -195,6 +195,10 @@ impl RepoPathBuf {
         }
     }
 
+    pub fn to_lower_case(&self) -> Self {
+        Self(self.0.to_lowercase())
+    }
+
     fn append(&mut self, s: &str) {
         if !self.0.is_empty() {
             self.0.push(SEPARATOR);
@@ -351,6 +355,10 @@ impl RepoPath {
     /// This should be strictly equivalent to: `self.parents().rev()`.
     pub fn ancestors(&'_ self) -> Ancestors<'_> {
         Ancestors::new(self)
+    }
+
+    pub fn to_lower_case(&self) -> RepoPathBuf {
+        RepoPathBuf(self.0.to_lowercase())
     }
 }
 
