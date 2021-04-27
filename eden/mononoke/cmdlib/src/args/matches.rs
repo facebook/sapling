@@ -19,6 +19,7 @@ use cached_config::ConfigStore;
 use clap::{ArgMatches, Values};
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
+use megarepo_config::MononokeMegarepoConfigsOptions;
 use panichandler::{self, Fate};
 use rendezvous::RendezVousOptions;
 use slog::{debug, o, trace, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -43,21 +44,24 @@ use tunables::init_tunables_worker;
 use crate::helpers::create_runtime;
 use crate::log;
 
-use super::app::{
-    ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,
-    BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG, CACHELIB_ATTEMPT_ZSTD_ARG,
-    CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG,
-    LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MYSQL_CONN_OPEN_TIMEOUT,
-    MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT,
-    MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
-    MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
-    MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
-    READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
-    TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG, WRITE_BURST_BYTES_ARG,
-    WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
-};
-use super::cache::parse_and_init_cachelib;
 use super::parse_config_spec_to_path;
+use super::{
+    app::{
+        ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,
+        BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG, CACHELIB_ATTEMPT_ZSTD_ARG,
+        CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG,
+        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MYSQL_CONN_OPEN_TIMEOUT,
+        MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT,
+        MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
+        MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
+        READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
+        RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY,
+        WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG,
+        WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+    },
+    cache::parse_and_init_cachelib,
+};
 
 trait Drain =
     slog::Drain<Ok = (), Err = Never> + Send + Sync + UnwindSafe + RefUnwindSafe + 'static;
@@ -111,6 +115,7 @@ impl<'a> MononokeMatches<'a> {
             parse_readonly_storage(&matches).context("Failed to parse readonly storage options")?;
         let rendezvous_options =
             parse_rendezvous_options(&matches).context("Failed to parse rendezvous options")?;
+        let megarepo_configs_options = parse_mononoke_megarepo_configs_options(&matches)?;
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
@@ -127,6 +132,7 @@ impl<'a> MononokeMatches<'a> {
                 blobstore_options,
                 readonly_storage,
                 rendezvous_options,
+                megarepo_configs_options,
             }),
             app_data,
         })
@@ -656,6 +662,27 @@ fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOption
         .parse()
         .with_context(|| format!("Provided {} is not an integer", RENDEZVOUS_FREE_CONNECTIONS))?;
     Ok(RendezVousOptions { free_connections })
+}
+
+fn parse_mononoke_megarepo_configs_options(
+    matches: &ArgMatches<'_>,
+) -> Result<MononokeMegarepoConfigsOptions, Error> {
+    let use_test: bool = matches
+        .value_of(WITH_TEST_MEGAREPO_CONFIGS_CLIENT)
+        .expect("A default is set, should never be None")
+        .parse()
+        .with_context(|| {
+            format!(
+                "Provided {} is not a bool",
+                WITH_TEST_MEGAREPO_CONFIGS_CLIENT
+            )
+        })?;
+
+    if use_test {
+        Ok(MononokeMegarepoConfigsOptions::Test)
+    } else {
+        Ok(MononokeMegarepoConfigsOptions::Prod)
+    }
 }
 
 fn init_tunables<'a>(

@@ -16,7 +16,10 @@ use anyhow::{Context, Error};
 pub use bookmarks::BookmarkName;
 use futures::future;
 use futures_watchdog::WatchdogExt;
-use megarepo_config::{CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs};
+use megarepo_config::{
+    CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
+    TestMononokeMegarepoConfigs,
+};
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, o};
@@ -100,7 +103,15 @@ impl Mononoke {
         let fb = env.repo_factory.env.fb;
         let logger = env.repo_factory.env.logger.new(o!("megarepo" => "configs")); // TODO: maybe this should just be empty?
         let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> =
-            Arc::new(CfgrMononokeMegarepoConfigs::new(fb, &logger)?);
+            match env.repo_factory.env.megarepo_configs_options {
+                MononokeMegarepoConfigsOptions::Prod => {
+                    Arc::new(CfgrMononokeMegarepoConfigs::new(fb, &logger)?)
+                }
+                MononokeMegarepoConfigsOptions::Test => {
+                    Arc::new(TestMononokeMegarepoConfigs::new(&logger))
+                }
+            };
+
 
         Ok(Self {
             repos,
@@ -187,7 +198,6 @@ mod test_impl {
     use live_commit_sync_config::{
         LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
     };
-    use megarepo_config::TestMononokeMegarepoConfigs;
     use metaconfig_types::CommitSyncConfig;
     use synced_commit_mapping::SyncedCommitMapping;
 

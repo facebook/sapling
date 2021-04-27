@@ -40,6 +40,7 @@ COMMON_ARGS=(
   --tunables-config "$(get_configerator_relative_path "${MONONOKE_TUNABLES_PATH}")"
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
+  --with-test-megarepo-configs-client=true
 )
 
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"

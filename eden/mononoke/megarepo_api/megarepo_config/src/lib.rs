@@ -26,6 +26,18 @@ pub use facebook::CfgrMononokeMegarepoConfigs;
 pub use oss::CfgrMononokeMegarepoConfigs;
 pub use test_impl::TestMononokeMegarepoConfigs;
 
+/// Options for instantiating MononokeMegarepoConfigs
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum MononokeMegarepoConfigsOptions {
+    /// Create prod-style `MononokeMegarepoConfigs` implementation
+    /// (requires fb infra to function correctly, although will
+    /// successfully instantiate with `unimplemented!` methods
+    /// when built outside of fbcode)
+    Prod,
+    /// Create test-style `MononokeMegarepoConfigs` implementation
+    Test,
+}
+
 /// An API for Megarepo Configs
 #[async_trait]
 pub trait MononokeMegarepoConfigs: Send + Sync {

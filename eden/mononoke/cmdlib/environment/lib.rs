@@ -8,6 +8,7 @@
 use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
+use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
 use rendezvous::RendezVousOptions;
 use slog::Logger;
@@ -39,4 +40,5 @@ pub struct MononokeEnvironment {
     pub blobstore_options: BlobstoreOptions,
     pub readonly_storage: ReadOnlyStorage,
     pub rendezvous_options: RendezVousOptions,
+    pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
 }

@@ -78,6 +78,7 @@ pub const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
 pub const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 
 pub const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
+pub const WITH_TEST_MEGAREPO_CONFIGS_CLIENT: &str = "with-test-megarepo-configs-client";
 pub const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -565,6 +566,8 @@ impl MononokeAppBuilder {
             app = add_rendezvous_args(app);
         }
 
+        app = add_megarepo_svc_args(app);
+
         MononokeClapApp {
             clap: app,
             app_data: MononokeAppData {
@@ -1023,5 +1026,20 @@ fn add_rendezvous_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true)
             .default_value("5")
             .help("How many concurrent connections to allow before batching kicks in"),
+    )
+}
+
+fn add_megarepo_svc_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(WITH_TEST_MEGAREPO_CONFIGS_CLIENT)
+            .long(WITH_TEST_MEGAREPO_CONFIGS_CLIENT)
+            .help(
+                "whether to instantiate test-style MononokeMegarepoConfigs. \
+                     Prod-style instance reads/writes from/to configerator and \
+                     requires fb environment to work properly.",
+            )
+            .takes_value(true)
+            .possible_values(&["true", "false"])
+            .default_value("false"),
     )
 }
