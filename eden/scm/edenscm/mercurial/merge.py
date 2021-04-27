@@ -2416,9 +2416,7 @@ def update(
                     with repo.dirstate.parentchange():
                         repo.setparents(fp1, fp2)
                         with progress.spinner(repo.ui, "recording"):
-                            plan.record_updates(
-                                repo.dirstate._map._tree
-                            )
+                            plan.record_updates(repo.dirstate._map._tree)
                         # update completed, clear state
                         repo.localvfs.unlink("updatestate")
                         repo.localvfs.tryunlink("updateprogress")
