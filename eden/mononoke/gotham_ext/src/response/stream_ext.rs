@@ -14,7 +14,7 @@ use futures::{
 };
 use pin_project::pin_project;
 
-pub trait GothamTryStreamExt: TryStream {
+pub trait ResponseTryStreamExt: TryStream {
     /// Filter out errors from a `TryStream` and forward them into the given
     /// `Sink`, transforming the `TryStream` into a `Stream<Item=Self::Ok>`.
     ///
@@ -41,7 +41,7 @@ pub trait GothamTryStreamExt: TryStream {
     }
 }
 
-impl<S: TryStream + ?Sized> GothamTryStreamExt for S {}
+impl<S: TryStream + ?Sized> ResponseTryStreamExt for S {}
 
 #[pin_project]
 pub struct ForwardErr<St, Si, E> {

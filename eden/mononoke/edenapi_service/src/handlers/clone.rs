@@ -12,10 +12,9 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::wire::{ToWire, WireCloneData, WireIdMapEntry};
-use gotham_ext::content::ContentStream;
 use gotham_ext::error::HttpError;
 use gotham_ext::response::{BytesBody, StreamBody, TryIntoResponse};
-use gotham_ext::stream_ext::GothamTryStreamExt;
+use gotham_ext::response::{ContentStream, ResponseTryStreamExt};
 use types::HgId;
 
 use crate::context::ServerContext;

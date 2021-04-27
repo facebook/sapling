@@ -17,10 +17,9 @@ use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Serialize};
 
 use gotham_ext::{
-    content::ContentStream,
     error::HttpError,
+    response::{ContentStream, ResponseTryStreamExt},
     response::{StreamBody, TryIntoResponse},
-    stream_ext::GothamTryStreamExt,
 };
 
 use crate::errors::ErrorKind;

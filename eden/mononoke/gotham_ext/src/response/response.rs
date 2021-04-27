@@ -18,11 +18,12 @@ use hyper::{
 };
 use mime::Mime;
 
-use crate::content::stream::ContentMeta;
 use crate::content_encoding::{ContentCompression, ContentEncoding};
 use crate::error::HttpError;
 use crate::middleware::PostRequestCallbacks;
-use crate::signal_stream::SignalStream;
+
+use super::content_meta::ContentMeta;
+use super::signal_stream::SignalStream;
 
 pub trait TryIntoResponse {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;

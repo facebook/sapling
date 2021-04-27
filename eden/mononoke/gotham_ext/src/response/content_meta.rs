@@ -16,9 +16,9 @@ use futures::{
 };
 use pin_project::pin_project;
 
-use crate::stream_ext::{EndOnErr, ForwardErr};
-
 use crate::content_encoding::{ContentCompression, ContentEncoding};
+
+use super::stream_ext::{EndOnErr, ForwardErr};
 
 pub trait ContentMeta {
     /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent

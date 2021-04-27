@@ -16,12 +16,12 @@ use slog::error;
 
 use filestore::{self, Alias, FetchKey, Range};
 use gotham_ext::{
-    content::{CompressedContentStream, ContentStream},
     content_encoding::ContentEncoding,
     error::HttpError,
     middleware::ScubaMiddlewareState,
-    response::{StreamBody, TryIntoResponse},
-    stream_ext::GothamTryStreamExt,
+    response::{
+        CompressedContentStream, ContentStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
+    },
 };
 use http::header::{HeaderMap, RANGE};
 use mononoke_types::{hash::Sha256, ContentId};
