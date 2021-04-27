@@ -11,7 +11,6 @@ use crate::{facebook::*, *};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use fbinit::FacebookInit;
-use futures_ext::BoxFuture;
 use slog::Logger;
 use std::time::Duration;
 
@@ -126,15 +125,6 @@ pub async fn myrouter_ready(
         }
     }
 
-    fb_unimplemented!()
-}
-
-pub fn create_raw_xdb_connections(
-    _: FacebookInit,
-    _: String,
-    _: ReadConnectionType,
-    _: bool,
-) -> BoxFuture<SqlConnections, Error> {
     fb_unimplemented!()
 }
 

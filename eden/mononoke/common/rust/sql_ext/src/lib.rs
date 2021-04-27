@@ -10,59 +10,10 @@ mod oss;
 pub mod replication;
 mod sqlite;
 
-use sql::{Connection, Transaction};
+use sql::Transaction;
 
+pub use sql::{SqlConnections, SqlShardedConnections};
 pub use sqlite::{open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path};
-
-#[derive(Clone)]
-pub struct SqlConnections {
-    pub write_connection: Connection,
-    pub read_connection: Connection,
-    pub read_master_connection: Connection,
-}
-
-impl SqlConnections {
-    /// Create SqlConnections from a single connection.
-    pub fn new_single(connection: Connection) -> Self {
-        Self {
-            write_connection: connection.clone(),
-            read_connection: connection.clone(),
-            read_master_connection: connection,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct SqlShardedConnections {
-    pub write_connections: Vec<Connection>,
-    pub read_connections: Vec<Connection>,
-    pub read_master_connections: Vec<Connection>,
-}
-
-impl SqlShardedConnections {
-    pub fn is_empty(&self) -> bool {
-        self.write_connections.is_empty()
-    }
-}
-
-impl From<Vec<SqlConnections>> for SqlShardedConnections {
-    fn from(shard_connections: Vec<SqlConnections>) -> Self {
-        let mut write_connections = Vec::with_capacity(shard_connections.len());
-        let mut read_connections = Vec::with_capacity(shard_connections.len());
-        let mut read_master_connections = Vec::with_capacity(shard_connections.len());
-        for connections in shard_connections.into_iter() {
-            write_connections.push(connections.write_connection);
-            read_connections.push(connections.read_connection);
-            read_master_connections.push(connections.read_master_connection);
-        }
-
-        Self {
-            read_connections,
-            read_master_connections,
-            write_connections,
-        }
-    }
-}
 
 #[must_use]
 pub enum TransactionResult {
@@ -79,8 +30,7 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     pub use r#impl::{
         create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, create_raw_xdb_connections,
-        deprecated_create_mysql_pool_unsharded,
+        create_mysql_connections_unsharded, deprecated_create_mysql_pool_unsharded,
         myadmin::{MyAdmin, MyAdminLagMonitor},
         myrouter_ready, PoolConfig, SharedConnectionPool,
     };
@@ -88,9 +38,8 @@ pub mod facebook {
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{
         create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, create_raw_xdb_connections,
-        deprecated_create_mysql_pool_unsharded, myrouter_ready, MyAdmin, MyAdminLagMonitor,
-        PoolConfig, SharedConnectionPool,
+        create_mysql_connections_unsharded, deprecated_create_mysql_pool_unsharded, myrouter_ready,
+        MyAdmin, MyAdminLagMonitor, PoolConfig, SharedConnectionPool,
     };
 
     /// Way to connect to the DB: via myrouter connections, raw xdb or Mysql client
