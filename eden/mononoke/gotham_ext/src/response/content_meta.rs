@@ -8,7 +8,7 @@
 use crate::content_encoding::ContentEncoding;
 
 use super::stream::{CompressedResponseStream, ResponseStream};
-use super::stream_ext::{EndOnErr, ForwardErr};
+use super::stream_ext::{CaptureFirstErr, EndOnErr, ForwardErr};
 
 pub trait ContentMetaProvider {
     /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent
@@ -109,6 +109,22 @@ where
 
     fn content_encoding(&self) -> ContentEncoding {
         // end_on_err doesn't change the data's encoding.
+        self.get_ref().content_encoding()
+    }
+}
+
+impl<S, E> ContentMetaProvider for CaptureFirstErr<S, E>
+where
+    S: ContentMetaProvider,
+{
+    fn content_length(&self) -> Option<u64> {
+        // Since errors may be filtered out without intending to fail the response, we cannot
+        // provide a content length.
+        None
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        // CaptureFirstErr does not change the stream's encoding.
         self.get_ref().content_encoding()
     }
 }
