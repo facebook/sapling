@@ -24,6 +24,7 @@ use crate::content_encoding::ContentEncoding;
 use crate::error::{ErrorFormatter, HttpError};
 
 use super::content_meta::ContentMetaProvider;
+use super::error_meta::ErrorMetaProvider;
 use super::response_meta::{HeadersMeta, PendingResponseMeta};
 use super::signal_stream::SignalStream;
 
@@ -134,7 +135,7 @@ impl<S> StreamBody<S> {
 
 impl<S> TryIntoResponse for StreamBody<S>
 where
-    S: Stream<Item = Bytes> + ContentMetaProvider + Send + 'static,
+    S: Stream<Item = Bytes> + ContentMetaProvider + ErrorMetaProvider<Error> + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
         let Self {

@@ -21,6 +21,8 @@ pub enum LfsScubaKey {
     Method,
     /// If an error was encountered during processing, the error message.
     ErrorMessage,
+    /// Total count fo errors that occurred during processing.
+    ErrorCount,
     /// The order in which the response to a batch request was produced.
     BatchOrder,
     /// The number of objects in a batch request
@@ -48,6 +50,7 @@ impl AsRef<str> for LfsScubaKey {
             Repository => "repository",
             Method => "method",
             ErrorMessage => "error_msg",
+            ErrorCount => "error_count",
             BatchOrder => "batch_order",
             BatchObjectCount => "batch_object_count",
             BatchInternalMissingBlobs => "batch_internal_missing_blobs",
@@ -101,6 +104,8 @@ impl ScubaHandler for LfsScubaHandler {
             if let Some(err) = info.first_error() {
                 scuba.add(LfsScubaKey::ErrorMessage, format!("{:?}", err));
             }
+
+            scuba.add(LfsScubaKey::ErrorCount, info.error_count());
 
             ctx.ctx.perf_counters().insert_perf_counters(scuba);
         }

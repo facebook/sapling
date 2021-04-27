@@ -11,6 +11,8 @@ use gotham_derive::StateData;
 
 use crate::content_encoding::ContentCompression;
 
+use super::error_meta::ErrorMeta;
+
 #[derive(Debug, Copy, Clone)]
 pub enum HeadersMeta {
     Sized(u64),
@@ -30,7 +32,7 @@ impl HeadersMeta {
 
 pub struct BodyMeta {
     pub bytes_sent: u64,
-    pub errors: Vec<Error>,
+    pub error_meta: ErrorMeta<Error>,
 }
 
 pub struct ResponseMeta {
@@ -93,18 +95,18 @@ impl PendingResponseMeta {
         let body = match body {
             PendingBodyMeta::Immediate(bytes_sent) => BodyMeta {
                 bytes_sent,
-                errors: Vec::new(),
+                error_meta: ErrorMeta::new(),
             },
             PendingBodyMeta::Deferred(receiver) => match receiver.await {
                 Ok(body) => body,
                 Err(_) => BodyMeta {
                     bytes_sent: 0,
-                    errors: vec![Error::msg("Deferred body meta was not sent")],
+                    error_meta: ErrorMeta::one_error(Error::msg("Deferred body meta was not sent")),
                 },
             },
             PendingBodyMeta::Error(e) => BodyMeta {
                 bytes_sent: 0,
-                errors: vec![e],
+                error_meta: ErrorMeta::one_error(e),
             },
         };
 

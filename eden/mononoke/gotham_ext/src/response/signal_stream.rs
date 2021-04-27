@@ -8,6 +8,7 @@
 use std::convert::TryInto;
 use std::pin::Pin;
 
+use anyhow::Error;
 use bytes::Bytes;
 use futures::{
     channel::oneshot::Sender,
@@ -17,6 +18,7 @@ use futures::{
 };
 use pin_project::{pin_project, pinned_drop};
 
+use super::error_meta::{ErrorMeta, ErrorMetaProvider};
 use super::response_meta::BodyMeta;
 
 pub trait Sizeable {
@@ -34,14 +36,17 @@ impl Sizeable for Bytes {
 /// A stream that will fire to the sender associated upon completing or being dropped. The Sender
 /// will receive the amount of data that passed through the stream.
 #[pin_project(PinnedDrop, project = SignalStreamProjection)]
-pub struct SignalStream<S> {
+pub struct SignalStream<S: ErrorMetaProvider<Error>> {
     #[pin]
     stream: S,
     sender: Option<Sender<BodyMeta>>,
     size_sent: u64,
 }
 
-impl<S> SignalStream<S> {
+impl<S> SignalStream<S>
+where
+    S: ErrorMetaProvider<Error>,
+{
     pub fn new(stream: S, sender: Sender<BodyMeta>) -> Self {
         Self {
             stream,
@@ -53,7 +58,7 @@ impl<S> SignalStream<S> {
 
 impl<S, T> Stream for SignalStream<S>
 where
-    S: Stream<Item = T>,
+    S: Stream<Item = T> + ErrorMetaProvider<Error>,
     T: Sizeable,
 {
     type Item = T;
@@ -75,18 +80,29 @@ where
 }
 
 #[pinned_drop]
-impl<S> PinnedDrop for SignalStream<S> {
+impl<S> PinnedDrop for SignalStream<S>
+where
+    S: ErrorMetaProvider<Error>,
+{
     fn drop(self: Pin<&mut Self>) {
         let this = self.project();
         send_body_meta(this);
     }
 }
 
-fn send_body_meta<S>(this: SignalStreamProjection<S>) {
+fn send_body_meta<S>(this: SignalStreamProjection<S>)
+where
+    S: ErrorMetaProvider<Error>,
+{
     if let Some(sender) = this.sender.take() {
+        let bytes_sent = *this.size_sent;
+        let mut error_meta = ErrorMeta::new();
+
+        this.stream.report_errors(&mut error_meta);
+
         let _ = sender.send(BodyMeta {
-            bytes_sent: *this.size_sent,
-            errors: Vec::new(),
+            bytes_sent,
+            error_meta,
         });
     }
 }

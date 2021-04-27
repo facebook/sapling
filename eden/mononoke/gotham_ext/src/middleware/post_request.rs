@@ -32,7 +32,14 @@ pub struct PostResponseInfo {
 
 impl PostResponseInfo {
     pub fn first_error(&self) -> Option<&Error> {
-        self.meta.as_ref()?.body().errors.first()
+        self.meta.as_ref()?.body().error_meta.errors.first()
+    }
+
+    pub fn error_count(&self) -> u64 {
+        self.meta
+            .as_ref()
+            .map(|m| m.body().error_meta.error_count())
+            .unwrap_or(0)
     }
 }
 

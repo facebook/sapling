@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<S, F> ContentMetaProvider for EndOnErr<S, F>
+impl<S, E> ContentMetaProvider for EndOnErr<S, E>
 where
     S: ContentMetaProvider,
 {

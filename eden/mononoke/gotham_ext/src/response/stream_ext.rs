@@ -14,6 +14,8 @@ use futures::{
 };
 use pin_project::pin_project;
 
+use super::error_meta::{ErrorMeta, ErrorMetaProvider};
+
 pub trait ResponseTryStreamExt: TryStream {
     /// Filter out errors from a `TryStream` and forward them into the given
     /// `Sink`, transforming the `TryStream` into a `Stream<Item=Self::Ok>`.
@@ -33,11 +35,11 @@ pub trait ResponseTryStreamExt: TryStream {
     ///
     /// The error will be passed to the given callback, and the stream will be
     /// fused to prevent the underlying `TryStream` from being polled again.
-    fn end_on_err<F>(self, f: F) -> EndOnErr<Self, F>
+    fn end_on_err<E>(self) -> EndOnErr<Self, E>
     where
         Self: Sized,
     {
-        EndOnErr::new(self, f)
+        EndOnErr::new(self)
     }
 }
 
@@ -112,6 +114,12 @@ where
     }
 }
 
+impl<St, Si, E> ErrorMetaProvider<E> for ForwardErr<St, Si, E> {
+    fn report_errors(self: Pin<&mut Self>, _: &mut ErrorMeta<E>) {
+        // TODO: Coming later in this stack
+    }
+}
+
 /// Attempt to send an (optional) item into the given Sink.
 ///
 /// If the `Sink` isn't ready accept an additional item just yet, this function
@@ -149,17 +157,19 @@ fn poll_send<T, Si: Sink<T>>(
 }
 
 #[pin_project]
-pub struct EndOnErr<S, F> {
+pub struct EndOnErr<S, E> {
     #[pin]
     stream: S,
-    error_fn: Option<F>,
+    errored: bool,
+    error: Option<E>,
 }
 
-impl<S, F> EndOnErr<S, F> {
-    pub fn new(stream: S, error_fn: F) -> Self {
+impl<S, E> EndOnErr<S, E> {
+    pub fn new(stream: S) -> Self {
         Self {
             stream,
-            error_fn: Some(error_fn),
+            errored: false,
+            error: None,
         }
     }
 
@@ -168,10 +178,9 @@ impl<S, F> EndOnErr<S, F> {
     }
 }
 
-impl<S, F> Stream for EndOnErr<S, F>
+impl<S, E> Stream for EndOnErr<S, E>
 where
-    S: TryStream,
-    F: FnOnce(S::Error),
+    S: TryStream<Error = E>,
 {
     type Item = S::Ok;
 
@@ -179,20 +188,29 @@ where
         let this = self.project();
 
         // Fuse the stream once the error callback has fired.
-        if this.error_fn.is_none() {
+        if *this.errored {
             return Poll::Ready(None);
         }
 
         match ready!(this.stream.try_poll_next(ctx)) {
             Some(Ok(item)) => Poll::Ready(Some(item)),
             Some(Err(e)) => {
-                if let Some(f) = this.error_fn.take() {
-                    f(e);
-                }
+                this.error.replace(e);
+                *this.errored = true;
                 Poll::Ready(None)
             }
             None => Poll::Ready(None),
         }
+    }
+}
+
+impl<S, E> ErrorMetaProvider<E> for EndOnErr<S, E>
+where
+    S: TryStream<Error = E>,
+{
+    fn report_errors(self: Pin<&mut Self>, error_meta: &mut ErrorMeta<E>) {
+        let this = self.project();
+        error_meta.errors.extend(this.error.take());
     }
 }
 
@@ -223,12 +241,17 @@ mod tests {
             Err("error"),
             Ok("foo"),
             Err("bar"),
-        ]);
+        ])
+        .end_on_err();
 
-        let mut errors = Vec::new();
-        let items = s.end_on_err(|e| errors.push(e)).collect::<Vec<_>>().await;
+        futures::pin_mut!(s);
 
-        assert_eq!(&items, &["hello", "world"]);
-        assert_eq!(&errors, &["error"]);
+        assert_eq!(s.next().await, Some("hello"));
+        assert_eq!(s.next().await, Some("world"));
+        assert_eq!(s.next().await, None);
+
+        let mut errors = ErrorMeta::new();
+        s.report_errors(&mut errors);
+        assert_eq!(&errors.errors, &["error"]);
     }
 }

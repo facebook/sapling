@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create a repository. We use MULTIPLEXED here because that is the one that records BlobGets counters.
-  $ setup_mononoke_config
+  $ setup_mononoke_config "blob_files"
   $ MULTIPLEXED=1 REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
 
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)
@@ -53,6 +53,7 @@
       "batch_request_received_us": *, (glob)
       "batch_response_ready_us": *, (glob)
       "duration_ms": *, (glob)
+      "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
@@ -93,6 +94,7 @@
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
       "duration_ms": *, (glob)
+      "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_bytes_received": 2048,
@@ -139,6 +141,7 @@
       "batch_request_received_us": *, (glob)
       "batch_response_ready_us": *, (glob)
       "duration_ms": *, (glob)
+      "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
@@ -184,6 +187,7 @@
       "SqlWrites": 0,
       "download_content_size": 2048,
       "duration_ms": *, (glob)
+      "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_load": *, (glob)
@@ -223,6 +227,7 @@
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
       "duration_ms": *, (glob)
+      "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_load": *, (glob)
@@ -240,3 +245,27 @@
       "request_id": * (glob)
     }
   }
+
+# Send an invalid request and check that this gets logged
+  $ truncate -s 0 "$SCUBA"
+  $ curl -fsSL "${lfs_root}/lfs1/download/bad" -o /dev/null
+  curl: (22) The requested URL returned error: 400 Bad Request
+  [22]
+  $ wait_for_json_record_count "$SCUBA" 1
+  $ jq -r .normal.error_msg < "$SCUBA"
+  Could not parse Content ID
+  
+  Caused by:
+      invalid blake2 input: need exactly 64 hex digits
+
+# Send a request after corrupting our data, and check that this gets logged too
+  $ truncate -s 0 "$SCUBA"
+  $ find "$TESTTMP/blobstore_lfs1" -type f -name "*chunk*" | xargs rm
+  $ curl -fsSL "${lfs_root}/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -o /dev/null
+  curl: (18) transfer closed with 2048 bytes remaining to read
+  [18]
+  $ wait_for_json_record_count "$SCUBA" 1
+  $ jq -r .normal.error_msg < "$SCUBA"
+  Chunk not found: ContentChunkId(Blake2(1504ec6ce051f99d41b82ec69ef7e9cde95054758b3e85ed73ef335f32f7263c))
+  $ jq -r .int.error_count < "$SCUBA"
+  1

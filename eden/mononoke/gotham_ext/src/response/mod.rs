@@ -6,6 +6,7 @@
  */
 
 mod content_meta;
+mod error_meta;
 mod response;
 mod response_meta;
 mod signal_stream;

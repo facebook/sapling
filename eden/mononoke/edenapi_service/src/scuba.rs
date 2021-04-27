@@ -19,6 +19,7 @@ pub enum EdenApiScubaKey {
     Method,
     User,
     HandlerError,
+    HandlerErrorCount,
 }
 
 impl AsRef<str> for EdenApiScubaKey {
@@ -28,6 +29,7 @@ impl AsRef<str> for EdenApiScubaKey {
             Self::Method => "edenapi_method",
             Self::User => "edenapi_user",
             Self::HandlerError => "edenapi_error",
+            Self::HandlerErrorCount => "edenapi_error_count",
         }
     }
 }
@@ -72,5 +74,7 @@ impl ScubaHandler for EdenApiScubaHandler {
         if let Some(err) = info.first_error() {
             scuba.add(EdenApiScubaKey::HandlerError, format!("{:?}", err));
         }
+
+        scuba.add(EdenApiScubaKey::HandlerErrorCount, info.error_count());
     }
 }

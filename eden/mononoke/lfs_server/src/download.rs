@@ -12,7 +12,6 @@ use futures::stream::{StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
-use slog::error;
 
 use filestore::{self, Alias, FetchKey, Range};
 use gotham_ext::{
@@ -130,15 +129,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    let logger = ctx.logger().clone();
-    let stream = stream.end_on_err(move |e| {
-        // XXX: Ideally, we'd do something better with the error than just
-        // printing it to stderr, but the server's code likely needs to be
-        // restructed in order to do anything smarter here (such as setting
-        // the error message in the RequestContext, so that the error would
-        // get logged to Scuba).
-        error!(&logger, "Error during streaming response: {:?}", &e);
-    });
+    let stream = stream.end_on_err();
 
     let mut body = StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM);
     if range.is_some() {
