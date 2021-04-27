@@ -1217,17 +1217,17 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 
   if (*params->background_ref()) {
     folly::futures::detachOn(
-      server_->getServerState()->getThreadPool().get(),
-      folly::makeSemiFuture(folly::collectAll(std::move(globResults))
-        .toUnsafeFuture()
-        .ensure([globRoot,
-                 originHashes = std::move(originHashes),
-                 helper = std::move(helper)]() {
-          // keep globRoot, originHashes, and helper alive until the end.
-          // the helper contains the fetchContext, which is needed while
-          // fetching.
-        }))
-    );
+        server_->getServerState()->getThreadPool().get(),
+        folly::makeSemiFuture(
+            folly::collectAll(std::move(globResults))
+                .toUnsafeFuture()
+                .ensure([globRoot,
+                         originHashes = std::move(originHashes),
+                         helper = std::move(helper)]() {
+                  // keep globRoot, originHashes, and helper alive until the
+                  // end. the helper contains the fetchContext, which is needed
+                  // while fetching.
+                })));
     return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
   }
   return wrapFuture(
