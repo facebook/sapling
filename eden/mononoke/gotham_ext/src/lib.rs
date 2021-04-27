@@ -7,6 +7,7 @@
 
 pub mod body_ext;
 pub mod content;
+pub mod content_encoding;
 pub mod error;
 pub mod handler;
 pub mod middleware;

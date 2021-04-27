@@ -18,10 +18,8 @@ use hyper::{
 };
 use mime::Mime;
 
-use crate::content::{
-    encoding::{ContentCompression, ContentEncoding},
-    stream::ContentMeta,
-};
+use crate::content::stream::ContentMeta;
+use crate::content_encoding::{ContentCompression, ContentEncoding};
 use crate::error::HttpError;
 use crate::middleware::PostRequestCallbacks;
 use crate::signal_stream::SignalStream;
