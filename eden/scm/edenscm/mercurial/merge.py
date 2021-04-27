@@ -2322,112 +2322,20 @@ def update(
             if fallbackcheckout:
                 repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
             else:
-                repo.ui.debug("Using native checkout\n")
-                repo.ui.log(
-                    "nativecheckout",
-                    using_nativecheckout=True,
+                return donativecheckout(
+                    repo,
+                    p1,
+                    p2,
+                    fp1,
+                    fp2,
+                    xp1,
+                    xp2,
+                    matcher,
+                    force,
+                    partial,
+                    wc,
+                    prerecrawls,
                 )
-
-                sparsematchers = None
-                sparsematch = getattr(repo, "sparsematch", None)
-                if sparsematch is not None:
-                    revs = {fp1, fp2}
-                    revs -= {nullid}
-                    sparsematcher = sparsematch(*list(revs))
-                    # Ignore files that are not in either source or target sparse match
-                    # This is not enough if sparse profile changes, but works for checkout within same sparse profile
-                    matcher = matchmod.intersectmatchers(matcher, sparsematcher)
-                    oldsparsematch = sparsematch(fp1)
-                    newsparsematcher = sparsematch(fp2)
-                    # This can be optimized - if matchers are same, we can set sparsematchers = None
-                    # sparse.py does not do it, so we are not making things worse
-                    sparsematchers = (oldsparsematch, newsparsematcher)
-
-                if matcher is not None and matcher.always():
-                    matcher = None
-
-                updateprogresspath = None
-                if repo.ui.configbool("checkout", "resumable"):
-                    updateprogresspath = repo.localvfs.join("updateprogress")
-
-                with progress.spinner(repo.ui, _("calculating")):
-                    plan = nativecheckout.checkoutplan(
-                        repo.wvfs.base,
-                        p1.manifest(),
-                        p2.manifest(),
-                        matcher,
-                        sparsematchers,
-                        updateprogresspath,
-                    )
-
-                if repo.ui.debugflag:
-                    repo.ui.debug("Native checkout plan:\n%s\n" % plan)
-
-                if not force:
-                    unknown = plan.check_unknown_files(
-                        p2.manifest(),
-                        repo.fileslog.filescmstore,
-                        repo.dirstate._map._tree,
-                    )
-                    if unknown:
-                        for f in unknown:
-                            repo.ui.warn(_("%s: untracked file differs\n") % f)
-
-                        raise error.Abort(
-                            _(
-                                "untracked files in working directory "
-                                "differ from files in requested revision"
-                            )
-                        )
-
-                # preserving checks as is, even though wc.isinmemory always false here
-                if not partial and not wc.isinmemory():
-                    repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
-                    # note that we're in the middle of an update
-                    repo.localvfs.writeutf8("updatestate", p2.hex())
-
-                fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
-                cwd = pycompat.getcwdsafe()
-
-                repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
-                if repo.ui.configbool("nativecheckout", "usescmstore"):
-                    plan.apply_scmstore(
-                        repo.fileslog.filescmstore,
-                    )
-                else:
-                    plan.apply(
-                        repo.fileslog.contentstore,
-                    )
-                repo.ui.debug("Apply done\n")
-                stats = plan.stats()
-
-                if cwd and not pycompat.getcwdsafe():
-                    # cwd was removed in the course of removing files; print a helpful
-                    # warning.
-                    repo.ui.warn(
-                        _(
-                            "current directory was removed\n"
-                            "(consider changing to repo root: %s)\n"
-                        )
-                        % repo.root
-                    )
-
-                if not partial and not wc.isinmemory():
-                    with repo.dirstate.parentchange():
-                        repo.setparents(fp1, fp2)
-                        with progress.spinner(repo.ui, "recording"):
-                            plan.record_updates(repo.dirstate._map._tree)
-                        # update completed, clear state
-                        repo.localvfs.unlink("updatestate")
-                        repo.localvfs.tryunlink("updateprogress")
-
-                if not partial:
-                    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
-                postrecrawls = querywatchmanrecrawls(repo)
-                repo.ui.log(
-                    "watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls
-                )
-                return stats
 
         if pas[0] is None:
             if repo.ui.configlist("merge", "preferancestor") == ["*"]:
@@ -2648,6 +2556,115 @@ def update(
     postrecrawls = querywatchmanrecrawls(repo)
     repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
 
+    return stats
+
+
+def donativecheckout(
+    repo, p1, p2, fp1, fp2, xp1, xp2, matcher, force, partial, wc, prerecrawls
+):
+    repo.ui.debug("Using native checkout\n")
+    repo.ui.log(
+        "nativecheckout",
+        using_nativecheckout=True,
+    )
+
+    sparsematchers = None
+    sparsematch = getattr(repo, "sparsematch", None)
+    if sparsematch is not None:
+        revs = {fp1, fp2}
+        revs -= {nullid}
+        sparsematcher = sparsematch(*list(revs))
+        # Ignore files that are not in either source or target sparse match
+        # This is not enough if sparse profile changes, but works for checkout within same sparse profile
+        matcher = matchmod.intersectmatchers(matcher, sparsematcher)
+        oldsparsematch = sparsematch(fp1)
+        newsparsematcher = sparsematch(fp2)
+        # This can be optimized - if matchers are same, we can set sparsematchers = None
+        # sparse.py does not do it, so we are not making things worse
+        sparsematchers = (oldsparsematch, newsparsematcher)
+
+    if matcher is not None and matcher.always():
+        matcher = None
+
+    updateprogresspath = None
+    if repo.ui.configbool("checkout", "resumable"):
+        updateprogresspath = repo.localvfs.join("updateprogress")
+
+    with progress.spinner(repo.ui, _("calculating")):
+        plan = nativecheckout.checkoutplan(
+            repo.wvfs.base,
+            p1.manifest(),
+            p2.manifest(),
+            matcher,
+            sparsematchers,
+            updateprogresspath,
+        )
+
+    if repo.ui.debugflag:
+        repo.ui.debug("Native checkout plan:\n%s\n" % plan)
+
+    if not force:
+        unknown = plan.check_unknown_files(
+            p2.manifest(),
+            repo.fileslog.filescmstore,
+            repo.dirstate._map._tree,
+        )
+        if unknown:
+            for f in unknown:
+                repo.ui.warn(_("%s: untracked file differs\n") % f)
+
+            raise error.Abort(
+                _(
+                    "untracked files in working directory "
+                    "differ from files in requested revision"
+                )
+            )
+
+    # preserving checks as is, even though wc.isinmemory always false here
+    if not partial and not wc.isinmemory():
+        repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
+        # note that we're in the middle of an update
+        repo.localvfs.writeutf8("updatestate", p2.hex())
+
+    fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
+    cwd = pycompat.getcwdsafe()
+
+    repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
+    if repo.ui.configbool("nativecheckout", "usescmstore"):
+        plan.apply_scmstore(
+            repo.fileslog.filescmstore,
+        )
+    else:
+        plan.apply(
+            repo.fileslog.contentstore,
+        )
+    repo.ui.debug("Apply done\n")
+    stats = plan.stats()
+
+    if cwd and not pycompat.getcwdsafe():
+        # cwd was removed in the course of removing files; print a helpful
+        # warning.
+        repo.ui.warn(
+            _(
+                "current directory was removed\n"
+                "(consider changing to repo root: %s)\n"
+            )
+            % repo.root
+        )
+
+    if not partial and not wc.isinmemory():
+        with repo.dirstate.parentchange():
+            repo.setparents(fp1, fp2)
+            with progress.spinner(repo.ui, "recording"):
+                plan.record_updates(repo.dirstate._map._tree)
+            # update completed, clear state
+            repo.localvfs.unlink("updatestate")
+            repo.localvfs.unlink("updateprogress")
+
+    if not partial:
+        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+    postrecrawls = querywatchmanrecrawls(repo)
+    repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
     return stats
 
 
