@@ -42,6 +42,7 @@ mod merge;
 pub use actions::{Action, ActionMap};
 pub use conflict::Conflict;
 pub use merge::{Merge, MergeResult};
+use status::{FileStatus, Status};
 use tokio::runtime::Handle;
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
@@ -351,6 +352,17 @@ impl CheckoutPlan {
         .await
     }
 
+    pub fn check_conflicts(&self, status: &Status) -> Vec<&RepoPath> {
+        let mut conflicts = vec![];
+        for file in self.all_files() {
+            // Unknown files are handled separately in check_unknown_files
+            if !matches!(status.status(file), None | Some(FileStatus::Unknown)) {
+                conflicts.push(file.as_repo_path());
+            }
+        }
+        conflicts
+    }
+
     pub async fn check_unknown_files(
         &self,
         manifest: &impl Manifest,
@@ -561,6 +573,14 @@ impl CheckoutPlan {
     fn new_file_actions(&self) -> impl Iterator<Item = &UpdateContentAction> {
         // todo - index new files so that this function don't need to be O(total_files_changed)test-update-names.t.err
         self.update_content.iter().filter(|u| u.new_file)
+    }
+
+    pub fn all_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.update_content
+            .iter()
+            .map(|u| &u.path)
+            .chain(self.remove.iter())
+            .chain(self.update_meta.iter().map(|u| &u.path))
     }
 
     /// Returns (updated, removed)
