@@ -9,6 +9,7 @@ use crate::blobstore;
 use crate::checkpoint::{CheckpointsByName, SqlCheckpoints};
 use crate::graph::{EdgeType, Node, NodeType, SqlShardInfo};
 use crate::log;
+use crate::pack::PackInfoLogOptions;
 use crate::parse_node::parse_node;
 use crate::progress::{
     sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
@@ -131,6 +132,11 @@ pub const OUTPUT_FORMAT_ARG: &str = "output-format";
 pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
+
+const EXCLUDE_PACK_LOG_NODE_TYPE_ARG: &str = "exclude-pack-log-node-type";
+const INCLUDE_PACK_LOG_NODE_TYPE_ARG: &str = "include-pack-log-node-type";
+const PACK_LOG_SCUBA_TABLE_ARG: &str = "pack-log-scuba-table";
+const PACK_LOG_SCUBA_FILE_ARG: &str = "pack-log-scuba-file";
 
 const DEFAULT_VALUE_ARG: &str = "default";
 const DERIVED_VALUE_ARG: &str = "derived";
@@ -472,6 +478,37 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+pub fn parse_pack_info_log_args(
+    fb: FacebookInit,
+    sub_m: &ArgMatches,
+) -> Result<Option<PackInfoLogOptions>, Error> {
+    let log_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_PACK_LOG_NODE_TYPE_ARG,
+        EXCLUDE_PACK_LOG_NODE_TYPE_ARG,
+        &[],
+    )?;
+
+    let opt = if !log_node_types.is_empty() {
+        // Setup scuba
+        let scuba_table = sub_m
+            .value_of(PACK_LOG_SCUBA_TABLE_ARG)
+            .map(|a| a.to_string());
+        let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+        if let Some(scuba_log_file) = sub_m.value_of(PACK_LOG_SCUBA_FILE_ARG) {
+            scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
+        }
+        Some(PackInfoLogOptions {
+            log_node_types,
+            log_dest: scuba_builder,
+        })
+    } else {
+        None
+    };
+
+    Ok(opt)
+}
+
 pub fn parse_sampling_args(
     sub_m: &ArgMatches,
     default_sample_rate: u64,
@@ -540,6 +577,44 @@ pub fn setup_toplevel_app<'a, 'b>(
                 .default_value(OutputFormat::PrettyDebug.as_ref())
                 .required(false)
                 .help("Set the output format"),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .long(EXCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .short("A")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types not to log pack info for"),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .long(INCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .short("a")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types to log pack info for"),
+        )
+        .arg(
+            Arg::with_name(PACK_LOG_SCUBA_TABLE_ARG)
+                .long(PACK_LOG_SCUBA_TABLE_ARG)
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .requires(INCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .help("Scuba table for logging pack info data to. e.g. mononoke_packinfo"),
+        )
+        .arg(
+            Arg::with_name(PACK_LOG_SCUBA_FILE_ARG)
+                .long(PACK_LOG_SCUBA_FILE_ARG)
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .requires(INCLUDE_PACK_LOG_NODE_TYPE_ARG)
+                .help("A log file to write Scuba pack info logs to (primarily useful in testing)"),
         );
 
     let compression_benefit = setup_subcommand_args(

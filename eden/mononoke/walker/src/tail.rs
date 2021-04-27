@@ -102,7 +102,10 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
 ) -> Result<(), Error>
 where
     RunFac: 'static + Clone + Send + Sync + FnOnce(&CoreContext, &RepoWalkParams) -> SinkFac,
-    SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
+    SinkFac: 'static
+        + FnOnce(BoxStream<'static, Result<VOut, Error>>, Timestamp, u64) -> SinkOut
+        + Clone
+        + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
     V: 'static + TailingWalkVisitor + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
@@ -165,6 +168,7 @@ where
             .transpose()?;
 
         let is_chunking = chunk_params.is_some();
+        let mut run_start = Timestamp::now();
 
         // Get the chunk stream and whether the bounds it covers are contiguous
         let (contiguous_bounds, mut best_bounds, chunk_stream) = if let Some((
@@ -187,6 +191,7 @@ where
             ) = checkpoint
             {
                 let age_secs = checkpoint.create_timestamp.since_seconds();
+                run_start = checkpoint.create_timestamp;
                 if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
                 {
                     info!(repo_params.logger, #log::CHUNKING, "Checkpoint run {} chunk {} is too old at {}s, running from repo bounds",
@@ -195,6 +200,7 @@ where
                     checkpoint.update_run_number += 1;
                     checkpoint.update_chunk_number = 0;
                     checkpoint.create_timestamp = Timestamp::now();
+                    run_start = checkpoint.create_timestamp;
                     (true, None, None, Some((lower, upper)))
                 } else {
                     let (catchup_bounds, main_bounds) = checkpoint.stream_bounds(lower, upper)?;
@@ -301,7 +307,7 @@ where
             let arc_v = Arc::new(visitor);
             let walk_output =
                 walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params).boxed();
-            make_sink(walk_output).await?;
+            make_sink(walk_output, run_start, chunk_num).await?;
             visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
 
             if is_chunking {

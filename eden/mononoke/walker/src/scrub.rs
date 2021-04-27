@@ -7,15 +7,16 @@
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use crate::log;
+use crate::pack::{PackInfo, PackInfoLogOptions, PackInfoLogger};
 use crate::progress::{
     progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
 use crate::sampling::{SamplingOptions, SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
-    parse_node_types, parse_progress_args, parse_sampling_args, setup_common, JobWalkParams,
-    OutputFormat, RepoSubcommandParams, EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG,
-    LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, SCRUB,
+    parse_node_types, parse_pack_info_log_args, parse_progress_args, parse_sampling_args,
+    setup_common, JobWalkParams, OutputFormat, RepoSubcommandParams, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
+    INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::walk_exact_tail;
@@ -95,16 +96,18 @@ impl fmt::Display for ScrubStats {
 }
 
 // Force load of leaf data like file contents that graph traversal did not need
-fn loading_stream<InStream, SS>(
+fn loading_stream<InStream, SS, L>(
     limit_data_fetch: bool,
     scheduled_max: usize,
     s: InStream,
     sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
     output_node_types: HashSet<NodeType>,
     output_format: OutputFormat,
+    pack_info_logger: Option<L>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
+    L: PackInfoLogger + 'static + Send,
 {
     s.map_ok(move |(n, nd, _progress_stats)| {
         match nd {
@@ -115,11 +118,11 @@ where
                 file_bytes_stream
                     .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
                     .map_ok(move |num_bytes| {
-                        let size = ScrubStats::from(sampler.complete_step(&n).as_ref());
+                        let sample = sampler.complete_step(&n);
                         (
                             n,
                             Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
-                            Some(size),
+                            Some(sample),
                         )
                     })
                     .map_err(|e| e.context(format_err!("While scrubbing file content stream")))
@@ -135,16 +138,45 @@ where
                         }
                     }
                 }
-                let size = data_opt
-                    .as_ref()
-                    .map(|_d| ScrubStats::from(sampler.complete_step(&n).as_ref()));
-                future::ok((n, data_opt, size)).right_future()
+                let sample = data_opt.as_ref().map(|_d| sampler.complete_step(&n));
+                future::ok((n, data_opt, sample)).right_future()
             }
         }
     })
     .try_buffer_unordered(scheduled_max)
+    .map_ok(move |(n, data_opt, sample)| {
+        let size = if let Some(sample) = sample {
+            let size = ScrubStats::from(sample.as_ref());
+            if let Some(logger) = pack_info_logger.as_ref() {
+                record_for_packer(logger, &n, sample);
+            }
+            Some(size)
+        } else {
+            None
+        };
+        (n, data_opt, size)
+    })
 }
 
+fn record_for_packer<L>(logger: &L, n: &Node, sample: Option<ScrubSample>)
+where
+    L: PackInfoLogger,
+{
+    if let Some(sample) = sample {
+        for (blobstore_key, uncompressed_size) in sample.data {
+            logger.log(PackInfo {
+                blobstore_key,
+                node_type: n.get_type(),
+                node_fingerprint: n.sampling_fingerprint(),
+                similarity_key: n.stats_path().and_then(|p| p.sampling_fingerprint()),
+                relatedness_key: None, // TODO(ahornby) track mtime like in corpus
+                uncompressed_size,
+            })
+        }
+    }
+}
+
+// Holds a map from blobstore keys accessed to their Size
 #[derive(Debug)]
 struct ScrubSample {
     data: HashMap<String, u64>,
@@ -330,6 +362,7 @@ struct ScrubCommand {
     output_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
     sampling_options: SamplingOptions,
+    pack_info_log_options: Option<PackInfoLogOptions>,
     sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
 }
 
@@ -368,6 +401,7 @@ pub async fn scrub_objects<'a>(
         output_node_types,
         progress_options: parse_progress_args(&sub_m),
         sampling_options: parse_sampling_args(&sub_m, 1)?,
+        pack_info_log_options: parse_pack_info_log_args(fb, &sub_m)?,
         sampler,
     };
 
@@ -404,7 +438,7 @@ async fn run_one(
         cloned!(command, job_params.quiet, sub_params.progress_state,);
         move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
             cloned!(ctx, repo_params.scheduled_max);
-            async move |walk_output| {
+            async move |walk_output, run_start, chunk_num| {
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
                 let loading = loading_stream(
                     command.limit_data_fetch,
@@ -413,6 +447,9 @@ async fn run_one(
                     command.sampler,
                     command.output_node_types,
                     command.output_format,
+                    command
+                        .pack_info_log_options
+                        .map(|o| o.make_logger(run_start, chunk_num)),
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, loading);
 
