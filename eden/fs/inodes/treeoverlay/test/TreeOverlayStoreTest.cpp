@@ -36,16 +36,16 @@ class TreeOverlayStoreTest : public ::testing::Test {
       dtype_t mode = dtype_t::Regular,
       std::optional<InodeNumber> inode = std::nullopt) {
     overlay::OverlayEntry entry;
-    entry.set_mode(dtype_to_mode(mode));
+    entry.mode_ref() = dtype_to_mode(mode);
 
     if (inode) {
-      entry.set_inodeNumber(inode->get());
+      entry.inodeNumber_ref() = inode->get();
     } else {
-      entry.set_inodeNumber(overlay_->nextInodeNumber().get());
+      entry.inodeNumber_ref() = overlay_->nextInodeNumber().get();
     }
 
     if (hash) {
-      entry.set_hash(hash->toByteString());
+      entry.hash_ref() = hash->toByteString();
     }
 
     return entry;
