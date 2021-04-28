@@ -1,0 +1,19 @@
+[package]
+name = "pyeagerepo"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+async-runtime = { path = "../../../../lib/async-runtime" }
+cpython = { version = "0.5", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+dag = { path = "../../../../lib/dag" }
+eagerepo = { path = "../../../../lib/eagerepo" }
+edenapi_types = { path = "../../../../lib/edenapi/types" }
+pydag = { path = "../pydag" }
+pyedenapi = { path = "../pyedenapi" }
+
+[features]
+default = []
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
