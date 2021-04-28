@@ -122,7 +122,7 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
       << "getCachedBlob can only be called when not materialized";
 
   // Is the previous handle still valid? If so, return it.
-  if (auto blob = ptr_->interestHandle.getBlob()) {
+  if (auto blob = ptr_->interestHandle.getObject()) {
     return blob;
   }
   // Otherwise, does the cache have one?
@@ -131,9 +131,9 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
   // check the BlobCache, but by checking it here, we can avoid a transition to
   // BLOB_LOADING and back, and also avoid allocating some futures and closures.
   auto result = mount->getBlobCache()->get(ptr_->hash.value(), interest);
-  if (result.blob) {
+  if (result.object) {
     ptr_->interestHandle = std::move(result.interestHandle);
-    return std::move(result.blob);
+    return std::move(result.object);
   }
 
   // If we received a read and missed cache because the blob was
@@ -974,7 +974,7 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
             if (tryResult.hasValue()) {
               state->interestHandle = std::move(tryResult->interestHandle);
               state.unlock();
-              promise.setValue(std::move(tryResult->blob));
+              promise.setValue(std::move(tryResult->object));
             } else {
               state.unlock();
               promise.setException(std::move(tryResult).exception());

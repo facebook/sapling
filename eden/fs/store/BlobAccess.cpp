@@ -26,7 +26,7 @@ folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
     ObjectFetchContext& context,
     BlobCache::Interest interest) {
   auto result = blobCache_->get(hash, interest);
-  if (result.blob) {
+  if (result.object) {
     return folly::Future<BlobCache::GetResult>{std::move(result)};
   }
 

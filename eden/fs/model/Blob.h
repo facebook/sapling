@@ -47,6 +47,10 @@ class Blob {
     return size_;
   }
 
+  size_t getSizeBytes() const {
+    return size_;
+  }
+
  private:
   const Hash hash_;
   const folly::IOBuf contents_;

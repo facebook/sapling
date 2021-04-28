@@ -36,14 +36,14 @@ TEST(BlobCache, evicts_oldest_on_insertion) {
   EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
   cache->insert(blob5); // evicts blob3
   EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
-  EXPECT_EQ(nullptr, cache->get(hash3).blob)
+  EXPECT_EQ(nullptr, cache->get(hash3).object)
       << "Inserting blob5 should evict oldest (blob3)";
-  EXPECT_EQ(blob4, cache->get(hash4).blob) << "But blob4 still fits";
+  EXPECT_EQ(blob4, cache->get(hash4).object) << "But blob4 still fits";
   cache->insert(blob3); // evicts blob5
   EXPECT_EQ(7, cache->getStats().totalSizeInBytes);
-  EXPECT_EQ(nullptr, cache->get(hash5).blob)
+  EXPECT_EQ(nullptr, cache->get(hash5).object)
       << "Inserting blob3 again evicts blob5 because blob4 was accessed";
-  EXPECT_EQ(blob4, cache->get(hash4).blob);
+  EXPECT_EQ(blob4, cache->get(hash4).object);
 }
 
 TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
@@ -51,9 +51,9 @@ TEST(BlobCache, inserting_large_blob_evicts_multiple_small_blobs) {
   cache->insert(blob3);
   cache->insert(blob4);
   cache->insert(blob9);
-  EXPECT_FALSE(cache->get(hash3).blob);
-  EXPECT_FALSE(cache->get(hash4).blob);
-  EXPECT_EQ(blob9, cache->get(hash9).blob);
+  EXPECT_FALSE(cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
+  EXPECT_EQ(blob9, cache->get(hash9).object);
 }
 
 TEST(BlobCache, inserting_existing_blob_moves_it_to_back_of_eviction_queue) {
@@ -63,9 +63,9 @@ TEST(BlobCache, inserting_existing_blob_moves_it_to_back_of_eviction_queue) {
   cache->insert(blob3);
   cache->insert(blob5); // evicts 4
 
-  EXPECT_EQ(blob3, cache->get(hash3).blob);
-  EXPECT_FALSE(cache->get(hash4).blob);
-  EXPECT_EQ(blob5, cache->get(hash5).blob);
+  EXPECT_EQ(blob3, cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
+  EXPECT_EQ(blob5, cache->get(hash5).object);
 }
 
 TEST(
@@ -77,9 +77,9 @@ TEST(
   cache->insert(blob5);
 
   EXPECT_EQ(12, cache->getStats().totalSizeInBytes);
-  EXPECT_TRUE(cache->get(hash3).blob);
-  EXPECT_TRUE(cache->get(hash4).blob);
-  EXPECT_TRUE(cache->get(hash5).blob);
+  EXPECT_TRUE(cache->get(hash3).object);
+  EXPECT_TRUE(cache->get(hash4).object);
+  EXPECT_TRUE(cache->get(hash5).object);
 }
 
 TEST(BlobCache, preserves_minimum_number_of_entries) {
@@ -90,10 +90,10 @@ TEST(BlobCache, preserves_minimum_number_of_entries) {
   cache->insert(blob6);
 
   EXPECT_EQ(15, cache->getStats().totalSizeInBytes);
-  EXPECT_FALSE(cache->get(hash3).blob);
-  EXPECT_TRUE(cache->get(hash4).blob);
-  EXPECT_TRUE(cache->get(hash5).blob);
-  EXPECT_TRUE(cache->get(hash6).blob);
+  EXPECT_FALSE(cache->get(hash3).object);
+  EXPECT_TRUE(cache->get(hash4).object);
+  EXPECT_TRUE(cache->get(hash5).object);
+  EXPECT_TRUE(cache->get(hash6).object);
 }
 
 TEST(BlobCache, can_forget_cached_entries) {
@@ -109,8 +109,8 @@ TEST(BlobCache, can_forget_cached_entries) {
   handle3.reset();
   handle4.reset();
 
-  EXPECT_FALSE(cache->get(hash3).blob);
-  EXPECT_FALSE(cache->get(hash4).blob);
+  EXPECT_FALSE(cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
 }
 
 TEST(BlobCache, can_forget_cached_entries_in_reverse_insertion_order) {
@@ -125,8 +125,8 @@ TEST(BlobCache, can_forget_cached_entries_in_reverse_insertion_order) {
   handle4.reset();
   handle3.reset();
 
-  EXPECT_FALSE(cache->get(hash3).blob);
-  EXPECT_FALSE(cache->get(hash4).blob);
+  EXPECT_FALSE(cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
 }
 
 TEST(BlobCache, can_forget_cached_entry_in_middle) {
@@ -143,9 +143,9 @@ TEST(BlobCache, can_forget_cached_entry_in_middle) {
 
   handle4.reset();
 
-  EXPECT_TRUE(cache->get(hash3).blob);
-  EXPECT_FALSE(cache->get(hash4).blob);
-  EXPECT_TRUE(cache->get(hash5).blob);
+  EXPECT_TRUE(cache->get(hash3).object);
+  EXPECT_FALSE(cache->get(hash4).object);
+  EXPECT_TRUE(cache->get(hash5).object);
 }
 
 TEST(BlobCache, duplicate_insertion_with_interest_forgets_on_last_drop) {
@@ -170,13 +170,13 @@ TEST(BlobCache, does_not_forget_blob_until_last_handle_is_forgotten) {
       BlobCache::Interest::UnlikelyNeededAgain);
   auto result1 = cache->get(hash6, BlobCache::Interest::WantHandle);
   auto result2 = cache->get(hash6, BlobCache::Interest::WantHandle);
-  EXPECT_TRUE(result1.blob);
-  EXPECT_TRUE(result2.blob);
-  EXPECT_EQ(result1.blob, result2.blob);
+  EXPECT_TRUE(result1.object);
+  EXPECT_TRUE(result2.object);
+  EXPECT_EQ(result1.object, result2.object);
 
-  auto weak = std::weak_ptr<const Blob>{result1.blob};
-  result1.blob.reset();
-  result2.blob.reset();
+  auto weak = std::weak_ptr<const Blob>{result1.object};
+  result1.object.reset();
+  result2.object.reset();
   EXPECT_TRUE(weak.lock());
 
   result1.interestHandle.reset();
@@ -201,7 +201,7 @@ TEST(BlobCache, redundant_insert_does_not_invalidate_interest_handles) {
   auto cache = BlobCache::create(10, 0);
   auto handle3 = cache->insert(blob3, BlobCache::Interest::WantHandle);
   cache->insert(blob3, BlobCache::Interest::WantHandle);
-  EXPECT_TRUE(handle3.getBlob());
+  EXPECT_TRUE(handle3.getObject());
 }
 
 TEST(
@@ -215,10 +215,10 @@ TEST(
 
   // Normally, inserting blob5 would cause blob3 to get evicted since it was
   // the first one inserted. Access blob3 through its interest handle.
-  EXPECT_TRUE(handle3.getBlob());
+  EXPECT_TRUE(handle3.getObject());
   cache->insert(blob5);
-  EXPECT_TRUE(handle3.getBlob());
-  EXPECT_EQ(nullptr, handle4.getBlob());
+  EXPECT_TRUE(handle3.getObject());
+  EXPECT_EQ(nullptr, handle4.getObject());
 }
 
 TEST(BlobCache, interest_handle_can_return_blob_even_if_it_was_evicted) {
@@ -229,11 +229,11 @@ TEST(BlobCache, interest_handle_can_return_blob_even_if_it_was_evicted) {
   auto handle4 = cache->insert(blob4);
   auto handle5 = cache->insert(blob5);
 
-  EXPECT_FALSE(cache->get(hash3).blob) << "Inserting blob5 evicts blob3";
-  EXPECT_EQ(blob3, handle3.getBlob())
+  EXPECT_FALSE(cache->get(hash3).object) << "Inserting blob5 evicts blob3";
+  EXPECT_EQ(blob3, handle3.getObject())
       << "Blob accessible even though it's been evicted";
-  EXPECT_EQ(blob4, handle4.getBlob());
-  EXPECT_EQ(blob5, handle5.getBlob());
+  EXPECT_EQ(blob4, handle4.getObject());
+  EXPECT_EQ(blob5, handle5.getObject());
 }
 
 TEST(

@@ -1878,7 +1878,7 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   }
 
   const auto blobCacheStats = server_->getBlobCache()->getStats();
-  result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.blobCount;
+  result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.objectCount;
   result.blobCacheStats_ref()->totalSizeInBytes_ref() =
       blobCacheStats.totalSizeInBytes;
   result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;

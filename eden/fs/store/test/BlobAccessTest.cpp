@@ -89,7 +89,7 @@ struct BlobAccessTest : ::testing::Test {
   std::shared_ptr<const Blob> getBlobBlocking(const Hash& hash) {
     return blobAccess.getBlob(hash, ObjectFetchContext::getNullContext())
         .get(0ms)
-        .blob;
+        .object;
   }
 
   LoggingFetchContext context;

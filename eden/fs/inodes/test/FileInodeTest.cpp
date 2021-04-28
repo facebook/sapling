@@ -517,7 +517,7 @@ TEST(FileInode, dropsCacheWhenFullyRead) {
   auto inode = mount.getFileInode("bigfile.txt");
   auto hash = inode->getBlobHash().value();
 
-  EXPECT_FALSE(blobCache->get(hash).blob);
+  EXPECT_FALSE(blobCache->get(hash).object);
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
@@ -563,7 +563,7 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
   auto inode = mount.getFileInode("bigfile.txt");
   auto hash = inode->getBlobHash().value();
 
-  EXPECT_FALSE(blobCache->get(hash).blob);
+  EXPECT_FALSE(blobCache->get(hash).object);
 
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
