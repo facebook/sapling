@@ -330,7 +330,8 @@ folly::IOBuf TakeoverData::serializeErrorVersion3(
   SerializedTakeoverData serialized;
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
-  serialized.errorReason_ref() = folly::to<std::string>(exceptionClassName, ": ", what);
+  serialized.errorReason_ref() =
+      folly::to<std::string>(exceptionClassName, ": ", what);
 
   folly::IOBufQueue bufQ;
   folly::io::QueueAppender app(&bufQ, 0);
