@@ -202,7 +202,7 @@ pub async fn hash_lookup(state: &mut State) -> Result<impl TryIntoResponse, Http
         }
     });
 
-    Ok(cbor_stream(rctx, stream))
+    Ok(cbor_stream(stream))
 }
 
 async fn translate_location(
