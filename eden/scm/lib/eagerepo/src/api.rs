@@ -6,6 +6,8 @@
  */
 
 use crate::EagerRepo;
+use dag::ops::DagExportCloneData;
+use dag::Vertex;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitLocationToHashRequest;
@@ -181,7 +183,17 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<dag::CloneData<HgId>> {
-        todo!()
+        let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
+        check_convert_to_hgid(clone_data.idmap.values())?;
+        let clone_data = dag::CloneData {
+            flat_segments: clone_data.flat_segments,
+            idmap: clone_data
+                .idmap
+                .into_iter()
+                .map(|(k, v)| (k, HgId::from_slice(v.as_ref()).unwrap())) // unwrap: checked above
+                .collect(),
+        };
+        Ok(clone_data)
     }
 
     async fn full_idmap_clone_data(
@@ -189,7 +201,9 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<dag::CloneData<HgId>> {
-        todo!()
+        Err(not_implemented_error(
+            "EagerRepo does not support full_idmap_clone_data endpoint".to_string(),
+        ))
     }
 
     async fn commit_location_to_hash(
@@ -304,4 +318,15 @@ fn not_implemented_error(message: String) -> EdenApiError {
         status: StatusCode::NOT_IMPLEMENTED,
         message,
     }
+}
+
+fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> edenapi::Result<()> {
+    for v in vertexes {
+        let _ = HgId::from_slice(v.as_ref()).map_err(|e| EdenApiError::Other(e.into()))?;
+    }
+    Ok(())
+}
+
+fn map_dag_err(e: dag::Error) -> EdenApiError {
+    EdenApiError::Other(e.into())
 }
