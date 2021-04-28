@@ -310,7 +310,7 @@ def _findcommonheadsnew(
             sample.update(picked)
             if len(sample) >= size:
                 break
-        return list(sample)
+        return sorted(sample)
 
     from .bookmarks import selectivepullbookmarknames, remotenameforurl
 
@@ -329,7 +329,7 @@ def _findcommonheadsnew(
 
     # Drop nullid special case.
     sample.discard(nullid)
-    sample = list(sample)
+    sample = sorted(sample)
 
     ui.debug("query 1; heads\n")
     batch = remote.iterbatch()
