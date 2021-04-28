@@ -306,6 +306,7 @@ create_graph!(
             HgManifest,
             HgFileEnvelope,
             HgFileNode,
+            HgManifestFileNode,
             // Content
             FileContent,
             FileContentMetadata,
@@ -358,13 +359,13 @@ create_graph!(
     (
         HgChangeset,
         ChangesetKey<HgChangesetId>,
-        [HgParent(HgChangesetViaBonsai), HgManifest]
+        [HgParent(HgChangesetViaBonsai), HgManifest, HgManifestFileNode]
     ),
     (HgChangesetViaBonsai, ChangesetKey<HgChangesetId>, [HgChangeset]),
     (
         HgManifest,
         PathKey<HgManifestId>,
-        [HgFileEnvelope, HgFileNode, ChildHgManifest(HgManifest)]
+        [HgFileEnvelope, HgFileNode, HgManifestFileNode, ChildHgManifest(HgManifest)]
     ),
     (HgFileEnvelope, HgFileNodeId, [FileContent]),
     (
@@ -375,6 +376,16 @@ create_graph!(
             LinkedHgChangeset(HgChangesetViaBonsai),
             HgParentFileNode(HgFileNode),
             HgCopyfromFileNode(HgFileNode)
+        ]
+    ),
+    (
+        HgManifestFileNode,
+        PathKey<HgFileNodeId>,
+        [
+            LinkedHgBonsaiMapping(HgBonsaiMapping),
+            LinkedHgChangeset(HgChangesetViaBonsai),
+            HgParentFileNode(HgManifestFileNode),
+            HgCopyfromFileNode(HgManifestFileNode)
         ]
     ),
     // Content
@@ -477,6 +488,7 @@ impl NodeType {
             NodeType::HgManifest => Some(MappedHgChangesetId::NAME),
             NodeType::HgFileEnvelope => Some(MappedHgChangesetId::NAME),
             NodeType::HgFileNode => Some(FilenodesOnlyPublic::NAME),
+            NodeType::HgManifestFileNode => Some(FilenodesOnlyPublic::NAME),
             // Content
             NodeType::FileContent => None,
             NodeType::FileContentMetadata => None,
@@ -660,6 +672,7 @@ pub enum NodeData {
     HgManifest(HgBlobManifest),
     HgFileEnvelope(HgFileEnvelope),
     HgFileNode(Option<FilenodeInfo>),
+    HgManifestFileNode(Option<FilenodeInfo>),
     // Content
     FileContent(FileContentData),
     FileContentMetadata(Option<ContentMetadata>),
@@ -718,8 +731,15 @@ impl Node {
             Node::HgFileNode(PathKey { id: _, path }) => {
                 let path = path
                     .as_ref()
-                    // TODO(ahornby) walk isn't handling manifest filenodes yet, so only RootPath and FilePath
                     .map_or(RepoPath::RootPath, |p| RepoPath::FilePath(p.clone()));
+                let path_hash = PathHash::from_repo_path(&path);
+                let shard_num = path_hash.shard_number(shard_info.filenodes.shard_num.unwrap_or(1));
+                Some(SqlShard::HgFileNode(shard_num))
+            }
+            Node::HgManifestFileNode(PathKey { id: _, path }) => {
+                let path = path
+                    .as_ref()
+                    .map_or(RepoPath::RootPath, |p| RepoPath::DirectoryPath(p.clone()));
                 let path_hash = PathHash::from_repo_path(&path);
                 let shard_num = path_hash.shard_number(shard_info.filenodes.shard_num.unwrap_or(1));
                 Some(SqlShard::HgFileNode(shard_num))
@@ -763,6 +783,7 @@ impl Node {
             Node::HgManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::HgFileEnvelope(k) => k.blobstore_key(),
             Node::HgFileNode(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::HgManifestFileNode(PathKey { id, path: _ }) => id.blobstore_key(),
             // Content
             Node::FileContent(k) => k.blobstore_key(),
             Node::FileContentMetadata(k) => k.blobstore_key(),
@@ -802,6 +823,7 @@ impl Node {
             Node::HgManifest(PathKey { id: _, path }) => Some(&path),
             Node::HgFileEnvelope(_) => None,
             Node::HgFileNode(PathKey { id: _, path }) => Some(&path),
+            Node::HgManifestFileNode(PathKey { id: _, path }) => Some(&path),
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,
@@ -842,6 +864,7 @@ impl Node {
             Node::HgManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::HgFileEnvelope(k) => Some(k.sampling_fingerprint()),
             Node::HgFileNode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::HgManifestFileNode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             // Content
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),

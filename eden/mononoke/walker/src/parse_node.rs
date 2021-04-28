@@ -253,6 +253,14 @@ mod tests {
                 ))?
                 .get_type()
             ),
+            NodeType::HgManifestFileNode => assert_eq!(
+                node_type,
+                &parse_node(&format!(
+                    "HgManifestFileNode{}{}{}{}",
+                    NODE_SEP, SAMPLE_SHA1, NODE_SEP, SAMPLE_PATH
+                ))?
+                .get_type()
+            ),
             // Content
             NodeType::FileContent => assert_eq!(
                 node_type,

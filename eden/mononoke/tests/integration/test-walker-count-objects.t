@@ -31,15 +31,15 @@ check blobstore numbers, walk will do some more steps for mappings
 
 count-objects, all types, shallow edges
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I shallow -i all 2>&1 | strip_glog
-  Seen,Loaded: 46,46
+  Seen,Loaded: 47,47
 
 count-objects, all types, deep edges
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I deep -i all 2>&1 | strip_glog
-  Seen,Loaded: 80,80
+  Seen,Loaded: 83,83
 
 count-objects, all types, all edges, difference in final count vs deep edges is PhaseMapping and one extra BonsaiHgMapping from the bookmark
   $ mononoke_walker -l loaded scrub -q -b master_bookmark -I all -i all 2>&1 | strip_glog
-  Seen,Loaded: 84,84
+  Seen,Loaded: 87,87
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I bonsai 2>&1 | strip_glog
@@ -169,14 +169,14 @@ count-objects, deep walk across fastlog
 
 count-objects, shallow walk across hg
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -I BookmarkToBonsaiHgMapping -i Bookmark -i hg 2>&1 | strip_glog
-  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
-  Walking node types [BonsaiHgMapping, Bookmark, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
-  Seen,Loaded: 10,10
+  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, HgManifestToHgManifestFileNode]
+  Walking node types [BonsaiHgMapping, Bookmark, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
+  Seen,Loaded: 11,11
   * Type:Walked,Checks,Children BonsaiHgMapping:1,* Bookmark:1,* HgChangeset:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* (glob)
 
 count-objects, deep walk across hg
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I BookmarkToBonsaiHgMapping -i Bookmark -i hg 2>&1 | strip_glog
-  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
-  Walking node types [BonsaiHgMapping, Bookmark, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
-  Seen,Loaded: 20,20
+  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [BonsaiHgMapping, Bookmark, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
+  Seen,Loaded: 23,23
   * Type:Walked,Checks,Children BonsaiHgMapping:1,* Bookmark:1,* HgBonsaiMapping:3,* HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:3,* (glob)

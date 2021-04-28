@@ -159,6 +159,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::HgManifest => path,
         NodeType::HgFileEnvelope => path,
         NodeType::HgFileNode => path,
+        NodeType::HgManifestFileNode => path,
         // Content
         NodeType::FileContent => path,
         NodeType::FileContentMetadata => path,

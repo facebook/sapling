@@ -64,16 +64,23 @@ Check we dont walk blame on a non-public commit.  Because blame is the only path
   * Type:Walked,Checks,Children Blame:0,* Changeset:1,* HgBonsaiMapping:1,* UnodeFile:1,* UnodeManifest:1,* UnodeMapping:1,* (glob)
 
 Check we can walk filenodes on a public commit. In this walk all the HgChangeset history steps come from filenodes as we exclude HgChangesetToHgParent etc
-  $ mononoke_walker -L sizing scrub -q --walk-root=HgChangeset:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
+  $ mononoke_walker -L sizing scrub -q --walk-root=HgChangesetViaBonsai:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -x HgManifestFileNode -X HgChangesetToHgParent 2>&1 | strip_glog
   Walking edge types [HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
-  Seen,Loaded: 19,19
-  * Type:Walked,Checks,Children HgChangeset:4,* HgFileEnvelope:4,* HgFileNode:4,* HgManifest:4,* (glob)
+  Seen,Loaded: 20,20
+  * Type:Walked,Checks,Children HgChangeset:4,* HgChangesetViaBonsai:4,* HgFileEnvelope:4,* HgFileNode:4,* HgManifest:4,* (glob)
+
+Check we can walk manifest filenodes on a public commit. In this walk all the HgChangeset history steps come from mf filenodes as we exclude HgChangesetToHgParent etc
+  $ mononoke_walker -L sizing scrub -q --walk-root=HgChangesetViaBonsai:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -x HgFileNode -X HgChangesetToHgParent 2>&1 | strip_glog
+  Walking edge types [HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope]
+  Walking node types [HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest, HgManifestFileNode]
+  Seen,Loaded: 15,15
+  * Type:Walked,Checks,Children HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,* HgManifest:3,* HgManifestFileNode:3,* (glob)
 
 Check we dont walk filenodes on a non-public commit.  Because filenodes is the only path to HgChangeset history, this results in a shallow walk
   $ mononoke_walker -L sizing scrub -q --walk-root=HgChangeset:${HGCOMMITCNEW} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
-  Walking edge types [HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
-  Walking node types [HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest]
+  Walking edge types [HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
   Seen,Loaded: 4,4
   * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
 

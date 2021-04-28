@@ -192,6 +192,7 @@ pub struct WalkState {
     visited_hg_cs_via_bonsai: StateMap<InternedId<HgChangesetId>>,
     visited_hg_file_envelope: StateMap<InternedId<HgFileNodeId>>,
     visited_hg_filenode: StateMap<(InternedId<WrappedPathHash>, InternedId<HgFileNodeId>)>,
+    visited_hg_manifest_filenode: StateMap<(InternedId<WrappedPathHash>, InternedId<HgFileNodeId>)>,
     visited_hg_manifest: StateMap<(InternedId<WrappedPathHash>, InternedId<HgManifestId>)>,
     // Derived
     visited_blame: StateMap<InternedId<FileUnodeId>>,
@@ -250,6 +251,7 @@ impl WalkState {
             visited_hg_cs_via_bonsai: StateMap::with_hasher(fac.clone()),
             visited_hg_file_envelope: StateMap::with_hasher(fac.clone()),
             visited_hg_filenode: StateMap::with_hasher(fac.clone()),
+            visited_hg_manifest_filenode: StateMap::with_hasher(fac.clone()),
             visited_hg_manifest: StateMap::with_hasher(fac.clone()),
             // Derived
             visited_blame: StateMap::with_hasher(fac.clone()),
@@ -447,6 +449,7 @@ impl WalkState {
             NodeType::HgChangesetViaBonsai => self.visited_hg_cs_via_bonsai.clear(),
             NodeType::HgManifest => self.visited_hg_manifest.clear(),
             NodeType::HgFileNode => self.visited_hg_filenode.clear(),
+            NodeType::HgManifestFileNode => self.visited_hg_manifest_filenode.clear(),
             NodeType::HgFileEnvelope => self.visited_hg_file_envelope.clear(),
             // Content
             NodeType::FileContent => self.visited_file.clear(),
@@ -537,6 +540,11 @@ impl WalkState {
             (Node::HgFileNode(_), true) => true,
             (Node::HgFileNode(k), false) => self.record_with_path(
                 &self.visited_hg_filenode,
+                (&k.path, &self.hg_filenode_ids.interned(&k.id)),
+            ),
+            (Node::HgManifestFileNode(_), true) => true,
+            (Node::HgManifestFileNode(k), false) => self.record_with_path(
+                &self.visited_hg_manifest_filenode,
                 (&k.path, &self.hg_filenode_ids.interned(&k.id)),
             ),
             (Node::HgFileEnvelope(_), true) => true,

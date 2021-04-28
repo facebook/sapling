@@ -47,7 +47,7 @@ bonsai core data, chunked, deep. Should still visit all changesets, but no bookm
   Deferred: 0
 
 hg file content, chunked, deep.  Expect deferred as hg changeset parents will point outside chunk
-  $ mononoke_walker -L sizing -L chunking scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -i FileContent -x HgFileNode 2>&1 | strip_glog
+  $ mononoke_walker -L sizing -L chunking scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -i FileContent -x HgFileNode -x HgManifestFileNode 2>&1 | strip_glog
   Walking edge types [BonsaiHgMappingToHgChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope]
   Walking node types [BonsaiHgMapping, FileContent, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest]
   Seen,Loaded: 14,13
@@ -58,14 +58,14 @@ hg file content, chunked, deep.  Expect deferred as hg changeset parents will po
   Deferred: 0
 
 hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk
-  $ mononoke_walker -L sizing -L chunking scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -x HgFileEnvelope -X HgChangesetToHgParent -X HgFileNodeToLinkedHgBonsaiMapping -X HgFileNodeToLinkedHgChangeset 2>&1 | strip_glog
-  Walking edge types [BonsaiHgMappingToHgChangeset, HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgManifestToChildHgManifest, HgManifestToHgFileNode]
-  Walking node types [BonsaiHgMapping, HgChangeset, HgFileNode, HgManifest]
-  Seen,Loaded: 9,8
-  * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 HgChangeset:2,*,2 HgFileNode:3,*,0 HgManifest:2,*,3 (glob)
+  $ mononoke_walker -L sizing -L chunking scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -x HgFileEnvelope -X HgChangesetToHgParent -X HgFileNodeToLinkedHgBonsaiMapping -X HgFileNodeToLinkedHgChangeset -X HgManifestFileNodeToLinkedHgBonsaiMapping -X HgManifestFileNodeToLinkedHgChangeset 2>&1 | strip_glog
+  Walking edge types [BonsaiHgMappingToHgChangeset, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestToChildHgManifest, HgManifestToHgFileNode]
+  Walking node types [BonsaiHgMapping, HgChangeset, HgFileNode, HgManifest, HgManifestFileNode]
+  Seen,Loaded: 12,10
+  * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 HgChangeset:2,*,4 HgFileNode:3,*,0 HgManifest:2,*,3 HgManifestFileNode:3,*,1 (glob)
   Deferred: 1
-  Seen,Loaded: 4,4
-  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,3 HgFileNode:4,*,0 HgManifest:3,*,3 (glob)
+  Seen,Loaded: 5,5
+  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,5 HgFileNode:4,*,0 HgManifest:3,*,3 HgManifestFileNode:4,*,1 (glob)
   Deferred: 0
 
 derived changeset_info, chunked, deep

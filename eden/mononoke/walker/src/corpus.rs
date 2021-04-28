@@ -169,6 +169,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::HgManifest => false,
         NodeType::HgFileEnvelope => true,
         NodeType::HgFileNode => true,
+        NodeType::HgManifestFileNode => false,
         // Content
         NodeType::FileContent => true,
         NodeType::FileContentMetadata => true,

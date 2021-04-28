@@ -20,8 +20,8 @@ setup configuration
 validate with LFS enabled, shallow
   $ mononoke_walker -L graph validate --include-check-type=FileContentIsLfs --scuba-log-file scuba-validate-shallow.json -I shallow -I BookmarkToBonsaiHgMapping -i hg -x HgFileNode -i FileContent -i FileContentMetadata -q -b master_bookmark 2>&1 | strip_glog
   Performing check types [FileContentIsLfs]
-  Seen,Loaded: 13,13
-  Nodes,Pass,Fail:13,3,0; EdgesChecked:3; CheckType:Pass,Fail Total:3,0 FileContentIsLfs:3,0
+  Seen,Loaded: 14,14
+  Nodes,Pass,Fail:14,3,0; EdgesChecked:3; CheckType:Pass,Fail Total:3,0 FileContentIsLfs:3,0
 
 Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path.  As its shallow walk expect all via_node_key to be the same
   $ wc -l < scuba-validate-shallow.json

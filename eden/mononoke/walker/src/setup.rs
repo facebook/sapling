@@ -273,6 +273,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgBonsaiMappingToChangeset,
     EdgeType::HgChangesetToHgParent,
     EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgChangesetToHgManifestFileNode,
     EdgeType::HgChangesetViaBonsaiToHgChangeset,
     EdgeType::HgManifestToHgFileEnvelope,
     EdgeType::HgManifestToHgFileNode,
@@ -282,6 +283,10 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgFileNodeToLinkedHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
     EdgeType::HgFileNodeToHgCopyfromFileNode,
+    EdgeType::HgManifestFileNodeToLinkedHgBonsaiMapping,
+    EdgeType::HgManifestFileNodeToLinkedHgChangeset,
+    EdgeType::HgManifestFileNodeToHgParentFileNode,
+    EdgeType::HgManifestFileNodeToHgCopyfromFileNode,
     // Content
     EdgeType::FileContentToFileContentMetadata,
     EdgeType::FileContentMetadataToSha1Alias,
@@ -336,9 +341,11 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Hg
     EdgeType::HgBonsaiMappingToChangeset,
     EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgChangesetToHgManifestFileNode,
     EdgeType::HgChangesetViaBonsaiToHgChangeset,
     EdgeType::HgManifestToHgFileEnvelope,
     EdgeType::HgManifestToHgFileNode,
+    EdgeType::HgManifestToHgManifestFileNode,
     EdgeType::HgManifestToChildHgManifest,
     EdgeType::HgFileEnvelopeToFileContent,
     // Content
@@ -376,6 +383,7 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
     // Hg
     EdgeType::HgChangesetToHgManifest,
+    EdgeType::HgChangesetToHgManifestFileNode,
     EdgeType::HgChangesetToHgParent,
     EdgeType::HgChangesetViaBonsaiToHgChangeset,
     EdgeType::HgManifestToHgFileEnvelope,
@@ -385,6 +393,9 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgFileNodeToLinkedHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
     EdgeType::HgFileNodeToHgCopyfromFileNode,
+    EdgeType::HgManifestFileNodeToLinkedHgChangeset,
+    EdgeType::HgManifestFileNodeToHgParentFileNode,
+    EdgeType::HgManifestFileNodeToHgCopyfromFileNode,
 ];
 
 // Types that can result in loading bonsai data
