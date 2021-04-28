@@ -6,11 +6,14 @@
  */
 
 use crate::Result;
+use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
+use dag::Vertex;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use std::collections::HashMap;
 use std::path::Path;
 use zstore::Id20;
 use zstore::Zstore;
@@ -104,6 +107,23 @@ impl EagerRepo {
         Ok(self.store.get(id)?)
     }
 
+    /// Insert a commit. Return the commit hash.
+    pub async fn add_commit(&mut self, parents: &[Id20], raw_text: &[u8]) -> Result<Id20> {
+        let parents: Vec<Vertex> = parents
+            .iter()
+            .map(|v| Vertex::copy_from(v.as_ref()))
+            .collect();
+        let id: Id20 = {
+            let data = hg_sha1_text(&parents, raw_text);
+            self.add_sha1_blob(&data)?
+        };
+        let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
+        let parent_map: HashMap<Vertex, Vec<Vertex>> =
+            vec![(vertex.clone(), parents)].into_iter().collect();
+        self.dag.add_heads(&parent_map, &[vertex]).await?;
+        Ok(id)
+    }
+
     /// Obtain a reference to the commit graph.
     pub fn dag(&self) -> &Dag {
         &self.dag
@@ -113,6 +133,27 @@ impl EagerRepo {
     pub fn metalog(&self) -> &MetaLog {
         &self.metalog
     }
+}
+
+/// Convert parents and raw_text to HG SHA1 text format.
+fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
+    fn null_id() -> Vertex {
+        Vertex::copy_from(Id20::null_id().as_ref())
+    }
+    let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
+    let (p1, p2) = (
+        parents.get(0).cloned().unwrap_or_else(null_id),
+        parents.get(1).cloned().unwrap_or_else(null_id),
+    );
+    if p1 < p2 {
+        result.extend_from_slice(p1.as_ref());
+        result.extend_from_slice(p2.as_ref());
+    } else {
+        result.extend_from_slice(p2.as_ref());
+        result.extend_from_slice(p1.as_ref());
+    }
+    result.extend_from_slice(&raw_text);
+    result
 }
 
 #[cfg(test)]
@@ -137,5 +178,34 @@ mod tests {
 
         let repo2 = EagerRepo::open(dir).unwrap();
         assert_eq!(repo2.get_sha1_blob(id).unwrap().as_deref(), Some(text));
+    }
+
+    #[tokio::test]
+    async fn test_add_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+
+        let mut repo = EagerRepo::open(dir).unwrap();
+        let commit1 = repo.add_commit(&[], b"A").await.unwrap();
+        let commit2 = repo.add_commit(&[], b"B").await.unwrap();
+        let _commit3 = repo.add_commit(&[commit1, commit2], b"C").await.unwrap();
+        repo.flush().await.unwrap();
+
+        let repo2 = EagerRepo::open(dir).unwrap();
+        let rendered = dag::render::render_namedag(repo2.dag(), |v| {
+            let id = Id20::from_slice(v.as_ref()).unwrap();
+            let blob = repo2.get_sha1_blob(id).unwrap().unwrap();
+            Some(String::from_utf8_lossy(&blob[Id20::len() * 2..]).to_string())
+        })
+        .unwrap();
+        assert_eq!(
+            rendered,
+            r#"
+            o    53cceda7b244d25793af31655d682c7fe67d7650 C
+            ├─╮
+            │ o  35e7525ce3a48913275d7061dd9a867ffef1e34d B
+            │
+            o  005d992c5dcf32993668f7cede29d296c494a5d9 A"#
+        );
     }
 }
