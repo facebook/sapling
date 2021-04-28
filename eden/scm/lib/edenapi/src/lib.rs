@@ -22,3 +22,5 @@ pub use crate::response::{BlockingFetch, Entries, Fetch, ResponseMeta};
 // Re-export for convenience.
 pub use edenapi_types as types;
 pub use http_client::{Progress, Stats};
+
+pub type Result<T> = std::result::Result<T, EdenApiError>;

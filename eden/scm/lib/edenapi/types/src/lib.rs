@@ -61,6 +61,8 @@ pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 // re-export CloneData
 pub use dag_types::{CloneData, FlatSegment, Location as CommitLocation, PreparedFlatSegments};
 
+pub use types::nodeinfo::NodeInfo;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use thiserror::Error;
