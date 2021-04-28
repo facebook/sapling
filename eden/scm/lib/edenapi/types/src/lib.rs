@@ -23,6 +23,7 @@
 //! TYPES MAY CAUSE VERSION SKEW, so any changes should proceed
 //! with caution.
 
+pub mod batch;
 pub mod bookmark;
 pub mod commit;
 pub mod complete_tree;
@@ -34,6 +35,7 @@ pub mod metadata;
 pub mod tree;
 pub mod wire;
 
+pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,

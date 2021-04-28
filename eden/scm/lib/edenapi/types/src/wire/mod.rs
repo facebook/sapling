@@ -45,6 +45,7 @@
 //! 7. If the type has a corresponding API type, add a quickcheck wire-API round
 //! trip test.
 
+pub mod batch;
 pub mod bookmark;
 pub mod clone;
 pub mod commit;
@@ -58,6 +59,7 @@ pub mod tree;
 use dag_types::id::Id as DagId;
 
 pub use crate::wire::{
+    batch::WireBatch,
     bookmark::{WireBookmarkEntry, WireBookmarkRequest},
     clone::{WireCloneData, WireIdMapEntry},
     commit::{
