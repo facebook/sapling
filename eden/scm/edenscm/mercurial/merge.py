@@ -2329,8 +2329,6 @@ def update(
                     repo,
                     p1,
                     p2,
-                    fp1,
-                    fp2,
                     xp1,
                     xp2,
                     matcher,
@@ -2562,16 +2560,7 @@ def update(
     return stats
 
 
-def donativecheckout(
-    repo, p1, p2, fp1, fp2, xp1, xp2, matcher, force, partial, wc, prerecrawls
-):
-    repo.ui.debug("Using native checkout\n")
-    repo.ui.log(
-        "nativecheckout",
-        using_nativecheckout=True,
-    )
-
-    sparsematchers = None
+def getsparsematchers(repo, fp1, fp2, matcher=None):
     sparsematch = getattr(repo, "sparsematch", None)
     if sparsematch is not None:
         revs = {fp1, fp2}
@@ -2584,24 +2573,40 @@ def donativecheckout(
         newsparsematcher = sparsematch(fp2)
         # This can be optimized - if matchers are same, we can set sparsematchers = None
         # sparse.py does not do it, so we are not making things worse
-        sparsematchers = (oldsparsematch, newsparsematcher)
+        return matcher, (oldsparsematch, newsparsematcher)
+    else:
+        return matcher, None
+
+
+def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
+    (matcher, sparsematchers) = getsparsematchers(repo, p1.node(), p2.node(), matcher)
 
     if matcher is not None and matcher.always():
         matcher = None
+
+    return nativecheckout.checkoutplan(
+        repo.wvfs.base,
+        p1.manifest(),
+        p2.manifest(),
+        matcher,
+        sparsematchers,
+        updateprogresspath,
+    )
+
+
+def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerecrawls):
+    repo.ui.debug("Using native checkout\n")
+    repo.ui.log(
+        "nativecheckout",
+        using_nativecheckout=True,
+    )
 
     updateprogresspath = None
     if repo.ui.configbool("checkout", "resumable"):
         updateprogresspath = repo.localvfs.join("updateprogress")
 
     with progress.spinner(repo.ui, _("calculating")):
-        plan = nativecheckout.checkoutplan(
-            repo.wvfs.base,
-            p1.manifest(),
-            p2.manifest(),
-            matcher,
-            sparsematchers,
-            updateprogresspath,
-        )
+        plan = makenativecheckoutplan(repo, p1, p2, matcher, updateprogresspath)
 
     if repo.ui.debugflag:
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)
@@ -2640,7 +2645,7 @@ def donativecheckout(
         # note that we're in the middle of an update
         repo.localvfs.writeutf8("updatestate", p2.hex())
 
-    fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
+    fp1, fp2, xp1, xp2 = p2.node(), nullid, xp2, ""
     cwd = pycompat.getcwdsafe()
 
     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
