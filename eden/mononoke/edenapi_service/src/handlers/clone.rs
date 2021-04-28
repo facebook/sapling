@@ -51,7 +51,6 @@ pub async fn clone_data(state: &mut State) -> Result<BytesBody<Bytes>, HttpError
         })
         .collect();
     let wire_clone_data = WireCloneData {
-        head_id: clone_data.head_id.to_wire(),
         flat_segments: clone_data.flat_segments.segments.to_wire(),
         idmap,
     };
@@ -85,7 +84,6 @@ pub async fn full_idmap_clone_data(state: &mut State) -> Result<impl TryIntoResp
     // WireIdMapEntry objects.  The receiver is expected to deserialize a WireCloneData object then
     // continue to read idmap entries from the body of the response.
     let iddag_clone_data = WireCloneData {
-        head_id: clone_data.head_id.to_wire(),
         flat_segments: clone_data.flat_segments.segments.to_wire(),
         idmap: Vec::new(),
     };

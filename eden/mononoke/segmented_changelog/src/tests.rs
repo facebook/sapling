@@ -52,9 +52,11 @@ where
 {
     async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId> {
         let clone_data = self.clone_data(ctx).await?;
-        let cs_id = *clone_data
+        let cs_id = clone_data
             .idmap
-            .get(&clone_data.head_id)
+            .iter()
+            .max_by_key(|i| i.0)
+            .map(|i| i.1.clone())
             .ok_or_else(|| format_err!("error with clone data, missing idmap entry for head_id"))?;
         Ok(cs_id)
     }

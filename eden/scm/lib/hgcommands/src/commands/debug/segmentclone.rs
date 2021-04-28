@@ -8,7 +8,6 @@
 use super::ConfigSet;
 use super::Result;
 use super::IO;
-use anyhow::format_err;
 use anyhow::Context;
 use async_runtime::block_on_exclusive as block_on;
 use clidispatch::errors;
@@ -68,21 +67,25 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         })
         .collect();
 
-    let master = idmap
-        .get(&clone_data.head_id)
-        .cloned()
-        .ok_or_else(|| format_err!("head_id does not have idmap entry"))?;
-    let vertex_clone_data = CloneData {
-        head_id: clone_data.head_id,
-        flat_segments: clone_data.flat_segments,
-        idmap,
-    };
 
-    block_on(namedag.import_clone_data(vertex_clone_data))
-        .context("error importing segmented changelog")?;
+    let master = idmap.iter().max_by_key(|i| i.0).map(|i| i.1.clone());
+    if let Some(master) = master {
+        let vertex_clone_data = CloneData {
+            flat_segments: clone_data.flat_segments,
+            idmap,
+        };
+        block_on(namedag.import_clone_data(vertex_clone_data))
+            .context("error importing segmented changelog")?;
 
-    block_on(namedag.flush(&[master.clone()]))
-        .context("error writing segmented changelog to disk")?;
+        block_on(namedag.flush(&[master.clone()]))
+            .context("error writing segmented changelog to disk")?;
+
+        fs::write(
+            destination.join(".hg/store/remotenames"),
+            format!("{} bookmarks remote/master\n", master.to_hex()).as_bytes(),
+        )
+        .context("error writing to remotenames")?;
+    }
 
     fs::write(
         destination.join(".hg/requires"),
@@ -112,12 +115,6 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
             reponame
         )
         .as_bytes(),
-    )
-    .context("error writing to hg store requires")?;
-
-    fs::write(
-        destination.join(".hg/store/remotenames"),
-        format!("{} bookmarks remote/master\n", master.to_hex()).as_bytes(),
     )
     .context("error writing to hg store requires")?;
 

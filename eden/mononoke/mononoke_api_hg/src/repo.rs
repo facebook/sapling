@@ -285,7 +285,6 @@ impl HgRepoContext {
             }
         }
         let hg_clone_data = CloneData {
-            head_id: m_clone_data.head_id,
             flat_segments: m_clone_data.flat_segments,
             idmap: hg_idmap,
         };
@@ -313,7 +312,6 @@ impl HgRepoContext {
             .try_flatten()
             .boxed();
         let hg_clone_data = StreamCloneData {
-            head_id: m_clone_data.head_id,
             flat_segments: m_clone_data.flat_segments,
             idmap_stream: hg_idmap_stream,
         };

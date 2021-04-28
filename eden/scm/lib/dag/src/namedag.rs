@@ -419,15 +419,6 @@ where
     S: TryClone + Send + Sync + 'static,
 {
     async fn export_clone_data(&self) -> Result<CloneData<VertexName>> {
-        let head_id: Id = match self.dag.master_group()?.max() {
-            Some(id) => id,
-            None => {
-                // If we lift the limitation, CloneData struct needs to change.
-                return programming("Cannot export DAG with empty master group");
-            }
-        };
-        assert_eq!(head_id.group(), Group::MASTER);
-
         let idmap: HashMap<Id, VertexName> = {
             let ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
             tracing::debug!("export: {} universally known vertexes", ids.len());
@@ -458,7 +449,6 @@ where
         };
 
         let data = CloneData {
-            head_id,
             flat_segments,
             idmap,
         };

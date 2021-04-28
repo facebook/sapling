@@ -504,7 +504,6 @@ fn cmd_clone(args: CloneArgs) -> Result<()> {
         .pop()
         .ok_or_else(|| anyhow!("empty response for clone data"))?
         .to_api()?;
-    println!("head_id: {}", clone_data.head_id);
     println!("flat_segments: [");
     for fs in clone_data.flat_segments.segments {
         println!(
@@ -545,7 +544,6 @@ fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
     let mut deserializer = Deserializer::from_slice(&buffer);
     let wire_clone_data = WireCloneData::deserialize(&mut deserializer)?;
     let clone_data = wire_clone_data.to_api()?;
-    println!("head_id: {}", clone_data.head_id);
     println!("flat_segments: [");
     for fs in clone_data.flat_segments.segments {
         println!(

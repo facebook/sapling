@@ -19,8 +19,6 @@ use crate::{CloneData, FlatSegment, PreparedFlatSegments};
 // Only when an id has more than one parent it is sent over the wire.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCloneData {
-    #[serde(rename = "1")]
-    pub head_id: WireDagId,
     #[serde(rename = "2")]
     pub flat_segments: Vec<WireFlatSegment>,
     #[serde(rename = "3")]
@@ -58,7 +56,6 @@ impl ToWire for CloneData<HgId> {
             })
             .collect();
         WireCloneData {
-            head_id: self.head_id.to_wire(),
             flat_segments: self.flat_segments.segments.to_wire(),
             idmap,
         }
@@ -78,7 +75,6 @@ impl ToApi for WireCloneData {
             segments: self.flat_segments.to_api()?,
         };
         Ok(CloneData {
-            head_id: self.head_id.to_api()?,
             flat_segments,
             idmap,
         })

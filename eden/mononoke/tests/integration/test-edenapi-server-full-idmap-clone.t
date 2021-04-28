@@ -27,7 +27,6 @@ Enable Segmented Changelog
 Check files in response.
   $ edenapi_read_res full-idmap-clone res.cbor
   Reading from file: "res.cbor"
-  head_id: 2
   flat_segments: [
     0, 2, []
   ]

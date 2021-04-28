@@ -114,7 +114,6 @@ pub trait SegmentedChangelog: Send + Sync {
 }
 
 pub struct StreamCloneData<T> {
-    pub head_id: Vertex,
     pub flat_segments: PreparedFlatSegments,
     pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
 }

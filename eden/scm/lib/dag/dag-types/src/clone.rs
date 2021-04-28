@@ -15,7 +15,6 @@ use crate::segment::PreparedFlatSegments;
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[derive(Serialize, Deserialize)]
 pub struct CloneData<Name> {
-    pub head_id: Id,
     pub flat_segments: PreparedFlatSegments,
     pub idmap: HashMap<Id, Name>,
 }
@@ -33,7 +32,6 @@ where
             segments: Vec::arbitrary(g),
         };
         CloneData {
-            head_id: Id::arbitrary(g),
             flat_segments,
             idmap: HashMap::arbitrary(g),
         }
