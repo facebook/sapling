@@ -30,7 +30,7 @@ use http::Version;
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
     async fn health(&self) -> edenapi::Result<ResponseMeta> {
-        todo!()
+        Ok(default_response_meta())
     }
 
     async fn files(
@@ -125,5 +125,14 @@ impl EdenApi for EagerRepo {
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<BookmarkEntry>> {
         todo!()
+    }
+}
+
+fn default_response_meta() -> ResponseMeta {
+    ResponseMeta {
+        version: Version::HTTP_11,
+        status: StatusCode::OK,
+        server: Some("EagerRepo".to_string()),
+        ..Default::default()
     }
 }
