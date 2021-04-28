@@ -14,6 +14,8 @@ use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
+use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitKnownResponse;
 use edenapi_types::{CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData};
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -193,6 +195,20 @@ py_class!(pub class client |py| {
         callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>, PyFuture)> {
         self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids, callback)
+    }
+
+    /// commitknown(repo: str, nodes: [bytes]) -> [{'hgid': bytes, 'known': Result[bool]}]
+    def commitknown(&self, repo: String, hgids: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<CommitKnownResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().commit_known_py(py, repo, hgids)
+    }
+
+    /// commitgraph(repo: str, heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes]}]
+    def commitgraph(&self, repo: String, heads: Vec<PyBytes>, common: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<CommitGraphEntry>>>, PyFuture)>
+    {
+        self.inner(py).clone().commit_graph_py(py, repo, heads, common)
     }
 });
 

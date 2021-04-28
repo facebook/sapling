@@ -17,6 +17,8 @@ use cpython_ext::convert::Serde;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::Location;
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
+use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
     CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
@@ -279,6 +281,51 @@ pub trait EdenApiPyExt: EdenApi {
             })
             .map_pyerr(py)?;
 
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn commit_known_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        hgids: Vec<PyBytes>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<CommitKnownResponse>>>,
+        PyFuture,
+    )> {
+        let hgids = to_hgids(py, hgids);
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self.commit_known(repo, hgids).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn commit_graph_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        heads: Vec<PyBytes>,
+        common: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitGraphEntry>>>, PyFuture)> {
+        let heads = to_hgids(py, heads);
+        let common = to_hgids(py, common);
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self.commit_graph(repo, heads, common).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
         let responses_py = responses.map_ok(Serde).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
