@@ -5001,6 +5001,20 @@ def preregistersighandlers():
             pass
 
 
+def formatduration(time):
+    """
+    Format specific duration(in second) using best fit human readable time unit
+    """
+    if time >= 86400:
+        return _("{:.1f} day(s)").format(time / 86400)
+    elif time >= 3600:
+        return _("{:.1f} hour(s)").format(time / 3600)
+    elif time >= 60:
+        return _("{:.1f} minute(s)").format(time / 60)
+    else:
+        return _("{:.1f} second(s)").format(time)
+
+
 # see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
 def eachslice(iterable, n, maxtime=None):
     """If maxtime is not None, return a batch if it exceeds specified seconds"""
