@@ -975,6 +975,8 @@ Test list of internal help commands
    debugdiscovery
                  runs the changeset discovery protocol in isolation
    debugdrawdag  read an ASCII graph from stdin and create changesets
+   debugdryup    Execute native checkout (update) without actually writing to
+                 working copy
    debugdumpindexedlog
                  dump indexedlog data
    debugdumptrace

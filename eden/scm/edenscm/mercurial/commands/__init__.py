@@ -82,6 +82,7 @@ with hgdemandimport.deactivated():
         debugbenchmark,
         debugcheckoutidentifier,
         debugdirs,
+        debugdryup,
         debugmetalog,
         debugmutation,
         debugrebuildchangelog,

@@ -112,6 +112,7 @@ Show debug commands if there are no other candidates
   debugdirstate
   debugdiscovery
   debugdrawdag
+  debugdryup
   debugdumpindexedlog
   debugdumptrace
   debugdynamicconfig
@@ -406,6 +407,7 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: rev, ssh, remotecmd
   debugdrawdag: print
+  debugdryup: 
   debugdumpindexedlog: 
   debugdumptrace: time-range, session-id, output-path
   debugdynamicconfig: canary
