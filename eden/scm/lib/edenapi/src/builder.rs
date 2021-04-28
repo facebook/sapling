@@ -81,13 +81,17 @@ impl Builder {
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 
-        let headers = config
+        let mut headers = config
             .get_opt::<String>("edenapi", "headers")
             .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e))?
             .map(parse_headers)
             .transpose()
             .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e.to_string().into()))?
             .unwrap_or_default();
+        headers.insert(
+            "User-Agent".to_string(),
+            format!("EdenSCM/{}", version::VERSION),
+        );
 
         let max_requests = config
             .get_opt("edenapi", "maxrequests")
