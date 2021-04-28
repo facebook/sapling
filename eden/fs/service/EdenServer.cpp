@@ -78,6 +78,10 @@
 #include "eden/fs/takeover/TakeoverServer.h"
 #endif // _WIN32
 
+#ifdef EDEN_HAVE_RECAS
+#include "eden/fs/store/recas/ReCasBackingStore.h" //@manual
+#endif
+
 #ifdef EDEN_HAVE_GIT
 #include "eden/fs/store/git/GitBackingStore.h" // @manual
 #endif
@@ -1670,6 +1674,13 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     throw std::domain_error(
         "support for Git was not enabled in this EdenFS build");
 #endif // EDEN_HAVE_GIT
+  } else if (type == "recas") {
+#ifdef EDEN_HAVE_RECAS
+    return make_shared<ReCasBackingStore>(localStore_);
+#else // EDEN_HAVE_RECAS
+    throw std::domain_error(
+        "support for RE CAS was not enabled in this EdenFS build");
+#endif // EDEN_HAVE_RECAS
   }
   throw std::domain_error(
       folly::to<string>("unsupported backing store type: ", type));
