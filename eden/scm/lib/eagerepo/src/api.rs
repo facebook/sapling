@@ -13,6 +13,7 @@ use dag::Location;
 use dag::Vertex;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitHashToLocationResponse;
+use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
@@ -303,6 +304,14 @@ impl EdenApi for EagerRepo {
         // It's okay to return them with result "None" too.
 
         Ok(convert_to_fetch(values))
+    }
+
+    async fn commit_known(
+        &self,
+        _repo: String,
+        hgids: Vec<HgId>,
+    ) -> edenapi::Result<Fetch<CommitKnownResponse>> {
+        todo!()
     }
 
     async fn bookmarks(

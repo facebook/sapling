@@ -13,6 +13,7 @@ use std::iter::FromIterator;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
+use http::StatusCode;
 use itertools::Itertools;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -20,6 +21,7 @@ use serde_cbor::Deserializer;
 use url::Url;
 
 use auth::check_certs;
+use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     json::ToJson,
     wire::{
@@ -603,6 +605,14 @@ impl EdenApi for Client {
             .fetch::<WireCommitHashToLocationResponse>(formatted, progress)
             .await?)
     }
+
+    async fn commit_known(
+        &self,
+        _repo: String,
+        _hgids: Vec<HgId>,
+    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
+        raise_not_implemented()
+    }
 }
 
 /// Split up a collection of keys into batches of at most `batch_size`.
@@ -631,6 +641,13 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
     Err(EdenApiError::HttpError {
         status: res.status,
         message,
+    })
+}
+
+fn raise_not_implemented<T>() -> Result<T, EdenApiError> {
+    Err(EdenApiError::HttpError {
+        status: StatusCode::NOT_IMPLEMENTED,
+        message: "Not Implemented".to_string(),
     })
 }
 

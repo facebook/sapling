@@ -387,6 +387,14 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
         unimplemented!()
     }
+
+    async fn commit_known(
+        &self,
+        _repo: String,
+        _hgids: Vec<HgId>,
+    ) -> Result<Fetch<edenapi_types::CommitKnownResponse>, EdenApiError> {
+        unimplemented!()
+    }
 }
 
 pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {

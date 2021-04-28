@@ -96,6 +96,16 @@ pub struct CommitHashToLocationResponse {
     pub result: Result<Option<Location<HgId>>, ServerError>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize)]
+pub struct CommitKnownResponse {
+    pub hgid: HgId,
+    /// `Ok(true)`: The server verified that `hgid` is known.
+    /// `Ok(false)`: The server does not known `hgid`.
+    /// `Err`: The server cannot check `hgid`.
+    pub known: Result<bool, ServerError>,
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationRequestBatch {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
@@ -93,6 +94,14 @@ pub trait EdenApi: Send + Sync + 'static {
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError>;
+
+    /// Return a subset of commits that are known by the server.
+    /// This is similar to the "known" command in HG wireproto.
+    async fn commit_known(
+        &self,
+        repo: String,
+        hgids: Vec<HgId>,
+    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError>;
 
     async fn bookmarks(
         &self,
@@ -210,6 +219,16 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_hash_to_location(repo, master_heads, hgids, progress)
+            .await
+    }
+
+    async fn commit_known(
+        &self,
+        repo: String,
+        hgids: Vec<HgId>,
+    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .commit_known(repo, hgids)
             .await
     }
 
