@@ -163,7 +163,17 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<CommitRevlogData>> {
-        todo!()
+        let mut values = Vec::new();
+        for id in hgids {
+            let data = self.get_sha1_blob_for_api(id)?;
+            let data = CommitRevlogData {
+                hgid: id,
+                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
+                revlog_data: data.to_vec().into(),
+            };
+            values.push(Ok(data));
+        }
+        Ok(convert_to_fetch(values))
     }
 
     async fn clone_data(
