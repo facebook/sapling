@@ -7,6 +7,9 @@
 
 use crate::EagerRepo;
 use dag::ops::DagExportCloneData;
+use dag::protocol::AncestorPath;
+use dag::protocol::RemoteIdConvertProtocol;
+use dag::Location;
 use dag::Vertex;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitHashToLocationResponse;
@@ -212,7 +215,44 @@ impl EdenApi for EagerRepo {
         requests: Vec<CommitLocationToHashRequest>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<CommitLocationToHashResponse>> {
-        todo!()
+        let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
+            let paths: Vec<AncestorPath> = requests
+                .into_iter()
+                .map(|r| AncestorPath {
+                    x: Vertex::copy_from(r.location.descendant.as_ref()),
+                    n: r.location.distance,
+                    batch_size: r.count,
+                })
+                .collect();
+            self.dag()
+                .resolve_relative_paths_to_names(paths)
+                .await
+                .map_err(map_dag_err)?
+        };
+
+        check_convert_to_hgid(path_names.iter().flat_map(|i| i.1.iter()))?;
+        check_convert_to_hgid(path_names.iter().map(|i| &i.0.x))?;
+
+        let values: Vec<edenapi::Result<CommitLocationToHashResponse>> = path_names
+            .into_iter()
+            .map(|(p, ns)| {
+                let count = ns.len();
+                let response = CommitLocationToHashResponse {
+                    location: Location {
+                        descendant: HgId::from_slice(p.x.as_ref()).unwrap(), // unwrap: checked above
+                        distance: p.n,
+                    },
+                    hgids: ns
+                        .into_iter()
+                        .map(|n| HgId::from_slice(n.as_ref()).unwrap()) // unwrap: checked above
+                        .collect(),
+                    count: count as _,
+                };
+                Ok(response)
+            })
+            .collect();
+
+        Ok(convert_to_fetch(values))
     }
 
     async fn commit_hash_to_location(
