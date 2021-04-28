@@ -39,7 +39,22 @@ impl EdenApi for EagerRepo {
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<FileEntry>> {
-        todo!()
+        let mut values = Vec::with_capacity(keys.len());
+        for key in keys {
+            let id = key.hgid;
+            let data = self.get_sha1_blob_for_api(id)?;
+            let (p1, p2) = extract_p1_p2(&data);
+            let parents = Parents::new(p1, p2);
+            let entry = FileEntry {
+                key,
+                parents,
+                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
+                data: extract_body(&data).to_vec().into(),
+                metadata: Default::default(),
+            };
+            values.push(Ok(entry));
+        }
+        Ok(convert_to_fetch(values))
     }
 
     async fn history(
@@ -128,11 +143,47 @@ impl EdenApi for EagerRepo {
     }
 }
 
+impl EagerRepo {
+    fn get_sha1_blob_for_api(&self, id: HgId) -> edenapi::Result<minibytes::Bytes> {
+        // Emulate the HTTP errors.
+        match self.get_sha1_blob(id) {
+            Ok(None) => Err(EdenApiError::HttpError {
+                status: StatusCode::NOT_FOUND,
+                message: format!("{} cannot be found", id.to_hex()),
+            }),
+            Ok(Some(data)) => Ok(data),
+            Err(e) => Err(EdenApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: format!("{:?}", e),
+            }),
+        }
+    }
+}
+
 fn default_response_meta() -> ResponseMeta {
     ResponseMeta {
         version: Version::HTTP_11,
         status: StatusCode::OK,
         server: Some("EagerRepo".to_string()),
         ..Default::default()
+    }
+}
+
+fn extract_body(data_with_p1p2_prefix: &[u8]) -> &[u8] {
+    &data_with_p1p2_prefix[HgId::len() * 2..]
+}
+
+fn extract_p1_p2(data: &[u8]) -> (HgId, HgId) {
+    let p2 = HgId::from_slice(&data[..HgId::len()]).unwrap();
+    let p1 = HgId::from_slice(&data[HgId::len()..(HgId::len() * 2)]).unwrap();
+    (p1, p2)
+}
+
+/// Convert `Vec<T>` to `Fetch<T>`.
+fn convert_to_fetch<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>) -> Fetch<T> {
+    Fetch {
+        meta: Default::default(),
+        stats: Box::pin(async { Ok(Default::default()) }),
+        entries: Box::pin(futures::stream::iter(values)),
     }
 }
