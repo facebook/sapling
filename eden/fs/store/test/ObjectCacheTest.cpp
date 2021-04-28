@@ -31,19 +31,187 @@ class CacheObject {
 };
 
 constexpr auto hash3 = Hash{"0000000000000000000000000000000000000000"_sp};
+constexpr auto hash3a = Hash{"0000000000000000000000000000000000000010"_sp};
+constexpr auto hash3b = Hash{"0000000000000000000000000000000000000020"_sp};
+constexpr auto hash3c = Hash{"0000000000000000000000000000000000000030"_sp};
 constexpr auto hash4 = Hash{"0000000000000000000000000000000000000001"_sp};
 constexpr auto hash5 = Hash{"0000000000000000000000000000000000000002"_sp};
 constexpr auto hash6 = Hash{"0000000000000000000000000000000000000003"_sp};
 constexpr auto hash9 = Hash{"0000000000000000000000000000000000000004"_sp};
+constexpr auto hash11 = Hash{"0000000000000000000000000000000000000005"_sp};
 
 // Each object's name corresponds to its length in bytes.
 
 const auto object3 = std::make_shared<CacheObject>(hash3, 3);
+const auto object3a = std::make_shared<CacheObject>(hash3a, 3);
+const auto object3b = std::make_shared<CacheObject>(hash3b, 3);
+const auto object3c = std::make_shared<CacheObject>(hash3c, 3);
 const auto object4 = std::make_shared<CacheObject>(hash4, 4);
 const auto object5 = std::make_shared<CacheObject>(hash5, 5);
 const auto object6 = std::make_shared<CacheObject>(hash6, 6);
 const auto object9 = std::make_shared<CacheObject>(hash9, 9);
+const auto object11 = std::make_shared<CacheObject>(hash11, 11);
 } // namespace
+
+/**
+ * simple non-interest-handle test cases
+ */
+
+TEST(ObjectCache, testSimpleInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+
+  EXPECT_TRUE(cache->contains(object3->getHash()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+}
+
+TEST(ObjectCache, testMultipleInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+
+  EXPECT_TRUE(cache->contains(object3->getHash()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+  EXPECT_TRUE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(object3a, cache->getSimple(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+}
+
+TEST(ObjectCache, testSizeOverflowInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+  cache->insertSimple(object3c);
+
+  EXPECT_FALSE(cache->contains(object3->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<CacheObject>{nullptr},
+      cache->getSimple(object3->getHash()));
+  EXPECT_TRUE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(object3a, cache->getSimple(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object3c->getHash()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+}
+
+TEST(ObjectCache, testLRUSimpleInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+
+  cache->getSimple(object3->getHash()); // object3 should not be evicted now
+
+  cache->insertSimple(object3c);
+
+  EXPECT_TRUE(cache->contains(object3->getHash()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<CacheObject>{nullptr},
+      cache->getSimple(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object3c->getHash()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+}
+
+TEST(ObjectCache, testLargeInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object11);
+
+  EXPECT_TRUE(cache->contains(object11->getHash()));
+  EXPECT_EQ(object11, cache->getSimple(object11->getHash()));
+}
+
+TEST(ObjectCache, testSizeOverflowLargeInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+  cache->insertSimple(object11);
+
+  EXPECT_FALSE(cache->contains(object3->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<const CacheObject>{nullptr},
+      cache->getSimple(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<const CacheObject>{nullptr},
+      cache->getSimple(object3a->getHash()));
+  EXPECT_FALSE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<const CacheObject>{nullptr},
+      cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object11->getHash()));
+  EXPECT_EQ(object11, cache->getSimple(object11->getHash()));
+}
+
+TEST(ObjectCache, testDuplicateInsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+
+  cache->insertSimple(object3); // object3 should not be evicted now
+
+  cache->insertSimple(object3c);
+
+  EXPECT_TRUE(cache->contains(object3->getHash()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<CacheObject>{nullptr},
+      cache->getSimple(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object3c->getHash()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+}
+
+TEST(ObjectCache, testReinsert) {
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple>::create(10, 1);
+
+  cache->insertSimple(object3);
+  cache->insertSimple(object3a);
+  cache->insertSimple(object3b);
+  cache->insertSimple(object3c);
+  cache->insertSimple(object3);
+
+  EXPECT_TRUE(cache->contains(object3->getHash()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getHash()));
+  EXPECT_FALSE(cache->contains(object3a->getHash()));
+  EXPECT_EQ(
+      std::shared_ptr<CacheObject>{nullptr},
+      cache->getSimple(object3a->getHash()));
+  EXPECT_TRUE(cache->contains(object3b->getHash()));
+  EXPECT_EQ(object3b, cache->getSimple(object3b->getHash()));
+  EXPECT_TRUE(cache->contains(object3c->getHash()));
+  EXPECT_EQ(object3c, cache->getSimple(object3c->getHash()));
+}
+
+/**
+ * Interest-handle test cases
+ */
 
 TEST(ObjectCache, interest_handle_evicts_oldest_on_insertion) {
   auto cache =

@@ -58,3 +58,15 @@ TEST(TreeEntry, modeAndLogString) {
   EXPECT_EQ(std::nullopt, treeEntryTypeFromMode(S_IFSOCK | 0700));
 #endif
 }
+
+TEST(TreeEntry, testEntrySize) {
+  std::string name{"file.txt"};
+  auto type = TreeEntryType::REGULAR_FILE;
+  TreeEntry rwFile{makeTestHash("faceb00c"), PathComponent{name}, type};
+
+  auto sizeofSize = sizeof(rwFile);
+  auto getEntryIndirectBytesSize = rwFile.getIndirectSizeBytes();
+  auto totalSize = sizeofSize + getEntryIndirectBytesSize;
+
+  EXPECT_LE(name.length() + Hash::RAW_SIZE + sizeof(TreeEntryType), totalSize);
+}

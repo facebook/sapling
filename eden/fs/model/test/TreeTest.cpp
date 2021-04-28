@@ -11,6 +11,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::Hash;
@@ -68,4 +69,25 @@ TEST(Tree, testGetEntryPtr) {
   // Verify non-existent path.
   PathComponentPiece nonExistentPath("not_a_file");
   EXPECT_EQ(nullptr, tree.getEntryPtr(nonExistentPath));
+}
+
+TEST(Tree, testSize) {
+  std::string entryName{"file.txt"};
+  auto entryType = TreeEntryType::REGULAR_FILE;
+  TreeEntry entry{testHash, PathComponent{entryName}, entryType};
+  auto entrySize = sizeof(entry) + entry.getIndirectSizeBytes();
+
+  auto numEntries = 5;
+
+  vector<TreeEntry> entries;
+  for (auto i = 0; i < numEntries; ++i) {
+    entries.emplace_back(entry);
+  }
+  Tree tree(std::move(entries));
+
+  // testing the actual size is diffcult without just copy pasting the
+  // size caalculations, so we are just testing that the size estimate is
+  // reasonable. The theortical smallest possible memory footprint is the
+  // summ of the footprint of the entrys & the hash
+  EXPECT_LE(numEntries * entrySize + Hash::RAW_SIZE, tree.getSizeBytes());
 }
