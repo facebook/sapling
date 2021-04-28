@@ -262,7 +262,47 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<CommitHashToLocationResponse>> {
-        todo!()
+        let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
+            let heads: Vec<Vertex> = master_heads
+                .into_iter()
+                .map(|i| Vertex::copy_from(i.as_ref()))
+                .collect();
+            let names: Vec<Vertex> = hgids
+                .into_iter()
+                .map(|i| Vertex::copy_from(i.as_ref()))
+                .collect();
+            self.dag()
+                .resolve_names_to_relative_paths(heads, names)
+                .await
+                .map_err(map_dag_err)?
+        };
+
+        check_convert_to_hgid(path_names.iter().flat_map(|i| i.1.iter()))?;
+        check_convert_to_hgid(path_names.iter().map(|i| &i.0.x))?;
+
+        let values: Vec<edenapi::Result<CommitHashToLocationResponse>> = path_names
+            .into_iter()
+            .flat_map(|(p, ns)| {
+                ns.into_iter()
+                    .enumerate()
+                    .map(|(i, n)| {
+                        CommitHashToLocationResponse {
+                            hgid: HgId::from_slice(n.as_ref()).unwrap(), // unwrap: checked above
+                            result: Ok(Some(Location {
+                                descendant: HgId::from_slice(p.x.as_ref()).unwrap(), // unwrap: checked above
+                                distance: p.n + (i as u64),
+                            })),
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .map(Ok)
+            .collect();
+
+        // For hgids outside the master group, just ignore them.
+        // It's okay to return them with result "None" too.
+
+        Ok(convert_to_fetch(values))
     }
 
     async fn bookmarks(
