@@ -21,6 +21,7 @@ use serde_cbor::Deserializer;
 use url::Url;
 
 use auth::check_certs;
+use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     json::ToJson,
@@ -611,6 +612,15 @@ impl EdenApi for Client {
         _repo: String,
         _hgids: Vec<HgId>,
     ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
+        raise_not_implemented()
+    }
+
+    async fn commit_graph(
+        &self,
+        _repo: String,
+        _heads: Vec<HgId>,
+        _common: Vec<HgId>,
+    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
         raise_not_implemented()
     }
 }

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
@@ -102,6 +103,21 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Fetch<CommitKnownResponse>, EdenApiError>;
+
+    /// Return part of the commit graph that are ancestors of `heads`,
+    /// excluding ancestors of `common`.
+    ///
+    /// This is `heads % common` (or `only(heads, common)`) expressed using HG
+    /// revset, or `changelog.findmissing` in HG Python code base.
+    ///
+    /// If any of the nodes in `heads` and `common` are unknown by the server,
+    /// it should be an error.
+    async fn commit_graph(
+        &self,
+        repo: String,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError>;
 
     async fn bookmarks(
         &self,
@@ -229,6 +245,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_known(repo, hgids)
+            .await
+    }
+
+    async fn commit_graph(
+        &self,
+        repo: String,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .commit_graph(repo, heads, common)
             .await
     }
 

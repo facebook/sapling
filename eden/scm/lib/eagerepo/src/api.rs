@@ -12,6 +12,7 @@ use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
 use dag::Vertex;
 use edenapi::types::BookmarkEntry;
+use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
@@ -311,6 +312,15 @@ impl EdenApi for EagerRepo {
         _repo: String,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Fetch<CommitKnownResponse>> {
+        todo!()
+    }
+
+    async fn commit_graph(
+        &self,
+        _repo: String,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
         todo!()
     }
 

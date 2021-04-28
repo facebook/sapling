@@ -37,6 +37,7 @@ pub mod wire;
 
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
+pub use crate::commit::CommitGraphEntry;
 pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
     CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,

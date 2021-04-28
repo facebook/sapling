@@ -106,6 +106,13 @@ pub struct CommitKnownResponse {
     pub known: Result<bool, ServerError>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Serialize)]
+pub struct CommitGraphEntry {
+    pub hgid: HgId,
+    pub parents: Vec<HgId>,
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationRequestBatch {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {

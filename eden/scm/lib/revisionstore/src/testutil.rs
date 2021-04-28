@@ -395,6 +395,15 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<Fetch<edenapi_types::CommitKnownResponse>, EdenApiError> {
         unimplemented!()
     }
+
+    async fn commit_graph(
+        &self,
+        _repo: String,
+        _heads: Vec<HgId>,
+        _common: Vec<HgId>,
+    ) -> Result<Fetch<edenapi_types::CommitGraphEntry>, EdenApiError> {
+        unimplemented!()
+    }
 }
 
 pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
