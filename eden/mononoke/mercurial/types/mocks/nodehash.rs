@@ -14,6 +14,8 @@ pub use mercurial_types::NULL_HASH;
 
 use crate::hash;
 
+pub const NULL_CSID: HgChangesetId = HgChangesetId::new(NULL_HASH);
+
 // Definitions for hashes 1111...ffff.
 pub const ONES_HASH: HgNodeHash = HgNodeHash::new(hash::ONES);
 pub const TWOS_HASH: HgNodeHash = HgNodeHash::new(hash::TWOS);

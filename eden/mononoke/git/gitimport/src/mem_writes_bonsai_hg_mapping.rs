@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use context::CoreContext;
 use lock_ext::LockExt;
-use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 use std::cmp::Eq;
 use std::collections::HashMap;
@@ -132,13 +132,14 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
         }
     }
 
-    async fn get_many_hg_by_prefix(
+    async fn get_hg_in_range(
         &self,
         _ctx: &CoreContext,
         _repo_id: RepositoryId,
-        _cs_prefix: HgChangesetIdPrefix,
+        _low: HgChangesetId,
+        _high: HgChangesetId,
         _limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<Vec<HgChangesetId>, Error> {
         unimplemented!("This is not currently implemented in Gitimport")
     }
 }

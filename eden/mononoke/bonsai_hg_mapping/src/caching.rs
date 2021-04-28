@@ -19,7 +19,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use memcache::{KeyGen, MemcacheClient};
-use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -137,25 +137,26 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         Ok(res)
     }
 
-    /// Use caching for the full changeset ids and slower path otherwise.
-    async fn get_many_hg_by_prefix(
+    /// Use caching for the ranges of one element, use slower path otherwise.
+    async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        cs_prefix: HgChangesetIdPrefix,
+        low: HgChangesetId,
+        high: HgChangesetId,
         limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
-        if let Some(id) = cs_prefix.into_hg_changeset_id() {
-            let res = self.get(ctx, repo_id, id.into()).await?;
-            let res = match res.into_iter().next() {
-                Some(_) if limit > 0 => HgChangesetIdsResolvedFromPrefix::Single(id),
-                _ => HgChangesetIdsResolvedFromPrefix::NoMatch,
-            };
-            return Ok(res);
+    ) -> Result<Vec<HgChangesetId>, Error> {
+        if low == high {
+            let res = self.get(ctx, repo_id, low.into()).await?;
+            if res.is_empty() {
+                return Ok(vec![]);
+            } else {
+                return Ok(vec![low]);
+            }
         }
 
         self.mapping
-            .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .get_hg_in_range(ctx, repo_id, low, high, limit)
             .await
     }
 }

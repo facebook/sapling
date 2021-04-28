@@ -352,6 +352,16 @@ impl HgChangesetIdPrefix {
     }
 
     #[inline]
+    pub fn min_cs(&self) -> HgChangesetId {
+        HgChangesetId::new(HgNodeHash::new(self.0.0))
+    }
+
+    #[inline]
+    pub fn max_cs(&self) -> HgChangesetId {
+        HgChangesetId::new(HgNodeHash::new(self.0.1))
+    }
+
+    #[inline]
     pub fn min_as_ref(&self) -> &[u8] {
         self.0.min_as_ref()
     }

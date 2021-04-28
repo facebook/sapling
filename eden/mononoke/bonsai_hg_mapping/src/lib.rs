@@ -157,7 +157,36 @@ pub trait BonsaiHgMapping: Send + Sync {
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error>;
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+        let mut fetched_cs = self
+            .get_hg_in_range(
+                ctx,
+                repo_id,
+                cs_prefix.min_cs(),
+                cs_prefix.max_cs(),
+                limit + 1,
+            )
+            .await?;
+        let res = match fetched_cs.len() {
+            0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
+            1 => HgChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
+            l if l <= limit => HgChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
+            _ => HgChangesetIdsResolvedFromPrefix::TooMany({
+                fetched_cs.pop();
+                fetched_cs
+            }),
+        };
+        Ok(res)
+    }
+
+    async fn get_hg_in_range(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        low: HgChangesetId,
+        high: HgChangesetId,
+        limit: usize,
+    ) -> Result<Vec<HgChangesetId>, Error>;
 }
 
 #[derive(Clone)]
@@ -358,64 +387,45 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         Ok(mappings)
     }
 
-    async fn get_many_hg_by_prefix(
+    /// Return [`HgChangesetId`] entries in the inclusive range described by `low` and `high`.
+    /// Maximum `limit` entries will be returned.
+    async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        cs_prefix: HgChangesetIdPrefix,
+        low: HgChangesetId,
+        high: HgChangesetId,
         limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
-        STATS::get_many_hg_by_prefix.add_value(1);
+    ) -> Result<Vec<HgChangesetId>, Error> {
+        if low > high {
+            return Ok(Vec::new());
+        }
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let resolved_cs =
-            fetch_many_hg_by_prefix(&self.read_connection.conn, repo_id, &cs_prefix, limit).await?;
-
-        match resolved_cs {
-            HgChangesetIdsResolvedFromPrefix::NoMatch => {
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-                fetch_many_hg_by_prefix(
-                    &self.read_master_connection.conn,
-                    repo_id,
-                    &cs_prefix,
-                    limit,
-                )
-                .await
-            }
-            _ => Ok(resolved_cs),
+        let rows = SelectHgChangesetsByRange::query(
+            &self.read_connection.conn,
+            &repo_id,
+            &low.as_bytes(),
+            &high.as_bytes(),
+            &limit,
+        )
+        .await?;
+        let mut fetched: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
+        if fetched.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let rows = SelectHgChangesetsByRange::query(
+                &self.read_master_connection.conn,
+                &repo_id,
+                &low.as_bytes(),
+                &high.as_bytes(),
+                &limit,
+            )
+            .await?;
+            fetched = rows.into_iter().map(|row| row.0).collect();
         }
+        Ok(fetched)
     }
-}
-
-async fn fetch_many_hg_by_prefix(
-    connection: &Connection,
-    repo_id: RepositoryId,
-    cs_prefix: &HgChangesetIdPrefix,
-    limit: usize,
-) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
-    let rows = SelectHgChangesetsByRange::query(
-        &connection,
-        &repo_id,
-        &cs_prefix.min_as_ref(),
-        &cs_prefix.max_as_ref(),
-        &(limit + 1),
-    )
-    .await?;
-
-    let mut fetched_cs: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
-
-    let res = match fetched_cs.len() {
-        0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
-        1 => HgChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
-        l if l <= limit => HgChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
-        _ => HgChangesetIdsResolvedFromPrefix::TooMany({
-            fetched_cs.pop();
-            fetched_cs
-        }),
-    };
-
-    Ok(res)
 }
 
 async fn select_mapping(

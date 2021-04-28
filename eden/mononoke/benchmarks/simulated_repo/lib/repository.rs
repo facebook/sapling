@@ -41,7 +41,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use memblob::Memblob;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
-use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
+use mercurial_types::{HgChangesetId, HgFileNodeId};
 use metaconfig_types::ArcRepoConfig;
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
@@ -472,16 +472,17 @@ impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
         self.inner.get(ctx, repo_id, cs_id).await
     }
 
-    async fn get_many_hg_by_prefix(
+    async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        cs_prefix: HgChangesetIdPrefix,
+        low: HgChangesetId,
+        high: HgChangesetId,
         limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<Vec<HgChangesetId>, Error> {
         delay_v2(self.get_dist).await;
         self.inner
-            .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .get_hg_in_range(ctx, repo_id, low, high, limit)
             .await
     }
 }

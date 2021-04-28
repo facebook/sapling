@@ -107,6 +107,18 @@ pub enum ChangesetSpecifierPrefixResolution {
     TooMany(Vec<ChangesetSpecifier>),
 }
 
+impl ChangesetSpecifierPrefixResolution {
+    pub fn into_list(self) -> Vec<ChangesetSpecifier> {
+        use ChangesetSpecifierPrefixResolution::*;
+        match self {
+            NoMatch => Vec::new(),
+            Single(x) => vec![x],
+            Multiple(v) => v,
+            TooMany(v) => v,
+        }
+    }
+}
+
 impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
     for ChangesetSpecifierPrefixResolution
 {

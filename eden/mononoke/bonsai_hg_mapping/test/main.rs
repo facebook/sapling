@@ -19,7 +19,7 @@ use bonsai_hg_mapping::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
+use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -256,6 +256,70 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     assert_eq!(result, HgChangesetIdsResolvedFromPrefix::NoMatch);
 }
 
+async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+    let ctx = CoreContext::test_mock(fb);
+
+    let entry1 = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::ONES_CSID,
+        bcs_id: bonsai::ONES_CSID,
+    };
+    let entry2 = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::TWOS_CSID,
+        bcs_id: bonsai::TWOS_CSID,
+    };
+    let entry3 = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::THREES_CSID,
+        bcs_id: bonsai::THREES_CSID,
+    };
+
+    for entry in [entry1, entry2, entry3].iter() {
+        assert_eq!(true, mapping.add(&ctx, entry.clone()).await.unwrap());
+    }
+
+    assert!(
+        mapping
+            .get_hg_in_range(&ctx, REPO_ZERO, hg::AS_CSID, hg::BS_CSID, 10)
+            .await
+            .unwrap()
+            .is_empty(),
+    );
+
+    assert_eq!(
+        vec![hg::ONES_CSID],
+        mapping
+            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::ONES_CSID, 10)
+            .await
+            .unwrap()
+    );
+
+    assert_eq!(
+        vec![hg::ONES_CSID, hg::TWOS_CSID],
+        mapping
+            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::TWOS_CSID, 10)
+            .await
+            .unwrap()
+    );
+
+    assert_eq!(
+        vec![hg::ONES_CSID],
+        mapping
+            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::TWOS_CSID, 1)
+            .await
+            .unwrap()
+    );
+
+    assert_eq!(
+        vec![hg::ONES_CSID, hg::TWOS_CSID, hg::THREES_CSID],
+        mapping
+            .get_hg_in_range(&ctx, REPO_ZERO, hg::NULL_CSID, hg::FS_CSID, 10)
+            .await
+            .unwrap()
+    );
+}
+
 struct CountedBonsaiHgMapping {
     mapping: Arc<dyn BonsaiHgMapping>,
     gets: Arc<AtomicUsize>,
@@ -296,16 +360,17 @@ impl BonsaiHgMapping for CountedBonsaiHgMapping {
         self.mapping.get(ctx, repo_id, cs_id).await
     }
 
-    async fn get_many_hg_by_prefix(
+    async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        cs_prefix: HgChangesetIdPrefix,
+        low: HgChangesetId,
+        high: HgChangesetId,
         limit: usize,
-    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<Vec<HgChangesetId>, Error> {
         self.gets_many_hg_by_prefix.fetch_add(1, Ordering::Relaxed);
         self.mapping
-            .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .get_hg_in_range(ctx, repo_id, low, high, limit)
             .await
     }
 }
@@ -394,6 +459,17 @@ async fn test_caching(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
     get_many_hg_by_prefix(
+        fb,
+        SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test()),
+    )
+    .await;
+}
+
+#[fbinit::test]
+async fn test_get_hg_in_range(fb: FacebookInit) {
+    get_hg_in_range(
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
