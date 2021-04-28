@@ -21,6 +21,7 @@
 //! The word "eager" comes from "eager evaluation", the opposite of
 //! "lazy evaluation".
 
+mod api;
 mod eager_repo;
 mod errors;
 
