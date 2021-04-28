@@ -15,6 +15,7 @@ use edenapi::types::FileEntry;
 use edenapi::types::HgId;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
+use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
@@ -26,6 +27,7 @@ use edenapi::ProgressCallback;
 use edenapi::ResponseMeta;
 use http::StatusCode;
 use http::Version;
+use std::collections::HashSet;
 
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
@@ -64,7 +66,48 @@ impl EdenApi for EagerRepo {
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<HistoryEntry>> {
-        todo!()
+        let mut values = Vec::new();
+        let mut visited: HashSet<Key> = Default::default();
+        let mut to_visit: Vec<Key> = keys;
+        while let Some(key) = to_visit.pop() {
+            if !visited.insert(key.clone()) {
+                continue;
+            }
+            let data = self.get_sha1_blob_for_api(key.hgid)?;
+            // NOTE: Order of p1, p2 are not preserved, unlike revlog hg.
+            // It should be okay correctness-wise.
+            let (p1, p2) = extract_p1_p2(&data);
+            let mut key1 = Key {
+                path: key.path.clone(),
+                hgid: p1,
+            };
+            let mut key2 = Key {
+                path: key.path.clone(),
+                hgid: p2,
+            };
+            if let Some(renamed_from) = extract_rename(extract_body(&data)) {
+                if p1.is_null() {
+                    key1 = renamed_from;
+                } else {
+                    key2 = renamed_from;
+                }
+            }
+            if !p1.is_null() {
+                to_visit.push(key1.clone());
+            }
+            if !p2.is_null() {
+                to_visit.push(key2.clone());
+            }
+            let entry = HistoryEntry {
+                key,
+                nodeinfo: NodeInfo {
+                    parents: [key1, key2],
+                    linknode: *HgId::null_id(),
+                },
+            };
+            values.push(Ok(entry));
+        }
+        Ok(convert_to_fetch(values))
     }
 
     async fn trees(
@@ -177,6 +220,38 @@ fn extract_p1_p2(data: &[u8]) -> (HgId, HgId) {
     let p2 = HgId::from_slice(&data[..HgId::len()]).unwrap();
     let p1 = HgId::from_slice(&data[HgId::len()..(HgId::len() * 2)]).unwrap();
     (p1, p2)
+}
+
+/// Extract rename metadata from filelog header (if rename exists).
+/// data is not prefixed by hashes.
+///
+/// See `filelog.py:parsemeta`.
+fn extract_rename(data: &[u8]) -> Option<Key> {
+    if data.starts_with(b"\x01\n") {
+        let data = &data[2..];
+        if let Some(pos) = data.windows(2).position(|needle| needle == b"\x01\n") {
+            let header = String::from_utf8_lossy(&data[..pos]);
+            let mut path = None;
+            let mut rev = None;
+            for line in header.lines() {
+                let kv: Vec<&str> = line.split(": ").collect();
+                if let [k, v] = &kv[..] {
+                    if *k == "copy" {
+                        path = RepoPathBuf::from_string(v.to_string()).ok();
+                    } else if *k == "copyrev" {
+                        rev = HgId::from_hex(v.as_bytes()).ok();
+                    }
+                }
+            }
+            if let (Some(path), Some(rev)) = (path, rev) {
+                return Some(Key {
+                    path: path.into(),
+                    hgid: rev,
+                });
+            }
+        }
+    }
+    None
 }
 
 /// Convert `Vec<T>` to `Fetch<T>`.
