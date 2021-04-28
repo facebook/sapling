@@ -24,6 +24,12 @@ class Tree {
     return hash_;
   }
 
+  /**
+   * An estimate of the memory footprint of this tree. Called by ObjectCache to
+   * limit the number of cached trees in memory at a time.
+   */
+  size_t getSizeBytes() const;
+
   const std::vector<TreeEntry>& getTreeEntries() const {
     return entries_;
   }

@@ -115,6 +115,12 @@ class TreeEntry {
     return contentSha1_;
   }
 
+  /**
+   * An estimate of the memory footprint of this treeEntry outside of the data
+   * directly stored in this object.
+   */
+  size_t getIndirectSizeBytes() const;
+
  private:
   TreeEntryType type_;
   Hash hash_;

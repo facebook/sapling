@@ -7,13 +7,15 @@
 
 #include "eden/fs/model/TreeEntry.h"
 
-#include "eden/fs/utils/EnumValue.h"
+#include <sys/stat.h>
+#include <ostream>
 
 #include <folly/Conv.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <sys/stat.h>
-#include <ostream>
+
+#include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -102,6 +104,12 @@ bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
 
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {
   return !(entry1 == entry2);
+}
+
+size_t TreeEntry::getIndirectSizeBytes() const {
+  // TODO: we should consider using a standard memory framework across
+  // eden for this type of thing. D17174143 is one such idea.
+  return estimateIndirectMemoryUsage(name_.value());
 }
 } // namespace eden
 } // namespace facebook
