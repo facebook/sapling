@@ -18,6 +18,7 @@ chrono = { version = "0.4", features = ["serde"] }
 configmodel = { path = "../configmodel" }
 configparser = { path = "../configparser" }
 dirs = "2.0"
+edenapi_trait = { path = "trait" }
 edenapi_types = { path = "types" }
 env_logger = "0.7"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
