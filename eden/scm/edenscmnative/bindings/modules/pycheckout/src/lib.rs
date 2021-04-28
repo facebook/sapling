@@ -100,6 +100,22 @@ py_class!(class checkoutplan |py| {
         Ok(PyNone)
     }
 
+    def apply_dry_run(&self, content_store: &contentstore) -> PyResult<(usize, u64)> {
+        let store = content_store.extract_inner_ref(py);
+        let plan = self.plan(py);
+        py.allow_threads(|| try_block_unless_interrupted(
+            plan.apply_remote_data_store_dry_run(store)
+        )).map_pyerr(py)
+    }
+
+    def apply_scmstore_dry_run(&self, scmstore: &filescmstore) -> PyResult<(usize, u64)> {
+        let store = scmstore.extract_inner_ref(py).clone();
+        let plan = self.plan(py);
+        py.allow_threads(|| try_block_unless_interrupted(
+            plan.apply_read_store_dry_run(store)
+        )).map_pyerr(py)
+    }
+
     def apply_scmstore(&self, scmstore: &filescmstore) -> PyResult<PyNone> {
         let store = scmstore.extract_inner_ref(py).clone();
         let plan = self.plan(py);
@@ -141,6 +157,11 @@ py_class!(class checkoutplan |py| {
 
     def __str__(&self) -> PyResult<PyString> {
         Ok(PyString::new(py, &self.plan(py).to_string()))
+    }
+
+    // This function is not efficient, only good for debug commands
+    def __len__(&self) -> PyResult<usize> {
+        Ok(self.plan(py).all_files().count())
     }
 
 });

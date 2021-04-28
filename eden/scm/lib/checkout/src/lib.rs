@@ -6,6 +6,8 @@
  */
 
 use anyhow::{anyhow, bail, format_err, Result};
+use futures::channel::mpsc;
+use futures::channel::mpsc::UnboundedReceiver;
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
 use minibytes::Bytes;
@@ -334,46 +336,87 @@ impl CheckoutPlan {
         &self,
         store: &DS,
     ) -> Result<CheckoutStats> {
-        use futures::channel::mpsc;
-        self.apply_stream(|keys| {
-            let (tx, rx) = mpsc::unbounded();
-            let store = store.clone();
-            Handle::current().spawn_blocking(move || {
-                let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
-                for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-                    match store.prefetch(chunk) {
-                        Err(e) => {
-                            if tx.unbounded_send(Err(e)).is_err() {
-                                return;
-                            }
+        self.apply_stream(|keys| Self::stream_data_from_remote_data_store(store, keys))
+            .await
+    }
+
+    pub fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
+        store: &DS,
+        keys: Vec<Key>,
+    ) -> UnboundedReceiver<Result<(Bytes, Key)>> {
+        let (tx, rx) = mpsc::unbounded();
+        let store = store.clone();
+        Handle::current().spawn_blocking(move || {
+            let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
+            for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+                match store.prefetch(chunk) {
+                    Err(e) => {
+                        if tx.unbounded_send(Err(e)).is_err() {
+                            return;
                         }
-                        Ok(_) => {
-                            for store_key in chunk {
-                                let key = match store_key {
-                                    StoreKey::HgId(key) => key,
-                                    _ => unreachable!(),
-                                };
-                                let store_result = store.get(store_key.clone());
-                                let result = match store_result {
-                                    Err(err) => Err(err),
-                                    Ok(StoreResult::Found(data)) => {
-                                        strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
-                                    }
-                                    Ok(StoreResult::NotFound(k)) => {
-                                        Err(format_err!("{:?} not found in store", k))
-                                    }
-                                };
-                                if tx.unbounded_send(result).is_err() {
-                                    return;
+                    }
+                    Ok(_) => {
+                        for store_key in chunk {
+                            let key = match store_key {
+                                StoreKey::HgId(key) => key,
+                                _ => unreachable!(),
+                            };
+                            let store_result = store.get(store_key.clone());
+                            let result = match store_result {
+                                Err(err) => Err(err),
+                                Ok(StoreResult::Found(data)) => {
+                                    strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
                                 }
+                                Ok(StoreResult::NotFound(k)) => {
+                                    Err(format_err!("{:?} not found in store", k))
+                                }
+                            };
+                            if tx.unbounded_send(result).is_err() {
+                                return;
                             }
                         }
                     }
                 }
-            });
-            rx
-        })
-        .await
+            }
+        });
+        rx
+    }
+
+    pub async fn apply_remote_data_store_dry_run<DS: RemoteDataStore + Clone + 'static>(
+        &self,
+        store: &DS,
+    ) -> Result<(usize, u64)> {
+        let keys = self
+            .update_content
+            .iter()
+            .map(UpdateContentAction::make_key);
+        let mut stream = Self::stream_data_from_remote_data_store(store, keys.collect());
+        let (mut count, mut size) = (0, 0);
+        while let Some(result) = stream.next().await {
+            let (bytes, _) = result?;
+            count += 1;
+            size += bytes.len() as u64;
+        }
+        Ok((count, size))
+    }
+
+    pub async fn apply_read_store_dry_run(
+        &self,
+        store: Arc<dyn ReadStore<Key, StoreFile>>,
+    ) -> Result<(usize, u64)> {
+        let keys = self
+            .update_content
+            .iter()
+            .map(UpdateContentAction::make_key);
+        let keys: Vec<_> = keys.collect();
+        let mut stream = store.fetch_stream(Box::pin(stream::iter(keys)));
+        let (mut count, mut size) = (0, 0);
+        while let Some(result) = stream.next().await {
+            let file = result?;
+            count += 1;
+            size += file.content().unwrap().len() as u64;
+        }
+        Ok((count, size))
     }
 
     pub fn check_conflicts(&self, status: &Status) -> Vec<&RepoPath> {
