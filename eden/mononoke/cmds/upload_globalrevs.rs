@@ -21,7 +21,7 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::try_join, FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{Future, IntoFuture};
 use futures_old::stream;
@@ -86,13 +86,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches);
+    let globalrevs_store = Arc::new(args::open_sql::<SqlBonsaiGlobalrevMapping>(
+        fb,
+        config_store,
+        &matches,
+    )?);
 
-    let blobrepo = args::open_repo(fb, logger, &matches);
     let run = async {
-        let (repo, globalrevs_store) = try_join(blobrepo, globalrevs_store).await?;
+        let repo = args::open_repo(fb, logger, &matches).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
-        let globalrevs_store = Arc::new(globalrevs_store);
         upload(ctx, repo, in_filename, globalrevs_store)
             .compat()
             .await?;

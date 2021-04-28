@@ -6,7 +6,6 @@
  */
 
 use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
 use fbinit::FacebookInit;
 use metaconfig_types::{
     DatabaseConfig, LocalDatabaseConfig, MetadataDatabaseConfig, RemoteDatabaseConfig,
@@ -18,9 +17,8 @@ use crate::construct::SqlConstruct;
 use crate::facebook::{FbSqlConstruct, FbSqlShardedConstruct};
 
 /// Trait that allows construction from database config.
-#[async_trait]
 pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
-    async fn with_database_config(
+    fn with_database_config(
         fb: FacebookInit,
         database_config: &DatabaseConfig,
         mysql_options: &MysqlOptions,
@@ -46,9 +44,8 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
 impl<T: SqlConstruct + FbSqlConstruct> SqlConstructFromDatabaseConfig for T {}
 
 /// Trait that allows construction from the metadata database config.
-#[async_trait]
 pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct {
-    async fn with_metadata_database_config(
+    fn with_metadata_database_config(
         fb: FacebookInit,
         metadata_database_config: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
@@ -76,11 +73,10 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
 }
 
 /// Trait that allows construction of shardable databases from the metadata database config.
-#[async_trait]
 pub trait SqlShardableConstructFromMetadataDatabaseConfig:
     FbSqlConstruct + FbSqlShardedConstruct + SqlConstruct
 {
-    async fn with_metadata_database_config(
+    fn with_metadata_database_config(
         fb: FacebookInit,
         metadata_database_config: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,

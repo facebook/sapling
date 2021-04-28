@@ -6,7 +6,6 @@
  */
 
 use anyhow::Result;
-use async_trait::async_trait;
 use fbinit::FacebookInit;
 use sql_ext::facebook::MysqlOptions;
 
@@ -19,7 +18,6 @@ macro_rules! fb_unimplemented {
 }
 
 /// Construct a SQL data manager backed by Facebook infrastructure
-#[async_trait]
 pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
     fn with_mysql<'a>(_: FacebookInit, _: String, _: &'a MysqlOptions, _: bool) -> Result<Self> {
         fb_unimplemented!()
@@ -29,7 +27,6 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
 impl<T: SqlConstruct> FbSqlConstruct for T {}
 
 /// Construct a sharded SQL data manager backed by Facebook infrastructure
-#[async_trait]
 pub trait FbSqlShardedConstruct: SqlShardedConstruct + Sized + Send + Sync + 'static {
     fn with_sharded_mysql(
         _: FacebookInit,

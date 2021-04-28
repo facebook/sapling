@@ -1060,7 +1060,7 @@ pub fn parse_interned_types(
     Ok(include_types)
 }
 
-async fn parse_tail_args<'a>(
+fn parse_tail_args<'a>(
     fb: FacebookInit,
     sub_m: &'a ArgMatches<'a>,
     dbconfig: &'a MetadataDatabaseConfig,
@@ -1098,8 +1098,7 @@ async fn parse_tail_args<'a>(
         let sql_checkpoints = if let Some(checkpoint_path) = checkpoint_path {
             SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
         } else {
-            SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)
-                .await?
+            SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)?
         };
 
         Some(CheckpointsByName::new(checkpoint_name, sql_checkpoints))
@@ -1448,8 +1447,7 @@ pub async fn setup_common<'a>(
         let tail_params = match parsed_tail_params.get(metadatadb_config) {
             Some(tail_params) => tail_params.clone(),
             None => {
-                let tail_params =
-                    parse_tail_args(fb, sub_m, &metadatadb_config, &mysql_options).await?;
+                let tail_params = parse_tail_args(fb, sub_m, &metadatadb_config, &mysql_options)?;
                 parsed_tail_params.insert(metadatadb_config.clone(), tail_params.clone());
                 tail_params
             }

@@ -219,7 +219,7 @@ impl RepoFactory {
         self.redacted_blobs
             .get_or_try_init(config, || async move {
                 let sql_factory = self.sql_factory(config).await?;
-                let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>().await?;
+                let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>()?;
                 // Fetch redacted blobs in a separate task so that slow polls
                 // in repo construction don't interfere with the SQL query.
                 let redacted_blobs = tokio::task::spawn(async move {
@@ -358,7 +358,6 @@ impl RepoFactory {
             .await?;
         let builder = sql_factory
             .open::<SqlChangesetsBuilder>()
-            .await
             .context(RepoFactoryError::Changesets)?;
         let changesets = builder.build(self.env.rendezvous_options);
         if let Some(pool) = self.maybe_volatile_pool("changesets")? {
@@ -393,7 +392,6 @@ impl RepoFactory {
             .await?;
         let sql_bookmarks = sql_factory
             .open::<SqlBookmarksBuilder>()
-            .await
             .context(RepoFactoryError::Bookmarks)?
             .with_repo_id(repo_identity.id());
 
@@ -424,7 +422,6 @@ impl RepoFactory {
             .await?;
         let mut sql_phases_factory = sql_factory
             .open::<SqlPhasesFactory>()
-            .await
             .context(RepoFactoryError::Phases)?;
         if let Some(pool) = self.maybe_volatile_pool("phases")? {
             sql_phases_factory.enable_caching(self.env.fb, pool);
@@ -441,7 +438,6 @@ impl RepoFactory {
             .await?;
         let builder = sql_factory
             .open::<SqlBonsaiHgMappingBuilder>()
-            .await
             .context(RepoFactoryError::BonsaiHgMapping)?;
         let bonsai_hg_mapping = builder.build(self.env.rendezvous_options);
         if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
@@ -465,7 +461,6 @@ impl RepoFactory {
             .await?;
         let bonsai_git_mapping = sql_factory
             .open::<SqlBonsaiGitMappingConnection>()
-            .await
             .context(RepoFactoryError::BonsaiGitMapping)?
             .with_repo_id(repo_identity.id());
         Ok(Arc::new(bonsai_git_mapping))
@@ -480,7 +475,6 @@ impl RepoFactory {
             .await?;
         let bonsai_globalrev_mapping = sql_factory
             .open::<SqlBonsaiGlobalrevMapping>()
-            .await
             .context(RepoFactoryError::BonsaiGlobalrevMapping)?;
         if let Some(pool) = self.maybe_volatile_pool("bonsai_globalrev_mapping")? {
             Ok(Arc::new(CachingBonsaiGlobalrevMapping::new(
@@ -502,7 +496,6 @@ impl RepoFactory {
             .await?;
         let conn = sql_factory
             .open::<SqlPushrebaseMutationMappingConnection>()
-            .await
             .context(RepoFactoryError::PushrebaseMutationMapping)?;
         Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
     }
@@ -517,7 +510,6 @@ impl RepoFactory {
             .await?;
         let bonsai_svnrev_mapping = sql_factory
             .open::<SqlBonsaiSvnrevMapping>()
-            .await
             .context(RepoFactoryError::BonsaiSvnrevMapping)?;
         let bonsai_svnrev_mapping: Arc<dyn BonsaiSvnrevMapping + Send + Sync> =
             if let Some(pool) = self.maybe_volatile_pool("bonsai_svnrev_mapping")? {
@@ -541,7 +533,6 @@ impl RepoFactory {
             .await?;
         let mut filenodes_builder = sql_factory
             .open_shardable::<NewFilenodesBuilder>()
-            .await
             .context(RepoFactoryError::Filenodes)?;
         if let Caching::Enabled(_) = self.env.caching {
             let filenodes_tier = sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?;
@@ -572,7 +563,6 @@ impl RepoFactory {
             .await?;
         let hg_mutation_store = sql_factory
             .open::<SqlHgMutationStoreBuilder>()
-            .await
             .context(RepoFactoryError::HgMutationStore)?
             .with_repo_id(repo_identity.id());
         Ok(Arc::new(hg_mutation_store))
@@ -591,7 +581,6 @@ impl RepoFactory {
             .await?;
         let sql_connections = sql_factory
             .open::<SegmentedChangelogSqlConnections>()
-            .await
             .context(RepoFactoryError::SegmentedChangelog)?;
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
         let segmented_changelog = new_server_segmented_changelog(

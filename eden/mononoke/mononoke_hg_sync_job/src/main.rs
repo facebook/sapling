@@ -619,7 +619,7 @@ struct LatestReplayedSyncCounter {
 }
 
 impl LatestReplayedSyncCounter {
-    async fn new(
+    fn new(
         ctx: &CoreContext,
         source_repo: &BlobRepo,
         darkstorm_backup_repo: &Option<BlobRepo>,
@@ -637,13 +637,12 @@ impl LatestReplayedSyncCounter {
                 &config.storage_config.metadata,
                 &mysql_options,
                 readonly_storage.0,
-            )
-            .await?;
+            )?;
 
             (mutable_counters, repo_id)
         } else {
             let mutable_counters =
-                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
+                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)?;
             (mutable_counters, source_repo.get_repoid())
         };
 
@@ -896,7 +895,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         verify_server_bookmark_on_failure,
     )?;
 
-    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches).await?;
+    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches)?;
 
     let bookmarks = bookmarks.with_repo_id(repo_id);
     let reporting_handler = build_reporting_handler(&ctx, &scuba_sample, retry_num, &bookmarks);
@@ -976,9 +975,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 &maybe_darkstorm_backup_repo,
                 &config_store,
                 matches,
-            )
-            .watched(ctx.logger())
-            .await?;
+            )?;
             let exit_path = sub_m
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());

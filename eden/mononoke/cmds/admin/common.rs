@@ -145,7 +145,9 @@ pub async fn get_source_target_repos_and_mapping<'a>(
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches);
+    let (source_repo, target_repo) = try_join!(source_repo, target_repo)?;
 
-    try_join!(source_repo, target_repo, mapping)
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches)?;
+
+    Ok((source_repo, target_repo, mapping))
 }

@@ -863,7 +863,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches).await?;
+    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),
@@ -1041,8 +1041,7 @@ async fn repo_import(
         Ok(Some(mutable_path))
     });
 
-    let mutable_counters =
-        args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)?;
 
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {

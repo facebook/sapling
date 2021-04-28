@@ -19,7 +19,6 @@ use clap::Arg;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures::try_join;
 use slog::{debug, info, Logger};
 
 use blobrepo::BlobRepo;
@@ -317,10 +316,8 @@ async fn run_aliasverify<'a>(
     mode: Mode,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let (sqlchangesets, blobrepo) = try_join!(
-        args::open_sql::<SqlChangesetsBuilder>(fb, config_store, matches),
-        args::open_repo(fb, &logger, matches),
-    )?;
+    let sqlchangesets = args::open_sql::<SqlChangesetsBuilder>(fb, config_store, matches)?;
+    let blobrepo = args::open_repo(fb, &logger, matches).await?;
     AliasVerification::new(
         logger.clone(),
         blobrepo,

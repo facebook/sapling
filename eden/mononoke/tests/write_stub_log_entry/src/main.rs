@@ -63,7 +63,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let fut = async move {
         let config_store = matches.config_store();
         let repo_id = args::get_repo_id(config_store, matches)?;
-        let builder = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, matches).await?;
+        let builder = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, matches)?;
         let bookmarks = builder.with_repo_id(repo_id);
         let name = matches
             .value_of(BOOKMARK)

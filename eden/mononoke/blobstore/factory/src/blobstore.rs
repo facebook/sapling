@@ -573,20 +573,18 @@ async fn make_blobstore_multiplexed<'a>(
                 .watched(logger)
                 .await?;
 
-                Ok((blobstoreid, store_type, store))
+                Result::<_, Error>::Ok((blobstoreid, store_type, store))
             }
         }
-    }));
+    }))
+    .await?;
 
     let queue = SqlBlobstoreSyncQueue::with_database_config(
         fb,
         &queue_db,
         mysql_options,
         readonly_storage.0,
-    )
-    .watched(logger);
-
-    let (components, queue) = future::try_join(components, queue).await?;
+    )?;
 
     // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
     let (normal_components, write_mostly_components) = {

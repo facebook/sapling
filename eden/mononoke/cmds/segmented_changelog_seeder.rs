@@ -106,7 +106,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let segmented_changelog_sql_connections = sql_factory
         .open::<SegmentedChangelogSqlConnections>()
-        .await
         .context("error opening segmented changelog sql connections")?;
 
     let segmented_changelog_seeder = SegmentedChangelogSeeder::new(

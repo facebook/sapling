@@ -222,7 +222,7 @@ pub fn get_repo_id_from_value<'a>(
     Ok(repo_id)
 }
 
-pub async fn open_sql<'a, T>(
+pub fn open_sql<'a, T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
@@ -237,10 +237,9 @@ where
         matches.mysql_options(),
         matches.readonly_storage().0,
     )
-    .await
 }
 
-pub async fn open_source_sql<'a, T>(
+pub fn open_source_sql<'a, T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
@@ -256,7 +255,6 @@ where
         matches.mysql_options(),
         matches.readonly_storage().0,
     )
-    .await
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.

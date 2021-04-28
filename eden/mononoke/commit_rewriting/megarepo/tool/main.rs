@@ -189,13 +189,13 @@ async fn run_sync_diamond_merge<'a>(
 
     let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches);
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
 
     let (_, source_repo_config) =
         args::get_config_by_repoid(config_store, matches, source_repo_id)?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-    let (source_repo, target_repo, mapping) = try_join3(source_repo, target_repo, mapping).await?;
+    let (source_repo, target_repo) = try_join(source_repo, target_repo).await?;
 
     let source_merge_cs_id =
         helpers::csid_resolve(ctx.clone(), source_repo.clone(), merge_commit_hash)

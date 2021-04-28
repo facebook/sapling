@@ -66,8 +66,7 @@ pub async fn get_validation_helpers<'a>(
         &repo_config.storage_config.metadata,
         &mysql_options,
         readonly_storage.0,
-    )
-    .await?;
+    )?;
 
     let large_repo_lca_hint = get_lca_hint(ctx.clone(), &large_repo, &repo_config)
         .await

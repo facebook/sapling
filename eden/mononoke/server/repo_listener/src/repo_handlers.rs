@@ -205,7 +205,7 @@ pub async fn repo_handlers<'a>(
             &db_config,
             mysql_options,
             readonly_storage.0,
-        );
+        )?;
 
         let wireproto_logging = create_wireproto_logging(
             fb,
@@ -240,14 +240,8 @@ pub async fn repo_handlers<'a>(
             readonly_storage,
         );
 
-        let (mononoke_repo, sql_commit_sync_mapping, wireproto_logging, backsyncer_dbs) =
-            futures::future::try_join4(
-                mononoke_repo,
-                sql_commit_sync_mapping,
-                wireproto_logging,
-                backsyncer_dbs,
-            )
-            .await?;
+        let (mononoke_repo, wireproto_logging, backsyncer_dbs) =
+            futures::future::try_join3(mononoke_repo, wireproto_logging, backsyncer_dbs).await?;
 
         let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
             cloned!(logger);

@@ -96,7 +96,6 @@ async fn maybe_schedule_healer_for_storage(
         mysql_options,
         readonly_storage.0,
     )
-    .await
     .context("While opening sync queue")?;
 
     let sync_queue: Arc<dyn BlobstoreSyncQueue> = if dry_run {

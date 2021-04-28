@@ -269,7 +269,6 @@ async fn run_pushredirection_subcommand<'a>(
 
             let mutable_counters =
                 args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)
-                    .await
                     .context("While opening SqlMutableCounters")?;
 
             let counter = format_backsyncer_counter(&large_repo.get_repoid());

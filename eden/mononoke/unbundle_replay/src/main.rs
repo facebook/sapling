@@ -83,7 +83,7 @@ async fn get_replay_stream<'a>(
             let bundle_helper: String = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap().into();
             let bundle_id: i64 = sub.value_of(ARG_HG_RECORDING_ID).unwrap().parse()?;
 
-            let client = HgRecordingClient::new(ctx.fb, config_store, matches).await?;
+            let client = HgRecordingClient::new(ctx.fb, config_store, matches)?;
 
             let entry = client
                 .next_entry_by_id(ctx, bundle_id - 1)
@@ -106,7 +106,7 @@ async fn get_replay_stream<'a>(
                 .transpose()?
                 .map(Duration::from_secs);
 
-            let client = HgRecordingClient::new(ctx.fb, config_store, matches).await?;
+            let client = HgRecordingClient::new(ctx.fb, config_store, matches)?;
 
             let onto_rev = repo
                 .get_bookmark(ctx.clone(), &onto)

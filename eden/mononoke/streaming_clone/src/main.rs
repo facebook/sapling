@@ -43,7 +43,7 @@ pub async fn streaming_clone<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 
-    let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches).await?;
+    let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches)?;
     match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
             // This command works only if there are no streaming chunks at all for a give repo.
@@ -261,7 +261,7 @@ async fn insert_entries_into_db(
     Ok(())
 }
 
-async fn create_streaming_chunks_fetcher<'a>(
+fn create_streaming_chunks_fetcher<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<SqlStreamingChunksFetcher, Error> {
@@ -277,7 +277,6 @@ async fn create_streaming_chunks_fetcher<'a>(
         mysql_options,
         readonly_storage.0,
     )
-    .await
     .context("Failed to open SqlStreamingChunksFetcher")
 }
 

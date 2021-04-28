@@ -393,7 +393,7 @@ async fn run<'a>(
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
-    let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches);
+    let counters = args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)?;
 
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
@@ -406,8 +406,7 @@ async fn run<'a>(
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches);
 
-    let (source_repo, target_repo, counters) =
-        try_join3(source_repo, target_repo, mutable_counters).await?;
+    let (source_repo, target_repo) = try_join(source_repo, target_repo).await?;
 
     let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 

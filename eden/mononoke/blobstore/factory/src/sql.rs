@@ -40,17 +40,16 @@ pub struct SqlTierInfo {
 }
 
 impl MetadataSqlFactory {
-    pub async fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
+    pub fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
         T::with_metadata_database_config(
             self.fb,
             &self.dbconfig,
             &self.mysql_options,
             self.readonly.0,
         )
-        .await
     }
 
-    pub async fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
+    pub fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
         &self,
     ) -> Result<T, Error> {
         T::with_metadata_database_config(
@@ -59,7 +58,6 @@ impl MetadataSqlFactory {
             &self.mysql_options,
             self.readonly.0,
         )
-        .await
     }
 
     pub fn tier_info_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(

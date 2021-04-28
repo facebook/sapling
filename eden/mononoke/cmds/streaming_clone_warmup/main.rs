@@ -169,8 +169,7 @@ impl StreamingCloneWarmup {
             &config.storage_config.metadata,
             mysql_options,
             true, /*read-only*/
-        )
-        .await?;
+        )?;
 
         Ok(Self {
             fetcher,

@@ -75,64 +75,45 @@ impl MononokeRepo {
     ) -> Result<Self, Error> {
         let storage_config = &repo.config().storage_config;
 
-        let mutable_counters = async {
-            let ret = SqlMutableCounters::with_metadata_database_config(
+        let mutable_counters = Arc::new(
+            SqlMutableCounters::with_metadata_database_config(
                 fb,
                 &storage_config.metadata,
                 mysql_options,
                 readonly_storage.0,
             )
-            .await
-            .context("Failed to open SqlMutableCounters")?;
+            .context("Failed to open SqlMutableCounters")?,
+        );
 
-            Result::<_, Error>::Ok(Arc::new(ret))
-        };
+        let streaming_clone = streaming_clone(
+            fb,
+            repo.blob_repo(),
+            &storage_config.metadata,
+            mysql_options,
+            repo.repoid(),
+            readonly_storage.0,
+        )?;
 
-        let streaming_clone = async {
-            let ret = streaming_clone(
-                fb,
-                repo.blob_repo(),
-                &storage_config.metadata,
-                mysql_options,
-                repo.repoid(),
-                readonly_storage.0,
-            )
-            .await?;
-
-            Result::<_, Error>::Ok(ret)
-        };
-
-        let maybe_reverse_filler_queue = async {
+        let maybe_reverse_filler_queue = {
             let record_infinitepush_writes: bool =
                 repo.config().infinitepush.populate_reverse_filler_queue
                     && repo.config().infinitepush.allow_writes;
 
-            let ret = if record_infinitepush_writes {
+            if record_infinitepush_writes {
                 let reverse_filler_queue = SqlReverseFillerQueue::with_metadata_database_config(
                     fb,
                     &storage_config.metadata,
                     mysql_options,
                     readonly_storage.0,
-                )
-                .await?;
+                )?;
 
                 let reverse_filler_queue: Arc<dyn ReverseFillerQueue> =
                     Arc::new(reverse_filler_queue);
                 Some(reverse_filler_queue)
             } else {
                 None
-            };
-
-            Result::<_, Error>::Ok(ret)
+            }
         };
-
-        let (mutable_counters, streaming_clone, maybe_reverse_filler_queue) =
-            futures::future::try_join3(
-                mutable_counters,
-                streaming_clone,
-                maybe_reverse_filler_queue,
-            )
-            .await?;
 
         Self::new_from_parts(
             fb,
@@ -302,7 +283,7 @@ impl MononokeRepo {
     }
 }
 
-async fn streaming_clone(
+fn streaming_clone(
     fb: FacebookInit,
     blobrepo: &BlobRepo,
     metadata_db_config: &MetadataDatabaseConfig,
@@ -316,7 +297,6 @@ async fn streaming_clone(
         mysql_options,
         readonly_storage,
     )
-    .await
     .context("Failed to open SqlStreamingChunksFetcher")?;
 
     Ok(SqlStreamingCloneConfig {

@@ -75,7 +75,6 @@ pub async fn subcommand_mutable_counters<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .await
         .context("While opening SqlMutableCounters")?;
 
     match sub_m.subcommand() {

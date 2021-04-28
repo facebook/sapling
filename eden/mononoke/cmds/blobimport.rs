@@ -25,7 +25,7 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join4, TryFutureExt},
+    future::{try_join, TryFutureExt},
 };
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
@@ -367,19 +367,16 @@ async fn run_blobimport<'a>(
 
     let small_repo_id = args::get_source_repo_id_opt(config_store, matches)?;
 
-    let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
-        async {
-            if matches.is_present("no-create") {
-                args::open_repo_unredacted(fb, &ctx.logger(), matches).await
-            } else {
-                args::create_repo_unredacted(fb, &ctx.logger(), matches).await
-            }
-        },
-        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, matches),
-        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches),
-        args::open_sql::<SqlMutableCounters>(fb, config_store, matches),
-    )
-    .await?;
+    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, matches)?;
+    let synced_commit_mapping =
+        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, matches)?;
+
+    let blobrepo = if matches.is_present("no-create") {
+        args::open_repo_unredacted(fb, &ctx.logger(), matches).await?
+    } else {
+        args::create_repo_unredacted(fb, &ctx.logger(), matches).await?
+    };
 
     let origin_repo =
         if matches.is_present(BACKUP_FROM_REPO_ID) || matches.is_present(BACKUP_FROM_REPO_NAME) {

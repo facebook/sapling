@@ -20,7 +20,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join_all, TryFutureExt},
+    future::{try_join_all, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
 use manifest::ManifestOps;
@@ -235,13 +235,9 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
 
     let config_store = matches.config_store();
 
-    let blobrepo = args::open_repo(fb, &logger, &matches);
-    let redacted_blobs = async move {
-        args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
-            .await
-            .context("While opening SqlRedactedContentStore")
-    };
-    let (blobrepo, redacted_blobs) = try_join(blobrepo, redacted_blobs).await?;
+    let blobrepo = args::open_repo(fb, &logger, &matches).await?;
+    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
+        .context("While opening SqlRedactedContentStore")?;
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 

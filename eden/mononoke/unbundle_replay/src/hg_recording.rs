@@ -84,12 +84,12 @@ queries! {
 }
 
 impl HgRecordingClient {
-    pub async fn new<'a>(
+    pub fn new<'a>(
         fb: FacebookInit,
         config_store: &ConfigStore,
         matches: &'a MononokeMatches<'a>,
     ) -> Result<HgRecordingClient, Error> {
-        let sql = args::open_sql::<HgRecordingConnection>(fb, config_store, matches).await?;
+        let sql = args::open_sql::<HgRecordingConnection>(fb, config_store, matches)?;
         let repo_id = args::get_repo_id(config_store, matches)?;
         Ok(HgRecordingClient { repo_id, sql })
     }

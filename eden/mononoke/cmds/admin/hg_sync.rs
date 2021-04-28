@@ -540,11 +540,9 @@ pub async fn subcommand_process_hg_sync<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .await
         .context("While opening SqlMutableCounters")?;
 
     let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches)
-        .await
         .context("While opening SqlBookmarks")?
         .with_repo_id(repo_id);
 

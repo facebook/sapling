@@ -190,7 +190,6 @@ async fn run<'a>(
                 &mysql_options,
                 readonly_storage.0,
             )
-            .await
             .context("While opening MutableCounters")?;
 
             let start_id = get_start_id(ctx.clone(), repo_id, &mutable_counters, sub_m)

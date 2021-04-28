@@ -187,7 +187,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
         match redaction {
             Redaction::Enabled => {
                 let redacted_blobs =
-                    args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches).await?;
+                    args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)?;
                 redacted_blobs
                     .get_all_redacted_blobs()
                     .await
