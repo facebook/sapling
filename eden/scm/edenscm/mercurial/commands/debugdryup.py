@@ -5,8 +5,7 @@
 
 import time
 
-from bindings import checkout as nativecheckout
-
+from .. import merge as mergemod
 from .. import progress
 from .. import util
 from ..i18n import _
@@ -18,15 +17,9 @@ def debugdryup(ui, repo, fromspec, tospec, **opts):
     """Execute native checkout (update) without actually writing to working copy"""
     fromctx = repo[fromspec]
     toctx = repo[tospec]
+
     with PrintTimer(ui, "Calculating"), progress.spinner(ui, _("calculating")):
-        plan = nativecheckout.checkoutplan(
-            repo.wvfs.base,
-            fromctx.manifest(),
-            toctx.manifest(),
-            None,
-            None,
-            None,
-        )
+        plan = mergemod.makenativecheckoutplan(repo, fromctx, toctx)
 
     repo.ui.write(_("plan has %s actions\n") % len(plan))
 
