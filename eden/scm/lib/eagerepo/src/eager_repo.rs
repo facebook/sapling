@@ -13,6 +13,7 @@ use dag::Vertex;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 use zstore::Id20;
@@ -124,6 +125,52 @@ impl EagerRepo {
         Ok(id)
     }
 
+    /// Update or remove a single bookmark.
+    pub fn set_bookmark(&mut self, name: &str, id: Option<Id20>) -> Result<()> {
+        let mut bookmarks = self.get_bookmarks_map()?;
+        match id {
+            None => bookmarks.remove(name),
+            Some(id) => bookmarks.insert(name.to_string(), id),
+        };
+        self.set_bookmarks_map(bookmarks)?;
+        Ok(())
+    }
+
+    /// Get bookmarks.
+    pub fn get_bookmarks_map(&self) -> Result<BTreeMap<String, Id20>> {
+        // Attempt to match the format used by a real client repo.
+        let text: String = {
+            let data = self.metalog.get("bookmarks")?;
+            let opt_text = data.map(|b| String::from_utf8_lossy(&b).to_string());
+            opt_text.unwrap_or_default()
+        };
+        let map = text
+            .lines()
+            .filter_map(|line| {
+                // example line: d59acbf094f61c10b72dff3d0e6085b5c75d14f4 foo
+                let words: Vec<&str> = line.split_whitespace().collect();
+                if words.len() == 2 {
+                    if let Ok(id) = Id20::from_hex(words[0].as_bytes()) {
+                        return Some((words[1].to_string(), id));
+                    }
+                }
+                None
+            })
+            .collect();
+        Ok(map)
+    }
+
+    /// Set bookmarks.
+    pub fn set_bookmarks_map(&mut self, map: BTreeMap<String, Id20>) -> Result<()> {
+        let text = map
+            .into_iter()
+            .map(|(name, id)| format!("{} {}\n", id.to_hex(), name))
+            .collect::<Vec<_>>()
+            .concat();
+        self.metalog.set("bookmarks", text.as_bytes())?;
+        Ok(())
+    }
+
     /// Obtain a reference to the commit graph.
     pub fn dag(&self) -> &Dag {
         &self.dag
@@ -206,6 +253,39 @@ mod tests {
             │ o  35e7525ce3a48913275d7061dd9a867ffef1e34d B
             │
             o  005d992c5dcf32993668f7cede29d296c494a5d9 A"#
+        );
+    }
+
+    #[tokio::test]
+    async fn test_read_write_bookmarks() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+
+        let mut repo = EagerRepo::open(dir).unwrap();
+        let commit1 = repo.add_commit(&[], b"A").await.unwrap();
+        let commit2 = repo.add_commit(&[], b"B").await.unwrap();
+        repo.set_bookmark("c1", Some(commit1)).unwrap();
+        repo.set_bookmark("stable", Some(commit1)).unwrap();
+        repo.set_bookmark("main", Some(commit2)).unwrap();
+        repo.flush().await.unwrap();
+
+        let mut repo = EagerRepo::open(dir).unwrap();
+        assert_eq!(
+            format!("{:#?}", repo.get_bookmarks_map().unwrap()),
+            r#"{
+    "c1": HgId("005d992c5dcf32993668f7cede29d296c494a5d9"),
+    "main": HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
+    "stable": HgId("005d992c5dcf32993668f7cede29d296c494a5d9"),
+}"#
+        );
+        repo.set_bookmark("c1", None).unwrap();
+        repo.set_bookmark("stable", Some(commit2)).unwrap();
+        assert_eq!(
+            format!("{:#?}", repo.get_bookmarks_map().unwrap()),
+            r#"{
+    "main": HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
+    "stable": HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
+}"#
         );
     }
 }
