@@ -117,7 +117,30 @@ impl EdenApi for EagerRepo {
         attributes: Option<TreeAttributes>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
-        todo!()
+        let mut values = Vec::new();
+        let attributes = attributes.unwrap_or_default();
+        if attributes.child_metadata {
+            return Err(not_implemented_error(
+                "EagerRepo does not support child_metadata for trees".to_string(),
+            ));
+        }
+        for key in keys {
+            let data = self.get_sha1_blob_for_api(key.hgid)?;
+            let mut entry = TreeEntry::default();
+            entry.key = key;
+            if attributes.manifest_blob {
+                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
+                entry.data = Some(extract_body(&data).to_vec().into());
+            }
+            if attributes.parents {
+                let (p1, p2) = extract_p1_p2(&data);
+                let parents = Parents::new(p1, p2);
+                entry.parents = Some(parents);
+            }
+            assert!(!attributes.child_metadata, "checked above");
+            values.push(Ok(Ok(entry)));
+        }
+        Ok(convert_to_fetch(values))
     }
 
     async fn complete_trees(
@@ -129,7 +152,9 @@ impl EdenApi for EagerRepo {
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
-        todo!()
+        Err(not_implemented_error(
+            "EagerRepo does not support complete_trees endpoint".to_string(),
+        ))
     }
 
     async fn commit_revlog_data(
@@ -260,5 +285,13 @@ fn convert_to_fetch<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>) -
         meta: Default::default(),
         stats: Box::pin(async { Ok(Default::default()) }),
         entries: Box::pin(futures::stream::iter(values)),
+    }
+}
+
+/// Not implement error.
+fn not_implemented_error(message: String) -> EdenApiError {
+    EdenApiError::HttpError {
+        status: StatusCode::NOT_IMPLEMENTED,
+        message,
     }
 }
