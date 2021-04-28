@@ -203,3 +203,10 @@ impl ExtractInnerRef for client {
         self.inner(py)
     }
 }
+
+impl client {
+    pub fn from_edenapi(py: Python, client: Arc<dyn EdenApi>) -> PyResult<Self> {
+        let progress = NullProgressFactory::arc();
+        Self::create_instance(py, client, progress)
+    }
+}
