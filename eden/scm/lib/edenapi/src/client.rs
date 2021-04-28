@@ -638,12 +638,12 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
 mod tests {
     use anyhow::Result;
 
-    use crate::builder::Builder;
+    use crate::builder::HttpClientBuilder;
 
     #[test]
     fn test_url_escaping() -> Result<()> {
         let base_url = "https://example.com".parse()?;
-        let client = Builder::new().server_url(base_url).build()?;
+        let client = HttpClientBuilder::new().server_url(base_url).build()?;
 
         let repo = "repo_-. !@#$% foo \u{1f4a9} bar";
         let path = "path";

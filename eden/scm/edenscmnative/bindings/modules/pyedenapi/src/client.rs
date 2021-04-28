@@ -51,7 +51,7 @@ py_class!(pub class client |py| {
             None => NullProgressFactory::arc(),
         };
 
-        client::create_instance(py, Arc::new(inner), progress)
+        client::create_instance(py, inner, progress)
     }
 
     def health(&self) -> PyResult<PyDict> {

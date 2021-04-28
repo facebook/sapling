@@ -6,12 +6,15 @@
  */
 
 use std::ptr;
+use std::sync::Arc;
 
 use anyhow::Error;
 
-use edenapi::Client;
+use edenapi::EdenApi;
 
 use crate::{EdenApiServerError, OwnedString, TreeChildEntry, TreeEntry};
+
+type Client = Arc<dyn EdenApi>;
 
 trait ResultExt {
     fn unwrap_err_display(&self) -> String;

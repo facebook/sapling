@@ -8,6 +8,7 @@
 use std::fmt::Debug;
 use std::io::stdin;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use env_logger::Env;
@@ -20,7 +21,7 @@ use tokio::io;
 use tokio::io::AsyncWriteExt;
 
 use configparser::config::{ConfigSet, Options};
-use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
+use edenapi::{Builder, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
     json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, CompleteTreeRequest,
     FileRequest, HistoryRequest, TreeRequest,
@@ -62,7 +63,7 @@ struct Args {
 
 struct Setup<R> {
     repo: String,
-    client: Client,
+    client: Arc<dyn EdenApi>,
     requests: Vec<R>,
 }
 
@@ -291,7 +292,7 @@ async fn serialize_and_concat_raw<T: Serialize>(entries: Entries<T>) -> Result<V
         .await
 }
 
-fn init_client(config_path: Option<PathBuf>) -> Result<Client> {
+fn init_client(config_path: Option<PathBuf>) -> Result<Arc<dyn EdenApi>> {
     let config = load_config(config_path)?;
     Ok(Builder::from_config(&config)?.build()?)
 }

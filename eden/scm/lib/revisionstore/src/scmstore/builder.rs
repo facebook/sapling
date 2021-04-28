@@ -11,7 +11,8 @@ use std::sync::Arc;
 use anyhow::{bail, Result};
 
 use configparser::{config::ConfigSet, convert::ByteCount};
-use edenapi::{Builder, Client};
+use edenapi::Builder;
+use edenapi::EdenApi;
 use edenapi_types::{FileEntry, TreeEntry};
 use types::Key;
 
@@ -115,7 +116,7 @@ impl<'a> FileScmStoreBuilder<'a> {
             .get_or_default::<bool>("remotefilelog", "http")?)
     }
 
-    fn build_edenapi(&self) -> Result<Arc<EdenApiAdapter<Client>>> {
+    fn build_edenapi(&self) -> Result<Arc<EdenApiAdapter<Arc<dyn EdenApi>>>> {
         let reponame = get_repo_name(self.config)?;
         let extstored_policy = self.get_extstored_policy()?;
 
@@ -249,7 +250,7 @@ impl<'a> TreeScmStoreBuilder<'a> {
         Ok(self.config.get_or_default::<bool>("treemanifest", "http")?)
     }
 
-    fn build_edenapi(&self) -> Result<Arc<EdenApiAdapter<Client>>> {
+    fn build_edenapi(&self) -> Result<Arc<EdenApiAdapter<Arc<dyn EdenApi>>>> {
         let reponame = get_repo_name(self.config)?;
         Ok(Arc::new(EdenApiAdapter {
             client: Builder::from_config(self.config)?.build()?,

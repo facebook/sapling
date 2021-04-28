@@ -5,16 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::{convert::TryInto, path::PathBuf};
 
 use anyhow::Error;
 use libc::size_t;
 
-use edenapi::{Builder, Client, EdenApiBlocking};
+use edenapi::EdenApi;
+use edenapi::{Builder, EdenApiBlocking};
 use edenapi_types::{EdenApiServerError, TreeEntry};
 use types::Key as ApiKey;
 
 use crate::{ptr_len_to_slice, types::TreeAttributes, EdenApiClient, Key, TreeEntryFetch};
+
+type Client = Arc<dyn EdenApi>;
 
 fn edenapi_client_new(repository: *const u8, repository_len: size_t) -> Result<Client, Error> {
     let repository = unsafe { ptr_len_to_slice(repository, repository_len) }?;

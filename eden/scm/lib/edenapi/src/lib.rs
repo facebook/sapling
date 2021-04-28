@@ -15,6 +15,7 @@ mod response;
 pub use crate::api::{EdenApi, ProgressCallback};
 pub use crate::blocking::EdenApiBlocking;
 pub use crate::builder::Builder;
+pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;
 pub use crate::errors::{ConfigError, EdenApiError};
 pub use crate::response::{BlockingFetch, Entries, Fetch, ResponseMeta};

@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Error};
@@ -19,10 +20,49 @@ use http_client::HttpVersion;
 
 use crate::client::Client;
 use crate::errors::{ConfigError, EdenApiError};
+use crate::EdenApi;
 
 /// Builder for creating new EdenAPI clients.
+pub struct Builder<'a> {
+    config: &'a dyn configmodel::Config,
+    correlator: Option<String>,
+}
+
+impl<'a> Builder<'a> {
+    /// Populate a `Builder` from a Mercurial configuration.
+    pub fn from_config(config: &'a dyn configmodel::Config) -> Result<Self, EdenApiError> {
+        let builder = Self {
+            config,
+            correlator: None,
+        };
+        Ok(builder)
+    }
+
+    /// Unique identifier that will be logged by both the client and server for
+    /// every request, allowing log entries on both sides to be correlated. Also
+    /// allows correlating multiple requests that were made by the same instance
+    /// of the client.
+    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
+        self.correlator = correlator.map(|s| s.to_string());
+        self
+    }
+
+    /// Build the client.
+    pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        let client = Arc::new(
+            HttpClientBuilder::from_config(self.config)?
+                .correlator(self.correlator)
+                .build()?,
+        );
+        Ok(client)
+    }
+}
+
+/// Builder for creating new HTTP EdenAPI clients.
+///
+/// You probably want to use [`Builder`] instead.
 #[derive(Debug, Default)]
-pub struct Builder {
+pub struct HttpClientBuilder {
     server_url: Option<Url>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
@@ -41,17 +81,17 @@ pub struct Builder {
     log_dir: Option<PathBuf>,
 }
 
-impl Builder {
+impl HttpClientBuilder {
     pub fn new() -> Self {
         Default::default()
     }
 
-    /// Build the client.
+    /// Build the HTTP client.
     pub fn build(self) -> Result<Client, EdenApiError> {
         self.try_into().map(Client::with_config)
     }
 
-    /// Populate a `Builder` from a Mercurial configuration.
+    /// Populate a `HttpClientBuilder` from a Mercurial configuration.
     pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, EdenApiError> {
         let server_url = config
             .get_opt::<String>("edenapi", "url")
@@ -141,7 +181,7 @@ impl Builder {
         let log_dir = config
             .get_opt::<PathBuf>("edenapi", "logdir")
             .map_err(|e| ConfigError::Malformed("edenapi.logdir".into(), e))?;
-        Ok(Self {
+        Ok(HttpClientBuilder {
             server_url: Some(server_url),
             cert,
             key,
@@ -285,8 +325,8 @@ impl Builder {
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
-/// `Builder`, but required fields are not optional and values have been
-/// appropriately parsed and validated.
+/// `HttpClientBuilder`, but required fields are not optional and values have
+/// been appropriately parsed and validated.
 #[derive(Debug)]
 pub(crate) struct Config {
     pub(crate) server_url: Url,
@@ -307,11 +347,11 @@ pub(crate) struct Config {
     pub(crate) log_dir: Option<PathBuf>,
 }
 
-impl TryFrom<Builder> for Config {
+impl TryFrom<HttpClientBuilder> for Config {
     type Error = EdenApiError;
 
-    fn try_from(builder: Builder) -> Result<Self, Self::Error> {
-        let Builder {
+    fn try_from(builder: HttpClientBuilder) -> Result<Self, Self::Error> {
+        let HttpClientBuilder {
             server_url,
             cert,
             key,
