@@ -419,7 +419,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
                 &logger,
                 "Waiting for some requests to complete (load: {})...", load
             );
-            tokio::time::delay_for(Duration::from_millis(100)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
             continue;
         }
 
@@ -512,7 +512,7 @@ async fn do_main<'a>(
             fastreplay(&opts, stdout, &logger, &scuba, &repos, &count).await?;
 
             // Wait for child to terminate
-            child.await?;
+            child.wait().await?;
         }
         None => {
             fastreplay(&opts, io::stdin(), &logger, &scuba, &repos, &count).await?;
@@ -525,7 +525,7 @@ async fn do_main<'a>(
             break;
         }
         info!(&logger, "Waiting for {} requests to finish...", n);
-        tokio::time::delay_for(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
     }
 
     Ok(())

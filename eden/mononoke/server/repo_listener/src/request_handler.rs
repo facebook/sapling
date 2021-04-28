@@ -160,7 +160,7 @@ pub async fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
-        stdin.map(bytes_ext::copy_from_new),
+        stdin.map(|b| bytes_old::Bytes::from(b.as_ref())),
         repo_client,
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
@@ -171,7 +171,7 @@ pub async fn request_handler(
     let endres = proto_handler
         .inspect(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
         .map_err(Error::from)
-        .map(bytes_ext::copy_from_old)
+        .map(|b| Bytes::copy_from_slice(b.as_ref()))
         .forward(stdout)
         .map(|_| ());
 

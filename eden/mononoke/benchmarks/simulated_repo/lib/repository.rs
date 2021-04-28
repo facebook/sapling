@@ -293,7 +293,7 @@ where
 async fn delay_v2(distribution: impl Distribution<f64>) {
     let seconds = rand::thread_rng().sample(distribution).abs();
     let duration = Duration::new(seconds.trunc() as u64, (seconds.fract() * 1e+9) as u32);
-    tokio::time::delay_for(duration).await;
+    tokio::time::sleep(duration).await;
 }
 
 struct DelayedFilenodes<F> {

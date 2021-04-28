@@ -65,7 +65,6 @@ impl DarkstormVerifier {
 mod test {
     #![allow(warnings)]
     use super::*;
-    use bytes::Bytes;
     use fbinit::FacebookInit;
     use futures::{stream, TryFutureExt, TryStreamExt};
     use memblob::Memblob;
@@ -91,7 +90,7 @@ mod test {
             filestore,
             &ctx,
             &req,
-            stream::once(async { Ok(Bytes::from(&bytes[..])) }),
+            stream::once(async { Ok(bytes_05::Bytes::from(&bytes[..])) }),
         )
         .await?;
 
@@ -103,12 +102,12 @@ mod test {
 
         let uploaded_bytes = filestore::fetch(backup, ctx, &FetchKey::from(alias))
             .map_ok(|maybe_stream| async move {
-                let res: Vec<Bytes> = maybe_stream.unwrap().try_collect().await?;
+                let res: Vec<bytes_05::Bytes> = maybe_stream.unwrap().try_collect().await?;
                 Result::<_, Error>::Ok(res)
             })
             .try_flatten()
             .await?;
-        assert_eq!(vec![Bytes::from(&bytes[..])], uploaded_bytes);
+        assert_eq!(vec![bytes_05::Bytes::from(&bytes[..])], uploaded_bytes);
         Ok(())
     }
 }

@@ -387,7 +387,7 @@ where
             Some(interval) => {
                 let start = Instant::now();
                 let next_iter_deadline = start + Duration::from_secs(interval);
-                tokio::time::delay_until(next_iter_deadline).await;
+                tokio::time::sleep_until(next_iter_deadline).await;
                 let age_secs = state_start.since_seconds();
                 if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
                 {

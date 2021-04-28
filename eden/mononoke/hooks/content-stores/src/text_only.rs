@@ -108,7 +108,7 @@ mod test {
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let mut inner = InMemoryFileContentManager::new();
@@ -123,7 +123,7 @@ mod test {
 
     #[fbinit::test]
     fn test_elide_large_file(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let mut inner = InMemoryFileContentManager::new();
@@ -139,7 +139,7 @@ mod test {
 
     #[fbinit::test]
     fn test_elide_binary_file(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let mut inner = InMemoryFileContentManager::new();

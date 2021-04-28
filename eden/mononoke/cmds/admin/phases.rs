@@ -171,7 +171,7 @@ async fn add_public_phases(
         entries_processed += count;
         print!("\x1b[Khashes processed: {}\r", entries_processed);
         std::io::stdout().flush().expect("flush on stdout failed");
-        tokio::time::delay_for(Duration::from_secs(5)).await;
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
     Ok(())
 }

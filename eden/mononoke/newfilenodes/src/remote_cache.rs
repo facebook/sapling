@@ -476,7 +476,7 @@ pub mod test {
                     }
                     None => {}
                 }
-                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
+                time::sleep(Duration::from_millis(SLEEP_MS)).await;
             }
         })
         .await?;
@@ -496,7 +496,7 @@ pub mod test {
                     }
                     None => {}
                 }
-                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
+                time::sleep(Duration::from_millis(SLEEP_MS)).await;
             }
         })
         .await?;

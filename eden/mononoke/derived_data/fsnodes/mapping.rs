@@ -234,7 +234,7 @@ mod test {
         )
     }
 
-    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &mut Runtime)
+    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &Runtime)
     where
         F: Future<Output = BlobRepo>,
     {
@@ -257,16 +257,16 @@ mod test {
 
     #[fbinit::test]
     fn test_derive_data(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        verify_repo(fb, linear::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_uneven::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_wide::getrepo(fb), &mut runtime);
-        verify_repo(fb, many_diamonds::getrepo(fb), &mut runtime);
-        verify_repo(fb, many_files_dirs::getrepo(fb), &mut runtime);
-        verify_repo(fb, merge_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, merge_uneven::getrepo(fb), &mut runtime);
-        verify_repo(fb, unshared_merge_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, unshared_merge_uneven::getrepo(fb), &mut runtime);
+        let runtime = Runtime::new().unwrap();
+        verify_repo(fb, linear::getrepo(fb), &runtime);
+        verify_repo(fb, branch_even::getrepo(fb), &runtime);
+        verify_repo(fb, branch_uneven::getrepo(fb), &runtime);
+        verify_repo(fb, branch_wide::getrepo(fb), &runtime);
+        verify_repo(fb, many_diamonds::getrepo(fb), &runtime);
+        verify_repo(fb, many_files_dirs::getrepo(fb), &runtime);
+        verify_repo(fb, merge_even::getrepo(fb), &runtime);
+        verify_repo(fb, merge_uneven::getrepo(fb), &runtime);
+        verify_repo(fb, unshared_merge_even::getrepo(fb), &runtime);
+        verify_repo(fb, unshared_merge_uneven::getrepo(fb), &runtime);
     }
 }

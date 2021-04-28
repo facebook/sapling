@@ -37,7 +37,7 @@ impl MockController {
     /// Blocks until wait_for_dispatch is called, then allows wait_for_dispatch to proceed.
     pub async fn release(&self) {
         self.arrive.notified().await;
-        self.depart.notify();
+        self.depart.notify_one();
     }
 }
 
@@ -47,7 +47,7 @@ impl RendezVousController for MockController {
 
     /// Blocks until release is called.
     async fn wait_for_dispatch(&self) -> () {
-        self.arrive.notify();
+        self.arrive.notify_one();
         self.depart.notified().await;
     }
 

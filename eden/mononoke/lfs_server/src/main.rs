@@ -403,7 +403,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     serve_forever(
         runtime,
         select(
-            server.map(Ok).boxed(),
+            server.boxed(),
             shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
         .map(|res| res.factor_first().0),

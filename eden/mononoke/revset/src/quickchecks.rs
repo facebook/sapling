@@ -320,7 +320,7 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             #[test]
             fn $test_name() {
-                #[tokio::main(basic_scheduler)]
+                #[tokio::main(flavor = "current_thread")]
                 async fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
                     let ctx = CoreContext::test_mock(fb);
                     let repo = Arc::new($repo::getrepo(fb).await);

@@ -10,7 +10,8 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
+bytes-05 = { package = "bytes", version = "0.5", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -20,12 +21,12 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
-gotham = { version = "=0.5.0", default-features = false }
-gotham_derive = "=0.5.0"
+gotham = { version = "0.6.0", default-features = false }
+gotham_derive = "0.6.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
-hyper = "0.13.10"
-hyper-openssl = "0.8"
+hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
+hyper-openssl = "0.9"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 lfs_server_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/lfs_server" }
 maplit = "1.0"
@@ -49,10 +50,10 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 thiserror = "1.0"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 
 [dev-dependencies]
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = "0.6"

@@ -37,7 +37,7 @@ use std::ops::{Add, Sub};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 define_stats! {
     prefix = "mononoke.statistics_collector";
@@ -474,7 +474,7 @@ async fn run_statistics<'a>(
                 "Changeset hasn't changed, sleeping {:?}", duration
             );
 
-            delay_for(duration).await;
+            sleep(duration).await;
         } else {
             info!(
                 ctx.logger(),
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b""[..]))) });
         let result = rt.block_on(number_of_lines(stream))?;
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_number_of_lines_one_line() -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b"First line\n"[..]))) });
         let result = rt.block_on(number_of_lines(stream))?;
@@ -582,7 +582,7 @@ mod tests {
 
     #[test]
     fn test_number_of_lines_many_lines() -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         let stream = stream::once(async {
             Ok(FileBytes(Bytes::from(
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_number_of_lines_many_items() -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         let vec = vec![
             FileBytes(Bytes::from(&b"First line\n"[..])),
@@ -611,7 +611,7 @@ mod tests {
 
     #[fbinit::test]
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
+        let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 
@@ -663,7 +663,7 @@ mod tests {
 
     #[fbinit::test]
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
+        let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 
@@ -730,7 +730,7 @@ mod tests {
 
     #[fbinit::test]
     fn linear_test_update_statistics(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
+        let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 

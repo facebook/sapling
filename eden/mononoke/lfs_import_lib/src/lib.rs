@@ -72,20 +72,20 @@ async fn do_lfs_upload(
     info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
     let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
-    let (child, stream) = lfs_stream(lfs_helper, lfs)?;
+    let (mut child, stream) = lfs_stream(lfs_helper, lfs)?;
 
     let upload = filestore::store(
         blobrepo.blobstore(),
         blobrepo.filestore_config(),
         ctx,
         &req,
-        stream,
+        stream.map_ok(|b| bytes_05::Bytes::copy_from_slice(b.as_ref())),
     );
 
     // NOTE: We ignore the child exit code here. Since the Filestore validates the object
     // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
     // if it gave us exactly the content we wanted).
-    let (_, meta) = future::try_join(child.map_err(Error::from), upload).await?;
+    let (_, meta) = future::try_join(child.wait().map_err(Error::from), upload).await?;
 
     info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
 

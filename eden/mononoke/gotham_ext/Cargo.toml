@@ -9,15 +9,16 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-compression = { version = "0.3", features = ["all"] }
 async-trait = "0.1.45"
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
+bytes-05 = { package = "bytes", version = "0.5", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-gotham = { version = "=0.5.0", default-features = false }
-gotham_derive = "=0.5.0"
+gotham = { version = "0.6.0", default-features = false }
+gotham_derive = "0.6.0"
 hex = "0.4"
 http = "0.2"
-hyper = "0.13.10"
+hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
 load_limiter = { version = "0.1.0", path = "../load_limiter" }
 mime = "0.3.14"
@@ -29,9 +30,9 @@ quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-openssl = "0.4"
-trust-dns-resolver = "0.19"
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-openssl = "0.6"
+trust-dns-resolver = "0.20"
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

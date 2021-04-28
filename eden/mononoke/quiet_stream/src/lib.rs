@@ -12,7 +12,7 @@ use futures::{
 use pin_project::pin_project;
 use std::io::{Error, ErrorKind};
 use std::pin::Pin;
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 #[pin_project]
 pub struct QuietShutdownStream<T> {
@@ -34,8 +34,8 @@ where
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, Error>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<Result<(), Error>> {
         let this = self.project();
         this.inner.poll_read(cx, buf)
     }

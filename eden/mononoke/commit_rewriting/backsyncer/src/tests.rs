@@ -62,7 +62,7 @@ const BRANCHMERGE_FILE: &str = "branchmerge";
 
 #[fbinit::test]
 fn backsync_linear(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = Runtime::new()?;
+    let runtime = Runtime::new()?;
     runtime.block_on(async move {
         let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
@@ -76,7 +76,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     // for updating bookmark and/or counter failed. This transaction failure is benign and
     // expected, it means that two backsyncers doing the same job in parallel
 
-    let mut runtime = Runtime::new()?;
+    let runtime = Runtime::new()?;
     runtime.block_on(async move {
         let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;

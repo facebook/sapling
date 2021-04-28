@@ -33,7 +33,7 @@ use crate::GlobalrevPushrebaseHook;
 
 #[fbinit::test]
 fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(pushrebase_assigns_globalrevs_impl(fb))
 }
 
@@ -143,7 +143,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
 
 #[fbinit::test]
 fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(pushrebase_race_assigns_monotonic_globalrevs(fb))
 }
 
@@ -155,7 +155,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     impl PushrebaseHook for SleepHook {
         async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
             let us = rand::thread_rng().gen_range(0, 100);
-            tokio::time::delay_for(Duration::from_micros(us)).await;
+            tokio::time::sleep(Duration::from_micros(us)).await;
             Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
         }
     }

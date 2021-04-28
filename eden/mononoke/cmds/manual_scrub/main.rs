@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{Context, Error, Result};
-use async_compression::{tokio_02::write::ZstdEncoder, Level};
+use async_compression::{tokio::write::ZstdEncoder, Level};
 use clap::Arg;
 use futures::{
     channel::mpsc,
@@ -219,7 +219,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         let res = scrub(
             &blobstore,
             &ctx,
-            stdin.lines().map_err(Error::from),
+            tokio_stream::wrappers::LinesStream::new(stdin.lines()).map_err(Error::from),
             success,
             missing,
             error,

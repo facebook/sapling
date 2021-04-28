@@ -424,7 +424,7 @@ fn quickcheck_unfold(
     match tree {
         OrdTree::Node(id, children) => async move {
             if id % 10 > 0 {
-                tokio::time::delay_for(Duration::from_micros((id % 10) as u64)).await;
+                tokio::time::sleep(Duration::from_micros((id % 10) as u64)).await;
             }
             Ok(children.into_iter().map(|child| match child {
                 OrdTree::Leaf(id) => OrderedTraversal::Output(id),

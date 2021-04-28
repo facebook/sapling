@@ -1983,7 +1983,7 @@ where
             }
             // Didn't get the lease - wait a little bit and retry
             let sleep = rand::random::<u64>() % backoff_ms;
-            tokio::time::delay_for(Duration::from_millis(sleep)).await;
+            tokio::time::sleep(Duration::from_millis(sleep)).await;
 
             backoff_ms = std::cmp::min(1000, backoff_ms * 2);
             continue;

@@ -122,7 +122,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let ctx = ctx.clone();
         tasks.push(async move {
             // spread fetches over period, to reduce memory consumption
-            time::delay_for(offset_delay * index as u32).await;
+            time::sleep(offset_delay * index as u32).await;
             warmer.warmer_task(ctx.clone(), period).await?;
             Ok::<_, Error>(())
         });
@@ -214,7 +214,7 @@ impl StreamingCloneWarmup {
                     ctx.logger(),
                     "[{}] sleeping for: {:?}", self.reponame, delay
                 );
-                time::delay_for(delay).await;
+                time::sleep(delay).await;
             }
         }
     }

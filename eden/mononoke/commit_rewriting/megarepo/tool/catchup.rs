@@ -26,7 +26,7 @@ use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use slog::{error, info};
 use std::time::Duration;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 use unodes::RootUnodeManifestId;
 
 pub async fn create_deletion_head_commits<'a>(
@@ -90,7 +90,7 @@ pub async fn create_deletion_head_commits<'a>(
         info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
         if wait_secs > 0 {
             info!(ctx.logger(), "waiting for {} seconds", wait_secs);
-            delay_for(Duration::from_secs(wait_secs)).await;
+            sleep(Duration::from_secs(wait_secs)).await;
         }
     }
 

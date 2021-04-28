@@ -21,7 +21,6 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshne
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
-use bytes::Bytes;
 use cached_config::ConfigStore;
 use clap::{Arg, ArgGroup, SubCommand};
 use cloned::cloned;
@@ -551,7 +550,7 @@ where
 
                                     // First None means that no new entries will be added to the stream,
                                     // Some(current_id) means that bookmarks will be fetched again
-                                    tokio::time::delay_for(Duration::new(SLEEP_SECS, 0)).await;
+                                    tokio::time::sleep(Duration::new(SLEEP_SECS, 0)).await;
 
                                     unlock_repo_if_locked(&ctx, &repo_read_write_fetcher)
                                         .watched(ctx.logger())
@@ -711,10 +710,13 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let mut vars = HashMap::new();
     if matches.is_present(ARG_BOOKMARK_MOVE_ANY_DIRECTION) {
-        vars.insert("NON_FAST_FORWARD".to_string(), Bytes::from("true"));
+        vars.insert(
+            "NON_FAST_FORWARD".to_string(),
+            bytes_05::Bytes::from("true"),
+        );
     }
     if matches.is_present(ARG_BYPASS_READONLY) {
-        vars.insert("BYPASS_READONLY".to_string(), Bytes::from("true"));
+        vars.insert("BYPASS_READONLY".to_string(), bytes_05::Bytes::from("true"));
     }
 
     let push_vars = if vars.is_empty() { None } else { Some(vars) };

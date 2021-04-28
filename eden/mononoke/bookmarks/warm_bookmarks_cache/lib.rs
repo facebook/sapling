@@ -645,7 +645,7 @@ impl BookmarksCoordinator {
                         _ => 1000,
                     };
 
-                    tokio::time::delay_for(Duration::from_millis(delay_ms)).await;
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 }
             }
             .boxed();
@@ -791,7 +791,7 @@ async fn single_bookmark_updater(
                     ctx.logger(),
                     "sleeping for {} secs before updating a bookmark", to_sleep
                 );
-                tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
+                tokio::time::sleep(Duration::from_secs(to_sleep)).await;
             }
         }
         bookmarks.with_write(|bookmarks| {
@@ -1143,7 +1143,7 @@ mod tests {
                     break;
                 }
                 let sleep_ms = 10;
-                time::delay_for(Duration::from_millis(sleep_ms)).await;
+                time::sleep(Duration::from_millis(sleep_ms)).await;
             }
 
             Ok(())
@@ -1230,7 +1230,7 @@ mod tests {
 
         // This needs to split a bit because we don't know how long it would take for failing_book
         // to actually show up. :/
-        tokio::time::delay_for(Duration::from_secs(5)).await;
+        tokio::time::sleep(Duration::from_secs(5)).await;
 
         let failing_book = BookmarkName::new("failingbook")?;
         bookmarks.with_read(|bookmarks| assert_eq!(bookmarks.get(&failing_book), None));
@@ -1284,7 +1284,7 @@ mod tests {
                         *map.entry(cs_id).or_insert(0) += 1;
                     });
                     async move {
-                        tokio::time::delay_for(Duration::from_millis(derive_sleep_time_ms)).await;
+                        tokio::time::sleep(Duration::from_millis(derive_sleep_time_ms)).await;
                         RootUnodeManifestId::derive(&ctx, &repo, cs_id).await?;
                         Ok(())
                     }

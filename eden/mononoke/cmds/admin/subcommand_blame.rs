@@ -13,7 +13,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bounded_traversal::{bounded_traversal_dag, Iter};
-use bytes::Bytes;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -325,7 +324,10 @@ async fn subcommand_compute_blame(
             }
         },
         {
-            |(csid, path, file_unode_id), parents: Iter<Result<(Bytes, Blame), BlameRejected>>| {
+            |
+                (csid, path, file_unode_id),
+                parents: Iter<Result<(bytes_05::Bytes, Blame), BlameRejected>>,
+            | {
                 cloned!(ctx, repo);
                 async move {
                     let content =

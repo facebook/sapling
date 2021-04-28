@@ -349,7 +349,7 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_simple(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_simple(fb))
     }
 
@@ -378,7 +378,7 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_merge(fb))
     }
 
@@ -403,7 +403,7 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_type_change(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_type_change(fb))
     }
 
@@ -444,7 +444,7 @@ mod tests {
 
     #[fbinit::test]
     fn many_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_many_parents(fb))
     }
 
@@ -471,7 +471,7 @@ mod tests {
 
     #[fbinit::test]
     fn derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_empty_commits(fb))
     }
 
@@ -497,7 +497,7 @@ mod tests {
 
     #[fbinit::test]
     fn derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_only_empty_commits(fb))
     }
 
@@ -507,7 +507,7 @@ mod tests {
         tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
 
         with_tunables(tunables, || {
-            let mut runtime = tokio::runtime::Runtime::new()?;
+            let runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(test_derive_disabled_filenodes(fb))
         })
     }

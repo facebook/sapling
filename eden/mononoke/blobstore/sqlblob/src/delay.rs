@@ -12,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use futures::stream::StreamExt;
 use rand::{thread_rng, Rng};
 use stats::prelude::*;
 use tokio::sync::watch;
@@ -35,7 +36,7 @@ pub struct BlobDelay {
 async fn jitter_delay(raw_lag: Duration) {
     let delay =
         thread_rng().gen_range(Duration::from_secs(0), min(Duration::from_secs(1), raw_lag));
-    tokio::time::delay_for(delay).await;
+    tokio::time::sleep(delay).await;
 }
 
 impl BlobDelay {
@@ -63,10 +64,11 @@ impl BlobDelay {
     }
 
     pub async fn delay(&self, shard_id: usize) {
-        let mut lag_receiver = self.lag_receivers[shard_id].clone();
+        let mut lag_receiver =
+            tokio_stream::wrappers::WatchStream::new(self.lag_receivers[shard_id].clone());
         let start_time = Instant::now();
 
-        while let Some(raw_lag) = lag_receiver.recv().await {
+        while let Some(raw_lag) = lag_receiver.next().await {
             if raw_lag < MAX_LAG {
                 if start_time.elapsed() > Duration::from_secs(1) {
                     // No jittering for short delays, but jitter us about a bit if we've seen

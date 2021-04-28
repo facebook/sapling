@@ -12,7 +12,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
-    FutureExt, StreamExt, TryFutureExt,
+    FutureExt, TryFutureExt,
 };
 use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
@@ -140,19 +140,13 @@ pub fn get_root_manifest_id(
 /// Get a tokio `Runtime` with potentially explicitly set number of core threads
 pub fn create_runtime(
     log_thread_name_prefix: Option<&str>,
-    core_threads: Option<usize>,
+    worker_threads: Option<usize>,
 ) -> io::Result<Runtime> {
-    let mut builder = tokio::runtime::Builder::new();
-    builder.threaded_scheduler();
+    let mut builder = tokio::runtime::Builder::new_multi_thread();
     builder.enable_all();
-    builder.no_coop();
     builder.thread_name(log_thread_name_prefix.unwrap_or("tk"));
-    if let Some(core_threads) = core_threads {
-        builder.core_threads(core_threads);
-    } else {
-        // TODO(stash) T75113443 remove when
-        // https://github.com/tokio-rs/tokio/issues/2269 is landed
-        builder.core_threads(num_cpus::get());
+    if let Some(worker_threads) = worker_threads {
+        builder.worker_threads(worker_threads);
     }
     builder.build()
 }
@@ -193,8 +187,13 @@ where
 
     let mut terminate = signal(SignalKind::terminate())?;
     let mut interrupt = signal(SignalKind::interrupt())?;
+
+    let terminate = terminate.recv();
+    let interrupt = interrupt.recv();
+    futures::pin_mut!(terminate, interrupt);
+
     // This future becomes ready when we receive a termination signal
-    let signalled = future::select(terminate.next(), interrupt.next());
+    let signalled = future::select(terminate, interrupt);
 
     let stats_agg = schedule_stats_aggregation_preview()
         .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
@@ -236,7 +235,7 @@ where
         shutdown_grace_period.as_secs(),
     );
 
-    time::delay_for(shutdown_grace_period).await;
+    time::sleep(shutdown_grace_period).await;
 
     info!(&logger, "Shutting down...");
     let () = time::timeout(shutdown_timeout, shutdown)

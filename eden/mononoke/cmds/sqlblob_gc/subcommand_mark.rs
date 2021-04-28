@@ -17,7 +17,7 @@ use futures::{
 };
 use rand::{thread_rng, Rng};
 use slog::{info, Logger};
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 use sqlblob::Sqlblob;
 
@@ -59,7 +59,7 @@ async fn handle_one_key(key: String, store: Arc<Sqlblob>) -> Result<()> {
             "Failure {:#?} on key {} - delaying for {:#?}",
             res, &key, delay
         );
-        delay_for(delay).await;
+        sleep(delay).await;
     }
     Err(anyhow!(
         "Failed to handle {} after {} retries",
@@ -79,7 +79,7 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize) -> Result<()> 
             "Failure {:#?} on shard {} - delaying for {:#?}",
             res, shard, delay
         );
-        delay_for(delay).await;
+        sleep(delay).await;
     }
     Err(anyhow!(
         "Failed to handle initial generation on shard {} after {} retries",

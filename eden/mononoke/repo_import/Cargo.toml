@@ -37,7 +37,7 @@ serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]
@@ -45,7 +45,7 @@ ascii = "1.0"
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

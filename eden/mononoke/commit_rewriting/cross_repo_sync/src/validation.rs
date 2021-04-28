@@ -831,7 +831,7 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_diff_with_renamer_impl(fb))
     }
 
@@ -873,7 +873,7 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_small_to_large(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_small_to_large_impl(fb))
     }
 
@@ -902,7 +902,7 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_no_sync_outcome_impl(fb))
     }
 

@@ -8,6 +8,7 @@
 use std::env::var;
 use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
+use std::pin::Pin;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
@@ -266,7 +267,7 @@ impl<'a> StdioRelay<'a> {
         Ok(())
     }
 
-    async fn establish_connection(&self) -> Result<SslStream<TcpStream>, Error> {
+    async fn establish_connection(&self) -> Result<Pin<Box<SslStream<TcpStream>>>, Error> {
         let path = self.path.to_owned();
         let expected_server_identity = self.expected_server_identity.clone();
         let client_logger = self.client_logger.clone();
@@ -376,9 +377,18 @@ impl<'a> StdioRelay<'a> {
                 ""
             }
         };
-        tokio_openssl::connect(configured_connector, &common_name, sock)
+
+        let ssl = configured_connector.into_ssl(&common_name)?;
+
+        let ssl = SslStream::new(ssl, sock)?;
+        let mut ssl = Box::pin(ssl);
+
+        ssl.as_mut()
+            .connect()
             .await
-            .with_context(|| format!("tls failed: talking to '{}'", path))
+            .with_context(|| format!("tls failed: talking to '{}'", path))?;
+
+        Ok(ssl)
     }
 
     async fn internal_run(

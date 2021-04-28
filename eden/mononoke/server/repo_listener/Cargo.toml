@@ -13,9 +13,8 @@ base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -34,7 +33,7 @@ gotham_ext = { version = "0.1.0", path = "../../gotham_ext" }
 hgproto = { version = "0.1.0", path = "../../hgproto" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 http = "0.2"
-hyper = "0.13.10"
+hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
 load_limiter = { version = "0.1.0", path = "../../load_limiter" }
 maplit = "1.0"
@@ -62,9 +61,9 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-openssl = "0.4"
-tokio-util = { version = "0.3", features = ["codec", "udp"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-openssl = "0.6"
+tokio-util = { version = "0.6", features = ["full"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [patch.crates-io]

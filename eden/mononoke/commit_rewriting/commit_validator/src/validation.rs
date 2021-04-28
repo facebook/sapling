@@ -1607,7 +1607,7 @@ mod tests {
         //    |                     |
         //    0    -------------    0
         //   ..                     ..
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
@@ -1639,7 +1639,7 @@ mod tests {
         //    |         / \         |
         //    0      --/   \--      0
         //   ..                     ..
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
@@ -1670,7 +1670,7 @@ mod tests {
         //    |         / \         |
         //    0      --/   \--      0
         //   ..                     ..
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
@@ -1704,7 +1704,7 @@ mod tests {
         //    |                     |
         //    0                     0
         //   ..                     ..
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,

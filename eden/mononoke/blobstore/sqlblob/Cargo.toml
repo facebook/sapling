@@ -22,13 +22,14 @@ serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "sync", "time"] }
 twox-hash = "1.5"
 xdb_gc_structs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/xdb_gc" }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

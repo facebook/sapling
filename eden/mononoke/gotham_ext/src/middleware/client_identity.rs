@@ -51,7 +51,7 @@ impl ClientIdentity {
         let address = self.address.clone();
 
         async move {
-            let resolver = TokioAsyncResolver::tokio_from_system_conf().await.ok()?;
+            let resolver = TokioAsyncResolver::tokio_from_system_conf().ok()?;
             let hosts = resolver.reverse_lookup(address?).await.ok()?;
             let host = hosts.iter().next()?;
             Some(host.to_string().trim_end_matches('.').to_string())

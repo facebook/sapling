@@ -15,7 +15,6 @@ use anyhow::{anyhow, Error};
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
-use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -55,7 +54,7 @@ pub struct BundlePreparer {
     base_retry_delay_ms: u64,
     retry_num: usize,
     ty: BundleType,
-    push_vars: Option<HashMap<String, Bytes>>,
+    push_vars: Option<HashMap<String, bytes_05::Bytes>>,
 }
 
 #[derive(Clone)]
@@ -89,7 +88,7 @@ impl BundlePreparer {
         repo: BlobRepo,
         base_retry_delay_ms: u64,
         retry_num: usize,
-        push_vars: Option<HashMap<String, Bytes>>,
+        push_vars: Option<HashMap<String, bytes_05::Bytes>>,
     ) -> Result<BundlePreparer, Error> {
         Ok(BundlePreparer {
             repo,
@@ -110,7 +109,7 @@ impl BundlePreparer {
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
         use_hg_server_bookmark_value_if_mismatch: bool,
-        push_vars: Option<HashMap<String, Bytes>>,
+        push_vars: Option<HashMap<String, bytes_05::Bytes>>,
     ) -> Result<BundlePreparer, Error> {
         let blobstore = repo.get_blobstore().boxed();
         let skiplist =
@@ -260,7 +259,7 @@ impl BundlePreparer {
         overlay: &mut crate::BookmarkOverlay,
         prepare_type: PrepareType,
         use_hg_server_bookmark_value_if_mismatch: bool,
-        push_vars: Option<HashMap<String, Bytes>>,
+        push_vars: Option<HashMap<String, bytes_05::Bytes>>,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo);
 
@@ -371,7 +370,7 @@ impl BundlePreparer {
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
-        push_vars: Option<HashMap<String, Bytes>>,
+        push_vars: Option<HashMap<String, bytes_05::Bytes>>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let blobstore = repo.get_blobstore();
 

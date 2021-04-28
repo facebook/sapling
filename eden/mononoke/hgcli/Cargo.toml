@@ -12,7 +12,7 @@ test = false
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 dns-lookup = "1.0"
@@ -34,9 +34,9 @@ session_id = { version = "0.1.0", path = "../server/session_id" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-openssl = "0.4"
-tokio-util = { version = "0.3", features = ["codec", "udp"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-openssl = "0.6"
+tokio-util = { version = "0.6", features = ["full"] }
 users = "0.9"
 
 [patch.crates-io]

@@ -244,7 +244,7 @@ impl MultiplexedBlobstoreBase {
 }
 
 fn remap_timeout_result<O>(
-    timeout_or_result: Result<Result<O, Error>, tokio::time::Elapsed>,
+    timeout_or_result: Result<Result<O, Error>, tokio::time::error::Elapsed>,
 ) -> Result<O, Error> {
     timeout_or_result.unwrap_or_else(|_| Err(Error::msg("blobstore operation timeout")))
 }

@@ -299,7 +299,7 @@ async fn wait_until_backsynced_and_return_version(
             }
             None => {
                 info!(ctx.logger(), "sleeping for {} secs", sleep_time_secs);
-                time::delay_for(time::Duration::from_secs(sleep_time_secs)).await;
+                time::sleep(time::Duration::from_secs(sleep_time_secs)).await;
             }
         }
     }
@@ -644,7 +644,7 @@ async fn check_dependent_systems(
                 ctx.logger(),
                 "Phabricator hasn't parsed commit: {:?}", hg_csid
             );
-            time::delay_for(time::Duration::from_secs(sleep_time)).await;
+            time::sleep(time::Duration::from_secs(sleep_time)).await;
         }
     }
 

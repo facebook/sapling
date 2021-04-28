@@ -6,37 +6,12 @@ edition = "2018"
 license = "GPLv2+"
 
 [[bin]]
-name = "admin"
-path = "cmds/admin/main.rs"
-
-[[bin]]
-name = "aliasverify"
-path = "cmds/aliasverify.rs"
-
-[[bin]]
-name = "backfill_derived_data"
-path = "cmds/backfill_derived_data/main.rs"
-
-[[bin]]
 name = "backfill_mapping"
 path = "cmds/backfill_mapping.rs"
 
 [[bin]]
-name = "benchmark_filestore"
-path = "cmds/benchmark_filestore.rs"
-test = false
-
-[[bin]]
 name = "benchmark_storage_config"
 path = "cmds/benchmark_storage_config/main.rs"
-
-[[bin]]
-name = "blobimport"
-path = "cmds/blobimport.rs"
-
-[[bin]]
-name = "blobstore_healer"
-path = "cmds/blobstore_healer/main.rs"
 
 [[bin]]
 name = "bonsai_verify"
@@ -55,11 +30,6 @@ test = false
 [[bin]]
 name = "idxdump"
 path = "cmds/idxdump.rs"
-test = false
-
-[[bin]]
-name = "lfs_import"
-path = "cmds/lfs_import.rs"
 test = false
 
 [[bin]]
@@ -91,132 +61,61 @@ name = "sqlblob_gc"
 path = "cmds/sqlblob_gc/main.rs"
 
 [[bin]]
-name = "statistics_collector"
-path = "cmds/statistics_collector.rs"
-
-[[bin]]
 name = "streaming_clone_warmup"
 path = "cmds/streaming_clone_warmup/main.rs"
-
-[[bin]]
-name = "upload_globalrevs"
-path = "cmds/upload_globalrevs.rs"
 
 [dependencies]
 anyhow = "1.0"
 ascii = "1.0"
 async-compression = { version = "0.3", features = ["all"] }
-async-trait = "0.1.45"
-backsyncer = { version = "0.1.0", path = "commit_rewriting/backsyncer" }
-blame = { version = "0.1.0", path = "derived_data/blame" }
-blobimport_lib = { version = "0.1.0", path = "blobimport_lib" }
 blobrepo = { version = "0.1.0", path = "blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo/blobrepo_hg" }
-blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
-blobstore_sync_queue = { version = "0.1.0", path = "blobstore_sync_queue" }
-bonsai_globalrev_mapping = { version = "0.1.0", path = "bonsai_globalrev_mapping" }
-bookmark_renaming = { version = "0.1.0", path = "commit_rewriting/bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "bookmarks" }
-bookmarks_movement = { version = "0.1.0", path = "bookmarks/bookmarks_movement" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-bounded_traversal = { version = "0.1.0", path = "common/bounded_traversal" }
-bulkops = { version = "0.1.0", path = "bulkops" }
-bytes = { version = "0.5", features = ["serde"] }
 bytesize = "1.0"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-changeset_fetcher = { version = "0.1.0", path = "blobrepo/changeset_fetcher" }
-changesets = { version = "0.1.0", path = "changesets" }
-chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cmdlib = { version = "0.1.0", path = "cmdlib" }
 context = { version = "0.1.0", path = "server/context" }
-copy_utils = { version = "0.1.0", path = "common/copy_utils" }
 criterion = "=0.3.1"
-cross_repo_sync = { version = "0.1.0", path = "commit_rewriting/cross_repo_sync" }
-dbbookmarks = { version = "0.1.0", path = "bookmarks/dbbookmarks" }
-deleted_files_manifest = { version = "0.1.0", path = "derived_data/deleted_files_manifest" }
 derive_more = "0.99.3"
-derived_data = { version = "0.1.0", path = "derived_data" }
-derived_data_filenodes = { version = "0.1.0", path = "derived_data/filenodes" }
-derived_data_utils = { version = "0.1.0", path = "derived_data/utils" }
 environment = { version = "0.1.0", path = "cmdlib/environment" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fastlog = { version = "0.1.0", path = "derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-filenodes = { version = "0.1.0", path = "filenodes" }
 filestore = { version = "0.1.0", path = "filestore" }
-fsnodes = { version = "0.1.0", path = "derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
-futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-git_types = { version = "0.1.0", path = "git/git_types" }
-humantime = "1.3"
 itertools = "0.8"
-lazy_static = "1.0"
-lfs_import_lib = { version = "0.1.0", path = "lfs_import_lib" }
-live_commit_sync_config = { version = "0.1.0", path = "commit_rewriting/live_commit_sync_config" }
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-manifest = { version = "0.1.0", path = "manifest" }
-maplit = "1.0"
-memblob = { version = "0.1.0", path = "blobstore/memblob" }
-mercurial_bundle_replay_data = { version = "0.1.0", path = "mercurial/bundle_replay_data" }
 mercurial_derived_data = { version = "0.1.0", path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "metaconfig/types" }
-mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "mononoke_hg_sync_job" }
 mononoke_types = { version = "0.1.0", path = "mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "mutable_counters" }
 packblob = { version = "0.1.0", path = "blobstore/packblob" }
 prefixblob = { version = "0.1.0", path = "blobstore/prefixblob" }
-pushrebase = { version = "0.1.0", path = "pushrebase" }
 rand = { version = "0.7", features = ["small_rng"] }
-redactedblobstore = { version = "0.1.0", path = "blobstore/redactedblobstore" }
-regex = "1.4.2"
 repo_factory = { version = "0.1.0", path = "repo_factory" }
 revset = { version = "0.1.0", path = "revset" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
-sha2 = "0.8"
-skeleton_manifest = { version = "0.1.0", path = "derived_data/skeleton_manifest" }
-skiplist = { version = "0.1.0", path = "reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 streaming_clone = { version = "0.1.0", path = "repo_client/streaming_clone" }
-synced_commit_mapping = { version = "0.1.0", path = "commit_rewriting/synced_commit_mapping" }
 tempfile = "3.1"
-thiserror = "1.0"
-throttledblob = { version = "0.1.0", path = "blobstore/throttledblob" }
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-util = { version = "0.3", features = ["codec", "udp"] }
-tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "sync", "time"] }
 toml = "=0.5.7"
-unodes = { version = "0.1.0", path = "derived_data/unodes" }
-xdiff = { version = "0.1.0", path = "../scm/lib/xdiff" }
-
-[dev-dependencies]
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fixtures = { version = "0.1.0", path = "tests/fixtures" }
-test_repo_factory = { version = "0.1.0", path = "repo_factory/test_repo_factory" }
-tests_utils = { version = "0.1.0", path = "tests/utils" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
@@ -248,9 +147,14 @@ toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" 
 [workspace]
 members = [
   ".",
+  "admin",
+  "aliasverify",
   "alpn",
+  "backfill_derived_data",
+  "benchmark_filestore",
   "benchmarks/derived_data",
   "benchmarks/simulated_repo",
+  "blobimport",
   "blobimport_lib",
   "blobimport_lib/consts",
   "blobrepo",
@@ -282,6 +186,7 @@ members = [
   "blobstore/sqlblob",
   "blobstore/throttledblob",
   "blobstore/virtually_sharded_blobstore",
+  "blobstore_healer",
   "blobstore_sync_queue",
   "bonsai_git_mapping",
   "bonsai_git_mapping/git_mapping_pushrebase_hook",
@@ -367,6 +272,7 @@ members = [
   "hooks",
   "hooks/content-stores",
   "hooks/hook_manager_factory",
+  "lfs_import",
   "lfs_import_lib",
   "lfs_protocol",
   "lfs_server",
@@ -436,6 +342,7 @@ members = [
   "server/repo_listener",
   "server/session_id",
   "sshrelay",
+  "statistics_collector",
   "streaming_clone",
   "tests/fixtures",
   "tests/utils",
@@ -444,5 +351,6 @@ members = [
   "tunables",
   "tunables/tunables-derive",
   "unbundle_replay",
+  "upload_globalrevs",
   "walker",
 ]

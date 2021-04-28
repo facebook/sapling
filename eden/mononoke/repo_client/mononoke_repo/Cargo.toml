@@ -31,7 +31,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 streaming_clone = { version = "0.1.0", path = "../streaming_clone" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
 
 [patch.crates-io]

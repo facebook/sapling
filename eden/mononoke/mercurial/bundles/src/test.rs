@@ -90,9 +90,9 @@ fn parse_uncompressed(read_ops: PartialWithErrors<GenWouldBlock>) {
 
 #[test]
 fn test_parse_unknown_compression() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let bundle2_buf = BufReader::new(MemBuf::from(Vec::from(UNKNOWN_COMPRESSION_BUNDLE2)));
-    let outer_stream_err = parse_stream_start(&mut runtime, bundle2_buf, Some("IL")).unwrap_err();
+    let outer_stream_err = parse_stream_start(&runtime, bundle2_buf, Some("IL")).unwrap_err();
     assert_matches!(outer_stream_err.downcast::<ErrorKind>().unwrap(),
                     ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
 }
@@ -125,7 +125,7 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
         .unwrap();
     let encode_fut = builder.build();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
     buf.set_position(0);
 
@@ -222,7 +222,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     builder.add_part(unknown_part);
     let encode_fut = builder.build();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
     buf.set_position(0);
 
@@ -265,11 +265,11 @@ fn parse_bundle(
     compression: Option<&str>,
     read_ops: PartialWithErrors<GenWouldBlock>,
 ) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
 
     let bundle2_buf = MemBuf::from(Vec::from(input));
     let partial_read = BufReader::new(PartialAsyncRead::new(bundle2_buf, read_ops));
-    let stream = parse_stream_start(&mut runtime, partial_read, compression).unwrap();
+    let stream = parse_stream_start(&runtime, partial_read, compression).unwrap();
 
     let (stream, cg2s) = {
         let (res, stream) = runtime.old_next_stream(stream);
@@ -287,7 +287,7 @@ fn parse_bundle(
         (stream, cg2s)
     };
 
-    verify_cg2(&mut runtime, cg2s);
+    verify_cg2(&runtime, cg2s);
 
     let (res, stream) = runtime.old_next_stream(stream);
     assert_matches!(res, Some(StreamEvent::Done(_)));
@@ -302,7 +302,7 @@ fn parse_bundle(
     assert!(stream.app_errors().is_empty());
 }
 
-fn verify_cg2(runtime: &mut Runtime, stream: BoxStream<'static, Result<changegroup::Part>>) {
+fn verify_cg2(runtime: &Runtime, stream: BoxStream<'static, Result<changegroup::Part>>) {
     let (res, stream) = runtime.next_stream(stream);
     let res = res.expect("expected part");
 
@@ -447,12 +447,12 @@ fn test_parse_wirepack() {
 }
 
 fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
 
     let cursor = Cursor::new(WIREPACK_BUNDLE2);
     let partial_read = BufReader::new(PartialAsyncRead::new(cursor, read_ops));
 
-    let stream = parse_stream_start(&mut runtime, partial_read, None).unwrap();
+    let stream = parse_stream_start(&runtime, partial_read, None).unwrap();
 
     let stream = {
         let (res, stream) = runtime.old_next_stream(stream);
@@ -587,7 +587,7 @@ fn path(bytes: &[u8]) -> MPath {
 }
 
 fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
-    runtime: &mut Runtime,
+    runtime: &Runtime,
     reader: R,
     compression: Option<&str>,
 ) -> Result<Bundle2Stream<R>> {
@@ -615,13 +615,13 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
 
 trait RuntimeExt {
     fn next_stream<T>(
-        &mut self,
+        &self,
         stream: BoxStream<'static, Result<T>>,
     ) -> (Option<T>, BoxStream<'static, Result<T>>)
     where
         T: Send + 'static;
 
-    fn old_next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    fn old_next_stream<S>(&self, stream: S) -> (Option<S::Item>, S)
     where
         S: OldStream + Send + 'static,
         <S as OldStream>::Item: Send,
@@ -630,7 +630,7 @@ trait RuntimeExt {
 
 impl RuntimeExt for Runtime {
     fn next_stream<T>(
-        &mut self,
+        &self,
         stream: BoxStream<'static, Result<T>>,
     ) -> (Option<T>, BoxStream<'static, Result<T>>)
     where
@@ -640,7 +640,7 @@ impl RuntimeExt for Runtime {
         (item, stream.into_inner())
     }
 
-    fn old_next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    fn old_next_stream<S>(&self, stream: S) -> (Option<S::Item>, S)
     where
         S: OldStream + Send + 'static,
         <S as OldStream>::Item: Send,

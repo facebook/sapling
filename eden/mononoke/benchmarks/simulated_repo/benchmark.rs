@@ -182,6 +182,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
 
-    let mut runtime = Runtime::new()?;
+    let runtime = Runtime::new()?;
     runtime.block_on(run(ctx, repo, seed, stack_size, derive))
 }

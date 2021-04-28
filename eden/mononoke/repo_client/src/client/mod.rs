@@ -85,7 +85,6 @@ use std::sync::{
 use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
-use tokio::time::delay_for;
 use tunables::tunables;
 
 mod logging;
@@ -1102,7 +1101,7 @@ async fn check_lock_repo(repo: MononokeRepo) -> Result<Bytes, BundleResolverErro
                 let e = Error::from(ErrorKind::RepoReadOnly(reason));
                 return Err(e.into());
             }
-            RepoReadOnly::ReadWrite => delay_for(Duration::from_secs(1)).await,
+            RepoReadOnly::ReadWrite => tokio::time::sleep(Duration::from_secs(1)).await,
         }
     }
 }
@@ -2532,7 +2531,7 @@ fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
                 }
             };
 
-            tokio::time::delay_for(Duration::from_secs(interval)).await;
+            tokio::time::sleep(Duration::from_secs(interval)).await;
 
             if tunables().get_command_monitor_remote_logging() != 0 {
                 info!(

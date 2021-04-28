@@ -9,17 +9,17 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-trait = "0.1.45"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-gotham = { version = "=0.5.0", default-features = false }
-gotham_derive = "=0.5.0"
+gotham = { version = "0.6.0", default-features = false }
+gotham_derive = "0.6.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
-hyper = "0.13.10"
+hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
 load_limiter = { version = "0.1.0", path = "../load_limiter" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

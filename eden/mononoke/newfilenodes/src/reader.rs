@@ -179,7 +179,7 @@ impl FilenodesReader {
             return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
         }
 
-        let permit = self.shards.acquire_filenodes(&path, filenode).await;
+        let permit = self.shards.acquire_filenodes(&path, filenode).await?;
         scopeguard::defer! { drop(permit) };
 
         // Now that we acquired the permit, check our cache again, in case the previous permit
@@ -281,7 +281,7 @@ impl FilenodesReader {
             return convert_cached_filenodes(cached);
         }
 
-        let permit = self.shards.acquire_history(&path).await;
+        let permit = self.shards.acquire_history(&path).await?;
         scopeguard::defer! { drop(permit) };
 
         // See above for rationale here.

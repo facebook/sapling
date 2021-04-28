@@ -121,7 +121,7 @@ where
             log_delay(&ctx, &delay, &source_repo_name, &target_repo_name);
             if delay.remaining_entries == 0 {
                 debug!(ctx.logger(), "no entries remained");
-                tokio::time::delay_for(Duration::new(1, 0)).await;
+                tokio::time::sleep(Duration::new(1, 0)).await;
             } else {
                 debug!(ctx.logger(), "backsyncing...");
 
@@ -137,7 +137,7 @@ where
             debug!(ctx.logger(), "push redirector is disabled");
             let delay = Delay::no_delay();
             log_delay(&ctx, &delay, &source_repo_name, &target_repo_name);
-            tokio::time::delay_for(Duration::new(1, 0)).await;
+            tokio::time::sleep(Duration::new(1, 0)).await;
         }
     }
 }

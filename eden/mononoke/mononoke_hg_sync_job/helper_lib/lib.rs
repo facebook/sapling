@@ -24,7 +24,7 @@ use tempfile::NamedTempFile;
 use tokio::{
     fs::{File as AsyncFile, OpenOptions},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    time::{self, delay_for, timeout},
+    time::{self, sleep, timeout},
 };
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
@@ -115,7 +115,9 @@ async fn open_tempfile(tempfile: &NamedTempFile) -> Result<AsyncFile, Error> {
 pub async fn lines_after(p: impl AsRef<Path>, num: usize) -> Result<Vec<String>, Error> {
     let file = AsyncFile::open(p).await?;
     let reader = BufReader::new(file);
-    let mut v: Vec<_> = reader.lines().try_collect().await?;
+    let mut v: Vec<_> = tokio_stream::wrappers::LinesStream::new(reader.lines())
+        .try_collect()
+        .await?;
     Ok(v.split_off(num))
 }
 
@@ -137,7 +139,7 @@ pub async fn wait_till_more_lines(
                 return Ok(new_lines);
             }
 
-            delay_for(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(100)).await;
         }
     };
 
@@ -195,7 +197,7 @@ where
                 );
 
                 let delay = Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
-                delay_for(delay).await;
+                sleep(delay).await;
                 attempt += 1;
             }
         }
@@ -251,7 +253,7 @@ where
                 largest_id,
                 mut_counters_value
             );
-            time::delay_for(time::Duration::from_secs(sleep_secs)).await;
+            time::sleep(time::Duration::from_secs(sleep_secs)).await;
         } else {
             break;
         }

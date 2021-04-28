@@ -7,106 +7,111 @@
 
 use anyhow::{Context as _, Error};
 use cloned::cloned;
-use futures::{
-    future::{self, TryFutureExt},
-    stream::StreamExt,
-};
+use futures::future::TryFutureExt;
 use gotham::handler::Handler;
 use hyper::server::conn::Http;
-use openssl::ssl::SslAcceptor;
+use openssl::ssl::{Ssl, SslAcceptor};
 use permission_checker::MononokeIdentitySet;
 use quiet_stream::QuietShutdownStream;
 use slog::{warn, Logger};
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio_openssl::SslStream;
 
 use crate::handler::MononokeHttpHandler;
 use crate::socket_data::TlsSocketData;
 
 pub async fn https<H>(
     logger: Logger,
-    mut listener: TcpListener,
+    listener: TcpListener,
     acceptor: SslAcceptor,
     capture_session_data: bool,
     trusted_proxy_idents: MononokeIdentitySet,
     handler: MononokeHttpHandler<H>,
-) where
+) -> Result<(), Error>
+where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
     let trusted_proxy_idents = Arc::new(trusted_proxy_idents);
     let acceptor = Arc::new(acceptor);
 
-    listener
-        .incoming()
-        .for_each(move |socket| {
-            cloned!(acceptor, logger, handler, trusted_proxy_idents);
+    loop {
+        let (socket, peer_addr) = listener
+            .accept()
+            .await
+            .context("Error accepting connections")?;
 
-            let task = async move {
-                let socket = socket.context("Error obtaining socket")?;
-                let addr = socket.peer_addr().context("Error reading peer_addr()")?;
-                let ssl_socket = tokio_openssl::accept(&acceptor, socket)
-                    .await
-                    .context("Error performing TLS handshake")?;
+        cloned!(acceptor, logger, handler, trusted_proxy_idents);
 
+        let task = async move {
+            let ssl = Ssl::new(acceptor.context()).context("Error creating Ssl")?;
+            let ssl_socket = SslStream::new(ssl, socket).context("Error creating SslStream")?;
+            let mut ssl_socket = Box::pin(ssl_socket);
 
-                let tls_socket_data = TlsSocketData::from_ssl(
-                    ssl_socket.ssl(),
-                    trusted_proxy_idents.as_ref(),
-                    capture_session_data,
-                );
+            ssl_socket
+                .as_mut()
+                .accept()
+                .await
+                .context("Error performing TLS handshake")?;
 
-                let service = handler.clone().into_service(addr, Some(tls_socket_data));
+            let tls_socket_data = TlsSocketData::from_ssl(
+                ssl_socket.ssl(),
+                trusted_proxy_idents.as_ref(),
+                capture_session_data,
+            );
 
-                let ssl_socket = QuietShutdownStream::new(ssl_socket);
+            let service = handler
+                .clone()
+                .into_service(peer_addr, Some(tls_socket_data));
 
-                Http::new()
-                    .serve_connection(ssl_socket, service)
-                    .await
-                    .context("Error serving connection")?;
+            let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
-                Result::<_, Error>::Ok(())
-            };
+            Http::new()
+                .serve_connection(ssl_socket, service)
+                .await
+                .context("Error serving connection")?;
 
-            tokio::spawn(task.map_err(move |e| {
-                warn!(&logger, "HTTPS Server error: {:?}", e);
-            }));
+            Result::<_, Error>::Ok(())
+        };
 
-            future::ready(())
-        })
-        .await;
+        tokio::spawn(task.map_err(move |e| {
+            warn!(&logger, "HTTPS Server error: {:?}", e);
+        }));
+    }
 }
 
-pub async fn http<H>(logger: Logger, mut listener: TcpListener, handler: MononokeHttpHandler<H>)
+pub async fn http<H>(
+    logger: Logger,
+    listener: TcpListener,
+    handler: MononokeHttpHandler<H>,
+) -> Result<(), Error>
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
-    listener
-        .incoming()
-        .for_each(move |socket| {
-            cloned!(logger, handler);
+    loop {
+        let (socket, peer_addr) = listener
+            .accept()
+            .await
+            .context("Error accepting connections")?;
 
-            let task = async move {
-                let socket = socket.context("Error obtaining socket")?;
-                let addr = socket.peer_addr().context("Error reading peer_addr()")?;
+        cloned!(logger, handler);
 
-                let service = handler.clone().into_service(addr, None);
+        let task = async move {
+            let service = handler.clone().into_service(peer_addr, None);
 
-                let socket = QuietShutdownStream::new(socket);
+            let socket = QuietShutdownStream::new(socket);
 
-                Http::new()
-                    .serve_connection(socket, service)
-                    .await
-                    .context("Error serving connection")?;
+            Http::new()
+                .serve_connection(socket, service)
+                .await
+                .context("Error serving connection")?;
 
-                Result::<_, Error>::Ok(())
-            };
+            Result::<_, Error>::Ok(())
+        };
 
-            tokio::spawn(task.map_err(move |e| {
-                warn!(&logger, "HTTP Server error: {:?}", e);
-            }));
-
-            future::ready(())
-        })
-        .await;
+        tokio::spawn(task.map_err(move |e| {
+            warn!(&logger, "HTTP Server error: {:?}", e);
+        }));
+    }
 }

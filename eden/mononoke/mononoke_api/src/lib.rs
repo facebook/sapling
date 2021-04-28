@@ -95,10 +95,14 @@ impl Mononoke {
                         Ok::<_, Error>((name, Arc::new(repo)))
                     }
                 }),
-        )
-        .await?
-        .into_iter()
-        .collect();
+        );
+
+        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
+        // Tokio coop in the past.
+        let repos = tokio::task::unconstrained(repos)
+            .await?
+            .into_iter()
+            .collect();
 
         let fb = env.repo_factory.env.fb;
         let logger = env.repo_factory.env.logger.new(o!("megarepo" => "configs")); // TODO: maybe this should just be empty?

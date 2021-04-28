@@ -405,7 +405,7 @@ mod test {
 
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
+        let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(linear::getrepo(fb));
 
         let ctx = CoreContext::test_mock(fb);
@@ -519,7 +519,7 @@ mod test {
 
     #[fbinit::test]
     fn nested_directories_test(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
+        let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(many_files_dirs::getrepo(fb));
 
         let ctx = CoreContext::test_mock(fb);

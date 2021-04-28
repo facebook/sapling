@@ -63,7 +63,7 @@ segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 

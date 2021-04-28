@@ -23,7 +23,7 @@ sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexper
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 
 [dev-dependencies]
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

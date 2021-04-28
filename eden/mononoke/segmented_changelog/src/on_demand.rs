@@ -423,7 +423,7 @@ impl PeriodicUpdateSegmentedChangelog {
                 let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period);
                 // there's lots of warmup happenning at server startup so wait at least a period
                 // before starting to update
-                tokio::time::delay_for(period + jitter).await;
+                tokio::time::sleep(period + jitter).await;
 
                 let mut interval = tokio::time::interval(period);
                 loop {
@@ -435,7 +435,7 @@ impl PeriodicUpdateSegmentedChangelog {
                             err
                         );
                     }
-                    notify.notify();
+                    notify.notify_waiters();
                 }
             }
         });

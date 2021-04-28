@@ -144,9 +144,16 @@ async fn run_benchmark_filestore<'a>(
 
     let req = StoreRequest::new(len);
 
-    let (stats, res) = filestore::store(&blob, config, ctx, &req, data.map_err(Error::from))
-        .timed()
-        .await;
+    let (stats, res) = filestore::store(
+        &blob,
+        config,
+        ctx,
+        &req,
+        data.map_ok(|b| bytes_05::Bytes::copy_from_slice(b.as_ref()))
+            .map_err(Error::from),
+    )
+    .timed()
+    .await;
     log_perf(stats, &res, len);
 
     let metadata = res?;
@@ -345,7 +352,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
+    let runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
 
     let blob = runtime.block_on(get_blob(fb, &matches, config_store))?;
 

@@ -122,12 +122,9 @@ impl<S> MononokeHttpService<S>
 where
     S: MononokeStream,
 {
-    async fn handle(
-        &self,
-        req: http::request::Parts,
-        body: Body,
-    ) -> Result<Response<Body>, HttpError> {
-        if req.method == Method::GET && (req.uri.path() == "/" || req.uri.path() == "/health_check")
+    async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HttpError> {
+        if req.method() == Method::GET
+            && (req.uri().path() == "/" || req.uri().path() == "/health_check")
         {
             let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
                 "EXITING"
@@ -143,12 +140,12 @@ where
             return Ok(res);
         }
 
-        if let Err(e) = bump_qps(&req.headers, &self.conn.pending.acceptor.qps) {
+        if let Err(e) = bump_qps(&req.headers(), &self.conn.pending.acceptor.qps) {
             trace!(self.logger(), "Failed to bump QPS: {:?}", e);
         }
 
         let upgrade = req
-            .headers
+            .headers()
             .get(http::header::UPGRADE)
             .as_ref()
             .map(|h| h.to_str())
@@ -162,10 +159,10 @@ where
             .map_err(HttpError::BadRequest)?;
 
         if upgrade == Some("websocket") {
-            return self
-                .handle_websocket_request(&req.uri, &req.headers, body)
-                .await;
+            return self.handle_websocket_request(req).await;
         }
+
+        let (req, body) = req.into_parts();
 
         if req.uri.path() == "/netspeedtest" {
             return crate::netspeedtest::handle(req.method, &req.headers, body).await;
@@ -193,13 +190,11 @@ where
 
     async fn handle_websocket_request(
         &self,
-        uri: &Uri,
-        headers: &HeaderMap<HeaderValue>,
-        body: Body,
+        mut req: Request<Body>,
     ) -> Result<Response<Body>, HttpError> {
-        let reponame = uri.path().trim_matches('/').to_string();
+        let reponame = req.uri().path().trim_matches('/').to_string();
 
-        let websocket_key = calculate_websocket_accept(headers);
+        let websocket_key = calculate_websocket_accept(req.headers());
 
         let res = Response::builder()
             .status(http::StatusCode::SWITCHING_PROTOCOLS)
@@ -209,18 +204,17 @@ where
             .body(Body::empty())
             .map_err(HttpError::internal)?;
 
-        let metadata = try_convert_headers_to_metadata(self.conn.is_trusted, &headers)
+        let metadata = try_convert_headers_to_metadata(self.conn.is_trusted, &req.headers())
             .await
             .context("Invalid metadata")
             .map_err(HttpError::BadRequest)?;
 
-        let debug = headers.get(HEADER_CLIENT_DEBUG).is_some();
+        let debug = req.headers().get(HEADER_CLIENT_DEBUG).is_some();
 
         let this = self.clone();
 
         let fut = async move {
-            let io = body
-                .on_upgrade()
+            let io = hyper::upgrade::on(&mut req)
                 .await
                 .context("Failed to upgrade connection")?;
 
@@ -350,14 +344,12 @@ where
         let this = self.clone();
 
         async move {
-            let (req, body) = req.into_parts();
-
-            let method = req.method.clone();
-            let uri = req.uri.clone();
+            let method = req.method().clone();
+            let uri = req.uri().clone();
             debug!(this.logger(), "{} {}", method, uri);
 
             let res = this
-                .handle(req, body)
+                .handle(req)
                 .await
                 .and_then(|mut res| {
                     match HeaderValue::from_str(this.conn.pending.acceptor.server_hostname.as_str())

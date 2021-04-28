@@ -50,7 +50,7 @@ pub trait ReplicaLagMonitor: Send + Sync {
                 return Ok(());
             }
             // Wait before polling again.
-            time::delay_for(config.poll_interval).await;
+            time::sleep(config.poll_interval).await;
         }
     }
 }

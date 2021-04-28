@@ -197,7 +197,7 @@ async fn upload<'a>(
                     }
                 };
 
-                let body = Body::wrap_stream(s);
+                let body = Body::wrap_stream(s.map_ok(|b| Bytes::copy_from_slice(b.as_ref())));
 
                 let req = Request::put(format!("{}", href))
                     .header("Content-Length", &resp_object.object.size.to_string())

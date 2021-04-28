@@ -171,7 +171,7 @@ mod test {
         query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(123);

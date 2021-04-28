@@ -130,7 +130,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
                 (large_repo_name.clone(), small_repo_name.clone()),
             );
         }
-        tokio::time::delay_for(Duration::new(1, 0)).await;
+        tokio::time::sleep(Duration::new(1, 0)).await;
     }
 }
 
@@ -571,7 +571,7 @@ mod tests {
         let small_master = resolve_cs_id(&ctx, small_repo, "master").await?;
 
         // Wait a little bit
-        tokio::time::delay_for(Duration::from_secs(2)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
 
         // Move a bookmark in the large repo
         let old_large_master = resolve_cs_id(&ctx, large_repo, "master").await?;

@@ -145,13 +145,12 @@ pub fn main() {
 
 
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        tokio::runtime::Builder::new()
-            .threaded_scheduler()
-            .core_threads(core_threads)
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(core_threads)
             .enable_all()
             .build()
             .map_err(Error::from)
-            .and_then(|mut runtime| {
+            .and_then(|runtime| {
                 let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));
 
                 // NOTE: We leak the runtime, and all its tasks here. This is very unfortunate, but

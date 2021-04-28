@@ -8,7 +8,7 @@
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::sync::{AcquireError, OwnedSemaphorePermit, Semaphore};
 
 use crate::{MultiRendezVousController, RendezVousController, RendezVousOptions};
 
@@ -72,7 +72,9 @@ impl TunablesRendezVousController {
 
 #[async_trait::async_trait]
 impl RendezVousController for TunablesRendezVousController {
-    type RendezVousToken = Option<OwnedSemaphorePermit>;
+    // NOTE: We don't actually care about AcquireError here, since that can only happen when the
+    // Semaphore is closed, but we don't close it.
+    type RendezVousToken = Option<Result<OwnedSemaphorePermit, AcquireError>>;
 
     /// Wait for the configured dispatch delay.
     async fn wait_for_dispatch(&self) -> Self::RendezVousToken {

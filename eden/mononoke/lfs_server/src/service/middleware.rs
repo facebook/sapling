@@ -92,7 +92,7 @@ impl Middleware for ThrottleMiddleware {
 
                 let res = async move {
                     if total_sleep_ms > 0 {
-                        tokio::time::delay_for(Duration::from_millis(total_sleep_ms)).await;
+                        tokio::time::sleep(Duration::from_millis(total_sleep_ms)).await;
                     }
 
                     build_error_response(err, state, &LfsErrorFormatter)

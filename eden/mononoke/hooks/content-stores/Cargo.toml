@@ -28,7 +28,7 @@ unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 [dev-dependencies]
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

@@ -170,7 +170,7 @@ where
                 }
 
                 if staged_keys.len() >= self.inner.controller.early_dispatch_threshold() {
-                    notify.notify();
+                    notify.notify_one();
                 }
 
                 fut.clone()

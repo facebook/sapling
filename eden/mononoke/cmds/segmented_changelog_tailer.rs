@@ -174,7 +174,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             let wait_to_start = Duration::from_secs(7 * index as u64);
             let ctx = ctx.clone();
             tasks.push(async move {
-                tokio::time::delay_for(wait_to_start).await;
+                tokio::time::sleep(wait_to_start).await;
                 segmented_changelog_tailer.run(&ctx, period).await;
             });
         }

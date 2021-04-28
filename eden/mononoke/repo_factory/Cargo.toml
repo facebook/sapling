@@ -41,7 +41,7 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../segmented_changelog/types" }
 thiserror = "1.0"
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
 
 [patch.crates-io]

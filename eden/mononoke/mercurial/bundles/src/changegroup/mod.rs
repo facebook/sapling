@@ -144,7 +144,7 @@ mod test {
                 }
             });
 
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
         let result = runtime.block_on(fut.compat());
         result.unwrap()
     }

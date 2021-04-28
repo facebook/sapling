@@ -655,7 +655,7 @@ mod test {
 
     #[fbinit::test]
     fn test_simple(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
@@ -741,7 +741,7 @@ mod test {
 
     #[fbinit::test]
     fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
@@ -791,7 +791,7 @@ mod test {
 
     #[fbinit::test]
     fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
@@ -825,7 +825,7 @@ mod test {
 
     #[fbinit::test]
     fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
@@ -864,7 +864,7 @@ mod test {
 
     #[fbinit::test]
     fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
@@ -905,7 +905,7 @@ mod test {
 
     #[fbinit::test]
     fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+        let runtime = Runtime::new()?;
         runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 

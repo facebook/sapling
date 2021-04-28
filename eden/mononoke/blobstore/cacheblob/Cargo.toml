@@ -28,11 +28,11 @@ prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memblob = { version = "0.1.0", path = "../memblob" }
 
 [patch.crates-io]

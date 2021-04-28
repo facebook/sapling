@@ -652,7 +652,7 @@ mod tests {
     /// can be passed to next_request again to get the next one (and so on).
     ///
     /// Panics if no request arrives within the timeout.
-    fn next_request<T, S, F>(requests: F, rt: &mut Runtime, timeout_ms: u64) -> (T, StreamFuture<S>)
+    fn next_request<T, S, F>(requests: F, rt: &Runtime, timeout_ms: u64) -> (T, StreamFuture<S>)
     where
         T: Send + 'static,
         S: Stream<Item = T> + Send + Unpin + 'static,
@@ -660,7 +660,8 @@ mod tests {
     {
         rt.block_on(async move {
             let timeout = Duration::from_millis(timeout_ms);
-            let delay = tokio::time::delay_for(timeout);
+            let delay = tokio::time::sleep(timeout);
+            futures::pin_mut!(delay);
 
             match future::select(delay, requests).await {
                 Either::Left((_, _)) => panic!("no request came through!"),
@@ -678,14 +679,15 @@ mod tests {
     /// time.
     ///
     /// Otherwise, returns the stream.
-    fn assert_no_pending_requests<T, F>(fut: F, rt: &mut Runtime, timeout_ms: u64) -> F
+    fn assert_no_pending_requests<T, F>(fut: F, rt: &Runtime, timeout_ms: u64) -> F
     where
         T: Debug + Send + 'static,
         F: Future<Output = T> + Send + Unpin + 'static,
     {
         rt.block_on(async move {
             let timeout = Duration::from_millis(timeout_ms);
-            let delay = tokio::time::delay_for(timeout);
+            let delay = tokio::time::sleep(timeout);
+            futures::pin_mut!(delay);
 
             match future::select(delay, fut).await {
                 Either::Left((_, b)) => b,
@@ -696,7 +698,7 @@ mod tests {
 
     #[fbinit::test]
     fn test_cached_bookmarks(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
 
@@ -705,7 +707,7 @@ mod tests {
 
         let bookmarks = CachedBookmarks::new(Arc::new(mock), repo_id);
 
-        let spawn_query = |prefix: &'static str, ttl: Option<i64>, rt: &mut Runtime| {
+        let spawn_query = |prefix: &'static str, ttl: Option<i64>, rt: &Runtime| {
             let (sender, receiver) = oneshot::channel();
 
             // Tunables are read in list(), which is a sync function. We wrap this into a future to
@@ -745,15 +747,15 @@ mod tests {
         let ttl = Some(3000);
 
         // multiple requests should create only one underlying request
-        let res0 = spawn_query("a", ttl, &mut rt);
-        let res1 = spawn_query("b", ttl, &mut rt);
+        let res0 = spawn_query("a", ttl, &rt);
+        let res1 = spawn_query("b", ttl, &rt);
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.freshness, Freshness::MaybeStale);
         assert_eq!(request.kinds, BookmarkKind::ALL_PUBLISHING.to_vec());
 
         // We expect no other additional request to show up.
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         request
             .response
@@ -775,22 +777,22 @@ mod tests {
         );
 
         // We expect no further request to show up.
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // Create a non dirty transaction and make sure that no requests go to master.
         let transaction = bookmarks.create_transaction(ctx.clone());
         rt.block_on(transaction.commit()).unwrap();
 
-        let _ = spawn_query("c", ttl, &mut rt);
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let _ = spawn_query("c", ttl, &rt);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // successfull transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
         rt.block_on(transaction.commit()).unwrap();
 
-        let res = spawn_query("a", ttl, &mut rt);
+        let res = spawn_query("a", ttl, &rt);
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.freshness, Freshness::MostRecent);
         assert_eq!(request.kinds, BookmarkKind::ALL_PUBLISHING.to_vec());
         request
@@ -801,9 +803,9 @@ mod tests {
         rt.block_on(res).expect_err("cache did not bubble up error");
 
         // If request to master failed, next request should go to master too
-        let res = spawn_query("a", ttl, &mut rt);
+        let res = spawn_query("a", ttl, &rt);
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.freshness, Freshness::MostRecent);
         assert_eq!(request.kinds, BookmarkKind::ALL_PUBLISHING.to_vec());
         request
@@ -817,22 +819,22 @@ mod tests {
         assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("a"), ONES_CSID)]);
 
         // No further requests should be made.
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // request should be resolved with cache
-        let res = spawn_query("b", ttl, &mut rt);
+        let res = spawn_query("b", ttl, &rt);
 
         assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("b"), TWOS_CSID)]);
 
         // No requests should have been made.
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // cache should expire and request go to replica
         std::thread::sleep(Duration::from_secs(3));
 
-        let res = spawn_query("b", ttl, &mut rt);
+        let res = spawn_query("b", ttl, &rt);
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.freshness, Freshness::MaybeStale);
         assert_eq!(request.kinds, BookmarkKind::ALL_PUBLISHING.to_vec());
         request
@@ -846,16 +848,16 @@ mod tests {
         );
 
         // No further requests should be made.
-        let requests = assert_no_pending_requests(requests, &mut rt, 100);
+        let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // Spawn two queries, but without the cache being turned on. We expect 2 requests.
-        let _ = spawn_query("a", Some(-1), &mut rt);
-        let _ = spawn_query("b", Some(-1), &mut rt);
+        let _ = spawn_query("a", Some(-1), &rt);
+        let _ = spawn_query("b", Some(-1), &rt);
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("a").unwrap());
 
-        let (request, requests) = next_request(requests, &mut rt, 100);
+        let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("b").unwrap());
 
         let _ = requests;
@@ -895,7 +897,7 @@ mod tests {
         query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
 
@@ -925,7 +927,7 @@ mod tests {
 
         // Wait for the underlying MockBookmarks to receive the request. We
         // expect it to have a freshness consistent with the one we send.
-        let (request, _) = next_request(requests, &mut rt, 100);
+        let (request, _) = next_request(requests, &rt, 100);
         assert_eq!(request.freshness, query_freshness);
 
         // Now dispatch the response from the Bookmarks data we have and the

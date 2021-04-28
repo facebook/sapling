@@ -407,7 +407,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 config.readonly_storage,
             )?);
 
-            let mut runtime = tokio::runtime::Runtime::new()?;
+            let runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(populate_healer_queue(blobstore, queue, config))?;
             Ok(())
         }

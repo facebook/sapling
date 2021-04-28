@@ -275,7 +275,7 @@ async fn generations(fb: FacebookInit) -> Result<()> {
 
     // Update via another key, confirm both have put generation
     set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 1);
-    tokio::time::delay_for(UPDATE_WAIT_TIME).await;
+    tokio::time::sleep(UPDATE_WAIT_TIME).await;
     bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
     let generations = bs.as_inner().get_chunk_generations(&key1).await?;
     assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
@@ -285,7 +285,7 @@ async fn generations(fb: FacebookInit) -> Result<()> {
     // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
     // the wrong version.
     set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 2);
-    tokio::time::delay_for(UPDATE_WAIT_TIME).await;
+    tokio::time::sleep(UPDATE_WAIT_TIME).await;
     bs.as_inner().set_generation(&key1).await?;
     let generations = bs.as_inner().get_chunk_generations(&key1).await?;
     assert_eq!(generations, vec![Some(10)], "key1 generation not updated");

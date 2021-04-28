@@ -433,12 +433,12 @@ mod test {
     quickcheck! {
         fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
             let size = size + 1; // Don't allow 0 as the size.
-            let mut rt = Runtime::new().unwrap();
+            let rt = Runtime::new().unwrap();
             rt.block_on(do_check_chunk_stream(in_chunks, size))
         }
 
         fn check_make_chunks_fut_joins(in_chunks: Vec<Vec<u8>>) -> bool {
-            let mut rt = Runtime::new().unwrap();
+            let rt = Runtime::new().unwrap();
 
             let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
             let in_stream = stream::iter(in_chunks.clone()).map(Ok);

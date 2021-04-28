@@ -33,13 +33,14 @@ use futures_util::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
 use load_limiter::LoadLimiterEnvironment;
 use metaconfig_types::CommonConfig;
-use openssl::ssl::SslAcceptor;
+use openssl::ssl::{Ssl, SslAcceptor};
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
 use slog::{debug, error, info, warn, Logger};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
+use tokio_openssl::SslStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
@@ -80,7 +81,7 @@ pub async fn wait_for_connections_closed(logger: &Logger) {
         }
 
         slog::info!(logger, "Waiting for {} connections to close", conns);
-        tokio::time::delay_for(Duration::new(1, 0)).await;
+        tokio::time::sleep(Duration::new(1, 0)).await;
     }
 }
 
@@ -107,7 +108,7 @@ pub async fn connection_acceptor(
     let security_checker =
         ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?;
     let addr: SocketAddr = sockname.parse()?;
-    let mut listener = TcpListener::bind(&addr)
+    let listener = TcpListener::bind(&addr)
         .await
         .with_context(|| format!("could not bind mononoke on '{}'", sockname))?;
 
@@ -221,7 +222,13 @@ impl PendingConnection {
 }
 
 async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<()> {
-    let ssl_socket = tokio_openssl::accept(&conn.acceptor.tls_acceptor, sock)
+    let ssl = Ssl::new(conn.acceptor.tls_acceptor.context()).context("Error creating Ssl")?;
+    let ssl_socket = SslStream::new(ssl, sock).context("Error creating SslStream")?;
+    let mut ssl_socket = Box::pin(ssl_socket);
+
+    ssl_socket
+        .as_mut()
+        .accept()
         .await
         .context("Failed to perform tls handshake")?;
 
@@ -456,7 +463,7 @@ impl ChannelConn {
 
             let keep_alive_sender = async move {
                 loop {
-                    tokio::time::delay_for(KEEP_ALIVE_INTERVAL).await;
+                    tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
                     if ktx.unbounded_send(Bytes::new()).is_err() {
                         break;
                     }

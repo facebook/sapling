@@ -252,7 +252,7 @@ mod test {
         // Verify that the two Node Id computation implementations (in place and streaming) are
         // consistent.
         fn test_node_consistency(input: Vec<Vec<u8>>, hg_parents: HgParents) -> bool {
-            let mut rt = Runtime::new().unwrap();
+            let rt = Runtime::new().unwrap();
             let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
 
             let stream = stream::iter_ok::<_, ()>(input.clone());

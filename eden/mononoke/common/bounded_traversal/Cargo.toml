@@ -20,7 +20,7 @@ pretty_assertions = "0.6"
 quickcheck = "0.9"
 quickcheck_async = "0.1.1"
 rand = { version = "0.7", features = ["small_rng"] }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

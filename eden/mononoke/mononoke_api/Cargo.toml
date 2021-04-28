@@ -60,6 +60,7 @@ sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0"
+tokio = { version = "1.4", features = ["full", "test-util"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
@@ -68,7 +69,7 @@ xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 assert_matches = "1.5"
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync/test_utils" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

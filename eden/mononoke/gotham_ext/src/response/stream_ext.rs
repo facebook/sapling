@@ -10,6 +10,7 @@ use std::pin::Pin;
 use futures::{
     prelude::*,
     ready,
+    stream::Stream,
     task::{Context, Poll},
 };
 use pin_project::pin_project;

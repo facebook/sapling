@@ -158,7 +158,7 @@ async fn get_replay_stream<'a>(
                                     onto,
                                     onto_rev
                                 );
-                                time::delay_for(poll_interval).await;
+                                time::sleep(poll_interval).await;
                                 continue;
                             }
                         }

@@ -49,7 +49,7 @@ impl PeriodicReloadSegmentedChangelog {
                 // jitter is here so not all repos try to reload at the same time
                 // 10% of the period seems good enough
                 let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period / 10);
-                tokio::time::delay_for(period + jitter).await;
+                tokio::time::sleep(period + jitter).await;
 
                 let mut interval = tokio::time::interval(period);
                 loop {
@@ -64,7 +64,7 @@ impl PeriodicReloadSegmentedChangelog {
                             );
                         }
                     }
-                    my_notify.notify();
+                    my_notify.notify_waiters();
                 }
             }
         });

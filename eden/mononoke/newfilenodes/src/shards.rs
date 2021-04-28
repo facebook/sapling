@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use futures_stats::TimedFutureExt;
+use anyhow::Error;
+use futures_stats::TimedTryFutureExt;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::RepoPath;
 use stats::prelude::*;
@@ -46,7 +47,7 @@ impl Shards {
         &'a self,
         path: &RepoPath,
         filenode_id: HgFileNodeId,
-    ) -> SemaphorePermit<'a> {
+    ) -> Result<SemaphorePermit<'a>, Error> {
         let mut hasher = DefaultHasher::new();
         path.hash(&mut hasher);
         filenode_id.hash(&mut hasher);
@@ -54,25 +55,25 @@ impl Shards {
         let (stats, permit) = self.filenodes
             [(hasher.finish() % self.filenodes.len() as u64) as usize]
             .acquire()
-            .timed()
-            .await;
+            .try_timed()
+            .await?;
         STATS::filenodes_shard_checkout_ms
             .add_value(stats.completion_time.as_millis_unchecked() as i64);
 
-        permit
+        Ok(permit)
     }
 
-    pub async fn acquire_history<'a>(&'a self, path: &RepoPath) -> SemaphorePermit<'a> {
+    pub async fn acquire_history(&self, path: &RepoPath) -> Result<SemaphorePermit<'_>, Error> {
         let mut hasher = DefaultHasher::new();
         path.hash(&mut hasher);
 
         let (stats, permit) = self.history[(hasher.finish() % self.history.len() as u64) as usize]
             .acquire()
-            .timed()
-            .await;
+            .try_timed()
+            .await?;
         STATS::history_shard_checkout_ms
             .add_value(stats.completion_time.as_millis_unchecked() as i64);
 
-        permit
+        Ok(permit)
     }
 }

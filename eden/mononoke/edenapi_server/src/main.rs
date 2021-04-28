@@ -165,7 +165,7 @@ async fn start(fb: FacebookInit, logger: Logger, matches: &MononokeMatches<'_>) 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever_async(
         select(
-            server.map(Ok).boxed(),
+            server.boxed(),
             shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
         .map(|res| res.factor_first().0),

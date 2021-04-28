@@ -119,7 +119,7 @@ impl Metadata {
         // impact performance much. In case this does lead to performance issues we
         // could start caching this, which for now would be preferred to avoid as this
         // might lead to unexpected behavior if the system configuration changes.
-        let resolver = TokioAsyncResolver::tokio_from_system_conf().await?;
+        let resolver = TokioAsyncResolver::tokio_from_system_conf()?;
         resolver
             .reverse_lookup(client_ip)
             .await?

@@ -28,6 +28,7 @@ use tokio::{
     fs::File,
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
 };
+use tokio_stream::wrappers::LinesStream;
 
 const ARG_CONCURRENCY: &str = "concurrency";
 const ARG_ERROR_KEYS: &str = "error-keys-output";
@@ -124,7 +125,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         .ok_or_else(|| anyhow!("{} not set", ARG_IN_FILE))?;
     let mut inputfile = File::open(inputfile).await?;
     let file = BufReader::new(&mut inputfile);
-    let mut lines = file.lines();
+    let mut lines = LinesStream::new(file.lines());
     while let Some(line) = lines.try_next().await? {
         if strip_source_repo_prefix {
             match line.strip_prefix(&source_repo_prefix) {

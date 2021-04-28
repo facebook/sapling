@@ -32,7 +32,7 @@ rand = { version = "0.7", features = ["small_rng"] }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
 types = { version = "0.1.0", path = "../../../scm/lib/types" }

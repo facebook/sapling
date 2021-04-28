@@ -80,7 +80,7 @@ fn test_parsing_caps_simple() {
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_impl(fb))
 }
 
@@ -147,7 +147,7 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_depth_impl(fb))
 }
 
@@ -207,7 +207,7 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(get_changed_manifests_stream_test_base_path_impl(fb))
 }
 

@@ -131,7 +131,7 @@ pub(crate) fn tail_entries(
                         "tail_entries: no more entries during iteration {}. Sleeping.", iteration
                     );
                     log_noop_iteration_to_scuba(scuba_sample, repo_id);
-                    tokio::time::delay_for(Duration::new(SLEEP_SECS, 0)).await;
+                    tokio::time::sleep(Duration::new(SLEEP_SECS, 0)).await;
                     Ok((stream::empty().boxed(), (iteration + 1, current_id)))
                 }
             }

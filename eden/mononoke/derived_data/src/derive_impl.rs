@@ -382,7 +382,7 @@ where
                     break;
                 } else {
                     let sleep = rand::random::<u64>() % backoff_ms;
-                    tokio::time::delay_for(Duration::from_millis(sleep)).await;
+                    tokio::time::sleep(Duration::from_millis(sleep)).await;
 
                     backoff_ms *= 2;
                     if backoff_ms >= 1000 {
@@ -902,13 +902,13 @@ mod test {
         });
 
         // schedule derivation
-        tokio::time::delay_for(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
         assert_eq!(mapping.get(ctx.clone(), vec![csid]).await?, HashMap::new());
 
         // release lease
         lease.release_lease(&lease_key).await;
 
-        tokio::time::delay_for(Duration::from_millis(3000)).await;
+        tokio::time::sleep(Duration::from_millis(3000)).await;
         let result = match output.with(|output| output.pop()) {
             Some(result) => result?,
             None => panic!("scheduled derivation should have been completed"),

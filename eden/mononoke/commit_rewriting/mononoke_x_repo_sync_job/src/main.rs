@@ -173,7 +173,7 @@ async fn run_in_tailing_mode<
                 // Pushredirection is enabled - we need to disable forward sync in that case
                 if enabled {
                     log_noop_iteration(scuba_sample);
-                    tokio::time::delay_for(Duration::new(sleep_secs, 0)).await;
+                    tokio::time::sleep(Duration::new(sleep_secs, 0)).await;
                     continue;
                 }
 
@@ -194,7 +194,7 @@ async fn run_in_tailing_mode<
 
                 if !synced_something {
                     log_noop_iteration(scuba_sample);
-                    tokio::time::delay_for(Duration::new(sleep_secs, 0)).await;
+                    tokio::time::sleep(Duration::new(sleep_secs, 0)).await;
                 }
             }
         }
@@ -367,7 +367,7 @@ where
 
         if max_further_entries > limit {
             reporting::log_backpressure(ctx, max_further_entries, scuba_sample.clone());
-            tokio::time::delay_for(Duration::from_secs(sleep_secs)).await;
+            tokio::time::sleep(Duration::from_secs(sleep_secs)).await;
         } else {
             break;
         }

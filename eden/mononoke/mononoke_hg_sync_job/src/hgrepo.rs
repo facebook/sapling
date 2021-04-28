@@ -9,7 +9,7 @@ use crate::CommitsInBundle;
 
 use anyhow::{bail, format_err, Context as _, Error, Result};
 use bookmarks::BookmarkName;
-use futures::future::{self, Future, FutureExt, TryFuture, TryFutureExt};
+use futures::future::{self, FutureExt, TryFuture, TryFutureExt};
 use futures_ext::future::{FbFutureExt, FbTryFutureExt};
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
@@ -17,17 +17,13 @@ use mercurial_types::HgChangesetId;
 use mononoke_hg_sync_job_helper_lib::{
     lines_after, read_file_contents, wait_till_more_lines, write_to_named_temp_file,
 };
-use pin_project::pin_project;
-use shared_error::anyhow::{IntoSharedError, SharedError};
 use slog::{debug, info, Logger};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::pin::Pin;
-use std::process::{ExitStatus, Stdio};
+use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{
@@ -114,7 +110,7 @@ where
 }
 
 struct AsyncProcess {
-    child: ChildWrapper,
+    child: Child,
     stdin: ChildStdin,
 }
 
@@ -136,10 +132,7 @@ impl AsyncProcess {
             .stdin
             .take()
             .ok_or(Error::msg("ChildStdin unexpectedly not captured"))?;
-        Ok(Self {
-            child: ChildWrapper::new(child),
-            stdin,
-        })
+        Ok(Self { child, stdin })
     }
 
     pub async fn write_line(&mut self, line: Vec<u8>) -> Result<(), Error> {
@@ -150,14 +143,18 @@ impl AsyncProcess {
         Ok(())
     }
 
-    pub fn is_valid(&self) -> bool {
-        !self.child.is_finished()
+    pub fn is_valid(&mut self) -> bool {
+        !self.child_is_finished()
     }
 
-    pub fn kill(&mut self, logger: &Logger) {
-        if let Err(e) = self.child.as_inner_mut().kill() {
+    pub async fn kill(&mut self, logger: &Logger) {
+        if let Err(e) = self.child.kill().await {
             debug!(logger, "failed to kill the hg process: {}", e);
         }
+    }
+
+    fn child_is_finished(&mut self) -> bool {
+        self.child.try_wait().transpose().is_some()
     }
 
     /// Make sure child is still alive while provided future is being executed
@@ -171,17 +168,16 @@ impl AsyncProcess {
     where
         F: TryFuture<Error = Error> + Unpin + Send,
     {
-        if self.child.is_finished() {
+        if self.child_is_finished() {
             return Err(Error::msg("hg peer is dead"));
         }
 
-        // NOTE: ChildWrapper is Unpin, so this allows us to await this without having to pin it.
-        let child = &mut self.child;
+        let child = self.child.wait();
 
         let watchdog = async {
             let res = child.await;
             if let Some(grace_period) = grace_period {
-                tokio::time::delay_for(grace_period).await;
+                tokio::time::sleep(grace_period).await;
             }
             Err(format_err!("hg peer has died unexpectedly: {:?}", res))
         }
@@ -254,7 +250,7 @@ impl HgPeer {
         Arc::new(Mutex::new(self))
     }
 
-    pub fn still_good(&self, logger: &Logger) -> bool {
+    pub fn still_good(&mut self, logger: &Logger) -> bool {
         let can_be_used: bool = !self.invalidated & self.process.is_valid();
         let can_write_more = self.bundle_applied < self.max_bundles_allowed;
         debug!(
@@ -267,8 +263,8 @@ impl HgPeer {
         can_be_used && can_write_more
     }
 
-    pub fn kill(&mut self, logger: &Logger) {
-        self.process.kill(logger);
+    pub async fn kill(&mut self, logger: &Logger) {
+        self.process.kill(logger).await;
     }
 
     pub async fn apply_bundle<'a>(
@@ -469,7 +465,7 @@ impl HgRepo {
         }
 
         debug!(logger, "killing the old peer");
-        peer.kill(logger);
+        peer.kill(logger).await;
 
         debug!(logger, "renewing hg peer");
         let new_peer = HgPeer::new(
@@ -511,12 +507,13 @@ impl HgRepo {
             None => args.push("--deleted".into()),
         };
 
-        let cmd = get_hg_command(args)
+        let mut cmd = get_hg_command(args)
             .stdin(Stdio::piped())
             .spawn()
             .context("failed to start a mercurial process")?;
 
         let exit_status = cmd
+            .wait()
             .map_err(Error::from)
             .timeout(Duration::from_millis(BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS))
             .flatten_err()
@@ -529,50 +526,6 @@ impl HgRepo {
                 "server does not have a bookmark in the expected location",
             ))
         }
-    }
-}
-
-/// A wrapper around Child that remembers if the Child exited already and can be safely polled
-/// again, while still providing access to the Child itself (this allows us to e.g. call kill on
-/// it). This is a litle bit like Shared, except that Shared doesn't provide this access, and
-/// allows multiple threads to poll the future, which we don't care about.
-#[pin_project]
-pub struct ChildWrapper {
-    #[pin]
-    inner: Child,
-
-    res: Option<Result<ExitStatus, SharedError>>,
-}
-
-impl ChildWrapper {
-    pub fn new(inner: Child) -> Self {
-        Self { inner, res: None }
-    }
-
-    pub fn as_inner_mut(&mut self) -> &mut Child {
-        &mut self.inner
-    }
-
-    pub fn is_finished(&self) -> bool {
-        self.res.is_some()
-    }
-}
-
-impl Future for ChildWrapper {
-    type Output = Result<ExitStatus, SharedError>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        let this = self.project();
-
-        if let Some(res) = this.res.as_ref() {
-            return Poll::Ready(res.clone());
-        }
-
-        let res = futures::ready!(this.inner.poll(cx)).shared_error();
-
-        *this.res = Some(res.clone());
-
-        Poll::Ready(res)
     }
 }
 
@@ -593,7 +546,7 @@ mod tests {
         let res = proc
             .ensure_alive(
                 async {
-                    tokio::time::delay_for(Duration::from_millis(100)).await;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                     Ok(())
                 }
                 .boxed(),
@@ -613,7 +566,7 @@ mod tests {
         let res = proc
             .ensure_alive(
                 async {
-                    tokio::time::delay_for(Duration::from_secs(5)).await;
+                    tokio::time::sleep(Duration::from_secs(5)).await;
                     Ok(())
                 }
                 .boxed(),
@@ -633,7 +586,7 @@ mod tests {
         let res = proc
             .ensure_alive(
                 async {
-                    tokio::time::delay_for(Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                     Ok(())
                 }
                 .boxed(),

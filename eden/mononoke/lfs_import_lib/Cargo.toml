@@ -8,7 +8,8 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
+bytes-05 = { package = "bytes", version = "0.5", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -17,8 +18,8 @@ futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://gi
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-util = { version = "0.3", features = ["codec", "udp"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-util = { version = "0.6", features = ["full"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

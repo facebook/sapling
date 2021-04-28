@@ -1,0 +1,112 @@
+[package]
+name = "admin"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[[bin]]
+name = "admin"
+path = "../cmds/admin/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.45"
+backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
+blame = { version = "0.1.0", path = "../derived_data/blame" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
+bookmark_renaming = { version = "0.1.0", path = "../commit_rewriting/bookmark_renaming" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
+bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
+bulkops = { version = "0.1.0", path = "../bulkops" }
+bytes = { version = "1.0", features = ["serde"] }
+bytes-05 = { package = "bytes", version = "0.5", features = ["serde"] }
+cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../changesets" }
+clap = "2.33"
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "../cmdlib" }
+context = { version = "0.1.0", path = "../server/context" }
+copy_utils = { version = "0.1.0", path = "../common/copy_utils" }
+cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
+dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
+derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+filenodes = { version = "0.1.0", path = "../filenodes" }
+filestore = { version = "0.1.0", path = "../filestore" }
+fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+git_types = { version = "0.1.0", path = "../git/git_types" }
+humantime = "1.3"
+itertools = "0.8"
+live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
+manifest = { version = "0.1.0", path = "../manifest" }
+maplit = "1.0"
+mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
+mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sync_job" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
+pushrebase = { version = "0.1.0", path = "../pushrebase" }
+redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
+regex = "1.4.2"
+revset = { version = "0.1.0", path = "../revset" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
+skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
+slog = { version = "2.5", features = ["max_level_debug"] }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+thiserror = "1.0"
+tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio-util = { version = "0.6", features = ["full"] }
+unodes = { version = "0.1.0", path = "../derived_data/unodes" }
+xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
+
+[dev-dependencies]
+fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+
+[patch.crates-io]
+addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
+async-compression = { git = "https://github.com/ahornby/async-compression", rev = "c7fe7f9512e742f0c0097a19de0fca89da140b31" }
+bytecount = { git = "https://github.com/llogiq/bytecount", rev = "469eaf8395c99397cd64d059737a9054aa014088" }
+chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
+const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
+curl = { git = "https://github.com/kulshrax/curl-rust", rev = "2a15bbd8dbbd54734313fa703a64db7ce6ddaff0" }
+curl-sys = { git = "https://github.com/kulshrax/curl-rust", rev = "2a15bbd8dbbd54734313fa703a64db7ce6ddaff0" }
+enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
+gotham-02 = { package = "gotham", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
+gotham_derive-02 = { package = "gotham_derive", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
+hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/krallin/hyper-02.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6" }
+lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
+openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+petgraph = { git = "https://github.com/jkeljo/petgraph", rev = "e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384" }
+prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
+rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+tokio-02 = { package = "tokio", version = "0.2.25", git = "https://github.com/krallin/tokio.git", rev = "818f943db36e32b7c928351c32fe69ac913409f9" }
+tokio-compat = { package = "tokio-compat", version = "0.1.6", git = "https://github.com/krallin/tokio-compat.git", rev = "c2330c2a0141353e467cc5861988daa2eae7cb54" }
+tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
+toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }

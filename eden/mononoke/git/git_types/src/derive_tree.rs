@@ -270,7 +270,7 @@ mod test {
         ($fixture:ident) => {
             #[fbinit::test]
             fn $fixture(fb: FacebookInit) -> Result<(), Error> {
-                let mut runtime = tokio::runtime::Runtime::new()?;
+                let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
                     let repo = fixtures::$fixture::getrepo(fb).await;
                     run_tree_derivation_for_fixture(fb, repo).await

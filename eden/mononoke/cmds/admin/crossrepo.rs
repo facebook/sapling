@@ -821,7 +821,7 @@ async fn create_file_changes(
         map.insert("overrides".to_string(), map_overrides.into());
 
         let content = (get_generated_string() + &serde_json::to_string_pretty(&map)?).into_bytes();
-        let content = bytes::Bytes::from(content);
+        let content = bytes_05::Bytes::from(content);
         let size = content.len() as u64;
         let content_metadata = filestore::store(
             large_repo.blobstore(),
@@ -1481,7 +1481,7 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio::runtime::Runtime::new()?;
+        let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_bookmark_diff_impl(fb))
     }
 

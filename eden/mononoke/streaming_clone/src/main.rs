@@ -25,7 +25,7 @@ use std::convert::TryInto;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use streaming_clone::SqlStreamingChunksFetcher;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 pub const CREATE_SUB_CMD: &str = "create";
 pub const DEFAULT_MAX_DATA_CHUNK_SIZE: u32 = 950 * 1024;

@@ -285,7 +285,8 @@ impl LeaseOps for MemcacheOps {
                     warn!(ctx.logger(), "failed to renew lease for {}", mc_key);
                 }
 
-                let sleep = tokio::time::delay_for(Duration::from_secs(1));
+                let sleep = tokio::time::sleep(Duration::from_secs(1));
+                futures::pin_mut!(sleep);
                 let res = select(sleep, done).await;
                 match res {
                     Either::Left((_, new_done)) => {
@@ -305,7 +306,7 @@ impl LeaseOps for MemcacheOps {
         let retry_millis = 200;
         let retry_delay = Duration::from_millis(retry_millis);
         LEASE_STATS::wait_ms.add_value(retry_millis as i64, (self.lease_type,));
-        tokio::time::delay_for(retry_delay).await;
+        tokio::time::sleep(retry_delay).await;
     }
 
     async fn release_lease(&self, key: &str) {

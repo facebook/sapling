@@ -716,8 +716,7 @@ async fn run_mark_not_synced<'a>(
     let reader = BufReader::new(inputfile);
 
     let ctx = &ctx;
-    let s = reader
-        .lines()
+    let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok(move |line| async move {
             let cs_id = helpers::csid_resolve(ctx.clone(), large_repo.clone(), line)
@@ -797,8 +796,7 @@ async fn run_backfill_noop_mapping<'a>(
         .with_context(|| format!("Failed to open {}", input_file))?;
     let reader = BufReader::new(inputfile);
 
-    let s = reader
-        .lines()
+    let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok({
             borrowed!(ctx, mapping_version_name);

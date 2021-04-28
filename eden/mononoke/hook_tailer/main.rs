@@ -52,7 +52,7 @@ async fn get_changesets<'a>(
 
     if let Some(path) = matches.value_of(file_arg) {
         let file = File::open(path).await?;
-        let mut lines = BufReader::new(file).lines();
+        let mut lines = tokio_stream::wrappers::LinesStream::new(BufReader::new(file).lines());
         while let Some(line) = lines.next().await {
             ids.push(line?);
         }

@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
-use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
@@ -29,15 +29,15 @@ struct ShardHandle<'a> {
 }
 
 impl<'a> ShardHandle<'a> {
-    async fn acquire(&self) -> SemaphorePermit<'a> {
-        let (stats, permit) = self.semaphore.acquire().timed().await;
+    async fn acquire(&self) -> Result<SemaphorePermit<'a>, Error> {
+        let (stats, permit) = self.semaphore.acquire().try_timed().await?;
 
         self.ctx.perf_counters().add_to_counter(
             self.perf_counter_type,
             stats.completion_time.as_millis_unchecked() as i64,
         );
 
-        permit
+        Ok(permit)
     }
 }
 
@@ -88,7 +88,7 @@ impl Shards {
 
         //  Await the semaphore once, then check if our determinator says we should proceed.
 
-        let permit = handle.acquire().await;
+        let permit = handle.acquire().await?;
 
         if let Some(r) = determinator()? {
             return Ok(SemaphoreAcquisition::Cancelled(r, ticket));
@@ -109,7 +109,7 @@ impl Shards {
         // easier to implement callsites so that they don't have to bother with where exactly we
         // chose to cancel.
 
-        let permit = handle.acquire().await;
+        let permit = handle.acquire().await?;
 
         if let Some(r) = determinator()? {
             return Ok(SemaphoreAcquisition::Cancelled(r, ticket));

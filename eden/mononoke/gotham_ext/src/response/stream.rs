@@ -9,7 +9,7 @@ use std::pin::Pin;
 
 use anyhow::Error;
 use async_compression::stream::{GzipEncoder, ZstdEncoder};
-use bytes::Bytes;
+use bytes_05::Bytes;
 use futures::{
     stream::{BoxStream, Stream, StreamExt, TryStreamExt},
     task::{Context, Poll},

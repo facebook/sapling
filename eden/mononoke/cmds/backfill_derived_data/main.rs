@@ -896,7 +896,7 @@ async fn subcommand_tail(
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
 
-        let (sender, mut receiver) = tokio::sync::watch::channel(HashSet::new());
+        let (sender, receiver) = tokio::sync::watch::channel(HashSet::new());
 
         let tail_loop = async move {
             cloned!(ctx, repo);
@@ -925,7 +925,7 @@ async fn subcommand_tail(
                         gap_size,
                     )
                     .await?;
-                    let _ = sender.broadcast(heads.clone());
+                    let _ = sender.send(heads.clone());
                     derived_heads = heads;
                 }
             })
@@ -937,7 +937,8 @@ async fn subcommand_tail(
             tokio::spawn(async move {
                 if backfill {
                     let mut derived_heads = HashSet::new();
-                    while let Some(heads) = receiver.recv().await {
+                    let mut receiver = tokio_stream::wrappers::WatchStream::new(receiver);
+                    while let Some(heads) = receiver.next().await {
                         let underived_heads = heads
                             .difference(&derived_heads)
                             .cloned()
@@ -1011,7 +1012,7 @@ async fn tail_batch_iteration(
 
     let size = derive_graph.size();
     if size == 0 {
-        tokio::time::delay_for(Duration::from_millis(250)).await;
+        tokio::time::sleep(Duration::from_millis(250)).await;
     } else {
         info!(ctx.logger(), "deriving data {}", size);
         // We are using `bounded_traversal_dag` directly instead of `DeriveGraph::derive`
@@ -1116,7 +1117,7 @@ async fn tail_one_iteration(
     let pending_futs: Vec<_> = pending_futs.flatten().collect();
 
     if pending_futs.is_empty() {
-        tokio::time::delay_for(Duration::from_millis(250)).await;
+        tokio::time::sleep(Duration::from_millis(250)).await;
         Ok(())
     } else {
         let count = pending_futs.len();
@@ -1357,7 +1358,7 @@ mod tests {
             value: BlobstoreBytes,
         ) -> Result<()> {
             if key.find(&self.bad_key_substring).is_some() {
-                tokio::time::delay_for(Duration::from_millis(250)).await;
+                tokio::time::sleep(Duration::from_millis(250)).await;
                 Err(format_err!("failed"))
             } else {
                 self.inner.put(ctx, key, value).await

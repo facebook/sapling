@@ -21,6 +21,7 @@ use gotham_ext::{
     response::{
         CompressedResponseStream, ResponseStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
     },
+    upgrade_bytes::UpgradeBytesExt,
 };
 use http::header::{HeaderMap, RANGE};
 use mononoke_types::{hash::Sha256, ContentId};
@@ -129,7 +130,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    let stream = stream.end_on_err();
+    let stream = stream.upgrade_bytes().end_on_err();
 
     let mut body = StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM);
     if range.is_some() {

@@ -250,7 +250,7 @@ mod test {
             })
             .map_err(|err| panic!("{:#?}", err));
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(encode_fut.compat()).unwrap();
 
         TestResult::passed()
