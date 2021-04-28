@@ -6,6 +6,7 @@
  */
 
 use crate::EagerRepo;
+use dag::ops::DagAlgorithm;
 use dag::ops::DagExportCloneData;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
@@ -32,6 +33,9 @@ use edenapi::EdenApiError;
 use edenapi::Fetch;
 use edenapi::ProgressCallback;
 use edenapi::ResponseMeta;
+use futures::stream::BoxStream;
+use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
 use std::collections::HashSet;
@@ -312,7 +316,16 @@ impl EdenApi for EagerRepo {
         _repo: String,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Fetch<CommitKnownResponse>> {
-        todo!()
+        let mut values = Vec::new();
+        for id in hgids {
+            let known = self.get_sha1_blob(id).map_err(map_crate_err)?.is_some();
+            let response = CommitKnownResponse {
+                hgid: id,
+                known: Ok(known),
+            };
+            values.push(Ok(response));
+        }
+        Ok(convert_to_fetch(values))
     }
 
     async fn commit_graph(
@@ -321,7 +334,28 @@ impl EdenApi for EagerRepo {
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
-        todo!()
+        let heads =
+            dag::Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let common =
+            dag::Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
+        let stream = graph.iter_rev().await.map_err(map_dag_err)?;
+        let stream: BoxStream<edenapi::Result<CommitGraphEntry>> = stream
+            .then(|s| async move {
+                let s = s?;
+                let hgid = HgId::from_slice(s.as_ref()).unwrap();
+                let parents = self.dag().parent_names(s).await?;
+                let parents: Vec<HgId> = parents
+                    .into_iter()
+                    .map(|v| HgId::from_slice(v.as_ref()).unwrap())
+                    .collect();
+                let entry = CommitGraphEntry { hgid, parents };
+                Ok(entry)
+            })
+            .map_err(map_dag_err)
+            .boxed();
+        let values: Vec<edenapi::Result<CommitGraphEntry>> = stream.collect().await;
+        Ok(convert_to_fetch(values))
     }
 
     async fn bookmarks(
