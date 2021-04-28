@@ -1886,6 +1886,15 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   result.blobCacheStats_ref()->evictionCount_ref() =
       blobCacheStats.evictionCount;
   result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
+
+  const auto treeCacheStats = server_->getTreeCache()->getStats();
+  result.treeCacheStats_ref()->entryCount_ref() = treeCacheStats.objectCount;
+  result.treeCacheStats_ref()->totalSizeInBytes_ref() =
+      treeCacheStats.totalSizeInBytes;
+  result.treeCacheStats_ref()->hitCount_ref() = treeCacheStats.hitCount;
+  result.treeCacheStats_ref()->missCount_ref() = treeCacheStats.missCount;
+  result.treeCacheStats_ref()->evictionCount_ref() =
+      treeCacheStats.evictionCount;
 }
 
 void EdenServiceHandler::flushStatsNow() {

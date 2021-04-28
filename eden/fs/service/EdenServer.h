@@ -298,6 +298,10 @@ class EdenServer : private TakeoverHandler {
     return blobCache_;
   }
 
+  const std::shared_ptr<TreeCache>& getTreeCache() const {
+    return treeCache_;
+  }
+
   /**
    * Look up the BackingStore object for the specified repository type+name.
    *
