@@ -1067,6 +1067,7 @@ def remoteui(src, opts):
     # copy selected local settings to the remote ui
     for sect in (
         "auth",
+        "auth_proxy",
         "hostfingerprints",
         "hostsecurity",
         "http_proxy",
