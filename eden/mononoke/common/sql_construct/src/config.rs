@@ -31,7 +31,7 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
                 Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
             }
             DatabaseConfig::Remote(config) => {
-                Self::with_xdb(fb, config.db_address.clone(), mysql_options, readonly).await
+                Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
             }
         }
         .with_context(|| {
@@ -61,7 +61,7 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
             MetadataDatabaseConfig::Remote(remote) => {
                 let config = Self::remote_database_config(remote)
                     .ok_or_else(|| anyhow!("no configuration available"))?;
-                Self::with_xdb(fb, config.db_address.clone(), mysql_options, readonly).await
+                Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
             }
         }
     }
@@ -95,18 +95,15 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
                     .ok_or_else(|| anyhow!("no configuration available"))?;
                 match config {
                     ShardableRemoteDatabaseConfig::Unsharded(config) => {
-                        Self::with_xdb(fb, config.db_address.clone(), mysql_options, readonly).await
+                        Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
                     }
-                    ShardableRemoteDatabaseConfig::Sharded(config) => {
-                        Self::with_sharded_xdb(
-                            fb,
-                            config.shard_map.clone(),
-                            config.shard_num.get(),
-                            mysql_options,
-                            readonly,
-                        )
-                        .await
-                    }
+                    ShardableRemoteDatabaseConfig::Sharded(config) => Self::with_sharded_mysql(
+                        fb,
+                        config.shard_map.clone(),
+                        config.shard_num.get(),
+                        mysql_options,
+                        readonly,
+                    ),
                 }
             }
         }

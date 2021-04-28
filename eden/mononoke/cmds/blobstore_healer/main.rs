@@ -37,7 +37,7 @@ use sql_construct::SqlConstructFromDatabaseConfig;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::{
-    facebook::{myrouter_ready, MysqlOptions},
+    facebook::MysqlOptions,
     replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
 };
 use std::collections::HashMap;
@@ -89,8 +89,6 @@ async fn maybe_schedule_healer_for_storage(
             ),
             s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
         };
-
-    myrouter_ready(queue_db.remote_address(), &mysql_options, ctx.logger()).await?;
 
     let sync_queue = SqlBlobstoreSyncQueue::with_database_config(
         fb,

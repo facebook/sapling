@@ -30,18 +30,6 @@ impl PoolSizeConfig {
     }
 }
 
-pub fn create_myrouter_connections(
-    _: String,
-    _: Option<usize>,
-    _: u16,
-    _: ReadConnectionType,
-    _: PoolSizeConfig,
-    _: String,
-    _: bool,
-) -> SqlConnections {
-    fb_unimplemented!()
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PoolConfig;
 
@@ -73,11 +61,9 @@ impl SharedConnectionPool {
 
 pub fn create_mysql_connections_unsharded(
     _fb: FacebookInit,
-    _connection_pool: SharedConnectionPool,
-    _pool_config: PoolConfig,
+    _mysql_options: MysqlOptions,
     _label: String,
     _tier: String,
-    _read_con_type: ReadConnectionType,
     _readonly: bool,
 ) -> Result<SqlConnections, Error> {
     fb_unimplemented!()
@@ -95,36 +81,15 @@ pub fn deprecated_create_mysql_pool_unsharded(
 
 pub fn create_mysql_connections_sharded<S>(
     _fb: FacebookInit,
-    _connection_pool: SharedConnectionPool,
-    _pool_config: PoolConfig,
+    _global_connection_pool: MysqlOptions,
     _label: String,
     _shardmap: String,
     _shards: S,
-    _read_con_type: ReadConnectionType,
     _readonly: bool,
 ) -> Result<SqlShardedConnections, Error>
 where
     S: IntoIterator<Item = usize> + Clone,
 {
-    fb_unimplemented!()
-}
-
-pub async fn myrouter_ready(
-    db_addr_opt: Option<String>,
-    mysql_options: &MysqlOptions,
-    _: &Logger,
-) -> Result<(), Error> {
-    if db_addr_opt.is_none() {
-        return Ok(());
-    };
-
-    match mysql_options.connection_type {
-        MysqlConnectionType::Myrouter(_) => {}
-        _ => {
-            return Ok(());
-        }
-    }
-
     fb_unimplemented!()
 }
 

@@ -29,7 +29,7 @@ use metaconfig_types::{
 };
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_construct::facebook::FbSqlConstruct;
-use sql_ext::facebook::{MysqlConnectionType, ReadConnectionType};
+use sql_ext::facebook::MysqlOptions;
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -42,7 +42,7 @@ const FLAT_NAMESPACE_PREFIX: &str = "flat/";
 /// Configuration options
 struct Config {
     db_address: String,
-    connection_type: MysqlConnectionType,
+    mysql_options: MysqlOptions,
     blobstore_args: BlobConfig,
     repo_id: RepositoryId,
     src_blobstore_id: BlobstoreId,
@@ -227,12 +227,12 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         ))
         .and_then(|args| Ok(args.clone()))?;
 
-    let connection_type = matches.mysql_options().connection_type.clone();
+    let mysql_options = matches.mysql_options().clone();
     let readonly_storage = matches.readonly_storage();
     Ok(Config {
         repo_id,
         db_address: db_address.clone(),
-        connection_type,
+        mysql_options,
         blobstore_args,
         src_blobstore_id,
         dst_blobstore_id,
@@ -397,27 +397,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let blobstore = make_key_source(fb, &config.blobstore_args);
     match blobstore {
         Ok(blobstore) => {
-            let queue: Arc<dyn BlobstoreSyncQueue> = match config.connection_type.clone() {
-                MysqlConnectionType::Myrouter(myrouter_port) => {
-                    Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
-                        config.db_address.clone(),
-                        myrouter_port,
-                        ReadConnectionType::Replica,
-                        config.readonly_storage,
-                    ))
-                }
-                MysqlConnectionType::Mysql(pool, pool_config) => {
-                    let queue = SqlBlobstoreSyncQueue::with_mysql(
-                        fb,
-                        config.db_address.clone(),
-                        pool,
-                        pool_config,
-                        ReadConnectionType::Replica,
-                        config.readonly_storage,
-                    )?;
-                    Arc::new(queue)
-                }
-            };
+            let mut mysql_options = config.mysql_options.clone();
+            mysql_options.master_only = false;
+
+            let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_mysql(
+                fb,
+                config.db_address.clone(),
+                &mysql_options,
+                config.readonly_storage,
+            )?);
+
             let mut runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(populate_healer_queue(blobstore, queue, config))?;
             Ok(())

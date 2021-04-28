@@ -32,7 +32,6 @@ pub const TARGET_REPO_GROUP: &str = "target-repo";
 pub const TARGET_REPO_ID: &str = "target-repo-id";
 pub const TARGET_REPO_NAME: &str = "target-repo-name";
 pub const ENABLE_MCROUTER: &str = "enable-mcrouter";
-pub const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 pub const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 pub const MYSQL_USE_CLIENT: &str = "use-mysql-client";
 pub const MYSQL_POOL_LIMIT: &str = "mysql-pool-limit";
@@ -824,12 +823,6 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
-        Arg::with_name(MYSQL_MYROUTER_PORT)
-            .long(MYSQL_MYROUTER_PORT)
-            .help("Use MyRouter at this port")
-            .takes_value(true),
-    )
-    .arg(
         Arg::with_name(MYSQL_MASTER_ONLY)
             .long(MYSQL_MASTER_ONLY)
             .help("Connect to MySQL master only")
@@ -839,8 +832,7 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name(MYSQL_USE_CLIENT)
             .long(MYSQL_USE_CLIENT)
             .help("Connect via Mysql client")
-            .takes_value(false)
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .takes_value(false),
     )
     // All the defaults for Mysql connection pool are derived from sql_ext::facebook::mysql
     // https://fburl.com/diffusion/n5isd68j

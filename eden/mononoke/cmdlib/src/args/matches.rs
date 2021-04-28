@@ -38,7 +38,7 @@ use observability::{DynamicLevelDrain, ObservabilityContext};
 use repo_factory::ReadOnlyStorage;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog_ext::make_tag_filter_drain;
-use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig};
+use sql_ext::facebook::{MysqlOptions, PoolConfig};
 use tunables::init_tunables_worker;
 
 use crate::helpers::create_runtime;
@@ -51,14 +51,14 @@ use super::{
         BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG, CACHELIB_ATTEMPT_ZSTD_ARG,
         CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG,
         LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MYSQL_CONN_OPEN_TIMEOUT,
-        MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_MYROUTER_PORT, MYSQL_POOL_AGE_TIMEOUT,
-        MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
-        MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
-        MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
-        READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
-        RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY,
-        WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG,
-        WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+        MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT,
+        MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
+        MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
+        MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
+        READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
+        TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
+        WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
+        WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
     },
     cache::parse_and_init_cachelib,
 };
@@ -411,23 +411,14 @@ fn parse_mysql_options(
     matches: &ArgMatches<'_>,
     app_data: &MononokeAppData,
 ) -> Result<MysqlOptions, Error> {
-    let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
-        let port = port
-            .parse::<u16>()
-            .context("Provided --myrouter-port is not u16")?;
-        MysqlConnectionType::Myrouter(port)
-    } else {
-        let pool = app_data.global_mysql_connection_pool.clone();
-        let pool_config =
-            parse_mysql_pool_options(matches).context("Failed to parse MySQL pool options")?;
-
-        MysqlConnectionType::Mysql(pool, pool_config)
-    };
-
+    let pool = app_data.global_mysql_connection_pool.clone();
+    let pool_config =
+        parse_mysql_pool_options(matches).context("Failed to parse MySQL pool options")?;
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
 
     Ok(MysqlOptions {
-        connection_type,
+        pool,
+        pool_config,
         master_only,
     })
 }
@@ -486,22 +477,13 @@ fn parse_sqlblob_mysql_options(
     matches: &ArgMatches<'_>,
     app_data: &MononokeAppData,
 ) -> Result<MysqlOptions, Error> {
-    let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
-        let port = port
-            .parse::<u16>()
-            .context("Provided --myrouter-port is not u16")?;
-        MysqlConnectionType::Myrouter(port)
-    } else {
-        let pool = app_data.sqlblob_mysql_connection_pool.clone();
-        let pool_config = parse_mysql_sqlblob_pool_options(matches)?;
-
-        MysqlConnectionType::Mysql(pool, pool_config)
-    };
-
+    let pool = app_data.sqlblob_mysql_connection_pool.clone();
+    let pool_config = parse_mysql_sqlblob_pool_options(matches)?;
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
 
     Ok(MysqlOptions {
-        connection_type,
+        pool,
+        pool_config,
         master_only,
     })
 }

@@ -38,9 +38,7 @@ use nonzero_ext::nonzero;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, PoolConfig, PoolSizeConfig, ReadConnectionType,
-        SharedConnectionPool,
+        create_mysql_connections_sharded, create_mysql_connections_unsharded, MysqlOptions,
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections,
 };
@@ -91,86 +89,11 @@ fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc
 }
 
 impl Sqlblob {
-    pub async fn with_myrouter(
-        fb: FacebookInit,
-        shardmap: String,
-        port: u16,
-        read_con_type: ReadConnectionType,
-        shard_num: NonZeroUsize,
-        readonly: bool,
-        put_behaviour: PutBehaviour,
-        config_store: &ConfigStore,
-    ) -> Result<CountedSqlblob, Error> {
-        let delay = if readonly {
-            BlobDelay::dummy(shard_num)
-        } else {
-            myadmin_delay::sharded(fb, shardmap.clone(), shard_num)?
-        };
-        Self::with_connection_factory(
-            delay,
-            shardmap.clone(),
-            shard_num,
-            put_behaviour,
-            move |shard_id| {
-                let res = create_myrouter_connections(
-                    shardmap.clone(),
-                    Some(shard_id),
-                    port,
-                    read_con_type,
-                    PoolSizeConfig::for_sharded_connection(),
-                    SQLBLOB_LABEL.into(),
-                    readonly,
-                );
-                async move { Ok(res) }
-            },
-            config_store,
-        )
-        .await
-    }
-
-    pub async fn with_myrouter_unsharded(
-        fb: FacebookInit,
-        db_address: String,
-        port: u16,
-        read_con_type: ReadConnectionType,
-        readonly: bool,
-        put_behaviour: PutBehaviour,
-        config_store: &ConfigStore,
-    ) -> Result<CountedSqlblob, Error> {
-        let delay = if readonly {
-            BlobDelay::dummy(SINGLE_SHARD_NUM)
-        } else {
-            myadmin_delay::single(fb, db_address.clone())?
-        };
-        Self::with_connection_factory(
-            delay,
-            db_address.clone(),
-            SINGLE_SHARD_NUM,
-            put_behaviour,
-            move |_shard_id| {
-                let res = create_myrouter_connections(
-                    db_address.clone(),
-                    None,
-                    port,
-                    read_con_type,
-                    PoolSizeConfig::for_sharded_connection(),
-                    SQLBLOB_LABEL.into(),
-                    readonly,
-                );
-                async move { Ok(res) }
-            },
-            config_store,
-        )
-        .await
-    }
-
     pub async fn with_mysql(
         fb: FacebookInit,
         shardmap: String,
         shard_num: NonZeroUsize,
-        global_connection_pool: SharedConnectionPool,
-        pool_config: PoolConfig,
-        read_con_type: ReadConnectionType,
+        mysql_options: MysqlOptions,
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
@@ -192,12 +115,10 @@ impl Sqlblob {
             move || {
                 create_mysql_connections_sharded(
                     fb,
-                    global_connection_pool,
-                    pool_config,
+                    mysql_options,
                     SQLBLOB_LABEL.into(),
                     shardmap,
                     0..shard_count,
-                    read_con_type,
                     readonly,
                 )
             }
@@ -233,9 +154,7 @@ impl Sqlblob {
     pub async fn with_mysql_unsharded(
         fb: FacebookInit,
         db_address: String,
-        global_connection_pool: SharedConnectionPool,
-        pool_config: PoolConfig,
-        read_con_type: ReadConnectionType,
+        mysql_options: MysqlOptions,
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
@@ -253,11 +172,9 @@ impl Sqlblob {
             move |_shard_id| {
                 let res = create_mysql_connections_unsharded(
                     fb,
-                    global_connection_pool.clone(),
-                    pool_config,
+                    mysql_options.clone(),
                     SQLBLOB_LABEL.into(),
                     db_address.clone(),
-                    read_con_type,
                     readonly,
                 );
                 async { res }

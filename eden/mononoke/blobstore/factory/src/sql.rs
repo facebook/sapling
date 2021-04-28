@@ -10,16 +10,12 @@ use fbinit::FacebookInit;
 use metaconfig_types::{
     LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
 };
-use slog::Logger;
 use sql::Connection;
 use sql_construct::{
     SqlConstructFromMetadataDatabaseConfig, SqlShardableConstructFromMetadataDatabaseConfig,
 };
 use sql_ext::{
-    facebook::{
-        create_myrouter_connections, create_mysql_connections_unsharded, myrouter_ready,
-        MysqlConnectionType, MysqlOptions, PoolSizeConfig,
-    },
+    facebook::{create_mysql_connections_unsharded, MysqlOptions},
     open_sqlite_path, SqlConnections,
 };
 
@@ -95,28 +91,13 @@ impl MetadataSqlFactory {
                 open_sqlite_path(path.join("sqlite_dbs"), self.readonly.0)
                     .map(|conn| SqlConnections::new_single(Connection::with_sqlite(conn)))
             }
-            MetadataDatabaseConfig::Remote(config) => match &self.mysql_options.connection_type {
-                MysqlConnectionType::Myrouter(myrouter_port) => Ok(create_myrouter_connections(
-                    config.primary.db_address.clone(),
-                    None,
-                    *myrouter_port,
-                    self.mysql_options.read_connection_type(),
-                    PoolSizeConfig::for_regular_connection(),
-                    label,
-                    self.readonly.0,
-                )),
-                MysqlConnectionType::Mysql(global_connection_pool, pool_config) => {
-                    create_mysql_connections_unsharded(
-                        self.fb,
-                        global_connection_pool.clone(),
-                        pool_config.clone(),
-                        label,
-                        config.primary.db_address.clone(),
-                        self.mysql_options.read_connection_type(),
-                        self.readonly.0,
-                    )
-                }
-            },
+            MetadataDatabaseConfig::Remote(config) => create_mysql_connections_unsharded(
+                self.fb,
+                self.mysql_options.clone(),
+                label,
+                config.primary.db_address.clone(),
+                self.readonly.0,
+            ),
         }
     }
 }
@@ -126,12 +107,7 @@ pub async fn make_metadata_sql_factory(
     dbconfig: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly: ReadOnlyStorage,
-    logger: &Logger,
 ) -> Result<MetadataSqlFactory, Error> {
-    if let Some(dbaddress) = dbconfig.primary_address() {
-        myrouter_ready(Some(dbaddress), &mysql_options, &logger).await?
-    }
-
     Ok(MetadataSqlFactory {
         fb,
         dbconfig,

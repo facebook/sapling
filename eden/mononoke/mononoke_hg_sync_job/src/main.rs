@@ -57,7 +57,7 @@ use slog::{error, info};
 use sql_construct::{
     facebook::FbSqlConstruct, SqlConstruct, SqlConstructFromMetadataDatabaseConfig,
 };
-use sql_ext::facebook::{myrouter_ready, MysqlConnectionType, MysqlOptions};
+use sql_ext::facebook::MysqlOptions;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -236,24 +236,12 @@ fn get_read_write_fetcher(
                 let path = Path::new(repo_lock_db_addr);
                 SqlRepoReadWriteStatus::with_sqlite_path(path, readonly_storage)
             } else {
-                match mysql_options.connection_type.clone() {
-                    MysqlConnectionType::Myrouter(port) => {
-                        Ok(SqlRepoReadWriteStatus::with_myrouter(
-                            repo_lock_db_addr.to_string(),
-                            port,
-                            mysql_options.read_connection_type(),
-                            readonly_storage,
-                        ))
-                    }
-                    MysqlConnectionType::Mysql(pool, config) => SqlRepoReadWriteStatus::with_mysql(
-                        fb,
-                        repo_lock_db_addr.to_string(),
-                        pool,
-                        config,
-                        mysql_options.read_connection_type(),
-                        readonly_storage,
-                    ),
-                }
+                SqlRepoReadWriteStatus::with_mysql(
+                    fb,
+                    repo_lock_db_addr.to_string(),
+                    mysql_options,
+                    readonly_storage,
+                )
             };
             sql_repo_read_write_status.and_then(|connection| {
                 Ok(RepoReadWriteFetcher::new(
@@ -906,24 +894,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         verify_server_bookmark_on_failure,
     )?;
 
-    let myrouter_ready_fut = async {
-        if let MysqlConnectionType::Myrouter(_) = mysql_options.connection_type {
-            // connection goes via Myrouter
-            myrouter_ready(
-                repo_config.primary_metadata_db_address(),
-                &mysql_options,
-                ctx.logger(),
-            )
-            .await
-        } else {
-            // connection goes via Mysql client
-            Ok(())
-        }
-    };
+    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches).await?;
 
-    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches);
-
-    let (_, bookmarks) = try_join(myrouter_ready_fut, bookmarks).await?;
     let bookmarks = bookmarks.with_repo_id(repo_id);
     let reporting_handler = build_reporting_handler(&ctx, &scuba_sample, retry_num, &bookmarks);
 

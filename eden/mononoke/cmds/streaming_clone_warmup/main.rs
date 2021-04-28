@@ -28,7 +28,7 @@ use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use slog::{error, info};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::{myrouter_ready, MysqlOptions};
+use sql_ext::facebook::MysqlOptions;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -97,14 +97,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let mysql_options = matches.mysql_options();
     let blobstore_options = matches.blobstore_options();
     let configs = args::load_repo_configs(config_store, matches)?;
-
-    // wait for myrouter
-    myrouter_ready(
-        Some("xdb.mononoke_production".to_string()),
-        mysql_options,
-        ctx.logger(),
-    )
-    .await?;
 
     let mut warmers = Vec::new();
     for reponame in reponames {

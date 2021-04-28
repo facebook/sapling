@@ -78,8 +78,7 @@ impl GlobalrevSyncer {
         let hgsql = if use_sqlite {
             HgsqlConnection::with_sqlite_path(Path::new(hgsql_db_addr), readonly)?
         } else {
-            HgsqlConnection::with_xdb(fb, hgsql_db_addr.to_string(), &mysql_options, readonly)
-                .await?
+            HgsqlConnection::with_mysql(fb, hgsql_db_addr.to_string(), &mysql_options, readonly)?
         };
 
         let syncer = SqlGlobalrevSyncer {

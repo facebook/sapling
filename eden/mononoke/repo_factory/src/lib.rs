@@ -156,7 +156,6 @@ impl RepoFactory {
                     config.clone(),
                     self.env.mysql_options.clone(),
                     self.env.readonly_storage,
-                    &self.env.logger,
                 )
                 .watched(&self.env.logger)
                 .await?;

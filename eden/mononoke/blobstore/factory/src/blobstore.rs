@@ -31,7 +31,7 @@ use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
-use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
+use sql_ext::facebook::MysqlOptions;
 use sqlblob::{CountedSqlblob, Sqlblob};
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
@@ -188,62 +188,25 @@ pub async fn make_sql_blobstore_xdb<'a>(
     put_behaviour: PutBehaviour,
     config_store: &'a ConfigStore,
 ) -> Result<CountedSqlblob, Error> {
-    let read_conn_type = blobstore_options
-        .sqlblob_mysql_options
-        .read_connection_type();
-    match (
-        blobstore_options
-            .sqlblob_mysql_options
-            .connection_type
-            .clone(),
-        shard_count,
-    ) {
-        (MysqlConnectionType::Myrouter(myrouter_port), None) => {
-            Sqlblob::with_myrouter_unsharded(
-                fb,
-                tier_name,
-                myrouter_port,
-                read_conn_type,
-                readonly_storage.0,
-                put_behaviour,
-                config_store,
-            )
-            .await
-        }
-        (MysqlConnectionType::Myrouter(myrouter_port), Some(shard_num)) => {
-            Sqlblob::with_myrouter(
-                fb,
-                tier_name,
-                myrouter_port,
-                read_conn_type,
-                shard_num,
-                readonly_storage.0,
-                put_behaviour,
-                config_store,
-            )
-            .await
-        }
-        (MysqlConnectionType::Mysql(pool, pool_config), None) => {
+    let mysql_options = blobstore_options.sqlblob_mysql_options.clone();
+    match shard_count {
+        None => {
             Sqlblob::with_mysql_unsharded(
                 fb,
                 tier_name,
-                pool,
-                pool_config,
-                read_conn_type,
+                mysql_options,
                 readonly_storage.0,
                 put_behaviour,
                 config_store,
             )
             .await
         }
-        (MysqlConnectionType::Mysql(pool, pool_config), Some(shard_num)) => {
+        Some(shard_num) => {
             Sqlblob::with_mysql(
                 fb,
                 tier_name,
                 shard_num,
-                pool,
-                pool_config,
-                read_conn_type,
+                mysql_options,
                 readonly_storage.0,
                 put_behaviour,
                 config_store,

@@ -437,14 +437,8 @@ pub async fn open_backsyncer_dbs(
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> Result<TargetRepoDbs, Error> {
-    let sql_factory = make_metadata_sql_factory(
-        ctx.fb,
-        db_config,
-        mysql_options,
-        readonly_storage,
-        ctx.logger(),
-    )
-    .await?;
+    let sql_factory =
+        make_metadata_sql_factory(ctx.fb, db_config, mysql_options, readonly_storage).await?;
 
     let connections = sql_factory
         .make_primary_connections("bookmark_mutable_counters".to_string())

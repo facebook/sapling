@@ -55,7 +55,7 @@ use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use segmented_changelog::{CloneData, Location, SegmentedChangelog, StreamCloneData};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
-use slog::{debug, error, o, Logger};
+use slog::{debug, error, o};
 use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
@@ -126,14 +126,12 @@ pub async fn open_synced_commit_mapping(
     config: RepoConfig,
     mysql_options: &MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-    logger: &Logger,
 ) -> Result<Arc<SqlSyncedCommitMapping>, Error> {
     let sql_factory = make_metadata_sql_factory(
         fb,
         config.storage_config.metadata,
         mysql_options.clone(),
         readonly_storage,
-        logger,
     )
     .await?;
 
@@ -160,7 +158,6 @@ impl Repo {
             config.clone(),
             &env.repo_factory.env.mysql_options,
             env.repo_factory.env.readonly_storage,
-            &logger,
         )
         .await?;
 
@@ -223,20 +220,17 @@ impl Repo {
         let warm_bookmarks_cache =
             warm_bookmarks_cache_builder.build(env.warm_bookmarks_cache_delay);
 
-        let sql_read_write_status = async {
-            if let Some(addr) = &config.write_lock_db_address {
-                let r = SqlRepoReadWriteStatus::with_xdb(
-                    fb,
-                    addr.clone(),
-                    &env.repo_factory.env.mysql_options,
-                    env.repo_factory.env.readonly_storage.0,
-                )
-                .await?;
-                Ok(Some(r))
-            } else {
-                Ok(None)
-            }
-        };
+        let sql_read_write_status = if let Some(addr) = &config.write_lock_db_address {
+            let r = SqlRepoReadWriteStatus::with_mysql(
+                fb,
+                addr.clone(),
+                &env.repo_factory.env.mysql_options,
+                env.repo_factory.env.readonly_storage.0,
+            )?;
+            Result::<_, Error>::Ok(Some(r))
+        } else {
+            Ok(None)
+        }?;
 
         let (
             repo_permission_checker,
@@ -244,14 +238,12 @@ impl Repo {
             skiplist_index,
             warm_bookmarks_cache,
             hook_manager,
-            sql_read_write_status,
         ) = try_join!(
             repo_permission_checker.watched(&logger),
             service_permission_checker.watched(&logger),
             skiplist_index.watched(&logger),
             warm_bookmarks_cache.watched(&logger),
             hook_manager.watched(&logger),
-            sql_read_write_status.watched(&logger),
         )?;
 
         let readonly_fetcher = RepoReadWriteFetcher::new(

@@ -29,62 +29,61 @@ pub mod facebook {
 
     #[cfg(fbcode_build)]
     pub use r#impl::{
-        create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, deprecated_create_mysql_pool_unsharded,
+        create_mysql_connections_sharded, create_mysql_connections_unsharded,
+        deprecated_create_mysql_pool_unsharded,
         myadmin::{MyAdmin, MyAdminLagMonitor},
-        myrouter_ready, PoolConfig, SharedConnectionPool,
+        PoolConfig, SharedConnectionPool,
     };
 
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{
-        create_myrouter_connections, create_mysql_connections_sharded,
-        create_mysql_connections_unsharded, deprecated_create_mysql_pool_unsharded, myrouter_ready,
-        MyAdmin, MyAdminLagMonitor, PoolConfig, SharedConnectionPool,
+        create_mysql_connections_sharded, create_mysql_connections_unsharded,
+        deprecated_create_mysql_pool_unsharded, MyAdmin, MyAdminLagMonitor, PoolConfig,
+        SharedConnectionPool,
     };
 
-    /// Way to connect to the DB: via myrouter connections, raw xdb or Mysql client
+    /// MySQL global shared connection pool configuration.
     #[derive(Clone)]
-    pub enum MysqlConnectionType {
-        Myrouter(u16),
-        Mysql(SharedConnectionPool, PoolConfig),
+    pub struct MysqlOptions {
+        pub pool: SharedConnectionPool,
+        // pool config is used only once when the shared connection pool is being created
+        pub pool_config: PoolConfig,
+        pub master_only: bool,
     }
 
-    impl MysqlConnectionType {
+    impl MysqlOptions {
         pub fn per_key_limit(&self) -> Option<usize> {
             #[cfg(not(fbcode_build))]
             {
                 None
             }
             #[cfg(fbcode_build)]
-            match self {
-                Self::Myrouter(_) => None,
-                Self::Mysql(_, pool_config) => Some(pool_config.per_key_limit as usize),
+            {
+                Some(self.pool_config.per_key_limit as usize)
             }
         }
-    }
 
-    impl Debug for MysqlConnectionType {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match &self {
-                Self::Myrouter(port) => write!(f, "MyRouter(port: {:?})", port),
-                Self::Mysql(_, config) => write!(f, "MySQL with config {:?}", config),
-            }
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct MysqlOptions {
-        pub connection_type: MysqlConnectionType,
-        pub master_only: bool,
-    }
-
-    impl MysqlOptions {
         pub fn read_connection_type(&self) -> ReadConnectionType {
             if self.master_only {
                 ReadConnectionType::Master
             } else {
                 ReadConnectionType::Replica
             }
+        }
+    }
+
+    impl Debug for MysqlOptions {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let conn_type = if self.master_only {
+                "master only"
+            } else {
+                "replica"
+            };
+            write!(
+                f,
+                "MySQL pool with config {:?}, connection type: {}",
+                self.pool_config, conn_type
+            )
         }
     }
 

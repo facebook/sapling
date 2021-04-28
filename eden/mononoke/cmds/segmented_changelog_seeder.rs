@@ -100,7 +100,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         storage_config.metadata,
         mysql_options.clone(),
         readonly_storage,
-        ctx.logger(),
     )
     .await
     .context("constructing metadata sql factory")?;

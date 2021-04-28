@@ -1468,7 +1468,7 @@ pub async fn setup_common<'a>(
 
         let sql_shard_info = SqlShardInfo {
             filenodes: sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?,
-            active_keys_per_shard: mysql_options.connection_type.per_key_limit(),
+            active_keys_per_shard: mysql_options.per_key_limit(),
         };
 
         let one_repo = setup_repo(
