@@ -63,6 +63,7 @@ pub use crate::wire::{
     bookmark::{WireBookmarkEntry, WireBookmarkRequest},
     clone::{WireCloneData, WireIdMapEntry},
     commit::{
+        WireCommitHashLookupRequest, WireCommitHashLookupResponse,
         WireCommitHashToLocationRequestBatch, WireCommitHashToLocationResponse, WireCommitLocation,
         WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse,

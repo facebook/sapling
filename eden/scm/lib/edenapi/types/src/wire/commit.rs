@@ -13,10 +13,11 @@ use dag_types::Location;
 use types::HgId;
 
 use crate::commit::{
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse,
 };
-use crate::wire::{ToApi, ToWire, WireHgId, WireResult, WireToApiConversionError};
+use crate::wire::{is_default, ToApi, ToWire, WireHgId, WireResult, WireToApiConversionError};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {
@@ -281,6 +282,95 @@ impl Arbitrary for WireCommitHashToLocationResponse {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitHashLookupRequest {
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub inclusive_range: Option<(WireHgId, WireHgId)>,
+}
+
+impl ToWire for CommitHashLookupRequest {
+    type Wire = WireCommitHashLookupRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        use crate::CommitHashLookupRequest::*;
+        match self {
+            InclusiveRange(low, high) => WireCommitHashLookupRequest {
+                inclusive_range: Some((low.to_wire(), high.to_wire())),
+            },
+        }
+    }
+}
+
+impl ToApi for WireCommitHashLookupRequest {
+    type Api = CommitHashLookupRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let ir =
+            self.inclusive_range
+                .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                    "inclusive_range",
+                ))?;
+        let api = CommitHashLookupRequest::InclusiveRange(ir.0.to_api()?, ir.1.to_api()?);
+        Ok(api)
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireCommitHashLookupRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashLookupRequest::arbitrary(g).to_wire()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitHashLookupResponse {
+    #[serde(rename = "1")]
+    pub request: Option<WireCommitHashLookupRequest>,
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    pub hgids: Option<Vec<WireHgId>>,
+}
+
+impl ToWire for CommitHashLookupResponse {
+    type Wire = WireCommitHashLookupResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            request: Some(self.request.to_wire()),
+            hgids: Some(self.hgids.to_wire()),
+        }
+    }
+}
+
+impl ToApi for WireCommitHashLookupResponse {
+    type Api = CommitHashLookupResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let request = self
+            .request
+            .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                "request",
+            ))?
+            .to_api()?;
+        let hgids = self
+            .hgids
+            .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                "hgids",
+            ))?
+            .to_api()?;
+        let api = Self::Api { request, hgids };
+        Ok(api)
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireCommitHashLookupResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashLookupResponse::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,6 +444,30 @@ mod tests {
 
         fn test_roundtrip_wire_hash_to_location_response(
             v: CommitHashToLocationResponse
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_serialize_hash_lookup_request(
+            v: WireCommitHashLookupRequest
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_wire_hash_lookup_request(
+            v: CommitHashLookupRequest
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_serialize_hash_lookup_response(
+            v: WireCommitHashLookupResponse
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_wire_hash_lookup_response(
+            v: CommitHashLookupResponse
         ) -> bool {
             check_wire_roundtrip(v)
         }

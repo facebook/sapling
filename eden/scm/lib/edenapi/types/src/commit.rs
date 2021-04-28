@@ -147,3 +147,36 @@ impl CommitRevlogData {
         Self { hgid, revlog_data }
     }
 }
+
+/// Request commit hashes that fall in the [low..high] range.
+// Note: limit is implied to be 10.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub enum CommitHashLookupRequest {
+    InclusiveRange(HgId, HgId),
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitHashLookupRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashLookupRequest::InclusiveRange(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
+    }
+}
+
+/// Commit hashes that are known to the server in the described range.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitHashLookupResponse {
+    pub request: CommitHashLookupRequest,
+    pub hgids: Vec<HgId>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitHashLookupResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashLookupResponse {
+            request: Arbitrary::arbitrary(g),
+            hgids: Arbitrary::arbitrary(g),
+        }
+    }
+}

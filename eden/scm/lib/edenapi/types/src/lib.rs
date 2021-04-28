@@ -38,9 +38,9 @@ pub mod wire;
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::{
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest,
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;

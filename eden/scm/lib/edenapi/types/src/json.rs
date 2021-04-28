@@ -28,9 +28,10 @@ use serde_json::{json, Map, Value};
 use dag_types::Location;
 use types::{HgId, Key, RepoPathBuf};
 
+use crate::batch::Batch;
 use crate::bookmark::BookmarkRequest;
 use crate::commit::{
-    CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
+    CommitHashLookupRequest, CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
 };
 use crate::complete_tree::CompleteTreeRequest;
@@ -478,6 +479,33 @@ pub trait FromJson: Sized {
     fn from_json(json: &Value) -> Result<Self>;
 }
 
+impl<T> FromJson for Batch<T>
+where
+    T: FromJson,
+{
+    fn from_json(json: &Value) -> Result<Self> {
+        let json_batch = json
+            .get("batch")
+            .context("missing field batch")?
+            .as_array()
+            .context("batch is not an array")?;
+        let batch = json_batch
+            .iter()
+            .map(|x| T::from_json(x))
+            .collect::<Result<Vec<_>>>()?;
+        let r = Batch { batch };
+        Ok(r)
+    }
+}
+
+impl FromJson for HgId {
+    fn from_json(json: &Value) -> Result<Self> {
+        let hex = json.as_str().context("hgid must be string")?;
+        let hgid = HgId::from_str(hex)?;
+        Ok(hgid)
+    }
+}
+
 impl FromJson for FileRequest {
     fn from_json(json: &Value) -> Result<Self> {
         parse_file_req(json)
@@ -532,6 +560,19 @@ impl FromJson for BookmarkRequest {
     }
 }
 
+impl FromJson for CommitHashLookupRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        let ir = json
+            .get("inclusive_range")
+            .context("missing field inclusive_range")?
+            .as_object()
+            .context("field inclusive_range is not an object")?;
+        let low = HgId::from_json(ir.get("low").context("missing field low")?)?;
+        let high = HgId::from_json(ir.get("high").context("missing field high")?)?;
+        Ok(CommitHashLookupRequest::InclusiveRange(low, high))
+    }
+}
+
 pub trait ToJson {
     fn to_json(&self) -> Value;
 }
@@ -551,6 +592,17 @@ impl ToJson for Key {
 impl<T: ToJson> ToJson for Vec<T> {
     fn to_json(&self) -> Value {
         self.iter().map(ToJson::to_json).collect::<Vec<_>>().into()
+    }
+}
+
+impl<T> ToJson for Batch<T>
+where
+    T: ToJson,
+{
+    fn to_json(&self) -> Value {
+        json!({
+            "batch": self.batch.to_json()
+        })
     }
 }
 
@@ -671,6 +723,20 @@ impl ToJson for CommitRevlogDataRequest {
 impl ToJson for BookmarkRequest {
     fn to_json(&self) -> Value {
         json!({ "bookmarks": self.bookmarks })
+    }
+}
+
+impl ToJson for CommitHashLookupRequest {
+    fn to_json(&self) -> Value {
+        use CommitHashLookupRequest::*;
+        match self {
+            InclusiveRange(low, high) => json!({
+                "inclusive_range": {
+                    "low": low,
+                    "high": high
+                }
+            }),
+        }
     }
 }
 
