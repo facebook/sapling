@@ -311,7 +311,17 @@ impl EdenApi for EagerRepo {
         bookmarks: Vec<String>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<BookmarkEntry>> {
-        todo!()
+        let mut values = Vec::new();
+        let map = self.get_bookmarks_map().map_err(map_crate_err)?;
+        for name in bookmarks {
+            let opt_id = map.get(&name).cloned();
+            let entry = BookmarkEntry {
+                bookmark: name,
+                hgid: opt_id,
+            };
+            values.push(Ok(entry));
+        }
+        Ok(convert_to_fetch(values))
     }
 }
 
@@ -408,5 +418,9 @@ fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> eden
 }
 
 fn map_dag_err(e: dag::Error) -> EdenApiError {
+    EdenApiError::Other(e.into())
+}
+
+fn map_crate_err(e: crate::Error) -> EdenApiError {
     EdenApiError::Other(e.into())
 }
