@@ -194,34 +194,70 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
 }
 
 #[cfg(fbcode_build)]
-async fn update_manifold_key(
-    fb: FacebookInit,
-    latest_imported_rev: RevIdx,
-    manifold_key: String,
-    manifold_bucket: String,
-) -> Result<()> {
+mod facebook {
+    use super::*;
+
     use bytes::Bytes;
-    use manifold::{ObjectMeta, PayloadDesc, StoredObject};
-    use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
-
-    let next_revision_to_import = latest_imported_rev.as_u32() + 1;
-    let context = RequestContext {
-        bucketName: manifold_bucket,
-        apiKey: "".to_string(),
-        timeoutMsec: 10000,
-        ..Default::default()
+    use manifold_client::{
+        cpp_client::{ClientOptionsBuilder, ManifoldCppClient},
+        write::WriteRequestOptionsBuilder,
+        ManifoldClient,
     };
-    let object_meta = ObjectMeta {
-        ..Default::default()
-    };
-    let bytes = Bytes::from(format!("{}", next_revision_to_import));
-    let object = thrift::StoredObject::from(StoredObject {
-        meta: object_meta,
-        payload: PayloadDesc::from(bytes),
-    });
 
-    let client = manifold_thrift_new(fb)?;
-    thrift::write_chunked(&client, &context, &manifold_key, &object).await
+    pub async fn update_manifold_key(
+        fb: FacebookInit,
+        latest_imported_rev: RevIdx,
+        manifold_key: &str,
+        manifold_bucket: &str,
+    ) -> Result<()> {
+        let opts = ClientOptionsBuilder::default()
+            .build()
+            .map_err(|e| format_err!("Cannot build Manifold options: {}", e))?;
+
+        let client = ManifoldCppClient::from_options(fb, manifold_bucket, &opts)
+            .context("Cannot build ManifoldCppClient")?;
+
+        let opts = WriteRequestOptionsBuilder::default()
+            .with_allow_overwrite_predicate(true)
+            .build()
+            .map_err(|e| format_err!("Cannot build Write options: {}", e))?;
+
+        let mut req = client
+            .create_write_request(&opts)
+            .context("Cannot build write request")?;
+
+        let next_revision_to_import = latest_imported_rev.as_u32() + 1;
+        let mut bytes = Bytes::from(format!("{}", next_revision_to_import));
+        req.write(manifold_key, &mut bytes).await?;
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[fbinit::test]
+        async fn test_manifold_write(fb: FacebookInit) -> Result<(), Error> {
+            update_manifold_key(
+                fb,
+                RevIdx::from(0u32),
+                "flat/test_manifold_write",
+                "mononoke_test",
+            )
+            .await?;
+
+            update_manifold_key(
+                fb,
+                RevIdx::from(1u32),
+                "flat/test_manifold_write",
+                "mononoke_test",
+            )
+            .await?;
+
+            Ok(())
+        }
+    }
 }
 
 async fn run_blobimport<'a>(
@@ -401,7 +437,13 @@ async fn run_blobimport<'a>(
                 #[cfg(fbcode_build)]
                 {
                     if let Some((manifold_key, bucket)) = manifold_key_bucket {
-                        update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).await?
+                        facebook::update_manifold_key(
+                            fb,
+                            latest_imported_rev,
+                            &manifold_key,
+                            &bucket,
+                        )
+                        .await?
                     }
                 }
                 #[cfg(not(fbcode_build))]
