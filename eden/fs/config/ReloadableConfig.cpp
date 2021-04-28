@@ -24,6 +24,10 @@ namespace eden {
 
 ReloadableConfig::ReloadableConfig(std::shared_ptr<const EdenConfig> config)
     : state_{ConfigState{config}} {}
+ReloadableConfig::ReloadableConfig(
+    std::shared_ptr<const EdenConfig> config,
+    ConfigReloadBehavior reloadBehavior)
+    : state_{ConfigState{config}}, reloadBehavior_{reloadBehavior} {}
 
 ReloadableConfig::~ReloadableConfig() {}
 
@@ -33,6 +37,9 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
 
   // TODO: Update this monitoring code to use FileChangeMonitor.
   bool shouldReload;
+  if (reloadBehavior_.has_value()) {
+    reload = reloadBehavior_.value();
+  }
   switch (reload) {
     case ConfigReloadBehavior::NoReload:
       shouldReload = false;

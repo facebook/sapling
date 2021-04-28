@@ -13,6 +13,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
@@ -32,6 +33,9 @@ const auto blob3 = std::make_shared<Blob>(hash3, "333"_sp);
 const auto blob4 = std::make_shared<Blob>(hash4, "4444"_sp);
 const auto blob5 = std::make_shared<Blob>(hash5, "55555"_sp);
 const auto blob6 = std::make_shared<Blob>(hash6, "666666"_sp);
+
+constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
+constexpr size_t kTreeCacheMinimumEntries = 0;
 
 /**
  * These tests attempt to measure the number of hits to the backing store, so
@@ -70,16 +74,29 @@ struct BlobAccessTest : ::testing::Test {
   BlobAccessTest()
       : localStore{std::make_shared<NullLocalStore>()},
         backingStore{std::make_shared<FakeBackingStore>(localStore)},
-        objectStore{ObjectStore::create(
-            localStore,
-            backingStore,
-            std::make_shared<EdenStats>(),
-            &folly::QueuedImmediateExecutor::instance(),
-            std::make_shared<ProcessNameCache>(),
-            std::make_shared<NullStructuredLogger>(),
-            EdenConfig::createTestEdenConfig())},
-        blobCache{BlobCache::create(10, 0)},
-        blobAccess{objectStore, blobCache} {
+        blobCache{BlobCache::create(10, 0)} {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        kTreeCacheMaximumSize, ConfigSource::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+    auto edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    auto treeCache = TreeCache::create(edenConfig);
+
+    objectStore = ObjectStore::create(
+        localStore,
+        backingStore,
+        treeCache,
+        std::make_shared<EdenStats>(),
+        &folly::QueuedImmediateExecutor::instance(),
+        std::make_shared<ProcessNameCache>(),
+        std::make_shared<NullStructuredLogger>(),
+        rawEdenConfig);
+
+    blobAccess = std::make_shared<BlobAccess>(objectStore, blobCache);
+
     backingStore->putBlob(hash3, "333"_sp)->setReady();
     backingStore->putBlob(hash4, "4444"_sp)->setReady();
     backingStore->putBlob(hash5, "55555"_sp)->setReady();
@@ -87,7 +104,7 @@ struct BlobAccessTest : ::testing::Test {
   }
 
   std::shared_ptr<const Blob> getBlobBlocking(const Hash& hash) {
-    return blobAccess.getBlob(hash, ObjectFetchContext::getNullContext())
+    return blobAccess->getBlob(hash, ObjectFetchContext::getNullContext())
         .get(0ms)
         .object;
   }
@@ -97,7 +114,7 @@ struct BlobAccessTest : ::testing::Test {
   std::shared_ptr<FakeBackingStore> backingStore;
   std::shared_ptr<ObjectStore> objectStore;
   std::shared_ptr<BlobCache> blobCache;
-  BlobAccess blobAccess;
+  std::shared_ptr<BlobAccess> blobAccess;
 };
 
 } // namespace

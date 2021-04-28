@@ -32,6 +32,7 @@ class ManualExecutor;
 namespace facebook {
 namespace eden {
 class BlobCache;
+class TreeCache;
 class CheckoutConfig;
 class FakeBackingStore;
 class FakeFuse;
@@ -188,6 +189,10 @@ class TestMount {
 
   const std::shared_ptr<BlobCache>& getBlobCache() const {
     return blobCache_;
+  }
+
+  const std::shared_ptr<TreeCache>& getTreeCache() const {
+    return treeCache_;
   }
 
 #ifndef _WIN32
@@ -369,6 +374,8 @@ class TestMount {
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<EdenStats> stats_;
   std::shared_ptr<BlobCache> blobCache_;
+  std::shared_ptr<TreeCache> treeCache_;
+  std::shared_ptr<EdenConfig> edenConfig_;
 
   /*
    * config_ is only set before edenMount_ has been initialized.

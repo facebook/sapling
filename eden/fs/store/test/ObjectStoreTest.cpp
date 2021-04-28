@@ -22,8 +22,20 @@ using namespace std::chrono_literals;
 
 namespace {
 
+constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
+constexpr size_t kTreeCacheMinimumEntries = 0;
+
 struct ObjectStoreTest : ::testing::Test {
   void SetUp() override {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        kTreeCacheMaximumSize, ConfigSource::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+    auto edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    treeCache = TreeCache::create(edenConfig);
     localStore = std::make_shared<MemoryLocalStore>();
     backingStore = std::make_shared<FakeBackingStore>(localStore);
     stats = std::make_shared<EdenStats>();
@@ -31,6 +43,7 @@ struct ObjectStoreTest : ::testing::Test {
     objectStore = ObjectStore::create(
         localStore,
         backingStore,
+        treeCache,
         stats,
         executor,
         std::make_shared<ProcessNameCache>(),
@@ -56,6 +69,7 @@ struct ObjectStoreTest : ::testing::Test {
   LoggingFetchContext context;
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> backingStore;
+  std::shared_ptr<TreeCache> treeCache;
   std::shared_ptr<EdenStats> stats;
   std::shared_ptr<ObjectStore> objectStore;
   folly::QueuedImmediateExecutor* executor;
@@ -101,6 +115,20 @@ TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   auto& request = context.requests[1];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
+  EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
+}
+
+TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
+  objectStore->getTree(readyTreeId, context).get(0ms);
+
+  // clear the in memory cache so the tree can not be found here
+  treeCache->clear();
+
+  objectStore->getTree(readyTreeId, context).get(0ms);
+  ASSERT_EQ(2, context.requests.size());
+  auto& request = context.requests[1];
+  EXPECT_EQ(ObjectFetchContext::Tree, request.type);
+  EXPECT_EQ(readyTreeId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
@@ -133,6 +161,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   objectStore = ObjectStore::create(
       localStore,
       nullptr,
+      treeCache,
       stats,
       executor,
       std::make_shared<ProcessNameCache>(),

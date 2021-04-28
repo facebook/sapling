@@ -18,6 +18,7 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -52,22 +53,36 @@ inline void PrintTo(ScmFileStatus status, ::std::ostream* os) {
   }
   *os << "unknown status " << static_cast<unsigned int>(status);
 }
+
+constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
+constexpr size_t kTreeCacheMinimumEntries = 0;
+
 } // namespace eden
 } // namespace facebook
 
 class DiffTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        kTreeCacheMaximumSize, ConfigSource::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+    auto edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    auto treeCache = TreeCache::create(edenConfig);
     localStore_ = make_shared<MemoryLocalStore>();
     backingStore_ = make_shared<FakeBackingStore>(localStore_);
     store_ = ObjectStore::create(
         localStore_,
         backingStore_,
+        treeCache,
         std::make_shared<EdenStats>(),
         &folly::QueuedImmediateExecutor::instance(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
-        EdenConfig::createTestEdenConfig());
+        rawEdenConfig);
   }
 
   Future<std::unique_ptr<ScmStatus>> diffCommits(

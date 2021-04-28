@@ -20,6 +20,7 @@
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/ProcessNameCache.h"
@@ -74,6 +75,7 @@ class ObjectStore : public IObjectStore,
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<TreeCache> treeCache,
       std::shared_ptr<EdenStats> stats,
       folly::Executor::KeepAlive<folly::Executor> executor,
       std::shared_ptr<ProcessNameCache> processNameCache,
@@ -188,6 +190,7 @@ class ObjectStore : public IObjectStore,
   ObjectStore(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
+      std::shared_ptr<TreeCache> treeCache,
       std::shared_ptr<EdenStats> stats,
       folly::Executor::KeepAlive<folly::Executor> executor,
       std::shared_ptr<ProcessNameCache> processNameCache,
@@ -226,6 +229,19 @@ class ObjectStore : public IObjectStore,
    */
   mutable folly::Synchronized<folly::EvictingCacheMap<Hash, BlobMetadata>>
       metadataCache_;
+
+  /**
+   * During glob, we need to read a lot of trees, but we avoid loading inodes,
+   * so this means we go to RocksDB for each tree read. To avoid needing to hit
+   * RocksDB, keep a bounded in-memory cache of the trees we've seen.
+   * This cache will also be read from the first time we load a tree inode.
+   * This cache is shared accross all object stores, and has a fixed memory
+   * size. (The one size limit violation is if there are very large trees,
+   * the cache is allowed to retain a small fixed number of these in cache, and
+   * violate the fixed size. This generally, should be rare as no trees should
+   * approach the size limit of the cache.)
+   */
+  const std::shared_ptr<TreeCache> treeCache_;
 
   /*
    * The LocalStore.

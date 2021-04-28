@@ -446,6 +446,31 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether if EdenFS caches tree in memory.
+   */
+  ConfigSetting<bool> enableInMemoryTreeCaching{
+      "treecache:enable-in-memory-tree-caching",
+      true,
+      this};
+
+  /**
+   * Number of bytes worth of data to keep in memory
+   */
+  ConfigSetting<size_t> inMemoryTreeCacheSize{
+      "treecache:cache-size",
+      40 * 1024 * 1024,
+      this};
+
+  /**
+   * The minimum number of recent tree to keep cached. Trumps
+   * inMemoryTreeCacheSize
+   */
+  ConfigSetting<size_t> inMemoryTreeCacheMinElements{
+      "treecache:min-cache-elements",
+      16,
+      this};
+
+  /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
    */
   ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};

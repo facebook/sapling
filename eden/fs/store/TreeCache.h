@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectCache.h"
 
@@ -36,12 +37,11 @@ class Hash;
 class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
  public:
   static std::shared_ptr<TreeCache> create(
-      size_t maximumCacheSizeBytes,
-      size_t minimumEntryCount) {
+      std::shared_ptr<ReloadableConfig> config) {
     struct TC : TreeCache {
-      TC(size_t x, size_t y) : TreeCache{x, y} {}
+      explicit TC(std::shared_ptr<ReloadableConfig> c) : TreeCache{c} {}
     };
-    return std::make_shared<TC>(maximumCacheSizeBytes, minimumEntryCount);
+    return std::make_shared<TC>(config);
   }
   ~TreeCache() = default;
 
@@ -49,24 +49,22 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
    * If a tree for the given hash is in cache, return it. If the tree is not in
    * cache, return nullptr.
    */
-  std::shared_ptr<const Tree> get(const Hash& hash) {
-    return getSimple(hash);
-  }
+  std::shared_ptr<const Tree> get(const Hash& hash);
 
   /**
    * Inserts a tree into the cache for future lookup. If the new total size
    * exceeds the maximum cache size and the minimum entry count, old entries are
    * evicted.
    */
-  void insert(std::shared_ptr<const Tree> tree) {
-    return insertSimple(tree);
-  }
+  void insert(std::shared_ptr<const Tree> tree);
 
  private:
-  explicit TreeCache(size_t maximumCacheSizeBytes, size_t minimumEntryCount)
-      : ObjectCache<Tree, ObjectCacheFlavor::Simple>{
-            maximumCacheSizeBytes,
-            minimumEntryCount} {}
+  /**
+   * Reference to the eden config, may be a null pointer in unit tests.
+   */
+  std::shared_ptr<ReloadableConfig> config_;
+
+  explicit TreeCache(std::shared_ptr<ReloadableConfig> config);
 };
 
 } // namespace eden

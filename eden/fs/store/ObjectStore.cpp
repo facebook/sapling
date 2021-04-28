@@ -34,6 +34,7 @@ namespace eden {
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
+    shared_ptr<TreeCache> treeCache,
     shared_ptr<EdenStats> stats,
     folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
@@ -42,6 +43,7 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(localStore),
       std::move(backingStore),
+      std::move(treeCache),
       std::move(stats),
       executor,
       processNameCache,
@@ -52,12 +54,14 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
+    shared_ptr<TreeCache> treeCache,
     shared_ptr<EdenStats> stats,
     folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig)
     : metadataCache_{folly::in_place, kCacheSize},
+      treeCache_{std::move(treeCache)},
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
@@ -116,6 +120,19 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
   // request. If we we're to mark here that we got a request on this layer, then
   // we could avoid that case.
 
+  if (auto maybeTree = treeCache_->get(id)) {
+    fetchContext.didFetch(
+        ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
+
+    updateProcessFetch(fetchContext);
+    // We do not technically need to move this future onto the server threads,
+    // we do this because this code path is primarily called by globFiles
+    // and give a performance improvement for globFiles.
+    // (inode code also call this function, but only once as tree data is kept
+    // in the tree inode data structure).
+    return folly::makeSemiFuture(maybeTree).via(executor_);
+  }
+
   return localStore_->getTree(id).thenValue([self = shared_from_this(),
                                              id,
                                              &fetchContext](
@@ -126,6 +143,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
           ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
 
       self->updateProcessFetch(fetchContext);
+      self->treeCache_->insert(tree);
       return makeFuture(std::move(tree));
     }
 
@@ -135,8 +153,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     return self->backingStore_->getTree(id, fetchContext)
         .via(self->executor_)
         .thenValue([self, id, &fetchContext, localStore = self->localStore_](
-                       unique_ptr<const Tree> loadedTree) {
-          if (!loadedTree) {
+                       unique_ptr<const Tree> tree) {
+          if (!tree) {
             // TODO: Perhaps we should do some short-term negative
             // caching?
             XLOG(DBG2) << "unable to find tree " << id;
@@ -144,7 +162,10 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
                 folly::to<string>("tree ", id.toString(), " not found"));
           }
 
+          // promote to shared_ptr so we can store in the cache and return
+          std::shared_ptr<const Tree> loadedTree{std::move(tree)};
           localStore->putTree(loadedTree.get());
+          self->treeCache_->insert(loadedTree);
           XLOG(DBG3) << "tree " << id << " retrieved from backing store";
           fetchContext.didFetch(
               ObjectFetchContext::Tree,
@@ -164,14 +185,18 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 
   return backingStore_->getTreeForCommit(commitID, context)
       .via(executor_)
-      .thenValue([commitID,
-                  localStore = localStore_](std::shared_ptr<const Tree> tree) {
+      .thenValue([treeCache = treeCache_,
+                  commitID,
+                  localStore = localStore_,
+                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ", commitID.toString()));
         }
 
         localStore->putTree(tree.get());
+        treeCache->insert(tree);
+
         return tree;
       });
 }
@@ -184,8 +209,11 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
 
   return backingStore_->getTreeForManifest(commitID, manifestID, context)
       .via(executor_)
-      .thenValue([commitID, manifestID, localStore = localStore_](
-                     std::shared_ptr<const Tree> tree) {
+      .thenValue([treeCache = treeCache_,
+                  commitID,
+                  manifestID,
+                  localStore = localStore_,
+                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ",
@@ -195,6 +223,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
         }
 
         localStore->putTree(tree.get());
+        treeCache->insert(tree);
         return tree;
       });
 }

@@ -64,6 +64,7 @@ namespace eden {
 class BackingStore;
 class HgQueuedBackingStore;
 class BlobCache;
+class TreeCache;
 class Dirstate;
 class EdenServiceHandler;
 class LocalStore;
@@ -565,6 +566,7 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
   const std::shared_ptr<BlobCache> blobCache_;
+  std::shared_ptr<TreeCache> treeCache_;
 
   folly::Synchronized<MountMap> mountPoints_;
 

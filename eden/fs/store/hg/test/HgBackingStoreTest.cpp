@@ -31,7 +31,10 @@ using namespace std::chrono_literals;
 
 namespace {
 const auto kTestTimeout = 10s;
-}
+
+constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
+constexpr size_t kTreeCacheMinimumEntries = 0;
+} // namespace
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_hg_backing_store_test"};
@@ -85,7 +88,26 @@ class SkipMetadatPrefetchFetchContext : public ObjectFetchContext {
 };
 
 struct HgBackingStoreTest : TestRepo, ::testing::Test {
-  HgBackingStoreTest() {}
+  HgBackingStoreTest() {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        kTreeCacheMaximumSize, ConfigSource::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+    auto edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+    auto treeCache = TreeCache::create(edenConfig);
+    objectStore = ObjectStore::create(
+        localStore,
+        backingStore,
+        treeCache,
+        stats,
+        &folly::QueuedImmediateExecutor::instance(),
+        std::make_shared<ProcessNameCache>(),
+        std::make_shared<NullStructuredLogger>(),
+        rawEdenConfig);
+  }
 
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>()};
@@ -104,14 +126,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       nullptr,
       std::make_shared<NullStructuredLogger>(),
       nullptr)};
-  std::shared_ptr<ObjectStore> objectStore{ObjectStore::create(
-      localStore,
-      backingStore,
-      stats,
-      &folly::QueuedImmediateExecutor::instance(),
-      std::make_shared<ProcessNameCache>(),
-      std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig())};
+  std::shared_ptr<ObjectStore> objectStore;
 };
 
 TEST_F(

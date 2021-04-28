@@ -88,6 +88,23 @@ TestMount::TestMount()
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
 
+  edenConfig_ = make_shared<EdenConfig>(
+      /*userName=*/folly::StringPiece{"bob"},
+      /*userID=*/uid_t{},
+      /*userHomePath=*/AbsolutePath{testDir_->path().string()},
+      /*userConfigPath=*/
+      AbsolutePath{testDir_->path().string() + ".edenrc"},
+      /*systemConfigDir=*/AbsolutePath{testDir_->path().string()},
+      /*systemConfigPath=*/
+      AbsolutePath{
+          testDir_->path().string() + "edenfs.rc",
+      });
+
+  // Create treeCache
+  auto edenConfig = std::make_shared<ReloadableConfig>(
+      edenConfig_, ConfigReloadBehavior::NoReload);
+  treeCache_ = TreeCache::create(edenConfig);
+
   auto userInfo = UserInfo::lookup();
   serverState_ = {make_shared<ServerState>(
       userInfo,
@@ -96,34 +113,40 @@ TestMount::TestMount()
       clock_,
       make_shared<ProcessNameCache>(),
       make_shared<NullStructuredLogger>(),
-      make_shared<EdenConfig>(
-          /*userName=*/folly::StringPiece{"bob"},
-          /*userID=*/uid_t{},
-          /*userHomePath=*/AbsolutePath{testDir_->path().string()},
-          /*userConfigPath=*/
-          AbsolutePath{testDir_->path().string() + ".edenrc"},
-          /*systemConfigDir=*/AbsolutePath{testDir_->path().string()},
-          /*systemConfigPath=*/
-          AbsolutePath{
-              testDir_->path().string() + "edenfs.rc",
-          }),
+      edenConfig_,
       nullptr,
       /*enableFaultInjection=*/true)};
 }
 
 TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
     : TestMount() {
+  // Create treeCache
+  edenConfig_ = EdenConfig::createTestEdenConfig();
+  auto edenConfig = std::make_shared<ReloadableConfig>(
+      edenConfig_, ConfigReloadBehavior::NoReload);
+  treeCache_ = TreeCache::create(edenConfig);
   initialize(rootBuilder, startReady);
 }
 
 TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
-    : TestMount(rootBuilder, /*startReady=*/true) {}
+    : TestMount(rootBuilder, /*startReady=*/true) {
+  edenConfig_ = EdenConfig::createTestEdenConfig();
+  // Create treeCache
+  auto edenConfig = std::make_shared<ReloadableConfig>(
+      edenConfig_, ConfigReloadBehavior::NoReload);
+  treeCache_ = TreeCache::create(edenConfig);
+}
 
 TestMount::TestMount(
     Hash initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady)
     : TestMount() {
+  edenConfig_ = EdenConfig::createTestEdenConfig();
+  // Create treeCache
+  auto edenConfig = std::make_shared<ReloadableConfig>(
+      edenConfig_, ConfigReloadBehavior::NoReload);
+  treeCache_ = TreeCache::create(edenConfig);
   initialize(initialCommitHash, rootBuilder, startReady);
 }
 
@@ -198,11 +221,12 @@ void TestMount::createMount() {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
+      treeCache_,
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig());
+      edenConfig_);
   auto journal = std::make_unique<Journal>(stats_);
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -283,11 +307,12 @@ void TestMount::remount() {
   auto objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
+      treeCache_,
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig());
+      edenConfig_);
 
   auto journal = std::make_unique<Journal>(stats_);
 
@@ -320,11 +345,12 @@ void TestMount::remountGracefully() {
   auto objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
+      treeCache_,
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig());
+      edenConfig_);
 
   auto journal = std::make_unique<Journal>(stats_);
 

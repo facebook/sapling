@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-#include <gtest/gtest.h>
+#include "folly/portability/GTest.h"
 
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/TreeCache.h"
 
@@ -72,7 +74,28 @@ const auto cacheMinEntries = 1; // must keep at least one tree in cache
 
 } // namespace
 
-TEST(TreeCacheTest, testAssumptions) {
+struct TreeCacheTest : ::testing::Test {
+ protected:
+  std::shared_ptr<ReloadableConfig> edenConfig;
+  std::shared_ptr<TreeCache> cache;
+
+  void SetUp() override {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        cacheMaxSize, ConfigSource::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
+        cacheMinEntries, ConfigSource::Default, true);
+
+    edenConfig = std::make_shared<ReloadableConfig>(
+        rawEdenConfig, ConfigReloadBehavior::NoReload);
+
+    cache = TreeCache::create(edenConfig);
+  }
+};
+
+TEST_F(TreeCacheTest, testAssumptions) {
   // This test just exists to catch if the underlying assumptions of the rest of
   // the tests are violated rather than the caching code being incorrect. This
   // should make debugging the tests a bit easier.
@@ -96,9 +119,7 @@ TEST(TreeCacheTest, testAssumptions) {
   EXPECT_LT(cacheMaxSize, tree4->getSizeBytes());
 }
 
-TEST(TreeCacheTest, testMultipleInsert) {
-  auto cache = TreeCache::create(cacheMaxSize, cacheMinEntries);
-
+TEST_F(TreeCacheTest, testMultipleInsert) {
   cache->insert(tree0);
   cache->insert(tree1);
   cache->insert(tree2);
@@ -111,9 +132,7 @@ TEST(TreeCacheTest, testMultipleInsert) {
   EXPECT_EQ(tree2, cache->get(tree2->getHash()));
 }
 
-TEST(TreeCacheTest, testSizeOverflowInsert) {
-  auto cache = TreeCache::create(cacheMaxSize, cacheMinEntries);
-
+TEST_F(TreeCacheTest, testSizeOverflowInsert) {
   cache->insert(tree0);
   cache->insert(tree1);
   cache->insert(tree2);
@@ -129,18 +148,14 @@ TEST(TreeCacheTest, testSizeOverflowInsert) {
   EXPECT_EQ(tree3, cache->get(tree3->getHash()));
 }
 
-TEST(TreeCacheTest, testLargeInsert) {
-  auto cache = TreeCache::create(cacheMaxSize, cacheMinEntries);
-
+TEST_F(TreeCacheTest, testLargeInsert) {
   cache->insert(tree4);
 
   EXPECT_TRUE(cache->contains(tree4->getHash()));
   EXPECT_EQ(tree4, cache->get(tree4->getHash()));
 }
 
-TEST(TreeCacheTest, testSizeOverflowLargeInsert) {
-  auto cache = TreeCache::create(cacheMaxSize, cacheMinEntries);
-
+TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
   cache->insert(tree0);
   cache->insert(tree1);
   cache->insert(tree2);

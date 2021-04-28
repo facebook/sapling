@@ -26,6 +26,9 @@ class EdenConfig;
 class ReloadableConfig {
  public:
   explicit ReloadableConfig(std::shared_ptr<const EdenConfig> config);
+  ReloadableConfig(
+      std::shared_ptr<const EdenConfig> config,
+      ConfigReloadBehavior reload);
   ~ReloadableConfig();
 
   /**
@@ -45,7 +48,12 @@ class ReloadableConfig {
   };
 
   folly::Synchronized<ConfigState> state_;
-  std::atomic<std::chrono::steady_clock::time_point::rep> lastCheck_;
+  std::atomic<std::chrono::steady_clock::time_point::rep> lastCheck_{};
+
+  // Reload behavior, when set this overrides reload behavior passed to methods
+  // This is used in tests where we want to set the manually set the EdenConfig
+  // and avoid reloading it from disk.
+  std::optional<ConfigReloadBehavior> reloadBehavior_{std::nullopt};
 };
 
 } // namespace eden

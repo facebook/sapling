@@ -51,6 +51,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
@@ -356,6 +357,9 @@ EdenServer::EdenServer(
       version_{std::move(version)},
       progressManager_{std::make_unique<
           folly::Synchronized<EdenServer::ProgressManager>>()} {
+
+  treeCache_ = TreeCache::create(shared_ptr<ReloadableConfig>(
+      serverState_, &serverState_->getReloadableConfig()));
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
@@ -1335,6 +1339,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto objectStore = ObjectStore::create(
       getLocalStore(),
       backingStore,
+      treeCache_,
       getSharedStats(),
       serverState_->getThreadPool().get(),
       serverState_->getProcessNameCache(),

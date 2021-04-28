@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <cstddef>
 #include <list>
 #include <mutex>
 #include <unordered_map>
