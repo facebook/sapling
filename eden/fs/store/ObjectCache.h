@@ -7,10 +7,13 @@
 
 #pragma once
 
-#include <folly/Synchronized.h>
 #include <cstddef>
 #include <list>
+#include <mutex>
 #include <unordered_map>
+
+#include <folly/synchronization/DistributedMutex.h>
+
 #include "eden/fs/model/Hash.h"
 
 namespace facebook {
@@ -272,12 +275,47 @@ class ObjectCache
   };
 
   /**
+   * RAII object like folly::Synchronized::LockedPtr to help us manage
+   * locking and unlocking. We can not use folly::Synchronized due to the
+   * proxy returned by lock() which we need to pass to unlock(). Note that
+   * std::unique_lock gives us RAII over the lock, and LockedState adds
+   * clean type checking on locking (we use the type system to ensure the
+   * state is not accessed without the lock having been taken first).
+   */
+  class LockedState {
+   public:
+    LockedState(State& state, folly::DistributedMutex& lock)
+        : state_{state}, stateLock_{lock} {}
+
+    LockedState(const LockedState&) = delete;
+    LockedState(LockedState&&) = delete;
+    LockedState& operator=(const LockedState&) = delete;
+    LockedState& operator=(LockedState&&) = delete;
+
+    State* operator->() const {
+      return &state_;
+    }
+
+    State& operator*() const {
+      return state_;
+    }
+
+   private:
+    State& state_;
+    std::unique_lock<folly::DistributedMutex> stateLock_;
+  };
+
+  LockedState lockState() const {
+    return LockedState{state_, stateLock_};
+  }
+
+  /**
    * If an object for the given hash is in cache, return it. If the object is
    * not in cache, return nullptr (and an empty interest handle).
    *
    * Does not do anything related to interest handles.
    */
-  CacheItem* getImpl(const Hash& hash, State& state);
+  CacheItem* getImpl(const Hash& hash, LockedState& state);
 
   /**
    * Inserts an object into the cache for future lookup. If the new total size
@@ -288,17 +326,18 @@ class ObjectCache
    *
    * Does not do anything related to InterestHandles
    */
-  std::pair<CacheItem*, bool> insertImpl(ObjectPtr object, State& state);
+  std::pair<CacheItem*, bool> insertImpl(ObjectPtr object, LockedState& state);
 
   void dropInterestHandle(const Hash& hash, uint64_t generation) noexcept;
 
-  void evictUntilFits(State& state) noexcept;
-  void evictOne(State& state) noexcept;
-  void evictItem(State&, CacheItem* item) noexcept;
+  void evictUntilFits(LockedState& state) noexcept;
+  void evictOne(LockedState& state) noexcept;
+  void evictItem(LockedState&, CacheItem* item) noexcept;
 
   const size_t maximumCacheSizeBytes_;
   const size_t minimumEntryCount_;
-  folly::Synchronized<State> state_;
+  mutable State state_;
+  mutable folly::DistributedMutex stateLock_;
 
   friend class ObjectInterestHandle<ObjectType>;
 };
