@@ -48,6 +48,7 @@ pub enum EdenApiMethod {
     CommitLocationToHash,
     CommitHashToLocation,
     CommitRevlogData,
+    CommitHashLookup,
     Clone,
     FullIdMapClone,
     Bookmarks,
@@ -63,6 +64,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitLocationToHash => "commit_location_to_hash",
             Self::CommitHashToLocation => "commit_hash_to_location",
             Self::CommitRevlogData => "commit_revlog_data",
+            Self::CommitHashLookup => "commit_hash_lookup",
             Self::Clone => "clone",
             Self::FullIdMapClone => "full_idmap_clone",
             Self::Bookmarks => "bookmarks",
@@ -148,6 +150,7 @@ define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
+define_handler!(commit_hash_lookup_handler, commit::hash_lookup);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 define_handler!(bookmarks_handler, bookmarks::bookmarks);
@@ -195,6 +198,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()
             .to(commit_revlog_data_handler);
+        route
+            .post("/:repo/commit/hash_lookup")
+            .with_path_extractor::<commit::HashLookupParams>()
+            .to(commit_hash_lookup_handler);
         route
             .post("/:repo/clone")
             .with_path_extractor::<clone::CloneParams>()

@@ -12,9 +12,13 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::{WireCommitHashToLocationRequestBatch, WireCommitLocationToHashRequestBatch},
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, CommitRevlogDataRequest, ToWire,
+    wire::{
+        WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
+        WireCommitLocationToHashRequestBatch,
+    },
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest, ToWire,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::HgChangesetId;
@@ -46,6 +50,11 @@ pub struct HashToLocationParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct RevlogDataParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct HashLookupParams {
     repo: String,
 }
 
@@ -162,6 +171,38 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
     Ok(cbor_stream(response))
+}
+
+pub async fn hash_lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    use CommitHashLookupRequest::*;
+    let params = HashLookupParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::CommitHashLookup,
+    ));
+
+    let sctx = ServerContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
+
+    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+
+    let batch_request = parse_wire_request::<WireBatch<WireCommitHashLookupRequest>>(state).await?;
+    let stream = stream::iter(batch_request.batch.into_iter()).then(move |request| {
+        let hg_repo_ctx = hg_repo_ctx.clone();
+        async move {
+            let changesets = match request {
+                InclusiveRange(low, high) => {
+                    hg_repo_ctx.get_hg_in_range(low.into(), high.into()).await?
+                }
+            };
+            let hgids = changesets.into_iter().map(|x| x.into()).collect();
+            let response = CommitHashLookupResponse { request, hgids };
+            Ok(response.to_wire())
+        }
+    });
+
+    Ok(cbor_stream(rctx, stream))
 }
 
 async fn translate_location(

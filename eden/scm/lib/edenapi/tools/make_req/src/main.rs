@@ -23,9 +23,9 @@ use serde_json::Value;
 use structopt::StructOpt;
 
 use edenapi_types::{
-    json::FromJson, wire::ToWire, BookmarkRequest, CommitHashToLocationRequestBatch,
-    CommitLocationToHashRequestBatch, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest,
-    HistoryRequest, TreeRequest,
+    json::FromJson, wire::ToWire, Batch, BookmarkRequest, CommitHashLookupRequest,
+    CommitHashToLocationRequestBatch, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
+    CompleteTreeRequest, FileRequest, HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -38,6 +38,7 @@ enum Command {
     CommitRevlogData(Args),
     CommitLocationToHash(Args),
     CommitHashToLocation(Args),
+    CommitHashLookup(Args),
     Bookmark(Args),
 }
 
@@ -58,6 +59,7 @@ fn main() -> Result<()> {
         Command::CommitRevlogData(args) => make_req_wire::<CommitRevlogDataRequest>(args),
         Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequestBatch>(args),
         Command::CommitHashToLocation(args) => make_req::<CommitHashToLocationRequestBatch>(args),
+        Command::CommitHashLookup(args) => make_req::<Batch<CommitHashLookupRequest>>(args),
         Command::Bookmark(args) => make_req::<BookmarkRequest>(args),
     }
 }

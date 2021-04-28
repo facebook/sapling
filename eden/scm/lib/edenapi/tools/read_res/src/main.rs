@@ -23,9 +23,9 @@ use structopt::StructOpt;
 
 use edenapi_types::{
     wire::{
-        ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
-        WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireTreeEntry,
+        ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
+        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse, WireFileEntry,
+        WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
     },
     CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
@@ -40,6 +40,7 @@ enum Args {
     CommitRevlogData(CommitRevlogDataArgs),
     CommitLocationToHash(CommitLocationToHashArgs),
     CommitHashToLocation(CommitHashToLocationArgs),
+    CommitHashLookup(CommitHashLookupArgs),
     Clone(CloneArgs),
     FullIdmapClone(CloneArgs),
     Bookmark(BookmarkArgs),
@@ -210,6 +211,15 @@ struct BookmarkArgs {
     limit: Option<usize>,
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the content of a commit-hash-lookup response")]
+struct CommitHashLookupArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
+}
+
 fn main() -> Result<()> {
     match Args::from_args() {
         Args::Tree(args) => cmd_tree(args),
@@ -218,6 +228,7 @@ fn main() -> Result<()> {
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
         Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
         Args::CommitHashToLocation(args) => cmd_commit_hash_to_location(args),
+        Args::CommitHashLookup(args) => cmd_commit_hash_lookup(args),
         Args::Clone(args) => cmd_clone(args),
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
         Args::Bookmark(args) => cmd_bookmark(args),
@@ -461,6 +472,27 @@ fn cmd_commit_hash_to_location(args: CommitHashToLocationArgs) -> Result<()> {
                 ),
             };
             println!("{} =>\n    {}", response.hgid, s);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_commit_hash_lookup(args: CommitHashLookupArgs) -> Result<()> {
+    let response_list: Vec<WireCommitHashLookupResponse> = read_input(args.input, args.limit)?;
+    for response in response_list {
+        if let Some(Some(range)) = response.request.map(|r| r.inclusive_range) {
+            println!(
+                "InclusiveRange({}, {})\n  [{}]",
+                range.0,
+                range.1,
+                response
+                    .hgids
+                    .unwrap_or_else(Vec::new)
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
         }
     }
     Ok(())
