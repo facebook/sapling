@@ -209,7 +209,11 @@ impl<'a> From<&'a WalkKeyOptPath> for &'a Node {
 }
 
 // Name the stream output payload type
-pub struct WalkPayloadMtime(pub Option<DateTime>, pub Option<NodeData>);
+#[derive(Default)]
+pub struct WalkPayloadMtime {
+    pub data: Option<NodeData>,
+    pub mtime: Option<DateTime>,
+}
 
 impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
     fn start_chunk(
@@ -331,7 +335,10 @@ where
                     node: n,
                     path: route.path.clone(),
                 },
-                WalkPayloadMtime(route.mtime.clone(), nd),
+                WalkPayloadMtime {
+                    data: nd,
+                    mtime: route.mtime.clone(),
+                },
                 stats,
             ),
             route,
@@ -359,7 +366,7 @@ where
                     node: n,
                     path: route.path.clone(),
                 },
-                WalkPayloadMtime(None, None),
+                WalkPayloadMtime::default(),
                 stats,
             ),
             route,

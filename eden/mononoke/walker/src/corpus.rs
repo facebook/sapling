@@ -73,8 +73,9 @@ where
         + 'static
         + Send,
 {
-    s.map_ok(
-        move |(walk_key, WalkPayloadMtime(mtime, nd), _progress_stats)| match nd {
+    s.map_ok(move |(walk_key, payload, _progress_stats)| {
+        let mtime = payload.mtime;
+        match payload.data {
             Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
                 cloned!(sampler);
                 file_bytes_stream
@@ -94,8 +95,8 @@ where
                 let size = ScrubStats::from(sample.as_ref());
                 future::ready(Ok((walk_key, sample, mtime, Some(size)))).right_future()
             }
-        },
-    )
+        }
+    })
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
     .map_ok(move |(walk_key, sample, mtime, stats)| {

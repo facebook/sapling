@@ -347,7 +347,7 @@ async fn run_one(
                 cloned!(ctx, sizing_progress_state);
                 // Sizing doesn't use mtime, so remove it from payload
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output).map_ok(
-                    |(key, WalkPayloadMtime(_mtime, node_data), stats)| (key, node_data, stats),
+                    |(key, payload, stats): (_, WalkPayloadMtime, _)| (key, payload.data, stats),
                 );
 
                 let compressor = size_sampling_stream(
