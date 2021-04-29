@@ -38,8 +38,10 @@ pub enum LfsScubaKey {
     UploadSync,
     /// The actual size of the content being sent
     DownloadContentSize,
-    /// The attempt reported by the client
+    /// The attempt information reported by the client
     ClientAttempt,
+    ClientAttemptsLeft,
+    ClientThrottleAttemptsLeft,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -61,6 +63,8 @@ impl AsRef<str> for LfsScubaKey {
             UploadSync => "upload_sync",
             DownloadContentSize => "download_content_size",
             ClientAttempt => "client_attempt",
+            ClientAttemptsLeft => "client_attempts_left",
+            ClientThrottleAttemptsLeft => "client_throttle_attempts_left",
         }
     }
 }
@@ -75,6 +79,8 @@ impl Into<String> for LfsScubaKey {
 pub struct LfsScubaHandler {
     ctx: Option<RequestContext>,
     client_attempt: Option<u64>,
+    client_attempts_left: Option<u64>,
+    client_throttle_attempts_left: Option<u64>,
 }
 
 impl ScubaHandler for LfsScubaHandler {
@@ -83,14 +89,29 @@ impl ScubaHandler for LfsScubaHandler {
             .map(|r| r.ok())
             .flatten();
 
+        let client_attempts_left = read_header_value(state, "X-Attempts-Left")
+            .map(|r| r.ok())
+            .flatten();
+
+        let client_throttle_attempts_left = read_header_value(state, "X-Throttle-Attempts-Left")
+            .map(|r| r.ok())
+            .flatten();
+
         Self {
             ctx: state.try_borrow::<RequestContext>().cloned(),
             client_attempt,
+            client_attempts_left,
+            client_throttle_attempts_left,
         }
     }
 
     fn populate_scuba(self, info: &PostResponseInfo, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add_opt(LfsScubaKey::ClientAttempt, self.client_attempt);
+        scuba.add_opt(LfsScubaKey::ClientAttemptsLeft, self.client_attempts_left);
+        scuba.add_opt(
+            LfsScubaKey::ClientThrottleAttemptsLeft,
+            self.client_throttle_attempts_left,
+        );
 
         if let Some(ctx) = self.ctx {
             if let Some(repository) = ctx.repository {
