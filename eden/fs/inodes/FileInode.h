@@ -267,7 +267,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   void fsync(bool datasync);
 
-  void fallocate(uint64_t offset, uint64_t length);
+  FOLLY_NODISCARD folly::Future<folly::Unit> fallocate(
+      uint64_t offset,
+      uint64_t length);
 
 #endif // !_WIN32
 

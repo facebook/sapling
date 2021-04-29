@@ -764,8 +764,10 @@ void FileInode::fsync(bool datasync) {
   }
 }
 
-void FileInode::fallocate(uint64_t offset, uint64_t length) {
-  runWhileMaterialized(
+folly::Future<folly::Unit> FileInode::fallocate(
+    uint64_t offset,
+    uint64_t length) {
+  return runWhileMaterialized(
       LockedState{this},
       nullptr,
       [offset, length, self = inodePtrFromThis()](LockedState&& state) {
