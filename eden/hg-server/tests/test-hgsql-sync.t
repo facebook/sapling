@@ -139,10 +139,10 @@
   $ sleep 1
   [hgsql] getting 1 commits from database
   $ hg log -l 1 --template '{desc}\n' --forcesync
-  waiting for lock on working directory of $TESTTMP/master held by * (glob)
-  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
+  waiting for lock on working directory of $TESTTMP/master held by * (glob) (?)
+  (hint: run 'hg debugprocesstree *' to see related processes) (glob) (?)
   a
-  got lock after * seconds (glob)
+  got lock after * seconds (glob) (?)
   a
   $ cd ..
   $ cp backup.hgrc $HGRCPATH

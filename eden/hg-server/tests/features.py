@@ -693,6 +693,39 @@ ignorerevnumincompatiblelist = """
     test-graft-t.py
     test-hggit-bookmark-workflow.t
     test-hggit-push-r.t
+    test-hgsql-bundle2.t
+    test-hgsql-bundlerepo-t.py
+    test-hgsql-bundlerepo-t.py.err
+    test-hgsql-corruption.t
+    test-hgsql-encoding.t
+    test-hgsql-filenames-t.py
+    test-hgsql-filenames-t.py.err
+    test-hgsql-hggit.t
+    test-hgsql-lfs-sync.t
+    test-hgsql-linkrevs-t.py
+    test-hgsql-linkrevs-t.py.err
+    test-hgsql-local-commands-t.py
+    test-hgsql-local-commands-t.py.err
+    test-hgsql-metrics-t.py
+    test-hgsql-metrics-t.py.err
+    test-hgsql-profiler.t
+    test-hgsql-pushpull.t
+    test-hgsql-pushrebase2.t
+    test-hgsql-pushrebase.t
+    test-hgsql-race-conditions.t
+    test-hgsql-repolock.t
+    test-hgsql-requires.t
+    test-hgsql-sqldbsync.t
+    test-hgsql-sqlrefill.t
+    test-hgsql-sqlverify.t
+    test-hgsql-strip.t
+    test-hgsql-sync-interval.t
+    test-hgsql-sync.t
+    test-hgsql-sync.t.case-innodb.err
+    test-hgsql-sync.t.case-rocksdb.err
+    test-hgsql-transaction-restrictions-t.py
+    test-hgsql-transaction-restrictions-t.py.err
+    test-hgsql-treemanifest.t
     test-histedit-commute.t
     test-histedit-edit.t
     test-histedit-no-change.t
