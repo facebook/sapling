@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -14,6 +14,7 @@ use caching_ext::{
     MemcacheEntity, MemcacheHandler,
 };
 use changeset_entry_thrift as thrift;
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
@@ -23,6 +24,7 @@ use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
+use ref_cast::RefCast;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -32,13 +34,17 @@ use std::{
 use caching_ext::MockStoreStats;
 
 pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
-    format!("{}.{}", repo_id.prefix(), cs_id).to_string()
+    format!("{}.{}", repo_id.prefix(), cs_id)
 }
+
+#[derive(Clone, Debug, Abomonation, RefCast)]
+#[repr(transparent)]
+pub struct ChangesetEntryWrapper(ChangesetEntry);
 
 #[derive(Clone)]
 pub struct CachingChangesets {
     changesets: Arc<dyn Changesets>,
-    cachelib: CachelibHandler<ChangesetEntry>,
+    cachelib: CachelibHandler<ChangesetEntryWrapper>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
     repo_id: RepositoryId,
@@ -130,7 +136,7 @@ impl Changesets for CachingChangesets {
     ) -> Result<Option<ChangesetEntry>, Error> {
         let ctx = (&ctx, self);
         let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
-        Ok(map.remove(&cs_id))
+        Ok(map.remove(&cs_id).map(|entry| entry.0))
     }
 
     async fn get_many(
@@ -142,7 +148,7 @@ impl Changesets for CachingChangesets {
         let res = get_or_fill(ctx, cs_ids.into_iter().collect())
             .await?
             .into_iter()
-            .map(|(_, val)| val)
+            .map(|(_, val)| val.0)
             .collect();
         Ok(res)
     }
@@ -170,7 +176,9 @@ impl Changesets for CachingChangesets {
         for cs in changesets {
             assert_eq!(cs.repo_id, self.repo_id);
             let key = get_cache_key(self.repo_id, &cs.cs_id);
-            let _ = self.cachelib.set_cached(&key, &cs);
+            let _ = self
+                .cachelib
+                .set_cached(&key, ChangesetEntryWrapper::ref_cast(&cs));
         }
     }
 
@@ -202,22 +210,23 @@ impl Changesets for CachingChangesets {
     }
 }
 
-impl MemcacheEntity for ChangesetEntry {
+impl MemcacheEntity for ChangesetEntryWrapper {
     fn serialize(&self) -> Bytes {
-        compact_protocol::serialize(&self.clone().into_thrift())
+        compact_protocol::serialize(&self.0.clone().into_thrift())
     }
 
     fn deserialize(bytes: Bytes) -> Result<Self, ()> {
         compact_protocol::deserialize(bytes)
             .and_then(ChangesetEntry::from_thrift)
+            .map(ChangesetEntryWrapper)
             .map_err(|_| ())
     }
 }
 
 type CacheRequest<'a> = (&'a CoreContext, &'a CachingChangesets);
 
-impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
-    fn cachelib(&self) -> &CachelibHandler<ChangesetEntry> {
+impl EntityStore<ChangesetEntryWrapper> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<ChangesetEntryWrapper> {
         let (_, mapping) = self;
         &mapping.cachelib
     }
@@ -232,7 +241,7 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &ChangesetEntry) -> CacheDisposition {
+    fn cache_determinator(&self, _: &ChangesetEntryWrapper) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 
@@ -250,7 +259,7 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<ChangesetId, ChangesetEntry> for CacheRequest<'_> {
+impl KeyedEntityStore<ChangesetId, ChangesetEntryWrapper> for CacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
         let (_, mapping) = self;
         get_cache_key(mapping.repo_id, cs_id)
@@ -259,7 +268,7 @@ impl KeyedEntityStore<ChangesetId, ChangesetEntry> for CacheRequest<'_> {
     async fn get_from_db(
         &self,
         keys: HashSet<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, ChangesetEntry>, Error> {
+    ) -> Result<HashMap<ChangesetId, ChangesetEntryWrapper>, Error> {
         let (ctx, mapping) = self;
 
         let res = mapping
@@ -267,6 +276,10 @@ impl KeyedEntityStore<ChangesetId, ChangesetEntry> for CacheRequest<'_> {
             .get_many((*ctx).clone(), keys.into_iter().collect())
             .await?;
 
-        Result::<_, Error>::Ok(res.into_iter().map(|e| (e.cs_id, e)).collect())
+        Result::<_, Error>::Ok(
+            res.into_iter()
+                .map(|e| (e.cs_id, ChangesetEntryWrapper(e)))
+                .collect(),
+        )
     }
 }

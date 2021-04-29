@@ -1,72 +1,40 @@
 [package]
-name = "simulated_repo"
+name = "changesets_impl"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "lib/lib.rs"
-
-[[bin]]
-name = "benchmark"
-path = "benchmark.rs"
-
 [dependencies]
+abomonation = "0.7"
+abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.45"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
-bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+bytes = { version = "0.5", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
-changesets = { version = "0.1.0", path = "../../changesets" }
-changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
-clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cmdlib = { version = "0.1.0", path = "../../cmdlib" }
+caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
+changeset_entry_thrift = { version = "0.1.0", path = "../if" }
+changesets = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
-dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
-delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
-derived_data = { version = "0.1.0", path = "../../derived_data" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-filenodes = { version = "0.1.0", path = "../../filenodes" }
-filestore = { version = "0.1.0", path = "../../filestore" }
-fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
-mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
-mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+maplit = "1.0"
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
-phases = { version = "0.1.0", path = "../../phases" }
-pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 rand = { version = "0.7", features = ["small_rng"] }
-rand_distr = "0.2"
-rand_xorshift = "0.2"
+ref-cast = "1.0.2"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
-segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tokio = { version = "1.4", features = ["full", "test-util"] }
-tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+thiserror = "1.0"
+
+[dev-dependencies]
+assert_matches = "1.5"
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

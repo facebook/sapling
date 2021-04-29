@@ -6,13 +6,11 @@
  */
 
 //! Tests for the Changesets store.
-use super::{
-    CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
-    SqlChangesetsBuilder,
-};
+use super::{CachingChangesets, SqlChangesets, SqlChangesetsBuilder};
 use anyhow::Error;
 use assert_matches::assert_matches;
 use caching_ext::MockStoreStats;
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::Future;
@@ -23,6 +21,8 @@ use mononoke_types_mocks::repo::*;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
+
+use crate::sql::SqlChangesetsError;
 
 async fn run_test<F, FO>(fb: FacebookInit, test_fn: F) -> Result<(), Error>
 where
@@ -92,8 +92,8 @@ async fn add_missing_parents<C: Changesets>(fb: FacebookInit, changesets: C) -> 
         .await
         .expect_err("Adding entry with missing parents failed (should have succeeded)");
     assert_matches!(
-        result.downcast::<ErrorKind>(),
-        Ok(ErrorKind::MissingParents(ref x)) if x == &vec![TWOS_CSID]
+        result.downcast::<SqlChangesetsError>(),
+        Ok(SqlChangesetsError::MissingParents(ref x)) if x == &vec![TWOS_CSID]
     );
     Ok(())
 }
@@ -162,8 +162,8 @@ async fn broken_duplicate<C: Changesets + 'static>(
         .add(ctx.clone(), row)
         .await
         .expect_err("Adding changeset with the same hash but differen parents should fail");
-    match result.downcast::<ErrorKind>() {
-        Ok(ErrorKind::DuplicateInsertionInconsistency(..)) => {}
+    match result.downcast::<SqlChangesetsError>() {
+        Ok(SqlChangesetsError::DuplicateInsertionInconsistency(..)) => {}
         err => panic!("unexpected error: {:?}", err),
     };
 

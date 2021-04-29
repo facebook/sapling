@@ -12,28 +12,14 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
-cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 changeset_entry_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-maplit = "1.0"
-memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-rand = { version = "0.7", features = ["small_rng"] }
-rendezvous = { version = "0.1.0", path = "../common/rendezvous" }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-thiserror = "1.0"
 
 [dev-dependencies]
-assert_matches = "1.5"
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 
 [patch.crates-io]

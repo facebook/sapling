@@ -24,10 +24,8 @@ use bonsai_svnrev_mapping::{
 use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{
-    ArcChangesets, CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SortOrder,
-    SqlChangesetsBuilder,
-};
+use changesets::{ArcChangesets, ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use delayblob::DelayedBlobstore;

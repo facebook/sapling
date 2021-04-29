@@ -36,7 +36,8 @@ use cacheblob::{
     InProcessLease, LeaseOps, MemcacheOps,
 };
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{ArcChangesets, CachingChangesets, SqlChangesetsBuilder};
+use changesets::ArcChangesets;
+use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
