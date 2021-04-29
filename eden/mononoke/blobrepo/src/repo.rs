@@ -20,7 +20,7 @@ use bookmarks::{
 };
 use cacheblob::LeaseOps;
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use changesets::{ArcChangesets, ChangesetInsert, Changesets};
+use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{ArcFilenodes, Filenodes};
@@ -37,7 +37,7 @@ use mononoke_types::{
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
-use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
+use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use segmented_changelog_types::{ArcSegmentedChangelog, SegmentedChangelog};
@@ -147,67 +147,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    /// Create new `BlobRepo` object.
-    ///
-    /// Avoid using this constructor directly.  Instead use a repo factory,
-    /// such as `RepoFactory` or `TestRepoFactory`.
-    pub fn new_dangerous(
-        blobstore_args: RepoBlobstoreArgs,
-        changesets: ArcChangesets,
-        bonsai_git_mapping: ArcBonsaiGitMapping,
-        bonsai_globalrev_mapping: ArcBonsaiGlobalrevMapping,
-        bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
-        pushrebase_mutation_mapping: ArcPushrebaseMutationMapping,
-        derived_data_lease: Arc<dyn LeaseOps>,
-        filestore_config: FilestoreConfig,
-        phases_factory: SqlPhasesFactory,
-        derived_data_config: DerivedDataConfig,
-        reponame: String,
-        bookmarks: ArcBookmarks,
-        bookmark_update_log: ArcBookmarkUpdateLog,
-        bonsai_hg_mapping: ArcBonsaiHgMapping,
-        changeset_fetcher: ArcChangesetFetcher,
-        filenodes: ArcFilenodes,
-        hg_mutation_store: ArcHgMutationStore,
-        segmented_changelog: ArcSegmentedChangelog,
-    ) -> Self {
-        let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
-
-        let repo_blobstore = Arc::new(blobstore);
-        let filestore_config = Arc::new(filestore_config);
-        let sql_phases_factory = Arc::new(phases_factory);
-        let repo_bonsai_svnrev_mapping = Arc::new(bonsai_svnrev_mapping);
-        let repo_identity = Arc::new(RepoIdentity::new(repoid, reponame.clone()));
-        let repo_derived_data = Arc::new(RepoDerivedData::new(
-            derived_data_config,
-            derived_data_lease,
-        ));
-        let inner = BlobRepoInner {
-            repo_blobstore,
-            changesets,
-            bonsai_git_mapping,
-            bonsai_globalrev_mapping,
-            repo_bonsai_svnrev_mapping,
-            pushrebase_mutation_mapping,
-            repoid,
-            filestore_config,
-            sql_phases_factory,
-            reponame,
-            bookmarks,
-            bookmark_update_log,
-            bonsai_hg_mapping,
-            changeset_fetcher,
-            filenodes,
-            hg_mutation_store,
-            segmented_changelog,
-            repo_identity,
-            repo_derived_data,
-        };
-        BlobRepo {
-            inner: Arc::new(inner),
-        }
-    }
-
     #[inline]
     pub fn bookmarks(&self) -> &ArcBookmarks {
         &self.inner.bookmarks
