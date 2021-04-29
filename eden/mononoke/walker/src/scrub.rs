@@ -38,7 +38,7 @@ use futures::{
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
-use mononoke_types::BlobstoreBytes;
+use mononoke_types::{datetime::DateTime, BlobstoreBytes};
 use samplingblob::SamplingHandler;
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -124,6 +124,7 @@ where
     L: PackInfoLogger + 'static + Send,
 {
     s.map_ok(move |(walk_key, payload, _progress_stats)| {
+        let mtime = payload.mtime;
         match payload.data {
             Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
                 if !limit_data_fetch =>
@@ -135,6 +136,7 @@ where
                         let sample = sampler.complete_step(&walk_key.node);
                         (
                             walk_key,
+                            mtime,
                             Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
                             Some(sample),
                         )
@@ -157,16 +159,16 @@ where
                 let sample = data_opt
                     .as_ref()
                     .map(|_d| sampler.complete_step(&walk_key.node));
-                future::ok((walk_key, data_opt, sample)).right_future()
+                future::ok((walk_key, mtime, data_opt, sample)).right_future()
             }
         }
     })
     .try_buffer_unordered(scheduled_max)
-    .map_ok(move |(walk_key, data_opt, sample)| {
+    .map_ok(move |(walk_key, mtime, data_opt, sample)| {
         let size = if let Some(sample) = sample {
             let size = ScrubStats::from(sample.as_ref());
             if let Some(logger) = pack_info_logger.as_ref() {
-                record_for_packer(logger, &walk_key, sample);
+                record_for_packer(logger, &walk_key, mtime, sample);
             }
             Some(size)
         } else {
@@ -179,6 +181,7 @@ where
 fn record_for_packer<L>(
     logger: &L,
     walk_key: &WalkKeyOptPath<WrappedPathHash>,
+    mtime: Option<DateTime>,
     sample: Option<ScrubSample>,
 ) where
     L: PackInfoLogger,
@@ -190,7 +193,7 @@ fn record_for_packer<L>(
                 node_type: walk_key.node.get_type(),
                 node_fingerprint: walk_key.node.sampling_fingerprint(),
                 similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
-                relatedness_key: None, // TODO(ahornby) track mtime like in corpus
+                relatedness_key: mtime.map(|mtime| mtime.timestamp_secs() as u64),
                 uncompressed_size,
             })
         }
@@ -482,11 +485,16 @@ async fn run_one(
         }
     };
 
-    cloned!(mut command.output_node_types);
+    let mut stream_node_types = command.output_node_types.clone();
     if !command.limit_data_fetch {
-        output_node_types.insert(NodeType::FileContent);
+        stream_node_types.insert(NodeType::FileContent);
     }
-    let required_node_data_types: HashSet<NodeType> = output_node_types.into_iter().collect();
+    if command.pack_info_log_options.is_some() {
+        // Need these to be able to see and log the commit time stamps
+        stream_node_types.insert(NodeType::Changeset);
+        stream_node_types.insert(NodeType::HgChangeset);
+    }
+    let required_node_data_types: HashSet<NodeType> = stream_node_types.into_iter().collect();
 
     let walk_state = SamplingWalkVisitor::new(
         repo_params.include_node_types.clone(),

@@ -163,11 +163,7 @@ where
 
         Self {
             path: new_path.cloned(),
-            mtime: if mtime.is_none() {
-                route.and_then(|r| r.mtime)
-            } else {
-                mtime.cloned()
-            },
+            mtime: mtime.cloned().or_else(|| route.and_then(|r| r.mtime)),
         }
     }
 }
@@ -289,11 +285,7 @@ where
 
         let mtime = match &node_data {
             Some(NodeData::Changeset(bcs)) => {
-                if let Some(committer_date) = bcs.committer_date() {
-                    Some(committer_date)
-                } else {
-                    Some(bcs.author_date())
-                }
+                bcs.committer_date().or_else(|| Some(bcs.author_date()))
             }
             Some(NodeData::HgChangeset(hg_cs)) => Some(hg_cs.time()),
             _ => None,
