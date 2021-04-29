@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath, WrappedPathLike};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPathLike};
 use crate::state::{InternedType, StepStats, WalkState};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor};
 
@@ -124,16 +124,19 @@ impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub struct PathTrackingRoute {
+pub struct PathTrackingRoute<P: WrappedPathLike> {
     // The path we reached this by
-    pub path: Option<WrappedPath>,
+    pub path: Option<P>,
     /// When did this route see this path was updated.
     /// Taken from the last bonsai or hg changset stepped through.
     pub mtime: Option<DateTime>,
 }
 
-// No useful node info held.  TODO(ahornby) be nice to expand StepRoute logging to show path if present
-impl StepRoute for PathTrackingRoute {
+// We don't hold these tracking so as to keep memory usage down in scrub
+impl<P> StepRoute for PathTrackingRoute<P>
+where
+    P: WrappedPathLike + fmt::Debug,
+{
     fn source_node(&self) -> Option<&Node> {
         None
     }
@@ -142,39 +145,14 @@ impl StepRoute for PathTrackingRoute {
     }
 }
 
-impl PathTrackingRoute {
-    fn evolve_path<'a>(
-        from_route: Option<&'a WrappedPath>,
-        from_step: Option<&'a WrappedPath>,
-        target: &'a Node,
-    ) -> Option<&'a WrappedPath> {
-        match from_step {
-            // Step has set explicit path, e.g. bonsai file
-            Some(from_step) => Some(from_step),
-            None => match target.stats_path() {
-                // Path is part of node identity
-                Some(from_node) => Some(from_node),
-                // No per-node path, so use the route, filtering out nodes that can't have repo paths
-                None => {
-                    if target.get_type().allow_repo_path() {
-                        from_route
-                    } else {
-                        None
-                    }
-                }
-            },
-        }
-    }
-
-    fn evolve(
-        route: Option<Self>,
-        path: Option<&WrappedPath>,
-        target: &Node,
-        mtime: Option<&DateTime>,
-    ) -> Self {
+impl<P> PathTrackingRoute<P>
+where
+    P: WrappedPathLike + Eq + Clone,
+{
+    fn evolve(route: Option<Self>, walk_item: &OutgoingEdge, mtime: Option<&DateTime>) -> Self {
         let existing_path = route.as_ref().and_then(|r| r.path.as_ref());
         let existing_mtime = route.as_ref().and_then(|r| r.mtime.as_ref());
-        let new_path = PathTrackingRoute::evolve_path(existing_path, path, target);
+        let new_path = P::evolve_path(existing_path, &walk_item);
 
         // reuse same route if possible
         if new_path == existing_path && (mtime.is_none() || mtime == existing_mtime) {
@@ -196,14 +174,14 @@ impl PathTrackingRoute {
 
 // Name the stream output key type
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub struct WalkKeyOptPath {
+pub struct WalkKeyOptPath<P: WrappedPathLike> {
     pub node: Node,
-    pub path: Option<WrappedPath>,
+    pub path: Option<P>,
 }
 
 // Map the key type so progress reporting works
-impl<'a> From<&'a WalkKeyOptPath> for &'a Node {
-    fn from(from: &'a WalkKeyOptPath) -> &'a Node {
+impl<'a, P: WrappedPathLike> From<&'a WalkKeyOptPath<P>> for &'a Node {
+    fn from(from: &'a WalkKeyOptPath<P>) -> &'a Node {
         &from.node
     }
 }
@@ -241,23 +219,21 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
     }
 }
 
-impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute>
+impl<T, P>
+    WalkVisitor<(WalkKeyOptPath<P>, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute<P>>
     for SamplingWalkVisitor<T>
 where
-    T: SampleTrigger<WalkKeyOptPath> + Send + Sync,
+    T: SampleTrigger<WalkKeyOptPath<P>> + Send + Sync,
+    P: WrappedPathLike + Clone + Eq + fmt::Display,
 {
     fn start_step(
         &self,
         mut ctx: CoreContext,
-        route: Option<&PathTrackingRoute>,
+        route: Option<&PathTrackingRoute<P>>,
         step: &OutgoingEdge,
     ) -> Option<CoreContext> {
         if self.options.node_types.contains(&step.target.get_type()) {
-            let repo_path = PathTrackingRoute::evolve_path(
-                route.and_then(|r| r.path.as_ref()),
-                step.path.as_ref(),
-                &step.target,
-            );
+            let repo_path = route.and_then(|r| P::evolve_path(r.path.as_ref(), &step));
             if self.sample_path_regex.as_ref().map_or_else(
                 || true,
                 |re| match repo_path {
@@ -302,11 +278,11 @@ where
         ctx: &CoreContext,
         resolved: OutgoingEdge,
         node_data: Option<NodeData>,
-        route: Option<PathTrackingRoute>,
+        route: Option<PathTrackingRoute<P>>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
-        (WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>),
-        PathTrackingRoute,
+        (WalkKeyOptPath<P>, WalkPayloadMtime, Option<StepStats>),
+        PathTrackingRoute<P>,
         Vec<OutgoingEdge>,
     ) {
         let inner_route = route.as_ref().map(|_| EmptyRoute {});
@@ -323,8 +299,7 @@ where
             _ => None,
         };
 
-        let route =
-            PathTrackingRoute::evolve(route, resolved.path.as_ref(), &resolved.target, mtime);
+        let route = PathTrackingRoute::evolve(route, &resolved, mtime);
         let ((n, nd, stats), _inner_route, outgoing) =
             self.inner
                 .visit(ctx, resolved, node_data, inner_route, outgoing);
@@ -350,14 +325,13 @@ where
         &self,
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
-        route: Option<PathTrackingRoute>,
+        route: Option<PathTrackingRoute<P>>,
     ) -> (
-        (WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>),
-        PathTrackingRoute,
+        (WalkKeyOptPath<P>, WalkPayloadMtime, Option<StepStats>),
+        PathTrackingRoute<P>,
     ) {
         let inner_route = route.as_ref().map(|_| EmptyRoute {});
-        let route =
-            PathTrackingRoute::evolve(route, walk_item.path.as_ref(), &walk_item.target, None);
+        let route = PathTrackingRoute::evolve(route, walk_item, None);
         let ((n, _nd, stats), _inner_route) =
             self.inner.defer_visit(bcs_id, walk_item, inner_route);
         (
@@ -456,21 +430,23 @@ where
     }
 }
 
-impl<T> SampleTrigger<WalkKeyOptPath> for WalkSampleMapping<Node, T>
+impl<T, P> SampleTrigger<WalkKeyOptPath<P>> for WalkSampleMapping<Node, T>
 where
     T: Default,
+    P: WrappedPathLike + Eq + hash::Hash + fmt::Debug,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath<P>) {
         self.inflight.insert(sample_key, T::default());
         self.inflight_reverse.insert(walk_key.node, sample_key);
     }
 }
 
-impl<T> SampleTrigger<WalkKeyOptPath> for WalkSampleMapping<WalkKeyOptPath, T>
+impl<T, P> SampleTrigger<WalkKeyOptPath<P>> for WalkSampleMapping<WalkKeyOptPath<P>, T>
 where
     T: Default,
+    P: WrappedPathLike + Eq + hash::Hash + fmt::Debug,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath<P>) {
         self.inflight.insert(sample_key, T::default());
         self.inflight_reverse.insert(walk_key, sample_key);
     }

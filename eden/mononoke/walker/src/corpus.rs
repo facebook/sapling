@@ -69,7 +69,7 @@ fn corpus_stream<InStream, SS>(
     sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<()>, Option<ScrubStats>), Error>>
 where
-    InStream: Stream<Item = Result<(WalkKeyOptPath, WalkPayloadMtime, Option<SS>), Error>>
+    InStream: Stream<Item = Result<(WalkKeyOptPath<WrappedPath>, WalkPayloadMtime, Option<SS>), Error>>
         + 'static
         + Send,
 {
@@ -252,15 +252,15 @@ async fn move_node_files(
 
 #[derive(Debug)]
 pub struct CorpusSamplingHandler<T> {
-    inner: WalkSampleMapping<WalkKeyOptPath, T>,
+    inner: WalkSampleMapping<WalkKeyOptPath<WrappedPath>, T>,
     output_dir: Option<String>,
 }
 
-impl<T> SampleTrigger<WalkKeyOptPath> for CorpusSamplingHandler<T>
+impl<T> SampleTrigger<WalkKeyOptPath<WrappedPath>> for CorpusSamplingHandler<T>
 where
     T: Default,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath<WrappedPath>) {
         self.inner.map_keys(sample_key, walk_key);
     }
 }
@@ -274,7 +274,7 @@ impl<T> CorpusSamplingHandler<T> {
         }
     }
 
-    pub fn complete_step(&self, walk_key: &WalkKeyOptPath) -> Option<T> {
+    pub fn complete_step(&self, walk_key: &WalkKeyOptPath<WrappedPath>) -> Option<T> {
         self.inner.complete_step(walk_key)
     }
 }
@@ -459,7 +459,7 @@ async fn run_one(
         keep_edge_paths: true,
     };
 
-    walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
+    walk_exact_tail::<_, _, _, _, _, PathTrackingRoute<WrappedPath>>(
         fb,
         job_params,
         repo_params,

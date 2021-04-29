@@ -58,6 +58,8 @@ use std::{
 };
 use unodes::RootUnodeManifestId;
 
+use crate::walk::OutgoingEdge;
+
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
      (enum $enum_name:ident {
@@ -559,6 +561,10 @@ const ROOT_FINGERPRINT: u64 = 0;
 // Can represent Path and PathHash
 pub trait WrappedPathLike {
     fn sampling_fingerprint(&self) -> u64;
+    fn evolve_path<'a>(
+        from_route: Option<&'a Self>,
+        walk_item: &'a OutgoingEdge,
+    ) -> Option<&'a Self>;
 }
 
 /// Represent root or non root path hash.
@@ -568,11 +574,50 @@ pub enum WrappedPathHash {
     NonRoot(MPathHash),
 }
 
+impl WrappedPathHash {
+    pub fn as_ref(&self) -> Option<&MPathHash> {
+        match self {
+            Self::Root => None,
+            Self::NonRoot(mpath_hash) => Some(&mpath_hash),
+        }
+    }
+}
+
 impl WrappedPathLike for WrappedPathHash {
     fn sampling_fingerprint(&self) -> u64 {
         match self {
             WrappedPathHash::Root => ROOT_FINGERPRINT,
             WrappedPathHash::NonRoot(path_hash) => path_hash.sampling_fingerprint(),
+        }
+    }
+    fn evolve_path<'a>(
+        from_route: Option<&'a Self>,
+        walk_item: &'a OutgoingEdge,
+    ) -> Option<&'a Self> {
+        match walk_item.path.as_ref() {
+            // Step has set explicit path, e.g. bonsai file
+            Some(from_step) => Some(from_step.get_path_hash()),
+            None => match walk_item.target.stats_path() {
+                // Path is part of node identity
+                Some(from_node) => Some(from_node.get_path_hash()),
+                // No per-node path, so use the route, filtering out nodes that can't have repo paths
+                None => {
+                    if walk_item.target.get_type().allow_repo_path() {
+                        from_route
+                    } else {
+                        None
+                    }
+                }
+            },
+        }
+    }
+}
+
+impl fmt::Display for WrappedPathHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Root => write!(f, ""),
+            Self::NonRoot(mpath_hash) => write!(f, "{}", mpath_hash.to_hex()),
         }
     }
 }
@@ -641,6 +686,27 @@ impl WrappedPath {
 impl WrappedPathLike for WrappedPath {
     fn sampling_fingerprint(&self) -> u64 {
         self.get_path_hash().sampling_fingerprint()
+    }
+    fn evolve_path<'a>(
+        from_route: Option<&'a Self>,
+        walk_item: &'a OutgoingEdge,
+    ) -> Option<&'a Self> {
+        match walk_item.path.as_ref() {
+            // Step has set explicit path, e.g. bonsai file
+            Some(from_step) => Some(from_step),
+            None => match walk_item.target.stats_path() {
+                // Path is part of node identity
+                Some(from_node) => Some(from_node),
+                // No per-node path, so use the route, filtering out nodes that can't have repo paths
+                None => {
+                    if walk_item.target.get_type().allow_repo_path() {
+                        from_route
+                    } else {
+                        None
+                    }
+                }
+            },
+        }
     }
 }
 

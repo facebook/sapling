@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::progress::{
     progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
@@ -94,7 +94,16 @@ fn size_sampling_stream<InStream, InStats>(
     sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SizingStats>), Error>>
 where
-    InStream: Stream<Item = Result<(WalkKeyOptPath, Option<NodeData>, Option<InStats>), Error>>
+    InStream: Stream<
+            Item = Result<
+                (
+                    WalkKeyOptPath<WrappedPath>,
+                    Option<NodeData>,
+                    Option<InStats>,
+                ),
+                Error,
+            >,
+        >
         + 'static
         + Send,
     InStats: 'static + Send,
@@ -383,7 +392,7 @@ async fn run_one(
         keep_edge_paths: true,
     };
 
-    walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
+    walk_exact_tail::<_, _, _, _, _, PathTrackingRoute<WrappedPath>>(
         fb,
         job_params,
         repo_params,
