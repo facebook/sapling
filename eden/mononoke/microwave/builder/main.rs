@@ -152,7 +152,7 @@ async fn do_main<'a>(
                             Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
                         })
                         .dangerous_override(|inner| -> ArcChangesets {
-                            Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
+                            Arc::new(MicrowaveChangesets::new(changesets_sender, inner))
                         });
 
                     cache_warmup::cache_warmup(&warmup_ctx, &warmup_repo, req).await?;

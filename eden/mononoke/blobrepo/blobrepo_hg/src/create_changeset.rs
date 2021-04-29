@@ -308,7 +308,6 @@ impl CreateChangeset {
 
             // update changeset mapping
             let completion_record = ChangesetInsert {
-                repo_id: repo.get_repoid(),
                 cs_id: bonsai_cs.get_changeset_id(),
                 parents: bonsai_cs.parents().into_iter().collect(),
             };

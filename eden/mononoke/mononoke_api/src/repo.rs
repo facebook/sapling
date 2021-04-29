@@ -865,12 +865,7 @@ impl RepoContext {
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
                     .get_changesets_object()
-                    .get_many_by_prefix(
-                        self.ctx.clone(),
-                        self.blob_repo().get_repoid(),
-                        prefix,
-                        MAX_LIMIT_AMBIGUOUS_IDS,
-                    )
+                    .get_many_by_prefix(self.ctx.clone(), prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::Globalrev(prefix) => {
@@ -1098,11 +1093,7 @@ impl RepoContext {
             let parents: Vec<_> = self
                 .blob_repo()
                 .get_changesets_object()
-                .get_many(
-                    self.ctx.clone(),
-                    self.blob_repo().get_repoid(),
-                    queue.clone(),
-                )
+                .get_many(self.ctx.clone(), queue.clone())
                 .await?
                 .into_iter()
                 .map(|cs_entry| cs_entry.parents)

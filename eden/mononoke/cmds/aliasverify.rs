@@ -209,14 +209,10 @@ impl AliasVerification {
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
 
-        let bcs_ids = self.blobrepo.changesets().list_enumeration_range(
-            ctx,
-            self.repoid,
-            min_id,
-            max_id,
-            None,
-            true,
-        );
+        let bcs_ids = self
+            .blobrepo
+            .changesets()
+            .list_enumeration_range(ctx, min_id, max_id, None, true);
 
         bcs_ids
             .and_then(move |(bcs_id, _)| async move {
@@ -247,7 +243,7 @@ impl AliasVerification {
         let (min_id, max_id) = self
             .blobrepo
             .changesets()
-            .enumeration_bounds(ctx, self.repoid, true)
+            .enumeration_bounds(ctx, true)
             .await?
             .unwrap();
 

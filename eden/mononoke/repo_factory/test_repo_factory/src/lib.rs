@@ -220,10 +220,10 @@ impl TestRepoFactory {
     }
 
     /// Construct Changesets using the in-memory metadata database.
-    pub fn changesets(&self) -> Result<ArcChangesets> {
+    pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
         Ok(Arc::new(
             SqlChangesetsBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(RendezVousOptions::for_test()),
+                .build(RendezVousOptions::for_test(), repo_identity.id()),
         ))
     }
 

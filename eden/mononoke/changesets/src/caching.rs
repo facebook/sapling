@@ -41,6 +41,7 @@ pub struct CachingChangesets {
     cachelib: CachelibHandler<ChangesetEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
+    repo_id: RepositoryId,
 }
 
 fn get_keygen() -> KeyGen {
@@ -60,6 +61,7 @@ impl CachingChangesets {
         cache_pool: cachelib::VolatileLruCachePool,
     ) -> Self {
         Self {
+            repo_id: changesets.repo_id(),
             changesets,
             cachelib: cache_pool.into(),
             memcache: MemcacheClient::new(fb)
@@ -75,6 +77,7 @@ impl CachingChangesets {
         let memcache = MemcacheHandler::create_mock();
 
         Self {
+            repo_id: changesets.repo_id(),
             changesets,
             cachelib,
             memcache,
@@ -85,6 +88,7 @@ impl CachingChangesets {
     #[cfg(test)]
     pub fn fork_cachelib(&self) -> Self {
         Self {
+            repo_id: self.repo_id,
             changesets: self.changesets.clone(),
             cachelib: CachelibHandler::create_mock(),
             memcache: self.memcache.clone(),
@@ -111,6 +115,10 @@ impl CachingChangesets {
 
 #[async_trait]
 impl Changesets for CachingChangesets {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         self.changesets.add(ctx, cs).await
     }
@@ -118,10 +126,9 @@ impl Changesets for CachingChangesets {
     async fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
-        let ctx = (&ctx, repo_id, self);
+        let ctx = (&ctx, self);
         let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
         Ok(map.remove(&cs_id))
     }
@@ -129,10 +136,9 @@ impl Changesets for CachingChangesets {
     async fn get_many(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
-        let ctx = (&ctx, repo_id, self);
+        let ctx = (&ctx, self);
         let res = get_or_fill(ctx, cs_ids.into_iter().collect())
             .await?
             .into_iter()
@@ -145,25 +151,25 @@ impl Changesets for CachingChangesets {
     async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
         if let Some(id) = cs_prefix.into_changeset_id() {
-            let res = self.get(ctx, repo_id, id).await?;
+            let res = self.get(ctx, id).await?;
             return match res {
                 Some(_) if limit > 0 => Ok(ChangesetIdsResolvedFromPrefix::Single(id)),
                 _ => Ok(ChangesetIdsResolvedFromPrefix::NoMatch),
             };
         }
         self.changesets
-            .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .get_many_by_prefix(ctx, cs_prefix, limit)
             .await
     }
 
     fn prime_cache(&self, _ctx: &CoreContext, changesets: &[ChangesetEntry]) {
         for cs in changesets {
-            let key = get_cache_key(cs.repo_id, &cs.cs_id);
+            assert_eq!(cs.repo_id, self.repo_id);
+            let key = get_cache_key(self.repo_id, &cs.cs_id);
             let _ = self.cachelib.set_cached(&key, &cs);
         }
     }
@@ -171,18 +177,16 @@ impl Changesets for CachingChangesets {
     async fn enumeration_bounds(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         read_from_master: bool,
     ) -> Result<Option<(u64, u64)>, Error> {
         self.changesets
-            .enumeration_bounds(ctx, repo_id, read_from_master)
+            .enumeration_bounds(ctx, read_from_master)
             .await
     }
 
     fn list_enumeration_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
         sort_and_limit: Option<(SortOrder, u64)>,
@@ -190,7 +194,6 @@ impl Changesets for CachingChangesets {
     ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
         self.changesets.list_enumeration_range(
             ctx,
-            repo_id,
             min_id,
             max_id,
             sort_and_limit,
@@ -211,21 +214,21 @@ impl MemcacheEntity for ChangesetEntry {
     }
 }
 
-type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a CachingChangesets);
+type CacheRequest<'a> = (&'a CoreContext, &'a CachingChangesets);
 
 impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<ChangesetEntry> {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
         &mapping.cachelib
     }
 
     fn keygen(&self) -> &KeyGen {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
         &mapping.keygen
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
         &mapping.memcache
     }
 
@@ -237,7 +240,7 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
 
     #[cfg(test)]
     fn spawn_memcache_writes(&self) -> bool {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
 
         match mapping.memcache {
             MemcacheHandler::Real(_) => true,
@@ -249,19 +252,19 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
 #[async_trait]
 impl KeyedEntityStore<ChangesetId, ChangesetEntry> for CacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
-        let (_, repo_id, _) = self;
-        get_cache_key(*repo_id, cs_id)
+        let (_, mapping) = self;
+        get_cache_key(mapping.repo_id, cs_id)
     }
 
     async fn get_from_db(
         &self,
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, ChangesetEntry>, Error> {
-        let (ctx, repo_id, mapping) = self;
+        let (ctx, mapping) = self;
 
         let res = mapping
             .changesets
-            .get_many((*ctx).clone(), *repo_id, keys.into_iter().collect())
+            .get_many((*ctx).clone(), keys.into_iter().collect())
             .await?;
 
         Result::<_, Error>::Ok(res.into_iter().map(|e| (e.cs_id, e)).collect())

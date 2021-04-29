@@ -157,7 +157,6 @@ where
                     chunk_size
                 };
                 let heads_fetcher = PublicChangesetBulkFetch::new(
-                    repo_params.repo.get_repoid(),
                     repo_params.repo.get_changesets_object(),
                     repo_params.repo.get_phases(),
                 )

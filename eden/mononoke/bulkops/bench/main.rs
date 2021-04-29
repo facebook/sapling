@@ -124,7 +124,6 @@ fn main(fb: fbinit::FacebookInit) {
                 (
                     blobrepo.name().to_string(),
                     PublicChangesetBulkFetch::new(
-                        blobrepo.get_repoid(),
                         blobrepo.get_changesets_object(),
                         blobrepo.get_phases(),
                     ),

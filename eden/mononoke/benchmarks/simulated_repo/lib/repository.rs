@@ -140,9 +140,10 @@ impl BenchmarkRepoFactory {
         ))
     }
 
-    pub fn changesets(&self) -> Result<ArcChangesets> {
+    pub fn changesets(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcChangesets> {
         let changesets: Arc<dyn Changesets> = Arc::new(DelayedChangesets::new(
-            SqlChangesetsBuilder::with_sqlite_in_memory()?.build(RendezVousOptions::for_test()),
+            SqlChangesetsBuilder::with_sqlite_in_memory()?
+                .build(RendezVousOptions::for_test(), repo_identity.id()),
             self.delay_settings.db_get_dist,
             self.delay_settings.db_put_dist,
         ));
@@ -393,6 +394,10 @@ impl<C> DelayedChangesets<C> {
 
 #[async_trait]
 impl<C: Changesets> Changesets for DelayedChangesets<C> {
+    fn repo_id(&self) -> RepositoryId {
+        self.inner.repo_id()
+    }
+
     async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         delay_v2(self.put_dist).await;
         self.inner.add(ctx, cs).await
@@ -401,34 +406,29 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     async fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         delay_v2(self.get_dist).await;
-        self.inner.get(ctx, repo_id, cs_id).await
+        self.inner.get(ctx, cs_id).await
     }
 
     async fn get_many(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         delay_v2(self.get_dist).await;
-        self.inner.get_many(ctx, repo_id, cs_ids).await
+        self.inner.get_many(ctx, cs_ids).await
     }
 
     async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
         delay_v2(self.get_dist).await;
-        self.inner
-            .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
-            .await
+        self.inner.get_many_by_prefix(ctx, cs_prefix, limit).await
     }
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
@@ -438,31 +438,21 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     async fn enumeration_bounds(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         read_from_master: bool,
     ) -> Result<Option<(u64, u64)>, Error> {
-        self.inner
-            .enumeration_bounds(ctx, repo_id, read_from_master)
-            .await
+        self.inner.enumeration_bounds(ctx, read_from_master).await
     }
 
     fn list_enumeration_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
         sort_and_limit: Option<(SortOrder, u64)>,
         read_from_master: bool,
     ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
-        self.inner.list_enumeration_range(
-            ctx,
-            repo_id,
-            min_id,
-            max_id,
-            sort_and_limit,
-            read_from_master,
-        )
+        self.inner
+            .list_enumeration_range(ctx, min_id, max_id, sort_and_limit, read_from_master)
     }
 }
 

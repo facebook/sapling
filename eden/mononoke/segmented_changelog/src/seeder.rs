@@ -54,8 +54,7 @@ impl SegmentedChangelogSeeder {
         let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
-        let changeset_bulk_fetch =
-            Arc::new(PublicChangesetBulkFetch::new(repo_id, changesets, phases));
+        let changeset_bulk_fetch = Arc::new(PublicChangesetBulkFetch::new(changesets, phases));
         let idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
         Self {
             idmap_version_store,

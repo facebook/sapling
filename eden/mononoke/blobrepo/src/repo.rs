@@ -302,11 +302,7 @@ impl BlobRepo {
         changesetid: ChangesetId,
     ) -> Result<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
-        let changeset = self
-            .inner
-            .changesets
-            .get(ctx, self.get_repoid(), changesetid)
-            .await?;
+        let changeset = self.inner.changesets.get(ctx, changesetid).await?;
         Ok(changeset.is_some())
     }
 
@@ -316,11 +312,7 @@ impl BlobRepo {
         changesetid: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
-        let changeset = self
-            .inner
-            .changesets
-            .get(ctx, self.get_repoid(), changesetid)
-            .await?;
+        let changeset = self.inner.changesets.get(ctx, changesetid).await?;
         let parents = changeset
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
             .parents;
@@ -429,11 +421,7 @@ impl BlobRepo {
         cs: ChangesetId,
     ) -> Result<Option<Generation>, Error> {
         STATS::get_generation_number.add_value(1);
-        let result = self
-            .inner
-            .changesets
-            .get(ctx, self.get_repoid(), cs)
-            .await?;
+        let result = self.inner.changesets.get(ctx, cs).await?;
         Ok(result.map(|res| Generation::new(res.gen)))
     }
 
@@ -517,7 +505,6 @@ pub async fn save_bonsai_changesets(
 ) -> Result<(), Error> {
     let complete_changesets = repo.get_changesets_object();
     let blobstore = repo.get_blobstore();
-    let repoid = repo.get_repoid();
 
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
     for bcs in &bonsai_changesets {
@@ -565,7 +552,6 @@ pub async fn save_bonsai_changesets(
         if let Some(bcs) = bonsai_changesets.get(&bcs_id) {
             let bcs_id = bcs.get_changeset_id();
             let completion_record = ChangesetInsert {
-                repo_id: repoid,
                 cs_id: bcs_id,
                 parents: bcs.parents().into_iter().collect(),
             };

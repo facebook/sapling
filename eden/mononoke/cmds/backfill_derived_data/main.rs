@@ -564,11 +564,8 @@ async fn run_subcmd<'a>(
 
             let repo = args::open_repo(fb, &logger, &matches).await?;
 
-            let fetcher = PublicChangesetBulkFetch::new(
-                repo.get_repoid(),
-                repo.get_changesets_object(),
-                repo.get_phases(),
-            );
+            let fetcher =
+                PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
 
             let css = fetcher
                 .fetch(&ctx, Direction::OldestFirst)

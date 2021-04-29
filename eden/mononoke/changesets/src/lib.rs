@@ -23,15 +23,14 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
 use rand::Rng;
-use rendezvous::{
-    MultiRendezVous, RendezVousOptions, RendezVousStats, TunablesMultiRendezVousController,
-};
+use rendezvous::{RendezVous, RendezVousOptions, RendezVousStats, TunablesRendezVousController};
 use sql::{queries, Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::result;
+use std::sync::Arc;
 
 mod caching;
 mod errors;
@@ -121,7 +120,6 @@ pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetInsert {
-    pub repo_id: RepositoryId,
     pub cs_id: ChangesetId,
     pub parents: Vec<ChangesetId>,
 }
@@ -137,6 +135,9 @@ pub enum SortOrder {
 #[async_trait]
 #[auto_impl(&, Arc)]
 pub trait Changesets: Send + Sync {
+    /// The repository this `Changesets` is for.
+    fn repo_id(&self) -> RepositoryId;
+
     /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
     /// returns false if the same changeset has already existed.
     async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error>;
@@ -145,7 +146,6 @@ pub trait Changesets: Send + Sync {
     async fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error>;
 
@@ -153,7 +153,6 @@ pub trait Changesets: Send + Sync {
     async fn get_many(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error>;
 
@@ -161,11 +160,12 @@ pub trait Changesets: Send + Sync {
     async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error>;
 
+    /// Prime any caches with known changeset entries.  The changeset entries
+    /// must be for the repository associated with this `Changesets`.
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
 
     /// Enumerate all public changesets in the repository.
@@ -178,7 +178,6 @@ pub trait Changesets: Send + Sync {
     async fn enumeration_bounds(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         read_from_master: bool,
     ) -> Result<Option<(u64, u64)>>;
 
@@ -199,7 +198,6 @@ pub trait Changesets: Send + Sync {
     fn list_enumeration_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
         sort_and_limit: Option<(SortOrder, u64)>,
@@ -209,7 +207,7 @@ pub trait Changesets: Send + Sync {
 
 #[derive(Clone)]
 struct RendezVousConnection {
-    rdv: MultiRendezVous<RepositoryId, ChangesetId, ChangesetEntry>,
+    rdv: RendezVous<ChangesetId, ChangesetEntry>,
     conn: Connection,
 }
 
@@ -217,9 +215,9 @@ impl RendezVousConnection {
     fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
         Self {
             conn,
-            rdv: MultiRendezVous::new(
-                TunablesMultiRendezVousController::new(opts),
-                RendezVousStats::new(format!("changesets.{}", name,)),
+            rdv: RendezVous::new(
+                TunablesRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!("changesets.{}", name,))),
             ),
         }
     }
@@ -227,6 +225,7 @@ impl RendezVousConnection {
 
 #[derive(Clone)]
 pub struct SqlChangesets {
+    repo_id: RepositoryId,
     write_connection: Connection,
     read_connection: RendezVousConnection,
     read_master_connection: RendezVousConnection,
@@ -377,7 +376,7 @@ impl SqlConstruct for SqlChangesetsBuilder {
 impl SqlConstructFromMetadataDatabaseConfig for SqlChangesetsBuilder {}
 
 impl SqlChangesetsBuilder {
-    pub fn build(self, opts: RendezVousOptions) -> SqlChangesets {
+    pub fn build(self, opts: RendezVousOptions, repo_id: RepositoryId) -> SqlChangesets {
         let SqlConnections {
             read_connection,
             read_master_connection,
@@ -385,6 +384,7 @@ impl SqlChangesetsBuilder {
         } = self.connections;
 
         SqlChangesets {
+            repo_id,
             read_connection: RendezVousConnection::new(read_connection, "read", opts),
             read_master_connection: RendezVousConnection::new(
                 read_master_connection,
@@ -398,6 +398,10 @@ impl SqlChangesetsBuilder {
 
 #[async_trait]
 impl Changesets for SqlChangesets {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
@@ -407,16 +411,18 @@ impl Changesets for SqlChangesets {
             if cs.parents.is_empty() {
                 Vec::new()
             } else {
-                SelectChangesets::query(&self.write_connection, &cs.repo_id, &cs.parents[..])
+                SelectChangesets::query(&self.write_connection, &self.repo_id, &cs.parents[..])
                     .await?
             }
         };
         check_missing_rows(&cs.parents, &parent_rows)?;
         let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
         let transaction = self.write_connection.start_transaction().await?;
-        let (transaction, result) =
-            InsertChangeset::query_with_transaction(transaction, &[(&cs.repo_id, &cs.cs_id, &gen)])
-                .await?;
+        let (transaction, result) = InsertChangeset::query_with_transaction(
+            transaction,
+            &[(&self.repo_id, &cs.cs_id, &gen)],
+        )
+        .await?;
 
         if result.affected_rows() == 1 && result.last_insert_id().is_some() {
             insert_parents(
@@ -429,7 +435,7 @@ impl Changesets for SqlChangesets {
             Ok(true)
         } else {
             transaction.rollback().await?;
-            check_changeset_matches(&self.write_connection, cs).await?;
+            check_changeset_matches(&self.write_connection, self.repo_id, cs).await?;
             Ok(false)
         }
     }
@@ -437,21 +443,15 @@ impl Changesets for SqlChangesets {
     async fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
-        let res = self
-            .get_many(ctx, repo_id, vec![cs_id])
-            .await?
-            .into_iter()
-            .next();
+        let res = self.get_many(ctx, vec![cs_id]).await?.into_iter().next();
         Ok(res)
     }
 
     async fn get_many(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         if cs_ids.is_empty() {
@@ -462,7 +462,7 @@ impl Changesets for SqlChangesets {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let fetched_cs =
-            select_many_changesets(ctx.fb, &self.read_connection, repo_id, &cs_ids).await?;
+            select_many_changesets(ctx.fb, &self.read_connection, self.repo_id, &cs_ids).await?;
         let fetched_set: HashSet<_> = fetched_cs
             .clone()
             .into_iter()
@@ -482,7 +482,7 @@ impl Changesets for SqlChangesets {
             let mut master_fetched_cs = select_many_changesets(
                 ctx.fb,
                 &self.read_master_connection,
-                repo_id,
+                self.repo_id,
                 &notfetched_cs_ids,
             )
             .await?;
@@ -494,7 +494,6 @@ impl Changesets for SqlChangesets {
     async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
@@ -502,14 +501,15 @@ impl Changesets for SqlChangesets {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let resolved_cs =
-            fetch_many_by_prefix(&self.read_connection.conn, repo_id, &cs_prefix, limit).await?;
+            fetch_many_by_prefix(&self.read_connection.conn, self.repo_id, &cs_prefix, limit)
+                .await?;
         match resolved_cs {
             ChangesetIdsResolvedFromPrefix::NoMatch => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
                 fetch_many_by_prefix(
                     &self.read_master_connection.conn,
-                    repo_id,
+                    self.repo_id,
                     &cs_prefix,
                     limit,
                 )
@@ -526,11 +526,10 @@ impl Changesets for SqlChangesets {
     async fn enumeration_bounds(
         &self,
         _ctx: &CoreContext,
-        repo_id: RepositoryId,
         read_from_master: bool,
     ) -> Result<Option<(u64, u64)>, Error> {
         let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id).await?;
+        let rows = SelectChangesetsIdsBounds::query(conn, &self.repo_id).await?;
         if rows.is_empty() {
             Ok(None)
         } else {
@@ -541,7 +540,6 @@ impl Changesets for SqlChangesets {
     fn list_enumeration_range(
         &self,
         _ctx: &CoreContext,
-        repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
         sort_and_limit: Option<(SortOrder, u64)>,
@@ -555,17 +553,26 @@ impl Changesets for SqlChangesets {
         async move {
             match sort_and_limit {
                 None => {
-                    SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id).await
+                    SelectAllChangesetsIdsInRange::query(&conn, &self.repo_id, &min_id, &max_id)
+                        .await
                 }
                 Some((SortOrder::Ascending, limit)) => {
                     SelectAllChangesetsIdsInRangeLimitAsc::query(
-                        &conn, &repo_id, &min_id, &max_id, &limit,
+                        &conn,
+                        &self.repo_id,
+                        &min_id,
+                        &max_id,
+                        &limit,
                     )
                     .await
                 }
                 Some((SortOrder::Descending, limit)) => {
                     SelectAllChangesetsIdsInRangeLimitDesc::query(
-                        &conn, &repo_id, &min_id, &max_id, &limit,
+                        &conn,
+                        &self.repo_id,
+                        &min_id,
+                        &max_id,
+                        &limit,
                     )
                     .await
                 }
@@ -672,9 +679,10 @@ async fn insert_parents(
 
 async fn check_changeset_matches(
     connection: &Connection,
+    repo_id: RepositoryId,
     cs: ChangesetInsert,
 ) -> Result<(), Error> {
-    let stored_parents = select_changeset(&connection, cs.repo_id, cs.cs_id)
+    let stored_parents = select_changeset(&connection, repo_id, cs.cs_id)
         .await?
         .map(|cs| cs.parents);
     if Some(&cs.parents) == stored_parents.as_ref() {
@@ -722,7 +730,6 @@ async fn select_many_changesets(
 
     let ret = connection
         .rdv
-        .get(repo_id)
         .dispatch(fb, cs_ids.iter().copied().collect(), || {
             let conn = connection.conn.clone();
             move |cs_ids| async move {

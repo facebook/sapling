@@ -244,11 +244,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     ctx: &CoreContext,
     repo: &BlobRepo,
 ) -> Result<Arc<dyn ChangesetFetcher>, Error> {
-    let fetcher = PublicChangesetBulkFetch::new(
-        repo.get_repoid(),
-        repo.get_changesets_object(),
-        repo.get_phases(),
-    );
+    let fetcher = PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
     let fetched_changesets = fetcher
         .fetch(&ctx, Direction::OldestFirst)
         .try_collect::<Vec<_>>()

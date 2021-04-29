@@ -25,7 +25,7 @@ use futures::{
 use bounded_traversal::bounded_traversal_stream;
 use changesets::{ChangesetEntry, Changesets, SortOrder};
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
 use phases::Phases;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -44,7 +44,6 @@ impl Direction {
 }
 
 pub struct PublicChangesetBulkFetch {
-    repo_id: RepositoryId,
     changesets: Arc<dyn Changesets>,
     phases: Arc<dyn Phases>,
     read_from_master: bool,
@@ -52,13 +51,8 @@ pub struct PublicChangesetBulkFetch {
 }
 
 impl PublicChangesetBulkFetch {
-    pub fn new(
-        repo_id: RepositoryId,
-        changesets: Arc<dyn Changesets>,
-        phases: Arc<dyn Phases>,
-    ) -> Self {
+    pub fn new(changesets: Arc<dyn Changesets>, phases: Arc<dyn Phases>) -> Self {
         Self {
-            repo_id,
             changesets,
             phases,
             read_from_master: true,
@@ -88,7 +82,6 @@ impl PublicChangesetBulkFetch {
         ctx: &'a CoreContext,
         d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
-        let repo_id = self.repo_id;
         async move {
             let s = self
                 .fetch_ids(ctx, d, None)
@@ -99,10 +92,7 @@ impl PublicChangesetBulkFetch {
                             .into_iter()
                             .map(|r| r.map(|(id, _bounds)| id))
                             .collect::<Result<Vec<_>, Error>>()?;
-                        let entries = self
-                            .changesets
-                            .get_many(ctx.clone(), repo_id, ids.clone())
-                            .await?;
+                        let entries = self.changesets.get_many(ctx.clone(), ids.clone()).await?;
                         let mut entries_map: HashMap<_, _> =
                             entries.into_iter().map(|e| (e.cs_id, e)).collect();
                         let result = ids
@@ -130,7 +120,6 @@ impl PublicChangesetBulkFetch {
         repo_bounds: Option<(u64, u64)>,
     ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
         let phases = self.phases.get_store();
-        let repo_id = self.repo_id;
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
             future::ok(repo_bounds).left_future()
         } else {
@@ -153,7 +142,6 @@ impl PublicChangesetBulkFetch {
                                 let results: Vec<_> = changesets
                                     .list_enumeration_range(
                                         &ctx,
-                                        repo_id,
                                         lower,
                                         upper,
                                         Some((d.sort_order(), step)),
@@ -219,7 +207,7 @@ impl PublicChangesetBulkFetch {
     pub async fn get_repo_bounds(&self, ctx: &CoreContext) -> Result<(u64, u64), Error> {
         let bounds = self
             .changesets
-            .enumeration_bounds(ctx, self.repo_id, self.read_from_master)
+            .enumeration_bounds(ctx, self.read_from_master)
             .await?;
         match bounds {
             // Add one to make the range half-open: [min, max).
@@ -270,12 +258,8 @@ mod tests {
         step_size: u64,
         blobrepo: &BlobRepo,
     ) -> Result<PublicChangesetBulkFetch, Error> {
-        PublicChangesetBulkFetch::new(
-            blobrepo.get_repoid(),
-            blobrepo.get_changesets_object(),
-            blobrepo.get_phases(),
-        )
-        .with_step(step_size)
+        PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.get_phases())
+            .with_step(step_size)
     }
 
     #[fbinit::test]

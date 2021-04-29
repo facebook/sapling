@@ -39,15 +39,12 @@ pub trait ChangesetFetcher: Send + Sync + 'static {
 /// Simplest ChangesetFetcher implementation which is just a wrapper around `Changesets` object
 pub struct SimpleChangesetFetcher {
     changesets: Arc<dyn Changesets>,
-    repo_id: RepositoryId,
 }
 
 impl SimpleChangesetFetcher {
     pub fn new(changesets: Arc<dyn Changesets>, repo_id: RepositoryId) -> Self {
-        Self {
-            changesets,
-            repo_id,
-        }
+        assert_eq!(changesets.repo_id(), repo_id);
+        Self { changesets }
     }
 }
 
@@ -58,10 +55,7 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
-        let maybe_cs = self
-            .changesets
-            .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .await?;
+        let maybe_cs = self.changesets.get(ctx, cs_id).await?;
         let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
         Ok(Generation::new(cs.gen))
     }
@@ -71,10 +65,7 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
-        let maybe_cs = self
-            .changesets
-            .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .await?;
+        let maybe_cs = self.changesets.get(ctx, cs_id).await?;
         let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
         Ok(cs.parents)
     }

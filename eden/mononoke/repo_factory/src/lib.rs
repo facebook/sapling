@@ -352,14 +352,18 @@ impl RepoFactory {
         self.env.caching
     }
 
-    pub async fn changesets(&self, repo_config: &ArcRepoConfig) -> Result<ArcChangesets> {
+    pub async fn changesets(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcChangesets> {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
         let builder = sql_factory
             .open::<SqlChangesetsBuilder>()
             .context(RepoFactoryError::Changesets)?;
-        let changesets = builder.build(self.env.rendezvous_options);
+        let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
         if let Some(pool) = self.maybe_volatile_pool("changesets")? {
             Ok(Arc::new(CachingChangesets::new(
                 self.env.fb,

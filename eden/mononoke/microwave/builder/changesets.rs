@@ -26,13 +26,9 @@ pub struct MicrowaveChangesets {
 }
 
 impl MicrowaveChangesets {
-    pub fn new(
-        repo_id: RepositoryId,
-        recorder: Sender<ChangesetEntry>,
-        inner: Arc<dyn Changesets>,
-    ) -> Self {
+    pub fn new(recorder: Sender<ChangesetEntry>, inner: Arc<dyn Changesets>) -> Self {
         Self {
-            repo_id,
+            repo_id: inner.repo_id(),
             recorder,
             inner,
         }
@@ -41,26 +37,31 @@ impl MicrowaveChangesets {
 
 #[async_trait]
 impl Changesets for MicrowaveChangesets {
-    async fn add(&self, _ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
+    async fn add(&self, _ctx: CoreContext, _cs: ChangesetInsert) -> Result<bool, Error> {
         // See rationale in filenodes.rs for why we error out on unexpected calls under
         // MicrowaveFilenodes.
-        unimplemented!("MicrowaveChangesets: unexpected add in repo {}", cs.repo_id)
+        unimplemented!(
+            "MicrowaveChangesets: unexpected add in repo {}",
+            self.repo_id
+        )
     }
 
     async fn get(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         cloned!(self.inner, mut self.recorder);
 
-        // NOTE: See MicrowaveFilenodes for context on this.
-        assert_eq!(repo_id, self.repo_id);
-        let entry = inner.get(ctx, repo_id, cs_id).await?;
+        let entry = inner.get(ctx, cs_id).await?;
 
         if let Some(ref entry) = entry {
-            assert_eq!(entry.repo_id, repo_id); // Same as above
+            // NOTE: See MicrowaveFilenodes for context on this.
+            assert_eq!(entry.repo_id, self.repo_id);
             recorder.send(entry.clone()).await?;
         }
 
@@ -70,27 +71,23 @@ impl Changesets for MicrowaveChangesets {
     async fn get_many(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
         _cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
-        // Same as above
         unimplemented!(
             "MicrowaveChangesets: unexpected get_many in repo {}",
-            repo_id
+            self.repo_id
         )
     }
 
     async fn get_many_by_prefix(
         &self,
         _ctx: CoreContext,
-        repo_id: RepositoryId,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
-        // Same as above
         unimplemented!(
             "MicrowaveChangesets: unexpected get_many_by_prefix in repo {}",
-            repo_id
+            self.repo_id
         )
     }
 
@@ -101,30 +98,20 @@ impl Changesets for MicrowaveChangesets {
     async fn enumeration_bounds(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         read_from_master: bool,
     ) -> Result<Option<(u64, u64)>, Error> {
-        self.inner
-            .enumeration_bounds(ctx, repo_id, read_from_master)
-            .await
+        self.inner.enumeration_bounds(ctx, read_from_master).await
     }
 
     fn list_enumeration_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
         sort_and_limit: Option<(SortOrder, u64)>,
         read_from_master: bool,
     ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
-        self.inner.list_enumeration_range(
-            ctx,
-            repo_id,
-            min_id,
-            max_id,
-            sort_and_limit,
-            read_from_master,
-        )
+        self.inner
+            .list_enumeration_range(ctx, min_id, max_id, sort_and_limit, read_from_master)
     }
 }
