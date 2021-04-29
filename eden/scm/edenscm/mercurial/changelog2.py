@@ -561,16 +561,7 @@ class changelog(object):
                 if self._partialmatch(test) is None:
                     return False
 
-                try:
-                    i = int(test)
-                    # if we are a pure int, then starting with zero will not be
-                    # confused as a rev; or, obviously, if the int is larger
-                    # than the value of the tip rev
-                    if test[0] == "0" or i > len(self):
-                        return True
-                    return False
-                except ValueError:
-                    return True
+                return True
             except error.RepoLookupError:
                 return False
             except error.RevlogError:
