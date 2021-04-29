@@ -8,7 +8,7 @@
 #ifdef _WIN32
 
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
-#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <cpptoml.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"

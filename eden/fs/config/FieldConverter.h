@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <cpptoml.h>
 #include <chrono>
 #include <map>
 #include <optional>

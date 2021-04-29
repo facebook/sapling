@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <cpptoml.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>

@@ -7,7 +7,7 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 
-#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <cpptoml.h>
 
 #include <folly/Range.h>
 #include <folly/String.h>

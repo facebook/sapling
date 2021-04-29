@@ -7,7 +7,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 
-#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <cpptoml.h>
 #include <array>
 #include <sstream>
 
