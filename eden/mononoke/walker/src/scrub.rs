@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPathLike};
+use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPathHash, WrappedPathLike};
 use crate::log;
 use crate::pack::{PackInfo, PackInfoLogOptions, PackInfoLogger};
 use crate::progress::{
     progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{SamplingOptions, SamplingWalkVisitor, WalkSampleMapping};
+use crate::sampling::{
+    SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime, WalkSampleMapping,
+};
 use crate::setup::{
     parse_node_types, parse_pack_info_log_args, parse_progress_args, parse_sampling_args,
     setup_common, JobWalkParams, OutputFormat, RepoSubcommandParams, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
@@ -106,11 +108,23 @@ fn loading_stream<InStream, SS, L>(
     pack_info_logger: Option<L>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
-    InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
+    InStream: Stream<
+            Item = Result<
+                (
+                    WalkKeyOptPath<WrappedPathHash>,
+                    WalkPayloadMtime,
+                    Option<SS>,
+                ),
+                Error,
+            >,
+        >
+        + 'static
+        + Send,
     L: PackInfoLogger + 'static + Send,
 {
-    s.map_ok(move |(n, nd, _progress_stats)| {
-        match nd {
+    s.map_ok(move |(walk_key, payload, _progress_stats)| {
+        let n = walk_key.node;
+        match payload.data {
             Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
                 if !limit_data_fetch =>
             {

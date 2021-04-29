@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPathLike};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPathHash, WrappedPathLike};
 use crate::state::{InternedType, StepStats, WalkState};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor};
 
@@ -349,10 +349,17 @@ where
 }
 
 // Super simple sampling visitor impl for scrubbing
-impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute>
-    for SamplingWalkVisitor<T>
+impl<T>
+    WalkVisitor<
+        (
+            WalkKeyOptPath<WrappedPathHash>,
+            WalkPayloadMtime,
+            Option<StepStats>,
+        ),
+        EmptyRoute,
+    > for SamplingWalkVisitor<T>
 where
-    T: SampleTrigger<Node> + Send + Sync,
+    T: SampleTrigger<WalkKeyOptPath<WrappedPathHash>> + Send + Sync,
 {
     fn start_step(
         &self,
@@ -375,7 +382,13 @@ where
             if should_sample {
                 let sampling_key = SamplingKey::new();
                 ctx = ctx.clone_and_sample(sampling_key);
-                self.sampler.map_keys(sampling_key, step.target.clone());
+                self.sampler.map_keys(
+                    sampling_key,
+                    WalkKeyOptPath {
+                        node: step.target.clone(),
+                        path: None,
+                    },
+                );
             }
         }
         self.inner.start_step(ctx, route, step)
@@ -389,11 +402,28 @@ where
         route: Option<EmptyRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
-        (Node, Option<NodeData>, Option<StepStats>),
+        (
+            WalkKeyOptPath<WrappedPathHash>,
+            WalkPayloadMtime,
+            Option<StepStats>,
+        ),
         EmptyRoute,
         Vec<OutgoingEdge>,
     ) {
-        self.inner.visit(ctx, resolved, node_data, route, outgoing)
+        let ((n, nd, stats), route, outgoing) =
+            self.inner.visit(ctx, resolved, node_data, route, outgoing);
+        let output = (
+            WalkKeyOptPath {
+                node: n,
+                path: None,
+            },
+            WalkPayloadMtime {
+                data: nd,
+                mtime: None,
+            },
+            stats,
+        );
+        (output, route, outgoing)
     }
 
     fn defer_visit(
@@ -401,8 +431,27 @@ where
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         route: Option<EmptyRoute>,
-    ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
-        self.inner.defer_visit(bcs_id, walk_item, route)
+    ) -> (
+        (
+            WalkKeyOptPath<WrappedPathHash>,
+            WalkPayloadMtime,
+            Option<StepStats>,
+        ),
+        EmptyRoute,
+    ) {
+        let ((n, nd, stats), route) = self.inner.defer_visit(bcs_id, walk_item, route);
+        let output = (
+            WalkKeyOptPath {
+                node: n,
+                path: None,
+            },
+            WalkPayloadMtime {
+                data: nd,
+                mtime: None,
+            },
+            stats,
+        );
+        (output, route)
     }
 }
 
