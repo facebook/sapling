@@ -511,6 +511,47 @@ impl NodeType {
             NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
         }
     }
+
+    // Only certain node types can have repo paths associated
+    pub fn allow_repo_path(&self) -> bool {
+        match self {
+            NodeType::Root => false,
+            // Bonsai
+            NodeType::Bookmark => false,
+            NodeType::Changeset => false,
+            NodeType::BonsaiHgMapping => false,
+            NodeType::PhaseMapping => false,
+            NodeType::PublishedBookmarks => false,
+            // Hg
+            NodeType::HgBonsaiMapping => false,
+            NodeType::HgChangeset => false,
+            NodeType::HgChangesetViaBonsai => false,
+            NodeType::HgManifest => true,
+            NodeType::HgFileEnvelope => true,
+            NodeType::HgFileNode => true,
+            NodeType::HgManifestFileNode => true,
+            // Content
+            NodeType::FileContent => true,
+            NodeType::FileContentMetadata => true,
+            NodeType::AliasContentMapping => true,
+            // Derived Data
+            NodeType::Blame => false,
+            NodeType::ChangesetInfo => false,
+            NodeType::ChangesetInfoMapping => false,
+            NodeType::DeletedManifest => true,
+            NodeType::DeletedManifestMapping => false,
+            NodeType::FastlogBatch => true,
+            NodeType::FastlogDir => true,
+            NodeType::FastlogFile => true,
+            NodeType::Fsnode => true,
+            NodeType::FsnodeMapping => false,
+            NodeType::SkeletonManifest => true,
+            NodeType::SkeletonManifestMapping => false,
+            NodeType::UnodeFile => true,
+            NodeType::UnodeManifest => true,
+            NodeType::UnodeMapping => false,
+        }
+    }
 }
 
 const ROOT_FINGERPRINT: u64 = 0;

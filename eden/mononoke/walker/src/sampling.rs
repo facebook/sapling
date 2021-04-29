@@ -142,47 +142,6 @@ impl StepRoute for PathTrackingRoute {
     }
 }
 
-// Only certain node types can have repo paths associated
-fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Option<&'_ WrappedPath> {
-    match node_type {
-        NodeType::Root => None,
-        // Bonsai
-        NodeType::Bookmark => None,
-        NodeType::Changeset => None,
-        NodeType::BonsaiHgMapping => None,
-        NodeType::PhaseMapping => None,
-        NodeType::PublishedBookmarks => None,
-        // Hg
-        NodeType::HgBonsaiMapping => None,
-        NodeType::HgChangeset => None,
-        NodeType::HgChangesetViaBonsai => None,
-        NodeType::HgManifest => path,
-        NodeType::HgFileEnvelope => path,
-        NodeType::HgFileNode => path,
-        NodeType::HgManifestFileNode => path,
-        // Content
-        NodeType::FileContent => path,
-        NodeType::FileContentMetadata => path,
-        NodeType::AliasContentMapping => path,
-        // Derived Data
-        NodeType::Blame => None,
-        NodeType::ChangesetInfo => None,
-        NodeType::ChangesetInfoMapping => None,
-        NodeType::DeletedManifest => path,
-        NodeType::DeletedManifestMapping => None,
-        NodeType::FastlogBatch => path,
-        NodeType::FastlogDir => path,
-        NodeType::FastlogFile => path,
-        NodeType::Fsnode => path,
-        NodeType::FsnodeMapping => None,
-        NodeType::SkeletonManifest => path,
-        NodeType::SkeletonManifestMapping => None,
-        NodeType::UnodeFile => path,
-        NodeType::UnodeManifest => path,
-        NodeType::UnodeMapping => None,
-    }
-}
-
 impl PathTrackingRoute {
     fn evolve_path<'a>(
         from_route: Option<&'a WrappedPath>,
@@ -196,7 +155,13 @@ impl PathTrackingRoute {
                 // Path is part of node identity
                 Some(from_node) => Some(from_node),
                 // No per-node path, so use the route, filtering out nodes that can't have repo paths
-                None => filter_repo_path(target.get_type(), from_route),
+                None => {
+                    if target.get_type().allow_repo_path() {
+                        from_route
+                    } else {
+                        None
+                    }
+                }
             },
         }
     }
