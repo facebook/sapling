@@ -258,12 +258,13 @@
   Caused by:
       invalid blake2 input: need exactly 64 hex digits
 
-# Send a request after corrupting our data, and check that this gets logged too
+# Send a request after corrupting our data, and check that this gets logged
+# too. Silence the error we get so that output variations in Curl don't break
+# the test.
   $ truncate -s 0 "$SCUBA"
   $ find "$TESTTMP/blobstore_lfs1" -type f -name "*chunk*" | xargs rm
-  $ curl -fsSL "${lfs_root}/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -o /dev/null
-  curl: (18) transfer closed with 2048 bytes remaining to read
-  [18]
+  $ curl -fsL "${lfs_root}/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -o /dev/null || false
+  [1]
   $ wait_for_json_record_count "$SCUBA" 1
   $ jq -r .normal.error_msg < "$SCUBA"
   Chunk not found: ContentChunkId(Blake2(1504ec6ce051f99d41b82ec69ef7e9cde95054758b3e85ed73ef335f32f7263c))
