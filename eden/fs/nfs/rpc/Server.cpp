@@ -230,6 +230,63 @@ std::unique_ptr<folly::IOBuf> RpcTcpHandler::readOneRequest() noexcept {
   return readBuf_.split(c.getCurrentPosition());
 }
 
+namespace {
+void serializeRpcMismatch(folly::io::QueueAppender& ser, uint32_t xid) {
+  rpc_msg_reply reply{
+      xid,
+      msg_type::REPLY,
+      reply_body{{
+          reply_stat::MSG_DENIED,
+          rejected_reply{{
+              reject_stat::RPC_MISMATCH,
+              mismatch_info{kRPCVersion, kRPCVersion},
+          }},
+      }},
+  };
+
+  XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+}
+
+void serializeAuthError(
+    folly::io::QueueAppender& ser,
+    auth_stat auth,
+    uint32_t xid) {
+  rpc_msg_reply reply{
+      xid,
+      msg_type::REPLY,
+      reply_body{{
+          reply_stat::MSG_DENIED,
+          rejected_reply{{
+              reject_stat::AUTH_ERROR,
+              auth,
+          }},
+      }},
+  };
+
+  XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+}
+
+/**
+ * Make an RPC fragment by computing the size of the iobufQueue.
+ *
+ * Return an IOBuf chain that can be directly written to a socket.
+ */
+std::unique_ptr<folly::IOBuf> finalizeFragment(
+    std::unique_ptr<folly::IOBufQueue> iobufQueue) {
+  auto chainLength = iobufQueue->chainLength();
+  auto resultBuffer = iobufQueue->move();
+
+  // Fill out the fragment header.
+  auto len = uint32_t(chainLength - sizeof(uint32_t));
+  auto fragment = (uint32_t*)resultBuffer->writableData();
+  *fragment = folly::Endian::big(len | 0x80000000);
+
+  XLOG(DBG8) << "Sending:\n"
+             << folly::hexDump(resultBuffer->data(), resultBuffer->length());
+  return resultBuffer;
+}
+} // namespace
+
 void RpcTcpHandler::dispatchAndReply(
     std::unique_ptr<folly::IOBuf> input,
     DestructorGuard guard) {
@@ -237,46 +294,20 @@ void RpcTcpHandler::dispatchAndReply(
     folly::io::Cursor deser(input.get());
     rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
 
-    auto resultBuf = std::make_unique<folly::IOBufQueue>(
+    auto iobufQueue = std::make_unique<folly::IOBufQueue>(
         folly::IOBufQueue::cacheChainLength());
-    folly::io::QueueAppender ser(resultBuf.get(), 1024);
+    folly::io::QueueAppender ser(iobufQueue.get(), 1024);
     XdrTrait<uint32_t>::serialize(ser, 0); // reserve space for fragment header
 
     if (call.cbody.rpcvers != kRPCVersion) {
-      rpc_msg_reply reply{
-          call.xid,
-          msg_type::REPLY,
-          reply_body{{
-              reply_stat::MSG_DENIED,
-              rejected_reply{{
-                  reject_stat::RPC_MISMATCH,
-                  mismatch_info{kRPCVersion, kRPCVersion},
-              }},
-          }},
-      };
-
-      XdrTrait<rpc_msg_reply>::serialize(ser, reply);
-
-      return folly::makeFuture(std::move(resultBuf));
+      serializeRpcMismatch(ser, call.xid);
+      return folly::makeFuture(finalizeFragment(std::move(iobufQueue)));
     }
 
     if (auto auth = proc_->checkAuthentication(call.cbody);
         auth != auth_stat::AUTH_OK) {
-      rpc_msg_reply reply{
-          call.xid,
-          msg_type::REPLY,
-          reply_body{{
-              reply_stat::MSG_DENIED,
-              rejected_reply{{
-                  reject_stat::AUTH_ERROR,
-                  auth,
-              }},
-          }},
-      };
-
-      XdrTrait<rpc_msg_reply>::serialize(ser, reply);
-
-      return folly::makeFuture(std::move(resultBuf));
+      serializeAuthError(ser, auth, call.xid);
+      return folly::makeFuture(finalizeFragment(std::move(iobufQueue)));
     }
 
     auto fut = proc_->dispatchRpc(
@@ -289,10 +320,9 @@ void RpcTcpHandler::dispatchAndReply(
 
     return std::move(fut).then(
         [keepInputAlive = std::move(input),
-         resultBuffer = std::move(resultBuf),
+         iobufQueue = std::move(iobufQueue),
          call = std::move(call)](folly::Try<folly::Unit> result) mutable {
           if (result.hasException()) {
-            // XXX: shrink resultBuffer and serialize a SYSTEM_ERR into it
             XLOGF(
                 WARN,
                 "Server failed to dispatch proc {} to {}:{}: {}",
@@ -300,30 +330,31 @@ void RpcTcpHandler::dispatchAndReply(
                 call.cbody.prog,
                 call.cbody.vers,
                 folly::exceptionStr(*result.exception().get_exception()));
+
+            // We don't know how much dispatchRpc wrote to the iobufQueue, thus
+            // let's clear it and write an error onto it.
+            iobufQueue->clear();
+            folly::io::QueueAppender errSer(iobufQueue.get(), 1024);
+            XdrTrait<uint32_t>::serialize(
+                errSer, 0); // reserve space for fragment header
+
+            serializeReply(errSer, accept_stat::SYSTEM_ERR, call.xid);
           }
 
-          return std::move(resultBuffer);
+          return finalizeFragment(std::move(iobufQueue));
         });
   })
       .via(this->sock_->getEventBase())
       .then([this, guard = std::move(guard)](
-                folly::Try<std::unique_ptr<folly::IOBufQueue>> result) {
+                folly::Try<std::unique_ptr<folly::IOBuf>> result) {
+        // This code runs in the EventBase and thus must be as fast as possible
+        // to avoid unnecessary overhead in the EventBase. Always prefer
+        // duplicating work in the future above to adding code here.
+
         if (result.hasException()) {
           // XXX: This should never happen.
         } else {
-          auto& iobufQueue = result.value();
-          auto chainLength = iobufQueue->chainLength();
-          auto resultBuffer = iobufQueue->move();
-
-          // Fill out the fragment header.
-          auto len = uint32_t(chainLength - sizeof(uint32_t));
-          auto fragment = (uint32_t*)resultBuffer->writableData();
-          *fragment = folly::Endian::big(len | 0x80000000);
-
-          XLOG(DBG8) << "Sending:\n"
-                     << folly::hexDump(
-                            resultBuffer->data(), resultBuffer->length());
-
+          auto resultBuffer = std::move(result).value();
           sock_->writeChain(&writer_, std::move(resultBuffer));
         }
       });
