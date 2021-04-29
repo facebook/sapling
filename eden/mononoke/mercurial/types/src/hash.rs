@@ -84,7 +84,7 @@ impl Sha1 {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v = vec![0; SHA1_HASH_LENGTH_HEX];
+        let mut v = [0; SHA1_HASH_LENGTH_HEX];
 
         // This can only panic if buffer size of Vec isn't correct, which would be
         // a programming error.
@@ -189,11 +189,15 @@ impl Sha1Prefix {
                 .into()
             ))
         } else {
-            let min_tail: Vec<u8> = vec![0x00; SHA1_HASH_LENGTH_BYTES - bytes.len()];
-            let max_tail: Vec<u8> = vec![0xff; SHA1_HASH_LENGTH_BYTES - bytes.len()];
+            static SHA1_MIN: [u8; SHA1_HASH_LENGTH_BYTES] = [0x00; SHA1_HASH_LENGTH_BYTES];
+            static SHA1_MAX: [u8; SHA1_HASH_LENGTH_BYTES] = [0xff; SHA1_HASH_LENGTH_BYTES];
+
+            let min_tail = &SHA1_MIN[bytes.len()..];
+            let max_tail = &SHA1_MAX[bytes.len()..];
+
             Ok(Sha1Prefix(
-                Sha1::from_bytes(&(bytes.iter().chain(&min_tail).cloned().collect::<Vec<_>>()))?,
-                Sha1::from_bytes(&(bytes.iter().chain(&max_tail).cloned().collect::<Vec<_>>()))?,
+                Sha1::from_bytes(&(bytes.iter().chain(min_tail).copied().collect::<Vec<_>>()))?,
+                Sha1::from_bytes(&(bytes.iter().chain(max_tail).copied().collect::<Vec<_>>()))?,
             ))
         }
     }
@@ -217,13 +221,13 @@ impl Sha1Prefix {
     }
 
     pub fn to_hex(&self) -> AsciiString {
-        let mut v_min_hex = vec![0; SHA1_HASH_LENGTH_HEX];
+        let mut v_min_hex = &mut [0; SHA1_HASH_LENGTH_HEX][..];
         hex_encode(self.0.as_ref(), &mut v_min_hex).expect("failed to hex encode");
-        let mut v_max_hex = vec![0; SHA1_HASH_LENGTH_HEX];
+        let mut v_max_hex = &mut [0; SHA1_HASH_LENGTH_HEX][..];
         hex_encode(self.1.as_ref(), &mut v_max_hex).expect("failed to hex encode");
         for i in 0..SHA1_HASH_LENGTH_HEX {
             if v_min_hex[i] != v_max_hex[i] {
-                v_min_hex.truncate(i);
+                v_min_hex = &mut v_min_hex[..i];
                 break;
             }
         }
