@@ -147,7 +147,7 @@ fn main(fb: fbinit::FacebookInit) {
         &fetcher,
         |ctx, fetcher| {
             async move {
-                let (lower, upper) = fetcher.get_repo_bounds().await?;
+                let (lower, upper) = fetcher.get_repo_bounds(ctx).await?;
                 let mid = (upper - lower) / 2;
                 Ok(fetcher.fetch_ids(ctx, Direction::NewestFirst, Some((lower, mid))))
             }

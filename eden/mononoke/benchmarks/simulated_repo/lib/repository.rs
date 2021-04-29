@@ -25,7 +25,7 @@ use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{
-    ArcChangesets, CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets,
+    ArcChangesets, CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SortOrder,
     SqlChangesetsBuilder,
 };
 use context::CoreContext;
@@ -37,6 +37,7 @@ use filenodes::{
 };
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures::future::{FutureExt as _, TryFutureExt as _};
+use futures::stream::BoxStream;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use memblob::Memblob;
@@ -434,8 +435,34 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         self.inner.prime_cache(ctx, changesets)
     }
 
-    fn get_sql_changesets(&self) -> &SqlChangesets {
-        self.inner.get_sql_changesets()
+    async fn enumeration_bounds(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        read_from_master: bool,
+    ) -> Result<Option<(u64, u64)>, Error> {
+        self.inner
+            .enumeration_bounds(ctx, repo_id, read_from_master)
+            .await
+    }
+
+    fn list_enumeration_range(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        sort_and_limit: Option<(SortOrder, u64)>,
+        read_from_master: bool,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
+        self.inner.list_enumeration_range(
+            ctx,
+            repo_id,
+            min_id,
+            max_id,
+            sort_and_limit,
+            read_from_master,
+        )
     }
 }
 

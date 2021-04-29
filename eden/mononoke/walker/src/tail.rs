@@ -176,7 +176,7 @@ where
             heads_fetcher,
         )) = &chunk_params
         {
-            let (mut lower, mut upper) = heads_fetcher.get_repo_bounds().await?;
+            let (mut lower, mut upper) = heads_fetcher.get_repo_bounds(&ctx).await?;
             if let Some(lower_override) = tail_params.repo_lower_bound_override {
                 lower = lower_override;
             }

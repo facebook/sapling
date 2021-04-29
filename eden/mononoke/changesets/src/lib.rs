@@ -126,6 +126,12 @@ pub struct ChangesetInsert {
     pub parents: Vec<ChangesetId>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
 /// Interface to storage of changesets that have been completely stored in Mononoke.
 #[facet::facet]
 #[async_trait]
@@ -162,7 +168,43 @@ pub trait Changesets: Send + Sync {
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
 
-    fn get_sql_changesets(&self) -> &SqlChangesets;
+    /// Enumerate all public changesets in the repository.
+    ///
+    /// This retruns a pair of unique integers that are the minimum and
+    /// maxiumum unique changeset ids for this repository.
+    ///
+    /// This range can be used in subsequent calls to `list_enumeration_range`
+    /// to enumerate the changesets.
+    async fn enumeration_bounds(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        read_from_master: bool,
+    ) -> Result<Option<(u64, u64)>>;
+
+    /// Enumerate a range of public changesets in the repository.
+    ///
+    /// This lists all changesets in the given range of unique integer ids
+    /// that belong to this repositories, along with their unique integer ids.
+    /// Unique ids are assigned for all changesets (public or draft) in all
+    /// repositories, so a given range may not have any changesets for this
+    /// repository.
+    ///
+    /// The results can optionally be sorted and limited so that enumeration
+    /// can be performed in chunks for repositories with large numbers of
+    /// commits.
+    ///
+    /// Use `enumeration_bounds` to find suitable starting values for
+    /// `min_id` and `max_id`.
+    fn list_enumeration_range(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        sort_and_limit: Option<(SortOrder, u64)>,
+        read_from_master: bool,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>>;
 }
 
 #[derive(Clone)]
@@ -254,16 +296,16 @@ queries! {
         "
     }
 
-    read SelectAllChangesetsIdsInRange(repo_id: RepositoryId, min_id: u64, max_id: u64) -> (ChangesetId) {
+    read SelectAllChangesetsIdsInRange(repo_id: RepositoryId, min_id: u64, max_id: u64) -> (ChangesetId, u64) {
         mysql(
-            "SELECT cs_id
+            "SELECT cs_id, id
             FROM changesets FORCE INDEX(repo_id_id)
             WHERE repo_id = {repo_id}
             AND id BETWEEN {min_id} AND {max_id}
             ORDER BY id"
         )
         sqlite(
-            "SELECT cs_id
+            "SELECT cs_id, id
             FROM changesets
             WHERE repo_id = {repo_id}
             AND id BETWEEN {min_id} AND {max_id}
@@ -481,8 +523,60 @@ impl Changesets for SqlChangesets {
         // No-op
     }
 
-    fn get_sql_changesets(&self) -> &SqlChangesets {
-        self
+    async fn enumeration_bounds(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        read_from_master: bool,
+    ) -> Result<Option<(u64, u64)>, Error> {
+        let conn = self.read_conn(read_from_master);
+        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id).await?;
+        if rows.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some((rows[0].0, rows[0].1)))
+        }
+    }
+
+    fn list_enumeration_range(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        sort_and_limit: Option<(SortOrder, u64)>,
+        read_from_master: bool,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
+        // We expect the range [min_id, max_id), so subtract 1 from max_id as
+        // SQL request is BETWEEN, which means both bounds are inclusive.
+        let max_id = max_id - 1;
+        let conn = self.read_conn(read_from_master);
+
+        async move {
+            match sort_and_limit {
+                None => {
+                    SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id).await
+                }
+                Some((SortOrder::Ascending, limit)) => {
+                    SelectAllChangesetsIdsInRangeLimitAsc::query(
+                        &conn, &repo_id, &min_id, &max_id, &limit,
+                    )
+                    .await
+                }
+                Some((SortOrder::Descending, limit)) => {
+                    SelectAllChangesetsIdsInRangeLimitDesc::query(
+                        &conn, &repo_id, &min_id, &max_id, &limit,
+                    )
+                    .await
+                }
+            }
+        }
+        .map_ok(|rows| {
+            let changesets_ids = rows.into_iter().map(|row| Ok((row.0, row.1)));
+            stream::iter(changesets_ids)
+        })
+        .try_flatten_stream()
+        .boxed()
     }
 }
 
@@ -513,85 +607,7 @@ async fn fetch_many_by_prefix(
     Ok(result)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SortOrder {
-    Ascending,
-    Descending,
-}
-
 impl SqlChangesets {
-    pub fn get_list_bs_cs_id_in_range_exclusive(
-        &self,
-        repo_id: RepositoryId,
-        min_id: u64,
-        max_id: u64,
-        read_from_master: bool,
-    ) -> BoxStream<'_, Result<ChangesetId, Error>> {
-        // [min_id, max_id)
-        // As SQL request is BETWEEN, both bounds including
-        let max_id = max_id - 1;
-
-        let conn = self.read_conn(read_from_master);
-
-        async move { SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id).await }
-            .map_ok(move |rows| {
-                let changesets_ids = rows.into_iter().map(|row| Ok(row.0));
-                stream::iter(changesets_ids)
-            })
-            .try_flatten_stream()
-            .boxed()
-    }
-
-    pub fn get_list_bs_cs_id_in_range_exclusive_limit(
-        &self,
-        repo_id: RepositoryId,
-        min_id: u64,
-        max_id: u64,
-        limit: u64,
-        sort_order: SortOrder,
-        read_from_master: bool,
-    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
-        // [min_id, max_id)
-        // As SQL request is BETWEEN, both bounds including
-        let max_id = max_id - 1;
-
-        let conn = self.read_conn(read_from_master);
-
-        async move {
-            if sort_order == SortOrder::Ascending {
-                SelectAllChangesetsIdsInRangeLimitAsc::query(
-                    &conn, &repo_id, &min_id, &max_id, &limit,
-                )
-                .await
-            } else {
-                SelectAllChangesetsIdsInRangeLimitDesc::query(
-                    &conn, &repo_id, &min_id, &max_id, &limit,
-                )
-                .await
-            }
-        }
-        .map_ok(|rows| {
-            let changesets_ids = rows.into_iter().map(|row| Ok((row.0, row.1)));
-            stream::iter(changesets_ids)
-        })
-        .try_flatten_stream()
-        .boxed()
-    }
-
-    pub async fn get_changesets_ids_bounds(
-        &self,
-        repo_id: RepositoryId,
-        read_from_master: bool,
-    ) -> Result<(Option<u64>, Option<u64>), Error> {
-        let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id).await?;
-        if rows.is_empty() {
-            Ok((None, None))
-        } else {
-            Ok((Some(rows[0].0), Some(rows[0].1)))
-        }
-    }
-
     fn read_conn(&self, read_from_master: bool) -> &Connection {
         if read_from_master {
             &self.read_master_connection.conn

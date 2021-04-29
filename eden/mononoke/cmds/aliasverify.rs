@@ -23,7 +23,7 @@ use slog::{debug, info, Logger};
 
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, Storable};
-use changesets::{SqlChangesets, SqlChangesetsBuilder};
+use changesets::ChangesetsRef;
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,
@@ -52,33 +52,22 @@ enum Mode {
     Generate,
 }
 
-/// We are creating a separate object for SqlChangeset access, as we have added a specific
-/// function to get all the ChangesetId. It is not a part of Changesets trait.
-/// But blobrepo could provide us with Changesets object.
 #[derive(Clone)]
 struct AliasVerification {
     logger: Logger,
     blobrepo: BlobRepo,
     repoid: RepositoryId,
-    sqlchangesets: Arc<SqlChangesets>,
     mode: Mode,
     err_cnt: Arc<AtomicUsize>,
     cs_processed: Arc<AtomicUsize>,
 }
 
 impl AliasVerification {
-    pub fn new(
-        logger: Logger,
-        blobrepo: BlobRepo,
-        repoid: RepositoryId,
-        sqlchangesets: Arc<SqlChangesets>,
-        mode: Mode,
-    ) -> Self {
+    pub fn new(logger: Logger, blobrepo: BlobRepo, repoid: RepositoryId, mode: Mode) -> Self {
         Self {
             logger,
             blobrepo,
             repoid,
-            sqlchangesets,
             mode,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
@@ -220,15 +209,17 @@ impl AliasVerification {
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
 
-        let bcs_ids = self.sqlchangesets.get_list_bs_cs_id_in_range_exclusive(
+        let bcs_ids = self.blobrepo.changesets().list_enumeration_range(
+            ctx,
             self.repoid,
             min_id,
             max_id,
+            None,
             true,
         );
 
         bcs_ids
-            .and_then(move |bcs_id| async move {
+            .and_then(move |(bcs_id, _)| async move {
                 let file_changes_vec = self.get_file_changes_vector(ctx, bcs_id).await?;
                 Ok(stream::iter(file_changes_vec).map(Ok))
             })
@@ -254,13 +245,15 @@ impl AliasVerification {
         min_cs_db_id: u64,
     ) -> Result<(), Error> {
         let (min_id, max_id) = self
-            .sqlchangesets
-            .get_changesets_ids_bounds(self.repoid, true)
-            .await?;
+            .blobrepo
+            .changesets()
+            .enumeration_bounds(ctx, self.repoid, true)
+            .await?
+            .unwrap();
 
         let mut bounds = vec![];
-        let mut cur_id = cmp::max(min_id.unwrap(), min_cs_db_id);
-        let max_id = max_id.unwrap() + 1;
+        let mut cur_id = cmp::max(min_id, min_cs_db_id);
+        let max_id = max_id + 1;
         while cur_id < max_id {
             let max = cmp::min(max_id, cur_id + step);
             bounds.push((cur_id, max));
@@ -315,18 +308,10 @@ async fn run_aliasverify<'a>(
     matches: &'a MononokeMatches<'a>,
     mode: Mode,
 ) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let sqlchangesets = args::open_sql::<SqlChangesetsBuilder>(fb, config_store, matches)?;
     let blobrepo = args::open_repo(fb, &logger, matches).await?;
-    AliasVerification::new(
-        logger.clone(),
-        blobrepo,
-        repoid,
-        Arc::new(sqlchangesets.build(matches.environment().rendezvous_options)),
-        mode,
-    )
-    .verify_all(&ctx, step, min_cs_db_id)
-    .await
+    AliasVerification::new(logger.clone(), blobrepo, repoid, mode)
+        .verify_all(&ctx, step, min_cs_db_id)
+        .await
 }
 
 #[fbinit::main]

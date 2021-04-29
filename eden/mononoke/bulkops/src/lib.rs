@@ -88,7 +88,6 @@ impl PublicChangesetBulkFetch {
         ctx: &'a CoreContext,
         d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
-        let changesets = self.changesets.get_sql_changesets();
         let repo_id = self.repo_id;
         async move {
             let s = self
@@ -100,7 +99,8 @@ impl PublicChangesetBulkFetch {
                             .into_iter()
                             .map(|r| r.map(|(id, _bounds)| id))
                             .collect::<Result<Vec<_>, Error>>()?;
-                        let entries = changesets
+                        let entries = self
+                            .changesets
                             .get_many(ctx.clone(), repo_id, ids.clone())
                             .await?;
                         let mut entries_map: HashMap<_, _> =
@@ -129,13 +129,12 @@ impl PublicChangesetBulkFetch {
         d: Direction,
         repo_bounds: Option<(u64, u64)>,
     ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
-        let changesets = self.changesets.clone();
         let phases = self.phases.get_store();
         let repo_id = self.repo_id;
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
             future::ok(repo_bounds).left_future()
         } else {
-            self.get_repo_bounds().right_future()
+            self.get_repo_bounds(ctx).right_future()
         };
         let step = self.step;
         let read_from_master = self.read_from_master;
@@ -146,19 +145,18 @@ impl PublicChangesetBulkFetch {
                 Some(repo_bounds.await?),
                 // Returns ids plus next bounds to query, if any
                 move |(lower, upper): (u64, u64)| {
-                    let changesets = changesets.clone();
                     async move {
                         let next = {
-                            let changesets = changesets.clone();
+                            let ctx = ctx.clone();
+                            let changesets = self.changesets.clone();
                             async move {
-                                let changesets = changesets.get_sql_changesets();
                                 let results: Vec<_> = changesets
-                                    .get_list_bs_cs_id_in_range_exclusive_limit(
+                                    .list_enumeration_range(
+                                        &ctx,
                                         repo_id,
                                         lower,
                                         upper,
-                                        step,
-                                        d.sort_order(),
+                                        Some((d.sort_order(), step)),
                                         read_from_master,
                                     )
                                     .try_collect()
@@ -217,15 +215,17 @@ impl PublicChangesetBulkFetch {
         .try_flatten_stream()
     }
 
-    /// Get the repo bounds as max/min observed suitable for rust ranges (hence the + 1)
-    pub async fn get_repo_bounds(&self) -> Result<(u64, u64), Error> {
-        let changesets = self.changesets.get_sql_changesets();
-        let (start, stop) = changesets
-            .get_changesets_ids_bounds(self.repo_id, self.read_from_master)
+    /// Get the repo bounds as max/min observed suitable for rust ranges
+    pub async fn get_repo_bounds(&self, ctx: &CoreContext) -> Result<(u64, u64), Error> {
+        let bounds = self
+            .changesets
+            .enumeration_bounds(ctx, self.repo_id, self.read_from_master)
             .await?;
-        let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
-        let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-        Ok((start, stop))
+        match bounds {
+            // Add one to make the range half-open: [min, max).
+            Some((min_id, max_id)) => Ok((min_id, max_id + 1)),
+            None => Err(Error::msg("changesets table is empty")),
+        }
     }
 }
 
@@ -353,7 +353,7 @@ mod tests {
         for (step, dir, expected_completed) in expectations.iter() {
             let fetcher = build_fetcher(*step, &blobrepo)?;
 
-            let repo_bounds: (u64, u64) = fetcher.get_repo_bounds().await?;
+            let repo_bounds: (u64, u64) = fetcher.get_repo_bounds(&ctx).await?;
             assert_eq!((1, 8), repo_bounds);
 
             let completed: Vec<(u64, u64)> = fetcher

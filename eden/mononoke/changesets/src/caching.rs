@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
+use super::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -17,6 +17,7 @@ use changeset_entry_thrift as thrift;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
+use futures::stream::BoxStream;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
@@ -167,8 +168,34 @@ impl Changesets for CachingChangesets {
         }
     }
 
-    fn get_sql_changesets(&self) -> &SqlChangesets {
-        self.changesets.get_sql_changesets()
+    async fn enumeration_bounds(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        read_from_master: bool,
+    ) -> Result<Option<(u64, u64)>, Error> {
+        self.changesets
+            .enumeration_bounds(ctx, repo_id, read_from_master)
+            .await
+    }
+
+    fn list_enumeration_range(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        sort_and_limit: Option<(SortOrder, u64)>,
+        read_from_master: bool,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
+        self.changesets.list_enumeration_range(
+            ctx,
+            repo_id,
+            min_id,
+            max_id,
+            sort_and_limit,
+            read_from_master,
+        )
     }
 }
 

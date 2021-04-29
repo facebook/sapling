@@ -7,10 +7,12 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{channel::mpsc::Sender, sink::SinkExt};
+use futures::channel::mpsc::Sender;
+use futures::sink::SinkExt;
+use futures::stream::BoxStream;
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
@@ -96,7 +98,33 @@ impl Changesets for MicrowaveChangesets {
         self.inner.prime_cache(ctx, changesets)
     }
 
-    fn get_sql_changesets(&self) -> &SqlChangesets {
-        self.inner.get_sql_changesets()
+    async fn enumeration_bounds(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        read_from_master: bool,
+    ) -> Result<Option<(u64, u64)>, Error> {
+        self.inner
+            .enumeration_bounds(ctx, repo_id, read_from_master)
+            .await
+    }
+
+    fn list_enumeration_range(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        sort_and_limit: Option<(SortOrder, u64)>,
+        read_from_master: bool,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
+        self.inner.list_enumeration_range(
+            ctx,
+            repo_id,
+            min_id,
+            max_id,
+            sort_and_limit,
+            read_from_master,
+        )
     }
 }
