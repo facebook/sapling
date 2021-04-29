@@ -81,10 +81,25 @@ struct FileInodeState {
 
   Tag tag;
 
+  struct NonMaterializedState {
+    Hash hash;
+
+    /**
+     * Cached size to speedup FileInode::stat calls. The max uint64_t value is
+     * used to represent a non-cached size, this is used instead of a
+     * std::optional to save 8 bytes.
+     */
+    static constexpr uint64_t kUnknownSize =
+        std::numeric_limits<uint64_t>::max();
+    uint64_t size{kUnknownSize};
+
+    explicit NonMaterializedState(const Hash& hash) : hash(hash) {}
+  };
+
   /**
    * Set only in 'not loading' and 'loading' states. std::nullopt otherwise.
    */
-  std::optional<Hash> hash;
+  std::optional<NonMaterializedState> nonMaterializedState;
 
   /**
    * Set if 'loading'. Unset when load completes.
