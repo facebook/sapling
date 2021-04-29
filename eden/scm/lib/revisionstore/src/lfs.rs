@@ -38,7 +38,7 @@ use tokio::{
     task::spawn_blocking,
     time::{sleep, timeout},
 };
-use tracing::info_span;
+use tracing::{info_span, trace_span, Instrument};
 use url::Url;
 
 use async_runtime::block_on_exclusive as block_on_future;
@@ -108,6 +108,7 @@ struct HttpOptions {
     user_agent: String,
     auth: Option<AuthGroup>,
     backoff_times: Vec<f32>,
+    throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
 }
 
@@ -969,147 +970,172 @@ impl LfsRemoteInner {
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
     ) -> Result<Bytes, FetchError> {
-        let mut backoff = http_options.backoff_times.iter().copied();
-        let mut rng = thread_rng();
-        let mut attempt = 0;
+        let span = trace_span!("LfsRemoteInner::send_with_retry", url = %url);
 
-        loop {
-            attempt += 1;
+        async move {
+            let mut backoff = http_options.backoff_times.iter().copied();
+            let mut throttle_backoff = http_options.throttle_backoff_times.iter().copied();
+            let mut rng = thread_rng();
+            let mut attempt = 0;
 
-            let mut req = Request::new(url.clone(), method)
-                .header("Accept", "application/vnd.git-lfs+json")
-                .header("Content-Type", "application/vnd.git-lfs+json")
-                .header("User-Agent", &http_options.user_agent)
-                .header("X-Attempt", attempt.to_string())
-                .http_version(http_options.http_version);
+            loop {
+                attempt += 1;
 
-            if let Some(ref correlator) = http_options.correlator {
-                req.set_header("X-Client-Correlator", correlator.clone());
-            }
+                let mut req = Request::new(url.clone(), method)
+                    .header("Accept", "application/vnd.git-lfs+json")
+                    .header("Content-Type", "application/vnd.git-lfs+json")
+                    .header("User-Agent", &http_options.user_agent)
+                    .header("X-Attempt", attempt.to_string())
+                    .header("X-Attempts-Left", backoff.len().to_string())
+                    .header(
+                        "X-Throttle-Attempts-Left",
+                        throttle_backoff.len().to_string(),
+                    )
+                    .http_version(http_options.http_version);
 
-            if http_options.accept_zstd {
-                req.set_header("Accept-Encoding", "zstd");
-            }
-
-            if let Some(mts) = http_options.min_transfer_speed {
-                req.set_min_transfer_speed(mts);
-            }
-
-            if let Some(auth) = &http_options.auth {
-                if let Some(cert) = &auth.cert {
-                    req.set_cert(cert);
+                if let Some(ref correlator) = http_options.correlator {
+                    req.set_header("X-Client-Correlator", correlator.clone());
                 }
-                if let Some(key) = &auth.key {
-                    req.set_key(key);
+
+                if http_options.accept_zstd {
+                    req.set_header("Accept-Encoding", "zstd");
                 }
-                if let Some(ca) = &auth.cacerts {
-                    req.set_cainfo(ca);
+
+                if let Some(mts) = http_options.min_transfer_speed {
+                    req.set_min_transfer_speed(mts);
                 }
-            }
 
-            let res = async {
-                let request_timeout = http_options.request_timeout;
-
-                let req = add_extra(req);
-
-                let (mut stream, _) = client.send_async(vec![req])?;
-
-                let reply = timeout(request_timeout, stream.next())
-                    .await
-                    .map_err(|_| TransferError::Timeout(request_timeout))?;
-
-                let reply = match reply {
-                    Some(r) => r?,
-                    None => {
-                        return Err(TransferError::EndOfStream);
+                if let Some(auth) = &http_options.auth {
+                    if let Some(cert) = &auth.cert {
+                        req.set_cert(cert);
                     }
-                };
-
-                let status = reply.status;
-                let headers = reply.headers;
-
-                if !status.is_success() {
-                    return Err(TransferError::HttpStatus(status));
+                    if let Some(key) = &auth.key {
+                        req.set_key(key);
+                    }
+                    if let Some(ca) = &auth.cacerts {
+                        req.set_cainfo(ca);
+                    }
                 }
 
-                check_status(status)?;
+                let res = async {
+                    let request_timeout = http_options.request_timeout;
 
-                let start = Instant::now();
-                let mut body = reply.body;
-                let mut chunks: Vec<Vec<u8>> = vec![];
-                while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
-                    let chunk = res.map_err(|_| {
-                        let request_id = headers
-                            .get("x-request-id")
-                            .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
-                            .unwrap_or("?")
-                            .into();
-                        let bytes = chunks.iter().fold(0, |acc, c| acc + c.len());
-                        let elapsed = start.elapsed().as_millis();
-                        TransferError::ChunkTimeout {
-                            timeout: request_timeout,
-                            bytes,
-                            elapsed,
-                            request_id,
+                    let req = add_extra(req);
+
+                    let (mut stream, _) = client.send_async(vec![req])?;
+
+                    let reply = timeout(request_timeout, stream.next())
+                        .await
+                        .map_err(|_| TransferError::Timeout(request_timeout))?;
+
+                    let reply = match reply {
+                        Some(r) => r?,
+                        None => {
+                            return Err(TransferError::EndOfStream);
                         }
-                    })??;
+                    };
 
-                    chunks.push(chunk);
-                }
+                    let status = reply.status;
+                    let headers = reply.headers;
 
-                let result = join_chunks(&chunks);
-
-                let content_encoding = headers.get("Content-Encoding");
-
-                let result = match content_encoding
-                    .map(|c| std::str::from_utf8(c.as_bytes()))
-                    .transpose()
-                    .with_context(|| format!("Invalid Content-Encoding: {:?}", content_encoding))
-                    .map_err(TransferError::InvalidResponse)?
-                {
-                    Some("identity") | None => result,
-                    Some("zstd") => Bytes::from(
-                        zstd::stream::decode_all(Cursor::new(&result))
-                            .context("Error decoding zstd stream")
-                            .map_err(TransferError::InvalidResponse)?,
-                    ),
-                    Some(other) => {
-                        return Err(TransferError::InvalidResponse(format_err!(
-                            "Unsupported Content-Encoding: {}",
-                            other
-                        )));
+                    if !status.is_success() {
+                        return Err(TransferError::HttpStatus(status));
                     }
+
+                    check_status(status)?;
+
+                    let start = Instant::now();
+                    let mut body = reply.body;
+                    let mut chunks: Vec<Vec<u8>> = vec![];
+                    while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
+                        let chunk = res.map_err(|_| {
+                            let request_id = headers
+                                .get("x-request-id")
+                                .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
+                                .unwrap_or("?")
+                                .into();
+                            let bytes = chunks.iter().fold(0, |acc, c| acc + c.len());
+                            let elapsed = start.elapsed().as_millis();
+                            TransferError::ChunkTimeout {
+                                timeout: request_timeout,
+                                bytes,
+                                elapsed,
+                                request_id,
+                            }
+                        })??;
+
+                        chunks.push(chunk);
+                    }
+
+                    let result = join_chunks(&chunks);
+
+                    let content_encoding = headers.get("Content-Encoding");
+
+                    let result = match content_encoding
+                        .map(|c| std::str::from_utf8(c.as_bytes()))
+                        .transpose()
+                        .with_context(|| {
+                            format!("Invalid Content-Encoding: {:?}", content_encoding)
+                        })
+                        .map_err(TransferError::InvalidResponse)?
+                    {
+                        Some("identity") | None => result,
+                        Some("zstd") => Bytes::from(
+                            zstd::stream::decode_all(Cursor::new(&result))
+                                .context("Error decoding zstd stream")
+                                .map_err(TransferError::InvalidResponse)?,
+                        ),
+                        Some(other) => {
+                            return Err(TransferError::InvalidResponse(format_err!(
+                                "Unsupported Content-Encoding: {}",
+                                other
+                            )));
+                        }
+                    };
+
+                    Result::<_, TransferError>::Ok(result)
+                }
+                .await;
+
+                let error = match res {
+                    Ok(res) => return Ok(res),
+                    Err(error) => error,
                 };
 
-                Result::<_, TransferError>::Ok(result)
-            }
-            .await;
+                let retry_strategy = match &error {
+                    TransferError::HttpStatus(status) => RetryStrategy::from_http_status(*status),
+                    TransferError::HttpClientError(http_error) => {
+                        RetryStrategy::from_http_error(&http_error)
+                    }
+                    TransferError::EndOfStream => RetryStrategy::NoRetry,
+                    TransferError::Timeout(..) => RetryStrategy::NoRetry,
+                    TransferError::ChunkTimeout { .. } => RetryStrategy::NoRetry,
+                    TransferError::UnexpectedHttpStatus { .. } => RetryStrategy::NoRetry,
+                    TransferError::InvalidResponse(..) => RetryStrategy::NoRetry,
+                };
 
-            let error = match res {
-                Ok(res) => return Ok(res),
-                Err(error) => error,
-            };
+                let backoff_time = match retry_strategy {
+                    RetryStrategy::RetryError => backoff.next(),
+                    RetryStrategy::RetryThrottled => throttle_backoff.next(),
+                    RetryStrategy::NoRetry => None,
+                };
 
-            let retry = match &error {
-                TransferError::HttpStatus(status) => should_retry_http_status(*status),
-                TransferError::HttpClientError(http_error) => should_retry_http_error(&http_error),
-                TransferError::EndOfStream => false,
-                TransferError::Timeout(..) => false,
-                TransferError::ChunkTimeout { .. } => false,
-                TransferError::UnexpectedHttpStatus { .. } => false,
-                TransferError::InvalidResponse(..) => false,
-            };
-
-            if retry {
-                if let Some(backoff_time) = backoff.next() {
+                if let Some(backoff_time) = backoff_time {
                     let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
+                    tracing::debug!(
+                        sleep_time = ?sleep_time,
+                        retry_strategy = ?retry_strategy,
+                        "retry",
+                    );
                     sleep(sleep_time).await;
                     continue;
                 }
-            }
 
-            return Err(FetchError { url, method, error }.into());
+                return Err(FetchError { url, method, error });
+            }
         }
+        .instrument(span)
+        .await
     }
 
     fn send_batch_request(
@@ -1419,6 +1445,16 @@ impl LfsRemote {
 
             let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
 
+            // Backoff throtling is a lot more aggressive. This is here to mitigate large surges in
+            // downloads when new LFS content is checked in. There's no way to eliminate those
+            // without seriously overprovisioning. Retrying for a longer period of time is simply a
+            // way to wait until whatever surge of traffic is happening ends.
+            let throttle_backoff_times = config.get_or("lfs", "throttlebackofftimes", || {
+                vec![
+                    1f32, 4f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32, 8f32,
+                ]
+            })?;
+
             let request_timeout =
                 Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
 
@@ -1467,6 +1503,7 @@ impl LfsRemote {
                         correlator,
                         user_agent,
                         backoff_times,
+                        throttle_backoff_times,
                         request_timeout,
                         auth,
                     },
@@ -1792,31 +1829,42 @@ impl LocalStore for LfsFallbackRemoteStore {
     }
 }
 
-fn should_retry_http_status(status: StatusCode) -> bool {
-    if status == StatusCode::SERVICE_UNAVAILABLE {
-        return false;
-    }
-
-    if status == StatusCode::TOO_MANY_REQUESTS {
-        return true;
-    }
-
-    if status.is_server_error() {
-        return true;
-    }
-
-    false
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum RetryStrategy {
+    RetryError,
+    RetryThrottled,
+    NoRetry,
 }
 
-fn should_retry_http_error(error: &HttpClientError) -> bool {
-    match error {
-        HttpClientError::Curl(e) => {
-            e.is_couldnt_resolve_host()
+impl RetryStrategy {
+    pub fn from_http_status(status: StatusCode) -> Self {
+        if status == StatusCode::SERVICE_UNAVAILABLE {
+            return Self::NoRetry;
+        }
+
+        if status == StatusCode::TOO_MANY_REQUESTS {
+            return Self::RetryThrottled;
+        }
+
+        if status.is_server_error() {
+            return Self::RetryError;
+        }
+
+        Self::NoRetry
+    }
+
+    pub fn from_http_error(error: &HttpClientError) -> Self {
+        if let HttpClientError::Curl(ref e) = error {
+            if e.is_couldnt_resolve_host()
                 || e.is_operation_timedout()
                 || e.is_send_error()
                 || e.is_recv_error()
+            {
+                return Self::RetryError;
+            }
         }
-        _ => false,
+
+        Self::NoRetry
     }
 }
 
@@ -3009,16 +3057,43 @@ mod tests {
 
     #[test]
     fn test_should_retry() {
-        assert!(!should_retry_http_status(StatusCode::CONTINUE));
-        assert!(!should_retry_http_status(StatusCode::OK));
-        assert!(!should_retry_http_status(StatusCode::MOVED_PERMANENTLY));
-        assert!(!should_retry_http_status(StatusCode::BAD_REQUEST));
-        assert!(!should_retry_http_status(StatusCode::NOT_ACCEPTABLE));
-        assert!(!should_retry_http_status(StatusCode::SERVICE_UNAVAILABLE));
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::CONTINUE),
+            RetryStrategy::NoRetry
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::OK),
+            RetryStrategy::NoRetry
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::MOVED_PERMANENTLY),
+            RetryStrategy::NoRetry
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::BAD_REQUEST),
+            RetryStrategy::NoRetry
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::NOT_ACCEPTABLE),
+            RetryStrategy::NoRetry
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::SERVICE_UNAVAILABLE),
+            RetryStrategy::NoRetry
+        );
 
-        assert!(should_retry_http_status(StatusCode::INTERNAL_SERVER_ERROR));
-        assert!(should_retry_http_status(StatusCode::BAD_GATEWAY));
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::INTERNAL_SERVER_ERROR),
+            RetryStrategy::RetryError
+        );
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::BAD_GATEWAY),
+            RetryStrategy::RetryError
+        );
 
-        assert!(should_retry_http_status(StatusCode::TOO_MANY_REQUESTS));
+        assert_eq!(
+            RetryStrategy::from_http_status(StatusCode::TOO_MANY_REQUESTS),
+            RetryStrategy::RetryThrottled
+        );
     }
 }
