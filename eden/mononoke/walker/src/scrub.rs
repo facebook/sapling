@@ -13,7 +13,8 @@ use crate::progress::{
     ProgressStateCountByType, ProgressStateMutex,
 };
 use crate::sampling::{
-    SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime, WalkSampleMapping,
+    PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
+    WalkSampleMapping,
 };
 use crate::setup::{
     parse_node_types, parse_pack_info_log_args, parse_progress_args, parse_sampling_args,
@@ -123,7 +124,6 @@ where
     L: PackInfoLogger + 'static + Send,
 {
     s.map_ok(move |(walk_key, payload, _progress_stats)| {
-        let n = walk_key.node;
         match payload.data {
             Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
                 if !limit_data_fetch =>
@@ -132,9 +132,9 @@ where
                 file_bytes_stream
                     .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
                     .map_ok(move |num_bytes| {
-                        let sample = sampler.complete_step(&n);
+                        let sample = sampler.complete_step(&walk_key.node);
                         (
-                            n,
+                            walk_key,
                             Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
                             Some(sample),
                         )
@@ -143,46 +143,53 @@ where
                     .left_future()
             }
             data_opt => {
-                if output_node_types.contains(&n.get_type()) {
+                if output_node_types.contains(&walk_key.node.get_type()) {
                     match output_format {
-                        OutputFormat::Debug => println!("Node {:?}: NodeData: {:?}", n, data_opt),
+                        OutputFormat::Debug => {
+                            println!("Node {:?}: NodeData: {:?}", walk_key.node, data_opt)
+                        }
                         // Keep Node as non-Pretty so its on same line
                         OutputFormat::PrettyDebug => {
-                            println!("Node {:?}: NodeData: {:#?}", n, data_opt)
+                            println!("Node {:?}: NodeData: {:#?}", walk_key.node, data_opt)
                         }
                     }
                 }
-                let sample = data_opt.as_ref().map(|_d| sampler.complete_step(&n));
-                future::ok((n, data_opt, sample)).right_future()
+                let sample = data_opt
+                    .as_ref()
+                    .map(|_d| sampler.complete_step(&walk_key.node));
+                future::ok((walk_key, data_opt, sample)).right_future()
             }
         }
     })
     .try_buffer_unordered(scheduled_max)
-    .map_ok(move |(n, data_opt, sample)| {
+    .map_ok(move |(walk_key, data_opt, sample)| {
         let size = if let Some(sample) = sample {
             let size = ScrubStats::from(sample.as_ref());
             if let Some(logger) = pack_info_logger.as_ref() {
-                record_for_packer(logger, &n, sample);
+                record_for_packer(logger, &walk_key, sample);
             }
             Some(size)
         } else {
             None
         };
-        (n, data_opt, size)
+        (walk_key.node, data_opt, size)
     })
 }
 
-fn record_for_packer<L>(logger: &L, n: &Node, sample: Option<ScrubSample>)
-where
+fn record_for_packer<L>(
+    logger: &L,
+    walk_key: &WalkKeyOptPath<WrappedPathHash>,
+    sample: Option<ScrubSample>,
+) where
     L: PackInfoLogger,
 {
     if let Some(sample) = sample {
         for (blobstore_key, uncompressed_size) in sample.data {
             logger.log(PackInfo {
                 blobstore_key,
-                node_type: n.get_type(),
-                node_fingerprint: n.sampling_fingerprint(),
-                similarity_key: n.stats_path().map(|p| p.sampling_fingerprint()),
+                node_type: walk_key.node.get_type(),
+                node_fingerprint: walk_key.node.sampling_fingerprint(),
+                similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
                 relatedness_key: None, // TODO(ahornby) track mtime like in corpus
                 uncompressed_size,
             })
@@ -493,17 +500,30 @@ async fn run_one(
     let type_params = RepoWalkTypeParams {
         required_node_data_types,
         always_emit_edge_types: HashSet::new(),
-        keep_edge_paths: false,
+        keep_edge_paths: command.pack_info_log_options.is_some(),
     };
 
-    walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
-        fb,
-        job_params,
-        repo_params,
-        type_params,
-        sub_params.tail_params,
-        walk_state,
-        make_sink,
-    )
-    .await
+    if command.pack_info_log_options.is_some() {
+        walk_exact_tail::<_, _, _, _, _, PathTrackingRoute<WrappedPathHash>>(
+            fb,
+            job_params,
+            repo_params,
+            type_params,
+            sub_params.tail_params,
+            walk_state,
+            make_sink,
+        )
+        .await
+    } else {
+        walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
+            fb,
+            job_params,
+            repo_params,
+            type_params,
+            sub_params.tail_params,
+            walk_state,
+            make_sink,
+        )
+        .await
+    }
 }
