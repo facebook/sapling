@@ -171,10 +171,10 @@ void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
       break;
     }
 
-    DestructorGuard guard(this);
-    folly::via(
-        threadPool_.get(),
-        [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
+    // Send the work to a thread pool to increase the number of inflight
+    // requests that can be handled concurrently.
+    threadPool_->add(
+        [this, buf = std::move(buf), guard = DestructorGuard(this)]() mutable {
           XLOG(DBG8) << "Received:\n"
                      << folly::hexDump(buf->data(), buf->length());
           auto data = buf->data();
