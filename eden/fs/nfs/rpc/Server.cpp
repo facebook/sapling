@@ -26,17 +26,42 @@ namespace eden {
 
 namespace {
 class RpcTcpHandler : public folly::DelayedDestruction {
-  struct Reader : public folly::AsyncReader::ReadCallback {
-    RpcTcpHandler* handler_;
-    DestructorGuard guard_;
+ public:
+  using UniquePtr =
+      std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
 
-    void deleteMe() {
-      handler_->resetReader();
-    }
+  /**
+   * Build a RpcTcpHandler.
+   *
+   * When the returned UniquePtr is dropped, this class will stay alive until
+   * the client drops the connection, at which time the memory will be released
+   * and the socket will be closed.
+   */
+  template <class... Args>
+  static UniquePtr create(Args&&... args) {
+    return UniquePtr(
+        new RpcTcpHandler(std::forward<Args>(args)...),
+        folly::DelayedDestruction::Destructor());
+  }
 
+ private:
+  RpcTcpHandler(
+      std::shared_ptr<RpcServerProcessor> proc,
+      AsyncSocket::UniquePtr&& socket,
+      std::shared_ptr<folly::Executor> threadPool)
+      : proc_(proc),
+        sock_(std::move(socket)),
+        threadPool_(std::move(threadPool)),
+        reader_(std::make_unique<Reader>(this)) {
+    sock_->setReadCB(reader_.get());
+  }
+
+  class Reader : public folly::AsyncReader::ReadCallback {
+   public:
     explicit Reader(RpcTcpHandler* handler)
         : handler_(handler), guard_(handler_) {}
 
+   private:
     void getReadBuffer(void** bufP, size_t* lenP) override {
       auto [buf, len] = handler_->readBuf_.preallocate(64, 64 * 1024);
       *lenP = len;
@@ -59,6 +84,10 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       handler_->tryConsumeReadBuffer();
     }
 
+    void deleteMe() {
+      handler_->resetReader();
+    }
+
     void readEOF() noexcept override {
       deleteMe();
     }
@@ -67,11 +96,16 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       XLOG(ERR) << "Error while reading: " << folly::exceptionStr(ex);
       deleteMe();
     }
+
+    RpcTcpHandler* handler_;
+    DestructorGuard guard_;
   };
 
-  struct Writer : public folly::AsyncWriter::WriteCallback {
+  class Writer : public folly::AsyncWriter::WriteCallback {
+   public:
     Writer() = default;
 
+   private:
     void writeSuccess() noexcept override {}
 
     void writeErr(
@@ -81,105 +115,33 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     }
   };
 
+  /**
+   * Parse the buffer that was just read from the socket. Complete RPC buffers
+   * will be dispatched to the RpcServerProcessor.
+   */
+  void tryConsumeReadBuffer() noexcept;
+
+  /**
+   * Delete the reader, called when the socket is closed.
+   */
+  void resetReader() {
+    reader_.reset();
+  }
+
+  /**
+   * Try to read one request from the buffer.
+   *
+   * Return a nullptr if no complete RPC request can be read.
+   */
+  std::unique_ptr<folly::IOBuf> readOneRequest() noexcept;
+
+  /**
+   * Dispatch the RPC request contained in the input buffer to the
+   * RpcServerProcessor.
+   */
   void dispatchAndReply(
       std::unique_ptr<folly::IOBuf> input,
-      DestructorGuard guard) {
-    folly::makeFutureWith([this, input = std::move(input)]() mutable {
-      folly::io::Cursor deser(input.get());
-      rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
-
-      auto resultBuf = std::make_unique<folly::IOBufQueue>(
-          folly::IOBufQueue::cacheChainLength());
-      folly::io::QueueAppender ser(resultBuf.get(), 1024);
-      XdrTrait<uint32_t>::serialize(
-          ser, 0); // reserve space for fragment header
-
-      if (call.cbody.rpcvers != kRPCVersion) {
-        rpc_msg_reply reply{
-            call.xid,
-            msg_type::REPLY,
-            reply_body{{
-                reply_stat::MSG_DENIED,
-                rejected_reply{{
-                    reject_stat::RPC_MISMATCH,
-                    mismatch_info{kRPCVersion, kRPCVersion},
-                }},
-            }},
-        };
-
-        XdrTrait<rpc_msg_reply>::serialize(ser, reply);
-
-        return folly::makeFuture(std::move(resultBuf));
-      }
-
-      if (auto auth = proc_->checkAuthentication(call.cbody);
-          auth != auth_stat::AUTH_OK) {
-        rpc_msg_reply reply{
-            call.xid,
-            msg_type::REPLY,
-            reply_body{{
-                reply_stat::MSG_DENIED,
-                rejected_reply{{
-                    reject_stat::AUTH_ERROR,
-                    auth,
-                }},
-            }},
-        };
-
-        XdrTrait<rpc_msg_reply>::serialize(ser, reply);
-
-        return folly::makeFuture(std::move(resultBuf));
-      }
-
-      auto fut = proc_->dispatchRpc(
-          std::move(deser),
-          std::move(ser),
-          call.xid,
-          call.cbody.prog,
-          call.cbody.vers,
-          call.cbody.proc);
-
-      return std::move(fut).then(
-          [keepInputAlive = std::move(input),
-           resultBuffer = std::move(resultBuf),
-           call = std::move(call)](folly::Try<folly::Unit> result) mutable {
-            if (result.hasException()) {
-              // XXX: shrink resultBuffer and serialize a SYSTEM_ERR into it
-              XLOGF(
-                  WARN,
-                  "Server failed to dispatch proc {} to {}:{}: {}",
-                  call.cbody.proc,
-                  call.cbody.prog,
-                  call.cbody.vers,
-                  folly::exceptionStr(*result.exception().get_exception()));
-            }
-
-            return std::move(resultBuffer);
-          });
-    })
-        .via(this->sock_->getEventBase())
-        .then([this, guard = std::move(guard)](
-                  folly::Try<std::unique_ptr<folly::IOBufQueue>> result) {
-          if (result.hasException()) {
-            // XXX: This should never happen.
-          } else {
-            auto& iobufQueue = result.value();
-            auto chainLength = iobufQueue->chainLength();
-            auto resultBuffer = iobufQueue->move();
-
-            // Fill out the fragment header.
-            auto len = uint32_t(chainLength - sizeof(uint32_t));
-            auto fragment = (uint32_t*)resultBuffer->writableData();
-            *fragment = folly::Endian::big(len | 0x80000000);
-
-            XLOG(DBG8) << "Sending:\n"
-                       << folly::hexDump(
-                              resultBuffer->data(), resultBuffer->length());
-
-            sock_->writeChain(&writer_, std::move(resultBuffer));
-          }
-        });
-  }
+      DestructorGuard guard);
 
   std::shared_ptr<RpcServerProcessor> proc_;
   AsyncSocket::UniquePtr sock_;
@@ -187,81 +149,174 @@ class RpcTcpHandler : public folly::DelayedDestruction {
   std::unique_ptr<Reader> reader_;
   Writer writer_{};
   folly::IOBufQueue readBuf_{folly::IOBufQueue::cacheChainLength()};
+};
 
- public:
-  RpcTcpHandler(
-      std::shared_ptr<RpcServerProcessor> proc,
-      AsyncSocket::UniquePtr&& socket,
-      std::shared_ptr<folly::Executor> threadPool)
-      : proc_(proc),
-        sock_(std::move(socket)),
-        threadPool_(std::move(threadPool)),
-        reader_(std::make_unique<Reader>(this)) {}
+void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
+  // Iterate over all the complete fragments and dispatch these to the
+  // threadPool_.
+  while (true) {
+    auto buf = readOneRequest();
+    if (!buf) {
+      break;
+    }
 
-  void resetReader() {
-    reader_.reset();
-  }
+    DestructorGuard guard(this);
+    folly::via(
+        threadPool_.get(),
+        [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
+          buf->coalesce();
 
-  void setup() {
-    sock_->setReadCB(reader_.get());
-  }
+          XLOG(DBG8) << "Received:\n"
+                     << folly::hexDump(buf->data(), buf->length());
 
-  void tryConsumeReadBuffer() noexcept {
-    // Iterate over all the complete fragments and dispatch these to the
-    // threadPool_. Stop when we can no longer read the uin32_t that indicate
-    // the size of the fragment.
-    while (readBuf_.chainLength() >= sizeof(uint32_t)) {
-      folly::io::Cursor c(readBuf_.front());
-      while (true) {
-        auto fragmentHeader = c.readBE<uint32_t>();
-        auto len = fragmentHeader & 0x7fffffff;
-        bool isLast = (fragmentHeader & 0x80000000) != 0;
-        if (!c.canAdvance(len)) {
-          // we don't have a complete request, so try again later
-          return;
-        }
-        c.skip(len);
-        if (isLast) {
-          break;
-        }
-      }
-
-      auto buf = readBuf_.split(c.getCurrentPosition());
-
-      DestructorGuard guard(this);
-      folly::via(
-          threadPool_.get(),
-          [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
-            buf->coalesce();
-
-            XLOG(DBG8) << "Received:\n"
-                       << folly::hexDump(buf->data(), buf->length());
-
-            // Remove the fragment framing from the buffer
-            // XXX: This is O(N^2) in the number of fragments.
-            auto data = buf->writableData();
-            auto remain = buf->length();
-            size_t totalLength = 0;
-            while (true) {
-              auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
-              auto len = fragmentHeader & 0x7fffffff;
-              bool isLast = (fragmentHeader & 0x80000000) != 0;
-              memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
-              totalLength += len;
-              remain -= len + sizeof(uint32_t);
-              data += len;
-              if (isLast) {
-                break;
-              }
+          // Remove the fragment framing from the buffer
+          // XXX: This is O(N^2) in the number of fragments.
+          auto data = buf->writableData();
+          auto remain = buf->length();
+          size_t totalLength = 0;
+          while (true) {
+            auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
+            auto len = fragmentHeader & 0x7fffffff;
+            bool isLast = (fragmentHeader & 0x80000000) != 0;
+            memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
+            totalLength += len;
+            remain -= len + sizeof(uint32_t);
+            data += len;
+            if (isLast) {
+              break;
             }
+          }
 
-            buf->trimEnd(buf->length() - totalLength);
+          buf->trimEnd(buf->length() - totalLength);
 
-            dispatchAndReply(std::move(buf), std::move(guard));
-          });
+          dispatchAndReply(std::move(buf), std::move(guard));
+        });
+  }
+}
+
+std::unique_ptr<folly::IOBuf> RpcTcpHandler::readOneRequest() noexcept {
+  if (!readBuf_.front()) {
+    return nullptr;
+  }
+  folly::io::Cursor c(readBuf_.front());
+  while (true) {
+    uint32_t fragmentHeader;
+    if (!c.tryReadBE<uint32_t>(fragmentHeader)) {
+      // We can't even read the fragment header, bail out.
+      return nullptr;
+    }
+    auto len = fragmentHeader & 0x7fffffff;
+    bool isLast = (fragmentHeader & 0x80000000) != 0;
+    if (!c.canAdvance(len)) {
+      // we don't have a complete request, so try again later
+      return nullptr;
+    }
+    c.skip(len);
+    if (isLast) {
+      break;
     }
   }
-};
+  return readBuf_.split(c.getCurrentPosition());
+}
+
+void RpcTcpHandler::dispatchAndReply(
+    std::unique_ptr<folly::IOBuf> input,
+    DestructorGuard guard) {
+  folly::makeFutureWith([this, input = std::move(input)]() mutable {
+    folly::io::Cursor deser(input.get());
+    rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
+
+    auto resultBuf = std::make_unique<folly::IOBufQueue>(
+        folly::IOBufQueue::cacheChainLength());
+    folly::io::QueueAppender ser(resultBuf.get(), 1024);
+    XdrTrait<uint32_t>::serialize(ser, 0); // reserve space for fragment header
+
+    if (call.cbody.rpcvers != kRPCVersion) {
+      rpc_msg_reply reply{
+          call.xid,
+          msg_type::REPLY,
+          reply_body{{
+              reply_stat::MSG_DENIED,
+              rejected_reply{{
+                  reject_stat::RPC_MISMATCH,
+                  mismatch_info{kRPCVersion, kRPCVersion},
+              }},
+          }},
+      };
+
+      XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+
+      return folly::makeFuture(std::move(resultBuf));
+    }
+
+    if (auto auth = proc_->checkAuthentication(call.cbody);
+        auth != auth_stat::AUTH_OK) {
+      rpc_msg_reply reply{
+          call.xid,
+          msg_type::REPLY,
+          reply_body{{
+              reply_stat::MSG_DENIED,
+              rejected_reply{{
+                  reject_stat::AUTH_ERROR,
+                  auth,
+              }},
+          }},
+      };
+
+      XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+
+      return folly::makeFuture(std::move(resultBuf));
+    }
+
+    auto fut = proc_->dispatchRpc(
+        std::move(deser),
+        std::move(ser),
+        call.xid,
+        call.cbody.prog,
+        call.cbody.vers,
+        call.cbody.proc);
+
+    return std::move(fut).then(
+        [keepInputAlive = std::move(input),
+         resultBuffer = std::move(resultBuf),
+         call = std::move(call)](folly::Try<folly::Unit> result) mutable {
+          if (result.hasException()) {
+            // XXX: shrink resultBuffer and serialize a SYSTEM_ERR into it
+            XLOGF(
+                WARN,
+                "Server failed to dispatch proc {} to {}:{}: {}",
+                call.cbody.proc,
+                call.cbody.prog,
+                call.cbody.vers,
+                folly::exceptionStr(*result.exception().get_exception()));
+          }
+
+          return std::move(resultBuffer);
+        });
+  })
+      .via(this->sock_->getEventBase())
+      .then([this, guard = std::move(guard)](
+                folly::Try<std::unique_ptr<folly::IOBufQueue>> result) {
+        if (result.hasException()) {
+          // XXX: This should never happen.
+        } else {
+          auto& iobufQueue = result.value();
+          auto chainLength = iobufQueue->chainLength();
+          auto resultBuffer = iobufQueue->move();
+
+          // Fill out the fragment header.
+          auto len = uint32_t(chainLength - sizeof(uint32_t));
+          auto fragment = (uint32_t*)resultBuffer->writableData();
+          *fragment = folly::Endian::big(len | 0x80000000);
+
+          XLOG(DBG8) << "Sending:\n"
+                     << folly::hexDump(
+                            resultBuffer->data(), resultBuffer->length());
+
+          sock_->writeChain(&writer_, std::move(resultBuffer));
+        }
+      });
+}
 
 } // namespace
 
@@ -270,12 +325,7 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
     const folly::SocketAddress& clientAddr) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
-  using UniquePtr =
-      std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
-  auto handler = UniquePtr(
-      new RpcTcpHandler(proc_, std::move(socket), threadPool_),
-      folly::DelayedDestruction::Destructor());
-  handler->setup();
+  auto handler = RpcTcpHandler::create(proc_, std::move(socket), threadPool_);
 }
 
 void RpcServer::RpcAcceptCallback::acceptError(
