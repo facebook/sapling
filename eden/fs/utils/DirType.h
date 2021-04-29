@@ -45,6 +45,10 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 #define DT_DIR ((_S_IFDIR) >> 12)
 #define DT_REG ((_S_IFREG) >> 12)
 
+// Windows CRT does not define _S_IFLNK. So we arbitrarily define it here.
+#define _S_IFLNK 0xA000
+#define DT_LNK ((_S_IFLNK) >> 12)
+
 #define IFTODT(mode) (((mode)&_S_IFMT) >> 12)
 #define DTTOIF(type) (((type) << 12) & _S_IFMT)
 
@@ -64,6 +68,10 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 #define S_ISSOCK(mode) (0)
 #endif
 
+#ifndef S_ISLNK
+#define S_ISLNK(mode) (((mode) & (_S_IFLNK)) == (_S_IFLNK) ? 1 : 0)
+#endif
+
 /**
  * We only use d_type from dirent on Windows.
  */
@@ -78,9 +86,9 @@ enum class dtype_t : decltype(dirent::d_type) {
   Char = DT_CHR,
   Dir = DT_DIR,
   Regular = DT_REG,
+  Symlink = DT_LNK,
 #ifndef _WIN32
   Block = DT_BLK,
-  Symlink = DT_LNK,
   Socket = DT_SOCK,
   Whiteout = DT_WHT,
 #endif
