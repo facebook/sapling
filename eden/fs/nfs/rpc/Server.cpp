@@ -175,30 +175,18 @@ void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
     folly::via(
         threadPool_.get(),
         [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
-          buf->coalesce();
-
           XLOG(DBG8) << "Received:\n"
                      << folly::hexDump(buf->data(), buf->length());
+          auto data = buf->data();
+          auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
+          bool isLast = (fragmentHeader & 0x80000000) != 0;
 
-          // Remove the fragment framing from the buffer
-          // XXX: This is O(N^2) in the number of fragments.
-          auto data = buf->writableData();
-          auto remain = buf->length();
-          size_t totalLength = 0;
-          while (true) {
-            auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
-            auto len = fragmentHeader & 0x7fffffff;
-            bool isLast = (fragmentHeader & 0x80000000) != 0;
-            memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
-            totalLength += len;
-            remain -= len + sizeof(uint32_t);
-            data += len;
-            if (isLast) {
-              break;
-            }
-          }
-
-          buf->trimEnd(buf->length() - totalLength);
+          // Supporting multiple fragments is expensive and requires playing
+          // with IOBuf to avoid copying data. Since neither macOS nor Linux
+          // are sending requests spanning multiple segments, let's not support
+          // these.
+          XCHECK(isLast);
+          buf->trimStart(sizeof(uint32_t));
 
           dispatchAndReply(std::move(buf), std::move(guard));
         });
