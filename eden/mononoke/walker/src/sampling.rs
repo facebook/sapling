@@ -231,12 +231,15 @@ impl PathTrackingRoute {
 
 // Name the stream output key type
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub struct WalkKeyOptPath(pub Node, pub Option<WrappedPath>);
+pub struct WalkKeyOptPath {
+    pub node: Node,
+    pub path: Option<WrappedPath>,
+}
 
 // Map the key type so progress reporting works
 impl<'a> From<&'a WalkKeyOptPath> for &'a Node {
-    fn from(WalkKeyOptPath(n, _p): &'a WalkKeyOptPath) -> &'a Node {
-        n
+    fn from(from: &'a WalkKeyOptPath) -> &'a Node {
+        &from.node
     }
 }
 
@@ -313,7 +316,10 @@ where
                     ctx = ctx.clone_and_sample(sampling_key);
                     self.sampler.map_keys(
                         sampling_key,
-                        WalkKeyOptPath(step.target.clone(), repo_path.cloned()),
+                        WalkKeyOptPath {
+                            node: step.target.clone(),
+                            path: repo_path.cloned(),
+                        },
                     );
                 }
             }
@@ -356,7 +362,10 @@ where
 
         (
             (
-                WalkKeyOptPath(n, route.path.clone()),
+                WalkKeyOptPath {
+                    node: n,
+                    path: route.path.clone(),
+                },
                 WalkPayloadMtime(route.mtime.clone(), nd),
                 stats,
             ),
@@ -381,7 +390,10 @@ where
             self.inner.defer_visit(bcs_id, walk_item, inner_route);
         (
             (
-                WalkKeyOptPath(n, route.path.clone()),
+                WalkKeyOptPath {
+                    node: n,
+                    path: route.path.clone(),
+                },
                 WalkPayloadMtime(None, None),
                 stats,
             ),
@@ -478,7 +490,7 @@ where
 {
     fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
         self.inflight.insert(sample_key, T::default());
-        self.inflight_reverse.insert(walk_key.0, sample_key);
+        self.inflight_reverse.insert(walk_key.node, sample_key);
     }
 }
 

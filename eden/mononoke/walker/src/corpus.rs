@@ -98,12 +98,19 @@ where
     )
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
-    .map_ok(move |(WalkKeyOptPath(n, path), sample, mtime, stats)| {
+    .map_ok(move |(walk_key, sample, mtime, stats)| {
+        let node = walk_key.node;
         match sample {
-            Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample)
-                .map_ok(move |()| (n, Some(()), stats))
-                .left_future(),
-            None => future::ok((n, Some(()), stats)).right_future(),
+            Some(sample) => move_node_files(
+                output_dir.clone(),
+                node.clone(),
+                walk_key.path,
+                mtime,
+                sample,
+            )
+            .map_ok(move |()| (node, Some(()), stats))
+            .left_future(),
+            None => future::ok((node, Some(()), stats)).right_future(),
         }
     })
     .try_buffer_unordered(scheduled_max)

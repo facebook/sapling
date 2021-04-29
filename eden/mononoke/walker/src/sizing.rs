@@ -99,10 +99,10 @@ where
         + Send,
     InStats: 'static + Send,
 {
-    s.map_ok(move |(WalkKeyOptPath(n, _path), data_opt, _stats_opt)| {
-        match (&n, data_opt) {
+    s.map_ok(move |(walk_key, data_opt, _stats_opt)| {
+        match (&walk_key.node, data_opt) {
             (Node::FileContent(_content_id), Some(NodeData::FileContent(fc)))
-                if sampler.is_sampling(&n) =>
+                if sampler.is_sampling(&walk_key.node) =>
             {
                 match fc {
                     FileContentData::Consumed(_num_loaded_bytes) => {
@@ -118,7 +118,7 @@ where
                     move |fs_stream_size| {
                         // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
                         let sizes = sampler
-                            .complete_step(&n)
+                            .complete_step(&walk_key.node)
                             .map(|sizing_sample| {
                                 sizing_sample.data.values().try_fold(
                                     SizingStats::default(),
@@ -133,7 +133,7 @@ where
                         future::ready(sizes.map(|sizes| {
                             // Report the filestore stream's bytes size in the Consumed node
                             (
-                                n,
+                                walk_key.node,
                                 Some(NodeData::FileContent(FileContentData::Consumed(
                                     fs_stream_size,
                                 ))),
@@ -147,7 +147,7 @@ where
             (_, data_opt) => {
                 // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
                 let sizes = sampler
-                    .complete_step(&n)
+                    .complete_step(&walk_key.node)
                     .map(|sizing_sample| {
                         sizing_sample
                             .data
@@ -158,7 +158,7 @@ where
                     })
                     .transpose();
 
-                future::ready(sizes.map(|sizes| (n, data_opt, sizes))).right_future()
+                future::ready(sizes.map(|sizes| (walk_key.node, data_opt, sizes))).right_future()
             }
         }
     })
