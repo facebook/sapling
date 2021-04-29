@@ -21,6 +21,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
+use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 
 use bounded_traversal::bounded_traversal_stream;
 use changesets::{ChangesetEntry, Changesets, SortOrder};
@@ -28,7 +29,16 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    PartialEq,
+    AsRefStr,
+    EnumVariantNames,
+    EnumString
+)]
 pub enum Direction {
     NewestFirst,
     OldestFirst,
