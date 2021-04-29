@@ -63,7 +63,18 @@ class RpcTcpHandler : public folly::DelayedDestruction {
 
    private:
     void getReadBuffer(void** bufP, size_t* lenP) override {
-      auto [buf, len] = handler_->readBuf_.preallocate(64, 64 * 1024);
+      // TODO(xavierd): Should maxSize be configured to be at least the
+      // configured NFS iosize?
+      constexpr size_t maxSize = 64 * 1024;
+      constexpr size_t minReadSize = 4 * 1024;
+
+      // We want to issue a recv(2) of at least minReadSize, and bound it to
+      // the available writable size of the readBuf_ to minimize allocation
+      // cost. This guarantees reading large buffers, and minimize the number
+      // of calls to tryConsumeReadBuffer.
+      auto minSize = std::max(handler_->readBuf_.tailroom(), minReadSize);
+
+      auto [buf, len] = handler_->readBuf_.preallocate(minSize, maxSize);
       *lenP = len;
       *bufP = buf;
     }
