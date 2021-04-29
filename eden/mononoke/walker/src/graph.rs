@@ -515,6 +515,11 @@ impl NodeType {
 
 const ROOT_FINGERPRINT: u64 = 0;
 
+// Can represent Path and PathHash
+pub trait WrappedPathLike {
+    fn sampling_fingerprint(&self) -> u64;
+}
+
 /// Represent root or non root path hash.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WrappedPathHash {
@@ -522,8 +527,8 @@ pub enum WrappedPathHash {
     NonRoot(MPathHash),
 }
 
-impl WrappedPathHash {
-    pub fn sampling_fingerprint(&self) -> u64 {
+impl WrappedPathLike for WrappedPathHash {
+    fn sampling_fingerprint(&self) -> u64 {
         match self {
             WrappedPathHash::Root => ROOT_FINGERPRINT,
             WrappedPathHash::NonRoot(path_hash) => path_hash.sampling_fingerprint(),
@@ -590,8 +595,10 @@ impl WrappedPath {
             WrappedPath::NonRoot(path) => path.get_path_hash_memo(),
         }
     }
+}
 
-    pub fn sampling_fingerprint(&self) -> u64 {
+impl WrappedPathLike for WrappedPath {
+    fn sampling_fingerprint(&self) -> u64 {
         self.get_path_hash().sampling_fingerprint()
     }
 }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPathLike};
 use crate::log;
 use crate::pack::{PackInfo, PackInfoLogOptions, PackInfoLogger};
 use crate::progress::{

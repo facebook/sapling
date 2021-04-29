@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath, WrappedPathLike};
 use crate::state::{InternedType, StepStats, WalkState};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor};
 
