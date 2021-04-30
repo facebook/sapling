@@ -6,29 +6,29 @@
  */
 
 use anyhow::Result;
-use manifest::{DiffType, FileMetadata, FileType, Manifest};
-use pathmatcher::AlwaysMatcher;
-use std::collections::HashMap;
+use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
+use pathmatcher::{Matcher, XorMatcher};
+use std::collections::{hash_map::Entry, HashMap};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct ActionMap {
     map: HashMap<RepoPathBuf, Action>,
 }
 
 /// Basic update action.
 /// Diff between regular(no conflict checkin) commit generates list of such actions.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Action {
     Update(UpdateAction),
     Remove,
     UpdateExec(bool),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UpdateAction {
     pub from: Option<FileMetadata>,
     pub to: FileMetadata,
@@ -37,9 +37,7 @@ pub struct UpdateAction {
 impl ActionMap {
     // This is similar to CheckoutPlan::new
     // Eventually CheckoutPlan::new will migrate to take (Conflict)ActionMap instead of a Diff and there won't be code duplication
-    pub fn from_diff<M: Manifest>(src: &M, dst: &M) -> Result<Self> {
-        let matcher = AlwaysMatcher::new();
-        let diff = src.diff(dst, &matcher);
+    pub fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(diff: D) -> Result<Self> {
         let mut map = HashMap::new();
         for entry in diff {
             let entry = entry?;
@@ -65,6 +63,58 @@ impl ActionMap {
             };
         }
         Ok(Self { map })
+    }
+
+    pub fn with_sparse_profile_change(
+        mut self,
+        old_matcher: &impl Matcher,
+        new_matcher: &impl Matcher,
+        new_manifest: &impl Manifest,
+    ) -> Result<Self> {
+        // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
+        let mut result = Ok(());
+        self.map.retain(|path, action| {
+            if result.is_err() {
+                return true;
+            }
+            if matches!(action, Action::Remove) {
+                return true;
+            }
+            match new_matcher.matches_file(path.as_ref()) {
+                Ok(v) => v,
+                Err(err) => {
+                    result = Err(err);
+                    true
+                }
+            }
+        });
+        result?;
+
+        // Second - handle files in a new manifest, that were affected by sparse profile change
+        let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
+        for file in new_manifest.files(&xor_matcher) {
+            let file = file?;
+            if new_matcher.matches_file(&file.path)? {
+                match self.map.entry(file.path) {
+                    Entry::Vacant(va) => {
+                        va.insert(Action::Update(UpdateAction::new(None, file.meta)));
+                    }
+                    Entry::Occupied(_) => {}
+                }
+            } else {
+                // by definition of xor matcher this means old_matcher.matches_file==true
+                self.map.insert(file.path, Action::Remove);
+            }
+        }
+
+        Ok(self)
+    }
+
+    #[cfg(test)]
+    pub fn empty() -> Self {
+        Self {
+            map: Default::default(),
+        }
     }
 }
 
@@ -129,5 +179,68 @@ fn pyflags(t: &FileType) -> &'static str {
         FileType::Symlink => "l",
         FileType::Regular => "",
         FileType::Executable => "x",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
+    use pathmatcher::TreeMatcher;
+    use types::HgId;
+
+    #[test]
+    fn test_with_sparse_profile_change() -> Result<()> {
+        let a = (rp("a"), FileMetadata::regular(hgid(1)));
+        let b = (rp("b"), FileMetadata::regular(hgid(2)));
+        let c = (rp("c"), FileMetadata::regular(hgid(3)));
+        let ab_profile = TreeMatcher::from_rules(["a", "b"].iter())?;
+        let ac_profile = TreeMatcher::from_rules(["a", "c"].iter())?;
+        let manifest = make_tree_manifest_from_meta(vec![a, b, c]);
+
+        let actions =
+            ActionMap::empty().with_sparse_profile_change(&ab_profile, &ab_profile, &manifest)?;
+        assert_eq!("", &actions.to_string());
+
+        let mut expected_actions = ActionMap::empty();
+        expected_actions.map.insert(rp("b"), Action::Remove);
+        expected_actions.map.insert(
+            rp("c"),
+            Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
+        );
+
+        let actions =
+            ActionMap::empty().with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
+        assert_eq!(expected_actions, actions);
+
+        let mut actions = ActionMap::empty();
+        actions.map.insert(
+            rp("b"),
+            Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(10)))),
+        );
+        actions.map.insert(rp("b"), Action::UpdateExec(true));
+        let actions = actions.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
+        assert_eq!(expected_actions, actions);
+
+        let mut actions = ActionMap::empty();
+        actions.map.insert(
+            rp("c"),
+            Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
+        );
+        let actions = actions.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
+
+        assert_eq!(expected_actions, actions);
+
+        Ok(())
+    }
+
+    fn rp(p: &str) -> RepoPathBuf {
+        RepoPathBuf::from_string(p.to_string()).unwrap()
+    }
+
+    fn hgid(p: u8) -> HgId {
+        let mut r = HgId::default().into_byte_array();
+        r[0] = p;
+        HgId::from_byte_array(r)
     }
 }

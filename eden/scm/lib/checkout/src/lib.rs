@@ -9,10 +9,9 @@ use anyhow::{anyhow, bail, format_err, Result};
 use futures::channel::mpsc;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::{stream, try_join, Stream, StreamExt};
-use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
+use manifest::{FileMetadata, FileType, Manifest};
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use pathmatcher::{Matcher, XorMatcher};
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use revisionstore::{
@@ -20,7 +19,7 @@ use revisionstore::{
     StoreKey, StoreResult,
 };
 use std::boxed::Box;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -128,13 +127,6 @@ impl Checkout {
     pub fn plan_action_map(&self, map: ActionMap) -> CheckoutPlan {
         CheckoutPlan::from_action_map(self.clone(), map)
     }
-
-    pub fn plan_diff<D: Iterator<Item = Result<DiffEntry>>>(
-        &self,
-        iter: D,
-    ) -> Result<CheckoutPlan> {
-        CheckoutPlan::from_diff(self.clone(), iter)
-    }
 }
 
 impl CheckoutPlan {
@@ -162,53 +154,6 @@ impl CheckoutPlan {
         }
     }
 
-    /// Processes diff into checkout plan.
-    /// Left in the diff is a current commit.
-    /// Right is a commit to be checked out.
-    fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(
-        checkout: Checkout,
-        iter: D,
-    ) -> Result<Self> {
-        let mut remove = vec![];
-        let mut update_content = vec![];
-        let mut update_meta = vec![];
-        for item in iter {
-            let item: DiffEntry = item?;
-            match item.diff_type {
-                DiffType::LeftOnly(_) => remove.push(item.path),
-                DiffType::RightOnly(meta) => {
-                    update_content.push(UpdateContentAction::new(item.path, meta, true))
-                }
-                DiffType::Changed(old, new) => {
-                    match (old.hgid == new.hgid, old.file_type, new.file_type) {
-                        (true, FileType::Executable, FileType::Regular) => {
-                            update_meta.push(UpdateMetaAction {
-                                path: item.path,
-                                set_x_flag: false,
-                            });
-                        }
-                        (true, FileType::Regular, FileType::Executable) => {
-                            update_meta.push(UpdateMetaAction {
-                                path: item.path,
-                                set_x_flag: true,
-                            });
-                        }
-                        _ => {
-                            update_content.push(UpdateContentAction::new(item.path, new, false));
-                        }
-                    }
-                }
-            };
-        }
-        Ok(Self {
-            remove,
-            update_content,
-            update_meta,
-            progress: None,
-            checkout,
-        })
-    }
-
     pub fn add_progress(&mut self, path: PathBuf) -> Result<()> {
         let vfs = &self.checkout.vfs;
         let progress = if path.exists() {
@@ -224,38 +169,6 @@ impl CheckoutPlan {
         };
         self.progress = Some(Mutex::new(progress));
         Ok(())
-    }
-
-    /// Updates current plan to account for sparse profile change
-    pub fn with_sparse_profile_change(
-        mut self,
-        old_matcher: &impl Matcher,
-        new_matcher: &impl Matcher,
-        new_manifest: &impl Manifest,
-    ) -> Result<Self> {
-        // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
-        retain_paths(&mut self.update_content, new_matcher)?;
-        retain_paths(&mut self.update_meta, new_matcher)?;
-
-        let updated_content: HashSet<_> =
-            self.update_content.iter().map(|a| a.path.clone()).collect();
-
-        // Second - handle files in a new manifest, that were affected by sparse profile change
-        let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
-        for file in new_manifest.files(&xor_matcher) {
-            let file = file?;
-            if new_matcher.matches_file(&file.path)? {
-                if !updated_content.contains(&file.path) {
-                    self.update_content
-                        .push(UpdateContentAction::new(file.path, file.meta, true));
-                }
-            } else {
-                // by definition of xor matcher this means old_matcher.matches_file==true
-                self.remove.push(file.path);
-            }
-        }
-
-        Ok(self)
     }
 
     /// Applies plan to the root using store to fetch data.
@@ -863,23 +776,6 @@ impl UpdateContentAction {
     }
 }
 
-fn retain_paths<T: AsRef<RepoPath>>(v: &mut Vec<T>, matcher: impl Matcher) -> Result<()> {
-    let mut result = Ok(());
-    v.retain(|p| {
-        if result.is_err() {
-            return true;
-        }
-        match matcher.matches_file(p.as_ref()) {
-            Ok(v) => v,
-            Err(err) => {
-                result = Err(err);
-                true
-            }
-        }
-    });
-    result
-}
-
 impl AsRef<RepoPath> for UpdateContentAction {
     fn as_ref(&self) -> &RepoPath {
         &self.path
@@ -901,7 +797,7 @@ mod test {
     use anyhow::Context;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::Diff;
-    use pathmatcher::{AlwaysMatcher, TreeMatcher};
+    use pathmatcher::AlwaysMatcher;
     use quickcheck::{Arbitrary, StdGen};
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -954,68 +850,6 @@ mod test {
                 assert_checkout(a, b).await?;
             }
         }
-        Ok(())
-    }
-
-    #[test]
-    fn test_with_sparse_profile_change() -> Result<()> {
-        let a = (rp("a"), FileMetadata::regular(hgid(1)));
-        let b = (rp("b"), FileMetadata::regular(hgid(2)));
-        let c = (rp("c"), FileMetadata::regular(hgid(3)));
-        let ab_profile = TreeMatcher::from_rules(["a/**", "b/**"].iter())?;
-        let ac_profile = TreeMatcher::from_rules(["a/**", "c/**"].iter())?;
-        let manifest = make_tree_manifest_from_meta(vec![a, b, c]);
-
-        let tempdir = tempfile::tempdir()?;
-        let working_path = tempdir.path().to_path_buf().join("workingdir");
-        create_dir(working_path.as_path()).unwrap();
-        let vfs = VFS::new(working_path.clone())?;
-
-        let plan = CheckoutPlan::empty(vfs.clone()).with_sparse_profile_change(
-            &ab_profile,
-            &ab_profile,
-            &manifest,
-        )?;
-        assert_eq!("", &plan.to_string());
-
-        let plan = CheckoutPlan::empty(vfs.clone()).with_sparse_profile_change(
-            &ab_profile,
-            &ac_profile,
-            &manifest,
-        )?;
-        assert_eq!(
-            "rm b\nup c=>0300000000000000000000000000000000000000\n",
-            &plan.to_string()
-        );
-
-        let mut plan = CheckoutPlan::empty(vfs.clone());
-        plan.update_content.push(UpdateContentAction::new(
-            rp("b"),
-            FileMetadata::regular(hgid(10)),
-            true,
-        ));
-        plan.update_meta.push(UpdateMetaAction {
-            path: rp("b"),
-            set_x_flag: true,
-        });
-        let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
-        assert_eq!(
-            "rm b\nup c=>0300000000000000000000000000000000000000\n",
-            &plan.to_string()
-        );
-
-        let mut plan = CheckoutPlan::empty(vfs.clone());
-        plan.update_content.push(UpdateContentAction::new(
-            rp("c"),
-            FileMetadata::regular(hgid(3)),
-            true,
-        ));
-        let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
-        assert_eq!(
-            "rm b\nup c=>0300000000000000000000000000000000000000\n",
-            &plan.to_string()
-        );
-
         Ok(())
     }
 
@@ -1112,8 +946,7 @@ mod test {
         let vfs = VFS::new(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);
         let plan = checkout
-            .plan_diff(diff)
-            .context("Plan construction failed")?;
+            .plan_action_map(ActionMap::from_diff(diff).context("Plan construction failed")?);
 
         // Use clean vfs for test
         plan.apply_stream(dummy_fs)

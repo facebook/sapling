@@ -10,6 +10,7 @@ use crate::conflict::{Conflict, ConflictState};
 use anyhow::bail;
 use anyhow::Result;
 use manifest::{FileType, FsNodeMetadata, Manifest};
+use pathmatcher::AlwaysMatcher;
 use std::collections::HashSet;
 use std::fmt;
 use types::RepoPathBuf;
@@ -44,8 +45,11 @@ impl Merge {
         dest: &M,
         base: &M,
     ) -> Result<MergeResult<M>> {
-        let dest_actions = ActionMap::from_diff(base, dest)?;
-        let src_actions = ActionMap::from_diff(base, src)?;
+        let matcher = AlwaysMatcher::new();
+        let diff = base.diff(dest, &matcher);
+        let dest_actions = ActionMap::from_diff(diff)?;
+        let diff = base.diff(src, &matcher);
+        let src_actions = ActionMap::from_diff(diff)?;
         let dest_files: HashSet<_> = dest_actions.keys().collect();
         let src_files = src_actions.keys().collect();
         let union = dest_files.union(&src_files);
