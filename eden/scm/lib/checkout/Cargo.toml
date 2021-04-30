@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+configmodel = { path = "../configmodel" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { path = "../manifest", features = ["for-tests"] }
 minibytes = { path = "../minibytes" }

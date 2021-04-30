@@ -15,6 +15,7 @@ use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher};
+use pyconfigparser::config;
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::{contentstore, filescmstore};
@@ -41,6 +42,7 @@ py_class!(class checkoutplan |py| {
 
     def __new__(
         _cls,
+        config: &config,
         root: PyPathBuf,
         current_manifest: &treemanifest,
         target_manifest: &treemanifest,
@@ -49,6 +51,7 @@ py_class!(class checkoutplan |py| {
         sparse_change: Option<(PyObject, PyObject)> = None,
         progress_path: Option<PyPathBuf> = None,
     ) -> PyResult<checkoutplan> {
+        let config = config.get_cfg(py);
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
@@ -58,7 +61,7 @@ py_class!(class checkoutplan |py| {
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
-        let checkout = Checkout::default_config(vfs);
+        let checkout = Checkout::from_config(vfs, &config).map_pyerr(py)?;
         let mut plan = checkout.plan_diff(diff).map_pyerr(py)?;
         if let Some(progress_path) = progress_path {
             plan.add_progress(progress_path.to_path_buf()).map_pyerr(py)?;

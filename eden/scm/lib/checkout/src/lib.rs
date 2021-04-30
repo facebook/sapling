@@ -42,6 +42,7 @@ mod conflict;
 mod merge;
 
 pub use actions::{Action, ActionMap};
+use configmodel::{Config, ConfigExt};
 pub use conflict::Conflict;
 pub use merge::{Merge, MergeResult};
 use status::{FileStatus, Status};
@@ -114,6 +115,14 @@ impl Checkout {
             vfs,
             concurrency: DEFAULT_CONCURRENCY,
         }
+    }
+
+    pub fn from_config(vfs: VFS, config: &dyn Config) -> Result<Self> {
+        let concurrency = config
+            .get_opt("nativecheckout", "concurrency")
+            .map_err(|e| format_err!("Failed to parse nativecheckout.concurrency: {}", e))?;
+        let concurrency = concurrency.unwrap_or(DEFAULT_CONCURRENCY);
+        Ok(Self { vfs, concurrency })
     }
 
     pub fn plan_action_map(&self, map: ActionMap) -> CheckoutPlan {
