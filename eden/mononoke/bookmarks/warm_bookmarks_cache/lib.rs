@@ -24,6 +24,7 @@ use context::{CoreContext, SessionClass};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use fastlog::RootFastlog;
 use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
@@ -166,6 +167,10 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
                 .push(create_derived_data_warmer::<RootDeletedManifestId>(
                     &self.ctx,
                 ));
+        }
+        if types.contains(RootFastlog::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<RootFastlog>(&self.ctx));
         }
 
         Ok(())
