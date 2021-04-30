@@ -4045,9 +4045,7 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire
     project.
 
-    If no revision range is specified, the default is ``tip:0`` unless
-    --follow is set, in which case the working directory parent is
-    used as the starting revision.
+    If no revision range is specified, the default is ``::.``.
 
     File history is shown without following rename or copy history of
     files. Use -f/--follow with a filename to follow history across
