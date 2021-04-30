@@ -41,6 +41,12 @@ if (WIN32)
     Secur32
     Ncrypt
   )
+else()
+  target_link_libraries(
+    backingstore
+    PRIVATE
+      CURL::libcurl
+  )
 endif()
 
 # Reqwest links against the security framework.

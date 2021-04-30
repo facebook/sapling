@@ -88,11 +88,3 @@ if (NOT WIN32)
       eden_takeover
   )
 endif()
-
-if (CURL_FOUND)
-  target_link_libraries(
-    eden_service
-    PUBLIC
-      CURL::libcurl
-  )
-endif()

@@ -120,8 +120,9 @@ find_package(python-toml REQUIRED)
 # If we don't find it we simply won't run those tests.
 find_package(pexpect)
 
-find_package(CURL)
-set(EDEN_HAVE_CURL ${CURL_FOUND})
+if (NOT WIN32)
+  find_package(CURL REQUIRED)
+endif()
 
 if (WIN32)
   find_package(Prjfs MODULE REQUIRED)

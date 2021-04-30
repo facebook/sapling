@@ -13,7 +13,6 @@
 #include <fb303/FollyLoggingHandler.h>
 #include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
-#include <folly/ScopeGuard.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -38,11 +37,6 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
 #include "eden/fs/utils/WinStackTrace.h"
-
-// This has to be placed after eden-config.h
-#ifdef EDEN_HAVE_CURL
-#include <curl/curl.h> // @manual
-#endif
 
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
@@ -186,21 +180,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   folly::stop_watch<> daemonStart;
 
   std::vector<std::string> originalCommandLine{argv, argv + argc};
-
-  // This is normally performed just-in-time by folly::ssl::SSLContext,
-  // but we need to explicitly ensure that it is initialized
-  // prior to initializing libcurl
-  folly::ssl::init();
-
-#ifdef EDEN_HAVE_CURL
-  // We need to call curl_global_init before any thread is created to avoid
-  // crashes happens when curl structs are passed between threads.
-  // See curl's documentation for details.
-  curl_global_init(CURL_GLOBAL_ALL);
-  SCOPE_EXIT {
-    curl_global_cleanup();
-  };
-#endif
 
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
