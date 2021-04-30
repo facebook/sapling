@@ -8,9 +8,9 @@
 #pragma once
 #include <folly/File.h>
 #ifdef __linux__
-#include "eden/fs/third-party/fuse_kernel_linux.h" // @manual=//eden/fs/third-party:fuse_kernel
+#include "eden/fs/third-party/fuse_kernel_linux.h"
 #elif defined(__APPLE__)
-#include "eden/fs/third-party/fuse_kernel_osxfuse.h" // @manual=//eden/fs/third-party:fuse_kernel
+#include "eden/fs/third-party/fuse_kernel_osxfuse.h"
 #else
 #error need a fuse kernel header to be included for your OS!
 #endif
