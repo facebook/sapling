@@ -754,9 +754,12 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
         checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgBonsaiMapping, || {
             Node::HgBonsaiMapping(hg_key.clone())
         });
-        checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
-            Node::HgChangeset(hg_key.clone())
-        });
+        checker.add_edge(
+            &mut edges,
+            // use HgChangesetViaBonsai rather than HgChangeset so that same route is taken to each changeset
+            EdgeType::BonsaiHgMappingToHgChangesetViaBonsai,
+            || Node::HgChangesetViaBonsai(hg_key.clone()),
+        );
         hg_key.inner
     });
 
