@@ -22,7 +22,7 @@ use maybe_owned::MaybeOwned;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use panichandler::{self, Fate};
 use rendezvous::RendezVousOptions;
-use slog::{debug, o, trace, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
+use slog::{debug, o, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
 use std::panic::{RefUnwindSafe, UnwindSafe};
@@ -86,16 +86,19 @@ impl<'a> MononokeMatches<'a> {
         app_data: MononokeAppData,
         arg_types: HashSet<ArgType>,
     ) -> Result<Self, Error> {
-        let root_log_drain =
-            create_root_log_drain(fb, &matches).context("Failed to create root log drain")?;
+        let log_level = get_log_level(&matches);
+
+        let root_log_drain = create_root_log_drain(fb, &matches, log_level)
+            .context("Failed to create root log drain")?;
 
         // TODO: FacebookKV for this one?
         let config_store =
             create_config_store(fb, Logger::root(root_log_drain.clone(), o![]), &matches)
                 .context("Failed to create config store")?;
 
-        let observability_context = create_observability_context(&matches, &config_store)
-            .context("Faled to initialize observability context")?;
+        let observability_context =
+            create_observability_context(&matches, &config_store, log_level)
+                .context("Faled to initialize observability context")?;
 
         let logger = create_logger(&matches, root_log_drain, observability_context.clone())
             .context("Failed to create logger")?;
@@ -260,7 +263,11 @@ fn get_log_level(matches: &ArgMatches<'_>) -> Level {
     }
 }
 
-fn create_root_log_drain(fb: FacebookInit, matches: &ArgMatches<'_>) -> Result<impl Drain + Clone> {
+fn create_root_log_drain(
+    fb: FacebookInit,
+    matches: &ArgMatches<'_>,
+    log_level: Level,
+) -> Result<impl Drain + Clone> {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -318,12 +325,16 @@ fn create_root_log_drain(fb: FacebookInit, matches: &ArgMatches<'_>) -> Result<i
     // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
     let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
-    let stdlog_level = log::init_stdlog_once(stdlog_logger.clone(), stdlog_env)?;
-    trace!(
-        stdlog_logger,
-        "enabled stdlog with level: {:?} (set {} to configure)",
-        stdlog_level,
-        stdlog_env
+    let stdlog_level = log::init_stdlog_once(stdlog_logger, stdlog_env)?;
+
+    // Note what level we enabled stdlog at, so that if someone is trying to debug they get
+    // informed of potentially needing to set RUST_LOG.
+    debug!(
+        Logger::root(
+            root_log_drain.clone().filter_level(log_level).ignore_res(),
+            o![]
+        ),
+        "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
     );
 
     Ok(root_log_drain)
@@ -701,10 +712,11 @@ fn init_runtime(matches: &ArgMatches<'_>) -> Result<Runtime> {
 fn create_observability_context<'a>(
     matches: &'a ArgMatches<'a>,
     config_store: &'a ConfigStore,
+    log_level: Level,
 ) -> Result<ObservabilityContext, Error> {
     match matches.value_of(WITH_DYNAMIC_OBSERVABILITY) {
         Some("true") => Ok(ObservabilityContext::new(config_store)?),
-        Some("false") | None => Ok(ObservabilityContext::new_static(get_log_level(matches))),
+        Some("false") | None => Ok(ObservabilityContext::new_static(log_level)),
         Some(other) => panic!(
             "Unexpected --{} value: {}",
             WITH_DYNAMIC_OBSERVABILITY, other
