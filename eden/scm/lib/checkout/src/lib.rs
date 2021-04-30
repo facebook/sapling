@@ -59,7 +59,7 @@ pub struct CheckoutPlan {
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
     progress: Option<Mutex<CheckoutProgress>>,
-    vfs: VFS,
+    checkout: Checkout,
 }
 
 struct CheckoutProgress {
@@ -99,11 +99,37 @@ pub struct CheckoutStats {
     written_bytes: AtomicUsize,
 }
 
-const PARALLEL_CHECKOUT: usize = 16;
+const DEFAULT_CONCURRENCY: usize = 16;
 const MAX_CHECK_UNKNOWN: usize = 5000;
 
+#[derive(Clone)]
+pub struct Checkout {
+    vfs: VFS,
+    concurrency: usize,
+}
+
+impl Checkout {
+    pub fn default_config(vfs: VFS) -> Self {
+        Self {
+            vfs,
+            concurrency: DEFAULT_CONCURRENCY,
+        }
+    }
+
+    pub fn plan_action_map(&self, map: ActionMap) -> CheckoutPlan {
+        CheckoutPlan::from_action_map(self.clone(), map)
+    }
+
+    pub fn plan_diff<D: Iterator<Item = Result<DiffEntry>>>(
+        &self,
+        iter: D,
+    ) -> Result<CheckoutPlan> {
+        CheckoutPlan::from_diff(self.clone(), iter)
+    }
+}
+
 impl CheckoutPlan {
-    pub fn from_action_map(vfs: VFS, map: ActionMap) -> Self {
+    fn from_action_map(checkout: Checkout, map: ActionMap) -> Self {
         let mut remove = vec![];
         let mut update_content = vec![];
         let mut update_meta = vec![];
@@ -123,14 +149,17 @@ impl CheckoutPlan {
             update_content,
             update_meta,
             progress: None,
-            vfs,
+            checkout,
         }
     }
 
     /// Processes diff into checkout plan.
     /// Left in the diff is a current commit.
     /// Right is a commit to be checked out.
-    pub fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(vfs: VFS, iter: D) -> Result<Self> {
+    fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(
+        checkout: Checkout,
+        iter: D,
+    ) -> Result<Self> {
         let mut remove = vec![];
         let mut update_content = vec![];
         let mut update_meta = vec![];
@@ -167,21 +196,22 @@ impl CheckoutPlan {
             update_content,
             update_meta,
             progress: None,
-            vfs,
+            checkout,
         })
     }
 
     pub fn add_progress(&mut self, path: PathBuf) -> Result<()> {
+        let vfs = &self.checkout.vfs;
         let progress = if path.exists() {
-            match CheckoutProgress::load(&path, self.vfs.clone()) {
+            match CheckoutProgress::load(&path, vfs.clone()) {
                 Ok(p) => p,
                 Err(e) => {
                     debug!("Failed to load CheckoutProgress with {:?}", e);
-                    CheckoutProgress::new(&path, self.vfs.clone())?
+                    CheckoutProgress::new(&path, vfs.clone())?
                 }
             }
         } else {
-            CheckoutProgress::new(&path, self.vfs.clone())?
+            CheckoutProgress::new(&path, vfs.clone())?
         };
         self.progress = Some(Mutex::new(progress));
         Ok(())
@@ -221,14 +251,14 @@ impl CheckoutPlan {
 
     /// Applies plan to the root using store to fetch data.
     /// This async function offloads file system operation to tokio blocking thread pool.
-    /// It limits number of concurrent fs operations to PARALLEL_CHECKOUT.
+    /// It limits number of concurrent fs operations to Checkout::concurrency.
     ///
     /// This function also designed to leverage async storage API(which we do not yet have).
     /// When updating content of the file/symlink, this function first creates list of HgId
     /// it needs to fetch. This list is then converted to stream and fed into storage for fetching
     ///
     /// As storage starts returning blobs of data, we start to kick off fs write operations in
-    /// the tokio async worker pool. If more then PARALLEL_CHECKOUT fs operations are pending, we
+    /// the tokio async worker pool. If more then Checkout::concurrency fs operations are pending, we
     /// stop polling storage stream, until one of pending fs operations complete
     ///
     /// This function fails fast and returns error when first checkout operation fails.
@@ -240,7 +270,7 @@ impl CheckoutPlan {
         &self,
         f: F,
     ) -> Result<CheckoutStats> {
-        let vfs = &self.vfs;
+        let vfs = &self.checkout.vfs;
         let filtered_update_content: Vec<_> = self
             .progress
             .as_ref()
@@ -260,7 +290,7 @@ impl CheckoutPlan {
         let remove_files = stream::iter(self.remove.clone().into_iter())
             .chunks(VFS_BATCH_SIZE)
             .map(|paths| Self::remove_files(async_vfs, stats_ref, paths, bar));
-        let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
+        let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
 
         Self::process_work_stream(remove_files).await?;
 
@@ -290,12 +320,12 @@ impl CheckoutPlan {
                 Self::write_files(async_vfs, stats_ref, actions?, progress_ref, bar).await
             });
 
-        let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
+        let update_content = update_content.buffer_unordered(self.checkout.concurrency);
 
         let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
             Self::set_exec_on_file(async_vfs, stats_ref, &action.path, action.set_x_flag, bar)
         });
-        let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
+        let update_meta = update_meta.buffer_unordered(self.checkout.concurrency);
 
         let update_content = Self::process_work_stream(update_content);
         let update_meta = Self::process_work_stream(update_meta);
@@ -436,7 +466,7 @@ impl CheckoutPlan {
         store: Arc<dyn ReadStore<Key, StoreFile>>,
         tree_state: &mut TreeState,
     ) -> Result<Vec<RepoPathBuf>> {
-        let vfs = &self.vfs;
+        let vfs = &self.checkout.vfs;
         let mut check_content = vec![];
 
         let new_files = self.new_file_actions();
@@ -506,7 +536,7 @@ impl CheckoutPlan {
                     Self::check_content(&vfs, v?)
                 })
             })
-            .buffer_unordered(PARALLEL_CHECKOUT)
+            .buffer_unordered(self.checkout.concurrency)
             .map(|r| r?);
 
         let unknowns = Self::process_vec_work_stream(check_content).await?;
@@ -659,7 +689,7 @@ impl CheckoutPlan {
     }
 
     pub fn vfs(&self) -> &VFS {
-        &self.vfs
+        &self.checkout.vfs
     }
 
     #[cfg(test)]
@@ -669,7 +699,7 @@ impl CheckoutPlan {
             update_content: vec![],
             update_meta: vec![],
             progress: None,
-            vfs,
+            checkout: Checkout::default_config(vfs),
         }
     }
 }
@@ -1071,7 +1101,10 @@ mod test {
         let right_tree = make_tree_manifest_from_meta(to.iter().cloned());
         let diff = Diff::new(&left_tree, &right_tree, &matcher);
         let vfs = VFS::new(working_path.clone())?;
-        let plan = CheckoutPlan::from_diff(vfs, diff).context("Plan construction failed")?;
+        let checkout = Checkout::default_config(vfs);
+        let plan = checkout
+            .plan_diff(diff)
+            .context("Plan construction failed")?;
 
         // Use clean vfs for test
         plan.apply_stream(dummy_fs)

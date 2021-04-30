@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
-use checkout::{Action, ActionMap, CheckoutPlan, Conflict, Merge, MergeResult};
+use checkout::{Action, ActionMap, Checkout, CheckoutPlan, Conflict, Merge, MergeResult};
 use cpython::*;
 use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
@@ -58,7 +58,8 @@ py_class!(class checkoutplan |py| {
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
-        let mut plan = CheckoutPlan::from_diff(vfs, diff).map_pyerr(py)?;
+        let checkout = Checkout::default_config(vfs);
+        let mut plan = checkout.plan_diff(diff).map_pyerr(py)?;
         if let Some(progress_path) = progress_path {
             plan.add_progress(progress_path.to_path_buf()).map_pyerr(py)?;
         }
