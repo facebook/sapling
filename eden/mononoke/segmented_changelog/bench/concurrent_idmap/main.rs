@@ -13,7 +13,7 @@ use tokio::runtime::Runtime;
 use context::CoreContext;
 use mononoke_types::hash::Blake2;
 use mononoke_types::ChangesetId;
-use segmented_changelog::{ConcurrentMemIdMap, IdMap, Vertex};
+use segmented_changelog::{ConcurrentMemIdMap, DagId, IdMap};
 
 async fn insert(ctx: &CoreContext, idmap: &dyn IdMap, low: u64, high: u64) {
     let mut cs_id_bytes = [0u8; 32];
@@ -23,13 +23,13 @@ async fn insert(ctx: &CoreContext, idmap: &dyn IdMap, low: u64, high: u64) {
         let cs_id = ChangesetId::from(Blake2::from_byte_array(cs_id_bytes.clone()));
         // no good reason to join these futures
         idmap
-            .insert(ctx, Vertex(i), cs_id)
+            .insert(ctx, DagId(i), cs_id)
             .await
             .expect("failed to insert");
     }
 }
 
-async fn find(ctx: &CoreContext, idmap: &dyn IdMap, v: Vertex) {
+async fn find(ctx: &CoreContext, idmap: &dyn IdMap, v: DagId) {
     let _ = idmap
         .find_changeset_id(ctx, v)
         .await
@@ -58,7 +58,7 @@ fn read_benchmark(c: &mut Criterion, runtime: &Runtime, ctx: &CoreContext) {
                 for chunk in (0..10000u64).collect::<Vec<_>>().chunks(1000) {
                     let mut f = vec![];
                     for j in chunk {
-                        f.push(find(ctx, &idmap, Vertex(*j)));
+                        f.push(find(ctx, &idmap, DagId(*j)));
                     }
                     let _ = futures::future::join_all(f).await;
                 }
@@ -79,7 +79,7 @@ fn read_write_benchmark(c: &mut Criterion, runtime: &Runtime, ctx: &CoreContext)
                 for i in 0..100 {
                     let mut read = vec![];
                     for j in 0..100 {
-                        read.push(find(ctx, &idmap, Vertex(i * 100 + j)));
+                        read.push(find(ctx, &idmap, DagId(i * 100 + j)));
                     }
                     let _ = futures::future::join(
                         futures::future::join_all(read),

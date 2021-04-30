@@ -21,7 +21,7 @@ use thiserror::Error;
 
 pub use dag;
 pub use dag::{
-    CloneData, FirstAncestorConstraint, FlatSegment, Group, Id as Vertex, IdSet as DagIdSet,
+    CloneData, FirstAncestorConstraint, FlatSegment, Group, Id as DagId, IdSet as DagIdSet,
     InProcessIdDag, Location, PreparedFlatSegments,
 };
 
@@ -115,7 +115,7 @@ pub trait SegmentedChangelog: Send + Sync {
 
 pub struct StreamCloneData<T> {
     pub flat_segments: PreparedFlatSegments,
-    pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
+    pub idmap_stream: BoxStream<'static, Result<(DagId, T)>>,
 }
 
 #[derive(Debug, Error)]

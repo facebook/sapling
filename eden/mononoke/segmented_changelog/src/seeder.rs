@@ -133,16 +133,16 @@ impl SegmentedChangelogSeeder {
             start_state.insert_parents(cs_entry.cs_id, cs_entry.parents);
         }
 
-        let low_vertex = Group::MASTER.min_id();
+        let low_dag_id = Group::MASTER.min_id();
         let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
         let mut iddag = InProcessIdDag::new_in_process();
 
         // Assign ids for all changesets thus creating an IdMap
-        let (mem_idmap, head_vertex) = update::assign_ids(ctx, &start_state, head, low_vertex)?;
+        let (mem_idmap, head_dag_id) = update::assign_ids(ctx, &start_state, head, low_dag_id)?;
         info!(ctx.logger(), "dag ids assigned");
 
         // Construct the iddag
-        update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+        update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_dag_id)?;
         info!(ctx.logger(), "iddag constructed");
 
         // Update IdMapVersion

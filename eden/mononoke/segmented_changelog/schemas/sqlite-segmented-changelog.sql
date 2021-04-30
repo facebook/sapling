@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+/* vertex is an older name for dag_id in Mononoke */
 CREATE TABLE segmented_changelog_idmap (
   repo_id INTEGER NOT NULL,
   version INTEGER NOT NULL,

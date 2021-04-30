@@ -269,14 +269,14 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn are_heads_assigned(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
-        let vertex_map = self.idmap.find_many_vertexes(ctx, heads.to_vec()).await?;
-        if vertex_map.len() != heads.len() {
+        let dag_id_map = self.idmap.find_many_dag_ids(ctx, heads.to_vec()).await?;
+        if dag_id_map.len() != heads.len() {
             return Ok(false);
         }
-        // It is safer to check that the vertexes we got are also in the iddag.
+        // It is safer to check that the dag_ids we got are also in the iddag.
         let iddag = self.iddag.read().await;
-        for (_cs_id, vertex) in vertex_map {
-            if !iddag.contains_id(vertex)? {
+        for (_cs_id, dag_id) in dag_id_map {
+            if !iddag.contains_id(dag_id)? {
                 return Ok(false);
             }
         }
@@ -284,17 +284,17 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
-        if let Some(vertex) = self
+        if let Some(dag_id) = self
             .idmap
-            .find_vertex(ctx, cs_id)
+            .find_dag_id(ctx, cs_id)
             .await
-            .context("fetching vertex for csid")?
+            .context("fetching dag_id for csid")?
         {
             // Note. This will result in two read locks being acquired for functions that call
             // into build_up. It would be nice to get to one lock being acquired. I tried but
             // had some issues with lifetimes :).
             let iddag = self.iddag.read().await;
-            if iddag.contains_id(vertex)? {
+            if iddag.contains_id(dag_id)? {
                 return Ok(true);
             }
         }
@@ -311,7 +311,7 @@ async fn the_actual_update(
     head: ChangesetId,
 ) -> Result<()> {
     let monitored = async {
-        let (head_vertex, idmap_update_state) = {
+        let (head_dag_id, idmap_update_state) = {
             let iddag = iddag.read().await;
             prepare_incremental_iddag_update(&ctx, &iddag, &idmap, &changeset_fetcher, head)
                 .await
@@ -319,7 +319,7 @@ async fn the_actual_update(
         };
         if let Some((start_state, mem_idmap)) = idmap_update_state {
             let mut iddag = iddag.write().await;
-            update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+            update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_dag_id)?;
         }
         Ok(())
     };

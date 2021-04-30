@@ -19,9 +19,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
-use crate::{
-    CloneData, DagIdSet, FirstAncestorConstraint, Group, InProcessIdDag, Location, Vertex,
-};
+use crate::{CloneData, DagId, DagIdSet, FirstAncestorConstraint, Group, InProcessIdDag, Location};
 use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
@@ -46,7 +44,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
         let location = location
-            .and_then_descendant(|hgid| self.idmap.get_vertex(ctx, hgid))
+            .and_then_descendant(|hgid| self.idmap.get_dag_id(ctx, hgid))
             .await?;
         self.known_location_to_many_changeset_ids(ctx, location, count)
             .await
@@ -58,12 +56,12 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        let (master_head_vertexes, cs_to_vertex) = futures::try_join!(
-            self.idmap.find_many_vertexes(ctx, master_heads.clone()),
-            self.idmap.find_many_vertexes(ctx, cs_ids),
+        let (master_head_dag_ids, cs_to_dag_id) = futures::try_join!(
+            self.idmap.find_many_dag_ids(ctx, master_heads.clone()),
+            self.idmap.find_many_dag_ids(ctx, cs_ids),
         )
-        .context("failed fetching changeset to vertex translations")?;
-        if master_head_vertexes.is_empty() {
+        .context("failed fetching changeset to dag_id translations")?;
+        if master_head_dag_ids.is_empty() {
             // When the client has multiple heads, we are content with the server finding only one
             // of the heads. This situation comes up when master moves backwards.  The server may
             // be reseeded after that and will not have multiple heads. The client then may have
@@ -76,14 +74,14 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             );
         }
         let constraints = FirstAncestorConstraint::KnownUniversally {
-            heads: DagIdSet::from_spans(master_head_vertexes.into_iter().map(|(_k, v)| v)),
+            heads: DagIdSet::from_spans(master_head_dag_ids.into_iter().map(|(_k, v)| v)),
         };
-        let cs_to_vlocation = cs_to_vertex
+        let cs_to_vlocation = cs_to_dag_id
             .into_iter()
-            .filter_map(|(cs_id, vertex)| {
+            .filter_map(|(cs_id, dag_id)| {
                 // We do not return an entry when the asked commit is a descendant of client_head.
                 self.iddag
-                    .to_first_ancestor_nth(vertex, constraints.clone())
+                    .to_first_ancestor_nth(dag_id, constraints.clone())
                     .with_context(|| {
                         format!(
                             "failed to compute the common descendant and distance for {}",
@@ -99,15 +97,15 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             self.idmap
                 .find_many_changeset_ids(ctx, to_fetch)
                 .await
-                .context("failed fetching vertex to changeset translations")?
+                .context("failed fetching dag_id to changeset translations")?
         };
         let locations = cs_to_vlocation
             .into_iter()
             .map(|(cs, location)| {
                 location
-                    .try_map_descendant(|vertex| {
-                        common_cs_ids.get(&vertex).cloned().ok_or_else(|| {
-                            format_err!("failed to find vertex translation for {}", vertex)
+                    .try_map_descendant(|dag_id| {
+                        common_cs_ids.get(&dag_id).cloned().ok_or_else(|| {
+                            format_err!("failed to find dag_id translation for {}", dag_id)
                         })
                     })
                     .map(|l| (cs, l))
@@ -158,7 +156,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             .iddag
             .flat_segments(group)
             .context("error during flat segment retrieval")?;
-        let idmap_stream = stream::iter((group.min_id().0..next_id.0).into_iter().map(Vertex))
+        let idmap_stream = stream::iter((group.min_id().0..next_id.0).into_iter().map(DagId))
             .chunks(CHUNK_SIZE)
             .map({
                 cloned!(ctx, self.idmap);
@@ -187,33 +185,33 @@ impl<'a> ReadOnlySegmentedChangelog<'a> {
     pub(crate) async fn known_location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        location: Location<Vertex>,
+        location: Location<DagId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
-        let mut dist_ancestor_vertex = self
+        let mut dist_ancestor_dag_id = self
             .iddag
             .first_ancestor_nth(location.descendant, location.distance)
             .with_context(|| format!("failed to compute location origin for {:?}", location))?;
-        let mut vertexes = vec![dist_ancestor_vertex];
+        let mut dag_ids = vec![dist_ancestor_dag_id];
         for _ in 1..count {
             let parents = self
                 .iddag
-                .parent_ids(dist_ancestor_vertex)
-                .with_context(|| format!("looking up parents ids for {}", dist_ancestor_vertex))?;
+                .parent_ids(dist_ancestor_dag_id)
+                .with_context(|| format!("looking up parents ids for {}", dist_ancestor_dag_id))?;
             if parents.len() != 1 {
                 return Err(format_err!(
-                    "invalid request: changeset with vertex {} does not have {} single parent ancestors",
+                    "invalid request: changeset with dag_id {} does not have {} single parent ancestors",
                     location.descendant,
                     location.distance + count - 1
                 ));
             }
-            dist_ancestor_vertex = parents[0];
-            vertexes.push(dist_ancestor_vertex);
+            dist_ancestor_dag_id = parents[0];
+            dag_ids.push(dist_ancestor_dag_id);
         }
-        let changeset_futures = vertexes
+        let changeset_futures = dag_ids
             .into_iter()
-            .map(|vertex| self.idmap.get_changeset_id(ctx, vertex));
+            .map(|dag_id| self.idmap.get_changeset_id(ctx, dag_id));
         stream::iter(changeset_futures)
             .buffered(IDMAP_CHANGESET_FETCH_BATCH)
             .try_collect()

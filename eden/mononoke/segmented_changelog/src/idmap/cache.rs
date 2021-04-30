@@ -26,7 +26,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
-use crate::Vertex;
+use crate::DagId;
 
 #[derive(Clone)]
 pub struct CachedIdMap {
@@ -39,14 +39,14 @@ pub struct CachedIdMap {
 #[derive(Clone)]
 pub struct CacheHandlers {
     pub dag_to_cs: CachelibHandler<ChangesetIdWrapper>,
-    pub cs_to_dag: CachelibHandler<VertexWrapper>,
+    pub cs_to_dag: CachelibHandler<DagIdWrapper>,
     pub memcache: MemcacheHandler,
 }
 
 impl CacheHandlers {
     pub fn new(
         dag_to_cs: CachelibHandler<ChangesetIdWrapper>,
-        cs_to_dag: CachelibHandler<VertexWrapper>,
+        cs_to_dag: CachelibHandler<DagIdWrapper>,
         memcache: MemcacheHandler,
     ) -> Self {
         Self {
@@ -100,7 +100,7 @@ impl IdMap for CachedIdMap {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
-        mappings: Vec<(Vertex, ChangesetId)>,
+        mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
         self.idmap.insert_many(ctx, mappings).await?;
         Ok(())
@@ -109,10 +109,10 @@ impl IdMap for CachedIdMap {
     async fn find_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        vertexes: Vec<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetId>> {
+        dag_ids: Vec<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetId>> {
         let ctx = (ctx, self);
-        let res = get_or_fill(ctx, vertexes.into_iter().collect())
+        let res = get_or_fill(ctx, dag_ids.into_iter().collect())
             .await
             .with_context(|| "Error fetching many changeset ids via cache")?
             .into_iter()
@@ -121,11 +121,11 @@ impl IdMap for CachedIdMap {
         Ok(res)
     }
 
-    async fn find_many_vertexes(
+    async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vertex>> {
+    ) -> Result<HashMap<ChangesetId, DagId>> {
         let ctx = (ctx, self);
         let res = get_or_fill(ctx, cs_ids.into_iter().collect())
             .await
@@ -136,7 +136,7 @@ impl IdMap for CachedIdMap {
         Ok(res)
     }
 
-    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
+    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         self.idmap.get_last_entry(ctx).await
     }
 }
@@ -189,16 +189,16 @@ impl EntityStore<ChangesetIdWrapper> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<Vertex, ChangesetIdWrapper> for CacheRequest<'_> {
-    fn get_cache_key(&self, vertex: &Vertex) -> String {
+impl KeyedEntityStore<DagId, ChangesetIdWrapper> for CacheRequest<'_> {
+    fn get_cache_key(&self, dag_id: &DagId) -> String {
         let (_, bag) = self;
-        format!("{}.vertex.{}", bag.repo_id, vertex)
+        format!("{}.dag_id.{}", bag.repo_id, dag_id)
     }
 
     async fn get_from_db(
         &self,
-        keys: HashSet<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetIdWrapper>> {
+        keys: HashSet<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetIdWrapper>> {
         let (ctx, bag) = self;
 
         let res = bag
@@ -214,27 +214,27 @@ impl KeyedEntityStore<Vertex, ChangesetIdWrapper> for CacheRequest<'_> {
 }
 
 #[derive(Clone, Copy, Debug, Abomonation)]
-pub struct VertexWrapper(Vertex);
+pub struct DagIdWrapper(DagId);
 
-impl From<Vertex> for VertexWrapper {
-    fn from(vertex: Vertex) -> Self {
-        VertexWrapper(vertex)
+impl From<DagId> for DagIdWrapper {
+    fn from(dag_id: DagId) -> Self {
+        DagIdWrapper(dag_id)
     }
 }
 
-impl MemcacheEntity for VertexWrapper {
+impl MemcacheEntity for DagIdWrapper {
     fn serialize(&self) -> Bytes {
         Bytes::copy_from_slice(&self.0.0.to_be_bytes())
     }
 
     fn deserialize(bytes: Bytes) -> Result<Self, ()> {
         let arr = bytes.as_ref().try_into().map_err(|_| ())?;
-        Ok(VertexWrapper(Vertex(u64::from_be_bytes(arr))))
+        Ok(DagIdWrapper(DagId(u64::from_be_bytes(arr))))
     }
 }
 
-impl EntityStore<VertexWrapper> for CacheRequest<'_> {
-    fn cachelib(&self) -> &CachelibHandler<VertexWrapper> {
+impl EntityStore<DagIdWrapper> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<DagIdWrapper> {
         let (_, bag) = self;
         &bag.cache_handlers.cs_to_dag
     }
@@ -249,7 +249,7 @@ impl EntityStore<VertexWrapper> for CacheRequest<'_> {
         &bag.cache_handlers.memcache
     }
 
-    fn cache_determinator(&self, _: &VertexWrapper) -> CacheDisposition {
+    fn cache_determinator(&self, _: &DagIdWrapper) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 
@@ -257,7 +257,7 @@ impl EntityStore<VertexWrapper> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<ChangesetId, VertexWrapper> for CacheRequest<'_> {
+impl KeyedEntityStore<ChangesetId, DagIdWrapper> for CacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
         let (_, bag) = self;
         format!("{}.cs.{}", bag.repo_id, cs_id)
@@ -266,19 +266,19 @@ impl KeyedEntityStore<ChangesetId, VertexWrapper> for CacheRequest<'_> {
     async fn get_from_db(
         &self,
         keys: HashSet<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, VertexWrapper>> {
+    ) -> Result<HashMap<ChangesetId, DagIdWrapper>> {
         let (ctx, bag) = self;
 
         let futures = keys.into_iter().map(|cs_id| {
             bag.idmap
-                .find_vertex(ctx, cs_id)
+                .find_dag_id(ctx, cs_id)
                 .map_ok(move |v| (cs_id, v))
         });
 
         let res = future::try_join_all(futures)
             .await?
             .into_iter()
-            .filter_map(|(cs_id, opt)| opt.map(move |v| (cs_id, VertexWrapper(v))))
+            .filter_map(|(cs_id, opt)| opt.map(move |v| (cs_id, DagIdWrapper(v))))
             .collect();
 
         Ok(res)
@@ -326,17 +326,17 @@ mod tests {
         let idmap1 = new_cached_idmap(RepositoryId::new(1));
         let idmap2 = new_cached_idmap(RepositoryId::new(2));
 
-        idmap1.insert(&ctx, Vertex(0), ONES_CSID).await?;
-        idmap1.insert(&ctx, Vertex(1), TWOS_CSID).await?;
-        idmap2.insert(&ctx, Vertex(0), TWOS_CSID).await?;
+        idmap1.insert(&ctx, DagId(0), ONES_CSID).await?;
+        idmap1.insert(&ctx, DagId(1), TWOS_CSID).await?;
+        idmap2.insert(&ctx, DagId(0), TWOS_CSID).await?;
 
         // prime the caches
-        assert_eq!(idmap1.get_changeset_id(&ctx, Vertex(0)).await?, ONES_CSID);
-        assert_eq!(idmap1.get_changeset_id(&ctx, Vertex(1)).await?, TWOS_CSID);
-        assert_eq!(idmap2.get_changeset_id(&ctx, Vertex(0)).await?, TWOS_CSID);
+        assert_eq!(idmap1.get_changeset_id(&ctx, DagId(0)).await?, ONES_CSID);
+        assert_eq!(idmap1.get_changeset_id(&ctx, DagId(1)).await?, TWOS_CSID);
+        assert_eq!(idmap2.get_changeset_id(&ctx, DagId(0)).await?, TWOS_CSID);
 
-        assert_eq!(idmap1.get_vertex(&ctx, TWOS_CSID).await?, Vertex(1));
-        assert_eq!(idmap2.get_vertex(&ctx, TWOS_CSID).await?, Vertex(0));
+        assert_eq!(idmap1.get_dag_id(&ctx, TWOS_CSID).await?, DagId(1));
+        assert_eq!(idmap2.get_dag_id(&ctx, TWOS_CSID).await?, DagId(0));
 
         // check caches are set
         assert_eq!(
@@ -359,12 +359,12 @@ mod tests {
         );
 
         // fetch from caches
-        assert_eq!(idmap1.get_changeset_id(&ctx, Vertex(0)).await?, ONES_CSID);
-        assert_eq!(idmap1.get_changeset_id(&ctx, Vertex(1)).await?, TWOS_CSID);
-        assert_eq!(idmap2.get_changeset_id(&ctx, Vertex(0)).await?, TWOS_CSID);
+        assert_eq!(idmap1.get_changeset_id(&ctx, DagId(0)).await?, ONES_CSID);
+        assert_eq!(idmap1.get_changeset_id(&ctx, DagId(1)).await?, TWOS_CSID);
+        assert_eq!(idmap2.get_changeset_id(&ctx, DagId(0)).await?, TWOS_CSID);
 
-        assert_eq!(idmap1.get_vertex(&ctx, TWOS_CSID).await?, Vertex(1));
-        assert_eq!(idmap2.get_vertex(&ctx, TWOS_CSID).await?, Vertex(0));
+        assert_eq!(idmap1.get_dag_id(&ctx, TWOS_CSID).await?, DagId(1));
+        assert_eq!(idmap2.get_dag_id(&ctx, TWOS_CSID).await?, DagId(0));
 
         Ok(())
     }

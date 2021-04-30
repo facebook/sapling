@@ -14,62 +14,62 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
-use crate::Vertex;
+use crate::DagId;
 
 #[derive(Debug)]
 pub struct MemIdMap {
-    vertex2cs: HashMap<Vertex, ChangesetId>,
-    cs2vertex: HashMap<ChangesetId, Vertex>,
-    last_entry: Option<(Vertex, ChangesetId)>,
+    dag_id2cs: HashMap<DagId, ChangesetId>,
+    cs2dag_id: HashMap<ChangesetId, DagId>,
+    last_entry: Option<(DagId, ChangesetId)>,
 }
 
 impl MemIdMap {
     pub fn new() -> Self {
         Self {
-            vertex2cs: HashMap::new(),
-            cs2vertex: HashMap::new(),
+            dag_id2cs: HashMap::new(),
+            cs2dag_id: HashMap::new(),
             last_entry: None,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.vertex2cs.len()
+        self.dag_id2cs.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (Vertex, ChangesetId)> + '_ {
-        self.vertex2cs
+    pub fn iter(&self) -> impl Iterator<Item = (DagId, ChangesetId)> + '_ {
+        self.dag_id2cs
             .iter()
-            .map(|(&vertex, &cs_id)| (vertex, cs_id))
+            .map(|(&dag_id, &cs_id)| (dag_id, cs_id))
     }
 
-    pub fn insert(&mut self, vertex: Vertex, cs_id: ChangesetId) {
-        self.vertex2cs.insert(vertex, cs_id);
-        self.cs2vertex.insert(cs_id, vertex);
+    pub fn insert(&mut self, dag_id: DagId, cs_id: ChangesetId) {
+        self.dag_id2cs.insert(dag_id, cs_id);
+        self.cs2dag_id.insert(cs_id, dag_id);
         match self.last_entry {
-            Some((last_vertex, _)) if last_vertex > vertex => {}
-            _ => self.last_entry = Some((vertex, cs_id)),
+            Some((last_dag_id, _)) if last_dag_id > dag_id => {}
+            _ => self.last_entry = Some((dag_id, cs_id)),
         }
     }
 
-    pub fn find_changeset_id(&self, vertex: Vertex) -> Option<ChangesetId> {
-        self.vertex2cs.get(&vertex).copied()
+    pub fn find_changeset_id(&self, dag_id: DagId) -> Option<ChangesetId> {
+        self.dag_id2cs.get(&dag_id).copied()
     }
 
-    pub fn get_changeset_id(&self, vertex: Vertex) -> Result<ChangesetId> {
-        self.find_changeset_id(vertex)
-            .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", vertex))
+    pub fn get_changeset_id(&self, dag_id: DagId) -> Result<ChangesetId> {
+        self.find_changeset_id(dag_id)
+            .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", dag_id))
     }
 
-    pub fn find_vertex(&self, cs_id: ChangesetId) -> Option<Vertex> {
-        self.cs2vertex.get(&cs_id).copied()
+    pub fn find_dag_id(&self, cs_id: ChangesetId) -> Option<DagId> {
+        self.cs2dag_id.get(&cs_id).copied()
     }
 
-    pub fn get_vertex(&self, cs_id: ChangesetId) -> Result<Vertex> {
-        self.find_vertex(cs_id)
+    pub fn get_dag_id(&self, cs_id: ChangesetId) -> Result<DagId> {
+        self.find_dag_id(cs_id)
             .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
     }
 
-    pub fn get_last_entry(&self) -> Result<Option<(Vertex, ChangesetId)>> {
+    pub fn get_last_entry(&self) -> Result<Option<(DagId, ChangesetId)>> {
         Ok(self.last_entry.clone())
     }
 }
@@ -92,11 +92,11 @@ impl IdMap for ConcurrentMemIdMap {
     async fn insert_many(
         &self,
         _ctx: &CoreContext,
-        mappings: Vec<(Vertex, ChangesetId)>,
+        mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
         let mut inner = self.inner.write();
-        for (vertex, cs) in mappings {
-            inner.insert(vertex, cs);
+        for (dag_id, cs) in mappings {
+            inner.insert(dag_id, cs);
         }
         Ok(())
     }
@@ -104,30 +104,30 @@ impl IdMap for ConcurrentMemIdMap {
     async fn find_many_changeset_ids(
         &self,
         _ctx: &CoreContext,
-        vertexes: Vec<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetId>> {
+        dag_ids: Vec<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetId>> {
         let inner = self.inner.read();
-        let result = vertexes
+        let result = dag_ids
             .into_iter()
             .filter_map(|v| inner.find_changeset_id(v).map(|cs| (v, cs)))
             .collect();
         Ok(result)
     }
 
-    async fn find_many_vertexes(
+    async fn find_many_dag_ids(
         &self,
         _ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vertex>> {
+    ) -> Result<HashMap<ChangesetId, DagId>> {
         let inner = self.inner.read();
         let result = cs_ids
             .into_iter()
-            .filter_map(|cs| inner.find_vertex(cs).map(|v| (cs, v)))
+            .filter_map(|cs| inner.find_dag_id(cs).map(|v| (cs, v)))
             .collect();
         Ok(result)
     }
 
-    async fn get_last_entry(&self, _ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
+    async fn get_last_entry(&self, _ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         let inner = self.inner.read();
         inner.get_last_entry()
     }
@@ -150,37 +150,37 @@ mod test {
 
         assert_eq!(
             idmap
-                .find_many_vertexes(&ctx, vec![AS_CSID, ONES_CSID, TWOS_CSID])
+                .find_many_dag_ids(&ctx, vec![AS_CSID, ONES_CSID, TWOS_CSID])
                 .await?,
             hashmap![]
         );
         assert_eq!(
             idmap
-                .find_many_changeset_ids(&ctx, vec![Vertex(0), Vertex(1), Vertex(2)])
+                .find_many_changeset_ids(&ctx, vec![DagId(0), DagId(1), DagId(2)])
                 .await?,
             hashmap![]
         );
         assert_eq!(idmap.get_last_entry(&ctx).await?, None);
 
         idmap
-            .insert_many(&ctx, vec![(Vertex(0), AS_CSID), (Vertex(1), ONES_CSID)])
+            .insert_many(&ctx, vec![(DagId(0), AS_CSID), (DagId(1), ONES_CSID)])
             .await?;
 
         assert_eq!(
             idmap
-                .find_many_vertexes(&ctx, vec![AS_CSID, ONES_CSID, TWOS_CSID])
+                .find_many_dag_ids(&ctx, vec![AS_CSID, ONES_CSID, TWOS_CSID])
                 .await?,
-            hashmap![AS_CSID => Vertex(0), ONES_CSID => Vertex(1)]
+            hashmap![AS_CSID => DagId(0), ONES_CSID => DagId(1)]
         );
         assert_eq!(
             idmap
-                .find_many_changeset_ids(&ctx, vec![Vertex(0), Vertex(1), Vertex(2)])
+                .find_many_changeset_ids(&ctx, vec![DagId(0), DagId(1), DagId(2)])
                 .await?,
-            hashmap![Vertex(0) => AS_CSID, Vertex(1) => ONES_CSID]
+            hashmap![DagId(0) => AS_CSID, DagId(1) => ONES_CSID]
         );
         assert_eq!(
             idmap.get_last_entry(&ctx).await?,
-            Some((Vertex(1), ONES_CSID))
+            Some((DagId(1), ONES_CSID))
         );
 
         Ok(())

@@ -22,7 +22,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{ChangesetId, MPath};
 use repo_client::gettreepack_entries;
-use segmented_changelog::{CloneData, Location, StreamCloneData, Vertex};
+use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -349,9 +349,9 @@ impl HgRepoContext {
 async fn hg_convert_idmap_chunk(
     ctx: CoreContext,
     blobrepo: BlobRepo,
-    chunk: Vec<Result<(Vertex, ChangesetId), anyhow::Error>>,
-) -> Result<impl Stream<Item = Result<(Vertex, HgChangesetId), anyhow::Error>>, anyhow::Error> {
-    let chunk: Vec<(Vertex, ChangesetId)> = chunk
+    chunk: Vec<Result<(DagId, ChangesetId), anyhow::Error>>,
+) -> Result<impl Stream<Item = Result<(DagId, HgChangesetId), anyhow::Error>>, anyhow::Error> {
+    let chunk: Vec<(DagId, ChangesetId)> = chunk
         .into_iter()
         .collect::<Result<Vec<_>, anyhow::Error>>()?;
     let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();

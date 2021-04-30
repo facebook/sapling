@@ -28,63 +28,63 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::types::IdMapVersion;
-use crate::{Group, InProcessIdDag, Vertex};
+use crate::{DagId, Group, InProcessIdDag};
 
 #[async_trait]
 pub trait IdMap: Send + Sync {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
-        mappings: Vec<(Vertex, ChangesetId)>,
+        mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()>;
 
     async fn find_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        vertexes: Vec<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetId>>;
+        dag_ids: Vec<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetId>>;
 
 
-    async fn find_many_vertexes(
+    async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vertex>>;
+    ) -> Result<HashMap<ChangesetId, DagId>>;
 
-    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>>;
+    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>>;
 
     // Default implementations
 
-    async fn insert(&self, ctx: &CoreContext, vertex: Vertex, cs_id: ChangesetId) -> Result<()> {
-        self.insert_many(ctx, vec![(vertex, cs_id)]).await
+    async fn insert(&self, ctx: &CoreContext, dag_id: DagId, cs_id: ChangesetId) -> Result<()> {
+        self.insert_many(ctx, vec![(dag_id, cs_id)]).await
     }
 
     async fn find_changeset_id(
         &self,
         ctx: &CoreContext,
-        vertex: Vertex,
+        dag_id: DagId,
     ) -> Result<Option<ChangesetId>> {
         Ok(self
-            .find_many_changeset_ids(ctx, vec![vertex])
+            .find_many_changeset_ids(ctx, vec![dag_id])
             .await?
-            .remove(&vertex))
+            .remove(&dag_id))
     }
 
-    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
+    async fn find_dag_id(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<DagId>> {
         Ok(self
-            .find_many_vertexes(ctx, vec![cs_id])
+            .find_many_dag_ids(ctx, vec![cs_id])
             .await?
             .remove(&cs_id))
     }
 
-    async fn get_changeset_id(&self, ctx: &CoreContext, vertex: Vertex) -> Result<ChangesetId> {
-        self.find_changeset_id(ctx, vertex)
+    async fn get_changeset_id(&self, ctx: &CoreContext, dag_id: DagId) -> Result<ChangesetId> {
+        self.find_changeset_id(ctx, dag_id)
             .await?
-            .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", vertex))
+            .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", dag_id))
     }
 
-    async fn get_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Vertex> {
-        self.find_vertex(ctx, cs_id)
+    async fn get_dag_id(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<DagId> {
+        self.find_dag_id(ctx, cs_id)
             .await?
             .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
     }
@@ -95,7 +95,7 @@ impl IdMap for Arc<dyn IdMap> {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
-        mappings: Vec<(Vertex, ChangesetId)>,
+        mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
         (**self).insert_many(ctx, mappings).await
     }
@@ -103,20 +103,20 @@ impl IdMap for Arc<dyn IdMap> {
     async fn find_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        vertexes: Vec<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetId>> {
-        (**self).find_many_changeset_ids(ctx, vertexes).await
+        dag_ids: Vec<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetId>> {
+        (**self).find_many_changeset_ids(ctx, dag_ids).await
     }
 
-    async fn find_many_vertexes(
+    async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vertex>> {
-        (**self).find_many_vertexes(ctx, cs_ids).await
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        (**self).find_many_dag_ids(ctx, cs_ids).await
     }
 
-    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
+    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         (**self).get_last_entry(ctx).await
     }
 }
@@ -125,21 +125,21 @@ impl IdMap for Arc<dyn IdMap> {
 /// update operation to be consistent.  When we download an iddag, it has the idmap described by
 /// the shared store. The overlay allows us to update the iddag in process by adding an idmap that
 /// stores all the changes that we made in process. It's important to note that the shared store is
-/// updated constantly by other processes. Because vertexes are added in increasing order, we can
+/// updated constantly by other processes. Because dag_ids are added in increasing order, we can
 /// use the last entry in the downloaded iddag as the cutoff that delimitates the entries that are
 /// fetched from the shared store and those that are fetched from the in process store. Note that
 /// if we were to use the abcence of an entry from the in process store to fetch from the shared
 /// store we would likely end up with inconsistent entries from an updated shared store.
-// Vertexes greater than or equal to cutoff are associated with mem idmap.
-// Vertexes less than cutoff are associated with shared idmap.
+// DagIds greater than or equal to cutoff are associated with mem idmap.
+// DagIds less than cutoff are associated with shared idmap.
 pub struct OverlayIdMap {
     mem: ConcurrentMemIdMap,
     shared: Arc<dyn IdMap>,
-    cutoff: Vertex,
+    cutoff: DagId,
 }
 
 impl OverlayIdMap {
-    pub fn new(shared: Arc<dyn IdMap>, cutoff: Vertex) -> Self {
+    pub fn new(shared: Arc<dyn IdMap>, cutoff: DagId) -> Self {
         let mem = ConcurrentMemIdMap::new();
         Self {
             mem,
@@ -161,7 +161,7 @@ impl IdMap for OverlayIdMap {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
-        mappings: Vec<(Vertex, ChangesetId)>,
+        mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
         for (v, _) in mappings.iter() {
             if v < &self.cutoff {
@@ -178,15 +178,15 @@ impl IdMap for OverlayIdMap {
     async fn find_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        vertexes: Vec<Vertex>,
-    ) -> Result<HashMap<Vertex, ChangesetId>> {
-        let from_mem = vertexes
+        dag_ids: Vec<DagId>,
+    ) -> Result<HashMap<DagId, ChangesetId>> {
+        let from_mem = dag_ids
             .iter()
             .filter(|&v| v >= &self.cutoff)
             .cloned()
             .collect();
         let mut result = self.mem.find_many_changeset_ids(ctx, from_mem).await?;
-        let from_shared: Vec<Vertex> = vertexes
+        let from_shared: Vec<DagId> = dag_ids
             .iter()
             .filter(|&v| v < &self.cutoff)
             .cloned()
@@ -203,12 +203,12 @@ impl IdMap for OverlayIdMap {
         Ok(result)
     }
 
-    async fn find_many_vertexes(
+    async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vertex>> {
-        let mut result = self.mem.find_many_vertexes(ctx, cs_ids.clone()).await?;
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        let mut result = self.mem.find_many_dag_ids(ctx, cs_ids.clone()).await?;
         for (cs, v) in result.iter() {
             if v < &self.cutoff {
                 bail!(
@@ -223,7 +223,7 @@ impl IdMap for OverlayIdMap {
             .into_iter()
             .filter(|cs_id| !result.contains_key(&cs_id))
             .collect();
-        let from_shared = self.shared.find_many_vertexes(ctx, to_get_shared).await?;
+        let from_shared = self.shared.find_many_dag_ids(ctx, to_get_shared).await?;
         for (cs, v) in from_shared {
             if v < self.cutoff {
                 result.insert(cs, v);
@@ -232,22 +232,22 @@ impl IdMap for OverlayIdMap {
         Ok(result)
     }
 
-    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
+    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         match self.mem.get_last_entry(ctx).await? {
             Some(x) => Ok(Some(x)),
-            None if self.cutoff > Vertex(0) => {
-                let vertex = self.cutoff - 1;
+            None if self.cutoff > DagId(0) => {
+                let dag_id = self.cutoff - 1;
                 let cs_id = self
                     .shared
-                    .find_changeset_id(ctx, vertex)
+                    .find_changeset_id(ctx, dag_id)
                     .await?
                     .with_context(|| {
                         format!(
-                            "could not find shared entry for vertex {} (overlay cutoff = {})",
-                            vertex, self.cutoff
+                            "could not find shared entry for dag_id {} (overlay cutoff = {})",
+                            dag_id, self.cutoff
                         )
                     })?;
-                Ok(Some((vertex, cs_id)))
+                Ok(Some((dag_id, cs_id)))
             }
             None => Ok(None),
         }
@@ -340,32 +340,32 @@ mod tests {
         let shared: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
 
         shared
-            .insert_many(&ctx, vec![(Vertex(0), AS_CSID), (Vertex(1), ONES_CSID)])
+            .insert_many(&ctx, vec![(DagId(0), AS_CSID), (DagId(1), ONES_CSID)])
             .await?;
 
-        let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(2));
+        let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
 
         assert_eq!(
             overlay
-                .find_many_changeset_ids(&ctx, vec![Vertex(0), Vertex(1), Vertex(2)])
+                .find_many_changeset_ids(&ctx, vec![DagId(0), DagId(1), DagId(2)])
                 .await?,
-            hashmap![Vertex(0) => AS_CSID, Vertex(1) => ONES_CSID]
+            hashmap![DagId(0) => AS_CSID, DagId(1) => ONES_CSID]
         );
 
         overlay
-            .insert_many(&ctx, vec![(Vertex(2), TWOS_CSID), (Vertex(3), THREES_CSID)])
+            .insert_many(&ctx, vec![(DagId(2), TWOS_CSID), (DagId(3), THREES_CSID)])
             .await?;
         assert_eq!(
             overlay
-                .find_many_changeset_ids(&ctx, vec![Vertex(2), Vertex(3)])
+                .find_many_changeset_ids(&ctx, vec![DagId(2), DagId(3)])
                 .await?,
-            hashmap![Vertex(2) => TWOS_CSID, Vertex(3) => THREES_CSID]
+            hashmap![DagId(2) => TWOS_CSID, DagId(3) => THREES_CSID]
         );
 
         assert_eq!(
             overlay
                 .shared
-                .find_many_changeset_ids(&ctx, vec![Vertex(2), Vertex(3)])
+                .find_many_changeset_ids(&ctx, vec![DagId(2), DagId(3)])
                 .await?,
             hashmap![]
         );
@@ -374,18 +374,18 @@ mod tests {
             .insert_many(
                 &ctx,
                 vec![
-                    (Vertex(2), THREES_CSID),
-                    (Vertex(3), TWOS_CSID),
-                    (Vertex(4), FOURS_CSID),
+                    (DagId(2), THREES_CSID),
+                    (DagId(3), TWOS_CSID),
+                    (DagId(4), FOURS_CSID),
                 ],
             )
             .await?;
 
         assert_eq!(
             overlay
-                .find_many_changeset_ids(&ctx, vec![Vertex(3), Vertex(4)])
+                .find_many_changeset_ids(&ctx, vec![DagId(3), DagId(4)])
                 .await?,
-            hashmap![Vertex(3) => THREES_CSID]
+            hashmap![DagId(3) => THREES_CSID]
         );
 
         Ok(())
@@ -398,50 +398,50 @@ mod tests {
         let shared: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
 
         shared
-            .insert_many(&ctx, vec![(Vertex(0), AS_CSID), (Vertex(1), ONES_CSID)])
+            .insert_many(&ctx, vec![(DagId(0), AS_CSID), (DagId(1), ONES_CSID)])
             .await?;
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(0));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(0));
             assert_eq!(overlay.get_last_entry(&ctx).await?, None);
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(1));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(1));
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
-                Some((Vertex(0), AS_CSID))
+                Some((DagId(0), AS_CSID))
             );
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(1));
-            overlay.insert(&ctx, Vertex(1), THREES_CSID).await?;
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(1));
+            overlay.insert(&ctx, DagId(1), THREES_CSID).await?;
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
-                Some((Vertex(1), THREES_CSID)),
+                Some((DagId(1), THREES_CSID)),
             );
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(2));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
-                Some((Vertex(1), ONES_CSID)),
+                Some((DagId(1), ONES_CSID)),
             );
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(2));
-            overlay.insert(&ctx, Vertex(2), TWOS_CSID).await?;
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
+            overlay.insert(&ctx, DagId(2), TWOS_CSID).await?;
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
-                Some((Vertex(2), TWOS_CSID)),
+                Some((DagId(2), TWOS_CSID)),
             );
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(3));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(3));
             assert!(overlay.get_last_entry(&ctx).await.is_err());
         }
 

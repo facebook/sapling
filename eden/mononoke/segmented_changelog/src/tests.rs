@@ -183,9 +183,9 @@ async fn validate_build_idmap(
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
             .await?;
         for parent in parents {
-            let parent_vertex = sc.idmap.get_vertex(&ctx, parent).await?;
-            let vertex = sc.idmap.get_vertex(&ctx, cs_id).await?;
-            assert!(parent_vertex < vertex);
+            let parent_dag_id = sc.idmap.get_dag_id(&ctx, parent).await?;
+            let dag_id = sc.idmap.get_dag_id(&ctx, cs_id).await?;
+            assert!(parent_dag_id < dag_id);
         }
     }
     Ok(())
