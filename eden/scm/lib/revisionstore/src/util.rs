@@ -46,10 +46,10 @@ fn get_config_cache_path(config: &ConfigSet) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_cache_path(config: &ConfigSet, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+pub fn get_cache_path(config: &ConfigSet, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     let mut path = get_config_cache_path(config)?;
 
-    if let Some(suffix) = suffix {
+    if let Some(ref suffix) = suffix {
         path.push(suffix);
         create_shared_dir(&path)?;
     }
@@ -57,23 +57,16 @@ pub fn get_cache_path(config: &ConfigSet, suffix: &Option<PathBuf>) -> Result<Pa
     Ok(path)
 }
 
-pub fn get_local_path(
-    local_path: &Option<PathBuf>,
-    suffix: &Option<PathBuf>,
-) -> Result<Option<PathBuf>> {
-    if let Some(local_path) = local_path {
-        let mut path = local_path.to_path_buf();
+pub fn get_local_path(local_path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
+    let mut path = local_path;
+    create_dir(&path)?;
+
+    if let Some(ref suffix) = suffix {
+        path.push(suffix);
         create_dir(&path)?;
-
-        if let Some(suffix) = suffix {
-            path.push(&suffix);
-            create_dir(&path)?;
-        }
-
-        Ok(Some(path))
-    } else {
-        Ok(None)
     }
+
+    Ok(path)
 }
 
 pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {

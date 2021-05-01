@@ -65,10 +65,9 @@ impl MetadataStore {
         if let Some(suffix) = suffix.as_ref() {
             shared_path.push(suffix);
         }
-        let local_path = get_local_path(
-            &local_path.as_ref().map(|l| l.as_ref().to_path_buf()),
-            &suffix.map(|p| p.as_ref().to_path_buf()),
-        )?;
+        let local_path = local_path
+            .map(|p| get_local_path(p.as_ref().to_path_buf(), &suffix))
+            .transpose()?;
 
         repair_str += &IndexedLogHgIdHistoryStore::repair(
             get_indexedloghistorystore_path(&shared_path)?,
@@ -223,7 +222,11 @@ impl<'a> MetadataStoreBuilder<'a> {
     }
 
     pub fn build(self) -> Result<MetadataStore> {
-        let local_path = get_local_path(&self.local_path, &self.suffix)?;
+        let local_path = self
+            .local_path
+            .as_ref()
+            .map(|p| get_local_path(p.clone(), &self.suffix))
+            .transpose()?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         let max_pending: u64 = self
             .config
