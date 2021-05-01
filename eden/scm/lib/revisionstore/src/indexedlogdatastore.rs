@@ -262,6 +262,30 @@ impl IndexedLogHgIdDataStore {
             }
         }
     }
+
+    /// Attempt to read an Entry from IndexedLog, replacing the stored path with the one from the provided Key
+    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
+        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
+    }
+
+    // TODO(meyer): Make IndexedLogHgIdDataStore "directly" lockable so we can lock and do a batch of operations (RwLock Guard pattern)
+    /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
+    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+        let inner = self.inner.read();
+        Entry::from_log(key, &inner.log)
+    }
+
+    /// Write an entry to the IndexedLog
+    pub fn put_entry(&self, entry: Entry) -> Result<()> {
+        let mut inner = self.inner.write();
+        entry.write_to_log(&mut inner.log)
+    }
+
+    /// Flush the underlying IndexedLog
+    pub fn flush_log(&self) -> Result<()> {
+        self.inner.write().log.flush()?;
+        Ok(())
+    }
 }
 
 impl KeyedValue for Entry {
@@ -298,8 +322,7 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
             let self_ = self.clone();
             let key_ = key.clone();
             spawn_blocking(move || {
-                let inner = self_.inner.read();
-                match Entry::from_log(&key, &inner.log) {
+                match self_.get_entry(key.clone()) {
                     Ok(None) => Err(FetchError::not_found(key.clone())),
                     Ok(Some(entry)) => {
                         if self_.extstored_policy == ExtStoredPolicy::Ignore
@@ -307,7 +330,7 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
                         {
                             Err(FetchError::not_found(key.clone()))
                         } else {
-                            Ok(entry.with_key(key.clone()))
+                            Ok(entry)
                         }
                     }
                     Err(e) => Err(FetchError::with_key(key.clone(), e)),
@@ -330,9 +353,8 @@ impl WriteStore<Key, Entry> for IndexedLogHgIdDataStore {
             let self_ = self.clone();
             let key = value.key.clone();
             spawn_blocking(move || {
-                let mut inner = self_.inner.write();
                 let key = value.key.clone();
-                match value.write_to_log(&mut inner.log) {
+                match self_.put_entry(value) {
                     Ok(()) => Ok(key),
                     Err(e) => Err(WriteError::with_key(key, e)),
                 }
@@ -353,13 +375,11 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
-        let mut inner = self.inner.write();
-        entry.write_to_log(&mut inner.log)
+        self.put_entry(entry)
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        self.inner.write().log.flush()?;
-        Ok(None)
+        self.flush_log().map(|_| None)
     }
 }
 
@@ -387,8 +407,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        let inner = self.inner.read();
-        let mut entry = match Entry::from_log(&key, &inner.log)? {
+        let mut entry = match self.get_raw_entry(&key)? {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
@@ -407,8 +426,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        let inner = self.inner.read();
-        let entry = match Entry::from_log(&key, &inner.log)? {
+        let entry = match self.get_raw_entry(&key)? {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
