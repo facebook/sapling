@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
+use edenapi::{BlockingFetch, EdenApi, EdenApiBlocking, EdenApiError, Fetch, ProgressCallback};
 use edenapi_types::{EdenApiServerError, FileEntry, TreeAttributes, TreeEntry};
 use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
@@ -135,6 +135,18 @@ pub enum File {}
 
 /// Marker type indicating that the store fetches tree data.
 pub enum Tree {}
+
+impl EdenApiTreeStore {
+    pub fn trees_blocking(
+        &self,
+        keys: Vec<Key>,
+        attributes: Option<TreeAttributes>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+        self.client
+            .trees_blocking(self.repo.clone(), keys, attributes, progress)
+    }
+}
 
 /// Trait that provides a common interface for calling the `files` and `trees`
 /// methods on an EdenAPI client.

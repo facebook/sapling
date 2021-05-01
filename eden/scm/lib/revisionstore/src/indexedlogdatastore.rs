@@ -357,10 +357,31 @@ impl KeyedValue for Entry {
     }
 }
 
+impl std::convert::From<crate::memcache::McData> for Entry {
+    fn from(v: crate::memcache::McData) -> Self {
+        Entry::new(v.key, v.data, v.metadata)
+    }
+}
+
+impl std::convert::TryFrom<Entry> for crate::memcache::McData {
+    type Error = anyhow::Error;
+
+    fn try_from(mut v: Entry) -> Result<Self, Self::Error> {
+        let data = v.content()?;
+
+        Ok(crate::memcache::McData {
+            key: v.key,
+            data,
+            metadata: v.metadata,
+        })
+    }
+}
+
 impl std::convert::From<TreeEntry> for Entry {
     fn from(v: TreeEntry) -> Self {
         Entry::new(
             v.key().clone(),
+            // TODO(meyer): Why does this infallible conversion exist? Push the failure to consumer of TryFrom, at worst
             v.data_unchecked().unwrap().into(),
             Metadata::default(),
         )

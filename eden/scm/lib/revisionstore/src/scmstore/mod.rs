@@ -21,6 +21,7 @@ pub use self::{
     filter_map::FilterMapStore,
     inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
+    specialized::TreeStore,
     types::{StoreFile, StoreTree},
 };
 
@@ -31,6 +32,7 @@ pub mod filter_map;
 pub mod inmemory;
 pub mod legacy;
 pub mod lfs;
+pub mod specialized;
 pub mod types;
 pub mod util;
 

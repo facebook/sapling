@@ -67,7 +67,7 @@ mod dummy {
             Ok(MemcacheStore {})
         }
 
-        pub(super) fn get_data_iter(
+        pub(crate) fn get_data_iter(
             &self,
             _key: &[Key],
         ) -> Result<impl Iterator<Item = Result<McData>>> {
@@ -75,6 +75,7 @@ mod dummy {
         }
 
         pub(super) fn add_data(&self, _delta: &Delta, _metadata: &Metadata) {}
+        pub(crate) fn add_mcdata(&self, _mcdata: McData) {}
 
         pub(super) fn get_hist_iter(
             &self,
