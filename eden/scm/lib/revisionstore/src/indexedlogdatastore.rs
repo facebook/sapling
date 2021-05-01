@@ -15,7 +15,7 @@ use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use futures::{FutureExt, StreamExt};
 use minibytes::Bytes;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::task::spawn_blocking;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
@@ -51,6 +51,12 @@ pub struct IndexedLogHgIdDataStore {
     inner: RwLock<IndexedLogHgIdDataStoreInner>,
     extstored_policy: ExtStoredPolicy,
 }
+
+pub struct IndexedLogHgIdDataStoreReadGuard<'a>(RwLockReadGuard<'a, IndexedLogHgIdDataStoreInner>);
+
+pub struct IndexedLogHgIdDataStoreWriteGuard<'a>(
+    RwLockWriteGuard<'a, IndexedLogHgIdDataStoreInner>,
+);
 
 #[derive(Clone, Debug)]
 pub struct Entry {
@@ -284,6 +290,61 @@ impl IndexedLogHgIdDataStore {
     /// Flush the underlying IndexedLog
     pub fn flush_log(&self) -> Result<()> {
         self.inner.write().log.flush()?;
+        Ok(())
+    }
+
+    pub fn read_lock<'a>(&'a self) -> IndexedLogHgIdDataStoreReadGuard<'a> {
+        IndexedLogHgIdDataStoreReadGuard(self.inner.read())
+    }
+
+    pub fn write_lock<'a>(&'a self) -> IndexedLogHgIdDataStoreWriteGuard<'a> {
+        IndexedLogHgIdDataStoreWriteGuard(self.inner.write())
+    }
+}
+
+impl<'a> IndexedLogHgIdDataStoreReadGuard<'a> {
+    /// Write an entry to the IndexedLog
+    ///
+    /// Like IndexedLogHgIdDataStore::get_entry, but uses the already-acquired read lock.
+    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
+        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
+    }
+
+    /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
+    ///
+    /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired read lock.
+    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+        Entry::from_log(key, &self.0.log)
+    }
+}
+
+impl<'a> IndexedLogHgIdDataStoreWriteGuard<'a> {
+    /// Write an entry to the IndexedLog
+    ///
+    /// Like IndexedLogHgIdDataStore::get_entry, but uses the already-acquired write lock.
+    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
+        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
+    }
+
+    /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
+    ///
+    /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired write lock.
+    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+        Entry::from_log(key, &self.0.log)
+    }
+
+    /// Write an entry to the IndexedLog
+    ///
+    /// Like IndexedLogHgIdDataStore::put_entry, but uses the already-acquired write lock.
+    pub fn put_entry(&mut self, entry: Entry) -> Result<()> {
+        entry.write_to_log(&mut self.0.log)
+    }
+
+    /// Flush the underlying IndexedLog
+    ///
+    /// Like IndexedLogHgIdDataStore::flush_log, but uses the already-acquired write lock.
+    pub fn flush_log(&mut self) -> Result<()> {
+        self.0.log.flush()?;
         Ok(())
     }
 }
