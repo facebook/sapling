@@ -3284,11 +3284,7 @@ sh % "hg log -r '6:7' -T '{rev}:{shortest(node, 0)}\\n'" == r"""
     6:a0b
     7:a04"""
 
-#  node '10' conflicts with the revision number '10' even if it is hidden
-#  (we could exclude hidden revision numbers, but currently we don't)
-
-sh % "hg log -r 4 -T '{rev}:{shortest(node, 0)}\\n'" == "4:107"
-sh % "hg log -r 4 -T '{rev}:{shortest(node, 0)}\\n' --hidden" == "4:107"
+sh % "hg log -r 4 -T '{rev}:{shortest(node, 0)}\\n'" == "4:10"
 
 #  node 'c562' should be unique if the other 'c562' nodes are hidden
 #  (but we don't try the slow path to filter out hidden nodes for now)
