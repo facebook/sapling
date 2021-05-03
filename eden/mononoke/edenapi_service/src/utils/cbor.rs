@@ -32,8 +32,8 @@ pub fn cbor_mime() -> Mime {
     CBOR_MIME.clone()
 }
 
-pub fn to_cbor_bytes<S: Serialize>(s: S) -> Result<Bytes, Error> {
-    serde_cbor::to_vec(&s)
+pub fn to_cbor_bytes<S: Serialize>(s: &S) -> Result<Bytes, Error> {
+    serde_cbor::to_vec(s)
         .map(Bytes::from)
         .context(ErrorKind::SerializationFailed)
 }
@@ -45,7 +45,7 @@ where
     S: Stream<Item = Result<T, Error>> + Send + 'static,
     T: Serialize + Send + 'static,
 {
-    let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
+    let byte_stream = stream.and_then(|item| async move { to_cbor_bytes(&item) });
     let content_stream = ResponseStream::new(byte_stream).capture_first_err();
 
     StreamBody::new(content_stream, cbor_mime())
@@ -56,7 +56,7 @@ where
     S: Stream<Item = T> + Send + 'static,
     T: Serialize + Send + 'static,
 {
-    let byte_stream = stream.then(|item| async { to_cbor_bytes(item) });
+    let byte_stream = stream.then(|item| async move { to_cbor_bytes(&item) });
     let content_stream = ResponseStream::new(byte_stream).capture_first_err();
 
     StreamBody::new(content_stream, cbor_mime())

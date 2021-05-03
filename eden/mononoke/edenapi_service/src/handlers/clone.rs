@@ -56,7 +56,7 @@ pub async fn clone_data(state: &mut State) -> Result<BytesBody<Bytes>, HttpError
     };
 
     Ok(BytesBody::new(
-        cbor::to_cbor_bytes(wire_clone_data).map_err(HttpError::e500)?,
+        cbor::to_cbor_bytes(&wire_clone_data).map_err(HttpError::e500)?,
         cbor::cbor_mime(),
     ))
 }
@@ -87,13 +87,13 @@ pub async fn full_idmap_clone_data(state: &mut State) -> Result<impl TryIntoResp
         flat_segments: clone_data.flat_segments.segments.to_wire(),
         idmap: Vec::new(),
     };
-    let iddag_byte_stream = stream::iter(vec![cbor::to_cbor_bytes(iddag_clone_data)]);
+    let iddag_byte_stream = stream::iter(vec![cbor::to_cbor_bytes(&iddag_clone_data)]);
     let idmap_byte_stream = clone_data.idmap_stream.and_then(|(k, v)| async move {
         let entry = WireIdMapEntry {
             dag_id: k.to_wire(),
             hg_id: HgId::from(v.into_nodehash()).to_wire(),
         };
-        cbor::to_cbor_bytes(entry)
+        cbor::to_cbor_bytes(&entry)
     });
 
     let byte_stream = iddag_byte_stream.chain(idmap_byte_stream);
