@@ -20,7 +20,7 @@ openssl = "0.10"
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

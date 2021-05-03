@@ -34,7 +34,7 @@ reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 revset = { version = "0.1.0", path = "../../revset" }
 sha-1 = "0.8"
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 thiserror = "1.0"
 tunables = { version = "0.1.0", path = "../../tunables" }

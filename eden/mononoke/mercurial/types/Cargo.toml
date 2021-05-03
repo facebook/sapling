@@ -38,7 +38,7 @@ rand_distr = "0.2"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

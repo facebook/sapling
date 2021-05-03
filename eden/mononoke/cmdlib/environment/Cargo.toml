@@ -15,7 +15,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 observability = { version = "0.1.0", path = "../../observability" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 tokio = { version = "1.4", features = ["full", "test-util"] }
 

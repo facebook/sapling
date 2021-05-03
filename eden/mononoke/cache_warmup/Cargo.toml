@@ -27,7 +27,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 microwave = { version = "0.1.0", path = "../microwave" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 revset = { version = "0.1.0", path = "../revset" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 thiserror = "1.0"
 tokio = { version = "1.4", features = ["full", "test-util"] }
 

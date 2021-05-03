@@ -25,7 +25,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pushrebase_hook = { version = "0.1.0", path = "pushrebase_hook" }
 revset = { version = "0.1.0", path = "../revset" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 thiserror = "1.0"
 tunables = { version = "0.1.0", path = "../tunables" }
 

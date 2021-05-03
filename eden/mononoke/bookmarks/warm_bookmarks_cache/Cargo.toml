@@ -32,7 +32,7 @@ mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercuri
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "1.4", features = ["full", "test-util"] }
 tunables = { version = "0.1.0", path = "../../tunables" }

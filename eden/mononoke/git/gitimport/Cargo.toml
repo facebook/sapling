@@ -26,7 +26,7 @@ linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

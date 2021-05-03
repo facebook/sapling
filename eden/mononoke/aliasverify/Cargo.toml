@@ -25,7 +25,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sha2 = "0.8"
-slog = { version = "2.5", features = ["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
