@@ -62,6 +62,7 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 use segmented_changelog_types::ArcSegmentedChangelog;
+use slog::o;
 use thiserror::Error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
@@ -588,9 +589,11 @@ impl RepoFactory {
             .open::<SegmentedChangelogSqlConnections>()
             .context(RepoFactoryError::SegmentedChangelog)?;
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
+        let repo_name = String::from(repo_identity.name());
+        let logger = self.env.logger.new(o!("repo" => repo_name));
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
-            &CoreContext::new_with_logger(self.env.fb, self.env.logger.clone()),
+            &CoreContext::new_with_logger(self.env.fb, logger),
             repo_identity.id(),
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
