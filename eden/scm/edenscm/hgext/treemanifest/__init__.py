@@ -243,7 +243,7 @@ configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
-configitem("treemanifest", "ondemandfetch", default=False)
+configitem("treemanifest", "ondemandfetch", default=True)
 configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"

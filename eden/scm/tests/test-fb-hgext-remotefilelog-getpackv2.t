@@ -30,10 +30,16 @@ Shallow clone from full
   > getpackversion=2
   > EOF
 
+#if mononoke
+  $ hg up -q tip
+  1 trees fetched over 0.00s
+  1 trees fetched over 0.00s
+#else
   $ hg up -q tip
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
   2 trees fetched over *s (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
+#endif
 
   $ hg debugfilerev -v
   79c51fb96423: y

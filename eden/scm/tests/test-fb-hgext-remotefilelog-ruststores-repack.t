@@ -58,7 +58,7 @@ Test that we can repack packs into indexedlog
   $ hg push -q -r tip --to master --create
   $ clearcache
   $ clone master shallow2
-  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9
+  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9 (?)
   1 trees fetched over 0.00s
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
@@ -81,7 +81,7 @@ Test that we can repack packs into indexedlog
 # Verify new fetches go to the indexedlog
   $ clearcache
   $ hg prefetch -r .
-  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9
+  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9 (?)
   1 trees fetched over * (glob)
   $ ls_l $CACHEDIR/master/indexedlogdatastore/0
   -rw-rw-r--      25 index2-node
