@@ -42,6 +42,7 @@ from . import (
     pycompat,
     scmutil,
     sshpeer,
+    eagerpeer,
     ui as uimod,
     uiconfig,
     url,
@@ -123,6 +124,7 @@ def parseurl(path, branches=None):
 
 schemes = {
     "bundle": bundlerepo,
+    "eager": eagerpeer,
     "file": _local,
     "http": httppeer,
     "https": httppeer,
