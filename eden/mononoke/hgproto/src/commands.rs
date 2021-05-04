@@ -23,6 +23,7 @@ use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use limited_async_read::LimitedAsyncRead;
+use qps::Qps;
 use slog::Logger;
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
@@ -37,11 +38,23 @@ use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 pub struct HgCommandHandler<H> {
     logger: Logger,
     commands: H,
+    qps: Option<Arc<Qps>>,
+    src_region: Option<String>,
 }
 
 impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
-    pub fn new(logger: Logger, commands: H) -> Self {
-        HgCommandHandler { logger, commands }
+    pub fn new(
+        logger: Logger,
+        commands: H,
+        qps: Option<Arc<Qps>>,
+        src_region: Option<String>,
+    ) -> Self {
+        HgCommandHandler {
+            logger,
+            commands,
+            qps,
+            src_region,
+        }
     }
 
     /// Handles a single command (not batched) by returning a stream of responses and a future
@@ -59,6 +72,10 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     {
         let hgcmds = &self.commands;
+
+        if let (Some(qps), Some(src_region)) = (self.qps.as_ref(), self.src_region.as_ref()) {
+            let _res = qps.bump(&src_region);
+        }
 
         match req {
             SingleRequest::Between { pairs } => (
@@ -734,7 +751,7 @@ mod test {
     #[test]
     fn hello() {
         let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(logger, Dummy);
+        let handler = HgCommandHandler::new(logger, Dummy, None, None);
 
         let (r, _) = handler.handle(SingleRequest::Hello, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());
@@ -752,7 +769,7 @@ mod test {
     #[test]
     fn unimpl() {
         let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(logger, Dummy);
+        let handler = HgCommandHandler::new(logger, Dummy, None, None);
 
         let (r, _) = handler.handle(SingleRequest::Heads, BytesStream::new(stream::empty()));
         let r = assert_one(r.wait().collect::<Vec<_>>());

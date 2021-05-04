@@ -15,6 +15,7 @@ use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures::{stream, Future, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use qps::Qps;
 use slog::Logger;
 use std::io;
 use std::sync::{Arc, Mutex};
@@ -45,6 +46,8 @@ impl HgProtoHandler {
         reqdec: Dec,
         respenc: Enc,
         wireproto_calls: Arc<Mutex<Vec<String>>>,
+        qps: Option<Arc<Qps>>,
+        src_region: Option<String>,
     ) -> Self
     where
         In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
@@ -55,7 +58,7 @@ impl HgProtoHandler {
         Error: From<Dec::Error>,
     {
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(logger, commands),
+            commands_handler: HgCommandHandler::new(logger, commands, qps, src_region),
             reqdec,
             respenc,
             wireproto_calls,

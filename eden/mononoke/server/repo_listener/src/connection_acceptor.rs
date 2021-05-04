@@ -115,9 +115,9 @@ pub async fn connection_acceptor(
     let mut terminate_process = terminate_process.fuse();
 
     let qps = match cslb_config {
-        Some(config) => {
-            Some(Qps::new(fb, config, config_store).with_context(|| "Failed to initialize QPS")?)
-        }
+        Some(config) => Some(Arc::new(
+            Qps::new(fb, config, config_store).with_context(|| "Failed to initialize QPS")?,
+        )),
         None => None,
     };
 
@@ -174,7 +174,7 @@ pub struct Acceptor {
     pub server_hostname: String,
     pub will_exit: Arc<AtomicBool>,
     pub config_store: ConfigStore,
-    pub qps: Option<Qps>,
+    pub qps: Option<Arc<Qps>>,
 }
 
 /// Details for a socket we've just opened.
@@ -341,6 +341,7 @@ pub async fn handle_wireproto(
             Priority::Default,
             client_debug,
             Some(conn.pending.addr.ip()),
+            None,
         )
         .await
     };
@@ -380,6 +381,7 @@ pub async fn handle_wireproto(
         conn.pending.acceptor.load_limiter.clone(),
         conn.pending.addr.ip(),
         conn.pending.acceptor.scribe.clone(),
+        conn.pending.acceptor.qps.clone(),
     )
     .await
     .context("Failed to execute request_handler");
@@ -562,6 +564,7 @@ async fn try_convert_preamble_to_metadata(
             .map(|debug| debug.parse::<bool>().unwrap_or_default())
             .unwrap_or_default(),
         Some(client_ip),
+        None,
     )
     .await)
 }

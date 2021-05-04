@@ -20,6 +20,7 @@ use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
 use load_limiter::{LoadLimiterEnvironment, Metric};
 use maplit::{hashmap, hashset};
+use qps::Qps;
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
@@ -53,6 +54,7 @@ pub async fn request_handler(
     load_limiter: Option<LoadLimiterEnvironment>,
     addr: IpAddr,
     scribe: Scribe,
+    qps: Option<Arc<Qps>>,
 ) -> Result<()> {
     let Stdio {
         stdin,
@@ -165,6 +167,8 @@ pub async fn request_handler(
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         wireproto_calls.clone(),
+        qps.clone(),
+        metadata.revproxy_region().clone(),
     );
 
     // send responses back

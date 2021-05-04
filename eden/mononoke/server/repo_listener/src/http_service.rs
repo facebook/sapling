@@ -104,7 +104,7 @@ impl<S> Clone for MononokeHttpService<S> {
     }
 }
 
-fn bump_qps(headers: &HeaderMap, qps: &Option<Qps>) -> Result<()> {
+fn bump_qps(headers: &HeaderMap, qps: Option<&Qps>) -> Result<()> {
     let qps = match qps {
         Some(qps) => qps,
         None => return Ok(()),
@@ -114,7 +114,7 @@ fn bump_qps(headers: &HeaderMap, qps: &Option<Qps>) -> Result<()> {
             qps.bump(proxy_region.to_str()?)?;
             Ok(())
         }
-        None => Err(anyhow!("No {:?} header.", HEADER_REVPROXY_REGION,)),
+        None => Err(anyhow!("No {:?} header.", HEADER_REVPROXY_REGION)),
     }
 }
 
@@ -138,10 +138,6 @@ where
                 .map_err(HttpError::internal)?;
 
             return Ok(res);
-        }
-
-        if let Err(e) = bump_qps(&req.headers(), &self.conn.pending.acceptor.qps) {
-            trace!(self.logger(), "Failed to bump QPS: {:?}", e);
         }
 
         let upgrade = req
@@ -300,6 +296,10 @@ where
             .context("Error translating EdenAPI request")
             .map_err(HttpError::internal)?;
 
+        if let Err(e) = bump_qps(&req.headers, self.acceptor().qps.as_deref()) {
+            trace!(self.logger(), "Failed to bump QPS: {:?}", e);
+        }
+
         let tls_socket_data = if self.conn.is_trusted {
             TlsSocketData::trusted_proxy()
         } else {
@@ -433,6 +433,11 @@ async fn try_convert_headers_to_metadata(
             .parse::<IpAddr>()
             .context("Invalid IP Address")?;
 
+        let src_region = headers
+            .get(HEADER_REVPROXY_REGION)
+            .map(|r| r.to_str().ok().map(|r| r.to_string()))
+            .flatten();
+
         // In the case of HTTP proxied/trusted requests we only have the
         // guarantee that we can trust the forwarded credentials. Beyond
         // this point we can't trust anything else, ACL checks have not
@@ -446,6 +451,7 @@ async fn try_convert_headers_to_metadata(
                 Priority::Default,
                 headers.contains_key(HEADER_CLIENT_DEBUG),
                 Some(ip_addr),
+                src_region,
             )
             .await,
         ))
