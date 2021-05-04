@@ -35,6 +35,13 @@ bonsai core data, chunked, shallow.  Shallow walk with chunked commits should st
   * Type:Walked,Checks,Children Changeset:3,*,6 FileContent:3,3,0 (glob)
   Deferred: 0
 
+oldest, bonsai core data, chunked, shallow. For a shallow walk we should see no difference counts OldestFirst vs NewestFirst
+  $ mononoke_walker -l loaded scrub -q -p Changeset --chunk-size=2 -d OldestFirst -I shallow -i bonsai -i FileContent 2>&1 | strip_glog
+  Seen,Loaded: 4,4
+  Deferred: 0
+  Seen,Loaded: 2,2
+  Deferred: 0
+
 bonsai core data, chunked, deep. Should still visit all changesets, but no bookmark, second chunk has one deferred edge to process
   $ mononoke_walker -L sizing -L chunking scrub -q -p Changeset --chunk-size=2 -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Walking edge types [ChangesetToBonsaiParent, ChangesetToFileContent]
@@ -44,6 +51,13 @@ bonsai core data, chunked, deep. Should still visit all changesets, but no bookm
   Deferred: 1
   Seen,Loaded: 3,3
   * Type:Walked,Checks,Children Changeset:4,*,6 FileContent:3,*,0 (glob)
+  Deferred: 0
+
+oldest, bonsai core data, chunked, deep. Should still visit all changesets. Expect no deferred edges as OldestFirst (parents always point to edges already walked)
+  $ mononoke_walker -l loaded scrub -q -p Changeset --chunk-size=2 -d OldestFirst -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Seen,Loaded: 4,4
+  Deferred: 0
+  Seen,Loaded: 2,2
   Deferred: 0
 
 hg file content, chunked, deep.  Expect deferred as hg changeset parents will point outside chunk
@@ -57,6 +71,13 @@ hg file content, chunked, deep.  Expect deferred as hg changeset parents will po
   * Type:Walked,Checks,Children BonsaiHgMapping:3,* FileContent:3,* HgChangeset:3,* HgChangesetViaBonsai:4,* HgFileEnvelope:3,*,3 HgManifest:3,*,3 (glob)
   Deferred: 0
 
+oldest, hg file content, chunked, deep.  Expect no deferred edges as OldestFirst
+  $ mononoke_walker -l loaded scrub -q -p BonsaiHgMapping --chunk-size=2 -d OldestFirst -I deep -i hg -i FileContent -x HgFileNode -x HgManifestFileNode 2>&1 | strip_glog
+  Seen,Loaded: 12,12
+  Deferred: 0
+  Seen,Loaded: 6,6
+  Deferred: 0
+
 hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk
   $ mononoke_walker -L sizing -L chunking scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -x HgFileEnvelope -X HgChangesetToHgParent -X HgFileNodeToLinkedHgBonsaiMapping -X HgFileNodeToLinkedHgChangeset -X HgManifestFileNodeToLinkedHgBonsaiMapping -X HgManifestFileNodeToLinkedHgChangeset 2>&1 | strip_glog
   Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestToChildHgManifest, HgManifestToHgFileNode]
@@ -67,6 +88,9 @@ hg file node, chunked, deep.  Expect deferred as hg file node parents will point
   Seen,Loaded: 6,6
   * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,5 HgChangesetViaBonsai:3,* HgFileNode:4,*,0 HgManifest:3,*,3 HgManifestFileNode:4,*,1 (glob)
   Deferred: 0
+
+oldest, hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk
+  $ mononoke_walker -loaded scrub -q -p BonsaiHgMapping --chunk-size=2 -d OldestFirst -I deep -i hg -x HgFileEnvelope -X HgChangesetToHgParent -X HgFileNodeToLinkedHgBonsaiMapping -X HgFileNodeToLinkedHgChangeset -X HgManifestFileNodeToLinkedHgBonsaiMapping -X HgManifestFileNodeToLinkedHgChangeset 2>&1 | strip_glog
 
 derived changeset_info, chunked, deep
   $ mononoke_walker -L sizing -L chunking scrub -q -p ChangesetInfoMapping --chunk-size=2 -I deep -i derived_changeset_info 2>&1 | strip_glog

@@ -5,8 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use crate::log;
+
 use anyhow::{bail, Error};
+use bulkops::Direction;
 use mononoke_types::{RepositoryId, Timestamp};
+use slog::{info, Logger};
 use sql::queries;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -29,30 +33,58 @@ impl Checkpoint {
         &self,
         repo_lower: u64,
         repo_upper: u64,
+        direction: Direction,
     ) -> Result<(Option<(u64, u64)>, Option<(u64, u64)>), Error> {
-        // First work out the main bound from checkpoint restart
-        let main_bound = match repo_lower.cmp(&self.lower_bound) {
-            // Checkpoint didn't get to the end, continue from it
-            Ordering::Less => Some((repo_lower, self.lower_bound)),
-            Ordering::Greater => bail!(
-                "Repo lower bound reversed from {} to {}",
-                self.lower_bound,
-                repo_lower
-            ),
-            Ordering::Equal => None,
-        };
+        if direction == Direction::NewestFirst {
+            // First work out the main bound from checkpoint restart
+            let main_bound = match repo_lower.cmp(&self.lower_bound) {
+                // Checkpoint didn't get to the end, continue from it
+                Ordering::Less => Some((repo_lower, self.lower_bound)),
+                Ordering::Greater => bail!(
+                    "Repo lower bound reversed from {} to {}",
+                    self.lower_bound,
+                    repo_lower
+                ),
+                Ordering::Equal => None,
+            };
 
-        // Then if we need to catchup due to new Changesets
-        match repo_upper.cmp(&self.upper_bound) {
-            // repo has advanced. We'll do the newest part first, then continue from checkpoint
-            Ordering::Greater => Ok((Some((self.upper_bound, repo_upper)), main_bound)),
-            Ordering::Less => bail!(
-                "Repo upper bound reversed from {} to {}",
-                self.upper_bound,
-                repo_upper
-            ),
-            // repo upper still the same as checkpoint, no need to catchup for new Changesets
-            Ordering::Equal => Ok((None, main_bound)),
+            // Then if we need to catchup due to new Changesets
+            match repo_upper.cmp(&self.upper_bound) {
+                // repo has advanced. We'll do the newest part first, then continue from checkpoint
+                Ordering::Greater => Ok((Some((self.upper_bound, repo_upper)), main_bound)),
+                Ordering::Less => bail!(
+                    "Repo upper bound reversed from {} to {}",
+                    self.upper_bound,
+                    repo_upper
+                ),
+                // repo upper still the same as checkpoint, no need to catchup for new Changesets
+                Ordering::Equal => Ok((None, main_bound)),
+            }
+        } else {
+            // First work out the main bound from checkpoint restart
+            let main_bound = match repo_upper.cmp(&self.upper_bound) {
+                // Checkpoint didn't get to the end, continue from it
+                Ordering::Greater => Some((repo_upper, self.upper_bound)),
+                Ordering::Less => bail!(
+                    "Repo upper bound reversed from {} to {}",
+                    self.upper_bound,
+                    repo_upper
+                ),
+                Ordering::Equal => None,
+            };
+
+            // Then if we need to catchup due to lower bound moving (unlikely, but lets cover it)
+            match repo_lower.cmp(&self.lower_bound) {
+                // repo bounds have widened. We'll do the new wider part first, then continue from checkpoint
+                Ordering::Less => Ok((Some((self.lower_bound, repo_lower)), main_bound)),
+                Ordering::Greater => bail!(
+                    "Repo lower bound reversed from {} to {}",
+                    self.lower_bound,
+                    repo_lower
+                ),
+                // repo lower still the same as checkpoint, no need to catchup for wider bounds (expect this to be normal case)
+                Ordering::Equal => Ok((None, main_bound)),
+            }
         }
     }
 }
@@ -75,6 +107,40 @@ impl CheckpointsByName {
         self.sql_checkpoints
             .load(repo_id, &self.checkpoint_name)
             .await
+    }
+
+    pub async fn persist(
+        &self,
+        logger: &Logger,
+        repo_id: RepositoryId,
+        chunk_num: u64,
+        checkpoint: Option<Checkpoint>,
+        lower_bound: u64,
+        upper_bound: u64,
+    ) -> Result<Checkpoint, Error> {
+        let new_cp = if let Some(mut checkpoint) = checkpoint {
+            checkpoint.lower_bound = lower_bound;
+            checkpoint.upper_bound = upper_bound;
+            checkpoint.update_chunk_number = chunk_num;
+            info!(logger, #log::CHUNKING, "Chunk {} updating checkpoint to ({}, {})", chunk_num, lower_bound, upper_bound);
+            self.update(repo_id, &checkpoint).await?;
+            checkpoint
+        } else {
+            let now = Timestamp::now();
+            let new_cp = Checkpoint {
+                lower_bound,
+                upper_bound,
+                create_timestamp: now,
+                update_timestamp: now,
+                update_run_number: 1,
+                update_chunk_number: chunk_num,
+                last_finish_timestamp: None,
+            };
+            info!(logger, #log::CHUNKING, "Chunk {} inserting checkpoint ({}, {})", chunk_num, lower_bound, upper_bound);
+            self.insert(repo_id, &new_cp).await?;
+            new_cp
+        };
+        Ok(new_cp)
     }
 
     pub async fn insert(

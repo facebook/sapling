@@ -25,6 +25,7 @@ use anyhow::{bail, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
+use bulkops::Direction;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
     self, ArgType, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement,
@@ -100,6 +101,7 @@ const INCLUDE_HASH_VALIDATION_NODE_TYPE_ARG: &str = "include-hash-validation-nod
 const BOOKMARK_ARG: &str = "bookmark";
 const WALK_ROOT_ARG: &str = "walk-root";
 const CHUNK_BY_PUBLIC_ARG: &str = "chunk-by-public";
+const CHUNK_DIRECTION_ARG: &str = "chunk-direction";
 const CHUNK_SIZE_ARG: &str = "chunk-size";
 const INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG: &str = "include-chunk-clear-interned-type";
 const EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG: &str = "exclude-chunk-clear-interned-type";
@@ -826,6 +828,18 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Traverse using chunks of public changesets as roots to the specified node type"),
         )
         .arg(
+            Arg::with_name(CHUNK_DIRECTION_ARG)
+                .long(CHUNK_DIRECTION_ARG)
+                .short("d")
+                .takes_value(true)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(Direction::VARIANTS)
+                .requires(CHUNK_BY_PUBLIC_ARG)
+                .required(false)
+                .help("Set the direction to proceed through changesets"),
+        )
+        .arg(
             Arg::with_name(CHUNK_SIZE_ARG)
                 .long(CHUNK_SIZE_ARG)
                 .short("k")
@@ -1075,6 +1089,10 @@ fn parse_tail_args<'a>(
         None
     };
 
+    let chunk_direction = sub_m
+        .value_of(CHUNK_DIRECTION_ARG)
+        .map_or(Ok(Direction::NewestFirst), Direction::from_str)?;
+
     let clear_interned_types = parse_interned_types(
         sub_m,
         INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
@@ -1121,6 +1139,7 @@ fn parse_tail_args<'a>(
         tail_secs,
         public_changeset_chunk_size,
         public_changeset_chunk_by,
+        chunk_direction,
         clear_interned_types,
         clear_node_types,
         clear_sample_rate,
