@@ -689,7 +689,7 @@ def migrateto(repo, name):
         migratetohybird(repo)
     elif name == "lazytext":
         migratetolazytext(repo)
-    elif name == "lazytext":
+    elif name == "lazy":
         migratetolazy(repo)
     elif name == "fullsegments":
         migratetosegments(repo)
@@ -729,7 +729,7 @@ def migratetolazytext(repo):
     if not any(
         s in repo.storerequirements
         for s in ("lazytextchangelog", "hybridchangelog", "doublewritechangelog")
-    ):
+    ) and not _isempty(repo):
         raise error.Abort(
             _("lazytext backend can only be migrated from hybrid or doublewrite")
         )
@@ -747,14 +747,17 @@ def migratetolazy(repo):
 
     The migration can only be done from hybrid or doublewrite, or lazytext.
     """
-    if not any(
-        s in repo.storerequirements
-        for s in (
-            "lazytextchangelog",
-            "hybridchangelog",
-            "doublewritechangelog",
-            "lazytext",
+    if (
+        not any(
+            s in repo.storerequirements
+            for s in (
+                "lazytextchangelog",
+                "hybridchangelog",
+                "doublewritechangelog",
+                "lazytext",
+            )
         )
+        and not _isempty(repo)
     ):
         raise error.Abort(
             _(
@@ -885,3 +888,7 @@ def _removechangelogrequirements(repo):
     repo.storerequirements.discard("pythonrevlogchangelog")
     repo.storerequirements.discard("rustrevlogchangelog")
     repo.storerequirements.discard("segmentedchangelog")
+
+
+def _isempty(repo):
+    return len(repo.changelog) == 0
