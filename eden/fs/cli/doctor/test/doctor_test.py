@@ -942,8 +942,6 @@ Would remount {mounts[1]}
         self.assertEqual(exit_code, 1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    # pyre-fixme[56]: Argument `set()` to decorator factory `unittest.mock.patch`
-    #  could not be resolved in a global scope.
     @patch(
         "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
     )

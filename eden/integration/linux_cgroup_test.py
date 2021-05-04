@@ -62,9 +62,6 @@ class LinuxCgroupTest(IntegrationTestCase):
             ),
         )
 
-    # pyre-fixme[56]: Argument `not
-    #  eden.integration.lib.linux.is_cgroup_v2_mounted()` to decorator factory
-    #  `unittest.skipIf` could not be resolved in a global scope.
     @unittest.skipIf(
         not is_cgroup_v2_mounted(),
         "T36934106: Fix EdenFS systemd integration tests for cgroups v1",
