@@ -149,20 +149,26 @@ impl Pack {
         prefix: String,
     ) -> Result<(String, Vec<String>, BlobstoreBytes)> {
         for entry in &self.entries {
-            if let Some(prefix) = REPO_PREFIX_REGEX.find(&entry.key) {
+            if let Some(repo_prefix) = REPO_PREFIX_REGEX.find(&entry.key) {
                 bail!(
                     "Repo prefix {} found in packed blob key {}",
-                    prefix.as_str(),
+                    repo_prefix.as_str(),
                     entry.key
                 );
             }
         }
+        let link_keys = {
+            let mut link_keys: Vec<String> =
+                self.entries.iter().map(|entry| entry.key.clone()).collect();
 
-        let link_keys: Vec<String> = self.entries.iter().map(|entry| entry.key.clone()).collect();
+            // As long as it has the same entries its the same pack.  Sort keys before hashing them
+            link_keys.sort_unstable();
+            link_keys
+        };
 
         // Build the pack identity
         let mut pack_key = prefix;
-        pack_key.push_str(&compute_pack_hash(&self.entries).to_string());
+        pack_key.push_str(compute_pack_hash(&link_keys).as_str());
         pack_key.push_str(store::ENVELOPE_SUFFIX);
 
         let pack = PackedFormat {
@@ -257,7 +263,7 @@ pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBy
     let mut decoded_blobs = HashMap::new();
     let mut keys_to_decode = vec![key.to_string()];
     while let Some(next_key) = keys_to_decode.pop() {
-        match entry_map.remove(dbg!(&next_key)) {
+        match entry_map.remove(&next_key) {
             None => {
                 if next_key == key {
                     // Handled below
@@ -295,11 +301,11 @@ pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBy
 }
 
 // Hash the keys as they themselves are hashes
-fn compute_pack_hash(entries: &[PackedEntry]) -> AsciiString {
+fn compute_pack_hash(keys: &[String]) -> AsciiString {
     let mut hash_context = HashContext::new(b"pack");
-    for entry in entries {
-        hash_context.update(entry.key.len().to_le_bytes());
-        hash_context.update(entry.key.as_bytes());
+    for key in keys {
+        hash_context.update(key.len().to_le_bytes());
+        hash_context.update(key.as_bytes());
     }
     hash_context.finish().to_hex()
 }
@@ -403,9 +409,9 @@ mod tests {
 
         let (key, links, blob) = pack.into_blobstore_bytes(String::new())?;
 
-        for (name, i) in links.into_iter().zip(0..20) {
-            assert_eq!(i.to_string(), name);
-        }
+        let mut expected_links: Vec<String> = (0..20_u32).map(|i| i.to_string()).collect();
+        expected_links.sort_unstable();
+        assert_eq!(expected_links, links);
 
         let packed = {
             let envelope: PackEnvelope = blob.try_into()?;
@@ -420,7 +426,7 @@ mod tests {
 
         // Check for any change of hashing approach
         assert_eq!(
-            "f551ebbe66cfb504befd393604c53af5270b98d50fd7b1bf2d2aa3814c80e325.pack",
+            "49df56ffd39791720f4d4b5c05d3156dfeab994fcb6b0000b3c2343280b95975.pack",
             packed.key
         );
 
@@ -466,9 +472,9 @@ mod tests {
 
         let (key, links, blob) = pack.into_blobstore_bytes(String::new())?;
 
-        for (name, i) in links.into_iter().zip(0..20) {
-            assert_eq!(i.to_string(), name);
-        }
+        let mut expected_links: Vec<String> = (0..20_u32).map(|i| i.to_string()).collect();
+        expected_links.sort_unstable();
+        assert_eq!(expected_links, links);
 
         let packed = {
             let envelope: PackEnvelope = blob.try_into()?;
@@ -483,7 +489,7 @@ mod tests {
 
         // Check for any change of hashing approach
         assert_eq!(
-            "f551ebbe66cfb504befd393604c53af5270b98d50fd7b1bf2d2aa3814c80e325.pack",
+            "49df56ffd39791720f4d4b5c05d3156dfeab994fcb6b0000b3c2343280b95975.pack",
             packed.key
         );
 
