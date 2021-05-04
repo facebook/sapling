@@ -15,8 +15,8 @@ use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping};
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
-    future::{self, ready, try_join, try_join3, try_join4},
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
+    future::{self, try_join, try_join3, try_join4, FutureExt},
+    stream::{self, StreamExt, TryStreamExt},
     TryFutureExt,
 };
 use manifest::find_intersection_of_diffs;
@@ -118,30 +118,36 @@ async fn unode_warmup(
     repo: &BlobRepo,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
-    let futs = FuturesUnordered::new();
-    for cs_id in chunk {
-        let f = async move {
-            let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+    stream::iter(chunk)
+        .map({
+            |cs_id| {
+                async move {
+                    let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-            let root_mf_id = RootUnodeManifestId::derive(&ctx, &repo, bcs.get_changeset_id())
-                .map_err(Error::from);
+                    let root_mf_id =
+                        RootUnodeManifestId::derive(&ctx, &repo, bcs.get_changeset_id())
+                            .map_err(Error::from);
 
-            let parent_unodes = fetch_parent_root_unodes(ctx, repo, bcs);
-            let (root_mf_id, parent_unodes) = try_join(root_mf_id, parent_unodes).await?;
-            let unode_mf_id = root_mf_id.manifest_unode_id().clone();
-            find_intersection_of_diffs(
-                ctx.clone(),
-                Arc::new(repo.get_blobstore()),
-                unode_mf_id,
-                parent_unodes,
-            )
-            .try_for_each(|_| async { Ok(()) })
-            .await
-        };
-        futs.push(f);
-    }
+                    let parent_unodes = fetch_parent_root_unodes(ctx, repo, bcs);
+                    let (root_mf_id, parent_unodes) = try_join(root_mf_id, parent_unodes).await?;
+                    let unode_mf_id = root_mf_id.manifest_unode_id().clone();
+                    find_intersection_of_diffs(
+                        ctx.clone(),
+                        Arc::new(repo.get_blobstore()),
+                        unode_mf_id,
+                        parent_unodes,
+                    )
+                    .try_for_each(|_| async { Ok(()) })
+                    .await?;
 
-    futs.try_for_each(|_| ready(Ok(()))).await
+                    Result::<_, Error>::Ok(())
+                }
+                .map(|_: Result<(), _>| ()) // Ignore warm up failures
+            }
+        })
+        .for_each_concurrent(100, |f| f)
+        .await;
+    Ok(())
 }
 
 // Prefetch content of changed files between parents
