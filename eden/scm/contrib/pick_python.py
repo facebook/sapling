@@ -24,8 +24,9 @@ def main(args):
         for name in names:
             path = os.path.join(dir, name)
             if does_python_look_good(path):
-                sys.stdout.write(path)
+                print(path)
                 return
+
     # Fallback
     sys.stdout.write(names[0])
 
@@ -39,6 +40,14 @@ def does_python_look_good(path):
         )
         if b"-nostdinc" in cflags.split():
             sys.stderr.write("%s: ignored, lack of C stdlib\n" % path)
+            return False
+        realpath = subprocess.check_output(
+            [path, "-c", "import sys;print(sys.executable)"]
+        )
+        if b"fbprojects" in realpath:
+            sys.stderr.write(
+                "%s: ignored, avoid using the fb python for non-fb builds\n" % path
+            )
             return False
         return True
     except Exception:
