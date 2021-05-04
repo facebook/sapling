@@ -81,6 +81,15 @@ Do same run with compressed key output
   $ cat success | zstd -d | wc -l
   3
 
+Do same run without specifing the optional success file when checkpointing
+  $ rm success
+  $ manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint2.txt --quiet --error-keys-output errors --missing-keys-output missing <<EOF 2>&1 | strip_glog
+  > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
+  > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
+  > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+  > EOF
+  checkpointed repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
+
 Demostrate that a key exists
   $ ls "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
   $TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0

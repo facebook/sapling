@@ -27,7 +27,7 @@ async fn scrub_key<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     key: String,
-    mut success: mpsc::Sender<String>,
+    success: Option<mpsc::Sender<String>>,
     mut missing: mpsc::Sender<String>,
     mut error: mpsc::Sender<(String, Error)>,
 ) -> Result<(Progress, String)> {
@@ -49,7 +49,9 @@ async fn scrub_key<B: Blobstore + Clone + 'static>(
                 progress.error += 1;
             }
             Ok(Some(_)) => {
-                success.send(key).await?;
+                if let Some(mut success) = success {
+                    success.send(key).await?;
+                }
                 progress.success += 1;
             }
         }
@@ -62,7 +64,7 @@ pub async fn scrub<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     keys: impl Stream<Item = Result<String>>,
-    success: mpsc::Sender<String>,
+    success: Option<mpsc::Sender<String>>,
     missing: mpsc::Sender<String>,
     error: mpsc::Sender<(String, Error)>,
     checkpoint: Option<FileCheckpoint>,

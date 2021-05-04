@@ -107,7 +107,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             Arg::with_name(ARG_SUCCESSFUL_KEYS)
                 .long(ARG_SUCCESSFUL_KEYS)
                 .takes_value(true)
-                .required(true)
+                .required_unless(ARG_CHECKPOINT_KEY)
                 .help("A file to write successfully scrubbed key IDs to"),
         )
         .arg(
@@ -167,9 +167,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
     let blobstore_options = matches.blobstore_options();
     let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
-    let success_file_name = matches
-        .value_of_os(ARG_SUCCESSFUL_KEYS)
-        .context("No successfully scrubbed output file")?;
+    let success_file_name = matches.value_of_os(ARG_SUCCESSFUL_KEYS);
     let missing_keys_file_name = matches
         .value_of_os(ARG_MISSING_KEYS)
         .context("No missing data output file")?;
@@ -197,11 +195,13 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
 
         let stdin = BufReader::new(stdin());
         let mut output_handles = FuturesUnordered::new();
-        let success = {
+        let success = if let Some(success_file_name) = success_file_name {
             let (send, recv) = mpsc::channel(100);
             let file = create_file(success_file_name, zstd_level).await?;
             output_handles.push(tokio::spawn(bridge_to_file(file, recv)));
-            send
+            Some(send)
+        } else {
+            None
         };
         let missing = {
             let (send, recv) = mpsc::channel(100);
