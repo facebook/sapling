@@ -38,6 +38,17 @@ py_class!(class EagerRepo |py| {
         Self::create_instance(py, path, RefCell::new(inner))
     }
 
+    /// Construct `EagerRepo` from a URL.
+    @staticmethod
+    def openurl(url: &str) -> PyResult<Self> {
+        let dir = match RustEagerRepo::url_to_dir(url) {
+            Some(dir) => dir,
+            None => return Err(PyErr::new::<exc::ValueError, _>(py, "invalid url")),
+        };
+        let inner = RustEagerRepo::open(&dir).map_pyerr(py)?;
+        Self::create_instance(py, dir, RefCell::new(inner))
+    }
+
     /// Write pending changes to disk.
     def flush(&self) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();

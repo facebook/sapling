@@ -16,6 +16,7 @@ use minibytes::Bytes;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -81,6 +82,19 @@ impl EagerRepo {
             metalog,
         };
         Ok(repo)
+    }
+
+    /// Convert an URL to a directory path that can be passed to `open`.
+    ///
+    /// Supported URLs:
+    /// - `eager:dir_path`, `eager://dir_path`
+    pub fn url_to_dir(value: &str) -> Option<PathBuf> {
+        let prefix = "eager:";
+        if let Some(path) = value.strip_prefix(prefix) {
+            let path: &Path = Path::new(path);
+            return Some(path.to_path_buf());
+        }
+        None
     }
 
     /// Write pending changes to disk.

@@ -31,16 +31,13 @@ class eagerpeer(repository.peer):
     def __init__(self, ui, path, create=True):
         super(eagerpeer, self).__init__()
 
-        url = util.url(path)
-        assert url.scheme == "eager"
-
-        self._path = url.path
+        self._url = path
         self._ui = ui
         self._reponame = "dummy"
         self._reload()
 
     def _reload(self):
-        self._inner = EagerRepo.open(self._path)
+        self._inner = EagerRepo.openurl(self._url)
         # Invalidate propertycache.
         for name in ("dag", "edenapi"):
             self.__dict__.pop(name, None)
@@ -68,7 +65,7 @@ class eagerpeer(repository.peer):
         return self._ui
 
     def url(self):
-        return "eager:%s" % self._path
+        return self._url
 
     def local(self):
         return None
