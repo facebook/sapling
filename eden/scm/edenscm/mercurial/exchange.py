@@ -16,6 +16,8 @@ import collections
 import errno
 import hashlib
 
+import bindings
+
 from . import (
     bookmarks as bookmod,
     bundle2,
@@ -465,7 +467,7 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     if not pushop.remote.canpush():
         raise error.Abort(_("destination does not support push"))
 
-    if not pushop.remote.capable("unbundle"):
+    if not pushop.remote.capable("unbundle") and not pushop.remote.capable("addblobs"):
         raise error.Abort(
             _(
                 "cannot push: destination does not support the "
@@ -498,14 +500,85 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
         pushop.repo.checkpush(pushop)
         _pushdiscovery(pushop)
         pushop.repo.prepushoutgoinghooks(pushop)
-        if not _forcebundle1(pushop):
-            _pushbundle2(pushop)
-        _pushchangeset(pushop)
-        _pushsyncphase(pushop)
-        _pushobsolete(pushop)
+        if not pushop.remote.capable("unbundle") and pushop.remote.capable("addblobs"):
+            # addblobs path (bypass unbundle)
+            _pushaddblobs(pushop)
+        else:
+            # unbundle path
+            if not _forcebundle1(pushop):
+                _pushbundle2(pushop)
+            _pushchangeset(pushop)
+            _pushsyncphase(pushop)
+            _pushobsolete(pushop)
         _pushbookmark(pushop)
 
     return pushop
+
+
+def _pushaddblobs(pushop):
+    blobs = _findblobs(pushop)
+    peer = pushop.remote
+    assert peer.capable("addblobs")
+    peer.addblobs(blobs)
+    pushop.cgresult = 1
+
+
+def _findblobs(pushop):
+    """find new HG blobs (file, tree, commit) to push.
+
+    yield (blobtype, node, (p1, p2), text) per item.
+    blobtype: "blob", "tree", or "commit"
+    """
+    repo = pushop.repo
+    dag = repo.changelog.dag
+    parentnames = dag.parentnames
+    clparents = repo.changelog.parents
+    changelogrevision = repo.changelog.changelogrevision
+    clrevision = repo.changelog.revision
+    subdirdiff = bindings.manifest.subdirdiff
+    mfstore = repo.manifestlog.datastore
+    mfget = repo.manifestlog.get
+    treedepth = 1 << 15
+
+    def mfread(node, get=repo.manifestlog.get):
+        # subdir does not matter here - use ""
+        return get("", node).read()
+
+    def mfparents(subdir, node, get=repo.manifestlog.historystore.getnodeinfo):
+        p1, p2, _link, _copy = get(subdir, node)
+        return p1, p2
+
+    commitnodes = dag.sort(pushop.outgoing.missing)
+    for node in commitnodes.iterrev():
+        parentnodes = parentnames(node)
+        mfnode = changelogrevision(node).manifest
+        basemfnodes = [changelogrevision(p).manifest for p in parentnodes]
+
+        # changed files
+        ctx = repo[node]
+        mf = mfread(mfnode)
+        if basemfnodes:
+            basemf = mfread(basemfnodes[0])
+        else:
+            basemf = mfread(nullid)
+        difffiles = mf.diff(basemf)
+        # ex. {'A': ((newnode, ''), (None, ''))}
+        for path, ((newnode, _newflag), (oldnode, _oldflag)) in difffiles.items():
+            if newnode != oldnode and newnode is not None:
+                fctx = ctx[path]
+                assert fctx.filenode() == newnode
+                p1, p2 = fctx.filelog().parents(newnode)
+                yield "blob", newnode, (p1, p2), fctx.data()
+
+        # changed trees
+        difftrees = subdirdiff(mfstore, "", mfnode, basemfnodes, treedepth)
+        for subdir, treenode, treetext, _x, _x, _x in difftrees:
+            p1, p2 = mfparents(subdir, treenode)
+            yield "tree", treenode, (p1, p2), treetext
+
+        # commit
+        p1, p2 = clparents(node)
+        yield "commit", node, (p1, p2), clrevision(node)
 
 
 # list of steps to perform discovery before push

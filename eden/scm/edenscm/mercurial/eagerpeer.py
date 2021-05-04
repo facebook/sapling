@@ -8,7 +8,8 @@ from edenscm import tracing
 
 from . import repository, util, peer, error, bookmarks as bookmod
 from .i18n import _
-from .node import hex, bin
+from .node import hex, bin, nullid
+from .revlog import textwithheader
 
 EagerRepo = bindings.eagerepo.EagerRepo
 
@@ -57,6 +58,29 @@ class eagerpeer(repository.peer):
     def edenapi(self):
         return self._inner.edenapiclient()
 
+    # "Push" without using unbundle.
+    # Eventually EdenAPI would handle "push". For now we use EagerRepo APIs.
+
+    def addblobs(self, blobs):
+        """blobs: [(type, node, (p1, p2), text)]
+        type: "tree" | "blob" | "commit"
+        """
+        addcommit = self._inner.addcommit
+        addsha1blob = self._inner.addsha1blob
+        shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
+        for btype, node, (p1, p2), text in blobs:
+            data = textwithheader(text, p1, p2)
+            if shouldtrace:
+                tracing.trace("adding %6s %s" % (btype, hex(node)))
+            if btype == "commit":
+                parents = [p for p in (p1, p2) if p != nullid]
+                newnode = addcommit(parents, text)
+            else:
+                assert btype == "blob" or btype == "tree"
+                newnode = addsha1blob(data)
+            assert newnode == node, "SHA1 mismatch"
+        self._flush()
+
     # The Python "peer" interface.
     # Prefer using EdenAPI to implement them.
 
@@ -83,7 +107,7 @@ class eagerpeer(repository.peer):
         return {"default": self.heads()}
 
     def capabilities(self):
-        return {"edenapi", "lookup", "pushkey", "known", "branchmap"}
+        return {"edenapi", "lookup", "pushkey", "known", "branchmap", "addblobs"}
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         return "%s %s %s %s %s" % (one, two, three, four, five)
