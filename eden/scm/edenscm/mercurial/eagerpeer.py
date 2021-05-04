@@ -81,6 +81,23 @@ class eagerpeer(repository.peer):
             assert newnode == node, "SHA1 mismatch"
         self._flush()
 
+    # "Pull" without using getbundle.
+
+    def commitgraph(self, heads, common):
+        """heads: [node], common: [node]
+        Returns a list of [(node, parents)], parents is a list of node.
+        """
+        stream, _stats = self.edenapi.commitgraph(self._reponame, heads, common)
+        shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
+        for item in stream:
+            node = item["hgid"]
+            parents = item["parents"]
+            if shouldtrace:
+                tracing.trace(
+                    "graph node %s %r" % (hex(node), [hex(n) for n in parents])
+                )
+            yield node, parents
+
     # The Python "peer" interface.
     # Prefer using EdenAPI to implement them.
 
@@ -107,7 +124,15 @@ class eagerpeer(repository.peer):
         return {"default": self.heads()}
 
     def capabilities(self):
-        return {"edenapi", "lookup", "pushkey", "known", "branchmap", "addblobs"}
+        return {
+            "edenapi",
+            "lookup",
+            "pushkey",
+            "known",
+            "branchmap",
+            "addblobs",
+            "commitgraph",
+        }
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         return "%s %s %s %s %s" % (one, two, three, four, five)

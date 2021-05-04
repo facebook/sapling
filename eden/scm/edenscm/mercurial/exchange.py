@@ -1738,6 +1738,13 @@ def _pullchangeset(pullop):
         # issue1320, avoid a race if remote changed after discovery
         pullop.heads = pullop.rheads
 
+    repo = pullop.repo
+    if pullop.remote.capable("commitgraph") and (
+        "lazychangelog" in repo.storerequirements
+        or "lazytextchangelog" in repo.storerequirements
+    ):
+        return _pullcommitgraph(pullop)
+
     if pullop.remote.capable("getbundle"):
         # TODO: get bundlecaps from remote
         cg = pullop.remote.getbundle(
@@ -1757,6 +1764,29 @@ def _pullchangeset(pullop):
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, "pull")
     bundleop = bundle2.applybundle(pullop.repo, cg, tr, "pull", pullop.remote.url())
     pullop.cgresult = bundle2.combinechangegroupresults(bundleop)
+
+
+def _pullcommitgraph(pullop):
+    """pull commits from commitgraph endpoint
+
+    This requires a lazy repo but avoids changegroup and bundle2 tech-debt.
+    """
+    repo = pullop.repo
+
+    heads = pullop.heads
+    if heads is None:
+        # Legacy no-argument pull to pull "all" remote heads
+        heads = pullop.rheads
+    assert heads is not None
+
+    commits = repo.changelog.inner
+    graphnodes = list(pullop.remote.commitgraph(heads, pullop.common))
+
+    if graphnodes:
+        commits.addgraphnodes(graphnodes)
+        pullop.cgresult = 2  # changed
+    else:
+        pullop.cgresult = 1  # unchanged
 
 
 def _pullphase(pullop):

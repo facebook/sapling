@@ -53,3 +53,35 @@ Push:
    DEBUG edenscm::mercurial::eagerpeer: flushed
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
 
+Pull:
+
+  $ newremoterepo
+  $ setconfig paths.default=eager:$TESTTMP/e1
+  $ hg debugchangelog --migrate lazy
+  $ hg pull -B master
+  pulling from eager://$TESTTMP/e1
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   TRACE edenscm::mercurial::eagerpeer: graph node 426bada5c67598ca65036d57d9e4b64b0c1ce7a0 []
+   TRACE edenscm::mercurial::eagerpeer: graph node dc0947a82db884575bb76ea10ac97b08536bfa03 ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(phases, []) = sortdict()
+
+  $ hg pull -r $B
+  pulling from eager://$TESTTMP/e1
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   TRACE edenscm::mercurial::eagerpeer: known 112478962961147124edd43549aedd1a335e44bf: True
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   TRACE edenscm::mercurial::eagerpeer: known dc0947a82db884575bb76ea10ac97b08536bfa03: True
+  searching for changes
+   TRACE edenscm::mercurial::eagerpeer: graph node 112478962961147124edd43549aedd1a335e44bf ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(phases, []) = sortdict()
+
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  o  B
+  │
+  │ o  C remote/master
+  ├─╯
+  o  A
+  
