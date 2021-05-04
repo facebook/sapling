@@ -33,6 +33,7 @@ use edenapi::EdenApiError;
 use edenapi::Fetch;
 use edenapi::ProgressCallback;
 use edenapi::ResponseMeta;
+use edenapi_trait as edenapi;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;

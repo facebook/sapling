@@ -16,6 +16,7 @@ use url::Url;
 
 use auth::AuthSection;
 use configmodel::ConfigExt;
+use eagerepo::EagerRepo;
 use http_client::HttpVersion;
 
 use crate::client::Client;
@@ -49,6 +50,15 @@ impl<'a> Builder<'a> {
 
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
+            if let Ok(value) = self.config.get_or_default::<String>(section, name) {
+                if let Some(path) = EagerRepo::url_to_dir(&value) {
+                    let repo = EagerRepo::open(&path).map_err(|e| EdenApiError::Other(e.into()))?;
+                    return Ok(Arc::new(repo));
+                }
+            }
+        }
+
         let client = Arc::new(
             HttpClientBuilder::from_config(self.config)?
                 .correlator(self.correlator)

@@ -8,7 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1.45"
 dag = { path = "../dag" }
-edenapi = { path = "../edenapi" }
+edenapi_trait = { path = "../edenapi/trait" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 http = "0.2"
 metalog = { path = "../metalog" }
