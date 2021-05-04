@@ -87,7 +87,7 @@ const SUBCOMMAND_TAIL: &str = "tail";
 const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &str = "single";
 
-const DEFAULT_BATCH_SIZE_STR: &str = "4096";
+const DEFAULT_BATCH_SIZE_STR: &str = "128";
 const DEFAULT_SLICE_SIZE_STR: &str = "20000";
 
 /// Derived data types that are permitted to access redacted files. This list
