@@ -73,9 +73,8 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
         let mut pairs = Vec::with_capacity(names.len());
         let mut response = {
             if heads.is_empty() {
-                return dag::errors::programming(
-                    "resolve_names_to_relative_paths received empty heads",
-                );
+                // Not an error case. Just do not resolve anything.
+                return Ok(Vec::new());
             }
             let mut hgids = Vec::with_capacity(names.len());
             for name in names {
