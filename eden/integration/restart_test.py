@@ -185,7 +185,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         # "eden restart" should not restart if edenfs is still starting
         p = self._spawn_restart()
         p.expect_exact(f"The current edenfs daemon (pid {orig_pid}) is still starting")
-        p.expect_exact("Use --force if you want to forcibly restart the current daemon")
+        p.expect_exact(
+            "Use `eden restart --force` if you want to forcibly restart the current daemon"
+        )
         p.wait()
         self.assertEqual(p.exitstatus, 4)
 
@@ -217,7 +219,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
             f"Found an existing edenfs daemon (pid {orig_pid} that does not "
             "seem to be responding to thrift calls."
         )
-        p.expect_exact("Use --force if you want to forcibly restart the current daemon")
+        p.expect_exact(
+            "Use `eden restart --force` if you want to forcibly restart the current daemon"
+        )
         p.wait()
         self.assertEqual(p.exitstatus, 4)
 
@@ -252,7 +256,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
             f"Found an existing edenfs daemon (pid {orig_pid} that does not "
             "seem to be responding to thrift calls."
         )
-        p.expect_exact("Use --force if you want to forcibly restart the current daemon")
+        p.expect_exact(
+            "Use `eden restart --force` if you want to forcibly restart the current daemon"
+        )
         p.wait()
         self.assertEqual(p.exitstatus, 4)
 

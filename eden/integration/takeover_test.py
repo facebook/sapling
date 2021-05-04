@@ -344,7 +344,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         p = self.run_restart()
         p.expect_exact(
             f"The current edenfs daemon (pid {pid}) is in the middle of stopping."
-            f"\r\nUse --force if you want to forcibly restart the current daemon\r\n"
+            f"\r\nUse `eden restart --force` if you want to forcibly restart the current daemon\r\n"
         )
         p.wait()
         self.assertEqual(p.exitstatus, 4)

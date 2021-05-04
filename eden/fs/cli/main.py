@@ -1691,7 +1691,9 @@ class RestartCmd(Subcmd):
                 stop_timeout = 0
 
             if not self.args.force_restart:
-                print(f"Use --force if you want to forcibly restart the current daemon")
+                print(
+                    "Use `eden restart --force` if you want to forcibly restart the current daemon"
+                )
                 return 4
             return await self._force_restart(instance, edenfs_pid, stop_timeout)
 
