@@ -117,8 +117,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         repo_id.prefix()
     };
 
-    let pack_prefix = format!("{}{}", repo_prefix, PACK_PREFIX);
-
     let pack_keys: Vec<String> = io::stdin()
         .lock()
         .lines()
@@ -138,7 +136,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         pack_utils::repack_keys(
             &ctx,
             &blobstore,
-            &pack_prefix,
+            PACK_PREFIX,
             zstd_level,
             &repo_prefix,
             &pack_keys,
