@@ -275,6 +275,9 @@ def useruststore(ui):
 
 def usehttpfetching(repo):
     """Returns True if HTTP (EdenApi) fetching should be used."""
+    if repo.ui.config("ui", "ssh") == "false":
+        # Cannot use SSH.
+        return True
     return (
         repo.ui.configbool("treemanifest", "http")
         and getattr(repo, "edenapi", None) is not None

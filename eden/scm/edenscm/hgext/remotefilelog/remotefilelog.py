@@ -529,7 +529,11 @@ class remotefileslog(filelog.fileslog):
 
     def edenapistore(self, repo):
         if self._edenapistore is None:
-            if repo.edenapi is not None and repo.ui.configbool("remotefilelog", "http"):
+            useedenapi = repo.ui.configbool("remotefilelog", "http")
+            if repo.ui.config("ui", "ssh") == "false":
+                # Cannot use ssh. Force EdenAPI.
+                useedenapi = True
+            if repo.edenapi is not None and useedenapi:
                 self._edenapistore = repo.edenapi.filestore(repo.name)
 
         return self._edenapistore

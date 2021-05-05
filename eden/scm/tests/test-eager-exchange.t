@@ -109,3 +109,13 @@ Pull:
   ├─╯
   o  A
   
+Trigger file and tree downloading:
+
+  $ hg cat -r $B B A
+   DEBUG eagerepo::api: trees eb79886383871977bccdb3000c275a279f0d4c99
+   TRACE eagerepo::api:  found: eb79886383871977bccdb3000c275a279f0d4c99, 126 bytes
+   DEBUG eagerepo::api: files 005d992c5dcf32993668f7cede29d296c494a5d9
+   TRACE eagerepo::api:  found: 005d992c5dcf32993668f7cede29d296c494a5d9, 41 bytes
+   DEBUG eagerepo::api: files 35e7525ce3a48913275d7061dd9a867ffef1e34d
+   TRACE eagerepo::api:  found: 35e7525ce3a48913275d7061dd9a867ffef1e34d, 41 bytes
+  AB (no-eol)
