@@ -212,6 +212,9 @@ def showsyncstatus(repo, ctx, templ, **args):
     """String. Return whether the local revision is in sync
     with the remote (phabricator) revision
     """
+    if not ctx.mutable():
+        return None
+
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:
         return None
