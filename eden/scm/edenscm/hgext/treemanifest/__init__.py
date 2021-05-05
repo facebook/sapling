@@ -2543,6 +2543,22 @@ def generatepackstream(
     )
 
 
+def _existonserver(repo, mfnode):
+    """Check if the root manifest exists on server-side.
+
+    Return True if the server has the mfnode, False otherwise.
+    """
+    stream, _stats = repo.edenapi.trees(
+        repo.name, [("", mfnode)], {"parents": False, "manifest_blob": False}
+    )
+    try:
+        list(stream)
+        return True
+    except Exception:
+        # The error type story isn't great for now.
+        return False
+
+
 def _generatepackstream(
     repo, rootdir, mfnodes, basemfnodes, directories, depth, linknodefixup, version
 ):
@@ -2565,7 +2581,16 @@ def _generatepackstream(
 
     prevmfnode = None
     for node in mfnodes:
-        p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
+        try:
+            p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
+        except KeyError:
+            if _existonserver(repo, node):
+                # No need to bundle the tree. It is already present on the
+                # server-side. Similar to what we do for public commits
+                # (createtreepackpart checking ctx.phase() != phases.public)
+                continue
+            else:
+                raise
         # If p1 is being sent or is already on the client, chances are
         # that's the best thing for us to delta against.
         if p1node != nullid and (p1node in mfnodeset or p1node in basemfnodeset):
