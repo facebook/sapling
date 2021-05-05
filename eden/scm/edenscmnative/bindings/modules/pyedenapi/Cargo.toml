@@ -13,6 +13,7 @@ dag-types = { path = "../../../../lib/dag/dag-types" }
 edenapi = { path = "../../../../lib/edenapi" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+mincode = { path = "../../../../lib/mincode" }
 progress = { path = "../../../../lib/progress" }
 pyconfigparser = { path = "../pyconfigparser" }
 pyprogress = { path = "../pyprogress" }

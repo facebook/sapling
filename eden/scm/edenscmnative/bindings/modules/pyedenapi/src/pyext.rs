@@ -330,6 +330,23 @@ pub trait EdenApiPyExt: EdenApi {
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
     }
+
+    /// Get the "CloneData" serialized using mincode.
+    fn clone_data_py(self: Arc<Self>, py: Python, repo: String) -> PyResult<PyBytes> {
+        let bytes = {
+            py.allow_threads(|| {
+                block_on_future(async move {
+                    match self.clone_data(repo, None).await {
+                        Err(e) => Err(e),
+                        Ok(data) => Ok(mincode::serialize(&data)),
+                    }
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+        };
+        Ok(PyBytes::new(py, &bytes))
+    }
 }
 
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}

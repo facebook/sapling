@@ -210,6 +210,12 @@ py_class!(pub class client |py| {
     {
         self.inner(py).clone().commit_graph_py(py, repo, heads, common)
     }
+
+    /// clonedata(repo: str) -> bytes
+    /// mincode-serialized CloneData.
+    def clonedata(&self, repo: String) -> PyResult<PyBytes> {
+        self.inner(py).clone().clone_data_py(py, repo)
+    }
 });
 
 impl ExtractInnerRef for client {

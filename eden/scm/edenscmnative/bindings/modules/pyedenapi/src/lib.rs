@@ -7,7 +7,6 @@
 
 //! pyedenapi - Python bindings for the Rust `edenapi` crate
 
-#![deny(warnings)]
 #![allow(non_camel_case_types)]
 
 use cpython::*;
