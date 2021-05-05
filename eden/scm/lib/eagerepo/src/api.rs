@@ -40,6 +40,8 @@ use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
 use std::collections::HashSet;
+use tracing::debug;
+use tracing::trace;
 
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
@@ -53,6 +55,7 @@ impl EdenApi for EagerRepo {
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<FileEntry>> {
+        debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
             let id = key.hgid;
@@ -78,6 +81,7 @@ impl EdenApi for EagerRepo {
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<HistoryEntry>> {
+        debug!("history {}", debug_key_list(&keys));
         let mut values = Vec::new();
         let mut visited: HashSet<Key> = Default::default();
         let mut to_visit: Vec<Key> = keys;
@@ -129,6 +133,7 @@ impl EdenApi for EagerRepo {
         attributes: Option<TreeAttributes>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
+        debug!("trees {}", debug_key_list(&keys));
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
         if attributes.child_metadata {
@@ -175,6 +180,7 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<CommitRevlogData>> {
+        debug!("revlog_data {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
             let data = self.get_sha1_blob_for_api(id)?;
@@ -193,6 +199,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<dag::CloneData<HgId>> {
+        debug!("clone_data");
         let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
         check_convert_to_hgid(clone_data.idmap.values())?;
         let clone_data = dag::CloneData {
@@ -317,6 +324,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Fetch<CommitKnownResponse>> {
+        debug!("commit_known {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
             let known = self.get_sha1_blob(id).map_err(map_crate_err)?.is_some();
@@ -335,6 +343,11 @@ impl EdenApi for EagerRepo {
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
+        debug!(
+            "commit_graph {} {}",
+            debug_hgid_list(&heads),
+            debug_hgid_list(&common),
+        );
         let heads =
             dag::Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let common =
@@ -365,6 +378,7 @@ impl EdenApi for EagerRepo {
         bookmarks: Vec<String>,
         _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Fetch<BookmarkEntry>> {
+        debug!("bookmarks {}", debug_string_list(&bookmarks),);
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
         for name in bookmarks {
@@ -383,11 +397,17 @@ impl EagerRepo {
     fn get_sha1_blob_for_api(&self, id: HgId) -> edenapi::Result<minibytes::Bytes> {
         // Emulate the HTTP errors.
         match self.get_sha1_blob(id) {
-            Ok(None) => Err(EdenApiError::HttpError {
-                status: StatusCode::NOT_FOUND,
-                message: format!("{} cannot be found", id.to_hex()),
-            }),
-            Ok(Some(data)) => Ok(data),
+            Ok(None) => {
+                trace!(" not found: {}", id.to_hex());
+                Err(EdenApiError::HttpError {
+                    status: StatusCode::NOT_FOUND,
+                    message: format!("{} cannot be found", id.to_hex()),
+                })
+            }
+            Ok(Some(data)) => {
+                trace!(" found: {}, {} bytes", id.to_hex(), data.len());
+                Ok(data)
+            }
             Err(e) => Err(EdenApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: format!("{:?}", e),
@@ -477,4 +497,31 @@ fn map_dag_err(e: dag::Error) -> EdenApiError {
 
 fn map_crate_err(e: crate::Error) -> EdenApiError {
     EdenApiError::Other(e.into())
+}
+
+fn debug_key_list(keys: &[Key]) -> String {
+    debug_list(keys, |k| k.hgid.to_hex())
+}
+
+fn debug_hgid_list(ids: &[HgId]) -> String {
+    debug_list(ids, |i| i.to_hex())
+}
+
+fn debug_string_list(s: &[String]) -> String {
+    debug_list(s, |s| s.clone())
+}
+
+fn debug_list<T>(keys: &[T], func: impl Fn(&T) -> String) -> String {
+    let limit = 5;
+    let msg = keys
+        .iter()
+        .take(limit)
+        .map(|k| func(k))
+        .collect::<Vec<_>>()
+        .join(", ");
+    if keys.len() > limit {
+        format!("{} and {} more", msg, keys.len() - limit)
+    } else {
+        msg
+    }
 }
