@@ -174,6 +174,9 @@ async fn run_benchmark_filestore<'a>(
     Ok(())
 }
 
+#[cfg(fbcode_build)]
+const TEST_DATA_TTL: Duration = Duration::from_secs(3600);
+
 async fn get_blob<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
@@ -190,8 +193,15 @@ async fn get_blob<'a>(
 
                 let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
                 let put_behaviour = blobstore_options.put_behaviour;
-                let manifold = ManifoldBlob::new(fb, bucket, None, put_behaviour)
-                    .map_err(|e| -> Error { e })?;
+                let manifold = ManifoldBlob::new_with_ttl(
+                    fb,
+                    bucket,
+                    TEST_DATA_TTL,
+                    blobstore_options.manifold_api_key.as_deref(),
+                    blobstore_options.manifold_weak_consistency_ms,
+                    put_behaviour,
+                )
+                .map_err(|e| -> Error { e })?;
                 let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
                 Arc::new(blobstore)
             }

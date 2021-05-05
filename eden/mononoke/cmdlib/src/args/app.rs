@@ -64,6 +64,7 @@ pub const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 pub const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd";
 pub const WRITE_ZSTD_LEVEL_ARG: &str = "blobstore-write-zstd-level";
 pub const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
+pub const MANIFOLD_WEAK_CONSISTENCY_MS_ARG: &str = "manifold-weak-consistency-ms";
 pub const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
@@ -689,6 +690,13 @@ impl MononokeAppBuilder {
                 .takes_value(true)
                 .required(false)
                 .help("Manifold API key"),
+        )
+        .arg(
+            Arg::with_name(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
+                .long(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Manifold Weak Consistency max age millis. This overrides the value set via tunables"),
         )
         .arg(
             Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
