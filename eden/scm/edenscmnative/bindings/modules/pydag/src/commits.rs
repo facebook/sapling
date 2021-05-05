@@ -25,6 +25,7 @@ use dag::ops::IdMapSnapshot;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::ops::ToSet;
+use dag::CloneData;
 use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
@@ -111,6 +112,14 @@ py_class!(pub class commits |py| {
     def flushcommitdata(&self) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
         block_on(inner.flush_commit_data()).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Import clone data (serialized in mincode) and flush.
+    def importclonedata(&self, data: PyBytes) -> PyResult<PyNone> {
+        let data: CloneData<Vertex> = mincode::deserialize(data.data(py)).map_pyerr(py)?;
+        let mut inner = self.inner(py).borrow_mut();
+        block_on(inner.import_clone_data(data)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
