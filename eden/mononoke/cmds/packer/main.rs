@@ -90,7 +90,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let runtime = matches.runtime();
     let config_store = matches.config_store();
 
-    let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
     let blobstore_options = matches.blobstore_options();
     let readonly_storage = matches.readonly_storage();
     let blobconfig = args::get_config(&config_store, &matches)?

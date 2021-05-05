@@ -32,7 +32,7 @@ impl CoreContext {
     }
 
     // Context for bulk processing like scrubbing or bulk backfilling
-    pub fn new_bulk_with_logger(fb: FacebookInit, logger: Logger) -> Self {
+    pub fn new_for_bulk_processing(fb: FacebookInit, logger: Logger) -> Self {
         let session = SessionContainer::builder(fb)
             .session_class(SessionClass::Background)
             .build();

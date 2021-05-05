@@ -165,7 +165,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
 
     let mysql_options = matches.mysql_options();
     let blobstore_options = matches.blobstore_options();
-    let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
 
     let success_file_name = matches.value_of_os(ARG_SUCCESSFUL_KEYS);
     let missing_keys_file_name = matches
