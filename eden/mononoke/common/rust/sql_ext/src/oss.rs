@@ -11,7 +11,6 @@ use crate::{facebook::*, *};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use fbinit::FacebookInit;
-use slog::Logger;
 use std::time::Duration;
 
 macro_rules! fb_unimplemented {
