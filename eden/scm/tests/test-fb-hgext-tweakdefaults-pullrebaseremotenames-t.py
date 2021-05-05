@@ -15,12 +15,16 @@ sh % "setconfig 'extensions.treemanifest=!'"
 sh % "setconfig 'experimental.evolution='"
 
 # Set up with remotenames
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
 remotenames=
 tweakdefaults=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "echo a" > "repo/a"

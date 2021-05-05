@@ -460,5 +460,5 @@ class convert_git(common.converter_source, common.commandline):
         return bookmarks
 
     def checkrevformat(self, revstr, mapname="splicemap"):
-        """ git revision string is a 40 byte hex """
+        """git revision string is a 40 byte hex"""
         self.checkhexformat(revstr, mapname)

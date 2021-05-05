@@ -18,11 +18,15 @@ def reposetup(ui, repo):
 """ > "abortcommit.py"
 sh % "'abspath=`pwd`/abortcommit.py'"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 mq =
 abortcommit = $abspath
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init foo"
 sh % "cd foo"

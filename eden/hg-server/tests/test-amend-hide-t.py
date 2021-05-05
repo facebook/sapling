@@ -10,7 +10,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=
 undo =
@@ -20,12 +22,16 @@ evolution = obsolete
 enabled = true
 [visibility]
 enabled = true
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Create repo
 sh % "hg init repo"
 sh % "cd repo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 E
 |
 C D
@@ -34,6 +40,7 @@ B
 |
 A
 """
+)
 sh % "rm .hg/localtags"
 
 sh % "hg book -r 2 cat"

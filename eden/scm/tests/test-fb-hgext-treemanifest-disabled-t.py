@@ -14,11 +14,15 @@ sh % '. "$TESTDIR/library.sh"'
 
 sh % "hg init client1"
 sh % "cd client1"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [remotefilelog]
 reponame=master
 cachepath=$CACHEDIR
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "echo a" > "a"
 sh % "mkdir dir"

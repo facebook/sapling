@@ -16,7 +16,9 @@ from edenscm.mercurial import extensions, hg, obsolete
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 strip =
 shelve=
@@ -27,7 +29,9 @@ qnew = --date '0 0'
 maxbackups = 2
 [experimental]
 evolution=createmarkers
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Make sure obs-based shelve can be used with an empty repo
 sh % 'cd "$TESTTMP"'
@@ -727,10 +731,14 @@ sh % "hg shelve --delete --name NAME" == r"""
     [255]"""
 
 # Test interactive shelve
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [ui]
 interactive = true
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "echo a" >> "a/b"
 sh % "cat a/a" >> "a/b"
 sh % "echo x" >> "a/b"
@@ -893,11 +901,15 @@ if feature.check("false"):
     echo "===="
     """ > "$TESTTMP/checkvisibility.sh"
 
-    sh % "cat" << r"""
+    (
+        sh % "cat"
+        << r"""
     [defaults]
     # to fix hash id of temporary revisions
     unshelve = --date '0 0'
-    """ >> ".hg/hgrc"
+    """
+        >> ".hg/hgrc"
+    )
 
     # "hg unshelve"implies steps below:
     # (1) commit changes in the working directory
@@ -909,10 +921,14 @@ if feature.check("false"):
 
     # == test visibility to external preupdate hook
 
-    sh % "cat" << r"""
+    (
+        sh % "cat"
+        << r"""
     [hooks]
     preupdate.visibility = sh $TESTTMP/checkvisibility.sh preupdate
-    """ >> ".hg/hgrc"
+    """
+        >> ".hg/hgrc"
+    )
 
     sh % "echo nnnn" >> "n"
 
@@ -939,10 +955,14 @@ if feature.check("false"):
         ACTUAL  47f190a8b2e0
         ===="""
 
-    sh % "cat" << r"""
+    (
+        sh % "cat"
+        << r"""
     [hooks]
     preupdate.visibility =
-    """ >> ".hg/hgrc"
+    """
+        >> ".hg/hgrc"
+    )
 
     sh % 'sh "$TESTTMP/checkvisibility.sh" after-unshelving' == r"""
         ==== after-unshelving:
@@ -954,10 +974,14 @@ if feature.check("false"):
 
     sh % "hg update -q -C unshelvedest"
 
-    sh % "cat" << r"""
+    (
+        sh % "cat"
+        << r"""
     [hooks]
     update.visibility = sh $TESTTMP/checkvisibility.sh update
-    """ >> ".hg/hgrc"
+    """
+        >> ".hg/hgrc"
+    )
 
     sh % "echo nnnn" >> "n"
 
@@ -985,10 +1009,14 @@ if feature.check("false"):
         ACTUAL  47f190a8b2e0
         ===="""
 
-    sh % "cat" << r"""
+    (
+        sh % "cat"
+        << r"""
     [hooks]
     update.visibility =
-    """ >> ".hg/hgrc"
+    """
+        >> ".hg/hgrc"
+    )
 
     sh % 'sh "$TESTTMP/checkvisibility.sh" after-unshelving' == r"""
         ==== after-unshelving:
@@ -1049,12 +1077,16 @@ sh % "cd .."
 
 # Keep active bookmark while (un)shelving even on shared repo (issue4940)
 # -----------------------------------------------------------------------
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 share =
 [experimnetal]
 evolution=createmarkers
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg bookmarks -R obsrepo" == "   test                      a72d63c69876"
 sh % "hg share -B obsrepo obsshare" == r"""
     updating working directory

@@ -9,13 +9,17 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Set up
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution=all
 [extensions]
 amend=
 tweakdefaults=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Test hg bookmark works with hidden commits
 

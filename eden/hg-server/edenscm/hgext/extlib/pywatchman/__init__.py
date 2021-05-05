@@ -230,7 +230,7 @@ else:
 
 
 def _win32_strerror(err):
-    """ expand a win32 error code into a human readable message """
+    """expand a win32 error code into a human readable message"""
 
     # FormatMessage will allocate memory and assign it here
     buf = ctypes.c_char_p()
@@ -310,7 +310,7 @@ class CommandError(WatchmanError):
 
 
 def is_named_pipe_path(path):
-    """Returns True if path is a watchman named pipe path """
+    """Returns True if path is a watchman named pipe path"""
     return path.startswith("\\\\.\\pipe\\watchman")
 
 
@@ -351,20 +351,20 @@ class SockPath(object):
 
 
 class Transport(object):
-    """ communication transport to the watchman server """
+    """communication transport to the watchman server"""
 
     buf = None
 
     def close(self):
-        """ tear it down """
+        """tear it down"""
         raise NotImplementedError()
 
     def readBytes(self, size):
-        """ read size bytes """
+        """read size bytes"""
         raise NotImplementedError()
 
     def write(self, buf):
-        """ write some data """
+        """write some data"""
         raise NotImplementedError()
 
     def setTimeout(self, value):
@@ -396,7 +396,7 @@ class Transport(object):
 
 
 class Codec(object):
-    """ communication encoding for the watchman server """
+    """communication encoding for the watchman server"""
 
     transport = None
 
@@ -414,7 +414,7 @@ class Codec(object):
 
 
 class SocketTransport(Transport):
-    """ abstract socket transport """
+    """abstract socket transport"""
 
     sock = None
     timeout = None
@@ -448,7 +448,7 @@ class SocketTransport(Transport):
 
 
 class UnixSocketTransport(SocketTransport):
-    """ local unix domain socket transport """
+    """local unix domain socket transport"""
 
     def __init__(self, sockpath, timeout):
         super(UnixSocketTransport, self).__init__()
@@ -466,7 +466,7 @@ class UnixSocketTransport(SocketTransport):
 
 
 class TcpSocketTransport(SocketTransport):
-    """ TCP socket transport """
+    """TCP socket transport"""
 
     def __init__(self, sockpath, timeout):
         super(TcpSocketTransport, self).__init__()
@@ -539,7 +539,7 @@ def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
 
 
 class WindowsNamedPipeTransport(Transport):
-    """ connect to a named pipe """
+    """connect to a named pipe"""
 
     def __init__(self, sockpath, timeout):
         self.sockpath = sockpath
@@ -783,7 +783,7 @@ class CLIProcessTransport(Transport):
 
 
 class BserCodec(Codec):
-    """ use the BSER encoding.  This is the default, preferred codec """
+    """use the BSER encoding.  This is the default, preferred codec"""
 
     def __init__(self, transport, value_encoding, value_errors):
         super(BserCodec, self).__init__(transport)
@@ -835,7 +835,7 @@ class ImmutableBserCodec(BserCodec):
 
 
 class Bser2WithFallbackCodec(BserCodec):
-    """ use BSER v2 encoding """
+    """use BSER v2 encoding"""
 
     def __init__(self, transport, value_encoding, value_errors):
         super(Bser2WithFallbackCodec, self).__init__(
@@ -905,7 +905,7 @@ class ImmutableBser2Codec(Bser2WithFallbackCodec, ImmutableBserCodec):
 
 
 class JsonCodec(Codec):
-    """ Use json codec.  This is here primarily for testing purposes """
+    """Use json codec.  This is here primarily for testing purposes"""
 
     json = None
 
@@ -942,7 +942,7 @@ class JsonCodec(Codec):
 
 
 class client(object):
-    """ Handles the communication with the watchman service """
+    """Handles the communication with the watchman service"""
 
     sockpath = None
     transport = None
@@ -1113,7 +1113,7 @@ class client(object):
         )
 
     def _connect(self):
-        """ establish transport connection """
+        """establish transport connection"""
 
         if self.recvConn:
             if self.pid != os.getpid():
@@ -1278,7 +1278,7 @@ class client(object):
             raise
 
     def capabilityCheck(self, optional=None, required=None):
-        """ Perform a server capability check """
+        """Perform a server capability check"""
         res = self.query(
             "version", {"optional": optional or [], "required": required or []}
         )

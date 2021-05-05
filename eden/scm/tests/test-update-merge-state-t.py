@@ -16,11 +16,14 @@ def createstate(command="update"):
     """Create an interrupted state resolving 'hg update --merge' conflicts"""
 
     sh % "newrepo"
-    sh % "drawdag" << r"""
+    (
+        sh % "drawdag"
+        << r"""
     B C
     |/   # B/A=B\n
     A
     """
+    )
 
     if command == "update":
         sh % 'hg up -C "$C" -q'
@@ -30,11 +33,14 @@ def createstate(command="update"):
             warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
             [1]"""
     elif command == "backout":
-        sh % "drawdag" << r"""
+        (
+            sh % "drawdag"
+            << r"""
         D   # D/A=D\n
         |
         desc(B)
         """
+        )
         sh % 'hg up -C "$D" -q'
         sh % 'hg backout "$B" -q' == r"""
             warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')

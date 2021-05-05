@@ -12,14 +12,18 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
 histedit=
 
 [alias]
 tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 
 sh % "hg init a"

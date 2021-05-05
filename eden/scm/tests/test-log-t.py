@@ -902,12 +902,16 @@ sh % "cd .."
 
 sh % "hg init follow-dup"
 sh % "cd follow-dup"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [ui]
 logtemplate = '=== {rev}: {desc}\n'
 [diff]
 nodates = True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "echo 0" >> "a"
 sh % "hg ci -qAm a0"
 sh % "echo 1" >> "a"
@@ -1492,10 +1496,14 @@ sh % "hg log -r0 a" == r"""
     summary:     a"""
 # enable obsolete to test hidden feature
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution.createmarkers=True
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg log '--template={rev}:{node}\\n'" == r"""
     1:a765632148dc55d38c35c4f247c618701886cb2f

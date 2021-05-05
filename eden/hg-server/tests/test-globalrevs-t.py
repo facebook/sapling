@@ -21,19 +21,27 @@ sh % "setconfig 'extensions.treemanifest=!' 'format.use-zstore-commit-data=0'"
 
 sh % "initserver master master"
 sh % "cd master"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 globalrevs=
 [globalrevs]
 svnrevinteroperation=True
 [hgsql]
 enabled = True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [globalrevs]
 reponame = customname
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 # - Expectation is to fail because pushrebase extension is not enabled.
 
@@ -44,10 +52,14 @@ sh % "hg log -r tip -T '{node}'" == r"""
 
 # - Enable pushrebase extension on the server.
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 pushrebase=
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Expectation is to fail because we need to configure pushrebase to only allow
@@ -67,10 +79,14 @@ sh % "hg log -r tip -T '{node}' --config 'globalrevs.onlypushrebase=False'" == "
 
 # - Configure server repository to only allow commits created through pushrebase.
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [pushrebase]
 blocknonpushrebase = True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Test that the `globalrev` command fails because there is no entry in the
@@ -128,11 +144,15 @@ sh % "hg book master"
 sh % "cd .."
 sh % "initclient client"
 sh % "cd client"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 globalrevs=
 pushrebase=
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Make commits on the client.
@@ -185,10 +205,14 @@ sh % "cd ../master"
 # - Configure the transaction to always fail before closing on the server.
 
 sh % "cp .hg/hgrc .hg/hgrc.bak"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [hooks]
 pretxnclose.error = exit 1
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Make some commits on the client.
@@ -389,18 +413,26 @@ sh % "cd .."
 sh % "initserver master2 master"
 
 sh % "cd master2"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 globalrevs=
 pushrebase=
 [pushrebase]
 blocknonpushrebase=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [globalrevs]
 reponame = customname
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Create a second client corresponding to the second server.
@@ -411,11 +443,15 @@ sh % "initclient client2"
 sh % "hg pull -q -R client2 'ssh://user@dummy/master2'"
 
 sh % "cd client2"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 globalrevs=
 pushrebase=
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Make some commits on top of the tip commit on the first client.
@@ -603,10 +639,14 @@ sh % "hg log -r m1 -T '{node}\\n'" == "0000000000000000000000000000000000000000"
 
 sh % "cd ../master"
 sh % "cp .hg/hgrc.bak .hg/hgrc"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [globalrevs]
 readonly = True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Queries not involving writing data to commits should still work.
@@ -619,10 +659,14 @@ testlookup()
 # - Configure the first server to bypass hgsql extension.
 
 sh % "mv .hg/hgrc.bak .hg/hgrc"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [hgsql]
 bypass = True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Queries not involving the hgsql extension should still work.
@@ -681,10 +725,14 @@ sh % "firstvalidglobalrevcommit 5010"
 
 # - Configure the repository with `startrev` as 5005.
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [globalrevs]
 startrev = 5005
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 
 # - Test that lookup works for commits with  globalrev >= `startrev`.

@@ -12,11 +12,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "setconfig 'ui.disallowemptyupdate=True'"
 sh % "newrepo"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 B
 |
 A
 """
+)
 sh % "hg up -q 0"
 sh % "hg up" == r"""
     abort: You must specify a destination to update to, for example "hg update master".

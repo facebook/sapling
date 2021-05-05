@@ -11,7 +11,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Set up test environment.
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=
 rebase=
@@ -22,7 +24,9 @@ enabled=true
 record=false
 [visibility]
 enabled=true
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Test that rebases that cause an orphan commit are not a problem.
 sh % "hg init repo"

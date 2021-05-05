@@ -45,7 +45,7 @@ svn_config = None
 
 
 def _create_auth_baton(pool):
-    """Create a Subversion authentication baton. """
+    """Create a Subversion authentication baton."""
     import svn.client
 
     # Give the client context baton a suite of authentication

@@ -8,10 +8,14 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 ownercheck=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # ownercheck does not prevent normal hg operations
 
@@ -19,12 +23,16 @@ sh % "hg init repo1"
 
 # make os.getuid return a different, fake uid
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 import os
 _getuid = os.getuid
 def fakeuid(): return _getuid() + 1
 os.getuid = fakeuid
-""" >> "fakeuid.py"
+"""
+    >> "fakeuid.py"
+)
 
 # ownercheck prevents wrong user from creating new repos
 

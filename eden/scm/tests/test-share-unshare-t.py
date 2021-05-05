@@ -10,11 +10,15 @@ from testutil.dott import sh, testtmp  # noqa: F401
 
 # Share works with blackbox enabled:
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 blackbox =
 share =
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init a"
 sh % "hg share a b" == r"""

@@ -16,13 +16,16 @@ sh % "newrepo"
 sh % "enable copytrace amend"
 sh % "setconfig 'copytrace.draftusefullcopytrace=0' 'experimental.copytrace=off' 'copytrace.fastcopytrace=1' 'experimental.mergedriver=python:$TESTTMP/m.py'"
 
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 B C
 |/
 A
 |
 Z
 """
+)
 
 sh % "cat" << r"""
 def preprocess(ui, repo, hooktype, mergestate, wctx, labels):

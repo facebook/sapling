@@ -48,7 +48,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         self.commit2 = self.repo.commit("Initial commit.")
 
     def select_storage_engine(self) -> str:
-        """ we need to persist data across restarts """
+        """we need to persist data across restarts"""
         return "sqlite"
 
     def edenfs_logging_settings(self) -> Dict[str, str]:

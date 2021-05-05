@@ -290,7 +290,7 @@ class server(object):
 
     def getencoding(self):
         # type: () -> None
-        """ writes the current encoding to the result channel """
+        """writes the current encoding to the result channel"""
         self.cresult.write(pycompat.encodeutf8(encoding.encoding))
 
     def serveone(self):
@@ -341,7 +341,7 @@ class server(object):
 
 def _protectio(ui):
     # type: (Any) -> Tuple[BinaryIO, ...]
-    """ duplicates streams and redirect original to null if ui uses stdio """
+    """duplicates streams and redirect original to null if ui uses stdio"""
     ui.flush()
     newfiles = []
     nullfd = os.open(os.devnull, os.O_RDWR)
@@ -357,7 +357,7 @@ def _protectio(ui):
 
 def _restoreio(ui, fin, fout):
     # type: (Any,BinaryIO,BinaryIO) -> None
-    """ restores streams from duplicated ones """
+    """restores streams from duplicated ones"""
     ui.flush()
     for f, uif in [(fin, ui.fin), (fout, ui.fout)]:
         if f is not uif:

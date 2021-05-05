@@ -8,10 +8,14 @@ from __future__ import absolute_import
 from testutil.dott import sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 checkmessagehook=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Build up a repo
 

@@ -74,7 +74,7 @@ def loadforpath(path):
 
 @command("debugarcconfig")
 def debugarcconfig(ui, repo, *args, **opts):
-    """ exists purely for testing and diagnostic purposes """
+    """exists purely for testing and diagnostic purposes"""
     try:
         config = loadforpath(repo.root)
         ui.write(json.dumps(config, sort_keys=True), "\n")

@@ -11,9 +11,12 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # Test various flags to turn off bad hg features.
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 A
 """
+)
 sh % "hg up -Cq $A"
 
 # Test disabling the `hg merge` command:

@@ -12,12 +12,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "setconfig 'experimental.evolution='"
 
 # Set up extensions (order is important here, we must test tweakdefaults loading last)
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
 remotenames=
 tweakdefaults=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Run test
 sh % "hg init repo"

@@ -32,7 +32,9 @@ def conclude(ui, repo, hooktype, mergestate, wctx, labels=None):
 
 sh % "setconfig 'experimental.mergedriver=python:driver/'"
 sh % "hg commit -Aqm driver"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 E    # E/file = 1\n2\n3\n4\n5
 |
 D
@@ -43,6 +45,7 @@ B
 |
 A   # A/file = 1\n2\n3\n4
 """
+)
 sh % "hg rebase -s A -d 0" == r"""
     rebasing 19c6d3b0d8fb "A" (A)
     rebasing 5a83467e1fc3 "B" (B)

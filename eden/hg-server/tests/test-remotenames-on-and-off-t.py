@@ -10,10 +10,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "setconfig 'extensions.treemanifest=!'"
 # Set up global extensions
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Create a repo without remotenames
 sh % "hg init off"
@@ -26,10 +30,14 @@ sh % "cd .."
 sh % "hg clone off on" == r"""
     updating to branch default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 remotenames=
-""" >> "on/.hg/hgrc"
+"""
+    >> "on/.hg/hgrc"
+)
 
 # Ensure no crashes when working from repo with remotenames on
 sh % "hg -R off bookmark foo"
@@ -62,10 +70,14 @@ sh % "hg pull ../on" == r"""
     searching for changes
     no changes found"""
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [paths]
 default = $TESTTMP/on
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "hg pull" == r"""
     pulling from $TESTTMP/on

@@ -11,35 +11,47 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "configure dummyssh"
 sh % "enable amend commitcloud infinitepush rebase remotenames share"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [infinitepush]
 branchpattern = re:scratch/.*
 [commitcloud]
 hostname = testhost
 [experimental]
 evolution = createmarkers, allowunstable
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "setconfig 'remotefilelog.reponame=server'"
 
 sh % "hg init server"
 sh % "cd server"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [infinitepush]
 server = yes
 indextype = disk
 storetype = disk
 reponame = testrepo
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 # Make shared part of config
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [commitcloud]
 servicetype = local
 servicelocation = $TESTTMP
 token_enforced = False
 education_page = https://someurl.com/wiki/CommitCloud
-""" >> "shared.rc"
+"""
+    >> "shared.rc"
+)
 
 # Make a clone of the server
 sh % "hg clone 'ssh://user@dummy/server' client1 -q"

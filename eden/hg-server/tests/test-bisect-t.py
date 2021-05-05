@@ -550,10 +550,14 @@ sh % "hg up -C ." == "1 files updated, 0 files merged, 0 files removed, 0 files 
 # Check that bisect does not break on obsolete changesets
 # =========================================================
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution.createmarkers=True
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # tip is obsolete
 # ---------------------

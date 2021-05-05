@@ -8,10 +8,14 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 arcconfig=$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Sanity check expectations when there is no arcconfig
 

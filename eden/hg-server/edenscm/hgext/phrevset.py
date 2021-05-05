@@ -68,7 +68,7 @@ DESCRIPTION_REGEX = re.compile(
 
 
 def graphqlgetdiff(repo, diffid):
-    """Resolves a phabricator Diff number to a commit hash of it's latest version """
+    """Resolves a phabricator Diff number to a commit hash of it's latest version"""
     if util.istest():
         hexnode = repo.ui.config("phrevset", "mock-D%s" % diffid)
         if hexnode:

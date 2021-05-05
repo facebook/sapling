@@ -38,10 +38,14 @@ sh % "hg diff --reverse -r0 -r1" == r"""
     +b
     +c"""
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 g
 h
-""" >> "a"
+"""
+    >> "a"
+)
 sh % "hg diff --reverse --nodates" == r"""
     diff -r 2855cdcfcbb7 a
     --- a/a

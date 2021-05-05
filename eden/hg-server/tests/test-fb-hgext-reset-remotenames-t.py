@@ -11,11 +11,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 reset=
 remotenames=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"

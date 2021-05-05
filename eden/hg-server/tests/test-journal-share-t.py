@@ -14,7 +14,9 @@ feature.require(["py2"])
 
 # Journal extension test: tests the share extension support
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 # mock out util.getuser() and util.makedate() to supply testable values
 import os
 from edenscm.mercurial import util
@@ -34,16 +36,22 @@ def mockmakedate():
 
 util.getuser = mockgetuser
 util.makedate = mockmakedate
-""" >> "testmocks.py"
+"""
+    >> "testmocks.py"
+)
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 journal=
 share=
 testmocks=`pwd`/testmocks.py
 [remotenames]
 rename.default=remote
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"

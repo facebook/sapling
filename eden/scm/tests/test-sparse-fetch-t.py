@@ -55,7 +55,9 @@ sh % "enable sparse treemanifest rebase copytrace"
 sh % "setconfig treemanifest.flatcompat=0"
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 B  # B/x/x/y/z=B1
 |  # B/y/x/y/z=B2
 |
@@ -68,6 +70,7 @@ A  # A/x/x/y/z=A1
    # A/y/x/y/z=A2
    # A/z/x/y/z=A3
 """
+)
 
 sh % "hg sparse include x"
 
@@ -97,7 +100,9 @@ eq(collectprefetch("hg sparse exclude y"), ["x", "x/x", "x/x/y"])
 # Test sparse profile change.
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
     # B/profile=[include]\nx\ny
 B   # B/x/x/x=2
 |   # B/y/y/y=2
@@ -108,6 +113,7 @@ A   # A/profile=[include]\nx
     # A/y/y/y=1
     # A/z/z/z=1
 """
+)
 
 idtopath = getidtopath()
 
@@ -123,11 +129,14 @@ eq(collectprefetch("hg update -q $B"), ["x", "x/x", "y", "y/y"])
 # Test 'status'.
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 A   # A/x/x/x=1
     # A/y/y/y=1
     # A/z/z/z=1
 """
+)
 
 eq(collectprefetch("hg sparse include x"), [])
 sh % "hg up -q $A"

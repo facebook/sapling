@@ -10,20 +10,27 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 absorb=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 C
 |
 B
 |
 A
 """
+)
 
 sh % "hg debugmakepublic -r A"
 

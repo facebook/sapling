@@ -84,7 +84,7 @@ def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
 
 
 def make_temp_dir(repo: Path, subdir: Path) -> Path:
-    """ TODO(zeyi): This is a temporary measurement before we get mkscratch on Windows"""
+    """TODO(zeyi): This is a temporary measurement before we get mkscratch on Windows"""
     escaped = os.fsdecode(repo / subdir).replace("\\", "Z").replace("/", "Z")
     scratch = WINDOWS_SCRATCH_DIR / escaped
     scratch.mkdir(parents=True, exist_ok=True)
@@ -592,7 +592,7 @@ def run_cmd_quietly(args, check: bool = True) -> int:
 def apply_redirection_configs_to_checkout_config(
     checkout: EdenCheckout, redirs: Iterable[Redirection]
 ) -> CheckoutConfig:
-    """ Translate the redirections into a new CheckoutConfig """
+    """Translate the redirections into a new CheckoutConfig"""
 
     config = checkout.get_config()
     redirections = {}

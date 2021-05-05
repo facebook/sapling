@@ -16,7 +16,9 @@ sh % 'setconfig experimental.narrow-heads=true visibility.enabled=true mutation.
 # Test restack behavior with old stacks.
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
   D2  # amend: D1 -> D2
  /    # (This suggests a rebase from E1 to D2)
 M
@@ -32,6 +34,7 @@ M
 |/    # (This suggests a rebase from C1 to B2)
 A
 """
+)
 sh % 'hg debugremotebookmark master "$M"'
 sh % 'hg up -q "$D2"'
 

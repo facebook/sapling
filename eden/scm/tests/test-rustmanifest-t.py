@@ -32,9 +32,12 @@ sh % "enable treemanifest remotenames remotefilelog pushrebase"
 # Check manifest behavior with empty commit
 sh % "hginit emptycommit"
 sh % "cd emptycommit"
-sh % "drawdag" << r""" # drawdag.defaultfiles=false
+(
+    sh % "drawdag"
+    << r""" # drawdag.defaultfiles=false
 A
 """
+)
 eq(
     listcommitandmanifesthashes("$A::"),
     [("A", "7b3f3d5e5faf", "0000000000000000000000000000000000000000")],
@@ -49,7 +52,9 @@ sh % "cd $TESTTMP/localcommitsandmerge"
 # C, D - add + modify
 # E - merge with conflict and divergence
 # F - just checking that merge doesn't mess repo by performing a modify
-sh % "drawdag" << r""" # drawdag.defaultfiles=false
+(
+    sh % "drawdag"
+    << r""" # drawdag.defaultfiles=false
 F   # F/y/c=f  # crash with rustmanifest if y/c=c
 |
 E    # E/y/d=(removed)
@@ -62,6 +67,7 @@ B  # B/x/b=b
 |
 A  # A/x/a=a
 """
+)
 eq(
     listcommitandmanifesthashes("$A::"),
     [
@@ -84,17 +90,24 @@ sh % "hg cat -r $F x/a x/b y/c" == "dbf"
 # to a server doing pushrebase
 sh % "hginit $TESTTMP/serverpushrebasemerge"
 sh % "cd $TESTTMP/serverpushrebasemerge"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 pushrebase=
 [remotefilelog]
 server=True
 [treemanifest]
 server=True
-""" >> ".hg/hgrc"
-sh % "drawdag" << r""" # drawdag.defaultfiles=false
+"""
+    >> ".hg/hgrc"
+)
+(
+    sh % "drawdag"
+    << r""" # drawdag.defaultfiles=false
 A  # A/x/a=a
 """
+)
 sh % "hg bookmark master -r $A"
 eq(
     listcommitandmanifesthashes("$A::"),
@@ -105,11 +118,15 @@ sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebas
     fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f, found via bd99ff0a074c
     2 trees fetched over 0.00s"""
 sh % "cd $TESTTMP/clientpushrebasemerge"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [treemanifest]
 sendtrees=True
 treeonly=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "drawdag" << r""" # drawdag.defaultfiles=false
 F   # F/y/c=f  # crash with rustmanifest if y/c=c
 |

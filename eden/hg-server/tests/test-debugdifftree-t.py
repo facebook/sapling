@@ -9,13 +9,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 B   # B/dir/B=1
 |   # B/A=2
 |   # B/s=x (symlink)
 |   # B/x= (removed)
 A   # A/x=1 (executable)
 """
+)
 
 # Print paths:
 

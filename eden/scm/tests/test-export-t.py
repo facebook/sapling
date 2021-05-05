@@ -212,12 +212,16 @@ sh % 'hg export "not all()"' == r"""
     [255]"""
 
 # Check for color output
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [color]
 mode = ansi
 [extensions]
 color =
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg export --color always --nodates tip" == br"""
     # HG changeset patch
@@ -241,7 +245,9 @@ sh % "hg export --color always --nodates tip" == br"""
 
 sh % "newrepo"
 sh % "setconfig diff.git=1"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
        # B/foo/3=3\n (copied from bar/1)
        # B/foo/1=1\n (copied from bar/1)
        # B/bar/2=2\n
@@ -249,6 +255,7 @@ sh % "drawdag" << r"""
     |  # A/bar/1=0\n
     A  # A/foo/1=0\n
 """
+)
 
 sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
     # HG changeset patch

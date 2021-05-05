@@ -15,10 +15,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # This test file aims at test topological iteration and the various configuration it can has.
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [ui]
 logtemplate={rev}\n
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # On this simple example, all topological branch are displayed in turn until we
 # can finally display 0. this implies skipping from 8 to 3 and coming back to 7

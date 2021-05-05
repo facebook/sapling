@@ -364,7 +364,7 @@ class gitutil(object):
 
     @classmethod
     def _getdifftreepipe(cls, ui, path):
-        """"""
+        """ """
         if path not in cls.difftreepipes:
             cls.difftreepipes[path] = cls._createdifftreepipe(ui, path)
         return cls.difftreepipes[path]

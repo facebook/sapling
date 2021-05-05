@@ -53,7 +53,7 @@ def run_cmd(cmd, env=None, cwd=None):
 
 
 def generate_thrift_code(thrift_compiler, oss_dir, fb303_dir, gen_dir):
-    """ Generate python thrift clients for a couple of things """
+    """Generate python thrift clients for a couple of things"""
     fb303_include_dir = os.path.join(fb303_dir, "include", "thrift-files")
     thrift_files = [
         os.path.join(oss_dir, "eden/fs/config/eden_config.thrift"),
@@ -97,7 +97,7 @@ def copy_py(src_dir, instdir, dest_prefix):
 
 
 def find_site_packages(instdir):
-    """ locate any and all site-packages directories in the install image """
+    """locate any and all site-packages directories in the install image"""
     sp = []
     for root, dirs, _files in os.walk(instdir):
         for d in dirs:

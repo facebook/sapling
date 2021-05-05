@@ -42,7 +42,9 @@ sh % "hg debugpathcomplete -n d" == "dira"
 
 sh % "cd .."
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
   D     # A/filenormal = 1
  / \    # B/filep1 = 1
 B   C   # B/filemerged = 1
@@ -50,6 +52,7 @@ B   C   # B/filemerged = 1
   A     # C/filemerged = 2
         # D/filemerged = 12
 """
+)
 sh % "hg up -q $D"
 sh % "hg debugpathcomplete f" == r"""
     filemerged

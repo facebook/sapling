@@ -12,7 +12,9 @@ sh % "setconfig \"remotefilelog.cachepath=$TESTTMP/cache\" 'extensions.remotefil
 
 sh % "newrepo"
 sh % "echo remotefilelog" >> ".hg/requires"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 E  # E/X=1 (renamed from Y)
 |
 D  # D/Y=3 (renamed from X)
@@ -21,6 +23,7 @@ B  # B/X=2
 |
 A  # A/X=1
 """
+)
 
 sh % 'hg bundle --all "$TESTTMP/bundle" --traceback -q'
 

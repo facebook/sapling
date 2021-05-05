@@ -48,7 +48,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(pos, changed.toPosition)
 
     def test_getFileInformation(self) -> None:
-        """ verify that getFileInformation is consistent with the VFS """
+        """verify that getFileInformation is consistent with the VFS"""
 
         paths = [
             b"",

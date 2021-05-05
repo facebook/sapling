@@ -216,7 +216,9 @@ sh % "cat e" == "321"
 sh % "touch -t 200001010000 e"
 sh % "hg debugrebuildstate"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [fakedirstatewritetime]
 # emulate invoking dirstate.write() via repo.status()
 # at 2000-01-01 00:00
@@ -224,12 +226,18 @@ fakenow = 2000-01-01 00:00:00
 
 [extensions]
 fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "hg revert -r 0 e"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 fakedirstatewritetime = !
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "cat e" == "123"
 sh % "touch -t 200001010000 e"

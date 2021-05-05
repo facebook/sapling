@@ -17,11 +17,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "setconfig 'extensions.treemanifest=!'"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extdiff]
 # for portability:
 pdiff = sh "$RUNTESTDIR/pdiff"
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Create a repo with some stuff in it:
 
@@ -526,11 +530,14 @@ if False:
 # graft with --force (still doesn't graft merges)
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 C D
 |/|
 A B
 """
+)
 sh % "hg update -q $C"
 sh % "hg graft $B" == 'grafting fc2b737bb2e5 "B"'
 sh % "hg rm A B C"
@@ -578,9 +585,12 @@ sh % "cat A" == "abc"
 # Empty graft
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 A  B  # B/A=A
 """
+)
 sh % "hg up -qr $B"
 sh % "hg graft $A" == r"""
     grafting 426bada5c675 "A"

@@ -10,11 +10,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Load extensions
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 arcconfig=$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py
 arcdiff=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Diff with no revision
 

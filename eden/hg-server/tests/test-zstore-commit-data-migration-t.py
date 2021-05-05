@@ -21,11 +21,14 @@ sh % "setconfig experimental.rust-commits=off"
 sh % "setconfig format.use-zstore-commit-data=off"
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 B C
 |/
 A
 """
+)
 
 # Migrate up (double-writes to zstore and 00changelog.d).
 
@@ -34,13 +37,16 @@ sh % 'hg log -r "$C" -T "{desc}\\n"' == "C"
 
 # Create new commits.
 
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
   F
  /|
 D E
 | |
 desc(C)
 """
+)
 
 # With zstore-commit-data, 00changelog.d is not used for reading commits.
 
@@ -81,13 +87,16 @@ sh % 'hg log -GT "{desc}"' == r"""
 
 # Create new commits.
 
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 H
 |
 G
 |
 desc(B)
 """
+)
 
 # Migrate up (double-writes to zstore and 00changelog.d).
 

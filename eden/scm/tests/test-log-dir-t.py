@@ -13,7 +13,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 C   # C/x/3=3
 | D # C/x/2=2
 |/  # D/x/4=4
@@ -21,6 +23,7 @@ B
 |
 A   # A/x/1=1
 """
+)
 
 sh % "hg update -q $C"
 

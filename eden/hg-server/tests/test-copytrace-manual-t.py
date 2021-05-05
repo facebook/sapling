@@ -14,13 +14,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "enable rebase"
 sh % "newrepo"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 D    # A/A=1\n
 |    # B/A=(removed)
 B C  # B/Renamed=1\n
 |/   # C/A=2\n
 A
 """
+)
 
 sh % "hg up -q $C"
 sh % "hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.copytrace=off'" << r"""

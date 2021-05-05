@@ -246,12 +246,16 @@ sh % "echo 'style ='" >> ".hg/hgrc"
 
 # Add some simple styles to settings
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [templates]
 simple = "{rev}\n"
 simple2 = {rev}\n
 rev = "should not precede {rev} keyword\n"
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "hg log -l1 -Tsimple" == "8"
 sh % "hg log -l1 -Tsimple2" == "8"
@@ -320,14 +324,18 @@ sh % "hg log -l2 -T./map-myjson" == r"""
 
 # Test docheader, docfooter and separator in [templates] section
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [templates]
 myjson = ' {dict(rev, node|short)|json}'
 myjson:docheader = '\{\n'
 myjson:docfooter = '\n}\n'
 myjson:separator = ',\n'
 :docheader = 'should not be selected as a docheader for literal templates\n'
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "hg log -l2 -Tmyjson" == r"""
     {
      {"node": "209edb6a1848", "rev": 8},
@@ -2057,10 +2065,14 @@ sh % "hg ci -m 'Modify, add, remove, rename'"
 
 # Check the status template
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 color=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg log -T status -r 10" == r"""
     commit:      bc9dfec3b3bc
@@ -3117,14 +3129,18 @@ sh % "'COLUMNS=25' hg log -l1 --template '{fill(desc, termwidth, \"{node|short}:
 sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", author)}\'' == "{node|short}"
 sh % 'hg log -l 1 --template \'{sub(r"[0-9]", "-", "{node|short}")}\'' == "ea-c-------d"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 color=
 [color]
 mode=ansi
 text.{rev} = red
 text.1 = green
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "hg log '--color=always' -l 1 --template '{label(bookmarks, \"text\\n\")}'" == "\\x1b[0;31mtext\\x1b[0m (esc)"
 sh % "hg log '--color=always' -l 1 --template '{label(\"text.{rev}\", \"text\\n\")}'" == "\\x1b[0;32mtext\\x1b[0m (esc)"
 
@@ -3242,10 +3258,14 @@ sh % "cd .."
 
 sh % "hg init hashcollision"
 sh % "cd hashcollision"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution.createmarkers=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "echo 0" > "a"
 sh % "hg ci -qAm 0"
 
@@ -3419,10 +3439,14 @@ sh % "hg log --template '{rev} Parents: {revset(\"parents(%s)\", rev)}\\n'" == r
     1 Parents: 0
     0 Parents:"""
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [revsetalias]
 myparents(x) = parents(x)
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "hg log --template '{rev} Parents: {revset(\"myparents(%s)\", rev)}\\n'" == r"""
     2 Parents: 1
     1 Parents: 0
@@ -3785,13 +3809,17 @@ sh % pycompat.decodeutf8(
 
 sh % "hg clone -q a aliases"
 sh % "cd aliases"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [templatealias]
 r = rev
 rn = "{r}:{node|short}"
 status(c, files) = files % "{c} {file}\n"
 utcdate(d) = localdate(d, "UTC")
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "hg debugtemplate -vr0 '{rn} {utcdate(date)|isodate}\\n'" == r"""
     (template

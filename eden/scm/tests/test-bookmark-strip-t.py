@@ -13,13 +13,17 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # Test bookmark -D
 sh % "hg init book-D"
 sh % "cd book-D"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=
 tweakdefaults=
 [experimental]
 evolution=all
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "hg debugbuilddag '+4*2*2*2'"
 sh % "hg bookmark -i -r 1 master"
 sh % "hg bookmark -i -r 5 feature1"

@@ -11,12 +11,16 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 reset=
 [experimental]
 evolution=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
@@ -132,13 +136,17 @@ sh % "hg reset -C 66ee28d0328c" == "1 changeset hidden"
 
 # Reset + Obsolete tests
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=
 rebase=
 [experimental]
 evolution=all
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "touch a"
 sh % "hg commit -Aqm a"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""

@@ -10,12 +10,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Setup
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 arcconfig=$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py
 phabstatus=
 smartlog=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg init repo"
 sh % "cd repo"
 sh % "touch foo"

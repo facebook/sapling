@@ -22,26 +22,32 @@ sh.setconfig(
 sh.newrepo()
 sh.enable("remotenames", "amend")
 
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 C
 |
 B
 |
 A
 """
+)
 
 sh.hg("update", "desc(A)")
 sh.hg("bookmark", "foo")
 sh.hg("update", "desc(C)")
 sh.hg("bookmark", "foo")
 
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 E
 |
 D
 |
 desc(B)
 """
+)
 
 sh.hg("update", "desc(E)")
 sh.hg("metaedit", "-mE1")

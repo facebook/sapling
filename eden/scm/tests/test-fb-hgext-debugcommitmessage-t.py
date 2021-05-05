@@ -9,10 +9,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Set up extension
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 debugcommitmessage=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Set up repo
 sh % "hg init repo"

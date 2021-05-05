@@ -203,7 +203,7 @@ def validateconfig(ui):
 
 
 def codec2iana(cs):
-    """"""
+    """ """
     cs = email.charset.Charset(cs).input_charset.lower()
 
     # "latin1" normalizes to "iso8859-1", standard calls for "iso-8859-1"

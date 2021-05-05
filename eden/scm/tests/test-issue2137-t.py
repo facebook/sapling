@@ -38,10 +38,14 @@ def extsetup(ui):
     revlog._prereadsize = 8           # use revlog.lazyparser
 """ > "commitwrapper.py"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 commitwrapper = `pwd`/commitwrapper.py
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo1"
 sh % "cd repo1"

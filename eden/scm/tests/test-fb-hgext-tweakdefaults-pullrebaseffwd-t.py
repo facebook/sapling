@@ -13,11 +13,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "setconfig 'extensions.treemanifest=!'"
 sh.enable("remotenames")
 # Set up without remotenames
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
 tweakdefaults=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "echo a" > "repo/a"

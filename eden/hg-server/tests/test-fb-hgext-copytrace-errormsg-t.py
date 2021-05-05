@@ -11,13 +11,17 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 rebase=
 copytrace=
 [experimental]
 copytrace=off
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"

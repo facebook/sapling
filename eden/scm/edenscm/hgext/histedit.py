@@ -503,7 +503,7 @@ class histeditaction(object):
         return cls(state, rev)
 
     def verify(self, prev, expected, seen):
-        """ Verifies semantic correctness of the rule"""
+        """Verifies semantic correctness of the rule"""
         repo = self.repo
         ha = node.hex(self.node)
         try:
@@ -801,7 +801,7 @@ class edit(histeditaction):
 @action(["fold", "f"], _("use commit, but combine it with the one above"))
 class fold(histeditaction):
     def verify(self, prev, expected, seen):
-        """ Verifies semantic correctness of the fold rule"""
+        """Verifies semantic correctness of the fold rule"""
         super(fold, self).verify(prev, expected, seen)
         repo = self.repo
         if not prev:
@@ -1600,7 +1600,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
 
 
 def parserules(rules, state):
-    """Read the histedit rules string and return list of action objects """
+    """Read the histedit rules string and return list of action objects"""
     rules = [
         l
         for l in (r.strip() for r in rules.splitlines())

@@ -10,13 +10,17 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 tweakdefaults=
 rebase=
 [experimental]
 updatecheck=noconflict
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "setconfig 'ui.suggesthgprev=True'"
 
 # Set up the repository.

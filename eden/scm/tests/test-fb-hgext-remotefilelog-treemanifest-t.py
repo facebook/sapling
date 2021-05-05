@@ -12,19 +12,27 @@ sh % '. "$TESTDIR/library.sh"'
 
 sh % "hginit master"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 treemanifest=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "cd master"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 [remotefilelog]
 server=True
 [treemanifest]
 server=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "mkdir dir"
 sh % "echo x" > "dir/x"
 sh % "hg commit -qAm x1"
@@ -44,10 +52,14 @@ sh % "ls 'shallow/.hg/store/00*.i'" == r"""
 sh % "rm -rf shallow"
 
 # Clone with shallowtrees=True
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [remotefilelog]
 shallowtrees=True
-""" >> "master/.hg/hgrc"
+"""
+    >> "master/.hg/hgrc"
+)
 
 sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate" == r"""
     streaming all changes

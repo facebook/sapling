@@ -16,10 +16,14 @@ sh % "cat" << r"""
 env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort
 exit 0
 """ > "$TESTTMP/pretxnchangegroup.sh"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [hooks]
 pretxnchangegroup = bash $TESTTMP/pretxnchangegroup.sh
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "hg clone -q repo child"
@@ -82,18 +86,26 @@ sh % "hg push --pushvars DEBUG" == r"""
 
 # Test Python hooks
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 def hook(ui, repo, hooktype, **kwargs):
     for k, v in sorted(kwargs.items()):
         if "USERVAR" in k:
             ui.write("Got pushvar: %s=%s\n" % (k, v))
-""" >> "$TESTTMP/pyhook.py"
+"""
+    >> "$TESTTMP/pyhook.py"
+)
 
 sh % 'cp "$HGRCPATH" "$TESTTMP/hgrc.bak"'
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [hooks]
 pretxnchangegroup.pyhook = python:$TESTTMP/pyhook.py:hook
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg push --pushvars 'A=1' --pushvars 'B=2'" == r"""
     pushing to $TESTTMP/repo
@@ -107,11 +119,15 @@ sh % "hg push --pushvars 'A=1' --pushvars 'B=2'" == r"""
 sh % 'cp "$TESTTMP/hgrc.bak" "$HGRCPATH"'
 
 # Test pushvars for enforcing push reasons
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [push]
 requirereason=True
 requirereasonmsg="Because I said so"
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "echo c" >> "a"
 sh % "hg commit -Aqm c"
 sh % "hg push" == r"""

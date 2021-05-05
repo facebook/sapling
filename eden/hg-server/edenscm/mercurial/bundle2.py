@@ -869,7 +869,7 @@ class unbundle20(unpackermixin):
 
     def _processallparams(self, paramsblock):
         # type: (bytes) -> Dict[str, Optional[str]]
-        """"""
+        """ """
         params = util.sortdict()
         data = pycompat.decodeutf8(paramsblock)
         for param in data.split(" "):

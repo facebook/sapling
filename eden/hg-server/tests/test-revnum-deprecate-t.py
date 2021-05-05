@@ -9,13 +9,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "hg init"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 C
 |
 B
 |
 A
 """
+)
 
 sh % "setconfig 'devel.legacy.revnum=warn'"
 

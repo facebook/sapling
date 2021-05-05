@@ -26,7 +26,7 @@ class RemountTest(testcase.EdenRepoTest):
         self.assert_checkout_root_entries(expected_entries, path=mount_path)
 
     def select_storage_engine(self) -> str:
-        """ we need to persist data across restarts """
+        """we need to persist data across restarts"""
         return "sqlite"
 
     def test_remount_basic(self) -> None:

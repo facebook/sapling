@@ -10,14 +10,18 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Test that journal and lfs wrap the share extension properly
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 journal=
 lfs=
 [lfs]
 threshold=1000B
 usercache=$TESTTMP/lfs-cache
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"

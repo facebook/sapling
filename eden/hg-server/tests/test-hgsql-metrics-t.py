@@ -25,7 +25,9 @@ sh % "cd .."
 
 sh % "initserver master masterrepo"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 from edenscm.mercurial import extensions
 from edenscm.mercurial import ui as uimod
 def uisetup(ui):
@@ -37,14 +39,22 @@ def mylog(orig, self, service, *msg, **opts):
         msgstr = msg[0] % msg[1:]
         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
     return orig(self, service, *msg, **opts)
-""" >> "$TESTTMP/uilog.py"
-sh % "cat" << r"""
+"""
+    >> "$TESTTMP/uilog.py"
+)
+(
+    sh % "cat"
+    << r"""
 [extensions]
 uilog=$TESTTMP/uilog.py
-""" >> "master/.hg/hgrc"
+"""
+    >> "master/.hg/hgrc"
+)
 
 # Verify timeouts are logged
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 from edenscm.mercurial import error, extensions
 def uisetup(ui):
     hgsql = extensions.find('hgsql')
@@ -55,13 +65,19 @@ def fakeenter(orig, self):
     return orig(self)
 def lockthrow(*args, **kwargs):
     raise error.Abort("fake timeout")
-""" >> "$TESTTMP/forcetimeout.py"
+"""
+    >> "$TESTTMP/forcetimeout.py"
+)
 
 sh % "cp master/.hg/hgrc $TESTTMP/orighgrc"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 forcetimeout=$TESTTMP/forcetimeout.py
-""" >> "master/.hg/hgrc"
+"""
+    >> "master/.hg/hgrc"
+)
 sh % "cd client"
 sh % "hg push 'ssh://user@dummy/master'" == r"""
     pushing to ssh://user@dummy/master

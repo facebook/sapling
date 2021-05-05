@@ -615,7 +615,7 @@ class svn_source(converter_source):
         return revcommit
 
     def checkrevformat(self, revstr, mapname="splicemap"):
-        """ fails if revision format does not match the correct format"""
+        """fails if revision format does not match the correct format"""
         if not re.match(
             r"svn:[0-9a-f]{8,8}-[0-9a-f]{4,4}-"
             r"[0-9a-f]{4,4}-[0-9a-f]{4,4}-[0-9a-f]"

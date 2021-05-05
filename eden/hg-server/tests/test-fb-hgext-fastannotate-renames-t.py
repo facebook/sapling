@@ -11,12 +11,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 feature.require(["py2"])
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 fastannotate=
 [fastannotate]
 mainbranch=main
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
@@ -80,10 +84,14 @@ sh % "hg fastannotate --debug -nf b -r 0" == r"""
 
 sh % "echo a3" >> "a"
 sh % "hg commit -m a3"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 b3
 b4
-""" >> "b"
+"""
+    >> "b"
+)
 sh % "hg commit -m b4"
 sh % "hg bookmark -i main -q"
 sh % "hg fastannotate --debug -nf a" == r"""

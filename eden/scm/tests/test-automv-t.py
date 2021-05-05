@@ -11,11 +11,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Tests for the automv extension; detect moved files at commit time.
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 automv=
 rebase=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Setup repo
 
@@ -294,10 +298,14 @@ sh % "hg status --change . -C" == r"""
 
 # error conditions
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [automv]
 similarity=110
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg commit -m 'revision to amend to'" == r"""
     abort: automv.similarity must be between 0 and 100
     [255]"""

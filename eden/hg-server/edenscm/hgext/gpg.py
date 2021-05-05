@@ -54,7 +54,7 @@ class gpg(object):
         return util.filter(data, gpgcmd)
 
     def verify(self, data, sig):
-        """ returns of the good and bad signatures"""
+        """returns of the good and bad signatures"""
         sigfile = datafile = None
         try:
             # create temporary files

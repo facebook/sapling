@@ -8,20 +8,28 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 dirsync=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [ui]
 verbose=true
 [dirsync]
 sync1.1=dir1/
 sync1.2=dir2/subdir/
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 # Add multiple files
 sh % "mkdir dir1"

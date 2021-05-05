@@ -65,7 +65,7 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
             return super()._callTestMethod(testMethod)
 
     def _get_tmp_prefix(self) -> str:
-        """Get a prefix to use for the test's temporary directory name. """
+        """Get a prefix to use for the test's temporary directory name."""
         # Attempt to include a potion of the test name in the temporary directory
         # prefix, but limit it to 20 characters.  If the path is too long EdenFS will
         # fail to start since its Unix socket path won't fit in sockaddr_un, which has a

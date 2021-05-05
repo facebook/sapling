@@ -954,11 +954,14 @@ sh % "hg init headerlikemsg"
 sh % "cd headerlikemsg"
 sh % "touch empty"
 sh % "echo nonempty" >> "nonempty"
-sh % "hg ci -qAl -" << r"""
+(
+    sh % "hg ci -qAl -"
+    << r"""
 blah blah
 diff blah
 blah blah
 """
+)
 sh % "hg --config 'diff.git=1' log -pv" == r"""
     commit:      c6ef204ef767
     user:        test
@@ -1437,10 +1440,14 @@ edenscm.mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
 edenscm.mercurial.cmdutil.extrapostimport.append('foo')
 edenscm.mercurial.cmdutil.extrapostimportmap['foo'] = postimport
 """ > "$TESTTMP/parseextra.py"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 parseextra=$TESTTMP/parseextra.py
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg up -C tip" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "cat" << r"""
 # HG changeset patch

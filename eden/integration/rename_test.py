@@ -20,7 +20,7 @@ class RenameTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def test_rename_errors(self) -> None:
-        """ Test some error cases """
+        """Test some error cases"""
         with self.assertRaises(OSError) as context:
             os.rename(
                 os.path.join(self.mount, "not-exist"),
@@ -48,7 +48,7 @@ class RenameTest(testcase.EdenRepoTest):
             self.assertEqual("foo!\n", f.read())
 
     def test_rename_away_tree_entry(self) -> None:
-        """ Rename a tree entry away and back again """
+        """Rename a tree entry away and back again"""
         # We should be able to rename files that are in the Tree
         hello = os.path.join(self.mount, "hello")
         targetname = os.path.join(self.mount, "a-new-target")
@@ -80,7 +80,7 @@ class RenameTest(testcase.EdenRepoTest):
             self.assertEqual("hola\nwoot", f.read())
 
     def test_rename_overlay_only(self) -> None:
-        """ Create a local/overlay only file and rename it """
+        """Create a local/overlay only file and rename it"""
         # We should be able to rename files that are in the Tree
         from_name = os.path.join(self.mount, "overlay-a")
         to_name = os.path.join(self.mount, "overlay-b")
@@ -120,7 +120,7 @@ class RenameTest(testcase.EdenRepoTest):
             self.assertEqual("overlay-a\nwoot", f.read())
 
     def test_rename_overlay_over_tree(self) -> None:
-        """ Make an overlay file and overwrite a tree entry with it """
+        """Make an overlay file and overwrite a tree entry with it"""
 
         from_name = os.path.join(self.mount, "overlay-a")
         to_name = os.path.join(self.mount, "hello")

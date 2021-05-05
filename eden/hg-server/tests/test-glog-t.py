@@ -1918,10 +1918,14 @@ sh % "cd .."
 # Test --hidden
 #  (enable obsolete)
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution.createmarkers=True
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 node = sh.hg("log", "-r8", "-T{node}")
 sh % ("hg debugobsolete '%s'" % node) == ""
@@ -2036,12 +2040,16 @@ sh % "cd .."
 # change graph edge styling
 
 sh % "cd repo"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 graphstyle.parent = |
 graphstyle.grandparent = :
 graphstyle.missing =
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
     ╷  user:        test
@@ -2475,12 +2483,16 @@ sh % "'HGPLAIN=1' 'HGPLAINEXCEPT=graph' hg log -G -r 'file(\"a\")' -m" == r"""
 
 # Last 3 lines:
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 graphstyle.parent = !
 graphstyle.grandparent = 3.
 graphstyle.missing =
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
     ╷  user:        test
@@ -2553,12 +2565,16 @@ sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     ~ ~  summary:     (18) merge two known; two far left"""
 # All but the first 3 lines:
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 graphstyle.parent = !
 graphstyle.grandparent = -3.
 graphstyle.missing =
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
     ╷  user:        test
@@ -2634,13 +2650,17 @@ sh % "cd .."
 # Change graph shorten, test better with graphstyle.missing not none
 
 sh % "cd repo"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 graphstyle.parent = |
 graphstyle.grandparent = :
 graphstyle.missing = '
 graphshorten = true
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg log -G -r 'file(\"a\")' -m -T '{rev} {desc}'" == r"""
     @  36 (36) buggy merge: identical parents
     o    32 (32) expand

@@ -11,11 +11,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 smartlog=
 remotenames=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
@@ -68,19 +72,27 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
     │
     @  0 mybook"""
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [smartlog]
 repos=default/
 names=project/bookmark
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  3  default/project/bookmark
     │
     @  0 mybook"""
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [smartlog]
 names=master project/bookmark
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
     │

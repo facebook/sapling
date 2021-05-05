@@ -15,20 +15,28 @@ from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 sh % "setconfig 'experimental.evolution='"
 sh % "enable absorb"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 from edenscm.mercurial import commands, registrar
 cmdtable = {}
 command = registrar.command(cmdtable)
 @command('amend', [], '')
 def amend(ui, repo, *pats, **opts):
     return 3
-""" >> "$TESTTMP/dummyamend.py"
-sh % "cat" << r"""
+"""
+    >> "$TESTTMP/dummyamend.py"
+)
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=$TESTTMP/dummyamend.py
 [absorb]
 amendflag = correlated
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 
 def sedi(pattern, *paths):
@@ -390,10 +398,14 @@ sh % "hg --config 'absorb.maxstacksize=1' absorb -n" == r"""
 
 # Test obsolete markers creation:
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution=createmarkers
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg --config 'absorb.maxstacksize=3' sf -a" == r"""
     absorb: only the recent 3 changesets will be analysed
@@ -481,10 +493,14 @@ sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
 
 # Executable files:
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [diff]
 git=True
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 if feature.check(["execbit"]):
     sh % "newrepo"

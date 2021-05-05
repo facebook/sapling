@@ -42,13 +42,16 @@ sh.newrepo()
 sh.setconfig("experimental.metalog=0")
 sh.enable("remotenames")
 
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 C
 |
 B
 |
 A
 """
+)
 
 # Prepare bookmarks and remotenames. Set them to A in backup, and B on disk.
 

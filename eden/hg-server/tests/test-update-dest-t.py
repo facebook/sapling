@@ -12,10 +12,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "setconfig 'extensions.treemanifest=!'"
 # Test update.requiredest
 sh % 'cd "$TESTTMP"'
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [commands]
 update.requiredest = True
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 sh % "hg init repo"
 sh % "cd repo"
 sh % "echo a" >> "a"

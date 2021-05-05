@@ -10,7 +10,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # test interaction between sparse and treemanifest (sparse file listing)
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 sparse=
 treemanifest=
@@ -19,7 +21,9 @@ treeonly = True
 [remotefilelog]
 reponame = master
 cachepath = $PWD/hgcache
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Setup the repository
 

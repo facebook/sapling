@@ -917,7 +917,7 @@ def bailifchanged(repo, merge=True, hint=None):
 
 
 def logmessage(repo, opts):
-    """ get the log message according to -m and -l option """
+    """get the log message according to -m and -l option"""
     ui = repo.ui
 
     # Allow the commit message from another commit to be reused.

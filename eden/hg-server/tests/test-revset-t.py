@@ -39,10 +39,14 @@ def r3232(repo, subset, x):
 
 edenscm.mercurial.revset.symbols['r3232'] = r3232
 ''' > "testrevset.py"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 testrevset=$TESTTMP/testrevset.py
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 
 def _try(*args):
@@ -120,10 +124,14 @@ def debugrevlistspec(ui, repo, fmt, *args, **opts):
     for c in revs:
         ui.write("%s\n" % c)
 """ > "debugrevlistspec.py"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 debugrevlistspec = $TESTTMP/debugrevlistspec.py
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "hg init repo"
 sh % "cd repo"
@@ -1790,10 +1798,14 @@ sh % "cd .."
 
 sh % "hg init wdir-hashcollision"
 sh % "cd wdir-hashcollision"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [experimental]
 evolution.createmarkers=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "echo 0" > "a"
 sh % "hg ci -qAm 0"
 
@@ -2459,12 +2471,16 @@ sh % "cd .."
 
 sh % "hg init sorting"
 sh % "cd sorting"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [ui]
 logtemplate = '{rev} {branch|p5}{desc|p5}{author|p5}{date|hgdate}\n'
 [templatealias]
 p5(s) = pad(s, 5)
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "setbranch b12"
 sh % "commit -m m111 -u u112 -d '111 10800'"
 sh % "setbranch b11"

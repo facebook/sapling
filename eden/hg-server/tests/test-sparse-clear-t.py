@@ -12,11 +12,15 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "hg init myrepo"
 sh % "cd myrepo"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 sparse=
 rebase=
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "echo a" > "index.html"
 sh % "echo x" > "data.py"

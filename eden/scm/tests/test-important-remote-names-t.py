@@ -11,13 +11,16 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "newrepo server"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
   D
   |
 B C
 |/
 A
 """
+)
 sh % 'hg bookmark -r "desc(B)" master'
 
 # Remote bookmarks should be written even if remotenames is disabled.

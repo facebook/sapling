@@ -10,13 +10,17 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 amend=
 smartlog=
 [experimental]
 evolution = createmarkers
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 # Test that changesets with visible precursors are rendered as x's
 sh % "hg init repo"

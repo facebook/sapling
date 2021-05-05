@@ -15,10 +15,14 @@ sh % '. "$TESTDIR/library.sh"'
 
 sh % "hginit master"
 sh % "cd master"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [remotefilelog]
 server=True
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 sh % "echo x" > "x"
 sh % "hg commit -qAm x"
 sh % "echo y" >> "x"
@@ -41,10 +45,14 @@ sh % "hgcloneshallow 'ssh://user@dummy/master' shallow --noupdate" == r"""
     no changes found"""
 sh % "cd shallow"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [extensions]
 getflogheads=$TESTDIR/getflogheads.py
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 # Get heads of a remotefilelog
 

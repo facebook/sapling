@@ -11,31 +11,43 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "configure dummyssh"
 sh % "enable commitcloud infinitepush"
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [commitcloud]
 hostname = testhost
 servicetype = local
 servicelocation = $TESTTMP
-""" >> "$HGRCPATH"
+"""
+    >> "$HGRCPATH"
+)
 
 sh % "setconfig 'remotefilelog.reponame=server'"
 sh % "hg init server"
 sh % "cd server"
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 [infinitepush]
 server = yes
 indextype = disk
 storetype = disk
 reponame = testrepo
-""" >> ".hg/hgrc"
+"""
+    >> ".hg/hgrc"
+)
 
 sh % "hg clone 'ssh://user@dummy/server' client -q"
 sh % "cd client"
 
 
-sh % "cat" << r"""
+(
+    sh % "cat"
+    << r"""
 { "workspaces_data" : { "workspaces": [ { "name": "user/test/old", "archived": true, "version": 0 }, { "name": "user/test/default", "archived": false, "version": 0 }  ] } }
-""" >> "$TESTTMP/workspacesdata"
+"""
+    >> "$TESTTMP/workspacesdata"
+)
 
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo

@@ -13,11 +13,14 @@ sh % "setconfig 'extensions.treemanifest=!'"
 # Turn manifest verification on and off:
 sh % "hg init repo1"
 sh % "cd repo1"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 b c
 |/
 a
 """
+)
 sh % "hg verify --config 'verify.skipmanifests=0'" == r"""
     checking changesets
     checking manifests

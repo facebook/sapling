@@ -34,7 +34,7 @@ def readfromstore(self, text):
 
 def filectxisbinary(orig, self):
     if self.islfs():
-        """ Placeholders are always text """
+        """Placeholders are always text"""
         return False
     return orig(self)
 

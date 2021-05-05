@@ -13,7 +13,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "newrepo"
-sh % "hg debugdrawdag" << r"""
+(
+    sh % "hg debugdrawdag"
+    << r"""
 J K
 |/|
 H I
@@ -26,6 +28,7 @@ A D
 |\|
 B C
 """
+)
 
 sh % "hg debugbindag -r '::A' -o a.dag"
 sh % "hg debugpreviewbindag a.dag" == r"""

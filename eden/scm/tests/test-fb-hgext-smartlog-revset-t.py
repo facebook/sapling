@@ -10,11 +10,14 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "newrepo"
 sh % "enable smartlog"
-sh % "drawdag" << r"""
+(
+    sh % "drawdag"
+    << r"""
 B C  # B has date 100000 0
 |/   # C has date 200000 0
 A
 """
+)
 sh % 'hg bookmark -ir "$A" master'
 sh % "hg log -r 'smartlog()' -T '{desc}\\n'" == r"""
     A

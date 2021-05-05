@@ -127,7 +127,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def select_storage_engine(self) -> str:
-        """ we need to persist data across restarts """
+        """we need to persist data across restarts"""
         return "rocksdb"
 
 
