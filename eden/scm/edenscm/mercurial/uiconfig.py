@@ -616,16 +616,3 @@ def reportissues(ui, issues):
                 actual=dynamic_value,
                 repo=reponame or "unknown",
             )
-
-
-def applydynamicconfig(ui, reponame, sharedpath):
-    pinned = sorted(ui._uiconfig._pinnedconfigs)
-    values = [ui.config(s, n) for (s, n) in pinned]
-
-    issues = configparser.applydynamicconfig(
-        ui._uiconfig._rcfg._rcfg, reponame, sharedpath
-    )
-    reportissues(ui, issues)
-
-    for (section, name), value in zip(pinned, values):
-        ui.setconfig(section, name, value)

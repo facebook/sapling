@@ -14,7 +14,6 @@ use cpython::*;
 use configparser::{
     config::{ConfigSet, Options, SupersetVerification},
     convert::parse_list,
-    dynamicconfig::Generator,
     hg::{generate_dynamicconfig, ConfigSetHgExt, OptionsHgExt},
 };
 use cpython_ext::{error::ResultPyErrExt, PyNone, PyPath, PyPathBuf, Str};
@@ -24,22 +23,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<config>(py)?;
     m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
-    m.add(
-        py,
-        "applydynamicconfig",
-        py_fn!(
-            py,
-            applydynamicconfig(config: config, repo_name: String, shared_path: PyPathBuf)
-        ),
-    )?;
-    m.add(
-        py,
-        "generatedynamicconfig",
-        py_fn!(
-            py,
-            generatedynamicconfig(config: config, repo_name: String, shared_path: PyPathBuf)
-        ),
-    )?;
     Ok(m)
 }
 
@@ -168,26 +151,6 @@ py_class!(pub class config |py| {
         let results = cfg.load(repopath, readonly_items).map_pyerr(py)?;
         Ok(convert_superset_verification(results))
     }
-
-    def ensure_location_supersets(
-        &self,
-        superset_source: String,
-        subset_sources: Vec<String>,
-        allowed_locations: Option<Vec<String>> = None,
-        allowed_configs: Option<Vec<(String, String)>> = None
-    ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
-        let allowed_locations = allowed_locations.as_ref().map(|allowed| HashSet::from_iter(allowed.iter().map(|v| v.as_ref())));
-        let allowed_configs = allowed_configs.as_ref().map(|allowed| HashSet::from_iter(allowed.iter().map(|v| (v.0.as_ref(), v.1.as_ref()))));
-
-        let results = self.cfg(py).borrow_mut().ensure_location_supersets(
-            superset_source,
-            subset_sources,
-            allowed_locations,
-            allowed_configs,
-        );
-
-        Ok(convert_superset_verification(results))
-    }
 });
 
 fn convert_superset_verification(
@@ -242,45 +205,6 @@ fn errors_to_str_vec(errors: Vec<configparser::error::Error>) -> Vec<Str> {
         .into_iter()
         .map(|err| Str::from(format!("{}", err)))
         .collect()
-}
-
-fn applydynamicconfig(
-    py: Python,
-    config: config,
-    repo_name: String,
-    shared_path: PyPathBuf,
-) -> PyResult<PyNone> {
-    let user_name = get_user_name(py, &config);
-    let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf(), user_name)
-        .map_pyerr(py)?
-        .execute(None)
-        .map_pyerr(py)?;
-    for section in dyn_cfg.sections() {
-        for key in dyn_cfg.keys(section.clone()).iter_mut() {
-            if let Some(value) = dyn_cfg.get(section.clone(), key.clone()) {
-                config.set(
-                    py,
-                    section.to_string(),
-                    key.to_string(),
-                    Some(value.to_string()),
-                    "hgrc.dynamic".into(),
-                )?;
-            }
-        }
-    }
-
-    Ok(PyNone)
-}
-
-fn generatedynamicconfig(
-    py: Python,
-    config: config,
-    repo_name: String,
-    shared_path: PyPathBuf,
-) -> PyResult<PyNone> {
-    let user_name = get_user_name(py, &config);
-    generate_dynamicconfig(shared_path.as_path(), repo_name, None, user_name).map_pyerr(py)?;
-    Ok(PyNone)
 }
 
 fn get_user_name(py: Python, config: &config) -> String {
