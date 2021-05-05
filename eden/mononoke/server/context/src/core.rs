@@ -26,6 +26,14 @@ pub struct CoreContext {
 }
 
 impl CoreContext {
+    pub fn new(fb: FacebookInit, logging: LoggingContainer, session: SessionContainer) -> Self {
+        Self {
+            fb,
+            logging,
+            session,
+        }
+    }
+
     pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
         session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
@@ -74,18 +82,6 @@ impl CoreContext {
             fb: self.fb,
             session: self.session.clone(),
             logging: self.logging.with_mutated_scuba(mutator),
-        }
-    }
-
-    pub(crate) fn new_with_containers(
-        fb: FacebookInit,
-        logging: LoggingContainer,
-        session: SessionContainer,
-    ) -> Self {
-        Self {
-            fb,
-            logging,
-            session,
         }
     }
 

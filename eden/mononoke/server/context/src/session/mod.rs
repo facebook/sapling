@@ -61,7 +61,7 @@ impl SessionContainer {
     pub fn new_context(&self, logger: Logger, scuba: MononokeScubaSampleBuilder) -> CoreContext {
         let logging = LoggingContainer::new(self.fb, logger, scuba);
 
-        CoreContext::new_with_containers(self.fb, logging, self.clone())
+        CoreContext::new(self.fb, logging, self.clone())
     }
 
     pub fn new_context_with_scribe(
@@ -73,7 +73,7 @@ impl SessionContainer {
         let mut logging = LoggingContainer::new(self.fb, logger, scuba);
         logging.with_scribe(scribe);
 
-        CoreContext::new_with_containers(self.fb, logging, self.clone())
+        CoreContext::new(self.fb, logging, self.clone())
     }
 
     pub fn fb(&self) -> FacebookInit {
