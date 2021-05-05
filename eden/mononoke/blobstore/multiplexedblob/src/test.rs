@@ -25,7 +25,7 @@ use blobstore_sync_queue::{
 use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
-use context::{CoreContext, SessionClass};
+use context::{CoreContext, SessionClass, SessionContainer};
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
@@ -1351,7 +1351,10 @@ async fn no_handlers(fb: FacebookInit) {
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
-    let ctx = CoreContext::test_mock_class(fb, SessionClass::Background);
+    let ctx_session = SessionContainer::builder(fb)
+        .session_class(SessionClass::Background)
+        .build();
+    let ctx = CoreContext::test_mock_session(ctx_session);
     borrowed!(ctx);
 
     let clear = {
