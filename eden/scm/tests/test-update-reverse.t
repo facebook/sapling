@@ -64,15 +64,7 @@
   side1
   side2
 
-  $ hg update --debug -C 71a760306cafb582ff672db4d4beb9625f34022d
-  Using native checkout
-  Native checkout plan:
-  rm side1
-  rm side2
-  up main=>b80de5d138758541c5f05265ad144ab9fa86d1db
-  
-  Applying to $TESTTMP/repo 
-  Apply done
+  $ hg update -C 71a760306cafb582ff672db4d4beb9625f34022d
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ ls
