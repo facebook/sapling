@@ -16,6 +16,7 @@ use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
+use edenapi_types::TreeEntry;
 use edenapi_types::{CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData};
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -93,6 +94,15 @@ py_class!(pub class client |py| {
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
         self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes, callback, progress)
+    }
+
+    def trees(
+        &self,
+        repo: String,
+        keys: Vec<(PyPathBuf, PyBytes)>,
+        attributes: Option<PyDict> = None,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
+        self.inner(py).clone().trees_py(py, repo, keys, attributes)
     }
 
     def complete_trees(

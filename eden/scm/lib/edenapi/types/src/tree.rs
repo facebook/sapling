@@ -48,11 +48,12 @@ impl TreeError {
 /// Structure representing source control tree entry on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
+    #[serde(skip)]
     pub children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
 }
 

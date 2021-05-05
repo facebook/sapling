@@ -140,6 +140,37 @@ pub trait EdenApiPyExt: EdenApi {
         stats::new(py, stats)
     }
 
+    fn trees_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        keys: Vec<(PyPathBuf, PyBytes)>,
+        attributes: Option<PyDict>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
+        let keys = to_keys(py, &keys)?;
+        let attributes = attributes
+            .as_ref()
+            .map(|a| to_tree_attrs(py, a))
+            .transpose()?;
+
+        let (trees, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self.trees(repo, keys, attributes, None).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let trees_py = trees.map(|t| match t {
+            Ok(Ok(t)) => Ok(Serde(t)),
+            Ok(Err(e)) => Err(e.into()),
+            Err(e) => Err(e.into()),
+        });
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((trees_py.into(), stats_py))
+    }
+
     fn complete_trees_py(
         self: Arc<Self>,
         py: Python,
