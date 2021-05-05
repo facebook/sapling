@@ -9,8 +9,10 @@
 
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, StreamStats};
+use nonzero_ext::nonzero;
 pub use observability::ScubaVerbosityLevel;
 use observability::{ObservabilityContext, ScubaLoggingDecisionFields};
+use permission_checker::MononokeIdentitySetExt;
 use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
 pub use scuba::{Sampling, ScubaValue};
 use sshrelay::{Metadata, Preamble};
@@ -133,6 +135,15 @@ impl MononokeScubaSampleBuilder {
         }
 
         self
+    }
+
+    pub fn sample_for_identities(&mut self, identities: &impl MononokeIdentitySetExt) {
+        // Details of quicksand traffic aren't particularly interesting because all Quicksand tasks are
+        // doing effectively the same thing at the same time. If we need real-time debugging, we can
+        // always rely on updating the verbosity in real time.
+        if identities.is_quicksand() {
+            self.sampled_unless_verbose(nonzero!(100u64));
+        }
     }
 
 

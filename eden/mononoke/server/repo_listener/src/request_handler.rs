@@ -95,6 +95,7 @@ pub async fn request_handler(
     scuba = scuba.with_seq("seq");
     scuba.add("repo", reponame);
     scuba.add_metadata(&metadata);
+    scuba.sample_for_identities(metadata.identities());
 
     let reponame = repo.reponame();
 

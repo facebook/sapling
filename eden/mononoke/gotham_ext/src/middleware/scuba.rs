@@ -223,6 +223,7 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
         }
 
         if let Some(ref identities) = identity.identities() {
+            scuba.sample_for_identities(identities);
             let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
             scuba.add(HttpScubaKey::ClientIdentities, identities);
         }
