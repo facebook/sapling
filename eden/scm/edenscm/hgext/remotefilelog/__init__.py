@@ -844,20 +844,21 @@ def gc(ui, repo, *args, **opts):
         cachepath = ui.config("remotefilelog", "cachepath")
 
         if cachepath:
-            command = f"`rm -rf {cachepath}/*`"
+            command = "`rm -rf {cachepath}/*`"
 
             ui.warn(
                 _(
-                    f"""
+                    """
 To reclaim space from the hgcache directory, run:
 
-{command}
+%s
 
 NOTE: The hgcache should manage its size itself. You should only run the command
 above if you are completely out of space and quickly need to reclaim some space
 temporarily. This will affect other users if you run this command on a shared machine.
 """
                 )
+                % command
             )
 
 
