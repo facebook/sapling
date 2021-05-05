@@ -21,6 +21,7 @@ use futures::{
     stream::{self, BoxStream},
     try_join, Future, StreamExt, TryStreamExt,
 };
+use futures_stats::TimedTryFutureExt;
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
@@ -860,11 +861,15 @@ impl<'r> Bundle2Resolver<'r> {
                 let blob =
                     RawBundle2::new_bytes(Bytes::copy_from_slice(&full_content.lock().unwrap()))
                         .into_blob();
-                let id = blob.store(&self.ctx, self.repo.blobstore()).await?;
+                let (stats, id) = blob
+                    .store(&self.ctx, self.repo.blobstore())
+                    .try_timed()
+                    .await?;
                 debug!(self.ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
                 self.ctx
                     .scuba()
                     .clone()
+                    .add_future_stats(&stats)
                     .log_with_msg("Saved a raw bundle2 content", Some(format!("{}", id)));
                 Ok(Some(id))
             }
