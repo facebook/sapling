@@ -40,6 +40,7 @@ if (WIN32)
     Crypt32
     Secur32
     Ncrypt
+    winhttp
   )
 else()
   target_link_libraries(
