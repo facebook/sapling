@@ -1098,6 +1098,13 @@ class FsckCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        if sys.platform == "win32":
+            print_stderr("`edenfsctl fsck` is not supported on Windows.")
+            print_stderr(
+                "If you are looking to fix your EdenFS mount, try `edenfsctl doctor`."
+            )
+            return 1
+
         if not args.path:
             return_codes = self.check_all(args)
             if not return_codes:
