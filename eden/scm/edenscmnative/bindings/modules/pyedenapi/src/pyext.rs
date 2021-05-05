@@ -105,7 +105,7 @@ pub trait EdenApiPyExt: EdenApi {
         stats::new(py, stats)
     }
 
-    fn trees_py(
+    fn storetrees_py(
         self: Arc<Self>,
         py: Python,
         store: PyObject,

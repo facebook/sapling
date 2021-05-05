@@ -83,7 +83,7 @@ py_class!(pub class client |py| {
         self.inner(py).clone().history_py(py, store, repo, keys, length, callback, progress)
     }
 
-    def trees(
+    def storetrees(
         &self,
         store: PyObject,
         repo: String,
@@ -92,7 +92,7 @@ py_class!(pub class client |py| {
         callback: Option<PyObject> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().trees_py(py, store, repo, keys, attributes, callback, progress)
+        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes, callback, progress)
     }
 
     def complete_trees(

@@ -691,7 +691,7 @@ def wraprepo(repo):
         @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
         def _httpgetdesignatednodes(self, keys):
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            self.edenapi.trees(dpack, self.name, keys)
+            self.edenapi.storetrees(dpack, self.name, keys)
             return True
 
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
