@@ -69,11 +69,6 @@ Configs::
     # update to a new revision if the current revision has been moved
     updateonmove = true
 
-    # max number of heads allowed to push without checking what the server has backed up
-    # cloud sync can partially fail and manage to push some of the stacks
-    # this will prevent repush of that stacks
-    backuplimitnocheck = 4
-
     # option to print incoming and outgoing requests to
     # commit cloud http endpoint in json format (with --debug option only)
     debugrequests = true
@@ -188,7 +183,6 @@ configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "token_enforced", default=True)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
-configitem("commitcloud", "backuplimitnocheck", default=4)
 configitem("commitcloud", "automigrate", default=False)
 configitem("commitcloud", "automigratehostworkspace", default=False)
 configitem("commitcloud", "synccheckoutlocations", default=False)
