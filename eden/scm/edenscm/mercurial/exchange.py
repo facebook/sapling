@@ -1790,6 +1790,9 @@ def _pullcommitgraph(pullop):
 
 
 def _pullphase(pullop):
+    # Skip phase exchange if narrow-heads is on.
+    if pullop.repo.ui.configbool("experimental", "narrow-heads"):
+        return
     # Get remote phases data from remote
     if "phases" in pullop.stepsdone:
         return

@@ -79,7 +79,6 @@ Pull:
    DEBUG eagerepo::api: commit_graph dc0947a82db884575bb76ea10ac97b08536bfa03 
    TRACE edenscm::mercurial::eagerpeer: graph node 426bada5c67598ca65036d57d9e4b64b0c1ce7a0 []
    TRACE edenscm::mercurial::eagerpeer: graph node dc0947a82db884575bb76ea10ac97b08536bfa03 ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(phases, []) = sortdict()
 
   $ hg pull -r $B
   pulling from eager://$TESTTMP/e1
@@ -96,7 +95,6 @@ Pull:
   searching for changes
    DEBUG eagerepo::api: commit_graph 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03 dc0947a82db884575bb76ea10ac97b08536bfa03
    TRACE edenscm::mercurial::eagerpeer: graph node 112478962961147124edd43549aedd1a335e44bf ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(phases, []) = sortdict()
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
    DEBUG eagerepo::api: revlog_data 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03, 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
