@@ -31,8 +31,6 @@ Configs:
 
     ``remotefilelog.getfilesstep`` the number of files per batch during fetching
 
-    ``remotefilelog.repackonhggc`` runs repack on hg gc when True
-
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
 
@@ -168,7 +166,7 @@ from edenscm.mercurial.commands import debug as hgdebugcommands
 from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullrev
-from edenscm.mercurial.pycompat import isint
+from edenscm.mercurial.pycompat import isint, sysplatform
 
 from .. import clienttelemetry
 from . import (
@@ -669,7 +667,7 @@ def onetimeclientsetup(ui):
         copy,
         getfilectx,
         *args,
-        **kwargs
+        **kwargs,
     ):
         if shallowrepo.requirement in repo.requirements:
             prefetch = []
@@ -698,7 +696,7 @@ def onetimeclientsetup(ui):
             copy,
             getfilectx,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     wrapfunction(patch, "trydiff", trydiff)
@@ -840,14 +838,27 @@ def openrepo(ui, repopath):
 @command("gc", [], _("hg gc"), optionalrepo=True)
 def gc(ui, repo, *args, **opts):
     """garbage collect the client caches"""
+    ui.warn(_("hg gc is no longer supported."))
 
-    if not repo:
-        ui.warn(_("hg gc needs to be called in a repo\n"))
-    else:
-        from .. import lfs
+    if not sysplatform.startswith("win"):
+        cachepath = ui.config("remotefilelog", "cachepath")
 
-        lfs.gc(repo)
-        repackmod.incrementalrepack(repo)
+        if cachepath:
+            command = f"`rm -rf {cachepath}/*`"
+
+            ui.warn(
+                _(
+                    f"""
+To reclaim space from the hgcache directory, run:
+
+{command}
+
+NOTE: The hgcache should manage its size itself. You should only run the command
+above if you are completely out of space and quickly need to reclaim some space
+temporarily. This will affect other users if you run this command on a shared machine.
+"""
+                )
+            )
 
 
 def log(orig, ui, repo, *pats, **opts):

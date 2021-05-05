@@ -79,8 +79,6 @@ Once you have configured the server, you can get a shallow clone by doing:
 
 After that, all normal mercurial commands should work.
 
-Occasionly the client or server caches may grow too big. Run `hg gc` to clean up the cache. It will remove cached files that appear to no longer be necessary, or any files that exceed the configured maximum size. This does not improve performance; it just frees up space.
-
 Limitations
 ===========
 
