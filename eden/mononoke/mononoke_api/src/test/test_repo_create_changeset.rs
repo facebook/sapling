@@ -16,10 +16,7 @@ use chrono::{FixedOffset, TimeZone};
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
-use futures::FutureExt;
-use maplit::hashmap;
 use std::str::FromStr;
-use tunables::{with_tunables_async, MononokeTunables};
 
 use crate::{
     ChangesetContext, ChangesetId, CoreContext, CreateChange, FileType, Mononoke, MononokeError,
@@ -27,21 +24,9 @@ use crate::{
 };
 
 #[fbinit::test]
-async fn test_create_commit_skeleton_manifests(fb: FacebookInit) -> Result<(), Error> {
-    let tunables = MononokeTunables::default();
-    tunables.update_by_repo_bools(&hashmap! {
-        "repo".to_string() => hashmap! {
-            "use_skeleton_manifests_for_create_changesets".into() => true
-        }
-    });
-    with_tunables_async(tunables, create_commit(fb, "skeleton_manifests").boxed()).await?;
+async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
+    create_commit(fb, "skeleton_manifests").await?;
 
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_create_commit_fsnodes(fb: FacebookInit) -> Result<(), Error> {
-    create_commit(fb, "fsnodes").await?;
     Ok(())
 }
 
