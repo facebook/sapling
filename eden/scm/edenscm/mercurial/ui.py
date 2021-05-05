@@ -1886,7 +1886,7 @@ class paths(util.sortdict):
                 rawloc = rawloc[5:]
             if pycompat.iswindows:
                 rawloc = rawloc.replace("\\", "/")
-            rawloc = rawloc.replace("://", ":")
+            rawloc = rawloc.replace(":///", ":").replace("://", ":")
             return rawloc
 
         rawloc = normalize(rawloc)

@@ -1427,6 +1427,7 @@ class Test(unittest.TestCase):
             (br"\bHG_TXNID=TXN:[a-f0-9]{40}\b", br"HG_TXNID=TXN:$ID$"),
         ]
         r.append((self._escapepath(self._testtmp), b"$TESTTMP"))
+        r.append((br"eager:///", br"eager://"))
 
         replacementfile = os.path.join(self._testdir, b"common-pattern.py")
 

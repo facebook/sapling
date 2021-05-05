@@ -117,3 +117,4 @@ Trigger file and tree downloading:
    DEBUG eagerepo::api: files 35e7525ce3a48913275d7061dd9a867ffef1e34d
    TRACE eagerepo::api:  found: 35e7525ce3a48913275d7061dd9a867ffef1e34d, 41 bytes
   AB (no-eol)
+

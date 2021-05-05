@@ -91,6 +91,10 @@ impl EagerRepo {
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
         let prefix = "eager:";
         if let Some(path) = value.strip_prefix(prefix) {
+            // Remove '//' prefix from Windows file path. This makes it
+            // possible to use paths like 'eager://C:\foo\bar'.
+            #[cfg(windows)]
+            let path = path.trim_start_matches('/');
             let path: &Path = Path::new(path);
             return Some(path.to_path_buf());
         }
