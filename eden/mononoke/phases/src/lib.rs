@@ -171,7 +171,7 @@ impl SqlPhases {
     pub async fn get_public_raw(
         &self,
         ctx: &CoreContext,
-        csids: &[ChangesetId],
+        csids: impl IntoIterator<Item = &ChangesetId>,
     ) -> Result<HashSet<ChangesetId>, Error> {
         self.phases_store
             .get_public_raw(ctx, self.repo_id, csids)
@@ -280,7 +280,7 @@ pub async fn mark_reachable_as_public(
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     let changeset_fetcher = &phases.changeset_fetcher;
-    let public = phases.get_public_raw(&ctx, &all_heads).await?;
+    let public = phases.get_public_raw(&ctx, all_heads).await?;
 
     let mut input = all_heads
         .iter()

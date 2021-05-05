@@ -86,17 +86,15 @@ impl SqlPhasesStore {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        csids: &[ChangesetId],
+        csids: impl IntoIterator<Item = &ChangesetId>,
     ) -> Result<HashSet<ChangesetId>, Error> {
-        if csids.is_empty() {
+        let ids = csids.into_iter().cloned().collect::<HashSet<ChangesetId>>();
+        if ids.is_empty() {
             return Ok(Default::default());
         }
-
         STATS::get_many.add_value(1);
-
         let ctx = (ctx, repo_id, self);
-
-        let cs_to_phase = get_or_fill(ctx, csids.iter().cloned().collect())
+        let cs_to_phase = get_or_fill(ctx, ids)
             .await
             .with_context(|| "Error fetching phases via cache")?;
 

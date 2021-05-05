@@ -795,10 +795,7 @@ async fn traverse_draft_commits(
         .get_store()
         .get_public_raw(
             &ctx,
-            &hg_bonsai_heads
-                .iter()
-                .map(|(_hg_cs_id, bcs_id)| *bcs_id)
-                .collect::<Vec<_>>(),
+            hg_bonsai_heads.iter().map(|(_hg_cs_id, bcs_id)| bcs_id),
         )
         .await?;
 
