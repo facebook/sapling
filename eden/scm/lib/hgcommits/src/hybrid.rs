@@ -17,9 +17,12 @@ use crate::StreamCommitText;
 use crate::StripCommits;
 use async_trait::async_trait;
 use dag::delegate;
+use dag::ops::DagAlgorithm;
+use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
+use dag::CloneData;
 use dag::Location;
 use dag::Set;
 use dag::Vertex;
@@ -222,6 +225,26 @@ impl AppendCommits for HybridCommits {
             ));
         }
         self.commits.add_graph_nodes(graph_nodes).await?;
+        Ok(())
+    }
+
+    async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
+        if self.revlog.is_some() {
+            return Err(crate::Error::Unsupported(
+                "import_clone_data is not supported for revlog backend",
+            ));
+        }
+        if self.commits.dag.all().await?.count().await? > 0 {
+            return Err(crate::Error::Unsupported(
+                "import_clone_data can only be used in an empty repo",
+            ));
+        }
+        if !self.commits.dag.is_vertex_lazy() {
+            return Err(crate::Error::Unsupported(
+                "import_clone_data can only be used in commit graph with lazy vertexes",
+            ));
+        }
+        self.commits.dag.import_clone_data(clone_data).await?;
         Ok(())
     }
 }

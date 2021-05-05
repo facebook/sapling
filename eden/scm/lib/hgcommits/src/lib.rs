@@ -10,6 +10,7 @@
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
 use dag::errors::NotFoundError;
+use dag::CloneData;
 use dag::Vertex;
 use futures::future::try_join_all;
 use futures::stream::BoxStream;
@@ -66,6 +67,10 @@ pub trait AppendCommits {
     /// This is only supported by lazy backends.
     /// Use `flush` to write changes to disk.
     async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()>;
+
+    /// Import clone data and flush.
+    /// This is only supported by lazy backends and can only be used in an empty repo.
+    async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()>;
 }
 
 pub trait DescribeBackend {
