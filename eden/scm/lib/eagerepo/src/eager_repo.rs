@@ -104,7 +104,18 @@ impl EagerRepo {
     /// Write pending changes to disk.
     pub async fn flush(&mut self) -> Result<()> {
         self.store.flush()?;
-        self.dag.flush(&[]).await?;
+        let master_heads = {
+            let books = self.get_bookmarks_map()?;
+            let mut heads = Vec::new();
+            for &name in ["master", "main"].iter() {
+                if let Some(id) = books.get(name) {
+                    heads.push(Vertex::copy_from(id.as_ref()));
+                    break;
+                }
+            }
+            heads
+        };
+        self.dag.flush(&master_heads).await?;
         let opts = CommitOptions::default();
         self.metalog.commit(opts)?;
         Ok(())
