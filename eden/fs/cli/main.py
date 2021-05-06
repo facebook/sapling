@@ -1846,10 +1846,10 @@ re-open these files after Eden is restarted.
             except Exception:
                 pass
             try:
-                client.initiateShutdown(
-                    f"`eden restart --force` requested by pid={os.getpid()} "
-                    f"uid={os.getuid()}"
-                )
+                message = f"`eden restart --force` requested by pid={os.getpid()}"
+                if sys.platform != "win32":
+                    message += f" uid={os.getuid()}"
+                client.initiateShutdown(message)
             except Exception:
                 print("Sending SIGTERM...")
                 os.kill(pid, signal.SIGTERM)
