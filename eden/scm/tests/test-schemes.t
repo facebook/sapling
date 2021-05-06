@@ -19,6 +19,7 @@
   > default-push = push://server
   > infinitepush = i://server
   > infinitepush-write = iw://server
+  > normal-path = mononoke://mononoke.internal.tfbnw.net/server
   > [remotefilelog]
   > fallbackpath = fallback://server
   > [schemes]
@@ -31,6 +32,15 @@
   > z = file:\$PWD/
   > EOF
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
+
+test converting debug output for all paths
+
+  $ hg debugexpandpaths
+  paths.default=ssh://user@dummy/server (expanded from dotdot://server)
+  paths.default-push=ssh://user@dummy/server (expanded from push://server)
+  paths.infinitepush=ssh://user@dummy/server (expanded from i://server)
+  paths.infinitepush-write=ssh://user@dummy/server (expanded from iw://server)
+  paths.normal-path=mononoke://mononoke.internal.tfbnw.net/server (not expanded)
 
 check that paths are expanded
 

@@ -156,3 +156,17 @@ def expandscheme(ui, url, **opts):
     if isinstance(repo, ShortRepository):
         url = repo.resolve(url)
     ui.write(url + "\n")
+
+
+@command("debugexpandpaths")
+def expandschemes(ui, repo, *args, **opts):
+    """given a repo path, provide the scheme-expanded path"""
+    for name, path in sorted(pycompat.iteritems(ui.paths)):
+        url = path.rawloc
+        repo = hg._peerlookup(url)
+
+        debugstatus = " (not expanded)"
+        if isinstance(repo, ShortRepository):
+            debugstatus = " (expanded from " + url + ")"
+            url = repo.resolve(url)
+        ui.write(_("paths." + name + "=" + url + debugstatus + "\n"))

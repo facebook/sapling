@@ -356,6 +356,7 @@ def _makerage(ui, repo, **opts):
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse", lambda: hgcmd("sparse")),
         ("hg debugchangelog", lambda: hgcmd("debugchangelog")),
+        ("hg debugexpandpaths", lambda: hgcmd("debugexpandpaths")),
         ("hg debuginstall", lambda: hgcmd("debuginstall")),
         ("hg debugdetectissues", lambda: hgcmd("debugdetectissues")),
         ("usechg", usechginfo),
