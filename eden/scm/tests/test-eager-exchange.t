@@ -132,3 +132,13 @@ Clone:
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+
+  $ cd cloned
+
+Commit hash and message are lazy
+
+  $ LOG=dag::protocol=debug,eagerepo=debug hg log -T '{desc} {node}\n' -r 'all()'
+   DEBUG dag::protocol: resolve ids [0] remotely
+   DEBUG eagerepo::api: revlog_data 426bada5c67598ca65036d57d9e4b64b0c1ce7a0, dc0947a82db884575bb76ea10ac97b08536bfa03
+  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  C dc0947a82db884575bb76ea10ac97b08536bfa03

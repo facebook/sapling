@@ -671,9 +671,9 @@ where
             .into());
         }
         if names.len() < 30 {
-            tracing::debug!("resolve names {:?} remotely", &names);
+            tracing::debug!(target: "dag::protocol", "resolve names {:?} remotely", &names);
         } else {
-            tracing::debug!("resolve names ({}) remotely", names.len());
+            tracing::debug!(target: "dag::protocol", "resolve names ({}) remotely", names.len());
         }
         let request: protocol::RequestNameToLocation =
             (self.map(), self.dag()).process(names.to_vec()).await?;
@@ -711,9 +711,9 @@ where
             .into());
         }
         if ids.len() < 30 {
-            tracing::debug!("resolve ids {:?} remotely", &ids);
+            tracing::debug!(target: "dag::protocol", "resolve ids {:?} remotely", &ids);
         } else {
-            tracing::debug!("resolve ids ({}) remotely", ids.len());
+            tracing::debug!(target: "dag::protocol", "resolve ids ({}) remotely", ids.len());
         }
         let request: protocol::RequestLocationToName = (self.map(), self.dag())
             .process(IdSet::from_spans(ids.iter().copied()))
