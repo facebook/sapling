@@ -1056,6 +1056,9 @@ class TopCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        if sys.platform == "win32":
+            print_stderr("`edenfsctl top` isn't supported on Windows yet.")
+            return 1
         top = top_mod.Top()
         return top.start(args)
 
