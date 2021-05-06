@@ -117,3 +117,28 @@ def emergencyclone(source, repo):
 
             repo.invalidate()
             repo.invalidatechangelog()
+
+
+def segmentsclone(source, clonedata, repo):
+    """clone using segmented changelog's CloneData
+
+    This produces a repo with lazy commit hashes.
+    """
+    with repo.wlock(), repo.lock(), repo.transaction("clone"):
+        changelog2.migrateto(repo, "lazy")
+        repo.requirements.add("remotefilelog")
+        repo._writerequirements()
+
+        repo.ui.status(_("populating main commit graph\n"))
+        repo.changelog.inner.importclonedata(clonedata)
+        tip = repo.changelog.dag.all().first()
+        if tip:
+            repo.ui.status(_("tip commit: %s\n") % hex(tip))
+            repo.svfs.write("tip", tip)
+
+        repo.ui.status(_("fetching selected remote bookmarks\n"))
+        remote = bookmod.remotenameforurl(repo.ui, repo.ui.paths.getpath(source).rawloc)
+        assert remote is not None
+        repo.pull(
+            source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
+        )

@@ -592,9 +592,14 @@ def clone(
                     )
                 revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
+
+            # Can we use EdenAPI CloneData?
+            if srcpeer.capable("clonedata") and shallow and not update:
+                data = srcpeer.clonedata()
+                clonemod.segmentsclone(srcpeer.url(), data, destrepo)
             # Can we use the new code path (stream clone + shallow + no
             # update + selective pull)?
-            if (
+            elif (
                 destrepo
                 and not pull
                 and not update

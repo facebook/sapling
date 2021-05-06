@@ -118,3 +118,22 @@ Trigger file and tree downloading:
    TRACE eagerepo::api:  found: 35e7525ce3a48913275d7061dd9a867ffef1e34d, 41 bytes
   AB (no-eol)
 
+Clone:
+
+  $ cd $TESTTMP
+  $ hg clone -U --shallow eager:$TESTTMP/e1 cloned
+   DEBUG eagerepo::api: clone_data
+  populating main commit graph
+  fetching selected remote bookmarks
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG eagerepo::api: commit_known 
+   DEBUG eagerepo::api: commit_graph dc0947a82db884575bb76ea10ac97b08536bfa03 
+   TRACE edenscm::mercurial::eagerpeer: graph node 426bada5c67598ca65036d57d9e4b64b0c1ce7a0 []
+   TRACE edenscm::mercurial::eagerpeer: graph node dc0947a82db884575bb76ea10ac97b08536bfa03 ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
