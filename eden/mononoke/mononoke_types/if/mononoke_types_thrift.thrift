@@ -41,6 +41,7 @@ typedef IdType MPathHash (rust.newtype)
 typedef IdType ContentMetadataId (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
 typedef IdType BlameId (rust.newtype)
+typedef IdType BlameV2Id (rust.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary. Could also be used for
@@ -354,7 +355,15 @@ struct CompressedHashAndParents {
   2: list<ParentOffset> parent_offsets,
 }
 
+typedef i32 BlameChangeset (rust.newtype)
 typedef i32 BlamePath (rust.newtype)
+
+enum BlameRejected {
+  TooBig = 0,
+  Binary = 1,
+}
+
+// Blame V1
 
 struct BlameRange {
   1: i32 length,
@@ -369,12 +378,63 @@ struct Blame {
   2: list<MPath> paths,
 }
 
-enum BlameRejected {
-  TooBig = 0,
-  Binary = 1,
-}
-
 union BlameMaybeRejected {
   1: Blame Blame (py3.name = "blame"),
   2: BlameRejected Rejected,
+}
+
+// Blame V2
+
+struct BlameRangeV2 {
+  // Length (in lines) of this range.  The offset of a range is implicit from
+  // the sum of the lengths of the prior ranges.
+  1: i32 length,
+
+  // Index into csids of the changeset that introduced these lines.
+  2: BlameChangeset csid_index,
+
+  // Index into paths of the path of this file when this line was introduced.
+  3: BlamePath path_index,
+
+  // The offset of this range at the time that this line was introduced.
+  4: i32 origin_offset,
+}
+
+struct BlameDataV2 {
+  // A list of ranges that describe when the lines of this file were
+  // introduced.
+  1: list<BlameRangeV2> ranges,
+
+  // A mapping of integer indexes to changeset IDs that is used to reduce the
+  // repetition of data in ranges.
+  //
+  // Changeset ID indexes are stable for p1 parents, i.e. a changeset ID's
+  // index will not change over the history of a file unless the file is merged
+  // in a changeset, in which case only the indexes in the first parent of the
+  // changeset are preserved.
+
+  // Changesets are removed from this map when all lines that were added in the
+  // changeset are moved and none of the ranges reference it.  This means there
+  // are gaps in this mapping, and so a map is used.
+  2: map<i32, ChangesetId> (rust.type = "sorted_vector_map::SortedVectorMap") csids,
+
+  // The maximum index that is assigned to a changeset id.  This is also the
+  // index that would be assigned to the current changeset, as long as the
+  // changeset adds new lines.  If the changeset only deletes or merges lines,
+  // then this index will not appear in the csids map.
+  3: BlameChangeset max_csid_index,
+
+  // The list of paths that this file has been located at.  This is used to
+  // reduce repetition of data in ranges.  Since files are not often moved, and
+  // for simplicity, this includes all paths the file has ever been located at,
+  // even if they are no longer referenced by any of the ranges.
+  4: list<MPath> paths,
+}
+
+union BlameV2 {
+  // This version of the file contains full blame information.
+  1: BlameDataV2 full_blame,
+
+  // This version of the file was rejected for blaming.
+  2: BlameRejected rejected,
 }
