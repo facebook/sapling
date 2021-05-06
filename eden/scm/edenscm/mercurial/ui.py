@@ -1802,6 +1802,19 @@ class ui(object):
         return self._uiconfig.logmeasuredtimes
 
 
+def _normalizepath(rawloc):
+    # type: (str) -> (str)
+    rawloc = rawloc.split("?", 1)[0]
+    if rawloc.startswith("file:"):
+        rawloc = rawloc[5:]
+    if pycompat.iswindows:
+        rawloc = rawloc.replace("\\", "/")
+    if os.path.sep != "/":
+        rawloc = rawloc.replace(":///", ":")
+    rawloc = rawloc.replace("://", ":")
+    return rawloc
+
+
 class paths(util.sortdict):
     """Represents a collection of paths and their configs.
 
@@ -1880,21 +1893,10 @@ class paths(util.sortdict):
         Return `None` if path is unknown.
         """
 
-        def normalize(rawloc):
-            rawloc = rawloc.split("?", 1)[0]
-            if rawloc.startswith("file:"):
-                rawloc = rawloc[5:]
-            if pycompat.iswindows:
-                rawloc = rawloc.replace("\\", "/")
-            if os.path.sep != "/":
-                rawloc = rawloc.replace(":///", ":")
-            rawloc = rawloc.replace("://", ":")
-            return rawloc
-
-        rawloc = normalize(rawloc)
+        rawloc = _normalizepath(rawloc)
         result = None
         for name, path in self.items():
-            if normalize(path.rawloc) == rawloc:
+            if _normalizepath(path.rawloc) == rawloc:
                 result = name
                 break
 

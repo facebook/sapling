@@ -1,3 +1,8 @@
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Copyright 2009, Alexander Solovyov <piranha@piranha.org.ua>
 #
 # This software may be used and distributed according to the terms of the
@@ -44,18 +49,17 @@ from __future__ import absolute_import
 import os
 import re
 
-from mercurial.i18n import _
-from mercurial import (
+from edenscm.mercurial import (
     error,
     extensions,
     hg,
     pycompat,
     registrar,
     templater,
+    util,
+    ui as uimod,
 )
-from mercurial.utils import (
-    urlutil,
-)
+from edenscm.mercurial.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -63,9 +67,9 @@ command = registrar.command(cmdtable)
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
-testedwith = b'ships-with-hg-core'
+testedwith = b"ships-with-hg-core"
 
-_partre = re.compile(br'{(\d+)\}')
+_partre = re.compile(r"{(\d+)\}")
 
 
 class ShortRepository(object):
@@ -79,73 +83,76 @@ class ShortRepository(object):
             self.parts = 0
 
     def __repr__(self):
-        return b'<ShortRepository: %s>' % self.scheme
+        return "<ShortRepository: %s>" % self.scheme
 
-    def instance(self, ui, url, create, intents=None, createopts=None):
+    def instance(self, ui, url, create):
         url = self.resolve(url)
-        return hg._peerlookup(url).instance(
-            ui, url, create, intents=intents, createopts=createopts
-        )
+        return hg._peerlookup(url).instance(ui, url, create)
 
     def resolve(self, url):
         # Should this use the urlutil.url class, or is manual parsing better?
         try:
-            url = url.split(b'://', 1)[1]
+            url = url.split("://", 1)[1]
         except IndexError:
-            raise error.Abort(_(b"no '://' in scheme url '%s'") % url)
-        parts = url.split(b'/', self.parts)
+            raise error.Abort(_("no '://' in scheme url '%s'") % url)
+        parts = url.split("/", self.parts)
         if len(parts) > self.parts:
             tail = parts[-1]
             parts = parts[:-1]
         else:
-            tail = b''
-        context = {b'%d' % (i + 1): v for i, v in enumerate(parts)}
-        return b''.join(self.templater.process(self.url, context)) + tail
+            tail = ""
+        context = {"%d" % (i + 1): v for i, v in enumerate(parts)}
+        return (
+            pycompat.decodeutf8(b"".join(self.templater.process(self.url, context)))
+            + tail
+        )
 
 
 def hasdriveletter(orig, path):
     if path:
         for scheme in schemes:
-            if path.startswith(scheme + b':'):
+            if path.startswith(scheme + ":"):
                 return False
     return orig(path)
 
 
-schemes = {
-    b'py': b'http://hg.python.org/',
-    b'bb': b'https://bitbucket.org/',
-    b'bb+ssh': b'ssh://hg@bitbucket.org/',
-    b'gcode': b'https://{1}.googlecode.com/hg/',
-    b'kiln': b'https://{1}.kilnhg.com/Repo/',
-}
+def normalizepath(orig, path):
+    if path:
+        for scheme in schemes:
+            if path.startswith(scheme + ":"):
+                repo = hg._peerlookup(path)
+                if isinstance(repo, ShortRepository):
+                    path = repo.resolve(path)
+    return orig(path)
+
+
+schemes = {}
 
 
 def extsetup(ui):
-    schemes.update(dict(ui.configitems(b'schemes')))
-    t = templater.engine(templater.parse)
+    schemes.update(dict(ui.configitems("schemes")))
+    t = templater.engine(lambda x: x)
     for scheme, url in schemes.items():
         if (
             pycompat.iswindows
             and len(scheme) == 1
             and scheme.isalpha()
-            and os.path.exists(b'%s:\\' % scheme)
+            and os.path.exists("%s:\\" % scheme)
         ):
             raise error.Abort(
-                _(
-                    b'custom scheme %s:// conflicts with drive '
-                    b'letter %s:\\\n'
-                )
+                _("custom scheme %s:// conflicts with drive letter %s:\\\n")
                 % (scheme, scheme.upper())
             )
         hg.schemes[scheme] = ShortRepository(url, scheme, t)
 
-    extensions.wrapfunction(urlutil, b'hasdriveletter', hasdriveletter)
+    extensions.wrapfunction(util, "hasdriveletter", hasdriveletter)
+    extensions.wrapfunction(uimod, "_normalizepath", normalizepath)
 
 
-@command(b'debugexpandscheme', norepo=True)
+@command("debugexpandscheme", norepo=True)
 def expandscheme(ui, url, **opts):
     """given a repo path, provide the scheme-expanded path"""
     repo = hg._peerlookup(url)
     if isinstance(repo, ShortRepository):
         url = repo.resolve(url)
-    ui.write(url + b'\n')
+    ui.write(url + "\n")

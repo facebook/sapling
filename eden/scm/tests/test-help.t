@@ -361,6 +361,7 @@ Test extension help:
                      (no help text available)
        reset         reset the active bookmark and working copy to a desired
                      revision
+       schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
