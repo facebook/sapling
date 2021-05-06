@@ -936,6 +936,25 @@ impl BlobConfig {
             Pack { blobconfig, .. } => blobconfig.is_local(),
         }
     }
+
+    /// If this blobstore performs sampling, update the sampling ratio.
+    pub fn apply_sampling_multiplier(&mut self, multiplier: NonZeroU64) {
+        match self {
+            Self::Multiplexed {
+                ref mut scuba_sample_rate,
+                ..
+            }
+            | Self::Logging {
+                ref mut scuba_sample_rate,
+                ..
+            } => {
+                // NOTE: We unwrap here because we're multiplying two non zero numbers.
+                *scuba_sample_rate =
+                    NonZeroU64::new(scuba_sample_rate.get() * multiplier.get()).unwrap()
+            }
+            _ => {}
+        }
+    }
 }
 
 impl Default for BlobConfig {

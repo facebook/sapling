@@ -51,7 +51,7 @@ use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
     iter::FromIterator,
-    num::NonZeroU32,
+    num::{NonZeroU32, NonZeroU64},
     str::FromStr,
     sync::Arc,
     time::Duration,
@@ -134,6 +134,7 @@ pub const OUTPUT_FORMAT_ARG: &str = "output-format";
 pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
+const BLOBSTORE_SAMPLING_MULTIPLIER: &str = "blobstore-sampling-multiplier";
 
 const EXCLUDE_PACK_LOG_NODE_TYPE_ARG: &str = "exclude-pack-log-node-type";
 const INCLUDE_PACK_LOG_NODE_TYPE_ARG: &str = "include-pack-log-node-type";
@@ -1021,6 +1022,14 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .possible_values(&NODE_HASH_VALIDATION_POSSIBLE_VALUES)
                 .hide_possible_values(true)
                 .help("Node types for which we want to do hash validation"),
+        )
+        .arg(
+            Arg::with_name(BLOBSTORE_SAMPLING_MULTIPLIER)
+                .long(BLOBSTORE_SAMPLING_MULTIPLIER)
+                .takes_value(true)
+                .required(false)
+                .default_value("100")
+                .help("Add a multiplier on sampling requests")
         );
 }
 
@@ -1418,6 +1427,16 @@ pub async fn setup_common<'a>(
         None
     };
 
+    let sampling_multiplier = sub_m
+        .value_of(BLOBSTORE_SAMPLING_MULTIPLIER)
+        .map(|m| {
+            m.parse()
+                .context("Not a valid u64")
+                .and_then(|m| NonZeroU64::new(m).context("Cannot be zero"))
+                .with_context(|| format!("Invalid {}", BLOBSTORE_SAMPLING_MULTIPLIER))
+        })
+        .transpose()?;
+
     // Override the blobstore config so we can do things like run on one side of a multiplex
     for repo in &mut repos {
         if let Some(storage_config) = storage_override.clone() {
@@ -1430,6 +1449,13 @@ pub async fn setup_common<'a>(
             walk_stats_key,
             blobstore_options.scrub_options.is_some(),
         )?;
+
+        if let Some(sampling_multiplier) = sampling_multiplier {
+            repo.config
+                .storage_config
+                .blobstore
+                .apply_sampling_multiplier(sampling_multiplier);
+        }
     }
 
     // Disable redaction unless we are running with it enabled.
