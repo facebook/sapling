@@ -10,6 +10,7 @@ use crate::store;
 
 use anyhow::{bail, format_err, Error, Result};
 use ascii::AsciiString;
+use blobstore::{PackMetadata, SizeMetadata};
 use bytes::{buf::BufExt, buf::BufMutExt, Bytes, BytesMut};
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{
@@ -207,28 +208,34 @@ fn get_entry_compressed_size(entry: &PackedEntry) -> usize {
     }
 }
 
-pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes> {
-    match v {
-        SingleValue::Raw(v) => Ok(BlobstoreBytes::from_bytes(v)),
-        SingleValue::Zstd(v) => Ok(zstd::decode_all(v.reader()).map(BlobstoreBytes::from_bytes)?),
-        SingleValue::UnknownField(e) => Err(format_err!("SingleValue::UnknownField {:?}", e)),
-    }
+// returns (decoded, unique_compressed_size)
+pub(crate) fn decode_independent(v: SingleValue) -> Result<(BlobstoreBytes, u64)> {
+    let (compressed_size, decoded) = match v {
+        SingleValue::Raw(v) => (v.len() as u64, BlobstoreBytes::from_bytes(v)),
+        SingleValue::Zstd(v) => (
+            v.len() as u64,
+            zstd::decode_all(v.reader()).map(BlobstoreBytes::from_bytes)?,
+        ),
+        SingleValue::UnknownField(e) => bail!("SingleValue::UnknownField {:?}", e),
+    };
+    Ok((decoded, compressed_size))
 }
 
 fn decode_zstd_from_dict(
     k: &str,
     v: ZstdFromDictValue,
     dicts: &HashMap<String, BlobstoreBytes>,
-) -> Result<BlobstoreBytes, Error> {
+) -> Result<(BlobstoreBytes, u64), Error> {
     match dicts.get(&v.dict_key) {
         Some(dict) => {
+            let uncompressed_size = v.zstd.len() as u64;
             let data = v.zstd.reader();
             let mut decoder = ZstdDecoder::with_dictionary(data, dict.as_bytes())?;
             let mut output_bytes = BytesMut::new();
             let mut writer = (&mut output_bytes).writer();
             io::copy(&mut decoder, &mut writer)?;
 
-            Ok(BlobstoreBytes::from_bytes(output_bytes))
+            Ok((BlobstoreBytes::from_bytes(output_bytes), uncompressed_size))
         }
         None => Err(format_err!(
             "Dictionary {} not found for key {}",
@@ -239,7 +246,10 @@ fn decode_zstd_from_dict(
 }
 
 // Unpack `key` from `packed`
-pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBytes> {
+pub(crate) fn decode_pack(
+    packed: PackedFormat,
+    key: &str,
+) -> Result<(BlobstoreBytes, SizeMetadata)> {
     // Strip repo prefix, if any
     let key = match REPO_PREFIX_REGEX.find(key) {
         Some(m) => &key[m.end()..],
@@ -262,6 +272,9 @@ pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBy
     // Decode time
     let mut decoded_blobs = HashMap::new();
     let mut keys_to_decode = vec![key.to_string()];
+    let mut unique_compressed_size = 0;
+    let mut relevant_compressed_size = 0;
+    let mut relevant_uncompressed_size = 0;
     while let Some(next_key) = keys_to_decode.pop() {
         match entry_map.remove(&next_key) {
             None => {
@@ -269,21 +282,33 @@ pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBy
                     // Handled below
                     break;
                 }
-                return Err(format_err!(
+                bail!(
                     "Key {} needs dictionary {} but it is not in the pack",
                     key,
                     next_key
-                ));
+                );
             }
             Some(PackedValue::UnknownField(e)) => {
-                return Err(format_err!("PackedValue::UnknownField {:?}", e));
+                bail!("PackedValue::UnknownField {:?}", e);
             }
             Some(PackedValue::Single(v)) => {
-                decoded_blobs.insert(next_key, decode_independent(v)?);
+                let (decoded, compressed_size) = decode_independent(v)?;
+                relevant_uncompressed_size += decoded.len() as u64;
+                if next_key == key {
+                    unique_compressed_size += compressed_size;
+                }
+                relevant_compressed_size += compressed_size;
+                decoded_blobs.insert(next_key, decoded);
             }
             Some(PackedValue::ZstdFromDict(v)) => {
                 if decoded_blobs.contains_key(&v.dict_key) {
-                    let decoded = decode_zstd_from_dict(&next_key, v, &decoded_blobs)?;
+                    let (decoded, compressed_size) =
+                        decode_zstd_from_dict(&next_key, v, &decoded_blobs)?;
+                    relevant_uncompressed_size += decoded.len() as u64;
+                    if next_key == key {
+                        unique_compressed_size += compressed_size;
+                    }
+                    relevant_compressed_size += compressed_size;
                     decoded_blobs.insert(next_key, decoded);
                 } else {
                     // Can't yet decode it - push the keys we need to decode this onto the work queue in order.
@@ -295,9 +320,22 @@ pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBy
             }
         }
     }
-    decoded_blobs
+
+    let decoded = decoded_blobs
         .remove(key)
-        .ok_or_else(|| format_err!("Key {} not in the pack it is pointing to {}", key, pack_key))
+        .ok_or_else(|| format_err!("Key {} not in the pack it is pointing to {}", key, pack_key))?;
+
+    let pack_meta = PackMetadata {
+        pack_key,
+        relevant_compressed_size,
+        relevant_uncompressed_size,
+    };
+    let sizing = SizeMetadata {
+        unique_compressed_size,
+        pack_meta: Some(pack_meta),
+    };
+
+    Ok((decoded, sizing))
 }
 
 // Hash the keys as they themselves are hashes
@@ -327,10 +365,14 @@ mod tests {
         let input = Cursor::new(bytes_in.clone());
         let bytes = Bytes::from(zstd::encode_all(input, 0 /* default */)?);
         assert!(bytes.len() < bytes_in.len());
+        let expected_compressed_size = bytes.len() as u64;
 
         // Test the decoder
-        let decoded = decode_independent(SingleValue::Zstd(bytes))?;
+        let (decoded, compressed_size) = decode_independent(SingleValue::Zstd(bytes))?;
         assert_eq!(decoded.as_bytes(), &Bytes::from(bytes_in));
+
+        // Check the metadata
+        assert_eq!(expected_compressed_size, compressed_size);
 
         Ok(())
     }
@@ -356,6 +398,7 @@ mod tests {
             encoder.finish()?;
             compressed_blob.freeze()
         };
+        let expected_compressed_size = diff.len() as u64;
 
         let base_key = "base".to_string();
 
@@ -363,7 +406,7 @@ mod tests {
         dicts.insert(base_key.clone(), BlobstoreBytes::from_bytes(base_version));
 
         // Test the decoder
-        let decoded = decode_zstd_from_dict(
+        let (decoded, compressed_size) = decode_zstd_from_dict(
             "appkey",
             ZstdFromDictValue {
                 dict_key: base_key,
@@ -372,6 +415,7 @@ mod tests {
             &dicts,
         )?;
         assert_eq!(decoded.as_bytes(), &Bytes::from(next_version));
+        assert_eq!(expected_compressed_size, compressed_size);
 
         Ok(())
     }
@@ -430,10 +474,18 @@ mod tests {
             packed.key
         );
 
-        // Test reads roundtrip back to the raw form
+        // Test reads roundtrip back to the raw form and metadata is populated
         for (raw_data, i) in raw_data.into_iter().zip(0..20) {
-            let value = decode_pack(packed.clone(), &i.to_string())?;
+            let (value, size_meta) = decode_pack(packed.clone(), &i.to_string())?;
             assert_eq!(value.into_bytes(), Bytes::from(raw_data));
+            assert!(size_meta.unique_compressed_size > 0);
+            assert!(size_meta.pack_meta.is_some());
+            if let Some(pack_meta) = size_meta.pack_meta {
+                assert_eq!(&packed.key, &pack_meta.pack_key);
+                assert!(pack_meta.relevant_compressed_size > 0);
+                assert!(pack_meta.relevant_uncompressed_size > 0);
+                assert!(pack_meta.relevant_compressed_size >= size_meta.unique_compressed_size);
+            }
         }
 
         Ok(())
@@ -493,10 +545,18 @@ mod tests {
             packed.key
         );
 
-        // Test reads roundtrip back to the raw form
+        // Test reads roundtrip back to the raw form and metadata is populated
         for (raw_data, i) in raw_data.into_iter().zip(0..20) {
-            let value = decode_pack(packed.clone(), &i.to_string())?;
+            let (value, size_meta) = decode_pack(packed.clone(), &i.to_string())?;
             assert_eq!(value.into_bytes(), Bytes::from(raw_data));
+            assert!(size_meta.unique_compressed_size > 0);
+            assert!(size_meta.pack_meta.is_some());
+            if let Some(pack_meta) = size_meta.pack_meta {
+                assert_eq!(&packed.key, &pack_meta.pack_key);
+                assert!(pack_meta.relevant_compressed_size > 0);
+                assert!(pack_meta.relevant_uncompressed_size > 0);
+                assert!(pack_meta.relevant_compressed_size >= size_meta.unique_compressed_size);
+            }
         }
 
         Ok(())

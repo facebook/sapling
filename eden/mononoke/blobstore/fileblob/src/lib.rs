@@ -156,7 +156,7 @@ impl Blobstore for Fileblob {
                 f.read_to_end(&mut v).await?;
 
                 Some(BlobstoreGetData::new(
-                    BlobstoreMetadata::new(ctime(&f).await),
+                    BlobstoreMetadata::new(ctime(&f).await, None),
                     BlobstoreBytes::from_bytes(v),
                 ))
             }

@@ -414,7 +414,7 @@ impl Blobstore for Sqlblob {
                 blob.extend_from_slice(&chunk);
             }
 
-            let meta = BlobstoreMetadata::new(Some(chunked.ctime));
+            let meta = BlobstoreMetadata::new(Some(chunked.ctime), None);
             Ok(Some(BlobstoreGetData::new(
                 meta,
                 BlobstoreBytes::from_bytes(blob.freeze()),

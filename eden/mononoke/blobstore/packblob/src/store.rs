@@ -11,7 +11,8 @@ use crate::pack;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
+    OverwriteStatus, PutBehaviour,
 };
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
@@ -75,9 +76,11 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
             None => return Ok(None),
         };
 
-        let meta = inner_get_data.as_meta().clone();
+        let ctime = inner_get_data.as_meta().ctime();
         let envelope: PackEnvelope = inner_get_data.into_bytes().try_into()?;
-        Ok(Some(BlobstoreGetData::new(meta, envelope.decode(key)?)))
+        let (decoded, sizing) = envelope.decode(key)?;
+        let meta = BlobstoreMetadata::new(ctime, Some(sizing));
+        Ok(Some(BlobstoreGetData::new(meta, decoded)))
     }
 
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {

@@ -87,7 +87,7 @@ impl BlobstoreGetData {
     #[inline]
     pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
         BlobstoreGetData {
-            meta: BlobstoreMetadata { ctime: None },
+            meta: BlobstoreMetadata::default(),
             bytes: BlobstoreBytes::from_bytes(bytes.into()),
         }
     }
@@ -154,7 +154,7 @@ impl BlobstoreGetData {
 impl From<BlobstoreBytes> for BlobstoreGetData {
     fn from(blob_bytes: BlobstoreBytes) -> Self {
         BlobstoreGetData {
-            meta: BlobstoreMetadata { ctime: None },
+            meta: BlobstoreMetadata::default(),
             bytes: blob_bytes,
         }
     }
@@ -173,19 +173,44 @@ impl From<BlobstoreGetData> for BlobstoreBytes {
 }
 
 #[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PackMetadata {
+    /// Gives an idea what its packed with, if anything
+    pub pack_key: String,
+    /// How big the overall size of compressed forms was to reach this
+    pub relevant_compressed_size: u64,
+    /// How big the overall size of uncompressed forms was to reach this
+    pub relevant_uncompressed_size: u64,
+}
+
+/// Optional information about the size of a value
+#[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SizeMetadata {
+    /// How much size this value has added to storage on its own.
+    /// unique uncompressed size is already available from BlobstoreBytes::len()
+    pub unique_compressed_size: u64,
+    /// Info about packing, if its packed
+    pub pack_meta: Option<PackMetadata>,
+}
+
+#[derive(Abomonation, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct BlobstoreMetadata {
     ctime: Option<i64>,
+    sizes: Option<SizeMetadata>,
 }
 
 impl BlobstoreMetadata {
     #[inline]
-    pub fn new(ctime: Option<i64>) -> BlobstoreMetadata {
-        BlobstoreMetadata { ctime }
+    pub fn new(ctime: Option<i64>, sizes: Option<SizeMetadata>) -> BlobstoreMetadata {
+        BlobstoreMetadata { ctime, sizes }
     }
 
     #[inline]
     pub fn ctime(&self) -> Option<i64> {
         self.ctime
+    }
+
+    pub fn sizes(&self) -> Option<&SizeMetadata> {
+        self.sizes.as_ref()
     }
 }
 

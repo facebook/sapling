@@ -8,6 +8,7 @@
 use crate::pack;
 
 use anyhow::{format_err, Context, Error};
+use blobstore::SizeMetadata;
 use bufsize::SizeCounter;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use fbthrift::{
@@ -68,17 +69,23 @@ where
 pub(crate) struct PackEnvelope(pub packblob_thrift::StorageEnvelope);
 
 impl PackEnvelope {
-    pub fn decode(self, key: &str) -> Result<BlobstoreBytes, Error> {
-        let get_data = match self.0.storage {
-            StorageFormat::Single(single) => pack::decode_independent(single)
-                .with_context(|| format!("While decoding independent {:?}", key))?,
+    pub fn decode(self, key: &str) -> Result<(BlobstoreBytes, SizeMetadata), Error> {
+        Ok(match self.0.storage {
+            StorageFormat::Single(single) => {
+                let (decoded, unique_compressed_size) = pack::decode_independent(single)
+                    .with_context(|| format!("While decoding independent {:?}", key))?;
+                let sizing = SizeMetadata {
+                    unique_compressed_size,
+                    pack_meta: None,
+                };
+                (decoded, sizing)
+            }
             StorageFormat::Packed(packed) => pack::decode_pack(packed, key)
                 .with_context(|| format!("While decoding pack for {:?}", key))?,
             StorageFormat::UnknownField(e) => {
                 return Err(format_err!("StorageFormat::UnknownField {:?}", e));
             }
-        };
-        Ok(get_data)
+        })
     }
 }
 

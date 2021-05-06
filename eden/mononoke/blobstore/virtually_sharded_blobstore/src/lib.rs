@@ -474,7 +474,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
             let res = inner.blobstore.put(&ctx, key, value.clone()).await?;
 
-            let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
+            let value = BlobstoreGetData::new(BlobstoreMetadata::default(), value);
             let _ = inner.set_in_cache(&cache_key, presence, value);
 
             Ok(res)
@@ -656,7 +656,7 @@ mod test {
                 let bytes = handle.bytes().await?;
 
                 Ok(Some(BlobstoreGetData::new(
-                    BlobstoreMetadata::new(None),
+                    BlobstoreMetadata::default(),
                     bytes,
                 )))
             }
@@ -1044,7 +1044,7 @@ mod test {
                 _key: &'a str,
             ) -> Result<Option<BlobstoreGetData>> {
                 Ok(Some(BlobstoreGetData::new(
-                    BlobstoreMetadata::new(None),
+                    BlobstoreMetadata::default(),
                     BlobstoreBytes::from_bytes("foo"),
                 )))
             }
