@@ -21,7 +21,7 @@ use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
 };
-use context::CoreContext;
+use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
 use segmented_changelog::{SegmentedChangelogSqlConnections, SegmentedChangelogTailer};
@@ -56,7 +56,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches(fb)?;
 
     let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let session = SessionContainer::new_with_defaults(fb);
+    let ctx = session.new_context(logger.clone(), matches.scuba_sample_builder());
     helpers::block_execute(
         run(ctx, &matches),
         fb,

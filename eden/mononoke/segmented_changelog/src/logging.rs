@@ -19,12 +19,13 @@ pub fn log_new_idmap_version(
     repo_id: RepositoryId,
     idmap_version: IdMapVersion,
 ) {
-    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
-        .add_common_server_data()
-        .add("type", "idmap")
-        .add("repo_id", repo_id.id())
-        .add("idmap_version", idmap_version.0)
-        .log(); // note that logging may fail
+    if let Some(mut sample_builder) = new_sample_builder(ctx) {
+        sample_builder
+            .add("type", "idmap")
+            .add("repo_id", repo_id.id())
+            .add("idmap_version", idmap_version.0)
+            .log(); // note that logging may fail
+    }
 }
 
 pub fn log_new_iddag_version(
@@ -32,12 +33,13 @@ pub fn log_new_iddag_version(
     repo_id: RepositoryId,
     iddag_version: IdDagVersion,
 ) {
-    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
-        .add_common_server_data()
-        .add("type", "iddag")
-        .add("repo_id", repo_id.id())
-        .add("iddag_version", format!("{}", iddag_version.0))
-        .log(); // note that logging may fail
+    if let Some(mut sample_builder) = new_sample_builder(ctx) {
+        sample_builder
+            .add("type", "iddag")
+            .add("repo_id", repo_id.id())
+            .add("iddag_version", format!("{}", iddag_version.0))
+            .log(); // note that logging may fail
+    }
 }
 
 pub fn log_new_segmented_changelog_version(
@@ -52,11 +54,24 @@ pub fn log_new_segmented_changelog_version(
         sc_version.idmap_version,
         sc_version.iddag_version,
     );
-    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
-        .add_common_server_data()
-        .add("type", "segmented_changelog")
-        .add("repo_id", repo_id.id())
-        .add("idmap_version", sc_version.idmap_version.0)
-        .add("iddag_version", format!("{}", sc_version.iddag_version.0))
-        .log(); // note that logging may fail
+    if let Some(mut sample_builder) = new_sample_builder(ctx) {
+        sample_builder
+            .add("type", "segmented_changelog")
+            .add("repo_id", repo_id.id())
+            .add("idmap_version", sc_version.idmap_version.0)
+            .add("iddag_version", format!("{}", sc_version.iddag_version.0))
+            .log(); // note that logging may fail
+    }
+}
+
+fn new_sample_builder(ctx: &CoreContext) -> Option<MononokeScubaSampleBuilder> {
+    // We construct a completely new scuba sample builder to log to the version scuba table so we
+    // check the context to verify if we are in an environment where we are allowed to log.
+    // We want to avoid logging from tests.
+    if ctx.scuba().is_discard() {
+        return None;
+    }
+    let mut sample_builder = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
+    sample_builder.add_common_server_data();
+    Some(sample_builder)
 }
