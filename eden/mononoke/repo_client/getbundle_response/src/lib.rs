@@ -1165,6 +1165,8 @@ pub fn create_filenodes(
     create_filenodes_weighted(ctx, repo, entries).buffered_weight_limited(params)
 }
 
+// This function preserves the topological order of entries i.e. filenods or manifest
+// created in an earlier commit will be earlier in the output.
 pub async fn get_manifests_and_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1192,19 +1194,34 @@ pub async fn get_manifests_and_filenodes(
         .try_collect()
         .await?;
 
+    // We avoid duplicate manifests and filenodes, but we preserve the order of the entries
+    // with respect to the commit i.e. entries from earlier commit are before entries
+    // from the later commit.
     let mut all_mf_entries = vec![];
-    let mut all_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
+    let mut used_mfs = HashSet::new();
+
+    let mut ordered_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
+    let mut used_filenodes: HashMap<MPath, HashSet<HgFileNodeId>> = HashMap::new();
     for (mf_entries, file_entries) in entries {
-        all_mf_entries.extend(mf_entries);
+        for (path, mf_id, linknode) in mf_entries {
+            if used_mfs.insert((path.clone(), mf_id)) {
+                all_mf_entries.push((path, mf_id, linknode));
+            }
+        }
+
         for (file_path, filenodes) in file_entries {
-            all_filenode_entries
-                .entry(file_path)
-                .or_default()
-                .extend(filenodes);
+            let used_filenodes = used_filenodes.entry(file_path.clone()).or_default();
+            let ordered_entries = ordered_filenode_entries.entry(file_path).or_default();
+
+            for filenode in filenodes {
+                if used_filenodes.insert(filenode.filenode) {
+                    ordered_entries.push(filenode);
+                }
+            }
         }
     }
 
-    Ok((all_mf_entries, all_filenode_entries))
+    Ok((all_mf_entries, ordered_filenode_entries))
 }
 
 async fn fetch_manifest(
