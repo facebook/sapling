@@ -107,11 +107,15 @@ pub struct MultiplexedBlobstoreBase {
 
 impl std::fmt::Display for MultiplexedBlobstoreBase {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let blobstores: Vec<_> = self.blobstores.iter().map(|(id, _)| *id).collect();
+        let blobstores: Vec<_> = self
+            .blobstores
+            .iter()
+            .map(|(id, store)| (*id, store.to_string()))
+            .collect();
         let write_mostly_blobstores: Vec<_> = self
             .write_mostly_blobstores
             .iter()
-            .map(|(id, _)| *id)
+            .map(|(id, store)| (*id, store.to_string()))
             .collect();
         write!(
             f,
