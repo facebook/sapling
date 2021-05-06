@@ -29,7 +29,7 @@ use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
-    cbor_stream, get_repo, parse_cbor_request, parse_wire_request, simple_cbor_stream,
+    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -145,9 +145,9 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
                 }
             };
             futures::future::ready(to_keep)
-        })
-        .map(|response| response.to_wire());
-    Ok(simple_cbor_stream(response))
+        });
+    let cbor_response = custom_cbor_stream(response, |t| t.result.as_ref().err());
+    Ok(cbor_response)
 }
 
 pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {

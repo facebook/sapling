@@ -13,6 +13,8 @@ mod signal_stream;
 mod stream;
 mod stream_ext;
 
+pub use content_meta::ContentMetaProvider;
+pub use error_meta::{ErrorMeta, ErrorMetaProvider};
 pub use response::{
     build_error_response, build_response, BytesBody, EmptyBody, StreamBody, TryIntoResponse,
 };

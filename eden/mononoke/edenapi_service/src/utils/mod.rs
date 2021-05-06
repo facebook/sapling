@@ -23,7 +23,7 @@ pub mod cbor;
 pub mod convert;
 
 pub use cbor::{
-    cbor_mime, cbor_stream, parse_cbor_request, parse_wire_request, simple_cbor_stream,
+    cbor_mime, cbor_stream, custom_cbor_stream, parse_cbor_request, parse_wire_request,
     to_cbor_bytes,
 };
 pub use convert::{to_hg_path, to_mononoke_path, to_mpath};
