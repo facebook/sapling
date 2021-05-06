@@ -142,3 +142,12 @@ Commit hash and message are lazy
    DEBUG eagerepo::api: revlog_data 426bada5c67598ca65036d57d9e4b64b0c1ce7a0, dc0947a82db884575bb76ea10ac97b08536bfa03
   A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   C dc0947a82db884575bb76ea10ac97b08536bfa03
+
+Read file content:
+
+  $ hg cat -r $C C
+   DEBUG eagerepo::api: trees 5a538d6dd01b4058a549747c7947ce2dbf29f2ae
+   TRACE eagerepo::api:  found: 5a538d6dd01b4058a549747c7947ce2dbf29f2ae, 126 bytes
+   DEBUG eagerepo::api: files a2e456504a5e61f763f1a0b36a6c247c7541b2b3
+   TRACE eagerepo::api:  found: a2e456504a5e61f763f1a0b36a6c247c7541b2b3, 41 bytes
+  C (no-eol)
