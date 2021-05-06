@@ -13,7 +13,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig 'extensions.treemanifest=!'"
 sh % "enable amend"
 
 sh % "hg init a"
