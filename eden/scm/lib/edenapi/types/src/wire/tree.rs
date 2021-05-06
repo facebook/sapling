@@ -37,7 +37,7 @@ pub struct WireTreeEntry {
     children: Option<Vec<WireTreeChildEntry>>,
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    error: Option<WireEdenApiServerError>,
+    pub error: Option<WireEdenApiServerError>,
 }
 
 impl ToWire for Result<TreeEntry, EdenApiServerError> {

@@ -12,8 +12,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::{ToWire, WireTreeRequest},
-    EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
+    wire::WireTreeRequest, EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
 };
 use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
@@ -27,7 +26,7 @@ use types::{Key, RepoPathBuf};
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{custom_cbor_stream, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -57,8 +56,9 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(100_u64));
     }
 
-    Ok(cbor_stream(
-        fetch_all_trees(repo, request).map(|r| Ok(r.to_wire())),
+    Ok(custom_cbor_stream(
+        fetch_all_trees(repo, request),
+        |tree_entry| tree_entry.as_ref().err(),
     ))
 }
 
