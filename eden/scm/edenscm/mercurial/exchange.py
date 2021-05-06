@@ -540,6 +540,9 @@ def _findblobs(pushop):
     mfget = repo.manifestlog.get
     treedepth = 1 << 15
 
+    # flatcompat breaks SHA1 checks.
+    assert not repo.ui.configbool("treemanifest", "flatcompat")
+
     def mfread(node, get=repo.manifestlog.get):
         # subdir does not matter here - use ""
         return get("", node).read()
@@ -563,7 +566,7 @@ def _findblobs(pushop):
             basemf = mfread(nullid)
         difffiles = mf.diff(basemf)
         # ex. {'A': ((newnode, ''), (None, ''))}
-        for path, ((newnode, _newflag), (oldnode, _oldflag)) in difffiles.items():
+        for path, ((newnode, _newflag), (oldnode, _oldflag)) in sorted(difffiles.items()):
             if newnode != oldnode and newnode is not None:
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode

@@ -3,6 +3,7 @@
   $ configure modern
 
   $ setconfig paths.default=test:e1 ui.traceback=1
+  $ setconfig treemanifest.flatcompat=0
   $ export LOG=edenscm::mercurial::eagerpeer=trace,eagerepo=trace
 
 Disable SSH:
@@ -11,56 +12,61 @@ Disable SSH:
 
 Prepare Repo:
 
-  $ newrepo
+  $ newremoterepo
+  $ setconfig paths.default=test:e1
   $ drawdag << 'EOS'
-  > B C
+  > B C  # C/T/A=2
   > |/
-  > A
+  > A    # A/T/A=1
   > EOS
 
 Push:
 
   $ hg push -r $C --to master --create
-  pushing rev dc0947a82db8 to destination test:e1 bookmark master
+  pushing rev 178c10ffbc2f to destination test:e1 bookmark master
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
-   DEBUG eagerepo::api: commit_known dc0947a82db884575bb76ea10ac97b08536bfa03
-   TRACE edenscm::mercurial::eagerpeer: known dc0947a82db884575bb76ea10ac97b08536bfa03: False
+   DEBUG eagerepo::api: commit_known 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+   TRACE edenscm::mercurial::eagerpeer: known 178c10ffbc2f92d5407c14478ae9d9dea81f232e: False
    DEBUG edenscm::mercurial::eagerpeer: heads = []
   searching for changes
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
    TRACE edenscm::mercurial::eagerpeer: adding   blob 005d992c5dcf32993668f7cede29d296c494a5d9
-   TRACE edenscm::mercurial::eagerpeer: adding   tree 41b34f08c1356f6ad068e9ab9b43d984245111aa
-   TRACE edenscm::mercurial::eagerpeer: adding commit 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+   TRACE edenscm::mercurial::eagerpeer: adding   blob f976da1d0df2256cde08db84261621d5e92f77be
+   TRACE edenscm::mercurial::eagerpeer: adding   tree 4c28a8a0e46c55df521ea9d682b5b6b8a91031a2
+   TRACE edenscm::mercurial::eagerpeer: adding   tree 6161efd5db4f6d976d6aba647fa77c12186d3179
+   TRACE edenscm::mercurial::eagerpeer: adding commit 748104bd5058bf2c386d074d8dcf2704855380f6
    TRACE edenscm::mercurial::eagerpeer: adding   blob a2e456504a5e61f763f1a0b36a6c247c7541b2b3
-   TRACE edenscm::mercurial::eagerpeer: adding   tree 5a538d6dd01b4058a549747c7947ce2dbf29f2ae
-   TRACE edenscm::mercurial::eagerpeer: adding commit dc0947a82db884575bb76ea10ac97b08536bfa03
+   TRACE edenscm::mercurial::eagerpeer: adding   blob d85e50a0f00eee8211502158e93772aec5dc3d63
+   TRACE edenscm::mercurial::eagerpeer: adding   tree 319bc9670b2bff0a75b8b2dfa78867bf1f8d7aec
+   TRACE edenscm::mercurial::eagerpeer: adding   tree 0ccf968573574750913fcee533939cc7ebe7327d
+   TRACE edenscm::mercurial::eagerpeer: adding commit 178c10ffbc2f92d5407c14478ae9d9dea81f232e
    DEBUG edenscm::mercurial::eagerpeer: flushed
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
    DEBUG edenscm::mercurial::eagerpeer: flushed
-   DEBUG edenscm::mercurial::eagerpeer: pushkey bookmarks 'master': '' => 'dc0947a82db884575bb76ea10ac97b08536bfa03' (success)
+   DEBUG edenscm::mercurial::eagerpeer: pushkey bookmarks 'master': '' => '178c10ffbc2f92d5407c14478ae9d9dea81f232e' (success)
   exporting bookmark master
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
   $ hg push -r $B --allow-anon
   pushing to test:e1
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
-   DEBUG eagerepo::api: commit_known 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03
-   TRACE edenscm::mercurial::eagerpeer: known 112478962961147124edd43549aedd1a335e44bf: False
-   TRACE edenscm::mercurial::eagerpeer: known dc0947a82db884575bb76ea10ac97b08536bfa03: True
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+   DEBUG eagerepo::api: commit_known 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 99dac869f01e09fe3d501fa645ea524af80d498f
+   TRACE edenscm::mercurial::eagerpeer: known 178c10ffbc2f92d5407c14478ae9d9dea81f232e: True
+   TRACE edenscm::mercurial::eagerpeer: known 99dac869f01e09fe3d501fa645ea524af80d498f: False
   searching for changes
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    TRACE edenscm::mercurial::eagerpeer: adding   blob 35e7525ce3a48913275d7061dd9a867ffef1e34d
-   TRACE edenscm::mercurial::eagerpeer: adding   tree eb79886383871977bccdb3000c275a279f0d4c99
-   TRACE edenscm::mercurial::eagerpeer: adding commit 112478962961147124edd43549aedd1a335e44bf
+   TRACE edenscm::mercurial::eagerpeer: adding   tree d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43
+   TRACE edenscm::mercurial::eagerpeer: adding commit 99dac869f01e09fe3d501fa645ea524af80d498f
    DEBUG edenscm::mercurial::eagerpeer: flushed
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
 Pull:
 
@@ -70,37 +76,37 @@ Pull:
   $ hg pull -B master
   pulling from test:e1
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: commit_known 
-   DEBUG eagerepo::api: commit_graph dc0947a82db884575bb76ea10ac97b08536bfa03 
-   TRACE edenscm::mercurial::eagerpeer: graph node 426bada5c67598ca65036d57d9e4b64b0c1ce7a0 []
-   TRACE edenscm::mercurial::eagerpeer: graph node dc0947a82db884575bb76ea10ac97b08536bfa03 ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
+   DEBUG eagerepo::api: commit_graph 178c10ffbc2f92d5407c14478ae9d9dea81f232e 
+   TRACE edenscm::mercurial::eagerpeer: graph node 748104bd5058bf2c386d074d8dcf2704855380f6 []
+   TRACE edenscm::mercurial::eagerpeer: graph node 178c10ffbc2f92d5407c14478ae9d9dea81f232e ['748104bd5058bf2c386d074d8dcf2704855380f6']
 
   $ hg pull -r $B
   pulling from test:e1
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
-   DEBUG eagerepo::api: commit_known 112478962961147124edd43549aedd1a335e44bf
-   TRACE edenscm::mercurial::eagerpeer: known 112478962961147124edd43549aedd1a335e44bf: True
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+   DEBUG eagerepo::api: commit_known 99dac869f01e09fe3d501fa645ea524af80d498f
+   TRACE edenscm::mercurial::eagerpeer: known 99dac869f01e09fe3d501fa645ea524af80d498f: True
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
-   DEBUG eagerepo::api: commit_known dc0947a82db884575bb76ea10ac97b08536bfa03
-   TRACE edenscm::mercurial::eagerpeer: known dc0947a82db884575bb76ea10ac97b08536bfa03: True
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+   DEBUG eagerepo::api: commit_known 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+   TRACE edenscm::mercurial::eagerpeer: known 178c10ffbc2f92d5407c14478ae9d9dea81f232e: True
   searching for changes
-   DEBUG eagerepo::api: commit_graph 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03 dc0947a82db884575bb76ea10ac97b08536bfa03
-   TRACE edenscm::mercurial::eagerpeer: graph node 112478962961147124edd43549aedd1a335e44bf ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
+   DEBUG eagerepo::api: commit_graph 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 99dac869f01e09fe3d501fa645ea524af80d498f 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+   TRACE edenscm::mercurial::eagerpeer: graph node 99dac869f01e09fe3d501fa645ea524af80d498f ['748104bd5058bf2c386d074d8dcf2704855380f6']
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
-   DEBUG eagerepo::api: revlog_data 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03, 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-   TRACE eagerepo::api:  found: 112478962961147124edd43549aedd1a335e44bf, 94 bytes
-   TRACE eagerepo::api:  found: dc0947a82db884575bb76ea10ac97b08536bfa03, 94 bytes
-   TRACE eagerepo::api:  found: 426bada5c67598ca65036d57d9e4b64b0c1ce7a0, 94 bytes
+   DEBUG eagerepo::api: revlog_data 99dac869f01e09fe3d501fa645ea524af80d498f, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 748104bd5058bf2c386d074d8dcf2704855380f6
+   TRACE eagerepo::api:  found: 99dac869f01e09fe3d501fa645ea524af80d498f, 94 bytes
+   TRACE eagerepo::api:  found: 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 98 bytes
+   TRACE eagerepo::api:  found: 748104bd5058bf2c386d074d8dcf2704855380f6, 98 bytes
   o  B
   │
   │ o  C remote/master
@@ -110,8 +116,8 @@ Pull:
 Trigger file and tree downloading:
 
   $ hg cat -r $B B A
-   DEBUG eagerepo::api: trees eb79886383871977bccdb3000c275a279f0d4c99
-   TRACE eagerepo::api:  found: eb79886383871977bccdb3000c275a279f0d4c99, 126 bytes
+   DEBUG eagerepo::api: trees d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43
+   TRACE eagerepo::api:  found: d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43, 170 bytes
    DEBUG eagerepo::api: files 005d992c5dcf32993668f7cede29d296c494a5d9
    TRACE eagerepo::api:  found: 005d992c5dcf32993668f7cede29d296c494a5d9, 41 bytes
    DEBUG eagerepo::api: files 35e7525ce3a48913275d7061dd9a867ffef1e34d
@@ -124,14 +130,14 @@ Clone:
   $ hg clone -U --shallow test:e1 cloned
    DEBUG eagerepo::api: clone_data
   populating main commit graph
-  tip commit: dc0947a82db884575bb76ea10ac97b08536bfa03
+  tip commit: 178c10ffbc2f92d5407c14478ae9d9dea81f232e
   fetching selected remote bookmarks
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
   $ cd cloned
 
@@ -139,15 +145,15 @@ Commit hash and message are lazy
 
   $ LOG=dag::protocol=debug,eagerepo=debug hg log -T '{desc} {node}\n' -r 'all()'
    DEBUG dag::protocol: resolve ids [0] remotely
-   DEBUG eagerepo::api: revlog_data 426bada5c67598ca65036d57d9e4b64b0c1ce7a0, dc0947a82db884575bb76ea10ac97b08536bfa03
-  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  C dc0947a82db884575bb76ea10ac97b08536bfa03
+   DEBUG eagerepo::api: revlog_data 748104bd5058bf2c386d074d8dcf2704855380f6, 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+  A 748104bd5058bf2c386d074d8dcf2704855380f6
+  C 178c10ffbc2f92d5407c14478ae9d9dea81f232e
 
 Read file content:
 
   $ hg cat -r $C C
-   DEBUG eagerepo::api: trees 5a538d6dd01b4058a549747c7947ce2dbf29f2ae
-   TRACE eagerepo::api:  found: 5a538d6dd01b4058a549747c7947ce2dbf29f2ae, 126 bytes
+   DEBUG eagerepo::api: trees 0ccf968573574750913fcee533939cc7ebe7327d
+   TRACE eagerepo::api:  found: 0ccf968573574750913fcee533939cc7ebe7327d, 170 bytes
    DEBUG eagerepo::api: files a2e456504a5e61f763f1a0b36a6c247c7541b2b3
    TRACE eagerepo::api:  found: a2e456504a5e61f763f1a0b36a6c247c7541b2b3, 41 bytes
   C (no-eol)
