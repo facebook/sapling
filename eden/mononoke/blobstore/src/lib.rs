@@ -31,7 +31,7 @@ pub use crate::disabled::DisabledBlob;
 pub use crate::errors::ErrorKind;
 
 // This module exists to namespace re-exported
-// imports, needed for macto exports.
+// imports, needed for macro exports.
 pub mod private {
     pub use crate::{
         Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable,

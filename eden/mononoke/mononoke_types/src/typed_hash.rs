@@ -9,13 +9,11 @@ use std::fmt::{self, Display};
 use std::{result, str::FromStr};
 
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Error, Result};
-use ascii::{AsciiStr, AsciiString};
+use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use edenapi_types::{ContentId as EdenapiContentId, FsnodeId as EdenapiFsnodeId};
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use sql::mysql;
 
 use crate::{
@@ -24,11 +22,10 @@ use crate::{
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
     deleted_files_manifest::DeletedManifest,
-    errors::ErrorKind,
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
     fsnode::Fsnode,
-    hash::{Blake2, Blake2Prefix, Context},
+    hash::{Blake2, Blake2Prefix},
     rawbundle2::RawBundle2,
     skeleton_manifest::SkeletonManifest,
     thrift,
@@ -117,7 +114,7 @@ pub struct FastlogBatchId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct BlameId(Blake2);
 
-struct Blake2HexVisitor;
+pub struct Blake2HexVisitor;
 
 impl<'de> serde::de::Visitor<'de> for Blake2HexVisitor {
     type Value = String;
@@ -142,23 +139,24 @@ impl<'de> serde::de::Visitor<'de> for Blake2HexVisitor {
 }
 
 /// Implementations of typed hashes.
+#[macro_export]
 macro_rules! impl_typed_hash_no_context {
     {
-        hash_type => $typed: ident,
-        value_type => $value_type: ident,
+        hash_type => $typed: ty,
+        thrift_type => $thrift_typed: ty,
     } => {
         impl $typed {
-            pub const fn new(blake2: Blake2) -> Self {
-                $typed(blake2)
+            pub const fn new(blake2: $crate::private::Blake2) -> Self {
+                Self(blake2)
             }
 
             // (this is public because downstream code wants to be able to deserialize these nodes)
-            pub fn from_thrift(h: thrift::$typed) -> Result<Self> {
+            pub fn from_thrift(h: $thrift_typed) -> $crate::private::anyhow::Result<Self> {
                 // This assumes that a null hash is never serialized. This should always be the
                 // case.
                 match h.0 {
-                    thrift::IdType::Blake2(blake2) => Ok($typed(Blake2::from_thrift(blake2)?)),
-                    thrift::IdType::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
+                    $crate::private::thrift::IdType::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
+                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::ErrorKind::InvalidThrift(
                         stringify!($typed).into(),
                         format!("unknown id type field: {}", x)
                     )),
@@ -167,55 +165,55 @@ macro_rules! impl_typed_hash_no_context {
 
             #[cfg(test)]
             pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
-                $typed(Blake2::from_byte_array(arr))
+                Self::new($crate::private::Blake2::from_byte_array(arr))
             }
 
             #[inline]
-            pub fn from_bytes(bytes: impl AsRef<[u8]>) -> Result<Self> {
-                Blake2::from_bytes(bytes).map(Self::new)
+            pub fn from_bytes(bytes: impl AsRef<[u8]>) -> $crate::private::anyhow::Result<Self> {
+                $crate::private::Blake2::from_bytes(bytes).map(Self::new)
             }
 
             #[inline]
-            pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
-                Blake2::from_ascii_str(s).map(Self::new)
+            pub fn from_ascii_str(s: &$crate::private::AsciiStr) -> $crate::private::anyhow::Result<Self> {
+                $crate::private::Blake2::from_ascii_str(s).map(Self::new)
             }
 
-            pub fn blake2(&self) -> &Blake2 {
+            pub fn blake2(&self) -> &$crate::private::Blake2 {
                 &self.0
             }
 
             #[inline]
-            pub fn to_hex(&self) -> AsciiString {
+            pub fn to_hex(&self) -> $crate::private::AsciiString {
                 self.0.to_hex()
             }
 
-            pub fn to_brief(&self) -> AsciiString {
+            pub fn to_brief(&self) -> $crate::private::AsciiString {
                 self.to_hex().into_iter().take(8).collect()
             }
 
             // (this is public because downstream code wants to be able to serialize these nodes)
-            pub fn into_thrift(self) -> thrift::$typed {
-                thrift::$typed(thrift::IdType::Blake2(self.0.into_thrift()))
+            pub fn into_thrift(self) -> $thrift_typed {
+                <$thrift_typed>::new($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
             }
         }
 
-        impl FromStr for $typed {
-            type Err = Error;
+        impl std::str::FromStr for $typed {
+            type Err = $crate::private::anyhow::Error;
             #[inline]
-            fn from_str(s: &str) -> Result<Self> {
-                Blake2::from_str(s).map(Self::new)
+            fn from_str(s: &str) -> $crate::private::anyhow::Result<Self> {
+                $crate::private::Blake2::from_str(s).map(Self::new)
             }
         }
 
-        impl From<Blake2> for $typed {
-            fn from(h: Blake2) -> $typed {
-                $typed::new(h)
+        impl From<$crate::private::Blake2> for $typed {
+            fn from(h: $crate::private::Blake2) -> $typed {
+                Self::new(h)
             }
         }
 
-        impl<'a> From<&'a Blake2> for $typed {
-            fn from(h: &'a Blake2) -> $typed {
-                $typed::new(*h)
+        impl<'a> From<&'a $crate::private::Blake2> for $typed {
+            fn from(h: &'a $crate::private::Blake2) -> $typed {
+                Self::new(*h)
             }
         }
 
@@ -225,40 +223,42 @@ macro_rules! impl_typed_hash_no_context {
             }
         }
 
-        impl Display for $typed {
-            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-                self.0.fmt(fmt)
+        impl std::fmt::Display for $typed {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                std::fmt::Display::fmt(&self.0, fmt)
             }
         }
 
-        impl Arbitrary for $typed {
-            fn arbitrary<G: Gen>(g: &mut G) -> Self {
-                $typed(Blake2::arbitrary(g))
+        impl $crate::private::Arbitrary for $typed {
+            fn arbitrary<G: $crate::private::Gen>(g: &mut G) -> Self {
+                Self::new($crate::private::Blake2::arbitrary(g))
             }
 
             fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-                empty_shrinker()
+                $crate::private::empty_shrinker()
             }
         }
 
-        impl serde::Serialize for $typed {
+        impl $crate::private::Serialize for $typed {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
-                S: serde::Serializer,
+                S: $crate::private::Serializer,
             {
                 serializer.serialize_str(self.to_hex().as_str())
             }
         }
 
-        impl<'de> serde::de::Deserialize<'de> for $typed {
+        impl<'de> $crate::private::Deserialize<'de> for $typed {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
-                D: serde::de::Deserializer<'de>,
+                D: $crate::private::Deserializer<'de>,
             {
-                let hex = deserializer.deserialize_string(Blake2HexVisitor)?;
-                match Blake2::from_str(hex.as_str()) {
-                    Ok(blake2) => Ok($typed(blake2)),
-                    Err(error) => Err(serde::de::Error::custom(error)),
+                use std::str::FromStr;
+
+                let hex = deserializer.deserialize_string($crate::private::Blake2HexVisitor)?;
+                match $crate::private::Blake2::from_str(hex.as_str()) {
+                    Ok(blake2) => Ok(Self::new(blake2)),
+                    Err(error) => Err($crate::private::DeError::custom(error)),
                 }
             }
         }
@@ -309,31 +309,22 @@ macro_rules! impl_typed_hash_loadable_storable {
     }
 }
 
-macro_rules! impl_typed_hash {
+#[macro_export]
+macro_rules! impl_typed_context {
     {
         hash_type => $typed: ident,
-        value_type => $value_type: ident,
         context_type => $typed_context: ident,
         context_key => $key: expr,
     } => {
-        impl_typed_hash_no_context! {
-            hash_type => $typed,
-            value_type => $value_type,
-        }
-
-        impl_typed_hash_loadable_storable! {
-            hash_type => $typed,
-        }
-
         /// Context for incrementally computing a hash.
         #[derive(Clone)]
-        pub struct $typed_context(Context);
+        pub struct $typed_context($crate::hash::Context);
 
         impl $typed_context {
             /// Construct a context.
             #[inline]
             pub fn new() -> Self {
-                $typed_context(Context::new($key.as_bytes()))
+                $typed_context($crate::hash::Context::new($key.as_bytes()))
             }
 
             #[inline]
@@ -348,6 +339,32 @@ macro_rules! impl_typed_hash {
             pub fn finish(self) -> $typed {
                 $typed(self.0.finish())
             }
+        }
+
+    }
+}
+
+macro_rules! impl_typed_hash {
+    {
+        hash_type => $typed: ident,
+        thrift_hash_type => $thrift_hash_type: ty,
+        value_type => $value_type: ident,
+        context_type => $typed_context: ident,
+        context_key => $key: expr,
+    } => {
+        impl_typed_hash_no_context! {
+            hash_type => $typed,
+            thrift_type => $thrift_hash_type,
+        }
+
+        impl_typed_hash_loadable_storable! {
+            hash_type => $typed,
+        }
+
+        impl_typed_context! {
+            hash_type => $typed,
+            context_type => $typed_context,
+            context_key => $key,
         }
 
         impl MononokeId for $typed {
@@ -374,6 +391,7 @@ macro_rules! impl_typed_hash {
 
 impl_typed_hash! {
     hash_type => ChangesetId,
+    thrift_hash_type => thrift::ChangesetId,
     value_type => BonsaiChangeset,
     context_type => ChangesetIdContext,
     context_key => "changeset",
@@ -381,6 +399,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ContentId,
+    thrift_hash_type => thrift::ContentId,
     value_type => FileContents,
     context_type => ContentIdContext,
     context_key => "content",
@@ -400,6 +419,7 @@ impl From<EdenapiContentId> for ContentId {
 
 impl_typed_hash! {
     hash_type => ContentChunkId,
+    thrift_hash_type => thrift::ContentChunkId,
     value_type => ContentChunk,
     context_type => ContentChunkIdContext,
     context_key => "chunk",
@@ -407,6 +427,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => RawBundle2Id,
+    thrift_hash_type => thrift::RawBundle2Id,
     value_type => RawBundle2,
     context_type => RawBundle2IdContext,
     context_key => "rawbundle2",
@@ -414,6 +435,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => FileUnodeId,
+    thrift_hash_type => thrift::FileUnodeId,
     value_type => FileUnode,
     context_type => FileUnodeIdContext,
     context_key => "fileunode",
@@ -421,6 +443,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => ManifestUnodeId,
+    thrift_hash_type => thrift::ManifestUnodeId,
     value_type => ManifestUnode,
     context_type => ManifestUnodeIdContext,
     context_key => "manifestunode",
@@ -428,6 +451,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => DeletedManifestId,
+    thrift_hash_type => thrift::DeletedManifestId,
     value_type => DeletedManifest,
     context_type => DeletedManifestContext,
     context_key => "deletedmanifest",
@@ -435,6 +459,7 @@ impl_typed_hash! {
 
 impl_typed_hash! {
     hash_type => FsnodeId,
+    thrift_hash_type => thrift::FsnodeId,
     value_type => Fsnode,
     context_type => FsnodeIdContext,
     context_key => "fsnode",
@@ -454,6 +479,7 @@ impl From<EdenapiFsnodeId> for FsnodeId {
 
 impl_typed_hash! {
     hash_type => SkeletonManifestId,
+    thrift_hash_type => thrift::SkeletonManifestId,
     value_type => SkeletonManifest,
     context_type => SkeletonManifestIdContext,
     context_key => "skeletonmanifest",
@@ -461,7 +487,7 @@ impl_typed_hash! {
 
 impl_typed_hash_no_context! {
     hash_type => ContentMetadataId,
-    value_type => ContentMetadata,
+    thrift_type => thrift::ContentMetadataId,
 }
 
 impl_typed_hash_loadable_storable! {
@@ -470,6 +496,7 @@ impl_typed_hash_loadable_storable! {
 
 impl_typed_hash! {
     hash_type => FastlogBatchId,
+    thrift_hash_type => thrift::FastlogBatchId,
     value_type => FastlogBatch,
     context_type => FastlogBatchIdContext,
     context_key => "fastlogbatch",

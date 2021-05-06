@@ -58,6 +58,20 @@ pub use typed_hash::{
 
 mod macros;
 
-mod thrift {
+pub mod thrift {
     pub use mononoke_types_thrift::*;
+}
+
+pub mod private {
+    pub use anyhow;
+    pub use ascii::{AsciiStr, AsciiString};
+    pub use quickcheck::{empty_shrinker, Arbitrary, Gen};
+    pub use serde::{
+        de::Deserialize, de::Deserializer, de::Error as DeError, Serialize, Serializer,
+    };
+
+    pub use crate::errors::ErrorKind;
+    pub use crate::hash::Blake2;
+    pub use crate::thrift;
+    pub use crate::typed_hash::Blake2HexVisitor;
 }
