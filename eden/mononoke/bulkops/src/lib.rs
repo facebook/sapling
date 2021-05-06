@@ -100,7 +100,7 @@ impl PublicChangesetBulkFetch {
                     future::ready(async move {
                         let ids: Vec<ChangesetId> = results
                             .into_iter()
-                            .map(|r| r.map(|(id, _bounds)| id))
+                            .map(|r| r.map(|((id, _), _bounds)| id))
                             .collect::<Result<Vec<_>, Error>>()?;
                         let entries = self.changesets.get_many(ctx.clone(), ids.clone()).await?;
                         let mut entries_map: HashMap<_, _> =
@@ -128,7 +128,7 @@ impl PublicChangesetBulkFetch {
         ctx: &'a CoreContext,
         d: Direction,
         repo_bounds: Option<(u64, u64)>,
-    ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
+    ) -> impl Stream<Item = Result<((ChangesetId, u64), (u64, u64)), Error>> + 'a {
         let phases = self.phases.get_store();
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
             future::ok(repo_bounds).left_future()
@@ -163,12 +163,12 @@ impl PublicChangesetBulkFetch {
                                 let count = results.len() as u64;
                                 let mut max_id = lower;
                                 let mut min_id = upper - 1;
-                                let cs_ids: Vec<ChangesetId> = results
+                                let cs_id_ids: Vec<(ChangesetId, u64)> = results
                                     .into_iter()
                                     .map(|(cs_id, id)| {
                                         max_id = max(max_id, id);
                                         min_id = min(min_id, id);
-                                        cs_id
+                                        (cs_id, id)
                                     })
                                     .collect();
 
@@ -188,7 +188,7 @@ impl PublicChangesetBulkFetch {
                                         (completed, Some(new_bounds))
                                     };
 
-                                Ok::<_, Error>(((cs_ids, completed), new_bounds))
+                                Ok::<_, Error>(((cs_id_ids, completed), new_bounds))
                             }
                         }
                         .boxed();
@@ -200,8 +200,9 @@ impl PublicChangesetBulkFetch {
             )
             .and_then(move |(mut ids, completed_bounds)| async move {
                 if !ids.is_empty() {
-                    let public = phases.get_public_raw(ctx, &ids).await?;
-                    ids.retain(|id| public.contains(&id));
+                    let cs_ids = ids.iter().map(|(cs_id, _)| cs_id);
+                    let public = phases.get_public_raw(ctx, cs_ids).await?;
+                    ids.retain(|(id, _)| public.contains(&id));
                 }
                 Ok::<_, Error>(stream::iter(
                     ids.into_iter().map(move |id| Ok((id, completed_bounds))),
@@ -299,7 +300,7 @@ mod tests {
                 let public_ids: Vec<ChangesetId> = entries.into_iter().map(|e| e.cs_id).collect();
                 let public_ids2: Vec<ChangesetId> = fetcher
                     .fetch_ids(&ctx, *d, None)
-                    .map_ok(|(cs_id, (lower, upper))| {
+                    .map_ok(|((cs_id, _), (lower, upper))| {
                         assert_ne!(lower, upper, "step {} dir {:?}", step_size, d);
                         cs_id
                     })

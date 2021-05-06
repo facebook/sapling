@@ -360,7 +360,7 @@ where
             let mut chunk_upper: u64 = 0;
             let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
-                .map(|(cs_id, (fetch_low, fetch_upper))| {
+                .map(|((cs_id, _id), (fetch_low, fetch_upper))| {
                     chunk_low = min(chunk_low, fetch_low);
                     chunk_upper = max(chunk_upper, fetch_upper);
                     cs_id
