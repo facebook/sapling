@@ -29,13 +29,13 @@ Run a scrub with the pack logging enabled
   Seen,Loaded: 7,7
 
 Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0. Expect compressed sizes and no pack_key yet
-  $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key] | @csv' < pack-info.json | sort | uniq
-  1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,108,
-  1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,73,
-  1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,108,
-  1,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","FileContent",975364069869333100,6905401043796602000,0,107626,10*, (glob)
-  1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410200,-6891338160001598000,0,107640,10*, (glob)
-  1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121091000,-6743401566611196000,0,107636,1*, (glob)
+  $ jq -r '.int * .normal | [ .repo, .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key] | @csv' < pack-info.json | sort | uniq
+  "repo",1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,108,
+  "repo",1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,73,
+  "repo",1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,108,
+  "repo",1,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","FileContent",975364069869333100,6905401043796602000,0,107626,10*, (glob)
+  "repo",1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410200,-6891338160001598000,0,107640,10*, (glob)
+  "repo",1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121091000,-6743401566611196000,0,107636,1*, (glob)
 
 Now pack the blobs
   $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=3
@@ -46,9 +46,9 @@ Run a scrub again now the storage is packed
 
 Check logged pack info now the store is packed. Expecting multiple in same pack key
   $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .relevant_uncompressed_size, .relevant_compressed_size ] | @csv' < pack-info-packed.json | sort | uniq
-  1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45980
-  1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,82,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107713,45945
-  1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45980
+  1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45* (glob)
+  1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,82,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107713,45* (glob)
+  1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45* (glob)
   1,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","FileContent",975364069869333100,6905401043796602000,0,107626,2*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",21*,4* (glob)
   1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410200,-6891338160001598000,0,107640,4*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",10*,4* (glob)
   1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121091000,-6743401566611196000,0,107636,2*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",21*,4* (glob)

@@ -6,6 +6,7 @@
  */
 
 use crate::graph::NodeType;
+use crate::validate::REPO;
 
 use blobstore::SizeMetadata;
 use mononoke_types::Timestamp;
@@ -48,8 +49,15 @@ pub struct PackInfoLogOptions {
 }
 
 impl PackInfoLogOptions {
-    pub fn make_logger(&self, run_start: Timestamp, chunk_num: u64) -> ScubaPackInfoLogger {
-        ScubaPackInfoLogger::new(self.log_dest.clone(), run_start, chunk_num)
+    pub fn make_logger(
+        &self,
+        repo_name: String,
+        run_start: Timestamp,
+        chunk_num: u64,
+    ) -> ScubaPackInfoLogger {
+        let mut scuba = self.log_dest.clone();
+        scuba.add(REPO, repo_name);
+        ScubaPackInfoLogger::new(scuba, run_start, chunk_num)
     }
 }
 
