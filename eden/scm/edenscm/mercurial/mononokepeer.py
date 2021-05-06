@@ -61,7 +61,6 @@ class mononokepipe(object):
         self._readoffset = 0
         self._ui = ui
         self._pipe = pipe
-        self._totalbytes = 0
 
     def write(self, data):
         assert isinstance(data, bytes)
@@ -127,6 +126,7 @@ class mononokepipe(object):
         else:
             self._reset_read_buf()
 
+        self._ui.metrics.gauge("mononoke_read_bytes", size)
         return buf[:size]
 
     def readline(self):
