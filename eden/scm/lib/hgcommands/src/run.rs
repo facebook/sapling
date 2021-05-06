@@ -13,7 +13,10 @@ use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use configparser::config::ConfigSet;
+use configparser::configmodel::ConfigExt;
+use eagerepo::EagerRepo;
 use hg_http::HgHttpConfig;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use std::env;
@@ -66,6 +69,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         }
         Ok(res) => res,
     };
+
+    setup_eager_repo();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
@@ -547,4 +552,23 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
         disable_tls_verification: global_opts.insecure,
     };
     hg_http::set_global_config(http_config);
+}
+
+fn setup_eager_repo() {
+    static REGISTERED: Lazy<()> = Lazy::new(|| {
+        edenapi::Builder::register_customize_build_func(|config| {
+            for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
+                if let Ok(value) = config.get_or_default::<String>(section, name) {
+                    if let Some(path) = EagerRepo::url_to_dir(&value) {
+                        let repo = EagerRepo::open(&path)
+                            .map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
+                        return Ok(Some(Arc::new(repo)));
+                    }
+                }
+            }
+            Ok(None)
+        })
+    });
+
+    *REGISTERED
 }

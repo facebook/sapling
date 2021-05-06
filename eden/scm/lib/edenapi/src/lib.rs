@@ -23,6 +23,7 @@ pub use crate::response::BlockingFetch;
 pub use edenapi_trait::{Entries, Fetch, ResponseMeta};
 
 // Re-export for convenience.
+pub use configmodel;
 pub use edenapi_types as types;
 pub use http_client::{Progress, Stats};
 

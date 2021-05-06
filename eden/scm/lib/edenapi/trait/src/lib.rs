@@ -14,6 +14,7 @@ pub use crate::errors::{ConfigError, EdenApiError};
 pub use crate::response::{Entries, Fetch, ResponseMeta};
 
 // Re-export for convenience.
+pub use configmodel;
 pub use edenapi_types as types;
 
 pub type Result<T> = std::result::Result<T, EdenApiError>;

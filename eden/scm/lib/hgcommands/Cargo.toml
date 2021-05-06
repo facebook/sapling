@@ -15,6 +15,7 @@ configparser = { path = "../configparser" }
 cpython = { version = "0.5", default-features = false }
 cpython_ext = { path = "../cpython-ext", default-features = false }
 dag = { path = "../dag" }
+eagerepo = { path = "../eagerepo" }
 edenapi = { path = "../edenapi" }
 edenfs_client = { path = "../edenfs-client" }
 encoding = { path = "../encoding" }
@@ -25,6 +26,7 @@ hgtime = { path = "../hgtime" }
 indexedlog = { path = "../indexedlog" }
 libc = "0.2.86"
 mincode = { path = "../mincode" }
+once_cell = "1.4"
 parking_lot = "0.10.2"
 procinfo = { path = "../procinfo" }
 progress-model = { path = "../progress/model" }

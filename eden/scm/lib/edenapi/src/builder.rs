@@ -12,16 +12,24 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Error};
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 use url::Url;
 
 use auth::AuthSection;
 use configmodel::ConfigExt;
-use eagerepo::EagerRepo;
 use http_client::HttpVersion;
 
 use crate::client::Client;
 use crate::errors::{ConfigError, EdenApiError};
 use crate::EdenApi;
+
+/// External function that constructs other kinds of `EdenApi` from config.
+static CUSTOM_BUILD_FUNCS: Lazy<RwLock<Vec<BuildFunc>>> = Lazy::new(Default::default);
+
+/// Function that takes config and outputs a built `EdenApi`, or `None` to
+/// fallback to the next build function.
+pub type BuildFunc = fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>;
 
 /// Builder for creating new EdenAPI clients.
 pub struct Builder<'a> {
@@ -50,11 +58,12 @@ impl<'a> Builder<'a> {
 
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
-        for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
-            if let Ok(value) = self.config.get_or_default::<String>(section, name) {
-                if let Some(path) = EagerRepo::url_to_dir(&value) {
-                    let repo = EagerRepo::open(&path).map_err(|e| EdenApiError::Other(e.into()))?;
-                    return Ok(Arc::new(repo));
+        // Consider custom build functions?
+        {
+            let funcs = CUSTOM_BUILD_FUNCS.read();
+            for func in funcs.iter() {
+                if let Some(client) = func(self.config)? {
+                    return Ok(client);
                 }
             }
         }
@@ -65,6 +74,11 @@ impl<'a> Builder<'a> {
                 .build()?,
         );
         Ok(client)
+    }
+
+    /// Register a customized builder that can produce a non-HTTP `EdenApi` from config.
+    pub fn register_customize_build_func(func: BuildFunc) {
+        CUSTOM_BUILD_FUNCS.write().push(func)
     }
 }
 
