@@ -1618,7 +1618,7 @@ class Test(unittest.TestCase):
             hgrc.write(b"[remotefilelog]\n")
             hgrc.write(b"reponame=reponame-default\n")
             hgrc.write(b"localdatarepack=True\n")
-            hgrc.write(b"cachepath=$TESTTMP/default-hgcache\n")
+            hgrc.write(b"cachepath=%s/default-hgcache\n" % self._testtmp)
 
             for opt in self._extraconfigopts:
                 section, key = opt.encode("utf-8").split(b".", 1)
