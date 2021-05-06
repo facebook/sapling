@@ -2201,7 +2201,7 @@ Please run "cd / && cd -" to update your shell's working directory."""
     return None
 
 
-async def async_main() -> int:
+async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     # Before doing anything else check that the current working directory is valid.
     # This helps catch the case where a user is trying to run the Eden CLI inside
     # a stale eden mount point.
@@ -2209,8 +2209,6 @@ async def async_main() -> int:
     if stale_return_code is not None:
         return stale_return_code
 
-    parser = create_parser()
-    args = parser.parse_args()
     if args.version:
         return do_version(args)
     if getattr(args, "func", None) is None:
@@ -2241,8 +2239,11 @@ except AttributeError:
 
 
 def main() -> int:
+    parser = create_parser()
+    args = parser.parse_args()
+
     try:
-        return asyncio_run(async_main())
+        return asyncio_run(async_main(parser, args))
     except KeyboardInterrupt:
         # If a Thrift stream is interrupted, Folly EventBus/NotificationQueue
         # gets into a wonky state, and attempting to garbage collect the
