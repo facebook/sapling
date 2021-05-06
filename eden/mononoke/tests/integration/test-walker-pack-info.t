@@ -6,28 +6,49 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-setup configuration
-  $ default_setup_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+setup configuration with some compressable files
+  $ PACK_BLOB=0 setup_common_config "blob_files"
+  $ cd $TESTTMP
+  $ hginit_treemanifest repo-hg-nolfs
+  $ cd repo-hg-nolfs
+  $ setup_hg_server
+  $ cp "${TEST_FIXTURES}/raw_text.txt" f1
+  $ hg commit -Aqm "f1"
+  $ cp f1 f2
+  $ echo "More text" >> f2
+  $ hg commit -Aqm "f2"
+  $ cp f1 f3
+  $ echo "Yet more text" >> f3
+  $ hg commit -Aqm "f3"
+  $ hg bookmark master_bookmark -r tip
+  $ cd ..
+  $ blobimport repo-hg-nolfs/.hg repo
 
 Run a scrub with the pack logging enabled
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog
   Seen,Loaded: 7,7
 
-Check logged pack info. Commit time is forced to zero in tests, hence relatedness_key is 0
-  $ LINES="$(wc -l < pack-info.json)"
-  $ [[ $LINES -lt 50 ]]
-  $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .relatedness_key, .uncompressed_size ] | @csv' < pack-info.json | sort | uniq
-  1,"repo0000.changeset.blake2.459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66","Changeset",2040214566370451200,,0,104
-  1,"repo0000.changeset.blake2.9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec","Changeset",-3468459737349231600,,0,69
-  1,"repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset",-975483755298211600,,0,104
-  1,"repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","FileContent",-5148279705570089000,1118993463608461200,0,4
-  1,"repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","FileContent",4679342931123203000,2609666726012457500,0,4
-  1,"repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","FileContent",-771035176585636100,595132756262828800,0,4
+Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0. Expect compressed sizes and no pack_key yet
+  $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key] | @csv' < pack-info.json | sort | uniq
+  1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,108,
+  1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,73,
+  1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,108,
+  1,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","FileContent",975364069869333100,6905401043796602000,0,107626,10*, (glob)
+  1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410200,-6891338160001598000,0,107640,10*, (glob)
+  1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121091000,-6743401566611196000,0,107636,1*, (glob)
+
+Now pack the blobs
+  $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=3
+
+Run a scrub again now the storage is packed
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
+  Seen,Loaded: 7,7
+
+Check logged pack info now the store is packed. Expecting multiple in same pack key
+  $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .relevant_uncompressed_size, .relevant_compressed_size ] | @csv' < pack-info-packed.json | sort | uniq
+  1,"repo0000.changeset.blake2.22eaf128d2cd64e1e47f9f0f091f835d893415588cb41c66d8448d892bcc0756","Changeset",-2205411614990931500,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45980
+  1,"repo0000.changeset.blake2.67472b417c6772992e6c4ef87258527b01a6256ef707a3f9c5fe6bc9679499f8","Changeset",-7389730255194601000,,0,73,82,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107713,45945
+  1,"repo0000.changeset.blake2.99283342831420aaf2c75c890cf3eb98bb26bf07e94d771cf8239b033ca45714","Changeset",-6187923334023141000,,0,108,117,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",107748,45980
+  1,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","FileContent",975364069869333100,6905401043796602000,0,107626,2*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",21*,4* (glob)
+  1,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","FileContent",1456254697391410200,-6891338160001598000,0,107640,4*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",10*,4* (glob)
+  1,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","FileContent",-7441908177121091000,-6743401566611196000,0,107636,2*,"multiblob-e9fc47da6371e725f7d558a0a7abafc029033a5f35de8f7833baffbd66029d25.pack",21*,4* (glob)

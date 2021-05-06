@@ -640,10 +640,13 @@ CONFIG
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
-[$blobstorename.blobstore.$underlyingstorage]
-path = "$blobstorepath"
-
+[$blobstorename.blobstore]
 CONFIG
+    if [[ -n "${PACK_BLOB:-}" ]]; then
+      echo "  pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath\" } } }" >> common/storage.toml
+    else
+      echo "  $underlyingstorage = { path = \"$blobstorepath\" }" >> common/storage.toml
+    fi
   fi
 }
 

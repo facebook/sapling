@@ -7,6 +7,7 @@
 
 use crate::graph::NodeType;
 
+use blobstore::SizeMetadata;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashSet;
@@ -17,8 +18,12 @@ const BLOBSTORE_KEY: &str = "blobstore_key";
 const NODE_TYPE: &str = "node_type";
 const NODE_FINGERPRINT: &str = "node_fingerprint";
 const SIMILARITY_KEY: &str = "similarity_key";
-const RELATEDNESS_KEY: &str = "relatedness_key";
+const MTIME: &str = "mtime";
 const UNCOMPRESSED_SIZE: &str = "uncompressed_size";
+const UNIQUE_COMPRESSED_SIZE: &str = "unique_compressed_size";
+const PACK_KEY: &str = "pack_key";
+const RELEVANT_UNCOMPRESSED_SIZE: &str = "relevant_uncompressed_size";
+const RELEVANT_COMPRESSED_SIZE: &str = "relevant_compressed_size";
 
 /// What do we log for each blobstore key
 pub struct PackInfo {
@@ -26,8 +31,9 @@ pub struct PackInfo {
     pub node_type: NodeType, // Might be different from type implied by blobstore_key's prefix string, e.g. if loading a node does multiple blobstore accesses
     pub node_fingerprint: Option<u64>, // the short hash of the graph level node
     pub similarity_key: Option<u64>, // typically the hash of associated repo path
-    pub relatedness_key: Option<u64>, // typically the mtime of commit from which this item was reached
-    pub uncompressed_size: u64,       // How big is the value for this key, in bytes.
+    pub mtime: Option<u64>, // typically the commit time of Changeset from which this item was reached
+    pub uncompressed_size: u64, // How big is the value for this key, in bytes.
+    pub sizes: Option<SizeMetadata>,
 }
 
 pub trait PackInfoLogger {
@@ -74,8 +80,21 @@ impl PackInfoLogger for ScubaPackInfoLogger {
             .add(NODE_TYPE, info.node_type.as_ref())
             .add_opt(NODE_FINGERPRINT, info.node_fingerprint)
             .add_opt(SIMILARITY_KEY, info.similarity_key)
-            .add_opt(RELATEDNESS_KEY, info.relatedness_key)
-            .add(UNCOMPRESSED_SIZE, info.uncompressed_size)
-            .log();
+            .add_opt(MTIME, info.mtime)
+            .add(UNCOMPRESSED_SIZE, info.uncompressed_size);
+
+        if let Some(sizes) = info.sizes {
+            scuba.add(UNIQUE_COMPRESSED_SIZE, sizes.unique_compressed_size);
+            if let Some(pack_meta) = sizes.pack_meta {
+                scuba.add(PACK_KEY, pack_meta.pack_key);
+                scuba.add(
+                    RELEVANT_UNCOMPRESSED_SIZE,
+                    pack_meta.relevant_uncompressed_size,
+                );
+                scuba.add(RELEVANT_COMPRESSED_SIZE, pack_meta.relevant_compressed_size);
+            }
+        }
+
+        scuba.log();
     }
 }

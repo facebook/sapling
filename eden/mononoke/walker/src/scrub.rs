@@ -28,6 +28,7 @@ use crate::walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::{format_err, Error};
 use blobstore::BlobstoreGetData;
+use blobstore::SizeMetadata;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -71,7 +72,11 @@ impl From<Option<&ScrubSample>> for ScrubStats {
         sample
             .map(|sample| ScrubStats {
                 blobstore_keys: sample.data.values().len() as u64,
-                blobstore_bytes: sample.data.values().sum(),
+                blobstore_bytes: sample
+                    .data
+                    .values()
+                    .map(|v| v.unique_uncompressed_size)
+                    .sum(),
             })
             .unwrap_or_default()
     }
@@ -187,24 +192,34 @@ fn record_for_packer<L>(
 ) where
     L: PackInfoLogger,
 {
-    if let Some(sample) = sample {
-        for (blobstore_key, uncompressed_size) in sample.data {
+    if let Some(mut sample) = sample {
+        for (blobstore_key, key_sizes) in sample.data.drain() {
             logger.log(PackInfo {
                 blobstore_key,
                 node_type: walk_key.node.get_type(),
                 node_fingerprint: walk_key.node.sampling_fingerprint(),
                 similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
-                relatedness_key: mtime.map(|mtime| mtime.timestamp_secs() as u64),
-                uncompressed_size,
+                mtime: mtime.map(|mtime| mtime.timestamp_secs() as u64),
+                uncompressed_size: key_sizes.unique_uncompressed_size,
+                sizes: key_sizes.sizes,
             })
         }
     }
 }
 
-// Holds a map from blobstore keys accessed to their Size
+// Sample for one blobstore key
+#[derive(Debug)]
+struct ScrubKeySample {
+    // Every key/store can provide uncompressed size
+    unique_uncompressed_size: u64,
+    // Only keys accessed via a packblob store have SizeMetadata
+    sizes: Option<SizeMetadata>,
+}
+
+// Holds a map from blobstore keys to their samples
 #[derive(Debug)]
 struct ScrubSample {
-    data: HashMap<String, u64>,
+    data: HashMap<String, ScrubKeySample>,
 }
 
 impl Default for ScrubSample {
@@ -225,9 +240,11 @@ impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
                 value.map(|value| {
-                    guard
-                        .data
-                        .insert(key.to_owned(), value.as_bytes().len() as u64)
+                    let sample = ScrubKeySample {
+                        unique_uncompressed_size: value.as_bytes().len() as u64,
+                        sizes: value.as_meta().sizes().cloned(),
+                    };
+                    guard.data.insert(key.to_owned(), sample)
                 })
             })
         });
