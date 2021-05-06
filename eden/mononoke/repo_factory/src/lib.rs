@@ -38,7 +38,7 @@ use cacheblob::{
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
-use context::CoreContext;
+use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
 use filenodes::ArcFilenodes;
@@ -591,9 +591,11 @@ impl RepoFactory {
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
         let repo_name = String::from(repo_identity.name());
         let logger = self.env.logger.new(o!("repo" => repo_name));
+        let session = SessionContainer::new_with_defaults(self.env.fb);
+        let ctx = session.new_context(logger, self.env.scuba_sample_builder.clone());
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
-            &CoreContext::new_with_logger(self.env.fb, logger),
+            &ctx,
             repo_identity.id(),
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
