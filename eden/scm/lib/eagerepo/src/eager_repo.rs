@@ -88,6 +88,7 @@ impl EagerRepo {
     ///
     /// Supported URLs:
     /// - `eager:dir_path`, `eager://dir_path`
+    /// - `test:name`, `test://name`: same as `eager:$TESTTMP/server-repos/name`
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
         let prefix = "eager:";
         if let Some(path) = value.strip_prefix(prefix) {
@@ -97,6 +98,15 @@ impl EagerRepo {
             let path = path.trim_start_matches('/');
             let path: &Path = Path::new(path);
             return Some(path.to_path_buf());
+        }
+        let prefix = "test:";
+        if let Some(path) = value.strip_prefix(prefix) {
+            let path = path.trim_start_matches('/');
+            if let Ok(tmp) = std::env::var("TESTTMP") {
+                let tmp: &Path = Path::new(&tmp);
+                let path = tmp.join(path);
+                return Some(path);
+            }
         }
         None
     }

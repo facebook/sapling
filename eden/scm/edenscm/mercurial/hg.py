@@ -130,6 +130,7 @@ schemes = {
     "https": httppeer,
     "mononoke": mononokepeer,
     "ssh": sshpeer,
+    "test": eagerpeer,
 }
 
 

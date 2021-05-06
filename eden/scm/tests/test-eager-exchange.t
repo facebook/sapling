@@ -2,7 +2,7 @@
 
   $ configure modern
 
-  $ setconfig paths.default=eager:$TESTTMP/e1 ui.traceback=1
+  $ setconfig paths.default=test:e1 ui.traceback=1
   $ export LOG=edenscm::mercurial::eagerpeer=trace,eagerepo=trace
 
 Disable SSH:
@@ -21,7 +21,7 @@ Prepare Repo:
 Push:
 
   $ hg push -r $C --to master --create
-  pushing rev dc0947a82db8 to destination eager://$TESTTMP/e1 bookmark master
+  pushing rev dc0947a82db8 to destination test:e1 bookmark master
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
    DEBUG eagerepo::api: commit_known dc0947a82db884575bb76ea10ac97b08536bfa03
@@ -46,7 +46,7 @@ Push:
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
 
   $ hg push -r $B --allow-anon
-  pushing to eager://$TESTTMP/e1
+  pushing to test:e1
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
    DEBUG eagerepo::api: commit_known 112478962961147124edd43549aedd1a335e44bf, dc0947a82db884575bb76ea10ac97b08536bfa03
@@ -65,10 +65,10 @@ Push:
 Pull:
 
   $ newremoterepo
-  $ setconfig paths.default=eager:$TESTTMP/e1
+  $ setconfig paths.default=test:e1
   $ hg debugchangelog --migrate lazy
   $ hg pull -B master
-  pulling from eager://$TESTTMP/e1
+  pulling from test:e1
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
    DEBUG eagerepo::api: bookmarks master
@@ -81,7 +81,7 @@ Pull:
    TRACE edenscm::mercurial::eagerpeer: graph node dc0947a82db884575bb76ea10ac97b08536bfa03 ['426bada5c67598ca65036d57d9e4b64b0c1ce7a0']
 
   $ hg pull -r $B
-  pulling from eager://$TESTTMP/e1
+  pulling from test:e1
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', 'dc0947a82db884575bb76ea10ac97b08536bfa03')])
    DEBUG eagerepo::api: commit_known 112478962961147124edd43549aedd1a335e44bf
@@ -121,7 +121,7 @@ Trigger file and tree downloading:
 Clone:
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow eager:$TESTTMP/e1 cloned
+  $ hg clone -U --shallow test:e1 cloned
    DEBUG eagerepo::api: clone_data
   populating main commit graph
   tip commit: dc0947a82db884575bb76ea10ac97b08536bfa03

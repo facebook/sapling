@@ -1076,7 +1076,7 @@ class localrepository(object):
         else:
             # If remote path is an EagerRepo, use EdenApi provided by it.
             path = self.ui.paths.get("default")
-            if path is not None and path.url.scheme == "eager":
+            if path is not None and path.url.scheme in ("eager", "test"):
                 return edenapi.getclient(self.ui)
 
             # NOTE: Consider making this an error instead.
