@@ -24,7 +24,7 @@ lazy_static = "1.0"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 regex = "1.4.2"
 reqwest = { version = "0.10", features = ["json", "rustls-tls", "stream"] }
-rust-ini = "0.13"
+rust-ini = "0.17"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 thiserror = "1.0"
