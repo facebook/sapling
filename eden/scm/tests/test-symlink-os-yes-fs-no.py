@@ -8,6 +8,9 @@ from edenscm.mercurial import commands, fscap, hg, ui as uimod, util
 from hghave import require
 
 
+require(["false"])  # incompatible with remotefilelog + non-treemanifest
+
+
 TESTDIR = os.environ["TESTDIR"]
 BUNDLEPATH = os.path.join(TESTDIR, "bundles", "test-no-symlinks.hg")
 

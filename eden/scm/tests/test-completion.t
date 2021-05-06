@@ -26,6 +26,7 @@ Show all commands except debug commands
   files
   forget
   fs
+  gc
   githelp
   graft
   grep
@@ -45,6 +46,7 @@ Show all commands except debug commands
   parents
   paths
   phase
+  prefetch
   pull
   purge
   push
@@ -52,6 +54,7 @@ Show all commands except debug commands
   recover
   remove
   rename
+  repack
   resolve
   revert
   rollback
@@ -67,6 +70,7 @@ Show all commands except debug commands
   uncommit
   update
   verify
+  verifyremotefilelog
   version
 
 Show all commands that start with "a"
@@ -104,6 +108,7 @@ Show debug commands if there are no other candidates
   debugcreatestreamclonebundle
   debugdag
   debugdata
+  debugdatapack
   debugdate
   debugdeltachain
   debugdetectissues
@@ -125,10 +130,13 @@ Show debug commands if there are no other candidates
   debugfsinfo
   debugfsync
   debuggetbundle
+  debughistorypack
   debughttp
   debugignore
   debugindex
   debugindexdot
+  debugindexedlogdatastore
+  debugindexedloghistorystore
   debuginitgit
   debuginstall
   debugknown
@@ -157,6 +165,7 @@ Show debug commands if there are no other candidates
   debugrebuildchangelog
   debugrebuilddirstate
   debugrebuildfncache
+  debugremotefilelog
   debugrename
   debugresetheads
   debugrevlog
@@ -181,6 +190,8 @@ Show debug commands if there are no other candidates
   debugupdatecaches
   debugvisibility
   debugvisibleheads
+  debugwaitonprefetch
+  debugwaitonrepack
   debugwalk
   debugwireargs
 
@@ -191,6 +202,7 @@ Do not show the alias of a debug command if there are other candidates
   recover
   remove
   rename
+  repack
   resolve
   revert
   rollback
@@ -312,6 +324,7 @@ Show aliases with -v
   files
   forget
   fs
+  gc
   githelp
   graft
   grep
@@ -331,6 +344,7 @@ Show aliases with -v
   parents
   paths
   phase
+  prefetch
   pull
   purge clean
   push
@@ -338,6 +352,7 @@ Show aliases with -v
   recover
   remove rm
   rename move mv
+  repack
   resolve
   revert
   rollback
@@ -353,6 +368,7 @@ Show aliases with -v
   uncommit
   update checkout co
   verify
+  verifyremotefilelog
   version
 
 Show an error if we use --options with an ambiguous abbreviation
@@ -399,6 +415,7 @@ Show all commands + options
   debugcreatestreamclonebundle: 
   debugdag: bookmarks, branches, dots, spaces
   debugdata: changelog, manifest, dir
+  debugdatapack: long, node, node-delta
   debugdate: extended, range
   debugdeltachain: changelog, manifest, dir, template
   debugdetectissues: 
@@ -420,10 +437,13 @@ Show all commands + options
   debugfsinfo: 
   debugfsync: 
   debuggetbundle: head, common, type
+  debughistorypack: long
   debughttp: 
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
+  debugindexedlogdatastore: long, node, node-delta
+  debugindexedloghistorystore: long
   debuginitgit: git-dir
   debuginstall: template
   debugknown: 
@@ -452,6 +472,7 @@ Show all commands + options
   debugrebuildchangelog: 
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
+  debugremotefilelog: decompress
   debugrename: rev
   debugresetheads: 
   debugrevlog: changelog, manifest, dir, dump
@@ -476,6 +497,8 @@ Show all commands + options
   debugupdatecaches: 
   debugvisibility: 
   debugvisibleheads: style, template
+  debugwaitonprefetch: 
+  debugwaitonrepack: 
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
@@ -484,6 +507,7 @@ Show all commands + options
   files: rev, print0, include, exclude, template
   forget: include, exclude
   fs: 
+  gc: 
   githelp: 
   graft: rev, continue, abort, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: after-context, before-context, context, ignore-case, files-with-matches, line-number, invert-match, word-regexp, extended-regexp, fixed-strings, perl-regexp, include, exclude
@@ -503,6 +527,7 @@ Show all commands + options
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev
+  prefetch: rev, repack, base, include, exclude
   pull: update, force, rev, bookmark, ssh, remotecmd
   purge: abort-on-err, all, dirs, files, print, print0, include, exclude
   push: force, rev, bookmark, new-branch, pushvars, ssh, remotecmd
@@ -510,6 +535,7 @@ Show all commands + options
   recover: 
   remove: after, force, include, exclude
   rename: after, force, include, exclude, dry-run
+  repack: background, incremental
   resolve: all, list, mark, unmark, no-status, root-relative, tool, include, exclude, template, skip
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
@@ -525,6 +551,7 @@ Show all commands + options
   uncommit: keep, include, exclude
   update: clean, check, merge, date, rev, inactive, continue, tool
   verify: rev
+  verifyremotefilelog: decompress
   version: template
 
   $ hg init a

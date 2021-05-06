@@ -277,6 +277,8 @@ Test extension help:
                      to a path
        rebase        command to move sets of revisions to a different ancestor
        eden          accelerated hg functionality in Eden checkouts (eden !)
+       remotefilelog
+                     minimize and speed up large repositories
        sampling      (no help text available)
        treemanifest
   
@@ -354,8 +356,6 @@ Test extension help:
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
-       remotefilelog
-                     minimize and speed up large repositories
        remotenames   mercurial extension for improving client/server workflows
        repogenerator
                      (no help text available)
@@ -962,6 +962,8 @@ Test list of internal help commands
    debugdag      format the changelog or an index DAG as a concise textual
                  description
    debugdata     dump the contents of a data file revision
+   debugdatapack
+                 (no help text available)
    debugdate     parse and display a date
    debugdeltachain
                  dump information about delta chains in a revlog
@@ -1003,12 +1005,18 @@ Test list of internal help commands
                  retrieves a bundle from a repo
    debuggetroottree
                  (no help text available)
+   debughistorypack
+                 (no help text available)
    debughttp     check whether the EdenAPI server is reachable
    debugignore   display the combined ignore pattern and information about
                  ignored files
    debugindex    dump the contents of an index file
    debugindexdot
                  dump an index DAG as a graphviz dot file
+   debugindexedlogdatastore
+                 (no help text available)
+   debugindexedloghistorystore
+                 (no help text available)
    debuginitgit  init a repo from a git backend
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
@@ -1058,6 +1066,8 @@ Test list of internal help commands
                  revision
    debugrebuildfncache
                  rebuild the fncache file
+   debugremotefilelog
+                 (no help text available)
    debugrename   dump rename information
    debugresetheads
                  reset heads of repo so it looks like after a fresh clone
@@ -1100,6 +1110,10 @@ Test list of internal help commands
                  control visibility tracking
    debugvisibleheads
                  print visible heads
+   debugwaitonprefetch
+                 (no help text available)
+   debugwaitonrepack
+                 (no help text available)
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)

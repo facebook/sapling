@@ -486,13 +486,6 @@ and its ancestor by overriding "repo._filecommit".
   > EOF
   $ hg debugsetparents 933981f264573acb5782b58f8f6fba0f5c815ac7 933981f264573acb5782b58f8f6fba0f5c815ac7
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
-  $ hg debugindexdot .hg/store/data/baz.i
-  digraph G {
-  	-1 -> 0
-  	0 -> 1
-  	1 -> 2
-  	1 -> 2
-  }
   $ hg annotate baz
   17: 1 baz:1
   18: 2 baz:2
@@ -518,16 +511,6 @@ and its ancestor by overriding "repo._filecommit".
   > EOF
   $ hg debugsetparents b94c9d8986533962f0ee2d1a8f1e244f839b6868 5d14c328cf75b0994b39f667b9a453cc4d050663
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
-  $ hg debugindexdot .hg/store/data/baz.i
-  digraph G {
-  	-1 -> 0
-  	0 -> 1
-  	1 -> 2
-  	1 -> 2
-  	2 -> 3
-  	3 -> 4
-  	2 -> 4
-  }
   $ hg annotate baz
   17: 1 baz:1
   18: 2 baz:2

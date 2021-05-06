@@ -7,6 +7,10 @@
 from __future__ import absolute_import
 
 from testutil.dott import feature, sh, testtmp  # noqa: F401
+from hghave import require
+
+
+require(["false"])  # incompatible with remotefilelog + non-treemanifest
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
