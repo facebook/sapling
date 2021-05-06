@@ -11,6 +11,7 @@
 #![feature(const_fn)]
 
 pub mod blame;
+pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;
 pub mod content_chunk;
