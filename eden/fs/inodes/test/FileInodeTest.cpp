@@ -508,6 +508,85 @@ TEST(FileInode, truncateDuringLoad) {
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }
 
+TEST(FileInode, setBlobHashDuringLoad) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  builder.setFiles(
+      {{"notready.txt", "Contents not ready.\n"},
+       {"dup.txt", "The second file.\n"}});
+  TestMount mount_;
+  mount_.initialize(builder, false);
+
+  auto notReadyInode = mount_.getFileInode("notready.txt");
+  auto dupInode = mount_.getFileInode("dup.txt");
+
+  // Start reading the contents
+  auto dataFuture =
+      notReadyInode->read(4096, 0, ObjectFetchContext::getNullContext());
+  EXPECT_FALSE(dataFuture.isReady());
+
+  // The blob is being loaded, let's interrupt it by swapping its hash.
+  notReadyInode->setBlobHash(dupInode->getBlobHash().value());
+
+  builder.setAllReady();
+
+  ASSERT_TRUE(dataFuture.isReady());
+  EXPECT_FILE_INODE(notReadyInode, "The second file.\n", 0644);
+}
+
+TEST(FileInode, setBlobHashAfterLoad) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  builder.setFiles(
+      {{"notready.txt", "Contents before.\n"},
+       {"dup.txt", "The second file.\n"}});
+
+  TestMount mount_;
+  mount_.initialize(builder, false);
+  builder.setAllReady();
+
+  auto notReadyInode = mount_.getFileInode("notready.txt");
+  auto dupInode = mount_.getFileInode("dup.txt");
+
+  // Start reading the contents
+  auto dataFuture =
+      notReadyInode->read(4096, 0, ObjectFetchContext::getNullContext());
+  EXPECT_TRUE(dataFuture.isReady());
+  EXPECT_FILE_INODE(notReadyInode, "Contents before.\n", 0644);
+
+  notReadyInode->setBlobHash(dupInode->getBlobHash().value());
+
+  auto after =
+      notReadyInode->read(4096, 0, ObjectFetchContext::getNullContext());
+  EXPECT_TRUE(after.isReady());
+  EXPECT_FILE_INODE(notReadyInode, "The second file.\n", 0644);
+}
+
+TEST(FileInode, setBlobHashAfterMaterialization) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  builder.setFiles(
+      {{"notready.txt", "Contents before.\n"},
+       {"dup.txt", "The second file.\n"}});
+
+  TestMount mount_;
+  mount_.initialize(builder, false);
+  builder.setAllReady();
+
+  auto notReadyInode = mount_.getFileInode("notready.txt");
+  auto dupInode = mount_.getFileInode("dup.txt");
+
+  auto dataFuture = notReadyInode->write("Materialize!\n", 0);
+  EXPECT_TRUE(dataFuture.isReady());
+
+  notReadyInode->setBlobHash(dupInode->getBlobHash().value());
+
+  auto after =
+      notReadyInode->read(4096, 0, ObjectFetchContext::getNullContext());
+  EXPECT_TRUE(after.isReady());
+  EXPECT_FILE_INODE(notReadyInode, "Contents before.\n", 0644);
+}
+
 TEST(FileInode, dropsCacheWhenFullyRead) {
   FakeTreeBuilder builder;
   builder.setFiles({{"bigfile.txt", "1234567890ab"}});
