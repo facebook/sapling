@@ -27,6 +27,7 @@ use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use bulkops::Direction;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
+use cloned::cloned;
 use cmdlib::args::{
     self, ArgType, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement,
     ResolvedRepo,
@@ -1471,8 +1472,14 @@ pub async fn setup_common<'a>(
     );
 
     if let Some(blobstore_sampler) = blobstore_sampler.clone() {
-        repo_factory.with_blobstore_override(move |blobstore| -> Arc<dyn Blobstore> {
-            Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
+        repo_factory.with_blobstore_override({
+            cloned!(logger);
+            move |blobstore| -> Arc<dyn Blobstore> {
+                if !quiet {
+                    info!(logger, "Sampling from blobstore: {}", blobstore);
+                }
+                Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
+            }
         });
     }
 
