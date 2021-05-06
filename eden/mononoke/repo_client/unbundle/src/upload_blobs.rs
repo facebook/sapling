@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{ensure, Result};
+use anyhow::Result;
 use futures::{compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryStreamExt};
 use futures_ext::{future::TryShared, FbTryFutureExt};
 
@@ -28,32 +28,19 @@ pub(crate) trait UploadableHgBlob {
     fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
 }
 
-#[derive(PartialEq, Eq)]
-pub(crate) enum UploadBlobsType {
-    IgnoreDuplicates,
-    EnsureNoDuplicates,
-}
-use self::UploadBlobsType::*;
-
 pub(crate) async fn upload_hg_blobs<'a, S, B>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     blobs: S,
-    ubtype: UploadBlobsType,
 ) -> Result<HashMap<HgNodeKey, B::Value>>
 where
     S: Stream<Item = Result<B>> + Send + 'a,
     B: UploadableHgBlob + 'a,
 {
-    let ignore_duplicates = ubtype == IgnoreDuplicates;
     blobs
         .try_fold(HashMap::new(), move |mut map, item| async move {
             let (key, value) = item.upload(ctx, repo)?;
-            ensure!(
-                map.insert(key.clone(), value).is_none() || ignore_duplicates,
-                "HgBlob {:?} already provided before",
-                key
-            );
+            map.insert(key, value);
             Ok(map)
         })
         .await

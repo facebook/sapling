@@ -50,7 +50,7 @@ use crate::errors::*;
 use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
 use crate::rate_limits::{enforce_file_changes_rate_limits, RateLimitedPushKind};
 use crate::stats::*;
-use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType};
+use crate::upload_blobs::upload_hg_blobs;
 use crate::upload_changesets::{upload_changeset, Filelogs, Manifests};
 
 #[allow(non_snake_case)]
@@ -1078,7 +1078,6 @@ impl<'r> Bundle2Resolver<'r> {
                     &ctx,
                     self.repo,
                     convert_to_revlog_filelog(self.ctx.clone(), self.repo.clone(), filelogs),
-                    UploadBlobsType::EnsureNoDuplicates,
                 )
                 .await
                 .context("While uploading File Blobs")?;
@@ -1180,7 +1179,6 @@ impl<'r> Bundle2Resolver<'r> {
                     self.ctx,
                     self.repo,
                     TreemanifestBundle2Parser::new(parts).compat(),
-                    UploadBlobsType::IgnoreDuplicates,
                 )
                 .await
                 .context("While uploading Manifest Blobs")?;
