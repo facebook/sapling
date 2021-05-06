@@ -23,6 +23,7 @@ use crate::tail::walk_exact_tail;
 use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
+use blobstore::BlobstoreGetData;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -34,7 +35,7 @@ use futures::{
     stream::{Stream, TryStreamExt},
 };
 use maplit::hashset;
-use mononoke_types::{datetime::DateTime, BlobstoreBytes};
+use mononoke_types::datetime::DateTime;
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use regex::Regex;
 use samplingblob::SamplingHandler;
@@ -310,7 +311,7 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
         &self,
         ctx: &CoreContext,
         key: &str,
-        value: Option<&BlobstoreBytes>,
+        value: Option<&BlobstoreGetData>,
     ) -> Result<(), Error> {
         let output_dir = match &self.output_dir {
             Some(d) => d,
@@ -331,11 +332,12 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
             inflight_path.push(percent_encode(key.as_bytes(), PATH).to_string());
             let mut f = std::fs::File::create(inflight_path)?;
             if let Some(value) = value {
-                f.write_all(value.as_bytes())?;
+                f.write_all(value.as_bytes().as_bytes())?;
             }
-            guard
-                .data
-                .insert(key.to_owned(), value.map_or(0, |v| v.len()) as u64);
+            guard.data.insert(
+                key.to_owned(),
+                value.map_or(0, |v| v.as_bytes().len()) as u64,
+            );
         }
 
         Ok(())

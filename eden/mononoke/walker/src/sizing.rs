@@ -23,6 +23,7 @@ use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
+use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use clap::ArgMatches;
 use cloned::cloned;
@@ -267,11 +268,11 @@ impl SamplingHandler for WalkSampleMapping<Node, SizingSample> {
         &self,
         ctx: &CoreContext,
         key: &str,
-        value: Option<&BlobstoreBytes>,
+        value: Option<&BlobstoreGetData>,
     ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
-                value.map(|value| guard.data.insert(key.to_owned(), value.clone()))
+                value.map(|value| guard.data.insert(key.to_owned(), value.as_bytes().clone()))
             })
         });
         Ok(())

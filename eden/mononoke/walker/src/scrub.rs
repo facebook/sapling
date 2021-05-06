@@ -27,6 +27,7 @@ use crate::validate::TOTAL;
 use crate::walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::{format_err, Error};
+use blobstore::BlobstoreGetData;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -38,7 +39,7 @@ use futures::{
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
-use mononoke_types::{datetime::DateTime, BlobstoreBytes};
+use mononoke_types::datetime::DateTime;
 use samplingblob::SamplingHandler;
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -219,11 +220,15 @@ impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
         &self,
         ctx: &CoreContext,
         key: &str,
-        value: Option<&BlobstoreBytes>,
+        value: Option<&BlobstoreGetData>,
     ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
-                value.map(|value| guard.data.insert(key.to_owned(), value.len() as u64))
+                value.map(|value| {
+                    guard
+                        .data
+                        .insert(key.to_owned(), value.as_bytes().len() as u64)
+                })
             })
         });
         Ok(())

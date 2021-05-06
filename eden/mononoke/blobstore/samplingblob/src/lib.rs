@@ -19,7 +19,7 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
         &self,
         ctx: &CoreContext,
         key: &str,
-        value: Option<&BlobstoreBytes>,
+        value: Option<&BlobstoreGetData>,
     ) -> Result<()>;
 
     fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) -> Result<()> {
@@ -60,8 +60,7 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         let opt_blob = self.inner.get(ctx, key).await?;
-        self.handler
-            .sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
+        self.handler.sample_get(ctx, key, opt_blob.as_ref())?;
         Ok(opt_blob)
     }
 
@@ -117,7 +116,7 @@ mod test {
             &self,
             ctx: &CoreContext,
             _key: &str,
-            _value: Option<&BlobstoreBytes>,
+            _value: Option<&BlobstoreGetData>,
         ) -> Result<()> {
             self.check_sample(ctx)
         }
