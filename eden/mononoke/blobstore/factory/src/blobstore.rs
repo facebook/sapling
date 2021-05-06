@@ -362,7 +362,7 @@ fn make_blobstore_put_ops<'a>(
     async move {
         use BlobConfig::*;
 
-        let mut has_components = false;
+        let mut needs_wrappers = true;
         let store = match blobconfig {
             // Physical blobstores
             Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
@@ -435,7 +435,7 @@ fn make_blobstore_put_ops<'a>(
                 minimum_successful_writes,
                 queue_db,
             } => {
-                has_components = true;
+                needs_wrappers = false;
                 make_blobstore_multiplexed(
                     fb,
                     multiplex_id,
@@ -459,6 +459,7 @@ fn make_blobstore_put_ops<'a>(
                 scuba_table,
                 scuba_sample_rate,
             } => {
+                needs_wrappers = false;
                 let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
@@ -476,43 +477,49 @@ fn make_blobstore_put_ops<'a>(
                     .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
                         MononokeScubaSampleBuilder::new(fb, &table)
                     });
-
                 Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
             }
-            Pack { .. } => make_packblob(
-                fb,
-                blobconfig,
-                readonly_storage,
-                blobstore_options,
-                logger,
-                config_store,
-            )
-            .watched(logger)
-            .await
-            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
+            Pack { .. } => {
+                // NB packblob does not apply the wrappers internally
+                make_packblob(
+                    fb,
+                    blobconfig,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                    config_store,
+                )
+                .watched(logger)
+                .await
+                .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
+            }
         };
 
-        let store = if readonly_storage.0 {
-            Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstorePutOps>
-        } else {
-            store
-        };
+        let store = if needs_wrappers {
+            let store = if readonly_storage.0 {
+                Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstorePutOps>
+            } else {
+                store
+            };
 
-        let store = if blobstore_options.throttle_options.has_throttle() {
-            Arc::new(
-                ThrottledBlob::new(store, blobstore_options.throttle_options)
-                    .watched(logger)
-                    .await,
-            ) as Arc<dyn BlobstorePutOps>
-        } else {
-            store
-        };
+            let store = if blobstore_options.throttle_options.has_throttle() {
+                Arc::new(
+                    ThrottledBlob::new(store, blobstore_options.throttle_options)
+                        .watched(logger)
+                        .await,
+                ) as Arc<dyn BlobstorePutOps>
+            } else {
+                store
+            };
 
-        // For stores with components only set chaos on their components
-        let store = if !has_components && blobstore_options.chaos_options.has_chaos() {
-            Arc::new(ChaosBlobstore::new(store, blobstore_options.chaos_options))
-                as Arc<dyn BlobstorePutOps>
+            if blobstore_options.chaos_options.has_chaos() {
+                Arc::new(ChaosBlobstore::new(store, blobstore_options.chaos_options))
+                    as Arc<dyn BlobstorePutOps>
+            } else {
+                store
+            }
         } else {
+            // Already applied the wrappers inside the store
             store
         };
 
