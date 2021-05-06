@@ -30,6 +30,7 @@ use futures::{
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameMaybeRejected, BlameRejected},
+    blame_v2::BlameV2,
     BlameId, ChangesetId, FileUnodeId, MPath,
 };
 use slog::Logger;
@@ -47,6 +48,13 @@ const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_PRINT_ERRORS: &str = "print-errors";
 const ARG_LINE: &str = "line";
+const ARG_BLAME_V2: &str = "blame-v2";
+
+#[derive(Clone, Debug)]
+enum EitherBlame {
+    V1(Blame),
+    V2(BlameV2),
+}
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
@@ -61,6 +69,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .help("show line number at the first appearance")
         .short("l")
         .long("line-number")
+        .takes_value(false)
+        .required(false);
+    let blame_v2_arg = Arg::with_name(ARG_BLAME_V2)
+        .help("use blame-v2")
+        .long("blame-v2")
         .takes_value(false)
         .required(false);
 
@@ -81,7 +94,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(COMMAND_COMPUTE)
                 .arg(line_number_arg.clone())
                 .arg(csid_arg.clone())
-                .arg(path_arg.clone()),
+                .arg(path_arg.clone())
+                .arg(blame_v2_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_FIND_REJECTED)
@@ -120,8 +134,9 @@ pub async fn subcommand_blame<'a>(
         (COMMAND_COMPUTE, Some(matches)) => {
             let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
+            let blame_v2 = matches.is_present(ARG_BLAME_V2);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
-                subcommand_compute_blame(ctx, repo, csid, path, line_number)
+                subcommand_compute_blame(ctx, repo, csid, path, line_number, blame_v2)
             })
             .await
         }
@@ -196,7 +211,8 @@ async fn subcommand_show_blame(
     line_number: bool,
 ) -> Result<(), Error> {
     let (content, blame) = fetch_blame(&ctx, &repo, csid, path).await?;
-    let annotate = blame_hg_annotate(ctx, repo, content, blame, line_number).await?;
+    let annotate =
+        blame_hg_annotate(ctx, repo, content, EitherBlame::V1(blame), line_number).await?;
     println!("{}", annotate);
     Ok(())
 }
@@ -275,13 +291,14 @@ async fn diff(
     Ok(String::from_utf8_lossy(&diff).into_owned())
 }
 
-/// Recalculate balme by going through whole history of a file
+/// Recalculate blame by going through whole history of a file
 async fn subcommand_compute_blame(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
     path: MPath,
     line_number: bool,
+    blame_v2: bool,
 ) -> Result<(), Error> {
     let blobstore = repo.get_blobstore().boxed();
     let blame_mapping = BlameRoot::default_mapping(&ctx, &repo)?;
@@ -318,7 +335,7 @@ async fn subcommand_compute_blame(
                         .map(|unode_id| (*unode_id, path.clone()))
                         .chain(copy_parent)
                         .collect();
-                    Ok(((csid, path, file_unode_id), parents))
+                    Ok::<_, Error>(((csid, path, file_unode_id), parents))
                 }
                 .boxed()
             }
@@ -326,7 +343,7 @@ async fn subcommand_compute_blame(
         {
             |
                 (csid, path, file_unode_id),
-                parents: Iter<Result<(bytes_05::Bytes, Blame), BlameRejected>>,
+                parents: Iter<Result<(bytes_05::Bytes, EitherBlame), BlameRejected>>,
             | {
                 cloned!(ctx, repo);
                 async move {
@@ -334,14 +351,36 @@ async fn subcommand_compute_blame(
                         fetch_file_full_content(&ctx, &repo, file_unode_id, blame_options).await?;
                     match content {
                         Err(rejected) => Ok(Err(rejected)),
-                        Ok(content) => {
+                        Ok(content) => if blame_v2 {
                             let parents = parents
                                 .into_iter()
-                                .filter_map(|result| result.ok())
+                                .filter_map(|parent| match parent {
+                                    Ok((content, EitherBlame::V2(blame))) => Some((content, blame)),
+                                    _ => None,
+                                })
                                 .collect();
-                            Blame::from_parents(csid, content.clone(), path.clone(), parents)
-                                .map(move |blame| Ok((content, blame)))
+                            Ok(EitherBlame::V2(BlameV2::new(
+                                csid,
+                                path.clone(),
+                                content.clone(),
+                                parents,
+                            )?))
+                        } else {
+                            let parents = parents
+                                .into_iter()
+                                .filter_map(|parent| match parent {
+                                    Ok((content, EitherBlame::V1(blame))) => Some((content, blame)),
+                                    _ => None,
+                                })
+                                .collect();
+                            Ok(EitherBlame::V1(Blame::from_parents(
+                                csid,
+                                content.clone(),
+                                path.clone(),
+                                parents,
+                            )?))
                         }
+                        .map(move |blame| Ok((content, blame))),
                     }
                 }
                 .boxed()
@@ -360,31 +399,59 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     ctx: CoreContext,
     repo: BlobRepo,
     content: C,
-    blame: Blame,
+    blame: EitherBlame,
     show_line_number: bool,
 ) -> Result<String, Error> {
     if content.as_ref().is_empty() {
         return Ok(String::new());
     }
-
-    let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
-    let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
-    let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
-
     let content = String::from_utf8_lossy(content.as_ref());
     let mut result = String::new();
-    for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
-        let hg_csid = mapping
-            .get(&csid)
-            .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
-        result.push_str(&hg_csid.to_string()[..12]);
-        result.push(':');
-        if show_line_number {
-            write!(&mut result, "{:>4}:", line_number + 1)?;
+
+    match blame {
+        EitherBlame::V1(blame) => {
+            let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
+            let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
+            let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
+
+            for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
+                let hg_csid = mapping
+                    .get(&csid)
+                    .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
+                result.push_str(&hg_csid.to_string()[..12]);
+                result.push(':');
+                if show_line_number {
+                    write!(&mut result, "{:>4}:", line_number + 1)?;
+                }
+                result.push(' ');
+                result.push_str(line);
+                result.push('\n');
+            }
         }
-        result.push(' ');
-        result.push_str(line);
-        result.push('\n');
+        EitherBlame::V2(blame) => {
+            let csids: Vec<_> = blame.changeset_ids()?.collect();
+            let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
+            let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
+
+            for (line, blame_line) in content.lines().zip(blame.lines()?) {
+                let hg_csid = mapping.get(blame_line.changeset_id).ok_or_else(|| {
+                    format_err!("unresolved bonsai csid: {}", blame_line.changeset_id)
+                })?;
+                write!(
+                    result,
+                    "{:>5} ",
+                    format!("#{}", blame_line.changeset_index + 1)
+                )?;
+                result.push_str(&hg_csid.to_string()[..12]);
+                result.push(':');
+                if show_line_number {
+                    write!(&mut result, "{:>4}:", blame_line.origin_offset + 1)?;
+                }
+                result.push(' ');
+                result.push_str(line);
+                result.push('\n');
+            }
+        }
     }
 
     Ok(result)
