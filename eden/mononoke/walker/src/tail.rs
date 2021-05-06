@@ -17,7 +17,7 @@ use crate::walk::{
 
 use anyhow::{anyhow, bail, Error};
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
-use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP, MIN_FETCH_STEP};
+use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerivable;
@@ -222,27 +222,19 @@ where
         let chunk_params = tail_params
             .public_changeset_chunk_size
             .map(|chunk_size| {
-                // Don't SQL fetch in really small or large chunks
-                let chunk_size = chunk_size as u64;
-                let fetch_step = if chunk_size < MIN_FETCH_STEP {
-                    MIN_FETCH_STEP
-                } else if chunk_size > MAX_FETCH_STEP {
-                    MAX_FETCH_STEP
-                } else {
-                    chunk_size
-                };
                 let heads_fetcher = PublicChangesetBulkFetch::new(
                     repo_params.repo.get_changesets_object(),
                     repo_params.repo.get_phases(),
                 )
                 .with_read_from_master(false)
-                .with_step(fetch_step);
+                .with_step(MAX_FETCH_STEP);
                 heads_fetcher.map(|v| (chunk_size as usize, v))
             })
             .transpose()?;
 
         let is_chunking = chunk_params.is_some();
         let mut run_start = Timestamp::now();
+        let mut chunk_smaller_than_fetch = false;
 
         // Get the chunk stream and whether the bounds it covers are contiguous
         let (contiguous_bounds, mut best_bounds, chunk_stream) = if let Some((
@@ -250,6 +242,9 @@ where
             heads_fetcher,
         )) = &chunk_params
         {
+            if *chunk_size < MAX_FETCH_STEP as usize {
+                chunk_smaller_than_fetch = true;
+            }
             let (mut lower, mut upper) = heads_fetcher.get_repo_bounds(&ctx).await?;
             if let Some(lower_override) = tail_params.repo_lower_bound_override {
                 lower = lower_override;
@@ -348,6 +343,9 @@ where
             chunk_num = checkpoint.update_chunk_number;
         }
 
+        let mut last_chunk_low = None;
+        let mut last_chunk_upper = None;
+
         futures::pin_mut!(chunk_stream);
         while let Some(chunk_members) = chunk_stream.try_next().await? {
             if is_chunking && chunk_members.is_empty() {
@@ -360,13 +358,33 @@ where
             let mut chunk_upper: u64 = 0;
             let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
-                .map(|((cs_id, _id), (fetch_low, fetch_upper))| {
-                    chunk_low = min(chunk_low, fetch_low);
-                    chunk_upper = max(chunk_upper, fetch_upper);
+                .map(|((cs_id, id), (fetch_low, fetch_upper))| {
+                    if chunk_smaller_than_fetch {
+                        // Adjust the bounds so it doesn't exceed previous chunk
+                        if tail_params.chunk_direction == Direction::NewestFirst {
+                            chunk_low = min(chunk_low, id);
+                            chunk_upper = max(chunk_upper, fetch_upper);
+                            if let Some(last_chunk_low) = last_chunk_low {
+                                chunk_upper = min(last_chunk_low, chunk_upper)
+                            }
+                        } else {
+                            chunk_low = min(chunk_low, fetch_low);
+                            if let Some(last_chunk_upper) = last_chunk_upper {
+                                chunk_low = max(last_chunk_upper, chunk_low)
+                            }
+                            chunk_upper = max(chunk_upper, fetch_upper);
+                        }
+                    } else {
+                        // no need to adjust
+                        chunk_low = min(chunk_low, fetch_low);
+                        chunk_upper = max(chunk_upper, fetch_upper);
+                    }
                     cs_id
                 })
                 .collect();
 
+            last_chunk_low.replace(chunk_low);
+            last_chunk_upper.replace(chunk_upper);
             cloned!(repo_params.logger);
             if is_chunking {
                 info!(logger, #log::CHUNKING, "Starting chunk {} with bounds ({}, {})", chunk_num, chunk_low, chunk_upper);
