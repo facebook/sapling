@@ -164,7 +164,7 @@ async fn run<'a>(
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
     let dbconfig = repo_config.storage_config.metadata.clone();
-    let scuba_sample = matches.scuba_sample_builder()?;
+    let scuba_sample = matches.scuba_sample_builder();
     let validation_helpers = get_validation_helpers(
         fb,
         ctx.clone(),

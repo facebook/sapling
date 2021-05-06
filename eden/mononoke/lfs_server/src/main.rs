@@ -241,11 +241,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
-    let mut scuba_logger = matches.scuba_sample_builder()?;
+    let scuba_logger = matches.scuba_sample_builder();
 
     let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
-
-    scuba_logger.add_common_server_data();
 
     let test_idents = idents_from_values(matches.values_of(ARG_TEST_IDENTITY))?;
     let disable_acl_checker = matches.is_present(ARG_DISABLE_ACL_CHECKER);

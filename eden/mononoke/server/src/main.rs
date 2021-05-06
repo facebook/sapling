@@ -149,8 +149,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let blobstore_options = matches.blobstore_options().clone();
     let env = matches.environment();
 
-    let mut scuba = matches.scuba_sample_builder()?;
-    scuba.add_common_server_data();
+    let scuba = matches.scuba_sample_builder();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

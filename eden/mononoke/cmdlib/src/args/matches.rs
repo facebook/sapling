@@ -102,6 +102,9 @@ impl<'a> MononokeMatches<'a> {
 
         let logger = create_logger(&matches, root_log_drain, observability_context.clone())
             .context("Failed to create logger")?;
+        let scuba_sample_builder =
+            create_scuba_sample_builder(fb, &matches, &app_data, &observability_context)
+                .context("Failed to create scuba sample builder")?;
 
         let caching = parse_and_init_cachelib(fb, &matches, app_data.cachelib_settings.clone());
 
@@ -127,6 +130,7 @@ impl<'a> MononokeMatches<'a> {
             environment: Arc::new(MononokeEnvironment {
                 fb,
                 logger,
+                scuba_sample_builder,
                 config_store,
                 caching,
                 observability_context,
@@ -177,31 +181,9 @@ impl<'a> MononokeMatches<'a> {
         &self.environment.readonly_storage
     }
 
-    pub fn scuba_sample_builder(&self) -> Result<MononokeScubaSampleBuilder> {
-        let mut scuba_logger = if let Some(scuba_dataset) = self.value_of("scuba-dataset") {
-            MononokeScubaSampleBuilder::new(self.environment.fb, scuba_dataset)
-        } else if let Some(default_scuba_dataset) = self.app_data.default_scuba_dataset.as_ref() {
-            if self.is_present("no-default-scuba-dataset") {
-                MononokeScubaSampleBuilder::with_discard()
-            } else {
-                MononokeScubaSampleBuilder::new(self.environment.fb, default_scuba_dataset)
-            }
-        } else {
-            MononokeScubaSampleBuilder::with_discard()
-        };
-        if let Some(scuba_log_file) = self.value_of("scuba-log-file") {
-            scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
-        }
-        let scuba_logger = scuba_logger
-            .with_observability_context(self.environment.observability_context.clone())
-            .with_seq("seq");
-
-
-        // TODO: add_common_server_data?
-
-        Ok(scuba_logger)
+    pub fn scuba_sample_builder(&self) -> MononokeScubaSampleBuilder {
+        self.environment.scuba_sample_builder.clone()
     }
-
 
     // Delegate some common methods to save on .as_ref() calls
     pub fn is_present<S: AsRef<str>>(&self, name: S) -> bool {
@@ -356,6 +338,35 @@ fn create_logger(
     };
 
     Ok(logger)
+}
+
+fn create_scuba_sample_builder(
+    fb: FacebookInit,
+    matches: &ArgMatches<'_>,
+    app_data: &MononokeAppData,
+    observability_context: &ObservabilityContext,
+) -> Result<MononokeScubaSampleBuilder> {
+    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
+        MononokeScubaSampleBuilder::new(fb, scuba_dataset)
+    } else if let Some(default_scuba_dataset) = app_data.default_scuba_dataset.as_ref() {
+        if matches.is_present("no-default-scuba-dataset") {
+            MononokeScubaSampleBuilder::with_discard()
+        } else {
+            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
+        }
+    } else {
+        MononokeScubaSampleBuilder::with_discard()
+    };
+    if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
+        scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
+    }
+    let mut scuba_logger = scuba_logger
+        .with_observability_context(observability_context.clone())
+        .with_seq("seq");
+
+    scuba_logger.add_common_server_data();
+
+    Ok(scuba_logger)
 }
 
 fn parse_readonly_storage(matches: &ArgMatches<'_>) -> Result<ReadOnlyStorage, Error> {

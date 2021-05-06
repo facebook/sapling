@@ -429,8 +429,7 @@ async fn do_main(
 
     service.set_ready();
 
-    let mut scuba = matches.scuba_sample_builder()?;
-    scuba.add_common_server_data();
+    let scuba = matches.scuba_sample_builder();
 
     let ctx = &ctx;
     let scuba = &scuba;

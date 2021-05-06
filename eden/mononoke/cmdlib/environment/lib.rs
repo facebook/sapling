@@ -11,6 +11,7 @@ use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
 use rendezvous::RendezVousOptions;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tokio::runtime::Runtime;
@@ -32,6 +33,7 @@ pub enum Caching {
 pub struct MononokeEnvironment {
     pub fb: FacebookInit,
     pub logger: Logger,
+    pub scuba_sample_builder: MononokeScubaSampleBuilder,
     pub config_store: ConfigStore,
     pub caching: Caching,
     pub observability_context: ObservabilityContext,

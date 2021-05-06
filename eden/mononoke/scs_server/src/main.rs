@@ -100,9 +100,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_store = matches.config_store();
     let repo_configs = load_repo_configs(config_path, config_store)?;
 
-    let mut scuba_builder = matches.scuba_sample_builder()?;
-
-    scuba_builder.add_common_server_data();
+    let scuba_builder = matches.scuba_sample_builder();
 
     let repo_factory = RepoFactory::new(
         matches.environment().clone(),

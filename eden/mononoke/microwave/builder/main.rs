@@ -80,8 +80,7 @@ async fn do_main<'a>(
     matches: &MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let mut scuba = matches.scuba_sample_builder()?;
-    scuba.add_common_server_data();
+    let scuba = matches.scuba_sample_builder();
 
     let config_store = matches.config_store();
 

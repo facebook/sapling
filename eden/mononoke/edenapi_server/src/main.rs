@@ -97,7 +97,7 @@ async fn start(fb: FacebookInit, logger: Logger, matches: &MononokeMatches<'_>) 
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
-    let mut scuba_logger = matches.scuba_sample_builder()?;
+    let scuba_logger = matches.scuba_sample_builder();
 
     debug!(logger, "Initializing Mononoke API");
     let repo_factory = RepoFactory::new(
@@ -117,8 +117,6 @@ async fn start(fb: FacebookInit, logger: Logger, matches: &MononokeMatches<'_>) 
     // Global flag that the main loop will set to True when the server
     // has been signalled to gracefully shut down.
     let will_exit = Arc::new(AtomicBool::new(false));
-
-    scuba_logger.add_common_server_data();
 
     let handler = edenapi_service::build(
         fb,

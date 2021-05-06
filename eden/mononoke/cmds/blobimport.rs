@@ -535,7 +535,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches(fb)?;
 
     let logger = matches.logger();
-    let scuba = matches.scuba_sample_builder()?;
+    let scuba = matches.scuba_sample_builder();
 
     let ctx = &SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
 

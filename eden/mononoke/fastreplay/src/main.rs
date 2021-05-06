@@ -475,8 +475,7 @@ async fn do_main<'a>(
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {
-    let mut scuba = matches.scuba_sample_builder()?;
-    scuba.add_common_server_data();
+    let scuba = matches.scuba_sample_builder();
 
     // Do this earlier to show errors before we bootstrap repositories
     let opts = ReplayOpts::parse(&matches)?;
