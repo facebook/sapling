@@ -39,6 +39,8 @@ use crate::ops::IdConvert;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
 use crate::Id;
+#[cfg(test)]
+pub(crate) use test_dag::ProtocolMonitor;
 
 // Example from segmented-changelog.pdf
 // - DAG1: page 10

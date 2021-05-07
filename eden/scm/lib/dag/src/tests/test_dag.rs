@@ -171,9 +171,9 @@ impl TestDag {
     }
 }
 
-struct ProtocolMonitor {
-    inner: Box<dyn RemoteIdConvertProtocol>,
-    output: Arc<Mutex<Vec<String>>>,
+pub(crate) struct ProtocolMonitor {
+    pub(crate) inner: Box<dyn RemoteIdConvertProtocol>,
+    pub(crate) output: Arc<Mutex<Vec<String>>>,
 }
 
 #[async_trait::async_trait]

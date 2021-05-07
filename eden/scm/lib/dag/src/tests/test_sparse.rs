@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use super::ProtocolMonitor;
 use super::TestDag;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -13,14 +14,15 @@ use crate::ops::IdConvert;
 use crate::Id;
 use crate::VertexName;
 use futures::TryStreamExt;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_sparse_dag() {
     // In this test, we have 3 dags:
     // - server1: A complete dag. Emulates server-side.
     // - server2: An isomorphism of server1. But uses different ids.
-    // - client3: A sparse dag. Emulates client-side. Cloned from server2.
-    //   Speaks remote protocol with server1.
+    // - client: A sparse dag. Emulates client-side. Cloned from server2.
+    //   Speaks remote protocol with server1 or server2.
     let mut server1 = TestDag::new();
     server1.drawdag(
         r#"
@@ -39,13 +41,14 @@ async fn test_sparse_dag() {
     server2.drawdag("A-B-C G-C", &["C"]);
     server2.drawdag("C-D-E-M-X J-E", &["M"]);
 
-    let client = server2.client().await;
+    for opt_remote_dag in vec![Some(server1.dag), None] {
+        let mut client = server2.client().await;
 
-    // Note: some ids (ex. 11) does not have matching name in its IdMap.
-    // The server-side non-master (X) is not cloned.
-    assert_eq!(
-        format!("{:?}", &client.dag),
-        r#"Max Level: 0
+        // Note: some ids (ex. 11) does not have matching name in its IdMap.
+        // The server-side non-master (X) is not cloned.
+        assert_eq!(
+            format!("{:?}", &client.dag),
+            r#"Max Level: 0
  Level 0
   Group Master:
    Next Free Id: 13
@@ -60,31 +63,41 @@ async fn test_sparse_dag() {
    Next Free Id: N0
    Segments: 0
 "#
-    );
+        );
 
-    // With remote protocol. Be able to resolve id <-> names.
-    assert_eq!(client.dag.vertex_name(Id(9)).await.unwrap(), "C".into());
-    assert_eq!(client.dag.vertex_id("E".into()).await.unwrap(), Id(11));
+        // The remote protocol could be backed by either server1 or server2.
+        if let Some(remote_dag) = opt_remote_dag {
+            let protocol = ProtocolMonitor {
+                inner: Box::new(remote_dag),
+                output: client.output.clone(),
+            };
+            client.dag.set_remote_protocol(Arc::new(protocol));
+        }
 
-    // NameSet iteration works too, and resolve Ids in batch.
-    let all: Vec<VertexName> = {
-        let all = client.dag.all().await.unwrap();
-        let iter = all.iter().await.unwrap();
-        iter.try_collect().await.unwrap()
-    };
-    assert_eq!(
-        format!("{:?}", all),
-        "[M, E, D, C, B, J, L, K, I, H, G, F, A]"
-    );
+        // With remote protocol. Be able to resolve id <-> names.
+        assert_eq!(client.dag.vertex_name(Id(9)).await.unwrap(), "C".into());
+        assert_eq!(client.dag.vertex_id("E".into()).await.unwrap(), Id(11));
 
-    assert_eq!(
-        client.output(),
-        [
-            "resolve paths: [D~1]",
-            "resolve names: [E], heads: [M]",
-            "resolve paths: [L~1, I~1, I~3(+2)]"
-        ]
-    );
+        // NameSet iteration works too, and resolve Ids in batch.
+        let all: Vec<VertexName> = {
+            let all = client.dag.all().await.unwrap();
+            let iter = all.iter().await.unwrap();
+            iter.try_collect().await.unwrap()
+        };
+        assert_eq!(
+            format!("{:?}", all),
+            "[M, E, D, C, B, J, L, K, I, H, G, F, A]"
+        );
+
+        assert_eq!(
+            client.output(),
+            [
+                "resolve paths: [D~1]",
+                "resolve names: [E], heads: [M]",
+                "resolve paths: [L~1, I~1, I~3(+2)]"
+            ]
+        );
+    }
 }
 
 #[tokio::test]
