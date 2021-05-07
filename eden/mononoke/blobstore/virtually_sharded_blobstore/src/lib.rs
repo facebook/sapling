@@ -524,7 +524,7 @@ mod test {
         static INSTANCE: OnceCell<()> = OnceCell::new();
         INSTANCE.get_or_init(|| {
             let config = cachelib::LruCacheConfig::new(64 * 1024 * 1024);
-            cachelib::init_cache_once(fb, config).unwrap();
+            cachelib::init_cache(fb, config).unwrap();
         });
 
         let blob_pool = cachelib::get_or_create_volatile_pool(blob_pool_name, 8 * 1024 * 1024)?;

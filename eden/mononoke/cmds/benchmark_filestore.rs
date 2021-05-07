@@ -244,7 +244,7 @@ async fn get_blob<'a>(
             #[cfg(fbcode_build)]
             {
                 let cache_size_bytes = size.parse()?;
-                cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
+                cachelib::init_cache(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
 
                 let presence_pool = cachelib::get_or_create_pool(
                     "presence",

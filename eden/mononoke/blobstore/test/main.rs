@@ -248,7 +248,7 @@ blobstore_test_impl! {
 #[cfg(fbcode_build)]
 fn create_cache(fb: FacebookInit) -> Result<(), Error> {
     let config = cachelib::LruCacheConfig::new(128 * 1024 * 1024);
-    cachelib::init_cache_once(fb, config)?;
+    cachelib::init_cache(fb, config)?;
     Ok(())
 }
 
