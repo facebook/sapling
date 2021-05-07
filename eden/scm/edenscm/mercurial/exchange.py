@@ -566,7 +566,9 @@ def _findblobs(pushop):
             basemf = mfread(nullid)
         difffiles = mf.diff(basemf)
         # ex. {'A': ((newnode, ''), (None, ''))}
-        for path, ((newnode, _newflag), (oldnode, _oldflag)) in sorted(difffiles.items()):
+        for path, ((newnode, _newflag), (oldnode, _oldflag)) in sorted(
+            difffiles.items()
+        ):
             if newnode != oldnode and newnode is not None:
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode
