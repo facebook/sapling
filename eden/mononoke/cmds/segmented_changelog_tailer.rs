@@ -34,6 +34,7 @@ const REPO_ARG: &str = "repo";
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeAppBuilder::new("Updates segmented changelog assets.")
+        .with_scuba_logging_args()
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()
