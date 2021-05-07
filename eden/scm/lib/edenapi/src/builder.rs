@@ -25,11 +25,18 @@ use crate::errors::{ConfigError, EdenApiError};
 use crate::EdenApi;
 
 /// External function that constructs other kinds of `EdenApi` from config.
-static CUSTOM_BUILD_FUNCS: Lazy<RwLock<Vec<BuildFunc>>> = Lazy::new(Default::default);
-
-/// Function that takes config and outputs a built `EdenApi`, or `None` to
-/// fallback to the next build function.
-pub type BuildFunc = fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>;
+static CUSTOM_BUILD_FUNCS: Lazy<
+    RwLock<
+        Vec<
+            Box<
+                dyn (Fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>)
+                    + Send
+                    + Sync
+                    + 'static,
+            >,
+        >,
+    >,
+> = Lazy::new(Default::default);
 
 /// Builder for creating new EdenAPI clients.
 pub struct Builder<'a> {
@@ -77,8 +84,19 @@ impl<'a> Builder<'a> {
     }
 
     /// Register a customized builder that can produce a non-HTTP `EdenApi` from config.
-    pub fn register_customize_build_func(func: BuildFunc) {
-        CUSTOM_BUILD_FUNCS.write().push(func)
+    pub fn register_customize_build_func<F>(func: F)
+    where
+        F: (Fn(&dyn configmodel::Config) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError>)
+            + Send
+            + Sync
+            + 'static,
+        F: Copy,
+    {
+        tracing::debug!(
+            "registered {} to edenapi Builder",
+            std::any::type_name::<F>()
+        );
+        CUSTOM_BUILD_FUNCS.write().push(Box::new(func))
     }
 }
 

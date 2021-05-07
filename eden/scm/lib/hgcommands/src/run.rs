@@ -13,8 +13,6 @@ use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use configparser::config::ConfigSet;
-use configparser::configmodel::ConfigExt;
-use eagerepo::EagerRepo;
 use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -556,18 +554,7 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
 
 fn setup_eager_repo() {
     static REGISTERED: Lazy<()> = Lazy::new(|| {
-        edenapi::Builder::register_customize_build_func(|config| {
-            for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
-                if let Ok(value) = config.get_or_default::<String>(section, name) {
-                    if let Some(path) = EagerRepo::url_to_dir(&value) {
-                        let repo = EagerRepo::open(&path)
-                            .map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
-                        return Ok(Some(Arc::new(repo)));
-                    }
-                }
-            }
-            Ok(None)
-        })
+        edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config)
     });
 
     *REGISTERED

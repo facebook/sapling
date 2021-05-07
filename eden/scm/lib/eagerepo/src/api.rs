@@ -6,12 +6,15 @@
  */
 
 use crate::EagerRepo;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagExportCloneData;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
 use dag::Vertex;
+use edenapi::configmodel;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashToLocationResponse;
@@ -40,6 +43,7 @@ use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
 use std::collections::HashSet;
+use std::sync::Arc;
 use tracing::debug;
 use tracing::trace;
 
@@ -414,6 +418,22 @@ impl EagerRepo {
             }),
         }
     }
+}
+
+/// Optionally build `EdenApi` from config.
+///
+/// If the config does not specify eagerepo-based `EdenApi`, return `Ok(None)`.
+pub fn edenapi_from_config(config: &dyn Config) -> edenapi::Result<Option<Arc<dyn EdenApi>>> {
+    for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
+        if let Ok(value) = config.get_or_default::<String>(section, name) {
+            if let Some(path) = EagerRepo::url_to_dir(&value) {
+                let repo =
+                    EagerRepo::open(&path).map_err(|e| edenapi::EdenApiError::Other(e.into()))?;
+                return Ok(Some(Arc::new(repo)));
+            }
+        }
+    }
+    Ok(None)
 }
 
 fn default_response_meta() -> ResponseMeta {
