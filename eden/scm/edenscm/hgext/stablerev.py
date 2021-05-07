@@ -30,10 +30,11 @@ from edenscm.mercurial import commands, encoding, error, json, pycompat, registr
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.revsetlang import getargsdict, getstring
 from edenscm.mercurial.smartset import baseset
-
+from edenscm.mercurial.templatekw import hybridlist
 
 revsetpredicate = registrar.revsetpredicate()
 namespacepredicate = registrar.namespacepredicate()
+templatekeyword = registrar.templatekeyword()
 
 # revspecs can be hashes, rev numbers, bookmark/tag names, etc., so this should
 # be permissive:
@@ -59,39 +60,6 @@ def _validatetarget(ui, target):
     return target
 
 
-def _execute(ui, repo, target=None):
-    script = ui.config("stablerev", "script")
-    if script is None:
-        raise error.ConfigError(_("must set stablerev.script"))
-
-    # Pass '--target $TARGET' for compatibility.
-    # XXX: Remove this once the new code has been rolled out for some time.
-    if target is not None:
-        script += " --target %s" % util.shellquote(target)
-    try:
-        ui.debug("repo-specific script for stable: %s\n" % script)
-        reporoot = repo.wvfs.join("")
-        env = encoding.environ.copy()
-        env.update({"REAL_CWD": pycompat.getcwd(), "HG_ROOT": reporoot})
-        if target is not None:
-            env["TARGET"] = target
-        ui.debug("setting current working directory to: %s\n" % reporoot)
-        p = subprocess.Popen(
-            script,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=util.closefds,
-            cwd=reporoot,
-            env=env,
-        )
-        res = p.communicate()
-        ui.debug("stable script returns: %r\n" % (res,))
-        return (pycompat.decodeutf8(res[0]), pycompat.decodeutf8(res[1]))
-    except subprocess.CalledProcessError as e:
-        raise error.Abort(_("couldn't fetch stable rev: %s") % e)
-
-
 def _validaterevspec(ui, node):
     """Verifies the given node looks like a revspec"""
     script = ui.config("stablerev", "script")
@@ -106,10 +74,18 @@ def _validaterevspec(ui, node):
 
 
 def _executeandparse(ui, repo, target=None):
-    stdout, stderr = _execute(ui, repo, target)
+    script = ui.config("stablerev", "script")
+    if script is None:
+        raise error.ConfigError(_("must set stablerev.script"))
 
-    # The stderr can optionally provide useful context, so print it.
-    ui.write_err(stderr)
+    # Pass '--target $TARGET' for compatibility.
+    # XXX: Remove this once the new code has been rolled out for some time.
+    env = {}
+    if target is not None:
+        script += " --target %s" % util.shellquote(target)
+        env["TARGET"] = target
+
+    stdout = _executescript(script, repo, env)
 
     try:
         # Prefer JSON output first.
@@ -146,23 +122,25 @@ def _lookup(ui, repo, revspec, trypull=False):
 def getstablerev(repo, subset, x):
     """Returns the "stable" revision.
 
-    The script to run is set via config::
+    .. container:: verbose
 
-      [stablerev]
-      script = scripts/get_stable_rev.py
+        The script to run is set via config::
 
-    The revset takes an optional "target" argument that is passed to the
-    script (as `--target $TARGET`). This argumement can be made `optional`,
-    `required`, or `forbidden`::
+            [stablerev]
+            script = scripts/get_stable_rev.py
 
-      [stablerev]
-      targetarg = forbidden
+        The revset takes an optional "target" argument that is passed to the
+        script (as `--target $TARGET`). This argumement can be made `optional`,
+        `required`, or `forbidden`::
 
-    The revset can automatically pull if the returned commit doesn't exist
-    locally::
+            [stablerev]
+            targetarg = forbidden
 
-      [stablerev]
-      pullonmissing = False
+        The revset can automatically pull if the returned commit doesn't exist
+        locally::
+
+            [stablerev]
+            pullonmissing = False
     """
     ui = repo.ui
     target = None
@@ -176,3 +154,83 @@ def getstablerev(repo, subset, x):
     commitctx = _lookup(ui, repo, revspec, trypull=trypull)
 
     return subset & baseset([commitctx.rev()], repo=repo)
+
+
+@templatekeyword("stables")
+def stables(repo, ctx, *args, **kwargs):
+    """List of strings. Any stables associated with this revision.
+
+    .. container:: verbose
+
+        To get the list of stables, this calls stablerev.stablesscript with
+        the commit nodeid. The called command is expected to output json with
+        the following structure::
+
+            {
+                "<nodeid>": ["<stables>", ...]
+            }
+
+        stablerev.stablesscript should be a shell command with {nodeid} located in the
+        command where the nodeid should be substituted::
+
+            [stablerev]
+            stablesscript = identify_stables {nodeid}
+    """
+    return hybridlist(_lookupstables(repo, ctx), name="stable")
+
+
+def _lookupstables(repo, ctx):
+    ui = repo.ui
+
+    stablesscript = ui.config("stablerev", "stablesscript")
+    if stablesscript is None:
+        raise error.ConfigError(_("must set stablerev.stablesscript"))
+
+    stablesscript = stablesscript.format(nodeid=util.shellquote(ctx.hex()))
+
+    stdout = _executescript(stablesscript, repo)
+
+    try:
+        committostables = json.loads(stdout)
+    except Exception as e:
+        raise error.Abort(_("couldn't parse stablesscript stdout as json: %s") % e)
+
+    return committostables.get(ctx.hex(), [])
+
+
+def _executescript(script, repo, extraenv=None):
+    ui = repo.ui
+
+    ui.debug("Executing script: %s\n" % script)
+    reporoot = repo.wvfs.join("")
+
+    env = encoding.environ.copy()
+    env.update({"REAL_CWD": pycompat.getcwd(), "HG_ROOT": reporoot})
+    if extraenv:
+        env.update(extraenv)
+    ui.debug("setting current working directory to: %s\n" % reporoot)
+
+    try:
+        p = subprocess.Popen(
+            args=script,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=util.closefds,
+            cwd=reporoot,
+            env=env,
+        )
+        res = p.communicate()
+    except subprocess.CalledProcessError as e:
+        raise error.Abort(_("error executing script: %s") % e)
+
+    stdout = pycompat.decodeutf8(res[0])
+    stderr = pycompat.decodeutf8(res[1])
+
+    ui.debug("script stdout:\n%s\n" % stdout)
+    ui.write_err(stderr)
+
+    if p.returncode:
+        error.Abort(_("script returned non-zero return code: %d") % p.returncode)
+
+    return stdout

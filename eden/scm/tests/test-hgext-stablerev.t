@@ -57,6 +57,20 @@ An alias can be used for simplicity:
   $ hg log -r stable
   [426bada5c675]: A
 
+Check that stables template keyword works:
+  $ cat <<'EOF' > stables.sh
+  > #!/bin/bash
+  > cat << FOE
+  > {
+  >   "$1": ["stable1", "stable2"]
+  > }
+  > FOE
+  > EOF
+  $ chmod +x stables.sh
+  $ setconfig "stablerev.stablesscript=./stables.sh {nodeid}"
+  $ hg log -r "D" --template "{stables}\n"
+  stable1 stable2
+
 # Auto-pull
 
 Make another repo with "E" (9bc730a19041):
