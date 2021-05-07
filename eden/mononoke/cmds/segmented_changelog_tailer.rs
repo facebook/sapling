@@ -84,7 +84,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let mysql_options = matches.mysql_options();
     let configs = args::load_repo_configs(config_store, matches)?;
     let readonly_storage = ReadOnlyStorage(false);
-    let caching = cachelib::get_volatile_pool("segmented_changelog")?.map(|pool| (ctx.fb, pool));
 
     let mut tasks = Vec::new();
     for (index, reponame) in reponames.into_iter().enumerate() {
@@ -153,7 +152,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             Arc::new(blobrepo.get_blobstore()),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             track_bookmark,
-            caching.clone(),
+            None,
         );
 
         info!(
