@@ -631,17 +631,6 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
           });
 }
 
-folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& manifestID,
-    bool prefetchMetadata) {
-  // Construct the edenTreeID to pass to localStore lookup
-  auto rootTreeHash =
-      HgProxyHash::prepareToStore(RelativePathPiece{}, manifestID).first;
-  return getTreeForRootTreeImpl(commitID, rootTreeHash, prefetchMetadata)
-      .via(serverThreadPool_);
-}
-
 folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
     const Hash& commitID,
     const Hash& rootTreeHash,

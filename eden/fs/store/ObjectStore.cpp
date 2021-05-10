@@ -201,33 +201,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
       });
 }
 
-Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& manifestID,
-    ObjectFetchContext& context) const {
-  XLOG(DBG3) << "getTreeForManifest(" << commitID << ", " << manifestID << ")";
-
-  return backingStore_->getTreeForManifest(commitID, manifestID, context)
-      .via(executor_)
-      .thenValue([treeCache = treeCache_,
-                  commitID,
-                  manifestID,
-                  localStore = localStore_,
-                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
-        if (!tree) {
-          throw std::domain_error(folly::to<string>(
-              "unable to import commit ",
-              commitID.toString(),
-              " with manifest node ",
-              manifestID.toString()));
-        }
-
-        localStore->putTree(tree.get());
-        treeCache->insert(tree);
-        return tree;
-      });
-}
-
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
     const std::vector<Hash>& ids,
     ObjectFetchContext& fetchContext) const {

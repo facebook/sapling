@@ -31,10 +31,6 @@ class EmptyBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context) override;
 };
 } // namespace eden
 } // namespace facebook

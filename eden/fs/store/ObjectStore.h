@@ -130,11 +130,6 @@ class ObjectStore : public IObjectStore,
       const Hash& commitID,
       ObjectFetchContext& context) const override;
 
-  folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context) const override;
-
   folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,
       ObjectFetchContext& context) const override;

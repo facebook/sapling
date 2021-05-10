@@ -45,12 +45,5 @@ SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
       std::domain_error("empty backing store"));
 }
 
-SemiFuture<std::unique_ptr<Tree>> EmptyBackingStore::getTreeForManifest(
-    const Hash& /* commitID */,
-    const Hash& /* manifestID */,
-    ObjectFetchContext& /* context */) {
-  return makeSemiFuture<unique_ptr<Tree>>(
-      std::domain_error("empty backing store"));
-}
 } // namespace eden
 } // namespace facebook

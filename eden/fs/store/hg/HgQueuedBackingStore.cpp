@@ -335,15 +335,6 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeForCommit(
   return backingStore_->getTreeForCommit(commitID, context.prefetchMetadata());
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>>
-HgQueuedBackingStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& manifestID,
-    ObjectFetchContext& context) {
-  return backingStore_->getTreeForManifest(
-      commitID, manifestID, context.prefetchMetadata());
-}
-
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids,
     ObjectFetchContext& context) {

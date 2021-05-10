@@ -40,12 +40,6 @@ folly::SemiFuture<std::unique_ptr<Tree>> ReCasBackingStore::getTreeForCommit(
     ObjectFetchContext& /** context **/) {
   throw std::domain_error("unimplemented");
 };
-folly::SemiFuture<std::unique_ptr<Tree>> ReCasBackingStore::getTreeForManifest(
-    const Hash& /** commitID **/,
-    const Hash& /** manifestID **/,
-    ObjectFetchContext& /** context **/) {
-  throw std::domain_error("unimplemented");
-};
 
 } // namespace eden
 } // namespace facebook

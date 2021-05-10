@@ -123,10 +123,6 @@ class HgQueuedBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,

@@ -79,13 +79,6 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
   return makeFuture(make_shared<Tree>(iter->second));
 }
 
-folly::Future<std::shared_ptr<const Tree>> FakeObjectStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& /* manifestID */,
-    ObjectFetchContext&) const {
-  return getTreeForCommit(commitID);
-}
-
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
     const std::vector<Hash>&,
     ObjectFetchContext&) const {

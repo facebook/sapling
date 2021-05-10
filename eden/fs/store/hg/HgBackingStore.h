@@ -81,10 +81,6 @@ class HgBackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID,
       bool prefetchMetadata);
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      bool prefetchMetadata);
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       std::vector<HgProxyHash> ids,
       ObjectFetchContext& context);

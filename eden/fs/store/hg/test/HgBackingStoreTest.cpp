@@ -152,18 +152,6 @@ TEST_F(
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
 
-TEST_F(HgBackingStoreTest, getTreeForManifest) {
-  auto tree1 =
-      objectStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
-          .get(0ms);
-  auto tree2 = objectStore
-                   ->getTreeForManifest(
-                       commit1, manifest1, ObjectFetchContext::getNullContext())
-                   .get(0ms);
-  EXPECT_EQ(tree1->getHash(), tree2->getHash());
-}
-
 TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
   auto metadataImporter = dynamic_cast<TestMetadataImporter*>(
       &(backingStore->getHgBackingStore().getMetadataImporter()));

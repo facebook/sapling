@@ -192,13 +192,6 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
       });
 }
 
-SemiFuture<std::unique_ptr<Tree>> GitBackingStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& /* manifestID */,
-    ObjectFetchContext& context) {
-  return getTreeForCommit(commitID, context);
-}
-
 git_oid GitBackingStore::hash2Oid(const Hash& hash) {
   git_oid oid;
   static_assert(

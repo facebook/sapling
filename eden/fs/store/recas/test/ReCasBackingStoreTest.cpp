@@ -57,14 +57,3 @@ TEST_F(ReCasBackingStoreTest, getTreeForCommit) {
           .get(kTestTimeout),
       std::domain_error);
 }
-
-TEST_F(ReCasBackingStoreTest, getTreeForManifest) {
-  auto reCasStore = makeReCasBackingStore();
-  EXPECT_THROW(
-      reCasStore
-          ->getTreeForManifest(
-              id, manifest, ObjectFetchContext::getNullContext())
-          .via(&folly::QueuedImmediateExecutor::instance())
-          .get(kTestTimeout),
-      std::domain_error);
-}

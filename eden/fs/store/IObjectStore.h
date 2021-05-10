@@ -49,10 +49,6 @@ class IObjectStore {
   virtual folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) const = 0;
-  virtual folly::Future<std::shared_ptr<const Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context) const = 0;
   virtual folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,
       ObjectFetchContext& context) const = 0;

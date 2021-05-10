@@ -29,10 +29,6 @@ class ReCasBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context) override;
 
  private:
   // Forbidden copy constructor and assignment operator
