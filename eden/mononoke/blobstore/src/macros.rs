@@ -7,7 +7,7 @@
 
 #[macro_export]
 macro_rules! impl_blobstore_conversions {
-    ($ty:ident, $thrift_ty:ident) => {
+    ($ty:ident, $thrift_ty:ty) => {
         impl $crate::private::TryFrom<$crate::private::BlobstoreBytes> for $ty {
             type Error = $crate::private::Error;
 

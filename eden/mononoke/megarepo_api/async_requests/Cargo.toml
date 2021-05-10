@@ -1,5 +1,5 @@
 [package]
-name = "megarepo_error"
+name = "async_requests"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
@@ -8,8 +8,23 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+context = { version = "0.1.0", path = "../../server/context" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
 megarepo_types_thrift = { version = "0.1.0", path = "../if" }
-thiserror = "1.0"
+memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
+rand = { version = "0.7", features = ["small_rng"] }
+requests_table = { version = "0.1.0", path = "../requests_table" }
+source_control = { version = "0.1.0", path = "../../scs/if" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+tokio = { version = "1.4", features = ["full", "test-util"] }
+
+[dev-dependencies]
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

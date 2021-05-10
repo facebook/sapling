@@ -10,6 +10,7 @@
 
 pub use anyhow::anyhow;
 use blobstore::LoadableError;
+use megarepo_types_thrift::StoredError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -112,4 +113,28 @@ macro_rules! bail_internal {
     ($fmt:expr, $($arg:tt)*) => {
         return Err($crate::MegarepoError::InternalError($crate::InternalError($crate::Arc::new($crate::anyhow!($fmt, $($arg)*)))))
     };
+}
+
+impl From<MegarepoError> for StoredError {
+    fn from(other: MegarepoError) -> StoredError {
+        // TODO: preserve error structure
+        match other {
+            MegarepoError::RequestError(e) => StoredError::request_error(format!("{}", e)),
+            MegarepoError::InternalError(e) => StoredError::internal_error(format!("{}", e)),
+        }
+    }
+}
+
+impl From<StoredError> for MegarepoError {
+    fn from(other: StoredError) -> MegarepoError {
+        // TODO: do something better with error structure
+        match other {
+            StoredError::request_error(e) => MegarepoError::request(anyhow!("{}", e)),
+            StoredError::internal_error(e) => MegarepoError::internal(anyhow!("{}", e)),
+            StoredError::UnknownField(x) => MegarepoError::internal(anyhow!(
+                "Failed to deserialize StoredError. UnknownField {}",
+                x
+            )),
+        }
+    }
 }
