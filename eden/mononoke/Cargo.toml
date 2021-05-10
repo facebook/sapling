@@ -328,6 +328,7 @@ members = [
   "repo_import",
   "revset",
   "revset/revset-test-helper",
+  "scs/if",
   "segmented_changelog",
   "segmented_changelog/bench/concurrent_idmap",
   "segmented_changelog/types",
