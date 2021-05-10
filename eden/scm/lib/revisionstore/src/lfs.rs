@@ -1438,7 +1438,7 @@ impl LfsRemote {
             };
 
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
-                "mercurial/revisionstore".to_string()
+                format!("EdenSCM/{}", ::version::VERSION)
             })?;
 
             let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
