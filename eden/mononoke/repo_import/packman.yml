@@ -1,3 +1,6 @@
+options:
+  macro-file: eden/mononoke/repo_import/disable_debuginfo.rpmmacros
+
 packages:
   fb-repo_import:
     summary: A tool to automate repo imports
