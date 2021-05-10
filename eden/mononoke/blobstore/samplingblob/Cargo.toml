@@ -10,6 +10,7 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 blobstore = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 
 [dev-dependencies]

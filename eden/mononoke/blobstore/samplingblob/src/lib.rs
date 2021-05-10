@@ -9,8 +9,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 use std::sync::Arc;
 
@@ -84,6 +85,130 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
     }
 }
 
+/// Used when you need the BlobstoreId (where there is one) in the sample
+pub trait ComponentSamplingHandler: std::fmt::Debug + Send + Sync {
+    fn sample_get(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+        value: Option<&BlobstoreGetData>,
+        inner_id: Option<BlobstoreId>,
+    ) -> Result<()>;
+
+    fn sample_put(
+        &self,
+        _ctx: &CoreContext,
+        _key: &str,
+        _value: &BlobstoreBytes,
+        _inner_id: Option<BlobstoreId>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    fn sample_is_present(
+        &self,
+        _ctx: &CoreContext,
+        _key: &str,
+        _value: bool,
+        _inner_id: Option<BlobstoreId>,
+    ) -> Result<()> {
+        Ok(())
+    }
+}
+
+/// A lower level sampler that can provide BlobstoreId
+#[derive(Debug)]
+pub struct SamplingBlobstorePutOps<T> {
+    inner: T,
+    inner_id: Option<BlobstoreId>,
+    handler: Arc<dyn ComponentSamplingHandler>,
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstorePutOps<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "SamplingBlobstorePutOps<{}, {:?}>",
+            &self.inner, self.inner_id
+        )
+    }
+}
+
+impl<T> SamplingBlobstorePutOps<T> {
+    pub fn new(
+        inner: T,
+        inner_id: Option<BlobstoreId>,
+        handler: Arc<dyn ComponentSamplingHandler>,
+    ) -> Self {
+        Self {
+            inner,
+            inner_id,
+            handler,
+        }
+    }
+}
+
+#[async_trait]
+impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstorePutOps<T> {
+    #[inline]
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let opt_blob = self.inner.get(ctx, key).await?;
+        self.handler
+            .sample_get(ctx, key, opt_blob.as_ref(), self.inner_id)?;
+        Ok(opt_blob)
+    }
+
+    #[inline]
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        let sample_res = self.handler.sample_put(&ctx, &key, &value, self.inner_id);
+        self.inner.put(ctx, key, value).await?;
+        sample_res
+    }
+
+    #[inline]
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        let is_present = self.inner.is_present(ctx, key).await?;
+        self.handler
+            .sample_is_present(ctx, key, is_present, self.inner_id)?;
+        Ok(is_present)
+    }
+}
+
+#[async_trait]
+impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.handler.sample_put(&ctx, &key, &value, self.inner_id)?;
+        self.inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.handler.sample_put(&ctx, &key, &value, self.inner_id)?;
+        self.inner.put_with_status(ctx, key, value).await
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -140,6 +265,75 @@ mod test {
         });
         let wrapper =
             SamplingBlobstore::new(base.clone(), handler.clone() as Arc<dyn SamplingHandler>);
+        let key = "foobar";
+
+        let r = wrapper
+            .put(
+                ctx,
+                key.to_owned(),
+                BlobstoreBytes::from_bytes("test foobar"),
+            )
+            .await;
+        assert!(r.is_ok());
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(!was_sampled);
+        let ctx = ctx.clone_and_sample(sample_this);
+        borrowed!(ctx);
+        let base_present = base.is_present(ctx, key).await.unwrap();
+        assert!(base_present);
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(!was_sampled);
+        let wrapper_present = wrapper.is_present(ctx, key).await.unwrap();
+        assert!(wrapper_present);
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(was_sampled);
+    }
+
+    impl ComponentSamplingHandler for TestSamplingHandler {
+        fn sample_get(
+            &self,
+            ctx: &CoreContext,
+            _key: &str,
+            _value: Option<&BlobstoreGetData>,
+            _inner_id: Option<BlobstoreId>,
+        ) -> Result<()> {
+            self.check_sample(ctx)
+        }
+        fn sample_put(
+            &self,
+            ctx: &CoreContext,
+            _key: &str,
+            _value: &BlobstoreBytes,
+            _inner_id: Option<BlobstoreId>,
+        ) -> Result<()> {
+            self.check_sample(ctx)
+        }
+        fn sample_is_present(
+            &self,
+            ctx: &CoreContext,
+            _key: &str,
+            _value: bool,
+            _inner_id: Option<BlobstoreId>,
+        ) -> Result<()> {
+            self.check_sample(ctx)
+        }
+    }
+
+    #[fbinit::test]
+    async fn test_component_sample_called(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
+        let base = Memblob::default();
+        let sample_this = SamplingKey::new();
+        let handler = Arc::new(TestSamplingHandler {
+            sampled: AtomicBool::new(false),
+            looking_for: sample_this,
+        });
+        let wrapper = SamplingBlobstorePutOps::new(
+            base.clone(),
+            None,
+            handler.clone() as Arc<dyn ComponentSamplingHandler>,
+        );
         let key = "foobar";
 
         let r = wrapper
