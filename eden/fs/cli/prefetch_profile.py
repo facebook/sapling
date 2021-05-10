@@ -65,6 +65,7 @@ def make_prefetch_request(
     revisions: Optional[List[str]],
     predict_revisions: bool,
     prefetch_metadata: bool,
+    background: bool,
 ) -> Optional[Glob]:
     if predict_revisions:
         # The arc and hg commands need to be run in the mount mount, so we need
@@ -145,6 +146,7 @@ def make_prefetch_request(
                 suppressFileList=silent,
                 revisions=byte_revisions,
                 prefetchMetadata=prefetch_metadata,
+                background=background,
             )
         )
 
@@ -154,7 +156,7 @@ def prefetch_profiles(
     checkout: EdenCheckout,
     instance: EdenInstance,
     profiles: List[str],
-    run_in_foreground: bool,
+    background: bool,
     enable_prefetch: bool,
     silent: bool,
     revisions: Optional[List[str]],
@@ -179,76 +181,22 @@ def prefetch_profiles(
             )
         prefetch_metadata = True
 
-    # if we are running in the foreground, skip creating a new process to
-    # run in, just run it here.
-    if run_in_foreground:
-        all_profile_contents = set()
+    all_profile_contents = set()
 
-        for profile in profiles:
-            all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
+    for profile in profiles:
+        all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
 
-        return make_prefetch_request(
-            checkout=checkout,
-            instance=instance,
-            all_profile_contents=all_profile_contents,
-            enable_prefetch=enable_prefetch,
-            silent=silent,
-            revisions=revisions,
-            predict_revisions=predict_revisions,
-            prefetch_metadata=prefetch_metadata,
-        )
-    # if we are running in the background, create a copy of the fetch command
-    # but in the foreground.
-    else:
-        # note that we intentionally skip the verbose flag, since this is
-        # running in the background there is no point to printing, eventually
-        # we might write to a log at which point we would want to forward
-        # the verbose flag
-        fetch_sub_command = get_eden_cli_cmd() + [
-            "prefetch-profile",
-            "fetch",
-            "--checkout",
-            str(checkout.path),
-            # Since we have already backgrounded, the background
-            # process should run the fetch in the foreground.
-            "--foreground",
-        ]
-
-        fetch_sub_command += ["--profile-names"] + profiles
-
-        if revisions is not None:
-            fetch_sub_command += ["--commits"] + revisions
-
-        if predict_revisions:
-            fetch_sub_command += ["--predict-commits"]
-
-        if prefetch_metadata:
-            fetch_sub_command += ["--prefetch-metadata"]
-
-        # we need to say if we are not suppose to prefetch as it is the
-        # default to enable_prefetching
-        if not enable_prefetch:
-            fetch_sub_command += ["--skip-prefetch"]
-
-        creation_flags = 0
-        if sys.platform == "win32":
-            # TODO add subprocess.DETACHED_PROCESS only available in python 3.7+
-            # on windows, currently only 3.6 avialable
-            creation_flags |= subprocess.CREATE_NEW_PROCESS_GROUP
-
-        # Note that we can not just try except to catch warnings, because
-        # warnings do not raise errors so the except would not catch them.
-        # We would have to turn warnings into errors with
-        # `warnings.filterwarnings('error')` and then we could catch them with
-        # try except, but this is the more idomatic way to catch warnings.
-        with warnings.catch_warnings(record=True):
-            subprocess.Popen(
-                fetch_sub_command,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                creationflags=creation_flags,
-            )
-            return None
+    return make_prefetch_request(
+        checkout=checkout,
+        instance=instance,
+        all_profile_contents=all_profile_contents,
+        enable_prefetch=enable_prefetch,
+        silent=silent,
+        revisions=revisions,
+        predict_revisions=predict_revisions,
+        prefetch_metadata=prefetch_metadata,
+        background=background,
+    )
 
 
 def print_prefetch_results(results, print_commits) -> None:
@@ -407,7 +355,7 @@ class ActivateProfileCmd(Subcmd):
                     checkout,
                     instance,
                     [args.profile_name],
-                    run_in_foreground=args.foreground,
+                    background=not args.foreground,
                     enable_prefetch=True,
                     silent=not args.verbose,
                     revisions=None,
@@ -545,7 +493,7 @@ class FetchProfileCmd(Subcmd):
             checkout,
             instance,
             profiles_to_fetch,
-            run_in_foreground=args.foreground,
+            background=not args.foreground,
             enable_prefetch=not args.skip_prefetch,
             silent=not args.verbose,
             revisions=args.commits,
