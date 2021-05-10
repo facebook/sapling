@@ -143,11 +143,19 @@ impl Blobstore for MultiplexedBlobstore {
                 if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
                     return Err(error);
                 }
+                // If a subset of blobstores failed, then we go to the queue. This is a way to
+                // "break the tie" if we had at least one blobstore that said the content didn't
+                // exist but the others failed to give a response: if any of those failing
+                // blobstores has the content, then it *must* be on the queue (it cannot have been
+                // pruned yet because if it was, then it would be in the blobstore that succeeded).
                 let entries = self.queue.get(&ctx, &key).await?;
                 if entries.is_empty() {
                     Ok(false)
                 } else {
-                    Err(error)
+                    // Oh boy. If we found this on the queue but we didn't find it in the
+                    // blobstores, it's possible that the content got written to the blobstore in
+                    // the meantime. To account for this ... we have to check again.
+                    self.blobstore.is_present(ctx, key).await
                 }
             }
         }
