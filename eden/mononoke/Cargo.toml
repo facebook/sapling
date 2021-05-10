@@ -274,6 +274,7 @@ members = [
   "load_limiter",
   "manifest",
   "megarepo_api/async_requests",
+  "megarepo_api/commit_transformation",
   "megarepo_api/configo_client",
   "megarepo_api/if",
   "megarepo_api/megarepo_config",
