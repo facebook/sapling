@@ -372,8 +372,16 @@ pub async fn corpus<'a>(
         output_dir.clone(),
     ));
 
-    let (job_params, per_repo) =
-        setup_common(CORPUS, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
+    let (job_params, per_repo) = setup_common(
+        CORPUS,
+        fb,
+        &logger,
+        Some(sampler.clone()),
+        None,
+        matches,
+        sub_m,
+    )
+    .await?;
 
     let sampling_path_regex = sub_m
         .value_of(SAMPLE_PATH_REGEX_ARG)

@@ -851,7 +851,8 @@ pub async fn validate<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let (job_params, per_repo) = setup_common(VALIDATE, fb, &logger, None, matches, sub_m).await?;
+    let (job_params, per_repo) =
+        setup_common(VALIDATE, fb, &logger, None, None, matches, sub_m).await?;
 
     let command = ValidateCommand {
         include_check_types: parse_check_types(sub_m)?,

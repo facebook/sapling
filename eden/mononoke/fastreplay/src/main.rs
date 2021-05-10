@@ -297,6 +297,7 @@ async fn bootstrap_repositories<'a>(
                         &logger,
                         config_store,
                         scrub_handler,
+                        None,
                     )
                 });
 

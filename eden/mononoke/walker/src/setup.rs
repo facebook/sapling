@@ -43,7 +43,7 @@ use multiplexedblob::ScrubHandler;
 use newfilenodes::NewFilenodesBuilder;
 use once_cell::sync::Lazy;
 use repo_factory::RepoFactory;
-use samplingblob::{SamplingBlobstore, SamplingHandler};
+use samplingblob::{ComponentSamplingHandler, SamplingBlobstore, SamplingHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, o, warn, Logger};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -1292,6 +1292,7 @@ pub async fn setup_common<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
+    blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(JobWalkParams, Vec<(RepoSubcommandParams, RepoWalkParams)>), Error> {
@@ -1481,6 +1482,10 @@ pub async fn setup_common<'a>(
                 Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
             }
         });
+    }
+
+    if let Some(sampler) = blobstore_component_sampler {
+        repo_factory.with_blobstore_component_sampler(sampler);
     }
 
     repo_factory.with_scrub_handler(Arc::new(blobstore::StatsScrubHandler::new(

@@ -308,6 +308,7 @@ pub async fn compression_benefit<'a>(
         fb,
         &logger,
         Some(sampler.clone()),
+        None,
         matches,
         sub_m,
     )

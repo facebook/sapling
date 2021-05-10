@@ -135,6 +135,7 @@ async fn get_blobstore<'a>(
         &logger,
         config_store,
         &blobstore_factory::default_scrub_handler(),
+        None,
     )
     .await
 }

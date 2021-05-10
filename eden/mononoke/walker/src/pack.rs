@@ -9,12 +9,14 @@ use crate::graph::NodeType;
 use crate::validate::REPO;
 
 use blobstore::SizeMetadata;
+use metaconfig_types::BlobstoreId;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashSet;
 
 const RUN_START: &str = "run_start";
 const CHUNK_NUM: &str = "chunk_num";
+const BLOBSTORE_ID: &str = "blobstore_id";
 const BLOBSTORE_KEY: &str = "blobstore_key";
 const NODE_TYPE: &str = "node_type";
 const NODE_FINGERPRINT: &str = "node_fingerprint";
@@ -27,8 +29,9 @@ const RELEVANT_UNCOMPRESSED_SIZE: &str = "relevant_uncompressed_size";
 const RELEVANT_COMPRESSED_SIZE: &str = "relevant_compressed_size";
 
 /// What do we log for each blobstore key
-pub struct PackInfo {
-    pub blobstore_key: String,
+pub struct PackInfo<'a> {
+    pub blobstore_id: Option<BlobstoreId>, // We only have blobstore ids when running against a multiplex
+    pub blobstore_key: &'a str,
     pub node_type: NodeType, // Might be different from type implied by blobstore_key's prefix string, e.g. if loading a node does multiple blobstore accesses
     pub node_fingerprint: Option<u64>, // the short hash of the graph level node
     pub similarity_key: Option<u64>, // typically the hash of associated repo path
@@ -38,7 +41,7 @@ pub struct PackInfo {
 }
 
 pub trait PackInfoLogger {
-    fn log(&self, info: PackInfo);
+    fn log(&self, info: PackInfo<'_>);
 }
 
 /// What to log for packing and where to send it
@@ -79,9 +82,10 @@ impl ScubaPackInfoLogger {
 }
 
 impl PackInfoLogger for ScubaPackInfoLogger {
-    fn log(&self, info: PackInfo) {
+    fn log(&self, info: PackInfo<'_>) {
         let mut scuba = self.scuba.clone();
         scuba
+            .add_opt(BLOBSTORE_ID, info.blobstore_id)
             .add(BLOBSTORE_KEY, info.blobstore_key)
             .add(RUN_START, self.run_start.timestamp_seconds())
             .add(CHUNK_NUM, self.chunk_num)

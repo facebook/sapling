@@ -24,6 +24,7 @@ multiplexedblob = { version = "0.1.0", path = "../multiplexedblob" }
 packblob = { version = "0.1.0", path = "../packblob" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
+samplingblob = { version = "0.1.0", path = "../samplingblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

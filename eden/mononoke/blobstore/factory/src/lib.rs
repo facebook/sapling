@@ -20,6 +20,7 @@ pub use multiplexedblob::{
     ScrubAction, ScrubHandler,
 };
 pub use packblob::PackOptions;
+pub use samplingblob::ComponentSamplingHandler;
 pub use throttledblob::ThrottleOptions;
 
 pub use crate::blobstore::{

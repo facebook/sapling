@@ -40,8 +40,9 @@ use futures::{
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
+use metaconfig_types::BlobstoreId;
 use mononoke_types::datetime::DateTime;
-use samplingblob::SamplingHandler;
+use samplingblob::ComponentSamplingHandler;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
@@ -75,7 +76,8 @@ impl From<Option<&ScrubSample>> for ScrubStats {
                 blobstore_bytes: sample
                     .data
                     .values()
-                    .map(|v| v.unique_uncompressed_size)
+                    // Uncompressed size is always the same between stores, so can take first value
+                    .map(|v| v.values().next().map_or(0, |v| v.unique_uncompressed_size))
                     .sum(),
             })
             .unwrap_or_default()
@@ -193,16 +195,19 @@ fn record_for_packer<L>(
     L: PackInfoLogger,
 {
     if let Some(mut sample) = sample {
-        for (blobstore_key, key_sizes) in sample.data.drain() {
-            logger.log(PackInfo {
-                blobstore_key,
-                node_type: walk_key.node.get_type(),
-                node_fingerprint: walk_key.node.sampling_fingerprint(),
-                similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
-                mtime: mtime.map(|mtime| mtime.timestamp_secs() as u64),
-                uncompressed_size: key_sizes.unique_uncompressed_size,
-                sizes: key_sizes.sizes,
-            })
+        for (blobstore_key, mut store_to_key_sizes) in sample.data.drain() {
+            for (blobstore_id, key_sizes) in store_to_key_sizes.drain() {
+                logger.log(PackInfo {
+                    blobstore_id,
+                    blobstore_key: blobstore_key.as_str(),
+                    node_type: walk_key.node.get_type(),
+                    node_fingerprint: walk_key.node.sampling_fingerprint(),
+                    similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
+                    mtime: mtime.map(|mtime| mtime.timestamp_secs() as u64),
+                    uncompressed_size: key_sizes.unique_uncompressed_size,
+                    sizes: key_sizes.sizes,
+                })
+            }
         }
     }
 }
@@ -216,10 +221,10 @@ struct ScrubKeySample {
     sizes: Option<SizeMetadata>,
 }
 
-// Holds a map from blobstore keys to their samples
+// Holds a map from blobstore keys to their samples per store
 #[derive(Debug)]
 struct ScrubSample {
-    data: HashMap<String, ScrubKeySample>,
+    data: HashMap<String, HashMap<Option<BlobstoreId>, ScrubKeySample>>,
 }
 
 impl Default for ScrubSample {
@@ -230,12 +235,13 @@ impl Default for ScrubSample {
     }
 }
 
-impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
+impl ComponentSamplingHandler for WalkSampleMapping<Node, ScrubSample> {
     fn sample_get(
         &self,
         ctx: &CoreContext,
         key: &str,
         value: Option<&BlobstoreGetData>,
+        inner_id: Option<BlobstoreId>,
     ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
@@ -244,7 +250,11 @@ impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
                         unique_uncompressed_size: value.as_bytes().len() as u64,
                         sizes: value.as_meta().sizes().cloned(),
                     };
-                    guard.data.insert(key.to_owned(), sample)
+                    guard
+                        .data
+                        .entry(key.to_owned())
+                        .or_default()
+                        .insert(inner_id, sample)
                 })
             })
         });
@@ -426,10 +436,18 @@ pub async fn scrub_objects<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
+    let component_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
 
-    let (job_params, per_repo) =
-        setup_common(SCRUB, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
+    let (job_params, per_repo) = setup_common(
+        SCRUB,
+        fb,
+        &logger,
+        None,
+        Some(component_sampler.clone()),
+        matches,
+        sub_m,
+    )
+    .await?;
 
     let output_format = sub_m
         .value_of(OUTPUT_FORMAT_ARG)
@@ -448,7 +466,7 @@ pub async fn scrub_objects<'a>(
         progress_options: parse_progress_args(&sub_m),
         sampling_options: parse_sampling_args(&sub_m, 1)?,
         pack_info_log_options: parse_pack_info_log_args(fb, &sub_m)?,
-        sampler,
+        sampler: component_sampler,
     };
 
     let mut all_walks = Vec::new();

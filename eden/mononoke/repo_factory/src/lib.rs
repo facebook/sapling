@@ -18,8 +18,8 @@ use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
 use blobstore::Blobstore;
 use blobstore_factory::{
-    default_scrub_handler, make_blobstore, make_metadata_sql_factory, MetadataSqlFactory,
-    ScrubHandler,
+    default_scrub_handler, make_blobstore, make_metadata_sql_factory, ComponentSamplingHandler,
+    MetadataSqlFactory, ScrubHandler,
 };
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{
@@ -116,6 +116,7 @@ pub struct RepoFactory {
         RepoFactoryCache<MetadataDatabaseConfig, Arc<HashMap<String, RedactedMetadata>>>,
     blobstore_override: Option<Box<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
+    blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
 }
 
 impl RepoFactory {
@@ -131,6 +132,7 @@ impl RepoFactory {
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
             scrub_handler: default_scrub_handler(),
+            blobstore_component_sampler: None,
         }
     }
 
@@ -144,6 +146,14 @@ impl RepoFactory {
 
     pub fn with_scrub_handler(&mut self, scrub_handler: Arc<dyn ScrubHandler>) -> &mut Self {
         self.scrub_handler = scrub_handler;
+        self
+    }
+
+    pub fn with_blobstore_component_sampler(
+        &mut self,
+        handler: Arc<dyn ComponentSamplingHandler>,
+    ) -> &mut Self {
+        self.blobstore_component_sampler = Some(handler);
         self
     }
 
@@ -178,6 +188,7 @@ impl RepoFactory {
                     &self.env.logger,
                     &self.env.config_store,
                     &self.scrub_handler,
+                    self.blobstore_component_sampler.as_ref(),
                 )
                 .watched(&self.env.logger)
                 .await?;

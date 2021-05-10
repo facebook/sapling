@@ -28,6 +28,7 @@ use multiplexedblob::{
 };
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
+use samplingblob::{ComponentSamplingHandler, SamplingBlobstorePutOps};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
@@ -123,6 +124,7 @@ pub fn make_blobstore<'a>(
     logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
+    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
     async move {
         let store = make_blobstore_put_ops(
@@ -134,6 +136,8 @@ pub fn make_blobstore<'a>(
             logger,
             config_store,
             scrub_handler,
+            component_sampler,
+            None,
         )
         .await?;
         // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
@@ -357,6 +361,8 @@ fn make_blobstore_put_ops<'a>(
     logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
+    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
+    blobstore_id: Option<BlobstoreId>,
 ) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
@@ -450,6 +456,7 @@ fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                     scrub_handler,
+                    component_sampler,
                 )
                 .watched(logger)
                 .await?
@@ -469,6 +476,8 @@ fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                     scrub_handler,
+                    component_sampler,
+                    None,
                 )
                 .watched(logger)
                 .await?;
@@ -496,6 +505,16 @@ fn make_blobstore_put_ops<'a>(
         };
 
         let store = if needs_wrappers {
+            let store = if let Some(component_sampler) = component_sampler {
+                Arc::new(SamplingBlobstorePutOps::new(
+                    store,
+                    blobstore_id,
+                    component_sampler.clone(),
+                )) as Arc<dyn BlobstorePutOps>
+            } else {
+                store
+            };
+
             let store = if readonly_storage.0 {
                 Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstorePutOps>
             } else {
@@ -546,6 +565,7 @@ async fn make_blobstore_multiplexed<'a>(
     logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
+    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     let component_readonly = blobstore_options
         .scrub_options
@@ -581,6 +601,8 @@ async fn make_blobstore_multiplexed<'a>(
                     logger,
                     config_store,
                     scrub_handler,
+                    component_sampler,
+                    Some(blobstoreid),
                 )
                 .watched(logger)
                 .await?;

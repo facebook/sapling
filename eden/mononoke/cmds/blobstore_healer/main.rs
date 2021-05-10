@@ -123,6 +123,7 @@ async fn maybe_schedule_healer_for_storage(
                 ctx.logger(),
                 config_store,
                 &blobstore_factory::default_scrub_handler(),
+                None,
             )
             .await?;
 
