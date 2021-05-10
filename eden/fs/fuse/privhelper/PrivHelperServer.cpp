@@ -430,7 +430,6 @@ folly::File mountMacFuse(
       folly::to<std::string>("-oiosize=", 1024 * 1024),
       "-oallow_other",
       "-odefault_permissions",
-      "-onoapplexattr",
       canonicalPath.stringPiece().toString(),
   };
 
