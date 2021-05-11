@@ -32,21 +32,24 @@ class ImmediateFuture {
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */
-  /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept
-      : inner_(std::move(value)) {}
+  /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept(
+      std::is_nothrow_move_constructible_v<folly::Try<T>>)
+      : inner_{std::move(value)} {}
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */
-  /* implicit */ ImmediateFuture(T value) noexcept
-      : ImmediateFuture(folly::Try<T>(std::move(value))) {}
+  /* implicit */ ImmediateFuture(T value) noexcept(
+      std::is_nothrow_move_constructible_v<folly::Try<T>>)
+      : ImmediateFuture{folly::Try<T>{std::move(value)}} {}
 
   /**
    * Construct an ImmediateFuture with a SemiFuture.
    */
-  /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept
-      : inner_(std::move(fut)) {}
+  /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
+      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
+      : inner_{std::move(fut)} {}
 
   ~ImmediateFuture() = default;
 
