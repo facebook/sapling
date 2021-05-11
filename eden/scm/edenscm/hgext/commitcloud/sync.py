@@ -484,7 +484,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     if remotebookmarknewnodes or newheads:
         # Partition the heads into groups we can pull together.
         headgroups = _partitionheads(
-            list(remotebookmarknewnodes) + newheads, cloudrefs.headdates
+            repo.ui, list(remotebookmarknewnodes) + newheads, cloudrefs.headdates
         )
         _pullheadgroups(repo, remotepath, headgroups)
 
@@ -605,7 +605,21 @@ def _pullheadgroups(repo, remotepath, headgroups):
             repo.connectionpool.close()
 
 
-def _partitionheads(heads, headdates=None, sizelimit=4, spanlimit=86400):
+def _partitionheads(ui, heads, headdates=None):
+    if ui.configbool("infinitepush", "wantsunhydratedcommits"):
+        # partition commits to larger groups because unhydratedcommits is faster and easier to pull
+        # split by 6 month timespans with some reasonably high (configurable) sizelimit
+        return _partitionheadsgroups(
+            heads,
+            headdates,
+            sizelimit=ui.config("commitcloud", "unhydratedpullsizelimit"),
+            spanlimit=86400 * 30 * 6,
+        )
+    else:
+        return _partitionheadsgroups(heads, headdates)
+
+
+def _partitionheadsgroups(heads, headdates=None, sizelimit=4, spanlimit=86400):
     """partition a list of heads into groups limited by size and timespan
 
     Partitions the list of heads into a list of head groups.  Each head group
@@ -779,7 +793,7 @@ def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
         repo, cloudremotebookmarks, lastsyncstate
     )
     if newnodes:
-        _pullheadgroups(repo, remotepath, _partitionheads(newnodes))
+        _pullheadgroups(repo, remotepath, _partitionheads(repo.ui, newnodes))
     omittedremotebookmarks = _updateremotebookmarks(repo, tr, updates)
 
     # We have now synced the repo to the cloud version.  Store this.
