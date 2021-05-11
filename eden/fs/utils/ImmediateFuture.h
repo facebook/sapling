@@ -29,6 +29,12 @@ class ImmediateFuture {
   using value_type = T;
 
   /**
+   * Default construct an ImmediateFuture with T's default constructor.
+   */
+  ImmediateFuture() noexcept(std::is_nothrow_default_constructible_v<T>)
+      : inner_{folly::Try<T>{T{}}} {}
+
+  /**
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */

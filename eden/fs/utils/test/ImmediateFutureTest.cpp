@@ -98,3 +98,29 @@ TEST(ImmediateFuture, unit) {
   auto fut = unitFunc();
   EXPECT_TRUE(fut.hasImmediate());
 }
+
+class Foo {
+ public:
+  Foo() = delete;
+  explicit Foo(int val) : val_(val) {}
+
+  int getVal() const {
+    return val_;
+  }
+
+ private:
+  int val_;
+};
+
+TEST(ImmediateFuture, defaultCtor) {
+  ImmediateFuture<Foo> noDefaultCtor{Foo{42}};
+  auto fortyThree = std::move(noDefaultCtor).thenValue([](auto&& foo) {
+    return foo.getVal() + 1;
+  });
+  EXPECT_EQ(std::move(fortyThree).get(), 43);
+
+  ImmediateFuture<int> defaultCtor{};
+  auto one =
+      std::move(defaultCtor).thenValue([](auto&& zero) { return zero + 1; });
+  EXPECT_EQ(std::move(one).get(), 1);
+}
