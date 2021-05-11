@@ -108,6 +108,20 @@ class ImmediateFuture {
       Func&& func) &&;
 
   /**
+   * Build a SemiFuture out of this ImmediateFuture and returns it.
+   *
+   * The returned semi future can then be executed on an executor with its
+   * via() method. When this ImmediateFuture stores an immediate value, this
+   * will allocate a new SemiFuture that is ready.
+   *
+   * Can be used as such:
+   *
+   *   ImmediateFuture<T> immFut = ...;
+   *   folly::Future<T> fut = std::move(fut).semi().via(executor);
+   */
+  folly::SemiFuture<T> semi() &&;
+
+  /**
    * Wait for the future to complete and return its value or throw its
    * exception.
    *

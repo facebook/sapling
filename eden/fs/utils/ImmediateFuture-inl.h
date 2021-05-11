@@ -78,4 +78,11 @@ folly::Try<T> ImmediateFuture<T>::getTry() && {
       std::move(inner_));
 }
 
+template <typename T>
+folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
+  return std::visit(
+      [](auto&& inner) -> folly::SemiFuture<T> { return std::move(inner); },
+      std::move(inner_));
+}
+
 } // namespace facebook::eden

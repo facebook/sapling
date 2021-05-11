@@ -124,3 +124,11 @@ TEST(ImmediateFuture, defaultCtor) {
       std::move(defaultCtor).thenValue([](auto&& zero) { return zero + 1; });
   EXPECT_EQ(std::move(one).get(), 1);
 }
+
+TEST(ImmediateFuture, semi) {
+  ImmediateFuture<int> semi{folly::SemiFuture<int>{42}};
+  EXPECT_EQ(std::move(semi).semi().get(), 42);
+
+  ImmediateFuture<int> imm{42};
+  EXPECT_EQ(std::move(imm).semi().get(), 42);
+}
