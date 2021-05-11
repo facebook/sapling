@@ -104,12 +104,13 @@ impl Mononoke {
             .into_iter()
             .collect();
 
+        let config_store = env.repo_factory.env.config_store.clone();
         let fb = env.repo_factory.env.fb;
         let logger = env.repo_factory.env.logger.new(o!("megarepo" => "configs")); // TODO: maybe this should just be empty?
         let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> =
             match env.repo_factory.env.megarepo_configs_options {
                 MononokeMegarepoConfigsOptions::Prod => {
-                    Arc::new(CfgrMononokeMegarepoConfigs::new(fb, &logger)?)
+                    Arc::new(CfgrMononokeMegarepoConfigs::new(fb, &logger, config_store)?)
                 }
                 MononokeMegarepoConfigsOptions::Test => {
                     Arc::new(TestMononokeMegarepoConfigs::new(&logger))

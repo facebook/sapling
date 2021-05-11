@@ -6,6 +6,7 @@
  */
 
 use async_trait::async_trait;
+use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use megarepo_configs::types::{SyncConfigVersion, SyncTargetConfig, Target};
@@ -22,7 +23,11 @@ use crate::MononokeMegarepoConfigs;
 pub struct CfgrMononokeMegarepoConfigs;
 
 impl CfgrMononokeMegarepoConfigs {
-    pub fn new(_fb: FacebookInit, logger: &Logger) -> Result<Self, MegarepoError> {
+    pub fn new(
+        _fb: FacebookInit,
+        logger: &Logger,
+        _config_store: ConfigStore,
+    ) -> Result<Self, MegarepoError> {
         warn!(
             logger,
             "CfgrMononokeMegarepoConfigs is not implemented for non-fbcode builds"
