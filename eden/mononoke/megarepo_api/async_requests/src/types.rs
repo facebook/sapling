@@ -8,6 +8,7 @@
 use anyhow::{anyhow, Error, Result};
 use blobstore::{impl_loadable_storable, Loadable, Storable};
 use fbthrift::compact_protocol;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_types_thrift::{
     MegarepoAddTargetParamsId as ThriftMegarepoAddTargetParamsId,
@@ -108,6 +109,11 @@ pub trait BlobstoreKeyWrapper: FromStr<Err = Error> {
 /// Thrift type representing async service method parameters
 pub trait ThriftParams: Sized + Send + Sync {
     type R: Request<ThriftParams = Self>;
+
+    /// Every *Params argument referes to some Target
+    /// This method is needed to extract it from the
+    /// implementor of this trait
+    fn target(&self) -> &Target;
 }
 
 /// Polling token for an async service method
@@ -263,6 +269,8 @@ macro_rules! impl_async_svc_method_types {
         token_type => $token_type: ident,
         token_thrift_type => $token_thrift_type: ident,
 
+        fn target(&$self_ident: ident: ThriftParams) -> &Target $target_in_params: tt
+
     } => {
         impl_async_svc_stored_type! {
             handle_type => $params_handle_type,
@@ -284,6 +292,10 @@ macro_rules! impl_async_svc_method_types {
 
         impl ThriftParams for $params_value_thrift_type {
             type R = $request_struct;
+
+            fn target(&$self_ident) -> &Target {
+                $target_in_params
+            }
         }
 
         impl Token for $token_type {
@@ -390,6 +402,10 @@ impl_async_svc_method_types! {
     poll_response_type => ThriftMegarepoAddTargetPollResponse,
     token_type => MegarepoAddTargetToken,
     token_thrift_type => ThriftMegarepoAddTargetToken,
+
+    fn target(&self: ThriftParams) -> &Target {
+        &self.config_with_new_target.target
+    }
 }
 
 // Params and result types for megarepo_change_target_config
@@ -414,6 +430,10 @@ impl_async_svc_method_types! {
     poll_response_type => ThriftMegarepoChangeTargetConfigPollResponse,
     token_type => MegarepoChangeTargetConfigToken,
     token_thrift_type => ThriftMegarepoChangeConfigToken,
+
+    fn target(&self: ThriftParams) -> &Target {
+        &self.target
+    }
 }
 
 // Params and result types for megarepo_sync_changeset
@@ -439,6 +459,9 @@ impl_async_svc_method_types! {
     token_type => MegarepoSyncChangesetToken,
     token_thrift_type => ThriftMegarepoSyncChangesetToken,
 
+    fn target(&self: ThriftParams) -> &Target {
+        &self.target
+    }
 }
 
 // Params and result types for megarepo_remerge_source
@@ -463,6 +486,10 @@ impl_async_svc_method_types! {
     poll_response_type => ThriftMegarepoRemergeSourcePollResponse,
     token_type => MegarepoRemergeSourceToken,
     token_thrift_type => ThriftMegarepoRemergeSourceToken,
+
+    fn target(&self: ThriftParams) -> &Target {
+        &self.target
+    }
 }
 
 #[cfg(test)]
