@@ -10,6 +10,7 @@ use gotham_derive::StateData;
 use hyper::{Body, Response};
 use load_limiter::LoadLimiterEnvironment;
 use slog::{o, Logger};
+use std::sync::Arc;
 
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
@@ -33,6 +34,7 @@ impl RequestContext {
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
+    scuba: Arc<MononokeScubaSampleBuilder>,
     load_limiter: Option<LoadLimiterEnvironment>,
 }
 
@@ -40,11 +42,13 @@ impl RequestContextMiddleware {
     pub fn new(
         fb: FacebookInit,
         logger: Logger,
+        scuba: MononokeScubaSampleBuilder,
         load_limiter: Option<LoadLimiterEnvironment>,
     ) -> Self {
         Self {
             fb,
             logger,
+            scuba: Arc::new(scuba),
             load_limiter,
         }
     }
@@ -67,7 +71,7 @@ impl Middleware for RequestContextMiddleware {
 
         let request_id = request_id(&state);
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let ctx = session.new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
+        let ctx = session.new_context(logger.clone(), (*self.scuba).clone());
 
         state.put(RequestContext::new(ctx, logger).await);
 

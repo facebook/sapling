@@ -42,7 +42,7 @@ pub type EdenApi = MononokeHttpHandler<Router>;
 pub fn build(
     fb: FacebookInit,
     logger: Logger,
-    scuba: MononokeScubaSampleBuilder,
+    mut scuba: MononokeScubaSampleBuilder,
     mononoke: Mononoke,
     will_exit: Arc<AtomicBool>,
     test_friendly_loging: bool,
@@ -70,11 +70,19 @@ pub fn build(
             "edenapi_server",
         )))
         .add(PostResponseMiddleware::default())
-        .add(RequestContextMiddleware::new(fb, logger, load_limiter))
+        .add(RequestContextMiddleware::new(
+            fb,
+            logger,
+            scuba.clone(),
+            load_limiter,
+        ))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())
-        .add(<ScubaMiddleware<EdenApiScubaHandler>>::new(scuba))
+        .add(<ScubaMiddleware<EdenApiScubaHandler>>::new({
+            scuba.add("log_tag", "EdenAPI Request Processed");
+            scuba
+        }))
         .add(TimerMiddleware::new())
         .build(router);
 
