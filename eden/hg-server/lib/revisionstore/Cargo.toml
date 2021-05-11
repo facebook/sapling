@@ -9,7 +9,7 @@ anyhow = "1.0"
 async-runtime = { path = "../async-runtime" }
 async-trait = "0.1.45"
 auth = { path = "../auth" }
-bincode = "1.2"
+bincode = "1.3.3"
 byteorder = "1.3"
 configparser = { path = "../configparser" }
 crossbeam = "0.7"

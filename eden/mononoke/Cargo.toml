@@ -277,6 +277,7 @@ members = [
   "megarepo_api/commit_transformation",
   "megarepo_api/configo_client",
   "megarepo_api/if",
+  "megarepo_api/mapping",
   "megarepo_api/megarepo_config",
   "megarepo_api/megarepo_error",
   "megarepo_api/requests_table",
