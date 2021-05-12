@@ -16,10 +16,6 @@ use anyhow::{Context, Error};
 pub use bookmarks::BookmarkName;
 use futures::future;
 use futures_watchdog::WatchdogExt;
-use megarepo_config::{
-    CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
-    TestMononokeMegarepoConfigs,
-};
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, o};
@@ -72,7 +68,6 @@ pub use context::{CoreContext, LoggingContainer, SessionContainer};
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     repos: HashMap<String, Arc<Repo>>,
-    megarepo_configs: Arc<dyn MononokeMegarepoConfigs>,
 }
 
 impl Mononoke {
@@ -104,24 +99,7 @@ impl Mononoke {
             .into_iter()
             .collect();
 
-        let config_store = env.repo_factory.env.config_store.clone();
-        let fb = env.repo_factory.env.fb;
-        let logger = env.repo_factory.env.logger.new(o!("megarepo" => "configs")); // TODO: maybe this should just be empty?
-        let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> =
-            match env.repo_factory.env.megarepo_configs_options {
-                MononokeMegarepoConfigsOptions::Prod => {
-                    Arc::new(CfgrMononokeMegarepoConfigs::new(fb, &logger, config_store)?)
-                }
-                MononokeMegarepoConfigsOptions::Test => {
-                    Arc::new(TestMononokeMegarepoConfigs::new(&logger))
-                }
-            };
-
-
-        Ok(Self {
-            repos,
-            megarepo_configs,
-        })
+        Ok(Self { repos })
     }
 
     /// Start a request on a repository.
@@ -139,10 +117,6 @@ impl Mononoke {
     /// Get all known repository ids
     pub fn known_repo_ids(&self) -> Vec<RepositoryId> {
         self.repos.iter().map(|repo| repo.1.repoid()).collect()
-    }
-
-    pub fn megarepo_configs(&self) -> Arc<dyn MononokeMegarepoConfigs> {
-        self.megarepo_configs.clone()
     }
 
     /// Start a request on a repository bypassing the ACL check.
@@ -213,8 +187,6 @@ mod test_impl {
             repos: impl IntoIterator<Item = (String, BlobRepo)>,
         ) -> Result<Self, Error> {
             use futures::stream::{FuturesOrdered, TryStreamExt};
-            let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> =
-                Arc::new(TestMononokeMegarepoConfigs::new(ctx.logger()));
 
             let repos = repos
                 .into_iter()
@@ -230,10 +202,7 @@ mod test_impl {
                 .try_collect()
                 .await?;
 
-            Ok(Self {
-                repos,
-                megarepo_configs,
-            })
+            Ok(Self { repos })
         }
 
         pub(crate) async fn new_test_xrepo(
@@ -250,8 +219,6 @@ mod test_impl {
             use futures::stream::{FuturesOrdered, TryStreamExt};
             let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
             let lv_cfg: Arc<dyn LiveCommitSyncConfig> = Arc::new(lv_cfg);
-            let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> =
-                Arc::new(TestMononokeMegarepoConfigs::new(ctx.logger()));
 
             let repos = repos
                 .into_iter()
@@ -272,13 +239,7 @@ mod test_impl {
                 .try_collect()
                 .await?;
 
-            Ok((
-                Self {
-                    repos,
-                    megarepo_configs,
-                },
-                lv_cfg_src,
-            ))
+            Ok((Self { repos }, lv_cfg_src))
         }
     }
 }

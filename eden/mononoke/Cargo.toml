@@ -273,6 +273,7 @@ members = [
   "lfs_server",
   "load_limiter",
   "manifest",
+  "megarepo_api",
   "megarepo_api/async_requests",
   "megarepo_api/commit_transformation",
   "megarepo_api/configo_client",

@@ -6,6 +6,10 @@
  */
 
 use anyhow::Result;
+use async_requests::tokens::{
+    MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
+};
+use async_requests::types::{ThriftParams, Token};
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_types::RepositoryId;
@@ -59,7 +63,7 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddConfigResponse, errors::ServiceError> {
         let new_config = params.new_config;
         self.verify_repos_by_config(&new_config)?;
-        let megarepo_configs = self.mononoke.megarepo_configs();
+        let megarepo_configs = self.megarepo_api.configs();
         megarepo_configs.add_config_version(ctx, new_config).await?;
         Ok(thrift::MegarepoAddConfigResponse {})
     }
@@ -70,10 +74,10 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoAddTargetParams,
     ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
         let config = params.config_with_new_target;
-        self.verify_repos_by_config(&config)?;
-        // TODO (ikostia, stash, mitrandir): stop using the fake token
-        let megarepo_configs = self.mononoke.megarepo_configs();
         let target = config.target.clone();
+        self.verify_repos_by_config(&config)?;
+        // TODO (ikostia): stop using the fake token
+        let megarepo_configs = self.megarepo_api.configs();
         megarepo_configs
             .add_target_with_config_version(ctx, config)
             .await?;
@@ -109,61 +113,97 @@ impl SourceControlServiceImpl {
 
     pub(crate) async fn megarepo_change_target_config(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoChangeTargetConfigParams,
+        ctx: CoreContext,
+        params: thrift::MegarepoChangeTargetConfigParams,
     ) -> Result<thrift::MegarepoChangeConfigToken, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "megarepo_change_target_config is not yet implemented",
-        )))
+        let token = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, params.target())
+            .await?
+            .enqueue(ctx, params)
+            .await
+            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+
+        Ok(token.into_thrift())
     }
 
     pub(crate) async fn megarepo_change_target_config_poll(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoChangeConfigToken,
+        ctx: CoreContext,
+        token: thrift::MegarepoChangeConfigToken,
     ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "poll_megarepo_change_config is not yet implemented",
-        )))
+        let token = MegarepoChangeTargetConfigToken(token);
+        let poll_response = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, token.target())
+            .await?
+            .poll(ctx, token)
+            .await?;
+
+        Ok(poll_response)
     }
 
     pub(crate) async fn megarepo_sync_changeset(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoSyncChangesetParams,
+        ctx: CoreContext,
+        params: thrift::MegarepoSyncChangesetParams,
     ) -> Result<thrift::MegarepoSyncChangesetToken, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "megarepo_sync_changeset is not yet implemented",
-        )))
+        let token = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, params.target())
+            .await?
+            .enqueue(ctx, params)
+            .await
+            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+
+        Ok(token.into_thrift())
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoSyncChangesetToken,
+        ctx: CoreContext,
+        token: thrift::MegarepoSyncChangesetToken,
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "poll_megarepo_sync_changeset is not yet implemented",
-        )))
+        let token = MegarepoSyncChangesetToken(token);
+        let poll_response = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, token.target())
+            .await?
+            .poll(ctx, token)
+            .await?;
+
+        Ok(poll_response)
     }
 
     pub(crate) async fn megarepo_remerge_source(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoRemergeSourceParams,
+        ctx: CoreContext,
+        params: thrift::MegarepoRemergeSourceParams,
     ) -> Result<thrift::MegarepoRemergeSourceToken, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "megarepo_remerge_source is not yet implemented",
-        )))
+        let token = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, params.target())
+            .await?
+            .enqueue(ctx, params)
+            .await
+            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+
+        Ok(token.into_thrift())
     }
 
     pub(crate) async fn megarepo_remerge_source_poll(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::MegarepoRemergeSourceToken,
+        ctx: CoreContext,
+        token: thrift::MegarepoRemergeSourceToken,
     ) -> Result<thrift::MegarepoRemergeSourcePollResponse, errors::ServiceError> {
-        Err(errors::ServiceError::from(errors::not_implemented(
-            "poll_megarepo_remerge_source is not yet implemented",
-        )))
+        let token = MegarepoRemergeSourceToken(token);
+        let poll_response = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, token.target())
+            .await?
+            .poll(ctx, token)
+            .await?;
+
+        Ok(poll_response)
     }
 }

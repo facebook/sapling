@@ -42,8 +42,8 @@ pub struct AsyncMethodRequestQueue {
 }
 
 impl AsyncMethodRequestQueue {
-    pub fn new() -> Result<Self, Error> {
-        unimplemented!("prod queue instantiation");
+    pub fn new(table: Arc<dyn LongRunningRequestsQueue>, blobstore: Arc<dyn Blobstore>) -> Self {
+        Self { blobstore, table }
     }
 
     pub fn new_test_in_memory() -> Result<Self, Error> {

@@ -8,11 +8,12 @@
 //! Repo Identity.
 //!
 //! Stores the id and name of the repository.
-
 use mononoke_types::RepositoryId;
+use std::hash::Hash;
 
 /// Repository identity information.
 #[facet::facet]
+#[derive(Hash, PartialEq, Eq)]
 pub struct RepoIdentity {
     /// The ID of the repository.
     id: RepositoryId,

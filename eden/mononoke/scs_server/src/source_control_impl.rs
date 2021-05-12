@@ -16,6 +16,7 @@ use futures_ext::FbFutureExt;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use maplit::hashset;
+use megarepo_api::MegarepoApi;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke,
     RepoContext, SessionContainer, TreeContext, TreeId,
@@ -67,6 +68,7 @@ static POPULAR_METHODS: Lazy<HashSet<&'static str>> =
 pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke>,
+    pub(crate) megarepo_api: MegarepoApi,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) service_identity: Identity,
@@ -79,6 +81,7 @@ impl SourceControlServiceImpl {
     pub fn new(
         fb: FacebookInit,
         mononoke: Arc<Mononoke>,
+        megarepo_api: MegarepoApi,
         logger: Logger,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
@@ -88,6 +91,7 @@ impl SourceControlServiceImpl {
         Self {
             fb,
             mononoke,
+            megarepo_api,
             logger,
             scuba_builder,
             service_identity: Identity::with_service(SCS_IDENTITY),

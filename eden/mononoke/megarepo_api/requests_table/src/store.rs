@@ -59,11 +59,11 @@ queries! {
         WHERE id = {id} AND request_type = {request_type}"
     }
 
-    write AddRequest(request_type: RequestType, args_blobstore_key: BlobstoreKey) {
+    write AddRequest(request_type: RequestType, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
-         (request_type, args_blobstore_key, status)
-         VALUES ({request_type}, {args_blobstore_key}, 'new')
+         (request_type, args_blobstore_key, status, created_at)
+         VALUES ({request_type}, {args_blobstore_key}, 'new', {created_at})
         "
     }
 
@@ -125,6 +125,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             &self.connections.write_connection,
             request_type,
             args_blobstore_key,
+            &Timestamp::now(),
         )
         .await?;
 

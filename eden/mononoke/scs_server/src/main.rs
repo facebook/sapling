@@ -21,6 +21,7 @@ use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
+use megarepo_api::MegarepoApi;
 use metaconfig_parser::load_repo_configs;
 use metadata_sys::facebook_scm_service_create_metadata as create_metadata;
 use mononoke_api::{
@@ -109,13 +110,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let env = MononokeApiEnvironment {
-        repo_factory,
+        repo_factory: repo_factory.clone(),
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
     };
 
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
+    let megarepo_api = runtime.block_on(MegarepoApi::new(
+        matches.environment(),
+        repo_configs,
+        repo_factory,
+    ))?;
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
@@ -133,6 +139,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(
         fb,
         mononoke.clone(),
+        megarepo_api,
         logger.clone(),
         scuba_builder.clone(),
         args::get_scribe(fb, &matches)?,

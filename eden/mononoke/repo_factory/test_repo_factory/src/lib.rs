@@ -54,6 +54,7 @@ use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
@@ -141,6 +142,7 @@ impl TestRepoFactory {
         con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
         con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
+        con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(Connection::with_sqlite(con));
 
         Ok(TestRepoFactory {
