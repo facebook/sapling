@@ -108,8 +108,10 @@ getdepsbuild:
 	mkdir -p ../../common/rust
 	ln -sfn $(GETDEPS_INSTALL_DIR)/rust-shed/source/shed ../../common/rust/shed
 	GETDEPS_BUILD=1 \
+		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(PYTHON3) setup3.py $(PURE) build $(COMPILERFLAG)
+		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup3.py \
+		$(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
