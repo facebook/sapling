@@ -8,16 +8,19 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, Error};
-use blobrepo::BlobRepo;
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use blobsync::copy_content;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::try_join_all, TryStreamExt};
+use futures::{future::try_join_all, stream::FuturesUnordered, TryStreamExt};
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
 use mercurial_types::HgManifestId;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, FileChange, MPath};
+use mononoke_types::{
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange, MPath,
+};
 use sorted_vector_map::SortedVectorMap;
 use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
@@ -276,6 +279,56 @@ pub async fn rewrite_commit<'a>(
     }
 
     Ok(Some(cs))
+}
+
+pub async fn upload_commits<'a>(
+    ctx: &'a CoreContext,
+    rewritten_list: Vec<BonsaiChangeset>,
+    source_repo: &'a BlobRepo,
+    target_repo: &'a BlobRepo,
+) -> Result<(), Error> {
+    let mut files_to_sync = vec![];
+    for rewritten in &rewritten_list {
+        let rewritten_mut = rewritten.clone().into_mut();
+        let new_files_to_sync = rewritten_mut
+            .file_changes
+            .values()
+            .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()));
+        files_to_sync.extend(new_files_to_sync);
+    }
+    copy_file_contents(ctx, source_repo, target_repo, files_to_sync).await?;
+    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
+    Ok(())
+}
+
+async fn identity<T>(res: T) -> Result<T, Error> {
+    Ok(res)
+}
+
+pub async fn copy_file_contents<'a>(
+    ctx: &'a CoreContext,
+    source_repo: &'a BlobRepo,
+    target_repo: &'a BlobRepo,
+    content_ids: impl IntoIterator<Item = ContentId>,
+) -> Result<(), Error> {
+    let source_blobstore = source_repo.get_blobstore();
+    let target_blobstore = target_repo.get_blobstore();
+    let target_filestore_config = target_repo.filestore_config();
+    let uploader: FuturesUnordered<_> = content_ids
+        .into_iter()
+        .map({
+            |content_id| {
+                copy_content(
+                    ctx,
+                    &source_blobstore,
+                    &target_blobstore,
+                    target_filestore_config.clone(),
+                    content_id,
+                )
+            }
+        })
+        .collect();
+    uploader.try_for_each_concurrent(100, identity).await
 }
 
 #[cfg(test)]

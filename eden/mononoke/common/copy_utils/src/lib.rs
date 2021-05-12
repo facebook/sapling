@@ -12,8 +12,8 @@ use fsnodes::RootFsnodeId;
 use futures::{future::try_join, TryStreamExt};
 
 use blobrepo::BlobRepo;
+use commit_transformation::copy_file_contents;
 use context::CoreContext;
-use cross_repo_sync::copy_file_contents;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     fsnode::FsnodeFile, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,

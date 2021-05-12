@@ -13,9 +13,10 @@ use blobstore::Loadable;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use cloned::cloned;
+use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::types::{Source, Target};
-use cross_repo_sync::{rewrite_commit, upload_commits, CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{rewrite_commit, CommitSyncOutcome, CommitSyncer};
 use cross_repo_sync::{
     CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos, SyncData,
     CHANGE_XREPO_MAPPING_EXTRA,

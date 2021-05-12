@@ -14,12 +14,13 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
     types::{Source, Target},
-    update_mapping_with_version, upload_commits, CommitSyncContext, CommitSyncDataProvider,
-    CommitSyncRepos, CommitSyncer, SyncData, Syncers,
+    update_mapping_with_version, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos,
+    CommitSyncer, SyncData, Syncers,
 };
 use futures::compat::Future01CompatExt;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};

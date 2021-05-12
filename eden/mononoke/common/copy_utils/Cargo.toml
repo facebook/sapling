@@ -8,8 +8,8 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
-cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

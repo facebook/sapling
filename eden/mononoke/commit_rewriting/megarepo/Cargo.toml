@@ -24,6 +24,7 @@ clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_x_repo = { version = "0.1.0", path = "../../cmdlib/x_repo" }
+commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }

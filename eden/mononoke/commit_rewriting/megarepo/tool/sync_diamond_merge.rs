@@ -18,10 +18,11 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cacheblob::LeaseOps;
 use cloned::cloned;
+use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, update_mapping_with_version, upload_commits,
-    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
+    create_commit_syncers, rewrite_commit, update_mapping_with_version, CandidateSelectionHint,
+    CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use futures::{
     compat::Future01CompatExt,

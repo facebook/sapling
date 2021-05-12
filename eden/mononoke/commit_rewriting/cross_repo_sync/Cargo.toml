@@ -14,7 +14,6 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }

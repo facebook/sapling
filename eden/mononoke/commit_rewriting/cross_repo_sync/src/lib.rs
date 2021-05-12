@@ -9,13 +9,14 @@
 #![feature(trait_alias)]
 
 use anyhow::{bail, format_err, Context, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use blobsync::copy_content;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
 use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
-use commit_transformation::{rewrite_commit as multi_mover_rewrite_commit, MultiMover};
+use commit_transformation::{
+    rewrite_commit as multi_mover_rewrite_commit, upload_commits, MultiMover,
+};
 use context::CoreContext;
 use environment::Caching;
 use fbinit::FacebookInit;
@@ -24,7 +25,7 @@ use futures::{
     channel::oneshot,
     compat::Future01CompatExt,
     future::{self, TryFutureExt},
-    stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
     FutureExt,
 };
 use futures_old::Future;
@@ -32,7 +33,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, PushrebaseFlags};
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange, MPath, RepositoryId,
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
@@ -98,10 +99,6 @@ pub enum ErrorKind {
     },
     #[error("X-repo sync is temporarily disabled, contact source control oncall")]
     XRepoSyncDisabled,
-}
-
-async fn identity<T>(res: T) -> Result<T, Error> {
-    Ok(res)
 }
 
 /// Create a version of `cs` with `Mover` applied to all changes
@@ -1631,52 +1628,6 @@ impl CommitSyncRepos {
             CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
         }
     }
-}
-
-pub async fn copy_file_contents<'a>(
-    ctx: &'a CoreContext,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
-    content_ids: impl IntoIterator<Item = ContentId>,
-) -> Result<(), Error> {
-    let source_blobstore = source_repo.get_blobstore();
-    let target_blobstore = target_repo.get_blobstore();
-    let target_filestore_config = target_repo.filestore_config();
-    let uploader: FuturesUnordered<_> = content_ids
-        .into_iter()
-        .map({
-            |content_id| {
-                copy_content(
-                    ctx,
-                    &source_blobstore,
-                    &target_blobstore,
-                    target_filestore_config.clone(),
-                    content_id,
-                )
-            }
-        })
-        .collect();
-    uploader.try_for_each_concurrent(100, identity).await
-}
-
-pub async fn upload_commits<'a>(
-    ctx: &'a CoreContext,
-    rewritten_list: Vec<BonsaiChangeset>,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
-) -> Result<(), Error> {
-    let mut files_to_sync = vec![];
-    for rewritten in &rewritten_list {
-        let rewritten_mut = rewritten.clone().into_mut();
-        let new_files_to_sync = rewritten_mut
-            .file_changes
-            .values()
-            .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()));
-        files_to_sync.extend(new_files_to_sync);
-    }
-    copy_file_contents(ctx, source_repo, target_repo, files_to_sync).await?;
-    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
-    Ok(())
 }
 
 pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static>(
