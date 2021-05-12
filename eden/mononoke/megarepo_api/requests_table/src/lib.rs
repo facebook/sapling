@@ -26,6 +26,7 @@ pub use crate::types::{
 /// and later checks if the result is ready.
 /// Another service handles the processing and
 /// state updates for individual requests.
+#[facet::facet]
 #[async_trait]
 pub trait LongRunningRequestsQueue: Send + Sync {
     /// Schedule an execution of a request, given

@@ -59,6 +59,7 @@ use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 use segmented_changelog_types::ArcSegmentedChangelog;
@@ -349,6 +350,9 @@ pub enum RepoFactoryError {
 
     #[error("Missing cache pool: {0}")]
     MissingCachePool(String),
+
+    #[error("Error opening long-running request queue")]
+    LongRunningRequestsQueue,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -481,6 +485,19 @@ impl RepoFactory {
             .context(RepoFactoryError::BonsaiGitMapping)?
             .with_repo_id(repo_identity.id());
         Ok(Arc::new(bonsai_git_mapping))
+    }
+
+    pub async fn long_running_requests_queue(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcLongRunningRequestsQueue> {
+        let sql_factory = self
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let long_running_requests_queue = sql_factory
+            .open::<SqlLongRunningRequestsQueue>()
+            .context(RepoFactoryError::LongRunningRequestsQueue)?;
+        Ok(Arc::new(long_running_requests_queue))
     }
 
     pub async fn bonsai_globalrev_mapping(
