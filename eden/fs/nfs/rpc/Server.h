@@ -48,6 +48,11 @@ class RpcServer {
       std::shared_ptr<folly::Executor> threadPool);
   ~RpcServer();
 
+  /**
+   * Bind this server to the passed in address and start accepting connections.
+   */
+  void initialize(folly::SocketAddress addr);
+
   void registerService(uint32_t progNumber, uint32_t progVersion);
 
   /**
@@ -58,9 +63,9 @@ class RpcServer {
   }
 
   /**
-   * Returns the TCP port number this RPC server is listening on.
+   * Returns the address that this RPC server is listening on.
    */
-  uint16_t getPort() const;
+  folly::SocketAddress getAddr() const;
 
  private:
   class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback,

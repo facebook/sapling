@@ -134,7 +134,6 @@ class ServerState {
   }
 
   const std::shared_ptr<NfsServer>& getNfsServer() const& {
-    XDCHECK(nfs_);
     return nfs_;
   }
 

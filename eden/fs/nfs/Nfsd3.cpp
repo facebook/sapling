@@ -1688,7 +1688,6 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 } // namespace
 
 Nfsd3::Nfsd3(
-    bool registerWithRpcbind,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool,
     std::unique_ptr<NfsDispatcher> dispatcher,
@@ -1706,7 +1705,10 @@ Nfsd3::Nfsd3(
               iosize),
           evb,
           std::move(threadPool)),
-      processAccessLog_(std::move(processNameCache)) {
+      processAccessLog_(std::move(processNameCache)) {}
+
+void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
+  server_.initialize(addr);
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }

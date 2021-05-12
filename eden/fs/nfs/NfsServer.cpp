@@ -60,7 +60,6 @@ class NfsTaskQueue : public folly::BlockingQueue<Task> {
 } // namespace
 
 NfsServer::NfsServer(
-    bool registerMountdWithRpcbind,
     folly::EventBase* evb,
     uint64_t numServicingThreads,
     uint64_t maxInflightRequests)
@@ -69,7 +68,13 @@ NfsServer::NfsServer(
           numServicingThreads,
           std::make_unique<NfsTaskQueue>(maxInflightRequests),
           std::make_unique<folly::NamedThreadFactory>("NfsThreadPool"))),
-      mountd_(registerMountdWithRpcbind, evb_, threadPool_) {}
+      mountd_(evb_, threadPool_) {}
+
+void NfsServer::initialize(
+    folly::SocketAddress addr,
+    bool registerMountdWithRpcbind) {
+  mountd_.initialize(addr, registerMountdWithRpcbind);
+}
 
 NfsServer::NfsMountInfo NfsServer::registerMount(
     AbsolutePathPiece path,
@@ -82,7 +87,6 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     CaseSensitivity caseSensitive,
     uint32_t iosize) {
   auto nfsd = std::make_unique<Nfsd3>(
-      false,
       evb_,
       threadPool_,
       std::move(dispatcher),
@@ -94,8 +98,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       iosize);
   mountd_.registerMount(path, rootIno);
 
-  auto nfsdPort = nfsd->getPort();
-  return {std::move(nfsd), mountd_.getPort(), nfsdPort};
+  return {std::move(nfsd), mountd_.getAddr()};
 }
 
 void NfsServer::unregisterMount(AbsolutePathPiece path) {

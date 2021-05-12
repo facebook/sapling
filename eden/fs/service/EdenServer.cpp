@@ -350,7 +350,6 @@ EdenServer::EdenServer(
 #ifndef _WIN32
           edenConfig->enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
-                    edenConfig->registerMountd.getValue(),
                     mainEventBase_,
                     edenConfig->numNfsThreads.getValue(),
                     edenConfig->maxNfsInflightRequests.getValue())
@@ -785,6 +784,14 @@ Future<Unit> EdenServer::prepareImpl(
 #ifndef _WIN32
   // Start the PrivHelper client, using our main event base to drive its I/O
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
+#endif
+
+#ifndef _WIN32
+  if (auto nfsServer = serverState_->getNfsServer()) {
+    nfsServer->initialize(
+        folly::SocketAddress("127.0.0.1", 0),
+        serverState_->getEdenConfig()->registerMountd.getValue());
+  }
 #endif
 
   // Set the ServiceData counter for tracking number of inodes unloaded by

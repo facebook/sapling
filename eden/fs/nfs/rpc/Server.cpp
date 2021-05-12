@@ -393,9 +393,11 @@ RpcServer::RpcServer(
     : evb_(evb),
       acceptCb_(
           new RpcServer::RpcAcceptCallback(proc, evb_, std::move(threadPool))),
-      serverSocket_(new AsyncServerSocket(evb_)) {
+      serverSocket_(new AsyncServerSocket(evb_)) {}
+
+void RpcServer::initialize(folly::SocketAddress addr) {
   // Ask kernel to assign us a port on the loopback interface
-  serverSocket_->bind(SocketAddress("127.0.0.1", 0));
+  serverSocket_->bind(addr);
   serverSocket_->listen(1024);
 
   serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
@@ -451,8 +453,8 @@ void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
   }
 }
 
-uint16_t RpcServer::getPort() const {
-  return serverSocket_->getAddress().getPort();
+folly::SocketAddress RpcServer::getAddr() const {
+  return serverSocket_->getAddress();
 }
 
 } // namespace eden

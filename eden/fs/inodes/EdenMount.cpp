@@ -1354,12 +1354,16 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                mountPromise = std::move(mountPromise),
                mountPath = std::move(mountPath)](
                   NfsServer::NfsMountInfo mountInfo) mutable {
-                auto [channel, mountdPort, nfsdPort] = std::move(mountInfo);
+                auto [channel, mountdAddr] = std::move(mountInfo);
+
+                channel->initialize(
+                    folly::SocketAddress("127.0.0.1", 0), false);
+
                 return serverState_->getPrivHelper()
                     ->nfsMount(
                         mountPath.stringPiece(),
-                        mountdPort,
-                        nfsdPort,
+                        mountdAddr,
+                        channel->getAddr(),
                         readOnly,
                         iosize)
                     .thenTry([this,

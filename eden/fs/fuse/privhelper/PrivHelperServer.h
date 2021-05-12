@@ -18,6 +18,7 @@
 namespace folly {
 class EventBase;
 class File;
+class SocketAddress;
 namespace io {
 class Cursor;
 }
@@ -102,8 +103,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual folly::File fuseMount(const char* mountPath, bool readOnly);
   virtual void nfsMount(
       std::string mountPath,
-      uint16_t mountdPort,
-      uint16_t nfsdPort,
+      folly::SocketAddress mountdPort,
+      folly::SocketAddress nfsdPort,
       bool readOnly,
       uint32_t iosize);
   virtual void unmount(const char* mountPath);

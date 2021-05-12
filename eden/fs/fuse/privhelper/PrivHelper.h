@@ -9,6 +9,7 @@
 
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/SocketAddress.h>
 #include <sys/types.h>
 #include <chrono>
 #include <memory>
@@ -70,8 +71,8 @@ class PrivHelper {
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
-      uint16_t mountdPort,
-      uint16_t nfsdPort,
+      folly::SocketAddress mountdAddr,
+      folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize) = 0;
 

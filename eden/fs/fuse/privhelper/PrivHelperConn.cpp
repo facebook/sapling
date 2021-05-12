@@ -15,6 +15,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/ScopeGuard.h>
+#include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -87,6 +88,30 @@ uint64_t deserializeUint32(Cursor& cursor) {
   return cursor.readBE<uint32_t>();
 }
 
+void serializeSocketAddress(Appender& a, const folly::SocketAddress& addr) {
+  bool isInet = addr.isFamilyInet();
+  serializeBool(a, isInet);
+  if (isInet) {
+    serializeString(a, addr.getAddressStr());
+    serializeUint16(a, addr.getPort());
+  } else {
+    XCHECK_EQ(addr.getFamily(), AF_UNIX);
+    serializeString(a, addr.getPath());
+  }
+}
+
+folly::SocketAddress deserializeSocketAddress(Cursor& cursor) {
+  bool isInet = deserializeBool(cursor);
+  if (isInet) {
+    auto host = deserializeString(cursor);
+    auto port = deserializeUint16(cursor);
+    return folly::SocketAddress(host, port);
+  } else {
+    auto path = deserializeString(cursor);
+    return folly::SocketAddress::makeFromPath(path);
+  }
+}
+
 // Helper for setting close-on-exec.  Not needed on systems
 // that can atomically do this in socketpair
 void setCloExecIfNoSockCloExec(int fd) {
@@ -144,16 +169,16 @@ void PrivHelperConn::parseMountRequest(
 UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
     uint32_t xid,
     folly::StringPiece mountPoint,
-    uint16_t mountdPort,
-    uint16_t nfsdPort,
+    folly::SocketAddress mountdAddr,
+    folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize) {
   auto msg = serializeHeader(xid, REQ_MOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
-  serializeUint16(appender, mountdPort);
-  serializeUint16(appender, nfsdPort);
+  serializeSocketAddress(appender, mountdAddr);
+  serializeSocketAddress(appender, nfsdAddr);
   serializeBool(appender, readOnly);
   serializeUint32(appender, iosize);
   return msg;
@@ -162,13 +187,13 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
 void PrivHelperConn::parseMountNfsRequest(
     folly::io::Cursor& cursor,
     std::string& mountPoint,
-    uint16_t& mountdPort,
-    uint16_t& nfsdPort,
+    folly::SocketAddress& mountdAddr,
+    folly::SocketAddress& nfsdAddr,
     bool& readOnly,
     uint32_t& iosize) {
   mountPoint = deserializeString(cursor);
-  mountdPort = deserializeUint16(cursor);
-  nfsdPort = deserializeUint16(cursor);
+  mountdAddr = deserializeSocketAddress(cursor);
+  nfsdAddr = deserializeSocketAddress(cursor);
   readOnly = deserializeBool(cursor);
   iosize = deserializeUint32(cursor);
   checkAtEnd(cursor, "mount nfs request");

@@ -11,6 +11,7 @@
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
@@ -99,8 +100,8 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<File> fuseMount(folly::StringPiece mountPath, bool readOnly) override;
   Future<Unit> nfsMount(
       folly::StringPiece mountPath,
-      uint16_t mountdPort,
-      uint16_t nfsdPort,
+      folly::SocketAddress mountdAddr,
+      folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
@@ -368,13 +369,13 @@ Future<File> PrivHelperClientImpl::fuseMount(
 
 Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::StringPiece mountPath,
-    uint16_t mountdPort,
-    uint16_t nfsdPort,
+    folly::SocketAddress mountdAddr,
+    folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeMountNfsRequest(
-      xid, mountPath, mountdPort, nfsdPort, readOnly, iosize);
+      xid, mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
   return sendAndRecv(xid, std::move(request))
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(

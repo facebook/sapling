@@ -213,11 +213,13 @@ void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
 }
 
 Mountd::Mountd(
-    bool registerWithRpcbind,
     folly::EventBase* evb,
     std::shared_ptr<folly::Executor> threadPool)
     : proc_(std::make_shared<MountdServerProcessor>()),
-      server_(proc_, evb, std::move(threadPool)) {
+      server_(proc_, evb, std::move(threadPool)) {}
+
+void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
+  server_.initialize(addr);
   if (registerWithRpcbind) {
     server_.registerService(kMountdProgNumber, kMountdProgVersion);
   }

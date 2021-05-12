@@ -29,12 +29,6 @@ class Mountd {
   /**
    * Create a new RPC mountd program.
    *
-   * If registerWithRpcbind is set, this mountd program will advertise itself
-   * against the rpcbind daemon allowing it to be visible system wide. Be aware
-   * that for a given transport (tcp/udp) only one mountd program can be
-   * registered with rpcbind, and thus if a real NFS server is running on this
-   * host, EdenFS won't be able to register itself.
-   *
    * All the socket processing will be run on the EventBase passed in. This
    * also must be called on that EventBase thread.
    *
@@ -42,10 +36,18 @@ class Mountd {
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  Mountd(
-      bool registerWithRpcbind,
-      folly::EventBase* evb,
-      std::shared_ptr<folly::Executor> threadPool);
+  Mountd(folly::EventBase* evb, std::shared_ptr<folly::Executor> threadPool);
+
+  /**
+   * Bind the RPC mountd program to the passed in address.
+   *
+   * If registerWithRpcbind is set, this mountd program will advertise itself
+   * against the rpcbind daemon allowing it to be visible system wide. Be aware
+   * that for a given transport (tcp/udp) only one mountd program can be
+   * registered with rpcbind, and thus if a real NFS server is running on this
+   * host, EdenFS won't be able to register itself.
+   */
+  void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
 
   /**
    * Register a path as the root of a mount point.
@@ -61,10 +63,10 @@ class Mountd {
   void unregisterMount(AbsolutePathPiece path);
 
   /**
-   * Obtain the TCP port that this mountd program is listening on.
+   * Obtain the address that this mountd program is listening on.
    */
-  uint16_t getPort() const {
-    return server_.getPort();
+  folly::SocketAddress getAddr() const {
+    return server_.getAddr();
   }
 
   Mountd(const Mountd&) = delete;

@@ -45,7 +45,6 @@ class Nfsd3 {
    * is not necessary for a properly behaving EdenFS.
    */
   Nfsd3(
-      bool registerWithRpcbind,
       folly::EventBase* evb,
       std::shared_ptr<folly::Executor> threadPool,
       std::unique_ptr<NfsDispatcher> dispatcher,
@@ -58,11 +57,13 @@ class Nfsd3 {
 
   ~Nfsd3();
 
+  void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
+
   /**
-   * Obtain the TCP port that this NFSv3 program is listening on.
+   * Obtain the address that this NFSv3 program is listening on.
    */
-  uint16_t getPort() const {
-    return server_.getPort();
+  folly::SocketAddress getAddr() const {
+    return server_.getAddr();
   }
 
   struct StopData {};

@@ -94,8 +94,8 @@ Future<File> FakePrivHelper::fuseMount(
 
 Future<Unit> FakePrivHelper::nfsMount(
     folly::StringPiece /*mountPath*/,
-    uint16_t /*mountdPort*/,
-    uint16_t /*nfsdPort*/,
+    folly::SocketAddress /*mountdPort*/,
+    folly::SocketAddress /*nfsdPort*/,
     bool /*readOnly*/,
     uint32_t /*iosize*/) {
   return makeFuture<Unit>(

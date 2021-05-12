@@ -36,22 +36,25 @@ class NfsServer {
    * One mountd program will be created per NfsServer, while one nfsd program
    * will be created per-mount point, this allows nfsd program to be only aware
    * of its own mount point which greatly simplifies it.
-   *
-   * See Mountd constructor for the meaning of registerMountdWithRpcbind.
    */
   NfsServer(
-      bool registerMountdWithRpcbind,
       folly::EventBase* evb,
       uint64_t numServicingThreads,
       uint64_t maxInflightRequests);
+
+  /**
+   * Bind the NfsServer to the passed in socket.
+   *
+   * See Mountd::initialize for the meaning of registerMountdWithRpcbind.
+   */
+  void initialize(folly::SocketAddress addr, bool registerMountdWithRpcbind);
 
   /**
    * Return value of registerMount.
    */
   struct NfsMountInfo {
     std::unique_ptr<Nfsd3> nfsd;
-    uint16_t mountdPort;
-    uint16_t nfsdPort;
+    folly::SocketAddress mountdAddr;
   };
 
   /**

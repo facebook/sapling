@@ -16,6 +16,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
+#include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
@@ -559,8 +560,8 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
 
 void PrivHelperServer::nfsMount(
     std::string mountPath,
-    uint16_t mountdPort,
-    uint16_t nfsdPort,
+    folly::SocketAddress mountdAddr,
+    folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize) {
 #ifdef __APPLE__
@@ -598,15 +599,40 @@ void PrivHelperServer::nfsMount(
   XdrTrait<nfs_mattr_lock_mode>::serialize(
       attrSer, nfs_lock_mode::NFS_LOCK_MODE_LOCAL);
 
+  auto mountdFamily = mountdAddr.getFamily();
+  auto nfsdFamily = nfsdAddr.getFamily();
+  if (mountdFamily != nfsdFamily) {
+    throw std::runtime_error(fmt::format(
+        "The mountd and nfsd socket must be of the same type: mountd=\"{}\", nfsd=\"{}\"",
+        mountdAddr.describe(),
+        nfsdAddr.describe()));
+  }
+
   mattrFlags |= NFS_MATTR_SOCKET_TYPE;
-  nfs_mattr_socket_type socketType{"tcp4"};
+  nfs_mattr_socket_type socketType;
+  switch (nfsdFamily) {
+    case AF_INET:
+      socketType = "tcp4";
+      break;
+    case AF_INET6:
+      socketType = "tcp6";
+      break;
+    case AF_UNIX:
+      socketType = "ticotsord";
+      break;
+    default:
+      throw std::runtime_error(
+          fmt::format("Unknown socket family: {}", nfsdFamily));
+  }
   XdrTrait<nfs_mattr_socket_type>::serialize(attrSer, socketType);
 
-  mattrFlags |= NFS_MATTR_NFS_PORT;
-  XdrTrait<nfs_mattr_nfs_port>::serialize(attrSer, nfsdPort);
+  if (nfsdAddr.isFamilyInet()) {
+    mattrFlags |= NFS_MATTR_NFS_PORT;
+    XdrTrait<nfs_mattr_nfs_port>::serialize(attrSer, nfsdAddr.getPort());
 
-  mattrFlags |= NFS_MATTR_MOUNT_PORT;
-  XdrTrait<nfs_mattr_mount_port>::serialize(attrSer, mountdPort);
+    mattrFlags |= NFS_MATTR_MOUNT_PORT;
+    XdrTrait<nfs_mattr_mount_port>::serialize(attrSer, mountdAddr.getPort());
+  }
 
   mattrFlags |= NFS_MATTR_FS_LOCATIONS;
   AbsolutePathPiece path{mountPath};
@@ -615,7 +641,12 @@ void PrivHelperServer::nfsMount(
   for (const auto component : componentIterator) {
     components.push_back(std::string(component.value()));
   }
-  nfs_fs_server server{"127.0.0.1", {"127.0.0.1"}, std::nullopt};
+  nfs_fs_server server{"edenfs", {}, std::nullopt};
+  if (nfsdAddr.isFamilyInet()) {
+    server.nfss_address.push_back(nfsdAddr.getAddressStr());
+  } else {
+    server.nfss_address.push_back(nfsdAddr.getPath());
+  }
   nfs_fs_location location{{server}, components};
   nfs_mattr_fs_locations locations{{location}, std::nullopt};
   XdrTrait<nfs_mattr_fs_locations>::serialize(attrSer, locations);
@@ -631,6 +662,14 @@ void PrivHelperServer::nfsMount(
   mattrFlags |= NFS_MATTR_MNTFROM;
   nfs_mattr_mntfrom serverName = "edenfs:";
   XdrTrait<nfs_mattr_mntfrom>::serialize(attrSer, serverName);
+
+  if (nfsdAddr.getFamily() == AF_UNIX) {
+    mattrFlags |= NFS_MATTR_LOCAL_NFS_PORT;
+    XdrTrait<std::string>::serialize(attrSer, nfsdAddr.getPath());
+
+    mattrFlags |= NFS_MATTR_LOCAL_MOUNT_PORT;
+    XdrTrait<std::string>::serialize(attrSer, mountdAddr.getPath());
+  }
 
   auto mountBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
   folly::io::QueueAppender ser(&mountBuf, 1024);
@@ -656,14 +695,24 @@ void PrivHelperServer::nfsMount(
   checkUnixError(rc, "failed to mount");
 
 #else
+  if (!mountdAddr.isFamilyInet() || !nfsdAddr.isFamilyInet()) {
+    folly::throwSystemErrorExplicit(
+        EINVAL,
+        fmt::format(
+            "only inet addresses are supported: mountdAddr=\"{}\", nfsdAddr=\"{}\"",
+            mountdAddr.describe(),
+            nfsdAddr.describe()));
+  }
   // Prepare the flags and options to pass to mount(2).
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
   // TODO(xavierd): remove nordirplus as this will likely improve performance.
   auto mountOpts = fmt::format(
-      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus,soft,retrans=0,rsize={},wsize={}",
-      nfsdPort,
-      mountdPort,
+      "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
+      "noresvport,nolock,nordirplus,soft,retrans=0,rsize={},wsize={}",
+      nfsdAddr.getAddressStr(),
+      nfsdAddr.getPort(),
+      mountdAddr.getPort(),
       iosize,
       iosize);
 
@@ -766,14 +815,14 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
 
 UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   string mountPath;
-  uint16_t mountdPort, nfsdPort;
+  folly::SocketAddress mountdAddr, nfsdAddr;
   bool readOnly;
   uint32_t iosize;
   PrivHelperConn::parseMountNfsRequest(
-      cursor, mountPath, mountdPort, nfsdPort, readOnly, iosize);
+      cursor, mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
   XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
 
-  nfsMount(mountPath, mountdPort, nfsdPort, readOnly, iosize);
+  nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
   mountPoints_.insert(mountPath);
 
   return makeResponse();
