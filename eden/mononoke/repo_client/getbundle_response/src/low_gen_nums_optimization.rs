@@ -16,12 +16,13 @@ use futures::{
 use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, HashSet},
     convert::TryInto,
     iter::FromIterator,
     sync::Arc,
 };
 use tunables::tunables;
+use uniqueheap::UniqueHeap;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
 pub const LOW_GEN_HEADS_LIMIT: u64 = 20;
@@ -134,15 +135,13 @@ pub(crate) async fn compute_partial_getbundle(
         .log_with_msg("Computing partial getbundle", None);
     let maybe_max_head = heads.iter().max_by_key(|node| node.1);
 
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
+    let mut queue = UniqueHeap::new();
     let mut new_heads: HashMap<_, _> = HashMap::from_iter(heads.clone());
     let new_excludes: HashMap<_, _> = HashMap::from_iter(excludes);
 
-    if let Some(max_head) = maybe_max_head {
-        if !new_excludes.contains_key(&max_head.0) && max_head.1.value() > gen_num_threshold {
-            queue.push_back(max_head.0);
-            visited.insert(max_head.0);
+    if let Some((cs_id, gen_num)) = maybe_max_head {
+        if !new_excludes.contains_key(&cs_id) && gen_num.value() > gen_num_threshold {
+            queue.push((*gen_num, *cs_id));
         }
     }
 
@@ -157,7 +156,7 @@ pub(crate) async fn compute_partial_getbundle(
     //
     // All the parents that weren't traversed but also weren't excluded will be added to
     // new_heads
-    while let Some(cs_id) = queue.pop_front() {
+    while let Some((_, cs_id)) = queue.pop() {
         partial.push(cs_id);
         new_heads.remove(&cs_id);
 
@@ -169,8 +168,8 @@ pub(crate) async fn compute_partial_getbundle(
         }))
         .await?;
         for (p, gen_num) in parents {
-            // This parent was already visited or excluded - just ignore it
-            if !visited.insert(p) || new_excludes.contains_key(&p) {
+            // This parent is excluded - just ignore it
+            if new_excludes.contains_key(&p) {
                 continue;
             }
 
@@ -178,7 +177,7 @@ pub(crate) async fn compute_partial_getbundle(
             if gen_num.value() > gen_num_threshold {
                 // We don't visit a parent that has a very low generation number -
                 // it will be processed separately
-                queue.push_back(p);
+                queue.push((gen_num, p));
             }
         }
 
@@ -404,12 +403,12 @@ mod test {
     use futures::{compat::Stream01CompatExt, FutureExt};
     use futures_01_ext::StreamExt as OldStreamExt;
     use futures_old::stream as old_stream;
-    use maplit::hashmap;
+    use maplit::{btreemap, hashmap};
     use mononoke_types_mocks::changesetid::{FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};
     use revset::add_generations_by_bonsai;
     use skiplist::SkiplistIndex;
     use std::collections::BTreeMap;
-    use tests_utils::drawdag::create_from_dag;
+    use tests_utils::{drawdag::create_from_dag, CreateCommitContext};
     use tunables::{with_tunables_async, MononokeTunables};
 
     #[fbinit::test]
@@ -800,6 +799,69 @@ mod test {
         assert_eq!(res.new_heads, params.heads);
         assert_eq!(res.new_excludes, params.excludes);
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_partial_getbundle_merge_parents_ancestors_of_each_other(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+
+        let first = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+
+        let second = CreateCommitContext::new(&ctx, &repo, vec![first])
+            .commit()
+            .await?;
+
+        // Merge parents are ancestors of each other. This test makes sure
+        // we return parents in correct order i.e. `second` before `first`.
+        let merge_first_second = CreateCommitContext::new(&ctx, &repo, vec![first, second])
+            .commit()
+            .await?;
+
+        let merge_second_first = CreateCommitContext::new(&ctx, &repo, vec![second, first])
+            .commit()
+            .await?;
+
+        let commit_map = btreemap! {
+            "A".to_string() => first,
+            "B".to_string() => second,
+            "C".to_string() => merge_first_second,
+            "D".to_string() => merge_second_first,
+        };
+
+        let low_gen_num_checker = LowGenNumChecker::new(Some(0));
+        let (res, _params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+            },
+            &["C".to_string()],
+            &[],
+            &low_gen_num_checker,
+        )
+        .await?;
+
+        assert_eq!(res.partial, vec![merge_first_second, second, first]);
+
+        let (res, _params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+            },
+            &["D".to_string()],
+            &[],
+            &low_gen_num_checker,
+        )
+        .await?;
+
+        assert_eq!(res.partial, vec![merge_second_first, second, first]);
         Ok(())
     }
 
