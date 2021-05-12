@@ -13,9 +13,10 @@ import eden.config
 from .lib import testcase
 
 
+@testcase.eden_nfs_repo_test
 class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """Test that various Eden CLI commands work even when invoked from a
-    current working directory that is inside a stale FUSE mount point.
+    current working directory that is inside a stale mount point.
     """
 
     def setup_eden_test(self) -> None:

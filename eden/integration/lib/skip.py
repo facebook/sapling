@@ -33,11 +33,11 @@ if sys.platform == "win32":
         "clone_test.CloneFakeEdenFSWithSystemdTestSystemdEdenCLI": True,
         "clone_test.CloneTestHg": True,
         "config_test.ConfigTest": True,
-        "corrupt_overlay_test.CorruptOverlayTest": True,
+        "corrupt_overlay_test.CorruptOverlayTestDefault": True,
         "debug_getpath_test.DebugGetPathTestHg": True,
         "doteden_test.DotEdenTestHg": True,
         "edenclient_test.EdenClientTestHg": True,
-        "fsck_test.FsckTest": True,
+        "fsck_test.FsckTestDefault": True,
         "fsck_test.FsckTestNoEdenfs": True,
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
@@ -52,7 +52,7 @@ if sys.platform == "win32":
         "persistence_test.PersistenceTestHg": [
             "test_does_not_reuse_inode_numbers_after_cold_restart"
         ],
-        "rage_test.RageTest": True,
+        "rage_test.RageTestDefault": True,
         "rc_test.RCTestHg": True,
         "redirect_test.RedirectTestHg": ["test_disallow_bind_mount_outside_repo"],
         "remount_test.RemountTestHg": True,
@@ -67,7 +67,7 @@ if sys.platform == "win32":
         "service_log_test.ServiceLogFakeEdenFSTestSystemdEdenCLI": True,
         "service_log_test.ServiceLogRealEdenFSTest": True,
         "setattr_test.SetAttrTestHg": True,
-        "stale_test.StaleTest": True,
+        "stale_test.StaleTestDefault": True,
         "start_test.DirectInvokeTest": True,
         "start_test.StartFakeEdenFSTestAdHoc": True,
         "start_test.StartFakeEdenFSTestManaged": True,
@@ -193,6 +193,19 @@ if sys.platform.startswith("linux"):
     for (testModule, disabled) in NFS_TEST_DISABLED.items():
         for vcs in ["Hg", "Git"]:
             TEST_DISABLED[testModule + "NFS" + vcs] = disabled
+
+    # custom nfs tests that don't run on both hg and git that we also need to
+    # disable
+    TEST_DISABLED.update(
+        {
+            "corrupt_overlay_test.CorruptOverlayTestNFS": [  # T89441739
+                "test_unlink_deletes_corrupted_files",
+                "test_unmount_succeeds",
+            ],
+            "fsck_test.FsckTestNFS": ["test_fsck_force_and_check_only"],  # T89442010
+            "stale_test.StaleTestNFS": True,  # T89442539
+        }
+    )
 
 
 def skip_if_disabled(test_case: unittest.TestCase) -> None:

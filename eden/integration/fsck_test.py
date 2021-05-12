@@ -21,6 +21,7 @@ FSCK_RETCODE_WARNINGS = 2
 FSCK_RETCODE_ERRORS = 3
 
 
+@testcase.eden_nfs_repo_test
 # pyre-ignore[13]: T62487924
 class FsckTest(testcase.EdenRepoTest):
     overlay: overlay_mod.OverlayStore

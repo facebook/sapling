@@ -14,6 +14,7 @@ import eden.integration.lib.overlay as overlay_mod
 from eden.integration.lib import testcase
 
 
+@testcase.eden_nfs_repo_test
 class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """Test file operations when Eden's overlay is corrupted."""
 

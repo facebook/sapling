@@ -90,6 +90,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
                 continue
 
 
+@testcase.eden_nfs_repo_test
 class ObjectStoreStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
@@ -113,6 +114,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 2)
 
 
+@testcase.eden_nfs_repo_test
 class HgBackingStoreStatsTest(testcase.EdenRepoTest):
     def test_reading_file_gets_file_from_hg(self) -> None:
         counters_before = self.get_counters()
@@ -168,6 +170,7 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
 
+@testcase.eden_nfs_repo_test
 class HgImporterStatsTest(testcase.EdenRepoTest):
     def test_reading_file_imports_blob(self) -> None:
         counters_before = self.get_counters()

@@ -12,6 +12,7 @@ from eden.fs.cli.util import poll_until
 from .lib import testcase
 
 
+@testcase.eden_nfs_repo_test
 class RocksDBStoreTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file("a/dir/foo.txt", "foo\n")

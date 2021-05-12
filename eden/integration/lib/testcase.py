@@ -459,6 +459,31 @@ def test_replicator(
     return decorator
 
 
+def _replicate_eden_nfs_repo_test(
+    test_class: Type[EdenRepoTest],
+) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
+    class NFSRepoTest(NFSTestMixin, test_class):
+        pass
+
+    class DefaultRepoTest(test_class):
+        pass
+
+    variants = [("Default", typing.cast(Type[EdenRepoTest], DefaultRepoTest))]
+    # Only run the nfs tests if EdenFS was built with nfs support.
+    if eden.config.HAVE_NFS:
+        variants.append(("NFS", typing.cast(Type[EdenRepoTest], NFSRepoTest)))
+
+    return variants
+
+
+# A decorator to duplicate the test to use NFS
+#
+# Tests that already use eden_repo_test (most of them), do not need to add this
+# decorator. However the custom tests that skip this, do need to add this
+# decorator.
+eden_nfs_repo_test = test_replicator(_replicate_eden_nfs_repo_test)
+
+
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest],
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:

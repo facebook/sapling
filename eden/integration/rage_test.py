@@ -9,6 +9,7 @@ import logging
 from .lib import repobase, testcase
 
 
+@testcase.eden_nfs_repo_test
 class RageTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file("README.md", "docs\n")
