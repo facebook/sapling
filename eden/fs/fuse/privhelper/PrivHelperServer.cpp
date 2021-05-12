@@ -45,6 +45,7 @@
 #include <fuse_ioctl.h> // @manual
 #include <fuse_mount.h> // @manual
 #include <grp.h> // @manual
+#include <sys/ioccom.h> // @manual
 #include <sys/sysctl.h> // @manual
 #endif
 
@@ -693,6 +694,23 @@ void PrivHelperServer::nfsMount(
 
   int rc = mount("nfs", mountPath.c_str(), mountFlags, (void*)buf->data());
   checkUnixError(rc, "failed to mount");
+
+  /*
+   * The fsctl syscall is completely undocumented, but it does contain a way to
+   * override the f_fstypename returned by statfs. This allows watchman to
+   * properly detects the filesystem as EdenFS and not NFS (watchman refuses to
+   * watch an NFS filesystem).
+   */
+  typedef char fstypename_t[MFSTYPENAMELEN];
+#define FSIOC_SET_FSTYPENAME_OVERRIDE _IOW('A', 10, fstypename_t)
+#define FSCTL_SET_FSTYPENAME_OVERRIDE IOCBASECMD(FSIOC_SET_FSTYPENAME_OVERRIDE)
+
+  rc = fsctl(
+      mountPath.c_str(), FSCTL_SET_FSTYPENAME_OVERRIDE, (void*)"edenfs:", 0);
+  if (rc != 0) {
+    unmount(mountPath.c_str());
+    checkUnixError(rc, "failed to fsctl");
+  }
 
 #else
   if (!mountdAddr.isFamilyInet() || !nfsdAddr.isFamilyInet()) {
