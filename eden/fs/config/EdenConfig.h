@@ -548,6 +548,15 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
 
   /**
+   * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
+   * TCP ones.
+   *
+   * Unix sockets bypass the overhead of TCP and are thus significantly faster.
+   * This is only supported on macOS.
+   */
+  ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
+
+  /**
    * Kill switch for the prefetch profiles feature.
    */
   ConfigSetting<bool> enablePrefetchProfiles{

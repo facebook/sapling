@@ -64,6 +64,7 @@
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
@@ -788,8 +789,12 @@ Future<Unit> EdenServer::prepareImpl(
 
 #ifndef _WIN32
   if (auto nfsServer = serverState_->getNfsServer()) {
+    std::optional<AbsolutePath> unixSocketPath;
+    if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
+      unixSocketPath = edenDir_.getMountdSocketPath();
+    }
     nfsServer->initialize(
-        folly::SocketAddress("127.0.0.1", 0),
+        makeNfsSocket(std::move(unixSocketPath)),
         serverState_->getEdenConfig()->registerMountd.getValue());
   }
 #endif

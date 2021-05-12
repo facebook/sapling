@@ -12,15 +12,16 @@
 
 using folly::StringPiece;
 
+namespace facebook {
+namespace eden {
+
 namespace {
 constexpr StringPiece kLockFileName{"lock"};
 constexpr StringPiece kPidFileName{"pid"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kThriftSocketName{"socket"};
+constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
 } // namespace
-
-namespace facebook {
-namespace eden {
 
 EdenStateDir::EdenStateDir(AbsolutePathPiece path)
     : path_(path), lockPath_(path + PathComponentPiece(kLockFileName)) {}
@@ -110,6 +111,10 @@ AbsolutePath EdenStateDir::getThriftSocketPath() const {
 
 AbsolutePath EdenStateDir::getTakeoverSocketPath() const {
   return path_ + PathComponentPiece{kTakeoverSocketName};
+}
+
+AbsolutePath EdenStateDir::getMountdSocketPath() const {
+  return path_ + kMountdSocketName;
 }
 
 AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {

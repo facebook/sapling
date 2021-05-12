@@ -47,6 +47,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Future.h"
+#include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -85,6 +86,7 @@ namespace {
 // The name of that symlink is `this-dir`:
 // .eden/this-dir -> /abs/path/to/mount/.eden
 constexpr PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
+constexpr PathComponentPiece kNfsdSocketName{"nfsd.socket"_pc};
 } // namespace
 
 /**
@@ -1356,8 +1358,13 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                   NfsServer::NfsMountInfo mountInfo) mutable {
                 auto [channel, mountdAddr] = std::move(mountInfo);
 
+                std::optional<AbsolutePath> unixSocketPath;
+                if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
+                  unixSocketPath =
+                      getConfig()->getClientDirectory() + kNfsdSocketName;
+                }
                 channel->initialize(
-                    folly::SocketAddress("127.0.0.1", 0), false);
+                    makeNfsSocket(std::move(unixSocketPath)), false);
 
                 return serverState_->getPrivHelper()
                     ->nfsMount(

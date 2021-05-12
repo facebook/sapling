@@ -91,6 +91,11 @@ class EdenStateDir {
   AbsolutePath getTakeoverSocketPath() const;
 
   /**
+   * Get the path to Eden's NFS mountd socket.
+   */
+  AbsolutePath getMountdSocketPath() const;
+
+  /**
    * Get the path to the directory where state for a specific checkout is
    * stored.
    *
