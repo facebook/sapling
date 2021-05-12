@@ -30,7 +30,7 @@ Check reads throttle by qps
   Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
-  $ if [[ "$ELAPSED_SECS" -ge 4 ]]; then echo Took Long Enough Read; else echo "Too short: $ELAPSED_SECS"; fi
+  $ if [[ "$ELAPSED_SECS" -ge 3 ]]; then echo Took Long Enough Read; else echo "Too short: $ELAPSED_SECS"; fi
   Took Long Enough Read
 
 Check reads throttle by bytes
