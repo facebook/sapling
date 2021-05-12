@@ -2921,7 +2921,6 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     std::optional<PathComponent> inodeName;
     {
       std::unique_ptr<InodeBase> deletedInode;
-      FileInodePtr fileInode;
       auto contents = contents_.wlock();
 
       // The CheckoutContext should be holding the rename lock, so the entry
@@ -2948,12 +2947,16 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         return InvalidationRequired::No;
       }
 
+      // This is a file, so we can simply unlink it, and replace/remove the
+      // entry as desired.
+      deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
       if (newScmEntry) {
-        fileInode = inode.asFilePtr();
-        fileInode->setBlobHash(newScmEntry->getHash());
-        it->second.setDematerialized(newScmEntry->getHash());
+        XDCHECK_EQ(newScmEntry->getName(), name);
+        it->second = DirEntry(
+            modeFromTreeEntryType(newScmEntry->getType()),
+            getOverlay()->allocateInodeNumber(),
+            newScmEntry->getHash());
       } else {
-        deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
         contents->entries.erase(it);
       }
     }

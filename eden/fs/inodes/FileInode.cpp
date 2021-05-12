@@ -623,51 +623,6 @@ std::optional<Hash> FileInode::getBlobHash() const {
   }
 }
 
-void FileInode::setBlobHash(Hash hash) {
-  {
-    // In the case where this FileInode is currently being loaded, we need to
-    // force the load to complete so we can switch the state back to
-    // BLOB_NOT_LOADING. This needs to be done outside of the LockedState lock,
-    // thus the need for the SCOPE_EXIT.
-    std::optional<folly::SharedPromise<std::shared_ptr<const Blob>>>
-        loadingPromise;
-    SCOPE_EXIT {
-      if (loadingPromise) {
-        loadingPromise->setValue(nullptr);
-      }
-    };
-
-    auto state = LockedState{this};
-    switch (state->tag) {
-      case State::MATERIALIZED_IN_OVERLAY:
-#ifndef _WIN32
-        getOverlayFileAccess(state)->removeFile(getNodeId());
-#endif
-        break;
-      case State::BLOB_LOADING:
-        // The blob is being loaded, let's complete it with an nullptr blob,
-        // this will force runWhileDataLoaded to simply retry, but this time
-        // with the new hash.
-        loadingPromise = std::move(state->blobLoadingPromise);
-        state->blobLoadingPromise.reset();
-        break;
-      case State::BLOB_NOT_LOADING:
-        // Nothing to be done, it's already in the right state.
-        break;
-    }
-
-    state->tag = State::BLOB_NOT_LOADING;
-    state->nonMaterializedState = FileInodeState::NonMaterializedState(hash);
-    state->interestHandle.reset();
-#ifndef _WIN32
-    state->readByteRanges.clear();
-#endif // !_WIN32
-
-    updateMtimeAndCtimeLocked(*state, getNow());
-  }
-  updateJournal();
-}
-
 void FileInode::materializeInParent() {
   auto renameLock = getMount()->acquireRenameLock();
   auto loc = getLocationInfo(renameLock);
@@ -1017,14 +972,16 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
         auto state = LockedState{self};
 
         switch (state->tag) {
+          case State::BLOB_NOT_LOADING:
+            EDEN_BUG()
+                << "A blob load finished when the inode was in BLOB_NOT_LOADING state";
+
           // Since the load doesn't hold the state lock for its duration,
           // sanity check that the inode is still in loading state.
           //
           // Note that someone else may have grabbed the lock before us and
           // materialized the FileInode, so we may already be
           // MATERIALIZED_IN_OVERLAY at this point.
-          // Similarly, a checkout may be happening that would flip the state
-          // back to BLOB_NOT_LOADING.
           case State::BLOB_LOADING: {
             auto promise = std::move(*state->blobLoadingPromise);
             state->blobLoadingPromise.reset();
@@ -1048,13 +1005,6 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
             // The load raced with a someone materializing the file to truncate
             // it.  Nothing left to do here. The truncation completed the
             // promise with a null blob.
-            XCHECK_EQ(false, state->blobLoadingPromise.has_value());
-            return;
-          case State::BLOB_NOT_LOADING:
-            // The load raced with a checkout operation that called setBlobHash
-            // on this inode. Similarly to MATERIALIZED_IN_OVERLAY, the promise
-            // completed with a null blob, the caller is responsible for
-            // retrying the load.
             XCHECK_EQ(false, state->blobLoadingPromise.has_value());
             return;
         }

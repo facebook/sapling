@@ -57,11 +57,6 @@ class OverlayFileAccess {
       const std::optional<Hash>& sha1);
 
   /**
-   * Remove a file from the overlay.
-   */
-  void removeFile(InodeNumber ino);
-
-  /**
    * Return the size of the overlay file at the given inode number. The result
    * will never be negative.
    *

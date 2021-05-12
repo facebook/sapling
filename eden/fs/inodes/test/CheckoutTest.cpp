@@ -702,11 +702,16 @@ TEST(Checkout, modifyThenRevert) {
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
-  // The checkout operation updates files by changing their hashes so the
-  // inodes will stay the same before and after the update.
+#ifndef _WIN32
+  // The checkout operation updates files by replacing them, so
+  // there should be a new inode at this location now, with the original
+  // contents. On Windows, files are written directly into the Projected FS
+  // cache, and thus the old data is gone.
   auto postInode = testMount.getFileInode("a/test.txt");
   EXPECT_FILE_INODE(postInode, "test contents\n", 0644);
-  EXPECT_EQ(preInode->getNodeId(), postInode->getNodeId());
+  EXPECT_NE(preInode->getNodeId(), postInode->getNodeId());
+  EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
+#endif
 }
 
 TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
@@ -1209,8 +1214,8 @@ TYPED_TEST(
 
   // Verify inode numbers for referenced inodes are the same.
 
-  // Files referenced by FUSE do not change inode numbers during a checkout.
-  EXPECT_EQ(
+  // Files always change inode numbers during a checkout.
+  EXPECT_NE(
       abcfile1InodeNumber,
       edenMount
           ->getInode(
@@ -1262,13 +1267,13 @@ TYPED_TEST(
           .get(1ms)
           ->getNodeId());
 
-  // Replaced files won't be unlinked.
+  // Replaced files should be unlinked.
 
   abcfile1 = edenMount->getInodeMap()
                  ->lookupInode(abcfile1InodeNumber)
                  .get(1ms)
                  .asFilePtr();
-  EXPECT_FALSE(abcfile1->isUnlinked());
+  EXPECT_TRUE(abcfile1->isUnlinked());
 
   // Referenced but modified directories are not unlinked - they're updated in
   // place.

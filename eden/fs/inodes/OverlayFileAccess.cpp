@@ -74,14 +74,6 @@ void OverlayFileAccess::createFile(
       ino, std::make_shared<Entry>(std::move(file), blob.getSize(), sha1));
 }
 
-void OverlayFileAccess::removeFile(InodeNumber ino) {
-  auto state = state_.wlock();
-  state->entries.erase(ino);
-  // TODO(xavierd): Both createFile and createEmptyFile will end up truncating
-  // the overlay file so we don't need to remove it here, but for the sake of
-  // cleaning up, should we remove it?
-}
-
 off_t OverlayFileAccess::getFileSize(FileInode& inode) {
   return getFileSize(inode.getNodeId(), &inode);
 }

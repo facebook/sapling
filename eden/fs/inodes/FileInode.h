@@ -54,8 +54,6 @@ class OverlayFileAccess;
  *   - loading -> not loaded (blob available during transition)
  *   - loading -> materialized (O_TRUNC or not)
  *   - loading -> not loading -> materialized
- *   - loading -> not loading (during checkout due to a setBlobHash)
- *   - materialized -> not loading (during checkout due to a setBlobHash)
  */
 struct FileInodeState {
   enum Tag : uint8_t {
@@ -234,14 +232,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * modifications by other threads.
    */
   std::optional<Hash> getBlobHash() const;
-
-  /**
-   * Reset this FileInode to the given hash.
-   *
-   * For a materialized FileInode, this will do a state transition to
-   * BLOB_NOT_LOADING.
-   */
-  void setBlobHash(Hash hash);
 
   /**
    * Read the entire file contents, and return them as a string.
