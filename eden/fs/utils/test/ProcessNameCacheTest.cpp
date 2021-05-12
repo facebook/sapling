@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/utils/ProcessNameCache.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace std::literals;
 using namespace facebook::eden;

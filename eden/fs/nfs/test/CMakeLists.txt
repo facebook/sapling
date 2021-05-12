@@ -15,6 +15,7 @@ target_link_libraries(
   PUBLIC
     eden_nfs_nfsd_rpc
     eden_nfs_testharness_xdr_test_utils
+    Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
 

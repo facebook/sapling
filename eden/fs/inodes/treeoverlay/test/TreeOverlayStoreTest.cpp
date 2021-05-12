@@ -8,7 +8,7 @@
 #include "eden/fs/inodes/treeoverlay/TreeOverlayStore.h"
 
 #include <folly/logging/xlog.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <memory>
 #include <optional>
 #include "eden/fs/inodes/InodeNumber.h"

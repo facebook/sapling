@@ -13,8 +13,8 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GTest.h>
 #include <gflags/gflags.h>
-#include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "eden/fs/config/CheckoutConfig.h"

@@ -6,9 +6,12 @@
  */
 
 #include "eden/fs/model/git/GitBlob.h"
+
+#include <folly/portability/GTest.h>
+
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
-#include <gtest/gtest.h>
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 

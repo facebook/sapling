@@ -9,7 +9,7 @@
 
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;

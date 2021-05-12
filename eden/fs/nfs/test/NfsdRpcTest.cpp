@@ -8,7 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/NfsdRpc.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"
 
 namespace facebook::eden {

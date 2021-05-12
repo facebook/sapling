@@ -8,8 +8,8 @@
 #include "eden/fs/config/EdenConfig.h"
 
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/model/git/GitIgnore.h"

@@ -17,9 +17,9 @@
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/test/TestLogHandler.h>
+#include <folly/portability/GTest.h>
 #include <folly/synchronization/test/Barrier.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <iomanip>
 #include <sstream>

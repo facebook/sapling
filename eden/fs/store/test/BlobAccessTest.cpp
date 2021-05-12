@@ -7,7 +7,7 @@
 
 #include "eden/fs/store/BlobAccess.h"
 #include <folly/executors/QueuedImmediateExecutor.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <chrono>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/store/LocalStore.h"

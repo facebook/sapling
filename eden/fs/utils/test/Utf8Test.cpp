@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/utils/Utf8.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 

@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/store/BlobCache.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/model/Blob.h"
 
 using namespace folly::literals;

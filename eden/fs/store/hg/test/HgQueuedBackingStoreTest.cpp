@@ -8,7 +8,7 @@
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/xlog.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"

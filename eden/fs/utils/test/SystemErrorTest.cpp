@@ -6,10 +6,10 @@
  */
 
 #ifdef _WIN32
+#include <folly/portability/GTest.h>
 #include <iostream>
 #include <string>
 #include "eden/fs/utils/WinError.h"
-#include "gtest/gtest.h"
 using namespace facebook::eden;
 
 // Test Win32 error

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 #include <folly/executors/ThreadedExecutor.h>
 #include <folly/futures/Future.h>

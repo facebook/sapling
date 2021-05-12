@@ -8,8 +8,8 @@
 #include "eden/fs/config/CheckoutConfig.h"
 
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"

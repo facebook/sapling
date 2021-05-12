@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/config/TomlConfig.h"
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 using namespace std::literals;

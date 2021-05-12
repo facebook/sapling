@@ -10,7 +10,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include <list>
 #include "eden/fs/utils/PathFuncs.h"
 

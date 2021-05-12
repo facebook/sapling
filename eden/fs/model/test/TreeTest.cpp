@@ -6,7 +6,7 @@
  */
 
 #include <folly/String.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"

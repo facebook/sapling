@@ -6,9 +6,12 @@
  */
 
 #include "eden/fs/model/git/GitTree.h"
-#include <folly/String.h>
-#include <gtest/gtest.h>
+
+#include <folly/portability/GTest.h>
 #include <string>
+
+#include <folly/String.h>
+
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"

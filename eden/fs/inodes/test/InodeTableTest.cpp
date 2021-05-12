@@ -11,8 +11,8 @@
 
 #include <folly/chrono/Conv.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

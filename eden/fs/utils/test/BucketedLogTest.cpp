@@ -7,8 +7,8 @@
 
 #include "eden/fs/utils/BucketedLog.h"
 
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

@@ -13,6 +13,7 @@ target_link_libraries(
   eden_journal_test
   PRIVATE
     eden_journal
+    Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
 

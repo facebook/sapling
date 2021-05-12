@@ -10,7 +10,7 @@
 #include <folly/Format.h>
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 

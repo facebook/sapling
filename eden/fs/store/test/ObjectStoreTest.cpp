@@ -6,8 +6,8 @@
  */
 
 #include <folly/executors/QueuedImmediateExecutor.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"

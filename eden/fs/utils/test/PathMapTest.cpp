@@ -6,8 +6,8 @@
  */
 
 #include "eden/fs/utils/PathMap.h"
+#include <folly/portability/GTest.h>
 #include <folly/portability/Unistd.h>
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using namespace facebook::eden::path_literals;

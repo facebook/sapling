@@ -7,8 +7,8 @@
 
 #include "eden/fs/inodes/InodePtr.h"
 
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"

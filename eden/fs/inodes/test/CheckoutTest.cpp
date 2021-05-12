@@ -9,9 +9,9 @@
 #include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"

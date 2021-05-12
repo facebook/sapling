@@ -6,8 +6,8 @@
  */
 
 #include "eden/fs/journal/Journal.h"
+#include <folly/portability/GTest.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

@@ -7,7 +7,7 @@
 
 #include "eden/fs/utils/LazyInitialize.h"
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 

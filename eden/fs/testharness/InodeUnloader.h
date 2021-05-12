@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/inodes/TreeInode.h"
 
 namespace facebook {

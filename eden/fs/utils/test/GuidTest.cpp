@@ -9,9 +9,9 @@
 
 #include "eden/fs/utils/Guid.h"
 #include <fmt/format.h>
+#include <folly/portability/GTest.h>
 #include <iostream>
 #include <string>
-#include "gtest/gtest.h"
 
 using namespace facebook::eden;
 

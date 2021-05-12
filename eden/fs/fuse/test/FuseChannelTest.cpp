@@ -9,8 +9,8 @@
 
 #include <folly/Random.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include <unordered_map>
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"

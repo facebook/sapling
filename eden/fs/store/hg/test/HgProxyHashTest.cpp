@@ -7,7 +7,7 @@
 
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <memory>
 
 #include "eden/fs/model/Hash.h"

@@ -7,7 +7,7 @@
 
 #include "eden/fs/inodes/Traverse.h"
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"

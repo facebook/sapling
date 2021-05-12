@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/io/IOBuf.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"

@@ -8,8 +8,8 @@
 #include "eden/fs/inodes/InodeLoader.h"
 #include <folly/Exception.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

@@ -7,9 +7,9 @@
 
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <stdexcept>
 
 #include "eden/fs/config/EdenConfig.h"

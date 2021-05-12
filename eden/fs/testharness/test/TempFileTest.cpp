@@ -8,7 +8,7 @@
 #include "eden/fs/testharness/TempFile.h"
 
 #include <folly/logging/xlog.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 

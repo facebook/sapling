@@ -13,6 +13,7 @@ target_link_libraries(
   eden_model_git_test
   PRIVATE
     eden_model_git
+    Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
 

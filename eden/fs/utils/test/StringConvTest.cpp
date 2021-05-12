@@ -8,8 +8,8 @@
 #ifdef _WIN32
 
 #include "eden/fs/utils/StringConv.h"
+#include <folly/portability/GTest.h>
 #include <string>
-#include "gtest/gtest.h"
 
 using namespace facebook::eden;
 

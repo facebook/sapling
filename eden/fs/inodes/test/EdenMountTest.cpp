@@ -14,8 +14,8 @@
 #include <folly/executors/ManualExecutor.h>
 #include <folly/futures/FutureSplitter.h>
 #include <folly/futures/Promise.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include <stdexcept>
 #include <utility>
 

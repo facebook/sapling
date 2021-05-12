@@ -14,6 +14,7 @@ target_link_libraries(
   PRIVATE
     eden_model
     eden_testharness
+    Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
 

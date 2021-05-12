@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/TestUtil.h"

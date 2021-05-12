@@ -8,8 +8,8 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/FileUtils.h"

@@ -9,7 +9,7 @@
 
 #include "eden/fs/nfs/xdr/Xdr.h"
 #include <folly/container/Array.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"
 
 namespace facebook::eden {

@@ -7,9 +7,9 @@
 
 #include "eden/fs/utils/UserInfo.h"
 
+#include <folly/portability/GTest.h>
 #include <folly/portability/Stdlib.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/utils/test/ScopedEnvVar.h"
 

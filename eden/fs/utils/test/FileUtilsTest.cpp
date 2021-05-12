@@ -7,7 +7,7 @@
 
 #include "eden/fs/utils/FileUtils.h"
 #include <folly/Range.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <string>
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/PathFuncs.h"

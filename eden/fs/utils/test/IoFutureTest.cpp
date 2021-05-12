@@ -12,8 +12,8 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <chrono>
 

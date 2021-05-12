@@ -12,7 +12,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace facebook::eden;
 using folly::ByteRange;

@@ -6,7 +6,7 @@
  */
 
 #include <folly/init/Init.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);

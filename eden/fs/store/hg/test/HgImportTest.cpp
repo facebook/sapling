@@ -7,9 +7,9 @@
 
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"

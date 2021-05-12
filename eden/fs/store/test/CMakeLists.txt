@@ -14,6 +14,7 @@ target_link_libraries(
     eden_store
     eden_model
     eden_testharness
+    Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )
 gtest_discover_tests(eden_store_test NO_PRETTY_VALUES)

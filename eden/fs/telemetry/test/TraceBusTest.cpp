@@ -7,7 +7,7 @@
 
 #include "eden/fs/telemetry/TraceBus.h"
 #include <folly/futures/Promise.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using namespace std::literals;
 using namespace facebook::eden;

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/portability/GTest.h>
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <sys/types.h>
 #include <utility>
 

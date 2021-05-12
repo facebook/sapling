@@ -8,7 +8,7 @@
 #include "eden/fs/utils/Memory.h"
 
 #include <folly/Exception.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 
 using std::string;
 using namespace facebook::eden;
