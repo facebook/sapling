@@ -69,14 +69,15 @@ use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 
+#[derive(Clone)]
 struct RepoFactoryCache<K: Clone + Eq + Hash, V: Clone> {
-    cache: Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>,
+    cache: Arc<Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>>,
 }
 
 impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
     fn new() -> Self {
         RepoFactoryCache {
-            cache: Mutex::new(HashMap::new()),
+            cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -108,6 +109,7 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
 
 pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 
+#[derive(Clone)]
 pub struct RepoFactory {
     pub env: Arc<MononokeEnvironment>,
     censored_scuba_params: CensoredScubaParams,
@@ -115,7 +117,7 @@ pub struct RepoFactory {
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs:
         RepoFactoryCache<MetadataDatabaseConfig, Arc<HashMap<String, RedactedMetadata>>>,
-    blobstore_override: Option<Box<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
+    blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
 }
@@ -141,7 +143,7 @@ impl RepoFactory {
         &mut self,
         blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
     ) -> &mut Self {
-        self.blobstore_override = Some(Box::new(blobstore_override));
+        self.blobstore_override = Some(Arc::new(blobstore_override));
         self
     }
 
