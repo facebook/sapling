@@ -6,7 +6,7 @@
  */
 
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
+use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, CountedBlobstore};
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
@@ -122,7 +122,9 @@ impl CacheOps for CachelibOps {
 
     async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let blob = self.blob_pool.get(key);
-        blob.ok()?.map(BlobstoreGetData::decode).transpose().ok()?
+        let blob = blob.ok()??;
+        let blob = BlobstoreBytes::decode(blob).ok()?;
+        Some(blob.into())
     }
 
     async fn put(&self, key: &str, value: BlobstoreGetData) {
@@ -134,7 +136,7 @@ impl CacheOps for CachelibOps {
         } else {
             None
         };
-        if let Ok(bytes) = value.encode(encode_limit) {
+        if let Ok(bytes) = value.into_bytes().encode(encode_limit) {
             let _ = self.blob_pool.set(key, bytes);
         }
     }

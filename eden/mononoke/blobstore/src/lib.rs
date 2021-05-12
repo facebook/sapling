@@ -96,59 +96,6 @@ impl BlobstoreGetData {
     pub fn remove_ctime(&mut self) {
         self.meta.ctime = None;
     }
-
-    pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
-        let mut bytes = vec![UNCOMPRESSED];
-        let get_data = BlobstoreGetDataSerialisable::from(self);
-        unsafe {
-            abomonation::encode(&get_data, &mut bytes).map_err(|_| ())?
-        };
-
-        match encode_limit {
-            Some(encode_limit) if bytes.len() as u64 >= encode_limit => {
-                let mut compressed = Vec::with_capacity(bytes.len());
-                compressed.push(COMPRESSED);
-
-                let mut cursor = Cursor::new(bytes);
-                cursor.set_position(1);
-                zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
-                    .map_err(|_| ())?;
-                Ok(Bytes::from(compressed))
-            }
-            _ => Ok(Bytes::from(bytes)),
-        }
-    }
-
-    pub fn decode(mut bytes: Bytes) -> Result<Self, ()> {
-        let prefix_size = 1;
-        if bytes.len() < prefix_size {
-            return Err(());
-        }
-
-        let is_compressed = bytes.split_to(prefix_size);
-        let mut bytes: Vec<u8> = if is_compressed[0] == COMPRESSED {
-            let cursor = Cursor::new(bytes);
-            zstd::decode_all(cursor).map_err(|_| ())?
-        } else {
-            bytes.bytes().into()
-        };
-
-        let get_data_serialisable =
-            unsafe { abomonation::decode::<BlobstoreGetDataSerialisable>(&mut bytes) };
-
-        let result = get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
-            if tail.is_empty() {
-                Some(get_data_serialisable.clone().into())
-            } else {
-                None
-            }
-        });
-
-        match result {
-            Some(val) => Ok(val),
-            None => Err(()),
-        }
-    }
 }
 
 impl From<BlobstoreBytes> for BlobstoreGetData {
@@ -248,38 +195,65 @@ impl BlobstoreBytes {
     pub fn as_bytes(&self) -> &Bytes {
         &self.0
     }
-}
 
-/// Serialisable counterpart of BlobstoreGetDataSerialisable fields mimic exactly
-/// its original struct except in types that cannot be serialised
-#[derive(Abomonation, Clone)]
-struct BlobstoreGetDataSerialisable {
-    meta: BlobstoreMetadata,
-    bytes: BlobstoreBytesSerialisable,
+    pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
+        let mut bytes = vec![UNCOMPRESSED];
+        let prepared = BlobstoreBytesSerialisable::from(self);
+        unsafe {
+            abomonation::encode(&prepared, &mut bytes).map_err(|_| ())?
+        };
+
+        match encode_limit {
+            Some(encode_limit) if bytes.len() as u64 >= encode_limit => {
+                let mut compressed = Vec::with_capacity(bytes.len());
+                compressed.push(COMPRESSED);
+
+                let mut cursor = Cursor::new(bytes);
+                cursor.set_position(1);
+                zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
+                    .map_err(|_| ())?;
+                Ok(Bytes::from(compressed))
+            }
+            _ => Ok(Bytes::from(bytes)),
+        }
+    }
+
+    pub fn decode(mut bytes: Bytes) -> Result<Self, ()> {
+        let prefix_size = 1;
+        if bytes.len() < prefix_size {
+            return Err(());
+        }
+
+        let is_compressed = bytes.split_to(prefix_size);
+        let mut bytes: Vec<u8> = if is_compressed[0] == COMPRESSED {
+            let cursor = Cursor::new(bytes);
+            zstd::decode_all(cursor).map_err(|_| ())?
+        } else {
+            bytes.bytes().into()
+        };
+
+        let get_data_serialisable =
+            unsafe { abomonation::decode::<BlobstoreBytesSerialisable>(&mut bytes) };
+
+        let result = get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
+            if tail.is_empty() {
+                Some(get_data_serialisable.clone().into())
+            } else {
+                None
+            }
+        });
+
+        match result {
+            Some(val) => Ok(val),
+            None => Err(()),
+        }
+    }
 }
 
 /// Serialisable counterpart of BlobstoreBytes fields mimic exactly its original
 /// struct except in types that cannot be serialised
 #[derive(Abomonation, Clone)]
 struct BlobstoreBytesSerialisable(Vec<u8>);
-
-impl From<BlobstoreGetData> for BlobstoreGetDataSerialisable {
-    fn from(blob: BlobstoreGetData) -> Self {
-        BlobstoreGetDataSerialisable {
-            meta: blob.meta,
-            bytes: blob.bytes.into(),
-        }
-    }
-}
-
-impl From<BlobstoreGetDataSerialisable> for BlobstoreGetData {
-    fn from(blob: BlobstoreGetDataSerialisable) -> Self {
-        BlobstoreGetData {
-            meta: blob.meta,
-            bytes: blob.bytes.into(),
-        }
-    }
-}
 
 impl From<BlobstoreBytes> for BlobstoreBytesSerialisable {
     fn from(blob_bytes: BlobstoreBytes) -> Self {

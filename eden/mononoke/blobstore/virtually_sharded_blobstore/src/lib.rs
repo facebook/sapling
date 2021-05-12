@@ -41,9 +41,9 @@ define_stats! {
 }
 
 // 4MiB, minus a little space for the STORED prefix and the key. Note that we also arbitrarily add
-// 8 bytes because 4 * 1024 * 1024 - 1024 is also our Filestore threshold so it's a good idea to
+// 128 bytes because 4 * 1024 * 1024 - 1024 is also our Filestore threshold so it's a good idea to
 // not attempt to recompress that given it was chosen to fit in cachelib.
-const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024 + 8;
+const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024 + 128;
 
 const NOT_STORABLE: Bytes = Bytes::from_static(&[0]);
 const STORED: Bytes = Bytes::from_static(&[1]);
@@ -81,8 +81,9 @@ impl CacheData {
         }
 
         if prefix.as_ref() == STORED {
-            let val = BlobstoreGetData::decode(val)
-                .map_err(|()| anyhow!("Invalid data in blob cache"))?;
+            let val = BlobstoreBytes::decode(val)
+                .map_err(|()| anyhow!("Invalid data in blob cache"))?
+                .into();
             return Ok(Self::Stored(val));
         }
 
@@ -249,6 +250,7 @@ impl Cache {
             None
         };
         let stored = value
+            .into_bytes()
             .encode(encode_limit)
             .map_err(|()| anyhow!("Could not encode"))
             .and_then(|encoded| {
@@ -553,6 +555,45 @@ mod test {
 
     fn reject_all_filter(_: &Bytes) -> Result<()> {
         Err(anyhow!("Rejected!"))
+    }
+
+    mod caching {
+        use super::*;
+
+        use mononoke_types::{content_chunk::new_blob_and_pointer, MononokeId};
+
+        #[fbinit::test]
+        fn test_filestore_chunk_is_not_compressed(fb: FacebookInit) -> Result<()> {
+            fn assert_below_threshold(b: &Bytes) -> Result<()> {
+                assert!(
+                    (b.len() as u64) < MAX_CACHELIB_VALUE_SIZE,
+                    "Blob of size {} would have triggered compression!",
+                    b.len()
+                );
+                Ok(())
+            }
+
+            let mut cache = make_cache(fb, "blobs", assert_below_threshold)?;
+            cache.cachelib_options.attempt_zstd = false;
+
+            let (blob, _) = new_blob_and_pointer(vec![0; 4193280]);
+
+            // Use a key that looks reasonably close to what we'd actually use in prod.
+            let key = format!("repo1234.{}", blob.id().blobstore_key());
+            let key = CacheKey::from_key(&key);
+
+            let bytes = BlobstoreBytes::from(blob);
+            cache.set_in_cache(&key, PresenceData::Get, bytes.clone().into())?;
+
+            let cached = cache.get_from_cache(&key)?.context("Blob not in cache")?;
+
+            assert_matches::assert_matches!(cached, CacheData::Stored(cached) => {
+                let expected = BlobstoreGetData::new(BlobstoreMetadata::default(), bytes);
+                assert_eq!(expected, cached);
+            });
+
+            Ok(())
+        }
     }
 
     mod sharding {
