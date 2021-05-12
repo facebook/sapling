@@ -117,13 +117,18 @@ pub trait ThriftParams: Sized + Send + Sync {
 }
 
 /// Polling token for an async service method
-pub trait Token: Sized + Send + Sync {
+pub trait Token: Clone + Sized + Send + Sync {
     type R: Request<Token = Self>;
     type ThriftToken;
 
     fn into_thrift(self) -> Self::ThriftToken;
-    fn from_db_id(id: RowId) -> Self;
-    fn to_db_id(&self) -> Result<RowId, MegarepoError>;
+    fn from_db_id_and_target(id: RowId, target: Target) -> Self;
+    fn to_db_id_and_target(&self) -> Result<(RowId, Target), MegarepoError>;
+
+    /// Every Token referes to some Target
+    /// This method is needed to extract it from the
+    /// implementor of this trait
+    fn target(&self) -> &Target;
 }
 
 /// This macro implements an async service method type,
@@ -288,6 +293,7 @@ macro_rules! impl_async_svc_method_types {
             context_type => $result_context_type,
         }
 
+        #[derive(Clone)]
         pub struct $token_type(pub $token_thrift_type);
 
         impl ThriftParams for $params_value_thrift_type {
@@ -302,23 +308,31 @@ macro_rules! impl_async_svc_method_types {
             type ThriftToken = $token_thrift_type;
             type R = $request_struct;
 
-            fn from_db_id(id: RowId) -> Self {
+            fn from_db_id_and_target(id: RowId, target: Target) -> Self {
                 // Thrift token is a string alias
                 // but's guard ourselves here against
                 // it changing unexpectedly.
-                let thrift_token: $token_thrift_type = format!("{}", id.0);
+                let thrift_token = $token_thrift_type {
+                    target,
+                    id: id.0 as i64
+                };
                 Self(thrift_token)
             }
 
-            fn to_db_id(&self) -> Result<RowId, MegarepoError> {
-                self.0
-                    .parse::<u64>()
-                    .map_err(MegarepoError::request)
-                    .map(RowId)
+            fn to_db_id_and_target(&self) -> Result<(RowId, Target), MegarepoError> {
+                let row_id = self.0.id as u64;
+                let row_id = RowId(row_id);
+                let target = self.0.target.clone();
+
+                Ok((row_id, target))
             }
 
             fn into_thrift(self) -> $token_thrift_type {
                 self.0
+            }
+
+            fn target(&self) -> &Target {
+                &self.0.target
             }
         }
 

@@ -919,10 +919,31 @@ struct RepoListHgManifestParams {
 }
 
 // Polling tokens for async megarepo methods
-typedef string MegarepoChangeConfigToken
-typedef string MegarepoSyncChangesetToken
-typedef string MegarepoRemergeSourceToken
-typedef string MegarepoAddTargetToken
+struct MegarepoChangeConfigToken {
+    // A target this token relates to
+    1: megarepo_configs.Target target,
+    // An actual token payload
+    2: i64 id,
+}
+
+struct MegarepoSyncChangesetToken {
+    // A target this token relates to
+    1: megarepo_configs.Target target,
+    // An actual token payload
+    2: i64 id,
+}
+struct MegarepoRemergeSourceToken{
+    // A target this token relates to
+    1: megarepo_configs.Target target,
+    // An actual token payload
+    2: i64 id,
+}
+struct MegarepoAddTargetToken {
+    // A target this token relates to
+    1: megarepo_configs.Target target,
+    // An actual token payload
+    2: i64 id,
+}
 
 // Params for the megarepo_add_sync_target_config method
 struct MegarepoAddConfigParams {
@@ -953,6 +974,9 @@ struct MegarepoAddTargetParams {
     // to the source revision if it is a changeset itself
     // Each source name MUST be present in this map.
     2: map<string, megarepo_configs.ChangesetId> changesets_to_merge
+    // A message to be used in the commit description
+    // If not provided, service will generate commit description
+    3: optional string message,
 }
 
 // Params for megarepo_change_target_config method
@@ -968,6 +992,14 @@ struct MegarepoChangeTargetConfigParams {
     // when this operation tries to advance it
     // This argument exists to prevent race conditions
     3: megarepo_configs.ChangesetId target_location,
+    // Initial changesets to merge for each of the
+    // sources in the `target`. Similar to `changesets_to_merge`
+    // in the `MegarepoAddTargetParams` struct, see docstring
+    // there
+    4: map<string, megarepo_configs.ChangesetId> changesets_to_merge
+    // A message to be used in the commit description
+    // If not provided, service will generate commit description
+    5: optional string message,
 }
 
 // Params for megarepo_sync_changeset method
@@ -1000,6 +1032,9 @@ struct MegarepoRemergeSourceParams {
     // when this operation tries to advance it
     // This argument exists to prevent race conditions
     4: megarepo_configs.ChangesetId target_location,
+    // A message to be used in the commit description
+    // If not provided, service will generate commit description
+    5: optional string message,
 }
 
 // Method response structures
@@ -1200,6 +1235,9 @@ struct MegarepoAddConfigResponse {
 }
 
 struct MegarepoAddTargetResponse {
+    // A new position of the target bookmark
+    // after the "sync changeset" operaton finished
+    1: megarepo_configs.ChangesetId cs_id
 }
 
 struct MegarepoAddTargetPollResponse {

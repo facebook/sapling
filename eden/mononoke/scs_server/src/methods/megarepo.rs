@@ -23,7 +23,7 @@ use crate::source_control_impl::SourceControlServiceImpl;
 /// become much more expensive and will utilize the async
 /// request approach. Still, we want to expose the incomplete
 /// version of this call, for our clients to test.
-const FAKE_ADD_TARGET_TOKEN: &str = "FAKE_ADD_TARGET_TOKEN";
+const FAKE_ADD_TARGET_TOKEN: i64 = -36;
 
 impl SourceControlServiceImpl {
     fn verify_repos_by_config(
@@ -71,13 +71,19 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
         let config = params.config_with_new_target;
         self.verify_repos_by_config(&config)?;
-        // TODO (ikostia): stop using the fake taken
+        // TODO (ikostia, stash, mitrandir): stop using the fake token
         let megarepo_configs = self.mononoke.megarepo_configs();
+        let target = config.target.clone();
         megarepo_configs
             .add_target_with_config_version(ctx, config)
             .await?;
 
-        Ok(FAKE_ADD_TARGET_TOKEN.to_owned())
+        let token = thrift::MegarepoAddTargetToken {
+            id: FAKE_ADD_TARGET_TOKEN,
+            target,
+        };
+
+        Ok(token)
     }
 
     pub(crate) async fn megarepo_add_sync_target_poll(
@@ -85,10 +91,14 @@ impl SourceControlServiceImpl {
         _ctx: CoreContext,
         token: thrift::MegarepoAddTargetToken,
     ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
-        // TODO (ikostia): stop using the fake taken
-        if token == FAKE_ADD_TARGET_TOKEN {
+        // TODO (ikostia, stash, mitrandir): stop using the fake token
+        if token.id == FAKE_ADD_TARGET_TOKEN {
             Ok(thrift::MegarepoAddTargetPollResponse {
-                response: Some(thrift::MegarepoAddTargetResponse {}),
+                response: Some(thrift::MegarepoAddTargetResponse {
+                    // This is obviously incorrect and should be removed together
+                    // with the fake token
+                    cs_id: Default::default(),
+                }),
             })
         } else {
             Err(errors::ServiceError::from(errors::not_implemented(

@@ -60,6 +60,7 @@ impl AsyncMethodRequestQueue {
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
         let request_type = RequestType(P::R::NAME.to_owned());
+        let target = thrift_params.target().clone();
         let rust_params: <P::R as Request>::Params = thrift_params.try_into()?;
         let params_object_id: <P::R as Request>::ParamsId =
             rust_params.store(&ctx, &self.blobstore).await?;
@@ -68,7 +69,7 @@ impl AsyncMethodRequestQueue {
             .table
             .add_request(&ctx, &request_type, &blobstoke_key)
             .await?;
-        let token = <P::R as Request>::Token::from_db_id(table_id);
+        let token = <P::R as Request>::Token::from_db_id_and_target(table_id, target);
         Ok(token)
     }
 
@@ -106,7 +107,8 @@ impl AsyncMethodRequestQueue {
     ) -> Result<<T::R as Request>::PollResponse, MegarepoError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
         let before = Instant::now();
-        let req_id = RequestId(token.to_db_id()?, RequestType(T::R::NAME.to_owned()));
+        let (row_id, _target) = token.to_db_id_and_target()?;
+        let req_id = RequestId(row_id, RequestType(T::R::NAME.to_owned()));
 
         loop {
             let maybe_stored_result: Option<<T::R as Request>::StoredResult> =
@@ -179,7 +181,7 @@ mod tests {
                 let token: $token = q.enqueue(ctx.clone(), params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
-                let row_id = token.to_db_id()?;
+                let (row_id, _) = token.to_db_id_and_target()?;
                 let entry = q
                     .table
                     .test_get_request_entry_by_id(&ctx, &row_id)

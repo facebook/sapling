@@ -9,6 +9,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
+use crate::scuba_common::{report_megarepo_target, Reported};
 
 /// A trait for logging a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {
@@ -75,10 +76,6 @@ impl AddScubaResponse for thrift::TreeListResponse {}
 
 impl AddScubaResponse for thrift::RepoListHgManifestResponse {}
 
-// MegarepoRemergeSourceToken, MegarepoChangeConfigToken
-// MegarepoSyncChangesetToken are all just aliases for String
-impl AddScubaResponse for String {}
-
 // TODO: report cs_ids where possible
 impl AddScubaResponse for thrift::MegarepoRemergeSourceResponse {}
 
@@ -90,10 +87,70 @@ impl AddScubaResponse for thrift::MegarepoAddTargetResponse {}
 
 impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}
 
-impl AddScubaResponse for thrift::MegarepoRemergeSourcePollResponse {}
+// Helper fn to report PollResponse types
+fn report_maybe_response<R: AddScubaResponse>(
+    maybe_response: &Option<R>,
+    scuba: &mut MononokeScubaSampleBuilder,
+) {
+    match maybe_response {
+        None => {
+            scuba.add("megarepo_ready", false);
+        }
+        Some(resp) => {
+            scuba.add("megarepo_ready", true);
+            <R as AddScubaResponse>::add_scuba_response(&resp, scuba);
+        }
+    }
+}
 
-impl AddScubaResponse for thrift::MegarepoSyncChangesetPollResponse {}
+impl AddScubaResponse for thrift::MegarepoRemergeSourcePollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_maybe_response(&self.response, scuba);
+    }
+}
 
-impl AddScubaResponse for thrift::MegarepoChangeTargetConfigPollResponse {}
+impl AddScubaResponse for thrift::MegarepoSyncChangesetPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_maybe_response(&self.response, scuba);
+    }
+}
 
-impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {}
+impl AddScubaResponse for thrift::MegarepoChangeTargetConfigPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_maybe_response(&self.response, scuba);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_maybe_response(&self.response, scuba);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoAddTargetToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Response);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoChangeConfigToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Response);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoRemergeSourceToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Response);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Response);
+    }
+}
