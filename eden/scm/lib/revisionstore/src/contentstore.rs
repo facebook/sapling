@@ -606,9 +606,21 @@ mod tests {
     use crate::{
         metadatastore::MetadataStore,
         repack::{repack, RepackKind, RepackLocation},
-        testutil::{make_config, make_lfs_config, FakeHgIdRemoteStore},
+        testutil::{
+            example_blob, get_lfs_batch_mock, get_lfs_download_mock, make_config, make_lfs_config,
+            FakeHgIdRemoteStore, TestBlob,
+        },
         types::ContentHash,
     };
+
+    use mockito::Mock;
+
+    fn prepare_lfs_mocks(blob: &TestBlob) -> Vec<Mock> {
+        let m1 = get_lfs_batch_mock(200, &[blob]);
+        let mut m2 = get_lfs_download_mock(200, blob);
+        m2.push(m1);
+        m2
+    }
 
     #[test]
     fn test_new() -> Result<()> {
@@ -952,7 +964,7 @@ mod tests {
     fn test_lfs_blob() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+        let config = make_lfs_config(&cachedir, "test_lfs_blob");
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -974,7 +986,7 @@ mod tests {
     fn test_lfs_metadata() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+        let config = make_lfs_config(&cachedir, "test_lfs_metadata");
 
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4, 5][..]);
@@ -1005,7 +1017,7 @@ mod tests {
     fn test_lfs_multiplexer() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+        let config = make_lfs_config(&cachedir, "test_lfs_multiplexer");
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -1028,7 +1040,7 @@ mod tests {
     fn test_repack_one_datapack_lfs() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir);
+        let mut config = make_lfs_config(&cachedir, "test_repack_one_datapack_lfs");
         config.set("lfs", "threshold", Some("10M"), &Default::default());
 
         let k1 = key("a", "2");
@@ -1170,18 +1182,16 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_remote");
+            let blob = example_blob();
+            let _lfs_mocks = prepare_lfs_mocks(&blob);
 
             let k = key("a", "1");
-            let sha256 = Sha256::from_str(
-                "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
-            )?;
-            let size = 6;
 
             let pointer = format!(
                 "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
-                sha256.to_hex(),
-                size
+                blob.sha.to_hex(),
+                blob.size,
             );
 
             let data = Bytes::from(pointer);
@@ -1210,7 +1220,7 @@ mod tests {
         fn test_lfs_fallback_on_missing_blob() -> Result<()> {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir, "test_lfs_fallback_on_missing_blob");
 
             let lfsdir = TempDir::new()?;
             config.set(
@@ -1277,10 +1287,12 @@ mod tests {
         #[test]
         fn test_lfs_prefetch_once() -> Result<()> {
             let _env_lock = crate::env_lock();
+            let blob = example_blob();
+            let _lfs_mocks = prepare_lfs_mocks(&blob);
 
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_prefetch_once");
 
             let k1 = key("a", "1");
             let k2 = key("a", "2");
@@ -1502,10 +1514,12 @@ mod tests {
         #[fbinit::test]
         fn test_memcache_lfs() -> Result<()> {
             let _mock = Lazy::force(&MOCK);
+            let blob = example_blob();
+            let _lfs_mocks = prepare_lfs_mocks(&blob);
 
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_memcache_lfs");
 
             let k = key("a", "1f5");
             let sha256 = Sha256::from_str(
@@ -1553,7 +1567,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_memcache_lfs2");
 
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)

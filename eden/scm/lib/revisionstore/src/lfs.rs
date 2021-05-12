@@ -1902,22 +1902,16 @@ mod tests {
     use crate::{
         indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
         localstore::ExtStoredPolicy,
-        testutil::make_lfs_config,
+        testutil::{
+            example_blob, example_blob2, get_lfs_batch_mock, get_lfs_download_mock,
+            make_lfs_config, nonexistent_blob, TestBlob,
+        },
     };
-
-    fn example_blob() -> (Sha256, usize, Bytes) {
-        (
-            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")
-                .unwrap(),
-            6,
-            Bytes::from(&b"master"[..]),
-        )
-    }
 
     #[test]
     fn test_new_shared() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_new_shared");
         let _ = LfsStore::shared(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
@@ -1931,7 +1925,7 @@ mod tests {
     #[test]
     fn test_new_local() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_new_local");
         let _ = LfsStore::local(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
@@ -1945,7 +1939,7 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_add");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -1971,7 +1965,7 @@ mod tests {
     #[test]
     fn test_loose() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_loose");
         let blob_store = LfsBlobsStore::shared(dir.path(), &config)?;
         let loose_store = LfsBlobsStore::loose(get_lfs_objects_path(dir.path())?);
 
@@ -1988,7 +1982,7 @@ mod tests {
     #[test]
     fn test_add_get_missing() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_add_get_missing");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2011,7 +2005,7 @@ mod tests {
     #[test]
     fn test_add_get() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_add_get");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2031,7 +2025,7 @@ mod tests {
     #[test]
     fn test_add_get_split() -> Result<()> {
         let dir = TempDir::new()?;
-        let mut config = make_lfs_config(&dir);
+        let mut config = make_lfs_config(&dir, "test_add_get_split");
         config.set("lfs", "blobschunksize", Some("2"), &Default::default());
 
         let store = LfsStore::shared(&dir, &config)?;
@@ -2059,7 +2053,7 @@ mod tests {
     #[test]
     fn test_partial_blob() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_partial_blob");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2084,7 +2078,7 @@ mod tests {
     #[test]
     fn test_full_chunked() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_full_chunked");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2126,7 +2120,7 @@ mod tests {
     #[test]
     fn test_overlapped_chunked() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_overlapped_chunked");
 
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
@@ -2190,7 +2184,7 @@ mod tests {
     #[test]
     fn test_add_get_copyfrom() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_add_get_copyform");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -2216,7 +2210,7 @@ mod tests {
     #[test]
     fn test_multiplexer_smaller_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_multiplexer_smaller_than_threshold");
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2248,7 +2242,7 @@ mod tests {
     #[test]
     fn test_multiplexer_larger_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_multiplexer_larger_than_threshold");
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2283,7 +2277,7 @@ mod tests {
     #[test]
     fn test_multiplexer_add_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir);
+        let config = make_lfs_config(&lfsdir, "test_multiplexer_add_pointer");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2355,7 +2349,7 @@ mod tests {
     #[test]
     fn test_multiplexer_add_copy_from_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir);
+        let config = make_lfs_config(&lfsdir, "test_multiplexer_add_copy_pointer");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2430,7 +2424,7 @@ mod tests {
     #[test]
     fn test_multiplexer_blob_with_header() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&lfsdir);
+        let config = make_lfs_config(&lfsdir, "test_multiplexer_blob_with_header");
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
@@ -2482,6 +2476,7 @@ mod tests {
     #[cfg(feature = "fb")]
     mod fb_test {
         use super::*;
+        use mockito::mock;
         use parking_lot::Mutex;
         use std::env::set_var;
         use std::sync::atomic::AtomicBool;
@@ -2518,13 +2513,20 @@ mod tests {
             let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_proxy_non_present");
+
+            let blob = &example_blob();
+            let _m1 = get_lfs_batch_mock(200, &[blob]);
+
+            let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = example_blob();
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let objs = [(blob.sha, blob.size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             remote.batch_fetch(&objs, sentinel.as_callback())?;
             assert!(sentinel.get());
 
@@ -2538,7 +2540,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_proxy_no_http");
 
             set_var("https_proxy", "fwdproxy:8082");
 
@@ -2546,7 +2548,10 @@ mod tests {
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = example_blob();
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let objs = [(blob.sha, blob.size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
             // But not necessarily that message in all cases.
@@ -2562,7 +2567,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_proxy_http");
 
             set_var("https_proxy", "http://fwdproxy:8082");
 
@@ -2570,7 +2575,10 @@ mod tests {
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = example_blob();
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let objs = [(blob.sha, blob.size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             assert!(resp.is_err());
 
@@ -2584,49 +2592,30 @@ mod tests {
             let sentinel = Sentinel::new();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_no_proxy");
 
-            set_var("http_proxy", "http://fwdproxy:8082");
-            set_var(
-                "NO_PROXY",
-                "dewey-lfs.vip.facebook.com,mononoke-lfs.internal.tfbnw.net",
-            );
+            let blob = &example_blob();
+            let _m1 = get_lfs_batch_mock(200, &[blob]);
+
+            let _m2 = get_lfs_download_mock(200, blob);
+
+            set_var("http_proxy", "http://shouldnt-touch-this:8082");
+            set_var("NO_PROXY", "localhost,127.0.0.1");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = example_blob();
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let objs = [(blob.sha, blob.size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             remote.batch_fetch(&objs, sentinel.as_callback())?;
             assert!(sentinel.get());
 
             Ok(())
         }
 
-        #[test]
-        fn test_lfs_no_proxy_suffix() -> Result<()> {
-            let _env_lock = crate::env_lock();
-
-            let sentinel = Sentinel::new();
-            let cachedir = TempDir::new()?;
-            let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
-
-            set_var("http_proxy", "http://fwdproxy:8082");
-            set_var("NO_PROXY", ".facebook.com,.tfbnw.net");
-
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
-
-            let blob = example_blob();
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, sentinel.as_callback())?;
-            assert!(sentinel.get());
-
-            Ok(())
-        }
-
-        fn test_download<C>(configure: C) -> Result<()>
+        fn test_download<C>(configure: C, blobs: &[&TestBlob]) -> Result<()>
         where
             C: for<'a> FnOnce(&'a mut ConfigSet),
         {
@@ -2634,39 +2623,24 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir, "test_download");
             configure(&mut config);
-
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob1 = (
-                Sha256::from_str(
-                    "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
-                )?,
-                6,
-                Bytes::from(&b"master"[..]),
-            );
-            let blob2 = (
-                Sha256::from_str(
-                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-                )?,
-                6,
-                Bytes::from(&b"1.44.0"[..]),
-            );
-            let blob3 = (
-                // Does not actually exist
-                Sha256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )?,
-                0,
-                Bytes::from(&b""[..]),
-            );
-
-            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1), (blob3.0, blob3.1)]
+            let _mocks: Vec<_> = blobs
                 .iter()
-                .cloned()
-                .collect::<HashSet<_>>();
+                .map(|b| get_lfs_download_mock(200, b))
+                .collect();
+
+            let objs = [
+                (blobs[0].sha, blobs[0].size),
+                (blobs[1].sha, blobs[1].size),
+                (blobs[2].sha, blobs[2].size),
+            ]
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
 
             let out = Arc::new(Mutex::new(Vec::new()));
             remote.batch_fetch(&objs, {
@@ -2678,7 +2652,10 @@ mod tests {
             })?;
             out.lock().sort();
 
-            let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
+            let mut expected_res = vec![
+                (blobs[0].sha, blobs[0].content.clone()),
+                (blobs[1].sha, blobs[1].content.clone()),
+            ];
             expected_res.sort();
 
             assert_eq!(*out.lock(), expected_res);
@@ -2688,23 +2665,59 @@ mod tests {
 
         #[test]
         fn test_lfs_remote_http1_1() -> Result<()> {
-            test_download(|config| {
-                config.set("lfs", "http-version", Some("1.1"), &Default::default());
-            })
+            let b1 = example_blob();
+            let b2 = example_blob2();
+            let b3 = nonexistent_blob();
+
+            let blobs = vec![&b1, &b2, &b3];
+
+            let _m1 = get_lfs_batch_mock(200, &blobs);
+
+            test_download(
+                |config| {
+                    config.set("lfs", "http-version", Some("1.1"), &Default::default());
+                },
+                &blobs,
+            )
         }
 
         #[test]
         fn test_lfs_remote_http2() -> Result<()> {
-            test_download(|config| {
-                config.set("lfs", "http-version", Some("2"), &Default::default());
-            })
+            let b1 = example_blob();
+            let b2 = example_blob2();
+            let b3 = nonexistent_blob();
+
+            let blobs = vec![&b1, &b2, &b3];
+
+            let _m1 = get_lfs_batch_mock(200, &blobs);
+
+            test_download(
+                |config| {
+                    config.set("lfs", "http-version", Some("2"), &Default::default());
+                },
+                &blobs,
+            )
         }
 
         #[test]
         fn test_lfs_remote_chunked() -> Result<()> {
-            test_download(|config| {
-                config.set("lfs", "download-chunk-size", Some("3"), &Default::default());
-            })
+            let mut blob1 = example_blob();
+            let mut blob2 = example_blob2();
+            blob1.chunk_size = Some(3);
+            blob2.chunk_size = Some(3);
+            blob1.response = vec![b"mas", b"ter"];
+            blob2.response = vec![b"1.4", b"4.0"];
+            let b3 = nonexistent_blob();
+            let blobs = vec![&blob1, &blob2, &b3];
+
+            let _m1 = get_lfs_batch_mock(200, &blobs);
+
+            test_download(
+                |config| {
+                    config.set("lfs", "download-chunk-size", Some("3"), &Default::default());
+                },
+                &blobs,
+            )
         }
 
         #[test]
@@ -2713,7 +2726,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir, "test_lfs_invalid_http");
             config.set("lfs", "http-version", Some("3"), &Default::default());
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
@@ -2730,7 +2743,7 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir, "test_lfs_request_timeout");
 
             config.set("lfs", "requesttimeout", Some("0"), &Default::default());
 
@@ -2758,7 +2771,12 @@ mod tests {
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir, "test_lfs_remote_datastore");
+
+            let blob = &example_blob();
+
+            let _m1 = get_lfs_batch_mock(200, &[blob]);
+            let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config, None)?);
@@ -2766,16 +2784,11 @@ mod tests {
             let key = key("a/b", "1234");
 
             let mut content_hashes = HashMap::new();
-            content_hashes.insert(
-                ContentHashType::Sha256,
-                ContentHash::Sha256(Sha256::from_str(
-                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-                )?),
-            );
+            content_hashes.insert(ContentHashType::Sha256, ContentHash::Sha256(blob.sha));
 
             let pointer = LfsPointersEntry {
                 hgid: key.hgid.clone(),
-                size: 6,
+                size: blob.size as u64,
                 is_binary: false,
                 copy_from: None,
                 content_hashes,
@@ -2787,7 +2800,7 @@ mod tests {
             let remotedatastore = remote.datastore(lfs.clone());
 
             let expected_delta = Delta {
-                data: Bytes::from(&b"1.44.0"[..]),
+                data: blob.content.clone(),
                 base: None,
                 key: key.clone(),
             };
@@ -2801,31 +2814,36 @@ mod tests {
             Ok(())
         }
 
+        #[cfg(fbcode_build)]
         #[test]
         fn test_lfs_redacted() -> Result<()> {
             let _env_lock = crate::env_lock();
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir, "test_lfs_redacted");
             config.set(
                 "lfs",
                 "url",
-                Some("https://mononoke-lfs.internal.tfbnw.net/fbsource"),
+                Some(&[mockito::server_url(), "/repo".to_string()].join("")),
                 &Default::default(),
             );
+
+            let blob = &example_blob();
+
+            let _m1 = get_lfs_batch_mock(200, &[blob]);
+
+            let _m2 = mock("GET", format!("/repo/download/{}", blob.oid).as_str())
+                .with_status(410)
+                .create();
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
 
-            let blob = (
-                Sha256::from_str(
-                    "5009a98366ddfa6302ff4a12f8ece03d995b8fd2847431699462709212552440",
-                )?,
-                0,
-            );
-
-            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let objs = [(blob.sha, blob.size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             remote.batch_fetch(&objs, |_, data| {
                 assert!(is_redacted(&data));
                 Ok(())
@@ -2840,7 +2858,7 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir);
+        let mut config = make_lfs_config(&cachedir, "test_lfs_remote_file");
 
         let lfsdir = TempDir::new()?;
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -2895,7 +2913,7 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir);
+        let mut config = make_lfs_config(&cachedir, "test_lfs_upload_remote_file");
 
         let lfsdir = TempDir::new()?;
         let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -2941,7 +2959,7 @@ mod tests {
         let _env_lock = crate::env_lock();
 
         let cachedir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir);
+        let mut config = make_lfs_config(&cachedir, "test_lfs_upload_move_to_shared");
 
         let lfsdir = TempDir::new()?;
         let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -2985,7 +3003,7 @@ mod tests {
     #[test]
     fn test_blob() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_blob");
         let store = LfsStore::shared(&dir, &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
@@ -3007,7 +3025,7 @@ mod tests {
     #[test]
     fn test_metadata() -> Result<()> {
         let dir = TempDir::new()?;
-        let config = make_lfs_config(&dir);
+        let config = make_lfs_config(&dir, "test_metadata");
         let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
@@ -3038,7 +3056,7 @@ mod tests {
     fn test_lfs_skips_server_for_empty_batch() -> Result<()> {
         let cachedir = TempDir::new()?;
         let lfsdir = TempDir::new()?;
-        let mut config = make_lfs_config(&cachedir);
+        let mut config = make_lfs_config(&cachedir, "test_lfs_skips_server_for_empty_batch");
 
         let store = Arc::new(LfsStore::local(&lfsdir, &config)?);
 

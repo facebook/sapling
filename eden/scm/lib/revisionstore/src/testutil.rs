@@ -9,9 +9,6 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use futures::prelude::*;
-use minibytes::Bytes;
-
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
@@ -19,6 +16,8 @@ use edenapi_types::{
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
     TreeAttributes, TreeEntry,
 };
+use futures::prelude::*;
+use minibytes::Bytes;
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
@@ -30,6 +29,9 @@ use crate::{
     remotestore::HgIdRemoteStore,
     types::StoreKey,
 };
+
+#[cfg(test)]
+pub use lfs_mocks::*;
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
     Delta {
@@ -432,28 +434,181 @@ pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
     config
 }
 
-pub fn make_lfs_config(dir: impl AsRef<Path>) -> ConfigSet {
-    let mut config = make_config(dir);
+#[cfg(test)]
+mod lfs_mocks {
+    use super::*;
+    use lfs_protocol::{
+        ObjectAction, ObjectError, ObjectStatus, Operation, RequestObject, ResponseBatch,
+        ResponseObject, Sha256 as LfsSha256, Transfer,
+    };
+    use mockito::{mock, Mock};
+    use std::convert::TryInto;
+    use types::Sha256;
 
-    config.set(
-        "lfs",
-        "url",
-        Some("https://mononoke-lfs.internal.tfbnw.net/ovrsource"),
-        &Default::default(),
-    );
+    pub struct TestBlob {
+        pub oid: &'static str,
+        pub size: usize,
+        pub content: Bytes,
+        pub sha: Sha256,
+        pub response: Vec<&'static [u8]>,
+        pub error: bool,
+        pub chunk_size: Option<usize>,
+    }
 
-    config.set(
-        "experimental",
-        "lfs.user-agent",
-        Some("mercurial/revisionstore/unittests"),
-        &Default::default(),
-    );
+    pub fn example_blob() -> TestBlob {
+        use std::str::FromStr;
 
-    config.set("lfs", "threshold", Some("4"), &Default::default());
+        let blob_oid = "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9";
+        let content = b"master";
 
-    config.set("remotefilelog", "lfs", Some("true"), &Default::default());
+        TestBlob {
+            oid: blob_oid,
+            size: 6,
+            content: Bytes::from(&content[..]),
+            sha: Sha256::from_str(blob_oid).unwrap(),
+            response: vec![content],
+            error: false,
+            chunk_size: None,
+        }
+    }
 
-    config.set("lfs", "moveafterupload", Some("true"), &Default::default());
+    pub fn example_blob2() -> TestBlob {
+        use std::str::FromStr;
+        let blob2_oid = "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24";
+        let content = b"1.44.0";
+        TestBlob {
+            oid: blob2_oid,
+            size: 6,
+            content: Bytes::from(&content[..]),
+            sha: Sha256::from_str(blob2_oid).unwrap(),
+            response: vec![content],
+            error: false,
+            chunk_size: None,
+        }
+    }
 
-    config
+    pub fn nonexistent_blob() -> TestBlob {
+        use std::str::FromStr;
+        let blob3_oid = "0000000000000000000000000000000000000000000000000000000000000000";
+        TestBlob {
+            oid: blob3_oid,
+            size: 0,
+            content: Bytes::from(&b""[..]),
+            sha: Sha256::from_str(blob3_oid).unwrap(),
+            response: vec![b"not_reached"],
+            error: true,
+            chunk_size: None,
+        }
+    }
+
+    pub fn get_lfs_batch_mock(status: usize, blobs: &[&TestBlob]) -> Mock {
+        let objects = blobs
+            .iter()
+            .map(|tb| {
+                let object = RequestObject {
+                    oid: LfsSha256(tb.sha.into_inner()),
+                    size: tb.size as u64,
+                };
+
+                let status = if tb.error {
+                    ObjectStatus::Err {
+                        error: ObjectError {
+                            code: 404,
+                            message: "".into(),
+                        },
+                    }
+                } else {
+                    ObjectStatus::Ok {
+                        authenticated: false,
+                        actions: vec![(
+                            Operation::Download,
+                            ObjectAction {
+                                href: format!("{}/repo/download/{}", mockito::server_url(), tb.oid)
+                                    .as_str()
+                                    .try_into()
+                                    .unwrap(),
+                                expires_at: None,
+                                expires_in: None,
+                                header: None,
+                            },
+                        )]
+                        .into_iter()
+                        .collect(),
+                    }
+                };
+
+                ResponseObject { object, status }
+            })
+            .collect();
+
+        let r = ResponseBatch {
+            transfer: Transfer::Basic,
+            objects,
+        };
+
+        let json_response = serde_json::to_string(&r).unwrap();
+
+        mock("POST", "/repo/objects/batch")
+            .with_status(status)
+            .with_body(json_response)
+            .create()
+    }
+
+    pub fn get_lfs_download_mock(status: usize, blob: &TestBlob) -> Vec<Mock> {
+        let mut mocks = vec![];
+        for response in blob.response.iter() {
+            let m = mock("GET", format!("/repo/download/{}", blob.oid).as_str())
+                .with_status(status)
+                .with_body(response)
+                .with_header("content-type", "application/octet-stream");
+
+            mocks.push(m);
+        }
+
+        let mocks = if let Some(chunk_size) = blob.chunk_size {
+            let mut i = 0;
+            let mut chunked_mocks: Vec<Mock> = vec![];
+
+            for mock in mocks.into_iter() {
+                let m = mock.with_status(206).match_header(
+                    "Range",
+                    format!("bytes={}-{}", i, i + chunk_size - 1).as_str(),
+                );
+                chunked_mocks.push(m);
+                i += chunk_size;
+            }
+
+            chunked_mocks
+        } else {
+            mocks
+        };
+
+        mocks.into_iter().map(|m| m.create()).collect()
+    }
+
+    pub fn make_lfs_config(dir: impl AsRef<Path>, agent_sufix: &str) -> ConfigSet {
+        let mut config = make_config(dir);
+
+        config.set(
+            "lfs",
+            "url",
+            Some(&[mockito::server_url(), "/repo".to_string()].join("")),
+            &Default::default(),
+        );
+
+        config.set(
+            "experimental",
+            "lfs.user-agent",
+            Some(format!("mercurial/revisionstore/unittests/{}", agent_sufix)),
+            &Default::default(),
+        );
+
+        config.set("lfs", "threshold", Some("4"), &Default::default());
+
+        config.set("remotefilelog", "lfs", Some("true"), &Default::default());
+
+        config.set("lfs", "moveafterupload", Some("true"), &Default::default());
+
+        config
+    }
 }

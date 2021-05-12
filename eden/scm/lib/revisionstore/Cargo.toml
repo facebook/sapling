@@ -56,6 +56,7 @@ zstd = "=0.7.0+zstd.1.4.9"
 [dev-dependencies]
 lazy_static = "1.0"
 maplit = "1.0"
+mockito = "0.25"
 rand_chacha = "0.2"
 
 [features]
