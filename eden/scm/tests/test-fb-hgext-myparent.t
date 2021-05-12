@@ -20,6 +20,8 @@ Setup
   > Differential Revision: https://phabricator.fb.com/D42
   > 
   > Tasks: 1337
+  > 
+  > Tags: mercurial
   > EOF
   $ hg commit -qAl ../commitmessage
   $ touch bar
@@ -38,6 +40,8 @@ previous commit.
   1337
   $ hg log -T '{myparenttitleprefix}\n' -r .
   [prefix]
+  $ hg log -T '{myparenttags}\n' -r .
+  mercurial
 
 If the authors do not match the keywords will be empty.
 
@@ -47,6 +51,7 @@ If the authors do not match the keywords will be empty.
   $ hg log -T '{myparentsubscribers}' -r .
   $ hg log -T '{myparenttasks}' -r .
   $ hg log -T '{myparenttitleprefix}' -r .
+  $ hg log -T '{myparenttags}' -r .
 
 Make sure the template keywords are documented correctly
 
@@ -54,5 +59,6 @@ Make sure the template keywords are documented correctly
       myparentdiff  Show the differential revision of the commit's parent, if it
       myparentreviewers
       myparentsubscribers
+      myparenttags  Show the tags from the commit's parent, if it has the same
       myparenttasks
       myparenttitleprefix

@@ -16,6 +16,7 @@ The extension adds five new keywords:
 - *myparentreviewers* the reviewers of the parent commit
 - *myparentsubscribers* the subscribers of the parent commit
 - *myparenttasks* the tasks of the parent commit
+- *myparenttags* the tags of the parent commit
 - *myparenttitleprefix* the prefix as defined by [] of the parent commit.
                         E.g. '[e2e automation] foo bar' -> '[e2e automation]'
 
@@ -30,6 +31,7 @@ After enabling the extension, change the default commit template:
       Reviewers: {myparentreviewers}
       Subscribers: {myparentsubscribers}
       Tasks: {myparenttasks}
+      Tags: {myparenttags}
       Blame Revision:
 
 In some (all?) repositories at Facebook the commit template is overridden at
@@ -75,6 +77,14 @@ def showmyparenttasks(repo, ctx, templ, **args):
     same author as this commit.
     """
     return extract_from_parent(ctx, "\s*(?:Tasks|Task ID): (.*)")
+
+
+@templatekeyword("myparenttags")
+def showmyparenttags(repo, ctx, templ, **args):
+    """Show the tags from the commit's parent, if it has the
+    same author as this commit.
+    """
+    return extract_from_parent(ctx, "\s*Tags: (.*)")
 
 
 @templatekeyword("myparenttitleprefix")
