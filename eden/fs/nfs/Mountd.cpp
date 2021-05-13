@@ -14,9 +14,11 @@
 
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/MountdRpc.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -37,19 +39,19 @@ class MountdServerProcessor final : public RpcServerProcessor {
       uint32_t progVersion,
       uint32_t procNumber) override;
 
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   mount(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   dump(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   umount(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  folly::Future<folly::Unit> umountAll(
+  ImmediateFuture<folly::Unit> umountAll(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
       uint32_t xid);
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   exprt(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
 
   void registerMount(AbsolutePathPiece path, InodeNumber rootIno);
@@ -62,7 +64,7 @@ class MountdServerProcessor final : public RpcServerProcessor {
 
 namespace {
 
-using Handler = folly::Future<folly::Unit> (MountdServerProcessor::*)(
+using Handler = ImmediateFuture<folly::Unit> (MountdServerProcessor::*)(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid);
@@ -96,7 +98,7 @@ constexpr auto kMountHandlers = [] {
 
 } // namespace
 
-folly::Future<folly::Unit> MountdServerProcessor::null(
+ImmediateFuture<folly::Unit> MountdServerProcessor::null(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -104,7 +106,7 @@ folly::Future<folly::Unit> MountdServerProcessor::null(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::mount(
+ImmediateFuture<folly::Unit> MountdServerProcessor::mount(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -125,7 +127,7 @@ folly::Future<folly::Unit> MountdServerProcessor::mount(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::dump(
+ImmediateFuture<folly::Unit> MountdServerProcessor::dump(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -133,7 +135,7 @@ folly::Future<folly::Unit> MountdServerProcessor::dump(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::umount(
+ImmediateFuture<folly::Unit> MountdServerProcessor::umount(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -141,7 +143,7 @@ folly::Future<folly::Unit> MountdServerProcessor::umount(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::umountAll(
+ImmediateFuture<folly::Unit> MountdServerProcessor::umountAll(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -149,7 +151,7 @@ folly::Future<folly::Unit> MountdServerProcessor::umountAll(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::exprt(
+ImmediateFuture<folly::Unit> MountdServerProcessor::exprt(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
@@ -195,7 +197,9 @@ folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
   auto handlerEntry = kMountHandlers[procNumber];
 
   XLOG(DBG7) << handlerEntry.name;
-  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
+  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 void MountdServerProcessor::registerMount(
