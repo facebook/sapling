@@ -346,6 +346,8 @@ pub async fn handle_wireproto(
         .await
     };
 
+    let metadata = Arc::new(metadata);
+
     let ChannelConn {
         stdin,
         stdout,

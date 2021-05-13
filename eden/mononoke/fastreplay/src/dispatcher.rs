@@ -52,6 +52,7 @@ impl FastReplayDispatcher {
         client_hostname: Option<String>,
     ) -> RepoClient {
         let metadata = Metadata::default().set_client_hostname(client_hostname);
+        let metadata = Arc::new(metadata);
 
         let logging = LoggingContainer::new(self.fb, self.logger.clone(), scuba);
         let session = SessionContainer::builder(self.fb)

@@ -35,7 +35,7 @@ impl SessionContainerBuilder {
         Self {
             fb,
             inner: SessionContainerInner {
-                metadata: Metadata::default(),
+                metadata: Arc::new(Metadata::default()),
                 load_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
@@ -44,7 +44,7 @@ impl SessionContainerBuilder {
         }
     }
 
-    pub fn metadata(mut self, value: Metadata) -> Self {
+    pub fn metadata(mut self, value: Arc<Metadata>) -> Self {
         self.inner.metadata = value;
         self
     }

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::env::var;
 use std::io;
 use std::net::IpAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
@@ -38,7 +39,7 @@ pub struct SshDecoder(NetstringDecoder);
 pub struct SshEncoder(NetstringEncoder<Bytes>);
 
 pub struct Stdio {
-    pub metadata: Metadata,
+    pub metadata: Arc<Metadata>,
     pub stdin: BoxStream<Bytes, io::Error>,
     pub stdout: mpsc::Sender<Bytes>,
     pub stderr: mpsc::UnboundedSender<Bytes>,

@@ -64,6 +64,7 @@ impl Middleware for RequestContextMiddleware {
 
         let load_limiter = self.load_limiter.as_ref().map(|l| l.get(&identities, None));
         let metadata = Metadata::default().set_identities(identities);
+        let metadata = Arc::new(metadata);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
             .load_limiter(load_limiter)

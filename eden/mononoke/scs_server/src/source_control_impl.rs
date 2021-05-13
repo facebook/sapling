@@ -193,6 +193,7 @@ impl SourceControlServiceImpl {
         identities: MononokeIdentitySet,
     ) -> Result<SessionContainer, errors::ServiceError> {
         let metadata = Metadata::default().set_identities(identities);
+        let metadata = Arc::new(metadata);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
             .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())

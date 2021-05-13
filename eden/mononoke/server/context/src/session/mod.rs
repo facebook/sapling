@@ -43,7 +43,7 @@ pub enum SessionClass {
 }
 
 struct SessionContainerInner {
-    metadata: Metadata,
+    metadata: Arc<Metadata>,
     load_limiter: Option<BoxLoadLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
