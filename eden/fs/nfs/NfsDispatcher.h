@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/DirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -51,7 +52,7 @@ class NfsDispatcher {
   /**
    * Get file attribute for the passed in InodeNumber.
    */
-  virtual folly::Future<struct stat> getattr(
+  virtual ImmediateFuture<struct stat> getattr(
       InodeNumber ino,
       ObjectFetchContext& context) = 0;
 
@@ -71,7 +72,7 @@ class NfsDispatcher {
    * See comment on the create method for the meaning of the returned pre and
    * post stat.
    */
-  virtual folly::Future<SetattrRes> setattr(
+  virtual ImmediateFuture<SetattrRes> setattr(
       InodeNumber ino,
       DesiredMetadata desired,
       ObjectFetchContext& context) = 0;
@@ -81,7 +82,7 @@ class NfsDispatcher {
    *
    * Can be used to handle a ".." filename.
    */
-  virtual folly::Future<InodeNumber> getParent(
+  virtual ImmediateFuture<InodeNumber> getParent(
       InodeNumber ino,
       ObjectFetchContext& context) = 0;
 
@@ -89,13 +90,13 @@ class NfsDispatcher {
    * Find the given file in the passed in directory. It's InodeNumber and
    * attributes are returned.
    */
-  virtual folly::Future<std::tuple<InodeNumber, struct stat>>
+  virtual ImmediateFuture<std::tuple<InodeNumber, struct stat>>
   lookup(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
   /**
    * For a symlink, return its destination, fail otherwise.
    */
-  virtual folly::Future<std::string> readlink(
+  virtual ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       ObjectFetchContext& context) = 0;
 
@@ -112,7 +113,7 @@ class NfsDispatcher {
   /**
    * Read data from the file referenced by the InodeNumber ino.
    */
-  virtual folly::Future<ReadRes> read(
+  virtual ImmediateFuture<ReadRes> read(
       InodeNumber ino,
       size_t size,
       off_t offset,
@@ -137,7 +138,7 @@ class NfsDispatcher {
    * See the comment on the create method below for the meaning of the returned
    * pre and post stat.
    */
-  virtual folly::Future<WriteRes> write(
+  virtual ImmediateFuture<WriteRes> write(
       InodeNumber ino,
       std::unique_ptr<folly::IOBuf> data,
       off_t offset,
@@ -167,7 +168,7 @@ class NfsDispatcher {
    * its cache needs to be invalidated. Setting them both to std::nullopt is an
    * acceptable approach if the stat cannot be collected atomically.
    */
-  virtual folly::Future<CreateRes> create(
+  virtual ImmediateFuture<CreateRes> create(
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
@@ -194,7 +195,7 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<MkdirRes> mkdir(
+  virtual ImmediateFuture<MkdirRes> mkdir(
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
@@ -224,7 +225,7 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<SymlinkRes> symlink(
+  virtual ImmediateFuture<SymlinkRes> symlink(
       InodeNumber dir,
       PathComponent name,
       std::string data,
@@ -252,7 +253,7 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<MknodRes> mknod(
+  virtual ImmediateFuture<MknodRes> mknod(
       InodeNumber ino,
       PathComponent name,
       mode_t mode,
@@ -276,7 +277,7 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<UnlinkRes>
+  virtual ImmediateFuture<UnlinkRes>
   unlink(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
   struct RmdirRes {
@@ -293,7 +294,7 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<RmdirRes>
+  virtual ImmediateFuture<RmdirRes>
   rmdir(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
   struct RenameRes {
@@ -315,7 +316,7 @@ class NfsDispatcher {
    * Fro the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual folly::Future<RenameRes> rename(
+  virtual ImmediateFuture<RenameRes> rename(
       InodeNumber fromIno,
       PathComponent fromName,
       InodeNumber toIno,
@@ -341,13 +342,13 @@ class NfsDispatcher {
    * readdir call will be made by the NFS client to restart the enumeration at
    * offset. The first readdir will have an offset of 0.
    */
-  virtual folly::Future<ReaddirRes> readdir(
+  virtual ImmediateFuture<ReaddirRes> readdir(
       InodeNumber dir,
       off_t offset,
       uint32_t count,
       ObjectFetchContext& context) = 0;
 
-  virtual folly::Future<struct statfs> statfs(
+  virtual ImmediateFuture<struct statfs> statfs(
       InodeNumber dir,
       ObjectFetchContext& context) = 0;
 

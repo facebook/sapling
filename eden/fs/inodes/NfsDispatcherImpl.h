@@ -19,89 +19,89 @@ class NfsDispatcherImpl : public NfsDispatcher {
  public:
   explicit NfsDispatcherImpl(EdenMount* mount);
 
-  folly::Future<struct stat> getattr(
+  ImmediateFuture<struct stat> getattr(
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::SetattrRes> setattr(
+  ImmediateFuture<NfsDispatcher::SetattrRes> setattr(
       InodeNumber ino,
       DesiredMetadata desired,
       ObjectFetchContext& context) override;
 
-  folly::Future<InodeNumber> getParent(
+  ImmediateFuture<InodeNumber> getParent(
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
-  folly::Future<std::tuple<InodeNumber, struct stat>> lookup(
+  ImmediateFuture<std::tuple<InodeNumber, struct stat>> lookup(
       InodeNumber dir,
       PathComponent name,
       ObjectFetchContext& context) override;
 
-  folly::Future<std::string> readlink(
+  ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::ReadRes> read(
+  ImmediateFuture<NfsDispatcher::ReadRes> read(
       InodeNumber ino,
       size_t size,
       off_t offset,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::WriteRes> write(
+  ImmediateFuture<NfsDispatcher::WriteRes> write(
       InodeNumber ino,
       std::unique_ptr<folly::IOBuf> data,
       off_t offset,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::CreateRes> create(
+  ImmediateFuture<NfsDispatcher::CreateRes> create(
       InodeNumber ino,
       PathComponent name,
       mode_t mode,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::MkdirRes> mkdir(
+  ImmediateFuture<NfsDispatcher::MkdirRes> mkdir(
       InodeNumber ino,
       PathComponent name,
       mode_t mode,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::SymlinkRes> symlink(
+  ImmediateFuture<NfsDispatcher::SymlinkRes> symlink(
       InodeNumber dir,
       PathComponent name,
       std::string data,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::MknodRes> mknod(
+  ImmediateFuture<NfsDispatcher::MknodRes> mknod(
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
       dev_t rdev,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::UnlinkRes> unlink(
+  ImmediateFuture<NfsDispatcher::UnlinkRes> unlink(
       InodeNumber dir,
       PathComponent name,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::RmdirRes> rmdir(
+  ImmediateFuture<NfsDispatcher::RmdirRes> rmdir(
       InodeNumber dir,
       PathComponent name,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::RenameRes> rename(
+  ImmediateFuture<NfsDispatcher::RenameRes> rename(
       InodeNumber fromIno,
       PathComponent fromName,
       InodeNumber toIno,
       PathComponent toName,
       ObjectFetchContext& context) override;
 
-  folly::Future<NfsDispatcher::ReaddirRes> readdir(
+  ImmediateFuture<NfsDispatcher::ReaddirRes> readdir(
       InodeNumber dir,
       off_t offset,
       uint32_t count,
       ObjectFetchContext& context) override;
 
-  folly::Future<struct statfs> statfs(
+  ImmediateFuture<struct statfs> statfs(
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
