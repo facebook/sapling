@@ -121,6 +121,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.environment(),
         repo_configs,
         repo_factory,
+        mononoke.clone(),
     ))?;
 
     let will_exit = Arc::new(AtomicBool::new(false));

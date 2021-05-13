@@ -18,8 +18,10 @@ use megarepo_config::{
     TestMononokeMegarepoConfigs,
 };
 use megarepo_error::MegarepoError;
+use megarepo_mapping::MegarepoMapping;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
+use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
 use parking_lot::Mutex;
 use repo_factory::RepoFactory;
@@ -77,6 +79,8 @@ pub struct MegarepoApi {
     repo_configs: RepoConfigs,
     repo_factory: RepoFactory,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
+    megarepo_mapping_cache: Cache<ArcRepoIdentity, Arc<MegarepoMapping>>,
+    mononoke: Arc<Mononoke>,
 }
 
 impl MegarepoApi {
@@ -84,6 +88,7 @@ impl MegarepoApi {
         env: &Arc<MononokeEnvironment>,
         repo_configs: RepoConfigs,
         repo_factory: RepoFactory,
+        mononoke: Arc<Mononoke>,
     ) -> Result<Self, MegarepoError> {
         let fb = env.fb;
         let logger = env.logger.new(o!("megarepo" => ""));
@@ -104,6 +109,8 @@ impl MegarepoApi {
             repo_configs,
             repo_factory,
             queue_cache: Cache::new(),
+            megarepo_mapping_cache: Cache::new(),
+            mononoke,
         })
     }
 
@@ -206,5 +213,30 @@ impl MegarepoApi {
             repo_identity.name()
         );
         Ok(blobstore)
+    }
+
+    /// Build MegarepoMapping
+    #[allow(unused)]
+    async fn megarepo_mapping(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+    ) -> Result<Arc<MegarepoMapping>, Error> {
+        let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+
+        let megarepo_mapping = self
+            .megarepo_mapping_cache
+            .get_or_try_init(&repo_identity.clone(), || async move {
+                let megarepo_mapping = self
+                    .repo_factory
+                    .sql_factory(&repo_config.storage_config.metadata)
+                    .await?
+                    .open::<MegarepoMapping>()?;
+
+                Ok(Arc::new(megarepo_mapping))
+            })
+            .await?;
+
+        Ok(megarepo_mapping)
     }
 }
