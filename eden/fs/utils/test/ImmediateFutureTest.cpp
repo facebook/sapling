@@ -39,6 +39,14 @@ TEST(ImmediateFuture, thenValue) {
   EXPECT_EQ(std::move(fortySix).get(), 46);
 }
 
+TEST(ImmediateFuture, thenValueReturnsImmediateFuture) {
+  int value = 42;
+  ImmediateFuture<int> fortyTwo{value};
+  auto fortyThree = std::move(fortyTwo).thenValue(
+      [](int v) -> ImmediateFuture<int> { return v + 1; });
+  EXPECT_EQ(std::move(fortyThree).get(), 43);
+}
+
 TEST(ImmediateFuture, thenTry) {
   int value = 42;
   ImmediateFuture<int> fortyTwo{value};

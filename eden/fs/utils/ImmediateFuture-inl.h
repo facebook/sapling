@@ -44,7 +44,19 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
             return folly::Try<NewType>(std::move(inner).exception());
           }
         } else {
-          return std::move(inner).defer(std::forward<Func>(func));
+          // In the case where Func returns an ImmediateFuture, we need to
+          // transform that return value into a SemiFuture so that the return
+          // type is a SemiFuture<NewType> and not a
+          // SemiFuture<ImmediateFuture<NewType>>.
+          using FuncRetType = std::invoke_result_t<Func, folly::Try<T>>;
+
+          auto semiFut = std::move(inner).defer(std::forward<Func>(func));
+          if constexpr (detail::isImmediateFuture<FuncRetType>::value) {
+            return std::move(semiFut).deferValue(
+                [](auto&& immFut) { return std::move(immFut).semi(); });
+          } else {
+            return semiFut;
+          }
         }
       },
       std::move(inner_));
