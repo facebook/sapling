@@ -248,6 +248,11 @@ impl SshMsg {
     pub fn stream(&self) -> IoStream {
         self.0.clone()
     }
+
+    pub fn stream_ref(&self) -> &IoStream {
+        &self.0
+    }
+
     pub fn data(self) -> Bytes {
         self.1
     }

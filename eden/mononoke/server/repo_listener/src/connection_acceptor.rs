@@ -36,6 +36,7 @@ use metaconfig_types::CommonConfig;
 use openssl::ssl::{Ssl, SslAcceptor};
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, error, info, warn, Logger};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
@@ -44,6 +45,8 @@ use tokio_openssl::SslStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
+use qps::Qps;
+use quiet_stream::QuietShutdownStream;
 use sshrelay::{
     IoStream, Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, Stdio,
 };
@@ -54,8 +57,7 @@ use crate::http_service::MononokeHttpService;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
 use crate::security_checker::ConnectionsSecurityChecker;
-use qps::Qps;
-use quiet_stream::QuietShutdownStream;
+use crate::wireproto_sink::WireprotoSink;
 
 define_stats! {
     prefix = "mononoke.connection_acceptor";
@@ -102,6 +104,7 @@ pub async fn connection_acceptor(
     will_exit: Arc<AtomicBool>,
     config_store: &ConfigStore,
     cslb_config: Option<String>,
+    wireproto_scuba: MononokeScubaSampleBuilder,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
@@ -138,6 +141,7 @@ pub async fn connection_acceptor(
         will_exit,
         config_store: config_store.clone(),
         qps,
+        wireproto_scuba,
     });
 
     loop {
@@ -175,6 +179,7 @@ pub struct Acceptor {
     pub will_exit: Arc<AtomicBool>,
     pub config_store: ConfigStore,
     pub qps: Option<Arc<Qps>>,
+    pub wireproto_scuba: MononokeScubaSampleBuilder,
 }
 
 /// Details for a socket we've just opened.
@@ -355,7 +360,7 @@ where
         logger,
         keep_alive,
         join_handle,
-    } = ChannelConn::setup(framed);
+    } = ChannelConn::setup(framed, conn.clone(), metadata.clone());
 
     if metadata.client_debug() {
         info!(&logger, "{:#?}", metadata; "remote" => "true");
@@ -427,12 +432,16 @@ pub struct ChannelConn {
 }
 
 impl ChannelConn {
-    pub fn setup<R, W>(conn: FramedConn<R, W>) -> Self
+    pub fn setup<R, W>(
+        framed: FramedConn<R, W>,
+        conn: AcceptedConnection,
+        metadata: Arc<Metadata>,
+    ) -> Self
     where
         R: AsyncRead + Send + std::marker::Unpin + 'static,
         W: AsyncWrite + Send + std::marker::Unpin + 'static,
     {
-        let FramedConn { rd, wr } = conn;
+        let FramedConn { rd, wr } = framed;
 
         let stdin = Box::new(rd.compat().filter_map(|s| {
             if s.stream() == IoStream::Stdin {
@@ -458,12 +467,42 @@ impl ChannelConn {
             let krx = krx.map(|v| SshMsg::new(IoStream::Stderr, v));
 
             // Glue them together
-            let fwd = orx
-                .select(erx)
-                .select(krx)
-                .compat()
-                .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
-                .forward(wr);
+            let fwd = async move {
+                let wr = WireprotoSink::new(wr);
+
+                futures::pin_mut!(wr);
+
+                let res = orx
+                    .select(erx)
+                    .select(krx)
+                    .compat()
+                    .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
+                    .forward(wr.as_mut())
+                    .await;
+
+                if let Err(e) = res.as_ref() {
+                    let projected_wr = wr.as_mut().project();
+                    let data = projected_wr.data;
+
+                    let mut scuba = conn.pending.acceptor.wireproto_scuba.clone();
+                    scuba.add_metadata(&metadata);
+                    scuba.add_opt(
+                        "last_successful_flush",
+                        data.last_successful_flush.map(|dt| dt.timestamp()),
+                    );
+                    scuba.add_opt(
+                        "last_failed_flush",
+                        data.last_failed_flush.map(|dt| dt.timestamp()),
+                    );
+                    scuba.add("stdout_bytes", data.stdout.bytes);
+                    scuba.add("stdout_messages", data.stdout.messages);
+                    scuba.add("stderr_bytes", data.stderr.bytes);
+                    scuba.add("stderr_messages", data.stderr.messages);
+                    scuba.log_with_msg("Forwarding failed", format!("{:#}", e));
+                }
+
+                Ok(())
+            };
 
             let keep_alive_sender = async move {
                 loop {

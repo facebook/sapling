@@ -16,6 +16,7 @@ mod netspeedtest;
 mod repo_handlers;
 mod request_handler;
 mod security_checker;
+mod wireproto_sink;
 
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
@@ -118,6 +119,11 @@ pub async fn create_repo_listeners<'a>(
         will_exit,
         config_store,
         cslb_config,
+        {
+            let mut scuba = scuba.clone();
+            scuba.add("service", "wireproto");
+            scuba
+        },
     )
     .await
 }
