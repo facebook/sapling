@@ -22,9 +22,7 @@ use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tunables::{force_update_tunables, tunables};
 
-use crate::connection_acceptor::{
-    self, AcceptedConnection, Acceptor, ChannelConn, FramedConn, MononokeStream,
-};
+use crate::connection_acceptor::{self, AcceptedConnection, Acceptor, FramedConn, MononokeStream};
 
 use qps::Qps;
 
@@ -222,10 +220,9 @@ where
             let (rx, tx) = tokio::io::split(io);
             let rx = AsyncReadExt::chain(Cursor::new(read_buf), rx);
 
-            let conn = FramedConn::setup(rx, tx);
-            let channels = ChannelConn::setup(conn);
+            let framed = FramedConn::setup(rx, tx);
 
-            connection_acceptor::handle_wireproto(this.conn, channels, reponame, metadata, debug)
+            connection_acceptor::handle_wireproto(this.conn, framed, reponame, metadata, debug)
                 .await
                 .context("Failed to handle_wireproto")?;
 

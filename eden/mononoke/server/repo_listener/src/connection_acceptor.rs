@@ -286,20 +286,15 @@ async fn handle_hgcli<S: MononokeStream>(conn: AcceptedConnection, stream: S) ->
         }
     };
 
-    let channels = ChannelConn::setup(framed);
-
     let metadata = if conn.is_trusted {
         // Relayed through trusted proxy. Proxy authenticates end client and generates
         // preamble so we can trust it. Use identity provided in preamble.
-        Some(
-            try_convert_preamble_to_metadata(&preamble, conn.pending.addr.ip(), &channels.logger)
-                .await?,
-        )
+        Some(try_convert_preamble_to_metadata(&preamble, conn.pending.addr.ip()).await?)
     } else {
         None
     };
 
-    handle_wireproto(conn, channels, preamble.reponame, metadata, false)
+    handle_wireproto(conn, framed, preamble.reponame, metadata, false)
         .await
         .context("Failed to handle_wireproto")?;
 
@@ -322,13 +317,17 @@ async fn handle_http<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> 
     Ok(())
 }
 
-pub async fn handle_wireproto(
+pub async fn handle_wireproto<R, W>(
     conn: AcceptedConnection,
-    channels: ChannelConn,
+    framed: FramedConn<R, W>,
     reponame: String,
     metadata: Option<Metadata>,
     client_debug: bool,
-) -> Result<()> {
+) -> Result<()>
+where
+    R: AsyncRead + Send + std::marker::Unpin + 'static,
+    W: AsyncWrite + Send + std::marker::Unpin + 'static,
+{
     let metadata = if let Some(metadata) = metadata {
         metadata
     } else {
@@ -346,6 +345,7 @@ pub async fn handle_wireproto(
         .await
     };
 
+
     let metadata = Arc::new(metadata);
 
     let ChannelConn {
@@ -355,7 +355,7 @@ pub async fn handle_wireproto(
         logger,
         keep_alive,
         join_handle,
-    } = channels;
+    } = ChannelConn::setup(framed);
 
     if metadata.client_debug() {
         info!(&logger, "{:#?}", metadata; "remote" => "true");
@@ -498,11 +498,7 @@ impl ChannelConn {
     }
 }
 
-async fn try_convert_preamble_to_metadata(
-    preamble: &Preamble,
-    addr: IpAddr,
-    conn_log: &Logger,
-) -> Result<Metadata> {
+async fn try_convert_preamble_to_metadata(preamble: &Preamble, addr: IpAddr) -> Result<Metadata> {
     let vars = SshEnvVars::from_map(&preamble.misc);
     let client_ip = match vars.ssh_client {
         Some(ssh_client) => ssh_client
@@ -514,15 +510,9 @@ async fn try_convert_preamble_to_metadata(
     };
 
     let priority = match Priority::extract_from_preamble(&preamble) {
-        Ok(Some(p)) => {
-            info!(&conn_log, "Using priority: {}", p; "remote" => "true");
-            p
-        }
+        Ok(Some(p)) => p,
         Ok(None) => Priority::Default,
-        Err(e) => {
-            warn!(&conn_log, "Could not parse priority: {}", e; "remote" => "true");
-            Priority::Default
-        }
+        Err(..) => Priority::Default,
     };
 
     let identity = {
