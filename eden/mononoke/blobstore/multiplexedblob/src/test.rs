@@ -239,6 +239,8 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     let bs0 = Arc::new(Tickable::new());
     let bid1 = BlobstoreId::new(1);
     let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
 
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
@@ -247,7 +249,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
-        vec![],
+        vec![(bid2, bs2.clone())],
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -265,6 +267,8 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     // No entry for "key" - blobstores return None...
     bs0.tick(None);
     bs1.tick(None);
+    // Expect a read from writemostly stores regardless
+    bs2.tick(None);
 
     // but then somebody writes it
     let entry = BlobstoreSyncQueueEntry {
@@ -621,10 +625,12 @@ async fn scrubbed(fb: FacebookInit) {
     let bs0 = Arc::new(Tickable::new());
     let bid1 = BlobstoreId::new(1);
     let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
-        vec![],
+        vec![(bid2, bs2.clone())],
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -636,7 +642,7 @@ async fn scrubbed(fb: FacebookInit) {
         scrub_handler.clone(),
     );
 
-    // non-existing key when one blobstore failing
+    // non-existing key when one main blobstore failing
     {
         let k0 = "k0";
 
@@ -647,10 +653,29 @@ async fn scrubbed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(Some("bs1 failed"));
-        assert_eq!(get_fut.await.unwrap(), None, "None/Err no replication");
+
+        bs2.tick(None);
+        assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
     }
 
-    // only replica containing key failed
+    // non-existing key when one write mostly blobstore failing
+    {
+        let k0 = "k0";
+
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+
+        bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+
+        bs1.tick(None);
+
+        bs2.tick(Some("bs1 failed"));
+        assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
+    }
+
+    // fail all but one store on put to make sure only one has the data
+    // only replica containing key fails on read.
     {
         let v1 = make_value("v1");
         let k1 = "k1";
@@ -663,10 +688,13 @@ async fn scrubbed(fb: FacebookInit) {
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(Some("bs1 failed"));
+        bs2.tick(Some("bs2 failed"));
         put_fut.await.unwrap();
 
         match queue.get(ctx, k1).await.unwrap().as_slice() {
-            [entry] => assert_eq!(entry.blobstore_id, bid0, "Queue bad"),
+            [entry] => {
+                assert_eq!(entry.blobstore_id, bid0, "Queue bad");
+            }
             _ => panic!("only one entry expected"),
         }
 
@@ -677,10 +705,11 @@ async fn scrubbed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(None);
+        bs2.tick(None);
         assert!(get_fut.await.is_err(), "None/Err while replicating");
     }
 
-    // both replicas fail
+    // all replicas fail
     {
         let k2 = "k2";
 
@@ -688,16 +717,19 @@ async fn scrubbed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(Some("bs1 failed"));
+        bs2.tick(Some("bs1 failed"));
         assert!(get_fut.await.is_err(), "Err/Err");
     }
 
-    // Now replace bs1 with an empty blobstore, and see the scrub work
+    // Now replace bs1 & bs2 with an empty blobstore, and see the scrub work
     let bid1 = BlobstoreId::new(1);
     let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
-        vec![],
+        vec![(bid2, bs2.clone())],
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -709,7 +741,7 @@ async fn scrubbed(fb: FacebookInit) {
         scrub_handler,
     );
 
-    // Non-existing key in both blobstores, new blobstore failing
+    // Non-existing key in all blobstores, new blobstore failing
     {
         let k0 = "k0";
 
@@ -720,6 +752,8 @@ async fn scrubbed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(Some("bs1 failed"));
+
+        bs2.tick(None);
         assert_eq!(get_fut.await.unwrap(), None, "None/Err after replacement");
     }
 
@@ -731,6 +765,7 @@ async fn scrubbed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(None);
+        bs2.tick(None);
         assert!(get_fut.await.is_err(), "Empty replacement against error");
     }
 
@@ -760,15 +795,18 @@ async fn scrubbed(fb: FacebookInit) {
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
+        bs2.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         // Tick the repairs
         bs1.tick(None);
+        bs2.tick(None);
 
         // Succeeds
         assert_eq!(get_fut.await.unwrap(), Some(v1.clone().into()));
-        // Now both populated.
+        // Now all populated.
         assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
     }
 }
 
