@@ -14,8 +14,6 @@
 
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
-#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/MountdRpc.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -31,7 +29,7 @@ class MountdServerProcessor final : public RpcServerProcessor {
   MountdServerProcessor& operator=(const MountdServerProcessor&) = delete;
   MountdServerProcessor& operator=(MountdServerProcessor&&) = delete;
 
-  folly::Future<folly::Unit> dispatchRpc(
+  ImmediateFuture<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
       uint32_t xid,
@@ -169,7 +167,7 @@ ImmediateFuture<folly::Unit> MountdServerProcessor::exprt(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
+ImmediateFuture<folly::Unit> MountdServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid,
@@ -197,9 +195,7 @@ folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
   auto handlerEntry = kMountHandlers[procNumber];
 
   XLOG(DBG7) << handlerEntry.name;
-  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 
 void MountdServerProcessor::registerMount(

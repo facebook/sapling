@@ -11,6 +11,7 @@
 
 #include <folly/Exception.h>
 #include <folly/String.h>
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <tuple>
@@ -306,31 +307,34 @@ void RpcTcpHandler::dispatchAndReply(
         call.cbody.vers,
         call.cbody.proc);
 
-    return std::move(fut).then(
-        [keepInputAlive = std::move(input),
-         iobufQueue = std::move(iobufQueue),
-         call = std::move(call)](folly::Try<folly::Unit> result) mutable {
-          if (result.hasException()) {
-            XLOGF(
-                WARN,
-                "Server failed to dispatch proc {} to {}:{}: {}",
-                call.cbody.proc,
-                call.cbody.prog,
-                call.cbody.vers,
-                folly::exceptionStr(*result.exception().get_exception()));
+    return std::move(fut)
+        .thenTry(
+            [keepInputAlive = std::move(input),
+             iobufQueue = std::move(iobufQueue),
+             call = std::move(call)](folly::Try<folly::Unit> result) mutable {
+              if (result.hasException()) {
+                XLOGF(
+                    WARN,
+                    "Server failed to dispatch proc {} to {}:{}: {}",
+                    call.cbody.proc,
+                    call.cbody.prog,
+                    call.cbody.vers,
+                    folly::exceptionStr(*result.exception().get_exception()));
 
-            // We don't know how much dispatchRpc wrote to the iobufQueue, thus
-            // let's clear it and write an error onto it.
-            iobufQueue->clear();
-            folly::io::QueueAppender errSer(iobufQueue.get(), 1024);
-            XdrTrait<uint32_t>::serialize(
-                errSer, 0); // reserve space for fragment header
+                // We don't know how much dispatchRpc wrote to the iobufQueue,
+                // thus let's clear it and write an error onto it.
+                iobufQueue->clear();
+                folly::io::QueueAppender errSer(iobufQueue.get(), 1024);
+                XdrTrait<uint32_t>::serialize(
+                    errSer, 0); // reserve space for fragment header
 
-            serializeReply(errSer, accept_stat::SYSTEM_ERR, call.xid);
-          }
+                serializeReply(errSer, accept_stat::SYSTEM_ERR, call.xid);
+              }
 
-          return finalizeFragment(std::move(iobufQueue));
-        });
+              return finalizeFragment(std::move(iobufQueue));
+            })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   })
       .via(this->sock_->getEventBase())
       .then([this, guard = std::move(guard)](
@@ -376,7 +380,7 @@ auth_stat RpcServerProcessor::checkAuthentication(
   return auth_stat::AUTH_OK;
 }
 
-Future<folly::Unit> RpcServerProcessor::dispatchRpc(
+ImmediateFuture<folly::Unit> RpcServerProcessor::dispatchRpc(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender /*ser*/,
     uint32_t /*xid*/,

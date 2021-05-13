@@ -14,6 +14,7 @@
 #include <folly/net/NetworkSocket.h>
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
 class Executor;
@@ -25,7 +26,7 @@ class RpcServerProcessor {
  public:
   virtual ~RpcServerProcessor() = default;
   virtual auth_stat checkAuthentication(const call_body& call_body);
-  virtual folly::Future<folly::Unit> dispatchRpc(
+  virtual ImmediateFuture<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
       uint32_t xid,

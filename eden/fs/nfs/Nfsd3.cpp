@@ -14,7 +14,6 @@
 #endif
 
 #include <folly/Utility.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/utils/Clock.h"
@@ -44,7 +43,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   Nfsd3ServerProcessor& operator=(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor& operator=(Nfsd3ServerProcessor&&) = delete;
 
-  folly::Future<folly::Unit> dispatchRpc(
+  ImmediateFuture<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
       uint32_t xid,
@@ -1655,7 +1654,7 @@ constexpr auto kNfs3dHandlers = [] {
   return handlers;
 }();
 
-folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
+ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid,
@@ -1687,9 +1686,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       "{}({})",
       handlerEntry.name,
       handlerEntry.formatArgs(deser));
-  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 } // namespace
 
