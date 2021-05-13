@@ -9,9 +9,13 @@ license = "GPLv2+"
 anyhow = "1.0"
 async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 async_requests = { version = "0.1.0", path = "async_requests" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 megarepo_config = { version = "0.1.0", path = "megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "megarepo_error" }
 megarepo_mapping = { version = "0.1.0", path = "mapping" }
@@ -20,6 +24,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 parking_lot = "0.10.2"
+reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 requests_table = { version = "0.1.0", path = "requests_table" }

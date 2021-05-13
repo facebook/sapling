@@ -26,7 +26,7 @@ slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 thiserror = "1.0"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio = { version = "1.5", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 tunables = { version = "0.1.0", path = "../tunables" }
 

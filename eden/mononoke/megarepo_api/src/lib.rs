@@ -22,7 +22,7 @@ use megarepo_mapping::MegarepoMapping;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_api::Mononoke;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use parking_lot::Mutex;
 use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
@@ -33,6 +33,8 @@ use std::convert::TryFrom;
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
+
+mod sync_changeset;
 
 /// A cache for AsyncMethodRequestQueue instances
 #[derive(Clone)]
@@ -216,7 +218,6 @@ impl MegarepoApi {
     }
 
     /// Build MegarepoMapping
-    #[allow(unused)]
     async fn megarepo_mapping(
         &self,
         ctx: &CoreContext,
@@ -238,5 +239,24 @@ impl MegarepoApi {
             .await?;
 
         Ok(megarepo_mapping)
+    }
+
+    pub async fn sync_changeset(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+        source_name: String,
+        target: Target,
+    ) -> Result<(), MegarepoError> {
+        let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
+        sync_changeset::SyncChangeset::new(&self.megarepo_configs, &self.mononoke)
+            .sync(
+                ctx,
+                source_cs_id,
+                source_name,
+                target,
+                target_megarepo_mapping,
+            )
+            .await
     }
 }

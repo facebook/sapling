@@ -12,7 +12,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 maplit = "1.0"
 openssl = "0.10"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
-tokio = { version = "1.4", features = ["full", "test-util"] }
+tokio = { version = "1.5", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

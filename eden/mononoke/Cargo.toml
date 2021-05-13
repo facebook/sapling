@@ -112,8 +112,8 @@ sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 streaming_clone = { version = "0.1.0", path = "repo_client/streaming_clone" }
 tempfile = "3.1"
-tokio = { version = "1.4", features = ["full", "test-util"] }
-tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "sync", "time"] }
+tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 toml = "=0.5.7"
 
 [patch.crates-io]
