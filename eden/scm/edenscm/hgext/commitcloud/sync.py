@@ -657,15 +657,15 @@ def _partitionheadsgroups(heads, headdates=None, sizelimit=4, spanlimit=86400):
     different synced machines.  This may mean potential groups get split up if a
     head with a different date is in the middle.
 
-    >>> _partitionheads([1, 2, 3, 4], {1: 1, 2: 2, 3: 3, 4: 4}, sizelimit=2, spanlimit=10)
+    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 1, 2: 2, 3: 3, 4: 4}, sizelimit=2, spanlimit=10)
     [[1, 2], [3, 4]]
-    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=10)
+    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=10)
     [[1, 2], [3, 4]]
-    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=30)
+    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=30)
     [[1, 2, 3, 4]]
-    >>> _partitionheads([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=5)
+    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=5)
     [[1], [2], [3], [4]]
-    >>> _partitionheads([1, 2, 3, 9, 4], {1: 10, 2: 20, 3: 30, 4: 40, 9: 90}, sizelimit=8, spanlimit=30)
+    >>> _partitionheadsgroups([1, 2, 3, 9, 4], {1: 10, 2: 20, 3: 30, 4: 40, 9: 90}, sizelimit=8, spanlimit=30)
     [[1, 2, 3], [9], [4]]
     """
     headdates = headdates or {}
