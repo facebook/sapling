@@ -189,9 +189,6 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
     target.populate_walk(&walk_repo, &mut walk)?;
 
-    // TODO: Don't import everything in one go. Instead, hide things we already imported from the
-    // traversal.
-
     let roots = &target.get_roots()?;
     let nb_commits_to_import = target.get_nb_commits(&walk_repo)?;
     if 0 == nb_commits_to_import {
@@ -200,9 +197,6 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
     }
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
-
-    // TODO: Make concurrency configurable below.
-
     let ret = stream::iter(walk)
         .map(|oid| async move {
             let oid = oid.with_context(|| "While walking commits")?;
@@ -231,7 +225,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
 
             Ok((metadata, file_changes))
         })
-        .buffered(20)
+        .buffered(prefs.concurrency)
         .try_fold(Acc::new(), {
             move |mut acc, (metadata, file_changes)| async move {
                 let oid = metadata.oid;

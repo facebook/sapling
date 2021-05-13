@@ -118,13 +118,27 @@ impl StoreLoadable<GitPool> for GitTree {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct GitimportPreferences {
     pub derive_trees: bool,
     pub derive_hg: bool,
     pub hggit_compatibility: bool,
     pub bonsai_git_mapping: bool,
     pub gitrepo_name: Option<String>,
+    pub concurrency: usize,
+}
+
+impl Default for GitimportPreferences {
+    fn default() -> Self {
+        GitimportPreferences {
+            derive_trees: false,
+            derive_hg: false,
+            hggit_compatibility: false,
+            bonsai_git_mapping: false,
+            gitrepo_name: None,
+            concurrency: 20,
+        }
+    }
 }
 
 impl GitimportPreferences {
@@ -148,6 +162,10 @@ impl GitimportPreferences {
     /// useful when several repos are imported simultainously.
     pub fn set_gitrepo_name(&mut self, name: String) {
         self.gitrepo_name = Some(name);
+    }
+
+    pub fn set_concurrency(&mut self, concurrency: usize) {
+        self.concurrency = concurrency;
     }
 }
 
