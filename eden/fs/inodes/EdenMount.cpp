@@ -1449,7 +1449,7 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
           channelInitSuccessful(channel_->getStopFuture());
 #else
           return std::visit(
-              [this](auto&& variant) {
+              [this](auto&& variant) -> folly::Future<folly::Unit> {
                 using T = std::decay_t<decltype(variant)>;
 
                 if constexpr (std::

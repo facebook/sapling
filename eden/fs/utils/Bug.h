@@ -37,8 +37,8 @@
  * In debug builds this will crash, but in production builds this will return a
  * folly::Future<Type> containing an exception.
  */
-#define EDEN_BUG_FUTURE(Type)               \
-  ::facebook::eden::EdenBugFuture<Type>() & \
+#define EDEN_BUG_FUTURE(Type)            \
+  ::facebook::eden::EdenBugTry<Type>() & \
       ::facebook::eden::EdenBug(__FILE__, __LINE__)
 
 /**
@@ -129,11 +129,11 @@ class EdenBugThrow {
 };
 
 template <typename T>
-class EdenBugFuture {
+class EdenBugTry {
  public:
   FOLLY_NODISCARD
-  folly::Future<T> operator&(EdenBug&& bug) const {
-    return folly::makeFuture<T>(bug.toException());
+  folly::Try<T> operator&(EdenBug&& bug) const {
+    return folly::Try<T>(bug.toException());
   }
 };
 
