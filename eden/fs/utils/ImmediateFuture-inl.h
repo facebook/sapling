@@ -15,7 +15,7 @@ ImmediateFuture<detail::continuation_result_t<Func, T>>
 ImmediateFuture<T>::thenValue(Func&& func) && {
   return std::move(*this).thenTry(
       [func = std::forward<Func>(func)](
-          folly::Try<T>&& try_) -> std::invoke_result_t<Func, T> {
+          folly::Try<T>&& try_) mutable -> std::invoke_result_t<Func, T> {
         // If try_ doesn't store a value, this will rethrow the exception which
         // will be caught by the thenTry method below.
         return func(std::move(try_).value());

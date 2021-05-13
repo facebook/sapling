@@ -131,6 +131,14 @@ class Foo {
     return val_;
   }
 
+  int getNonConstVal() {
+    return val_;
+  }
+
+  void setVal(int val) {
+    val_ = val;
+  }
+
  private:
   int val_;
 };
@@ -154,4 +162,12 @@ TEST(ImmediateFuture, semi) {
 
   ImmediateFuture<int> imm{42};
   EXPECT_EQ(std::move(imm).semi().get(), 42);
+}
+
+TEST(ImmediateFuture, mutableLambda) {
+  ImmediateFuture<int> fut{42};
+  Foo foo{1};
+  auto setFooFut = std::move(fut).thenValue(
+      [foo](auto&& value) mutable { return value + foo.getNonConstVal(); });
+  EXPECT_EQ(std::move(setFooFut).get(), 43);
 }
