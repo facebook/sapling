@@ -33,15 +33,11 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
       [func = std::forward<Func>(func)](auto&& inner) mutable -> RetType {
         using Type = std::decay_t<decltype(inner)>;
         if constexpr (std::is_same_v<Type, folly::Try<T>>) {
-          if (inner.hasValue()) {
-            try {
-              return func(std::move(inner));
-            } catch (std::exception& ex) {
-              return folly::Try<NewType>(
-                  folly::exception_wrapper(std::current_exception(), ex));
-            }
-          } else {
-            return folly::Try<NewType>(std::move(inner).exception());
+          try {
+            return func(std::move(inner));
+          } catch (std::exception& ex) {
+            return folly::Try<NewType>(
+                folly::exception_wrapper(std::current_exception(), ex));
           }
         } else {
           // In the case where Func returns an ImmediateFuture, we need to

@@ -83,6 +83,21 @@ TEST(ImmediateFuture, exception) {
       std::move(fortyThree).get(), std::logic_error, "Test exception");
 }
 
+TEST(ImmediateFuture, exceptionContinuation) {
+  int value = 42;
+  ImmediateFuture<int> fortyTwo{value};
+  auto exceptedFut = std::move(fortyTwo)
+                         .thenValue([](int) -> int {
+                           throw std::logic_error("Test exception");
+                         })
+                         .thenTry([](folly::Try<int>&& try_) {
+                           EXPECT_TRUE(try_.hasException());
+                           return std::move(try_);
+                         });
+  EXPECT_THROW_RE(
+      std::move(exceptedFut).get(), std::logic_error, "Test exception");
+}
+
 TEST(ImmediateFuture, hasImmediate) {
   int value = 42;
   ImmediateFuture<int> fortyTwo{value};
