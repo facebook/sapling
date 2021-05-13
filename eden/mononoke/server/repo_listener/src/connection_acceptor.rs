@@ -521,6 +521,18 @@ impl ChannelConn {
             // spawn a task for forwarding stdout/err into stream
             let join_handle = tokio::spawn(fwd);
 
+            // NOTE: This might seem useless, but it's not. When you spawn a task, Tokio puts it on
+            // a "LIFO slot" associated with the current thread. While the task is in the LIFO
+            // slot, it is not eligible to be run by other threads. If the thread that just spawned
+            // `fwd` above goes and does some expensive synchronous work in `request_handler` (we'd
+            // like to avoid that but sometimes that happens), then that will delay `fwd`. This
+            // means that notably keepalives will not be sent (you can repro by putting a
+            // `std::thread::sleep` right after we spawn `fwd`). To mitigate this, we spawn another
+            // dummy taks here. This task will take `fwd`'s place in the LIFO slot, thus pushing
+            // `fwd` onto a task queue where other runtime threads can claim it. This way, even if
+            // this thread goes do some expensive CPU-bound work, we won't delay keepalives.
+            tokio::spawn(async {});
+
             (otx, etx, keep_alive_abort, join_handle)
         };
 
