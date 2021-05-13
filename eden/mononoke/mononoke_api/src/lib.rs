@@ -12,7 +12,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
 use futures::future;
 use futures_watchdog::WatchdogExt;
@@ -68,6 +68,7 @@ pub use context::{CoreContext, LoggingContainer, SessionContainer};
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     repos: HashMap<String, Arc<Repo>>,
+    repos_by_ids: HashMap<RepositoryId, Arc<Repo>>,
 }
 
 impl Mononoke {
@@ -82,6 +83,7 @@ impl Mononoke {
                     move |(name, config)| async move {
                         let logger = &env.repo_factory.env.logger;
                         info!(logger, "Initializing repo: {}", &name);
+
                         let repo = Repo::new(env, name.clone(), config)
                             .watched(logger.new(o!("repo" => name.clone())))
                             .await
@@ -94,12 +96,31 @@ impl Mononoke {
 
         // There are lots of deep FuturesUnordered here that have caused inefficient polling with
         // Tokio coop in the past.
-        let repos = tokio::task::unconstrained(repos)
-            .await?
-            .into_iter()
-            .collect();
+        let repos_vec = tokio::task::unconstrained(repos).await?;
 
-        Ok(Self { repos })
+        Self::new_from_repos(repos_vec)
+    }
+
+    fn new_from_repos(
+        repos_iter: impl IntoIterator<Item = (String, Arc<Repo>)>,
+    ) -> Result<Self, Error> {
+        let mut repos = HashMap::new();
+        let mut repos_by_ids = HashMap::new();
+        for (name, repo) in repos_iter {
+            if !repos.insert(name.clone(), repo.clone()).is_none() {
+                return Err(anyhow!("repos with duplicate name '{}' found", name));
+            }
+
+            let repo_id = repo.blob_repo().get_repoid();
+            if !repos_by_ids.insert(repo_id, repo).is_none() {
+                return Err(anyhow!("repos with duplicate id '{}' found", repo_id));
+            }
+        }
+
+        Ok(Self {
+            repos,
+            repos_by_ids,
+        })
     }
 
     /// Start a request on a repository.
@@ -109,6 +130,17 @@ impl Mononoke {
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
         match self.repos.get(name.as_ref()) {
+            None => Ok(None),
+            Some(repo) => Ok(Some(RepoContext::new(ctx, repo.clone()).await?)),
+        }
+    }
+
+    pub async fn repo_by_id(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<RepoContext>, MononokeError> {
+        match self.repos_by_ids.get(&repo_id) {
             None => Ok(None),
             Some(repo) => Ok(Some(RepoContext::new(ctx, repo.clone()).await?)),
         }
@@ -199,10 +231,10 @@ mod test_impl {
                     }
                 })
                 .collect::<FuturesOrdered<_>>()
-                .try_collect()
+                .try_collect::<HashMap<_, _>>()
                 .await?;
 
-            Ok(Self { repos })
+            Self::new_from_repos(repos)
         }
 
         pub(crate) async fn new_test_xrepo(
@@ -236,10 +268,11 @@ mod test_impl {
                     }
                 })
                 .collect::<FuturesOrdered<_>>()
-                .try_collect()
+                .try_collect::<HashMap<_, _>>()
                 .await?;
 
-            Ok((Self { repos }, lv_cfg_src))
+            let mononoke = Self::new_from_repos(repos)?;
+            Ok((mononoke, lv_cfg_src))
         }
     }
 }
