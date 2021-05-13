@@ -14,6 +14,7 @@ use futures::{
     channel::mpsc,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
+use slog::info;
 use std::ffi::OsStr;
 use tokio::{
     fs::File,
@@ -193,6 +194,10 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             None,
         )
         .await?;
+
+        if !quiet {
+            info!(logger, "Scrubbing blobstore: {}", blobstore);
+        }
 
         let stdin = BufReader::new(stdin());
         let mut output_handles = FuturesUnordered::new();
