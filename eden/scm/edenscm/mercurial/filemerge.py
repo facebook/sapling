@@ -226,10 +226,9 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
             disabled.add(t)
     names = tools.keys()
     tools = sorted([(-p, tool) for tool, p in tools.items() if tool not in disabled])
-    interactive = ui.interactive() and ui.formatted
-    ui.debug(
-        "picktool() interactive=%s formatted=%s\n" % (ui.interactive(), ui.formatted)
-    )
+    plain = ui.plain(feature="mergetool")
+    interactive = ui.interactive() and not plain
+    ui.debug("picktool() interactive=%s plain=%s\n" % (ui.interactive(), plain))
     uimerge = None
     if interactive:
         uimerge = ui.config("ui", "merge:interactive")

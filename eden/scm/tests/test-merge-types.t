@@ -178,7 +178,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m (premerge)
-  picktool() interactive=False formatted=False
+  picktool() interactive=False plain=False
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   no tool found to merge a
   picked tool ':prompt' for a (binary False symlink True changedelete False)
