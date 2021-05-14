@@ -6,13 +6,11 @@
  */
 
 use anyhow::Result;
-use async_requests::tokens::{
-    MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
-};
+use async_requests::tokens::{MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken};
 use async_requests::types::{ThriftParams, Token};
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use source_control as thrift;
 use std::collections::HashSet;
 
@@ -148,31 +146,42 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoSyncChangesetParams,
     ) -> Result<thrift::MegarepoSyncChangesetToken, errors::ServiceError> {
-        let token = self
-            .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
-            .await?
-            .enqueue(ctx, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        let source_cs_id =
+            ChangesetId::from_bytes(params.cs_id).map_err(errors::invalid_request)?;
+        self.megarepo_api
+            .sync_changeset(
+                &ctx,
+                source_cs_id,
+                params.source_name,
+                params.target.clone(),
+            )
+            .await?;
 
-        Ok(token.into_thrift())
+        let token = thrift::MegarepoSyncChangesetToken {
+            id: FAKE_ADD_TARGET_TOKEN,
+            target: params.target,
+        };
+
+        Ok(token)
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
         &self,
-        ctx: CoreContext,
+        _ctx: CoreContext,
         token: thrift::MegarepoSyncChangesetToken,
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
-        let token = MegarepoSyncChangesetToken(token);
-        let poll_response = self
-            .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
-            .await?
-            .poll(ctx, token)
-            .await?;
-
-        Ok(poll_response)
+        if token.id == FAKE_ADD_TARGET_TOKEN {
+            Ok(thrift::MegarepoSyncChangesetPollResponse {
+                response: Some(thrift::MegarepoSyncChangesetResponse {
+                    // TODO(stash, mitrandir) - return the actual commit here
+                    cs_id: Default::default(),
+                }),
+            })
+        } else {
+            Err(errors::ServiceError::from(errors::not_implemented(
+                "megarepo_sync_changeset_poll is not yet implemented",
+            )))
+        }
     }
 
     pub(crate) async fn megarepo_remerge_source(
