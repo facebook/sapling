@@ -48,11 +48,12 @@ async fn scrub_key<B: Blobstore + Clone + 'static>(
                 error.send((key, e)).await?;
                 progress.error += 1;
             }
-            Ok(Some(_)) => {
+            Ok(Some(v)) => {
                 if let Some(mut success) = success {
                     success.send(key).await?;
                 }
                 progress.success += 1;
+                progress.bytes += v.as_bytes().len() as u64;
             }
         }
     };
