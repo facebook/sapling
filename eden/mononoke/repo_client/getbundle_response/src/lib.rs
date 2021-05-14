@@ -20,7 +20,7 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::{
-    compat::Future01CompatExt,
+    compat::Stream01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -56,6 +56,7 @@ use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryInto,
     iter::FromIterator,
     sync::Arc,
 };
@@ -445,7 +446,7 @@ async fn call_difference_of_union_of_ancestors_revset(
     match (min_heads_gen_num, max_excludes_gen_num) {
         (Some(min_heads), Some(max_excludes)) => {
             if min_heads.difference_from(*max_excludes).unwrap_or(0) > GETBUNDLE_COMMIT_NUM_WARN {
-                warn_expensive_getbundle(&ctx);
+                warn_expensive_getbundle(&ctx).await;
                 notified_expensive_getbundle = true;
             }
         }
@@ -459,27 +460,38 @@ async fn call_difference_of_union_of_ancestors_revset(
         heads,
         excludes,
     )
-    .inspect({
+    .compat()
+    .and_then({
         let mut i = 0;
-        move |_| {
+        move |value| {
             i += 1;
+            let mut should_notify = false;
             if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
-                warn_expensive_getbundle(&ctx);
+                should_notify = true;
                 notified_expensive_getbundle = true;
+            }
+            async move {
+                if should_notify {
+                    warn_expensive_getbundle(&ctx).await;
+                }
+                Ok(value)
             }
         }
     });
 
     let (stats, res) = async move {
         if let Some(limit) = limit {
-            let res = nodes_to_send.take(limit).collect().compat().await?;
+            let res: Vec<_> = nodes_to_send
+                .take(limit.try_into().unwrap())
+                .try_collect()
+                .await?;
             if res.len() as u64 == limit {
                 Ok(None)
             } else {
                 Ok(Some(res))
             }
         } else {
-            nodes_to_send.collect().compat().map_ok(Some).await
+            nodes_to_send.try_collect().map_ok(Some).await
         }
     }
     .try_timed()
@@ -491,7 +503,7 @@ async fn call_difference_of_union_of_ancestors_revset(
     Ok(res)
 }
 
-fn warn_expensive_getbundle(ctx: &CoreContext) {
+async fn warn_expensive_getbundle(ctx: &CoreContext) {
     info!(
         ctx.logger(),
         "your repository is out of date and pulling new commits might take a long time. \
@@ -500,6 +512,11 @@ fn warn_expensive_getbundle(ctx: &CoreContext) {
         https://fburl.com/wiki/brz1ysn7."
         ; o!("remote" => "true")
     );
+    // This is an attempt to mitigate S231752 - sending this warning message
+    // prevents keep alive messages to be send to clients, which might cause client disconnects.
+    // We don't yet understand the root cause, but the yield seemed to mitigate the issue
+    // locally, so we'd like to try it.
+    tokio::task::yield_now().await;
 }
 
 async fn create_hg_changeset_part(
