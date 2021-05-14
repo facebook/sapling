@@ -28,6 +28,8 @@
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
+    "disable_compression": false,
+    "disable_compression_identities": [],
     "disable_hostname_logging": false,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
@@ -59,6 +61,8 @@
 # Get the updated config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
+    "disable_compression": false,
+    "disable_compression_identities": [],
     "disable_hostname_logging": false,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,

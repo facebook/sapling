@@ -17,7 +17,7 @@ use filestore::{self, Alias, FetchKey, Range};
 use gotham_ext::{
     content_encoding::ContentEncoding,
     error::HttpError,
-    middleware::ScubaMiddlewareState,
+    middleware::{ClientIdentity, ScubaMiddlewareState},
     response::{
         CompressedResponseStream, ResponseStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
     },
@@ -25,13 +25,16 @@ use gotham_ext::{
 };
 use http::header::{HeaderMap, RANGE};
 use mononoke_types::{hash::Sha256, ContentId};
+use permission_checker::MononokeIdentitySet;
 use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
+use crate::config::ServerConfig;
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
+use crate::util::is_identity_subset;
 
 define_stats! {
     prefix = "mononoke.lfs.download";
@@ -83,6 +86,17 @@ fn extract_range(state: &State) -> Result<Option<Range>, Error> {
     let header = std::str::from_utf8(header.as_bytes()).context("Invalid range")?;
 
     Ok(Some(parse_range(header)?))
+}
+
+fn should_disable_compression(
+    config: &ServerConfig,
+    client_idents: Option<&MononokeIdentitySet>,
+) -> bool {
+    if config.disable_compression() {
+        return true;
+    }
+
+    is_identity_subset(config.disable_compression_identities(), client_idents)
 }
 
 async fn fetch_by_key(
@@ -139,6 +153,33 @@ async fn fetch_by_key(
     Ok(body)
 }
 
+async fn download_inner(
+    state: &mut State,
+    repository: String,
+    key: FetchKey,
+    method: LfsMethod,
+) -> Result<impl TryIntoResponse, HttpError> {
+    let range = extract_range(state).map_err(HttpError::e400)?;
+
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), method).await?;
+
+    let idents = ClientIdentity::try_borrow_from(&state)
+        .map(|ident| ident.identities().as_ref())
+        .flatten();
+
+    let disable_compression = should_disable_compression(&ctx.config, idents);
+
+    let content_encoding = if disable_compression {
+        ContentEncoding::Identity
+    } else {
+        ContentEncoding::from_state(&state)
+    };
+
+    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+
+    fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
+}
+
 pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let DownloadParamsContentId {
         repository,
@@ -149,16 +190,9 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         .context(ErrorKind::InvalidContentId)
         .map_err(HttpError::e400)?;
 
-    let range = extract_range(state).map_err(HttpError::e400)?;
-
     let key = FetchKey::Canonical(content_id);
-    let content_encoding = ContentEncoding::from_state(&state);
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)
-        .await?;
-
-    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
-    fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
+    download_inner(state, repository, key, LfsMethod::Download).await
 }
 
 pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -168,17 +202,9 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
         .context(ErrorKind::InvalidOid)
         .map_err(HttpError::e400)?;
 
-    let range = extract_range(state).map_err(HttpError::e400)?;
-
     let key = FetchKey::Aliased(Alias::Sha256(oid));
-    let content_encoding = ContentEncoding::from_state(&state);
 
-    let ctx =
-        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::DownloadSha256)
-            .await?;
-
-    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
-    fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
+    download_inner(state, repository, key, LfsMethod::DownloadSha256).await
 }
 
 #[cfg(test)]
@@ -191,6 +217,7 @@ mod test {
     use maplit::hashmap;
     use mononoke_types::typed_hash::MononokeId;
     use mononoke_types_mocks::contentid::ONES_CTID;
+    use permission_checker::MononokeIdentity;
     use redactedblobstore::RedactedMetadata;
     use test_repo_factory::TestRepoFactory;
 
@@ -230,6 +257,42 @@ mod test {
         assert_eq!(parse_range("bytes=1-5")?, Range::sized(1, 5).strict());
         assert!(parse_range("1-5").is_err());
         assert!(parse_range("foo=1-5").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_should_disable_compression() -> Result<(), Error> {
+        let mut config = ServerConfig::default();
+        let test_ident = MononokeIdentity::new("USER", "test")?;
+        let test_ident_2 = MononokeIdentity::new("USER", "test2")?;
+        let mut client_idents = MononokeIdentitySet::new();
+        client_idents.insert(test_ident.clone());
+
+        assert!(!should_disable_compression(&config, None));
+        assert!(!should_disable_compression(
+            &config,
+            Some(&MononokeIdentitySet::new())
+        ));
+        assert!(!should_disable_compression(&config, Some(&client_idents)));
+
+        config
+            .disable_compression_identities_mut()
+            .push(client_idents.clone());
+        assert!(!should_disable_compression(&config, None));
+        assert!(should_disable_compression(&config, Some(&client_idents)));
+
+        // A client must match all idents in a MononokeIdentitySet for compression to be disabled.
+        config.disable_compression_identities_mut().clear();
+
+        let mut and_set = MononokeIdentitySet::new();
+        and_set.insert(test_ident);
+        and_set.insert(test_ident_2);
+
+        config.disable_compression_identities_mut().push(and_set);
+        assert!(!should_disable_compression(&config, Some(&client_idents)));
+
+        config.raw_server_config.disable_compression = true;
+        assert!(should_disable_compression(&config, None));
         Ok(())
     }
 }

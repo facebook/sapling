@@ -83,6 +83,7 @@ pub struct ServerConfig {
     throttle_limits: Vec<Limit>,
     object_popularity: Option<ObjectPopularity>,
     tasks_per_content: NonZeroU16,
+    disable_compression_identities: Vec<MononokeIdentitySet>,
 }
 
 impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
@@ -112,11 +113,21 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
         let tasks_per_content =
             NonZeroU16::new(tasks_per_content).with_context(|| "tasks_per_content is 0")?;
 
+        let mut disable_compression_identities: Vec<MononokeIdentitySet> = Vec::new();
+        for list in value.disable_compression_identities.iter() {
+            let idents = list
+                .iter()
+                .map(|i| FromStr::from_str(&i))
+                .collect::<Result<BTreeSet<_>, _>>()?;
+            disable_compression_identities.push(idents);
+        }
+
         Ok(Self {
             raw_server_config: value,
             throttle_limits,
             object_popularity,
             tasks_per_content,
+            disable_compression_identities,
         })
     }
 }
@@ -154,6 +165,8 @@ impl Default for ServerConfig {
             object_popularity_category: Default::default(),
             object_popularity_threshold: Default::default(),
             tasks_per_content: 1,
+            disable_compression: false,
+            disable_compression_identities: vec![],
         };
 
         Self {
@@ -161,6 +174,7 @@ impl Default for ServerConfig {
             throttle_limits: vec![],
             object_popularity: None,
             tasks_per_content: NonZeroU16::new(1).unwrap(),
+            disable_compression_identities: vec![],
         }
     }
 }
@@ -190,6 +204,16 @@ impl ServerConfig {
     }
     pub fn tasks_per_content(&self) -> NonZeroU16 {
         self.tasks_per_content
+    }
+    pub fn disable_compression(&self) -> bool {
+        self.raw_server_config.disable_compression
+    }
+    pub fn disable_compression_identities(&self) -> &Vec<MononokeIdentitySet> {
+        &self.disable_compression_identities
+    }
+    #[cfg(test)]
+    pub fn disable_compression_identities_mut(&mut self) -> &mut Vec<MononokeIdentitySet> {
+        &mut self.disable_compression_identities
     }
 }
 

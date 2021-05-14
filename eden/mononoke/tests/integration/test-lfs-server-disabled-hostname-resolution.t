@@ -29,6 +29,8 @@
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
+    "disable_compression": false,
+    "disable_compression_identities": [],
     "disable_hostname_logging": true,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,

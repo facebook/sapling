@@ -25,6 +25,7 @@ use std::time::Duration;
 
 use crate::config::{Limit, ServerConfig};
 use crate::errors::ErrorKind;
+use crate::util::is_identity_subset;
 
 use super::error_formatter::LfsErrorFormatter;
 
@@ -122,14 +123,7 @@ fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&MononokeIden
         false => client_identity_sets,
     };
 
-    let presented_identities = match client_identity {
-        Some(value) => value,
-        _ => return false,
-    };
-
-    configured_identities
-        .iter()
-        .any(|limit_ids| limit_ids.is_subset(&presented_identities))
+    is_identity_subset(configured_identities, *client_identity)
 }
 
 fn limit_applies_probabilistically(limit: &Limit) -> bool {
