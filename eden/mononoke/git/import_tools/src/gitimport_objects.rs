@@ -124,6 +124,8 @@ pub struct GitimportPreferences {
     pub derive_hg: bool,
     pub hggit_compatibility: bool,
     pub bonsai_git_mapping: bool,
+    /// Only for logging purpuses,
+    /// useful when several repos are imported simultainously.
     pub gitrepo_name: Option<String>,
     pub concurrency: usize,
 }
@@ -138,34 +140,6 @@ impl Default for GitimportPreferences {
             gitrepo_name: None,
             concurrency: 20,
         }
-    }
-}
-
-impl GitimportPreferences {
-    pub fn enable_derive_trees(&mut self) {
-        self.derive_trees = true
-    }
-
-    pub fn enable_derive_hg(&mut self) {
-        self.derive_hg = true
-    }
-
-    pub fn enable_hggit_compatibility(&mut self) {
-        self.hggit_compatibility = true
-    }
-
-    pub fn enable_bonsai_git_mapping(&mut self) {
-        self.bonsai_git_mapping = true
-    }
-
-    /// Only for logging purpuses,
-    /// useful when several repos are imported simultainously.
-    pub fn set_gitrepo_name(&mut self, name: String) {
-        self.gitrepo_name = Some(name);
-    }
-
-    pub fn set_concurrency(&mut self, concurrency: usize) {
-        self.concurrency = concurrency;
     }
 }
 

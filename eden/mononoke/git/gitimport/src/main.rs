@@ -132,19 +132,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let dry_run = matches.readonly_storage().0;
 
     if matches.is_present(ARG_DERIVE_TREES) {
-        prefs.enable_derive_trees();
+        prefs.derive_trees = true;
     }
 
     if matches.is_present(ARG_DERIVE_HG) {
-        prefs.enable_derive_hg();
+        prefs.derive_hg = true;
     }
 
     if matches.is_present(ARG_HGGIT_COMPATIBILITY) {
-        prefs.enable_hggit_compatibility();
+        prefs.hggit_compatibility = true;
     }
 
     if matches.is_present(ARG_BONSAI_GIT_MAPPING) {
-        prefs.enable_bonsai_git_mapping();
+        prefs.bonsai_git_mapping = true;
     }
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
