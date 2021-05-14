@@ -46,7 +46,7 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
         _ctx: CoreContext,
         _target: Target,
     ) -> Result<Vec<SyncConfigVersion>, MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::get_target_config_versions")
+        unimplemented!("OSS CfgrMononokeMegarepoConfigs::get_target_config_versions")
     }
 
     fn get_config_by_version(
@@ -55,7 +55,7 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
         _target: Target,
         _version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::get_config_by_version")
+        unimplemented!("OSS CfgrMononokeMegarepoConfigs::get_config_by_version")
     }
 
     async fn add_target_with_config_version(
@@ -63,7 +63,7 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
         _ctx: CoreContext,
         _config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::add_target_with_config_version")
+        unimplemented!("OSS CfgrMononokeMegarepoConfigs::add_target_with_config_version")
     }
 
     async fn add_config_version(
@@ -71,6 +71,6 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
         _ctx: CoreContext,
         _config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::add_config_version")
+        unimplemented!("OSS CfgrMononokeMegarepoConfigs::add_config_version")
     }
 }
