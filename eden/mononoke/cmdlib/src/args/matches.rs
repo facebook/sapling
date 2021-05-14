@@ -48,9 +48,10 @@ use super::parse_config_spec_to_path;
 use super::{
     app::{
         ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,
-        BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG, CACHELIB_ATTEMPT_ZSTD_ARG,
-        CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG,
-        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_WEAK_CONSISTENCY_MS_ARG,
+        BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG,
+        BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG, CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG,
+        DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG, LOG_EXCLUDE_TAG,
+        LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_WEAK_CONSISTENCY_MS_ARG,
         MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT,
         MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
         MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
@@ -656,9 +657,14 @@ fn parse_blobstore_options(
             .value_of(BLOBSTORE_SCRUB_GRACE_ARG)
             .map(u64::from_str)
             .transpose()?;
+        let scrub_action_on_missing_write_mostly = matches
+            .value_of(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
+            .map(bool::from_str)
+            .transpose()?;
         blobstore_options
             .with_scrub_action(scrub_action)
             .with_scrub_grace(scrub_grace)
+            .with_scrub_action_on_missing_write_mostly(scrub_action_on_missing_write_mostly)
     } else {
         blobstore_options
     };

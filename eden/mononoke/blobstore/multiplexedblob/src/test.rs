@@ -233,8 +233,7 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
     }
 }
 
-#[fbinit::test]
-async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
+async fn scrub_none(fb: FacebookInit, scrub_action_on_missing_write_mostly: bool) -> Result<()> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
     let bid1 = BlobstoreId::new(1);
@@ -257,6 +256,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
+            scrub_action_on_missing_write_mostly,
         },
         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
     );
@@ -285,6 +285,12 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     fut.await?;
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
+    scrub_none(fb, true).await?;
+    scrub_none(fb, false).await
 }
 
 #[fbinit::test]
@@ -615,8 +621,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-async fn scrubbed(fb: FacebookInit) {
+async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly: bool) {
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -638,6 +643,7 @@ async fn scrubbed(fb: FacebookInit) {
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
+            scrub_action_on_missing_write_mostly,
         },
         scrub_handler.clone(),
     );
@@ -737,6 +743,7 @@ async fn scrubbed(fb: FacebookInit) {
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
             scrub_grace: None,
+            scrub_action_on_missing_write_mostly,
         },
         scrub_handler,
     );
@@ -785,9 +792,10 @@ async fn scrubbed(fb: FacebookInit) {
             _ => panic!("only one entry expected"),
         }
 
-        // bs1 empty at this point
+        // bs1 and bs2 empty at this point
         assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
+        assert!(bs2.storage.with(|s| s.is_empty()));
 
         let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
@@ -806,8 +814,18 @@ async fn scrubbed(fb: FacebookInit) {
         // Now all populated.
         assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
-        assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        if scrub_action_on_missing_write_mostly {
+            assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        } else {
+            assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), None);
+        }
     }
+}
+
+#[fbinit::test]
+async fn scrubbed(fb: FacebookInit) {
+    scrub_scenarios(fb, true).await;
+    scrub_scenarios(fb, false).await;
 }
 
 #[fbinit::test]

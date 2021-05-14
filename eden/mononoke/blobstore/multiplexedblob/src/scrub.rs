@@ -19,6 +19,7 @@ use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
+use itertools::Either;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, Timestamp};
 use once_cell::sync::Lazy;
@@ -58,6 +59,7 @@ pub enum ScrubAction {
 pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
     pub scrub_grace: Option<Duration>,
+    pub scrub_action_on_missing_write_mostly: bool,
 }
 
 impl Default for ScrubOptions {
@@ -65,6 +67,7 @@ impl Default for ScrubOptions {
         Self {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
+            scrub_action_on_missing_write_mostly: true,
         }
     }
 }
@@ -237,7 +240,11 @@ async fn blobstore_get(
                     Err(error.into())
                 }
             }
-            ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
+            ErrorKind::SomeMissingItem {
+                missing_main,
+                missing_write_mostly,
+                value: Some(value),
+            } => {
                 let ctime_age = value.as_meta().ctime().map(|ctime| {
                     let age_secs = max(0, Timestamp::from_timestamp_secs(ctime).since_seconds());
                     Duration::from_secs(age_secs as u64)
@@ -253,19 +260,30 @@ async fn blobstore_get(
 
                 let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
 
-                let entries = match ctime_age.as_ref() {
-                    // Avoid false alarms for recently written items still on the healer queue
-                    Some(ctime_age) if ctime_age < &*HEAL_MAX_BACKLOG => {
-                        queue.get(ctx, key).await?
-                    }
-                    _ => vec![],
-                };
+                // For write mostly stores we can chose not to do the scrub action
+                // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
+                if scrub_options.scrub_action_on_missing_write_mostly || !missing_main.is_empty() {
+                    // Only peek the queue if needed
+                    let entries = match ctime_age.as_ref() {
+                        // Avoid false alarms for recently written items still on the healer queue
+                        Some(ctime_age) if ctime_age < &*HEAL_MAX_BACKLOG => {
+                            queue.get(ctx, key).await?
+                        }
+                        _ => vec![],
+                    };
 
-                // Only attempt the action if we don't know of pending writes from the queue
-                if entries.is_empty() {
-                    for k in missing_reads.iter() {
-                        if let Some(s) = scrub_stores.get(k) {
-                            needs_repair.insert(*k, s.as_ref());
+                    // Only attempt the action if we don't know of pending writes from the queue
+                    if entries.is_empty() {
+                        let missing_reads = if scrub_options.scrub_action_on_missing_write_mostly {
+                            Either::Left(missing_main.iter().chain(missing_write_mostly.iter()))
+                        } else {
+                            Either::Right(missing_main.iter())
+                        };
+
+                        for k in missing_reads {
+                            if let Some(s) = scrub_stores.get(k) {
+                                needs_repair.insert(*k, s.as_ref());
+                            }
                         }
                     }
                 }

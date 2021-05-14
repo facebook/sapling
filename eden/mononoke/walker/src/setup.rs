@@ -553,6 +553,7 @@ pub fn setup_toplevel_app<'a, 'b>(
         .with_arg_types(vec![ArgType::Scrub])
         .with_blobstore_cachelib_attempt_zstd_default(false)
         .with_blobstore_read_qps_default(NonZeroU32::new(20000))
+        .with_scrub_action_on_missing_write_mostly_default(Some(false))
         .with_readonly_storage_default(ReadOnlyStorage(true))
         .with_repo_required(RepoRequirement::AtLeastOne)
         .with_fb303_args()

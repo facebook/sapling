@@ -109,6 +109,18 @@ impl BlobstoreOptions {
             self
         }
     }
+
+    pub fn with_scrub_action_on_missing_write_mostly(self, scrub_missing: Option<bool>) -> Self {
+        if let Some(mut scrub_options) = self.scrub_options {
+            scrub_options.scrub_action_on_missing_write_mostly = scrub_missing.unwrap_or(true);
+            Self {
+                scrub_options: Some(scrub_options),
+                ..self
+            }
+        } else {
+            self
+        }
+    }
 }
 
 /// Construct a blobstore according to the specification. The multiplexed blobstore

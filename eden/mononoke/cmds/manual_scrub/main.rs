@@ -89,6 +89,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .with_all_repos()
         .with_arg_types(vec![ArgType::Scrub])
         .with_scrub_action_default(Some(ScrubAction::Repair))
+        .with_scrub_action_on_missing_write_mostly_default(Some(true))
         .build()
         .arg(
             Arg::with_name(ARG_STORAGE_CONFIG_NAME)

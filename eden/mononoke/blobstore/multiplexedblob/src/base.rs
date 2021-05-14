@@ -13,7 +13,7 @@ use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::{
-    future::{join_all, select, Either as FutureEither},
+    future::{join_all, select, Either as FutureEither, FutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -58,8 +58,12 @@ pub enum ErrorKind {
         "Different blobstores have different values for this item: {0:?} are grouped by content, {1:?} do not have"
     )]
     ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
-    #[error("Some blobstores missing this item: {0:?}")]
-    SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreGetData>),
+    #[error("Some blobstores missing this item: {missing_main:?}")]
+    SomeMissingItem {
+        missing_main: Arc<BlobstoresReturnedNone>,
+        missing_write_mostly: Arc<BlobstoresReturnedNone>,
+        value: Option<BlobstoreGetData>,
+    },
     #[error("Multiple failures on put: {0:?}")]
     MultiplePutFailures(Arc<BlobstoresReturnedError>),
 }
@@ -179,19 +183,24 @@ impl MultiplexedBlobstoreBase {
                 OperationType::ScrubGet,
                 scuba.clone(),
             )
-            .chain(multiplexed_get(
-                ctx,
-                self.write_mostly_blobstores.as_ref(),
-                key,
-                OperationType::ScrubGet,
-                scuba,
-            )),
+            .map(|f| f.map(|v| (false, v)).left_future())
+            .chain(
+                multiplexed_get(
+                    ctx,
+                    self.write_mostly_blobstores.as_ref(),
+                    key,
+                    OperationType::ScrubGet,
+                    scuba,
+                )
+                .map(|f| f.map(|v| (true, v)).right_future()),
+            ),
         )
         .await;
 
-        let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
-            results.into_iter().partition_map(|(id, r)| match r {
-                Ok(v) => Either::Left((id, v)),
+        let (successes, errors): (HashMap<_, _>, HashMap<_, _>) = results
+            .into_iter()
+            .partition_map(|(write_mostly_flag, (id, r))| match r {
+                Ok(v) => Either::Left((id, (write_mostly_flag, v))),
                 Err(v) => Either::Right((id, v)),
             });
 
@@ -200,13 +209,18 @@ impl MultiplexedBlobstoreBase {
         }
 
         let mut all_values = HashMap::new();
-        let mut missing = HashSet::new();
+        let mut missing_main = HashSet::new();
+        let mut missing_write_mostly = HashSet::new();
         let mut last_get_data = None;
 
-        for (blobstore_id, value) in successes.into_iter() {
+        for (blobstore_id, (write_mostly_flag, value)) in successes.into_iter() {
             match value {
                 None => {
-                    missing.insert(blobstore_id);
+                    if write_mostly_flag {
+                        missing_write_mostly.insert(blobstore_id);
+                    } else {
+                        missing_main.insert(blobstore_id);
+                    }
                 }
                 Some(value) => {
                     let mut content_hash = XxHash::with_seed(0);
@@ -230,17 +244,24 @@ impl MultiplexedBlobstoreBase {
                 }
             }
             1 => {
-                if missing.is_empty() {
+                if missing_main.is_empty() && missing_write_mostly.is_empty() {
                     Ok(last_get_data)
                 } else {
-                    Err(ErrorKind::SomeMissingItem(Arc::new(missing), last_get_data))
+                    Err(ErrorKind::SomeMissingItem {
+                        missing_main: Arc::new(missing_main),
+                        missing_write_mostly: Arc::new(missing_write_mostly),
+                        value: last_get_data,
+                    })
                 }
             }
             _ => {
                 let answered = all_values.drain().map(|(_, stores)| stores).collect();
+                let mut all_missing = HashSet::new();
+                all_missing.extend(missing_main.drain());
+                all_missing.extend(missing_write_mostly.drain());
                 Err(ErrorKind::ValueMismatch(
                     Arc::new(answered),
-                    Arc::new(missing),
+                    Arc::new(all_missing),
                 ))
             }
         }

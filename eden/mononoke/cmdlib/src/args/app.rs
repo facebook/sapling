@@ -69,6 +69,7 @@ pub const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 pub const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
+pub const BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG: &str = "blobstore-scrub-write-mostly-missing";
 
 pub const WITH_READONLY_STORAGE_ARG: &str = "with-readonly-storage";
 
@@ -182,6 +183,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to allow a grace period before reporting a key missing in a store for recent keys
     scrub_grace_secs_default: Option<u64>,
+
+    // Whether to report missing keys in write mostly blobstores as a scrub action when scrubbing
+    scrub_action_on_missing_write_mostly_default: Option<bool>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -274,6 +278,7 @@ impl MononokeAppBuilder {
             default_scuba_dataset: None,
             scrub_action_default: None,
             scrub_grace_secs_default: None,
+            scrub_action_on_missing_write_mostly_default: None,
         }
     }
 
@@ -416,6 +421,12 @@ impl MononokeAppBuilder {
     /// This command has a special grace period for recent keys when scrubbing
     pub fn with_scrub_grace_secs_default(mut self, d: Option<u64>) -> Self {
         self.scrub_grace_secs_default = d;
+        self
+    }
+
+    /// This command has a special handling of write mostly stores when scrubbing
+    pub fn with_scrub_action_on_missing_write_mostly_default(mut self, d: Option<bool>) -> Self {
+        self.scrub_action_on_missing_write_mostly_default = d;
         self
     }
 
@@ -739,7 +750,22 @@ impl MononokeAppBuilder {
                 scrub_grace_arg = scrub_grace_arg
                     .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
             }
-            app.arg(scrub_action_arg).arg(scrub_grace_arg)
+            let mut scrub_action_on_missing_write_mostly_arg =
+                Arg::with_name(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
+                    .long(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
+                    .takes_value(true)
+                    .required(false)
+                    .possible_values(BOOL_VALUES)
+                    .help(
+                        "Whether to allow missing values from write mostly stores when scrubbing",
+                    );
+            if let Some(default) = self.scrub_action_on_missing_write_mostly_default {
+                scrub_action_on_missing_write_mostly_arg =
+                    scrub_action_on_missing_write_mostly_arg.default_value(bool_as_str(default));
+            }
+            app.arg(scrub_action_arg)
+                .arg(scrub_grace_arg)
+                .arg(scrub_action_on_missing_write_mostly_arg)
         } else {
             app
         }
