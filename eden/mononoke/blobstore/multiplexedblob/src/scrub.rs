@@ -167,7 +167,7 @@ impl ScrubBlobstore {
                 blobstores
                     .into_iter()
                     .chain(write_mostly_blobstores.into_iter())
-                    .collect::<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>(),
+                    .collect(),
             ),
             queue,
             scrub_handler,
@@ -251,6 +251,8 @@ async fn blobstore_get(
                     _ => {}
                 }
 
+                let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
+
                 let entries = match ctime_age.as_ref() {
                     // Avoid false alarms for recently written items still on the healer queue
                     Some(ctime_age) if ctime_age < &*HEAL_MAX_BACKLOG => {
@@ -259,17 +261,12 @@ async fn blobstore_get(
                     _ => vec![],
                 };
 
-                let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
-
-                for k in missing_reads.iter() {
-                    match scrub_stores.get(k) {
-                        Some(s) => {
-                            // Key is missing in the store so needs repair
-                            if entries.is_empty() {
-                                needs_repair.insert(*k, s.as_ref());
-                            }
+                // Only attempt the action if we don't know of pending writes from the queue
+                if entries.is_empty() {
+                    for k in missing_reads.iter() {
+                        if let Some(s) = scrub_stores.get(k) {
+                            needs_repair.insert(*k, s.as_ref());
                         }
-                        None => {}
                     }
                 }
 
