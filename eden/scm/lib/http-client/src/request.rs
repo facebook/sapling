@@ -5,11 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Cow;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
-use std::fs::File;
-use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
@@ -23,10 +20,6 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
-
-use openssl::pkcs12::Pkcs12;
-use openssl::pkey::PKey;
-use openssl::x509::X509;
 
 use crate::{
     errors::HttpClientError,
@@ -520,15 +513,12 @@ impl Request {
         easy.ssl_verify_host(self.verify_tls_host)?;
         easy.ssl_verify_peer(self.verify_tls_cert)?;
 
-        // SChannel on Windows does not support PEM-encoded certificates, and
-        // instead requires certificates to be passed in as a PKCS#12 archive.
-        // Since all of the other TLS engines (OpenSSL on Linux and Secure
-        // Transport on MacOS) support PKCS#12, let's just always convert the
-        // certificates and pass them to libcurl as an in-memory blob.
-        if let Some(cert) = &self.cert {
-            let blob = pem_to_pkcs12(cert, self.key)?;
-            easy.ssl_cert_type("P12")?;
-            easy.ssl_cert_blob(&blob)?;
+        // Set up client credentials for mTLS.
+        if let Some(cert) = self.cert {
+            easy.ssl_cert(cert)?;
+        }
+        if let Some(key) = self.key {
+            easy.ssl_key(key)?;
         }
 
         // Windows enables ssl revocation checking by default, which doesn't work inside the
@@ -601,44 +591,6 @@ impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
         let StreamRequest { request, receiver } = req;
         request.into_handle(|ctx| Streaming::new(receiver, ctx))
     }
-}
-
-fn read_file(path: impl AsRef<Path>) -> Result<Vec<u8>, anyhow::Error> {
-    let mut f = File::open(path)?;
-    let mut buf = Vec::new();
-    f.read_to_end(&mut buf)?;
-    Ok(buf)
-}
-
-/// Convert a PEM-formatted X.509 certificate chain and private key into a
-/// PKCS#12 archive, which can then be directly passed to libcurl using
-/// `CURLOPT_SSLCERT_BLOB`. This is useful because not all TLS engines (notably
-/// SChannel (WinSSL) on Windows) support loading PEM files, but all major TLS
-/// engines support PKCS#12. Returns a DER-encoded binary representation of
-/// the combined certificate chain and private key.
-fn pem_to_pkcs12(
-    cert: impl AsRef<Path>,
-    key: Option<impl AsRef<Path>>,
-) -> Result<Vec<u8>, anyhow::Error> {
-    // It's common for the certificate and private key to be concatenated
-    // together in the same PEM file. If a key path isn't specified, assume
-    // this is the case and use the certificate PEM for the key as well.
-    let cert_bytes = read_file(cert)?;
-    let key_bytes = match key {
-        Some(key) => Cow::Owned(read_file(key)?),
-        None => Cow::Borrowed(&cert_bytes),
-    };
-
-    let cert = X509::from_pem(&cert_bytes)?;
-    let key = PKey::private_key_from_pem(&key_bytes)?;
-
-    // PKCS#12 archives are encrypted, so we need to specify a password when
-    // creating one. Here we just use an empty password since it seems like most
-    // TLS engines will attempt to decrypt using the empty string if no password
-    // is specified.
-    let pkcs12 = Pkcs12::builder().build("", "", &key, &cert)?;
-
-    Ok(pkcs12.to_der()?)
 }
 
 #[cfg(test)]
