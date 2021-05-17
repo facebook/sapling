@@ -26,8 +26,8 @@ namespace eden {
 
 InodeBase::InodeBase(EdenMount* mount)
     : ino_{kRootNodeId},
-      initialMode_{S_IFDIR | 0755},
       mount_{mount},
+      initialMode_{S_IFDIR | 0755},
       // The root inode always starts with an implicit reference from FUSE.
       numFsReferences_{1},
       location_{LocationInfo{
@@ -49,8 +49,8 @@ InodeBase::InodeBase(
     TreeInodePtr parent,
     PathComponentPiece name)
     : ino_{ino},
-      initialMode_{initialMode},
       mount_{parent->mount_},
+      initialMode_{initialMode},
       location_{LocationInfo{std::move(parent), name}} {
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0

@@ -448,14 +448,6 @@ class InodeBase {
   InodeNumber const ino_;
 
   /**
-   * The initial mode bits specified when this inode was first created
-   * or instantiated from version control.  Primarily used when lazily
-   * writing metadata into this inode's metadata storage.  The type
-   * bits can never change - they can be accessed via getType().
-   */
-  mode_t const initialMode_;
-
-  /**
    * The EdenMount object that this inode belongs to.
    *
    * We store this as a raw pointer since the TreeInode is part of the mount
@@ -463,6 +455,14 @@ class InodeBase {
    * contains.
    */
   EdenMount* const mount_;
+
+  /**
+   * The initial mode bits specified when this inode was first created
+   * or instantiated from version control.  Primarily used when lazily
+   * writing metadata into this inode's metadata storage.  The type
+   * bits can never change - they can be accessed via getType().
+   */
+  mode_t const initialMode_;
 
   /**
    * A reference count tracking the outstanding lookups that the kernel's FUSE
