@@ -28,6 +28,7 @@ use context::CoreContext;
 mod checkpoint;
 mod progress;
 mod scrub;
+mod tracker;
 
 use crate::checkpoint::FileCheckpoint;
 use crate::scrub::scrub;

@@ -37,7 +37,7 @@ Failure time - this key will not exist
   $ [ ! -r checkpoint.txt ] || echo "not expecting checkpoint as no successes"
 
 Success time - these keys will exist and be scrubbed
-  $ manual_scrub --storage-config-name blobstore --quiet --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
+  $ manual_scrub --storage-config-name blobstore --quiet --scheduled-max=1 --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > EOF
@@ -54,7 +54,7 @@ Success time - these keys will exist and be scrubbed
   repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b (no-eol)
 
 Continue from checkpoint
-  $ manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
+  $ manual_scrub --storage-config-name blobstore --scheduled-max=1 --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success <<EOF 2>&1 | strip_glog
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
@@ -85,7 +85,7 @@ Do same run with compressed key output
 
 Do same run without specifing the optional success file when checkpointing
   $ rm success
-  $ manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint2.txt --quiet --error-keys-output errors --missing-keys-output missing <<EOF 2>&1 | strip_glog
+  $ manual_scrub --storage-config-name blobstore --scheduled-max=1 --checkpoint-key-file=checkpoint2.txt --quiet --error-keys-output errors --missing-keys-output missing <<EOF 2>&1 | strip_glog
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
