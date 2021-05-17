@@ -190,6 +190,8 @@ class EdenConfig : private ConfigSettingManager {
    */
 
  public:
+  // [core]
+
   ConfigSetting<AbsolutePath> edenDir{
       "core:edenDirectory",
       kUnspecifiedDefault,
@@ -214,10 +216,33 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(5),
       this};
 
+  // [config]
+
+  /**
+   * How often the on-disk config information should be checked for changes.
+   */
+  ConfigSetting<std::chrono::nanoseconds> configReloadInterval{
+      "config:reload-interval",
+      std::chrono::minutes(5),
+      this};
+
+  // [thrift]
+
   ConfigSetting<bool> allowUnixGroupRequests{
       "thrift:allow-unix-group-requests",
       false,
       this};
+
+  /**
+   * Whether Eden should implement its own unix domain socket permission checks
+   * or rely on filesystem permissions.
+   */
+  ConfigSetting<bool> thriftUseCustomPermissionChecking{
+      "thrift:use-custom-permission-checking",
+      true,
+      this};
+
+  // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{
       "ssl:client-certificate",
@@ -229,6 +254,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
+
+  // [mononoke]
 
   /**
    * Which tier to use when talking to mononoke.
@@ -243,6 +270,8 @@ class EdenConfig : private ConfigSettingManager {
       "mononoke:connection-type",
       "http",
       this};
+
+  // [scs]
 
   /**
    * Source Control Service (scs) tier
@@ -265,13 +294,7 @@ class EdenConfig : private ConfigSettingManager {
       1000,
       this};
 
-  /**
-   * How often the on-disk config information should be checked for changes.
-   */
-  ConfigSetting<std::chrono::nanoseconds> configReloadInterval{
-      "config:reload-interval",
-      std::chrono::minutes(5),
-      this};
+  // [store]
 
   /**
    * How often to compute stats and perform garbage collection management
@@ -330,6 +353,26 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * If the number of fetching requests of a process reaches this number,
+   * a FetchHeavy event will be sent to Scuba.
+   */
+  ConfigSetting<uint32_t> fetchHeavyThreshold{
+      "store:fetch-heavy-threshold",
+      2000,
+      this};
+
+  /**
+   * The maximum number of tree prefetch operations to allow in parallel for any
+   * checkout.  Setting this to 0 will disable prefetch operations.
+   */
+  ConfigSetting<uint64_t> maxTreePrefetches{
+      "store:max-tree-prefetches",
+      5,
+      this};
+
+  // [fuse]
+
+  /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to
    * avoid blocking forever.
@@ -337,36 +380,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::chrono::nanoseconds> fuseRequestTimeout{
       "fuse:request-timeout",
       std::chrono::minutes(1),
-      this};
-
-  /**
-   * The maximum time duration allowed for a NFS request. If a request exceeds
-   * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
-   * client to avoid blocking forever.
-   */
-  ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
-      "nfs:request-timeout",
-      std::chrono::minutes(1),
-      this};
-
-  /**
-   * The maximum time duration allowed for a ProjectedFS callback. If a request
-   * exceeds this amount of time, the request will fail to avoid blocking
-   * forever. A notification will also be shown to alert the user of the
-   * timeout.
-   */
-  ConfigSetting<std::chrono::nanoseconds> prjfsRequestTimeout{
-      "prjfs:request-timeout",
-      std::chrono::minutes(1),
-      this};
-
-  /**
-   * If the number of fetching requests of a process reaches this number,
-   * a FetchHeavy event will be sent to Scuba.
-   */
-  ConfigSetting<uint32_t> fetchHeavyThreshold{
-      "store:fetch-heavy-threshold",
-      2000,
       this};
 
   /**
@@ -386,20 +399,74 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> fuseUseEdenFS{"fuse:use-edenfs", false, this};
 
+  // [nfs]
+
   /**
-   * Whether Eden should implement its own unix domain socket permission checks
-   * or rely on filesystem permissions.
+   * The maximum time duration allowed for a NFS request. If a request exceeds
+   * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
+   * client to avoid blocking forever.
    */
-  ConfigSetting<bool> thriftUseCustomPermissionChecking{
-      "thrift:use-custom-permission-checking",
+  ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
+      "nfs:request-timeout",
+      std::chrono::minutes(1),
+      this};
+
+  /**
+   * Controls whether Mountd will register itself against rpcbind.
+   */
+  ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
+
+  /**
+   * Number of threads that will service the NFS requests.
+   */
+  ConfigSetting<uint64_t> numNfsThreads{"nfs:num-servicing-threads", 8, this};
+
+  /**
+   * Maximum number of pending NFS requests. If more requests are inflight, the
+   * NFS code will block.
+   */
+  ConfigSetting<uint64_t> maxNfsInflightRequests{
+      "nfs:max-inflight-requests",
+      1000,
+      this};
+
+  /**
+   * Buffer size for read and writes requests. Default to 1 MiB.
+   */
+  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
+
+  // [prjfs]
+
+  /**
+   * The maximum time duration allowed for a ProjectedFS callback. If a request
+   * exceeds this amount of time, the request will fail to avoid blocking
+   * forever. A notification will also be shown to alert the user of the
+   * timeout.
+   */
+  ConfigSetting<std::chrono::nanoseconds> prjfsRequestTimeout{
+      "prjfs:request-timeout",
+      std::chrono::minutes(1),
+      this};
+
+  /**
+   * Enable ProjectedFS's negative path caching to reduce the number of
+   * requests non existent files.
+   * Only applicable on Windows
+   */
+  ConfigSetting<bool> prjfsUseNegativePathCaching{
+      "prjfs:use-negative-path-caching",
       true,
       this};
+
+  // [hg]
 
   /**
    * Controls whether Eden enforces parent commits in a hg status
    * (getScmStatusV2) call
    */
   ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
+
+  // [telemetry]
 
   /**
    * Location of scribe_cat binary on the system. If not specified, scribe
@@ -437,6 +504,8 @@ class EdenConfig : private ConfigSettingManager {
       std::nullopt,
       this};
 
+  // [experimental]
+
   /**
    * Controls whether if EdenFS caches blobs in local store.
    */
@@ -444,6 +513,21 @@ class EdenConfig : private ConfigSettingManager {
       "experimental:enable-blob-caching",
       false,
       this};
+
+  /**
+   * Controls whether EdenFS uses EdenApi to import data from remote.
+   */
+  ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
+
+  /**
+   * Controls whether EdenFS exports itself as an NFS server.
+   */
+  ConfigSetting<bool> enableNfsServer{
+      "experimental:enable-nfs-server",
+      false,
+      this};
+
+  // [treecache]
 
   /**
    * Controls whether if EdenFS caches tree in memory.
@@ -470,27 +554,8 @@ class EdenConfig : private ConfigSettingManager {
       16,
       this};
 
-  /**
-   * Controls whether EdenFS uses EdenApi to import data from remote.
-   */
-  ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
+  // [notifications]
 
-  /**
-   * Controls whether EdenFS exports itself as an NFS server.
-   */
-  ConfigSetting<bool> enableNfsServer{
-      "experimental:enable-nfs-server",
-      false,
-      this};
-
-  /**
-   * The maximum number of tree prefetch operations to allow in parallel for any
-   * checkout.  Setting this to 0 will disable prefetch operations.
-   */
-  ConfigSetting<uint64_t> maxTreePrefetches{
-      "store:max-tree-prefetches",
-      5,
-      this};
   /**
    * A command to run to warn the user of a generic problem encountered
    * while trying to process a request.
@@ -510,42 +575,12 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(1),
       this};
 
+  // [log]
+
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};
   ConfigSetting<uint64_t> maxRotatedLogFiles{"log:num-rotated-logs", 3, this};
 
-  /**
-   * Enable ProjectedFS's negative path caching to reduce the number of
-   * requests non existent files.
-   * Only applicable on Windows
-   */
-  ConfigSetting<bool> prjfsUseNegativePathCaching{
-      "prjfs:use-negative-path-caching",
-      true,
-      this};
-
-  /**
-   * Controls whether Mountd will register itself against rpcbind.
-   */
-  ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
-
-  /**
-   * Number of threads that will service the NFS requests.
-   */
-  ConfigSetting<uint64_t> numNfsThreads{"nfs:num-servicing-threads", 8, this};
-
-  /**
-   * Maximum number of pending NFS requests. If more requests are inflight, the
-   * NFS code will block.
-   */
-  ConfigSetting<uint64_t> maxNfsInflightRequests{
-      "nfs:max-inflight-requests",
-      1000,
-      this};
-
-  /**
-   * Buffer size for read and writes requests. Default to 1 MiB.
-   */
-  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
+  // [prefetch-profiles]
 
   /**
    * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
@@ -563,6 +598,8 @@ class EdenConfig : private ConfigSettingManager {
       "prefetch-profiles:prefetching-enabled",
       false,
       this};
+
+  // [overlay]
 
   /**
    * Only used in CLI to control if new clones are using TreeOverlay by default.
