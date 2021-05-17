@@ -28,13 +28,21 @@ ImmediateFuture<detail::continuation_result_t<Func, folly::Try<T>>>
 ImmediateFuture<T>::thenTry(Func&& func) && {
   using NewType = detail::continuation_result_t<Func, folly::Try<T>>;
   using RetType = ImmediateFuture<NewType>;
+  using FuncRetType = std::invoke_result_t<Func, folly::Try<T>>;
 
   return std::visit(
       [func = std::forward<Func>(func)](auto&& inner) mutable -> RetType {
         using Type = std::decay_t<decltype(inner)>;
         if constexpr (std::is_same_v<Type, folly::Try<T>>) {
           try {
-            return func(std::move(inner));
+            // In the case where Func returns void, force the return value to
+            // be folly::unit.
+            if constexpr (std::is_same_v<FuncRetType, void>) {
+              func(std::move(inner));
+              return folly::unit;
+            } else {
+              return func(std::move(inner));
+            }
           } catch (std::exception& ex) {
             return folly::Try<NewType>(
                 folly::exception_wrapper(std::current_exception(), ex));
@@ -44,8 +52,6 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
           // transform that return value into a SemiFuture so that the return
           // type is a SemiFuture<NewType> and not a
           // SemiFuture<ImmediateFuture<NewType>>.
-          using FuncRetType = std::invoke_result_t<Func, folly::Try<T>>;
-
           auto semiFut = std::move(inner).defer(std::forward<Func>(func));
           if constexpr (detail::isImmediateFuture<FuncRetType>::value) {
             return std::move(semiFut).deferValue(

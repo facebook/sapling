@@ -121,6 +121,9 @@ ImmediateFuture<folly::Unit> unitFunc() {
 TEST(ImmediateFuture, unit) {
   auto fut = unitFunc();
   EXPECT_TRUE(fut.hasImmediate());
+
+  auto voidFut = std::move(fut).thenValue([](folly::Unit) {});
+  EXPECT_TRUE(voidFut.hasImmediate());
 }
 
 class Foo {

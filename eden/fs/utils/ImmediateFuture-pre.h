@@ -48,6 +48,11 @@ struct continuation_result_impl<
   using type = typename T::element_type;
 };
 
+template <>
+struct continuation_result_impl<void> {
+  using type = folly::Unit;
+};
+
 template <
     typename Func,
     typename Arg,
