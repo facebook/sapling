@@ -79,7 +79,8 @@ class FuseChannelTest : public ::testing::Test {
         std::chrono::seconds(60),
         nullptr,
         CaseSensitivity::Sensitive,
-        true));
+        true,
+        12));
   }
 
   FuseChannel::StopFuture performInit(

@@ -782,7 +782,8 @@ FuseChannel::FuseChannel(
     folly::Duration requestTimeout,
     Notifications* notifications,
     CaseSensitivity caseSensitive,
-    bool requireUtf8Path)
+    bool requireUtf8Path,
+    int32_t maximumBackgroundRequests)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -790,8 +791,9 @@ FuseChannel::FuseChannel(
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
       notifications_(notifications),
-      caseSensitive_(caseSensitive),
-      requireUtf8Path_(requireUtf8Path),
+      caseSensitive_{caseSensitive},
+      requireUtf8Path_{requireUtf8Path},
+      maximumBackgroundRequests_{maximumBackgroundRequests},
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -1368,8 +1370,21 @@ void FuseChannel::readInitPacket() {
   connInfo.major = init.init.major;
   connInfo.minor = init.init.minor;
   connInfo.max_write = bufferSize_ - 4096;
-
   connInfo.max_readahead = init.init.max_readahead;
+
+  int32_t max_background = maximumBackgroundRequests_;
+  if (max_background > 65535) {
+    max_background = 65535;
+  } else if (max_background < 0) {
+    max_background = 0;
+  }
+  // The libfuse documentation says this only applies to background
+  // requests like readahead prefetches and direct I/O, but we have
+  // empirically observed that, on Linux, without setting this value,
+  // `rg -j 200` limits the number of active FUSE requests to 16.
+  connInfo.max_background = static_cast<uint32_t>(max_background);
+  // Allow the kernel to default connInfo.congestion_threshold. Linux
+  // picks 3/4 of max_background.
 
   const auto capable = init.init.flags;
   auto& want = connInfo.flags;

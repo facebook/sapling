@@ -135,7 +135,8 @@ int main(int argc, char** argv) {
       std::chrono::seconds(60),
       nullptr,
       CaseSensitivity::Sensitive,
-      true));
+      true,
+      12 /* the default on Linux */));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

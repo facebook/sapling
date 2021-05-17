@@ -355,6 +355,18 @@ class EdenConfig : private ConfigSettingManager {
   // [fuse]
 
   /**
+   * The maximum number of concurrent FUSE requests we allow the kernel to send
+   * us.
+   *
+   * Linux FUSE defaults to 12, but EdenFS can handle a great deal of
+   * concurrency.
+   */
+  ConfigSetting<int32_t> fuseMaximumRequests{
+      "fuse:max-concurrent-requests",
+      1000,
+      this};
+
+  /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to
    * avoid blocking forever.
@@ -411,6 +423,15 @@ class EdenConfig : private ConfigSettingManager {
       "nfs:max-inflight-requests",
       1000,
       this};
+
+  /**
+   * The maximum number of concurrent requests allowed into userspace from the
+   * kernel. This corresponds to fuse_init_out::max_background. The
+   * documentation this applies to only readaheads and async direct IO, but
+   * empirically we have observed the number of concurrent requests is limited
+   * to 12 (FUSE_DEFAULT_MAX_BACKGROUND) unless this is set high.
+   */
+  ConfigSetting<uint32_t> maximumFuseRequests{"fuse:max-requests", 1000, this};
 
   /**
    * Buffer size for read and writes requests. Default to 1 MiB.

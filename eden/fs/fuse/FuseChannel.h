@@ -228,7 +228,8 @@ class FuseChannel {
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
       CaseSensitivity caseSensitive,
-      bool requireUtf8Path);
+      bool requireUtf8Path,
+      int32_t maximumBackgroundRequests);
 
   /**
    * Destroy the FuseChannel.
@@ -742,6 +743,7 @@ class FuseChannel {
   Notifications* const notifications_;
   CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
+  int32_t maximumBackgroundRequests_;
 
   /*
    * connInfo_ is modified during the initialization process,
