@@ -126,15 +126,20 @@ class ImmediateFuture {
    * exception.
    *
    * When the future is an immediate value, this returns without waiting.
+   *
+   * A folly::FutureTimeout will be thrown if the timeout is reached.
    */
-  T get() &&;
+  T get(folly::HighResDuration timeout = folly::HighResDuration::max()) &&;
 
   /**
    * Wait for the future to complete and return the Try value.
    *
    * When the future is an immediate value, this returns without waiting.
+   *
+   * A folly::FutureTimeout will be thrown if the timeout is reached.
    */
-  folly::Try<T> getTry() &&;
+  folly::Try<T> getTry(
+      folly::HighResDuration timeout = folly::HighResDuration::max()) &&;
 
   bool hasImmediate() const {
     return std::holds_alternative<folly::Try<T>>(inner_);

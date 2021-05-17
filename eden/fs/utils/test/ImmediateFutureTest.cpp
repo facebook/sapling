@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 
 TEST(ImmediateFuture, get) {
   int value = 42;
@@ -170,4 +171,10 @@ TEST(ImmediateFuture, mutableLambda) {
   auto setFooFut = std::move(fut).thenValue(
       [foo](auto&& value) mutable { return value + foo.getNonConstVal(); });
   EXPECT_EQ(std::move(setFooFut).get(), 43);
+}
+
+TEST(ImmediateFuture, getTimeout) {
+  auto [promise, semiFut] = folly::makePromiseContract<int>();
+  ImmediateFuture<int> fut{std::move(semiFut)};
+  EXPECT_THROW(std::move(fut).get(0ms), folly::FutureTimeout);
 }
