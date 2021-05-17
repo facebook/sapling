@@ -46,6 +46,10 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts):
             else:
                 self.limit = 2 * 7 * 24 * 60 * 60  # two weeks
             self.flags = []
+            if ui.configbool("commitcloud", "sl_showremotebookmarks"):
+                self.flags.append("ADD_REMOTE_BOOKMARKS")
+            if opts.get("force_original_backend"):
+                self.flags.append("USE_ORIGINAL_BACKEND")
 
         def prevversion(self):
             if self.cur_index > 0:
@@ -239,6 +243,8 @@ def oldshowhistory(ui, repo, reponame, workspacename, **opts):
             interactiveui.viewframe.__init__(self, ui, repo, -1)
             self.versions = versions
             self.flags = []
+            if ui.configbool("commitcloud", "sl_showremotebookmarks"):
+                self.flags.append("ADD_REMOTE_BOOKMARKS")
             if opts.get("force_original_backend"):
                 self.flags.append("USE_ORIGINAL_BACKEND")
 

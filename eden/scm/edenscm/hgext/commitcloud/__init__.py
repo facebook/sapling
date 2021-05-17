@@ -105,6 +105,9 @@ Configs::
     # Limit for number of commits in a group when pull (if unhydratedcommits enabled)
     unhydratedpullsizelimit = 5000
 
+    # Show remotebookmarks in Commit Cloud Smartlog (ask the server to send them)
+    sl_showremotebookmarks = False
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -192,6 +195,7 @@ configitem("commitcloud", "synccheckoutlocations", default=False)
 configitem("commitcloud", "enablestatus", default=True)
 configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "unhydratedpullsizelimit", 5000)
+configitem("commitcloud", "sl_showremotebookmarks", False)
 configitem(
     "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
 )

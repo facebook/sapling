@@ -603,6 +603,9 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
 
     flags = []
+    if ui.configbool("commitcloud", "sl_showremotebookmarks"):
+        flags.append("ADD_REMOTE_BOOKMARKS")
+
     if opts.get("force_original_backend"):
         flags.append("USE_ORIGINAL_BACKEND")
 
