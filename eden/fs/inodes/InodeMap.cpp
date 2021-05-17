@@ -188,7 +188,7 @@ void InodeMap::initializeFromTakeover(
 #endif
 }
 
-Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
+ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Lock the data.
   // We hold it while doing most of our work below, but explicitly unlock it
   // before triggering inode loading or before fulfilling any Promises.
@@ -197,14 +197,7 @@ Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Check to see if this Inode is already loaded
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
-    // Make a copy of the InodePtr with the lock held, then release the lock
-    // before calling makeFuture().
-    //
-    // This code path should be quite common, so it's better to perform
-    // makeFuture()'s memory allocation without the lock held.
-    auto result = loadedIter->second.getPtr();
-    data.unlock();
-    return folly::makeFuture<InodePtr>(std::move(result));
+    return loadedIter->second.getPtr();
   }
 
   // Look up the data in the unloadedInodes_ map.
@@ -223,7 +216,7 @@ Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
 
   // Add a new entry to the promises list.
   unloadedData->promises.emplace_back();
-  auto result = unloadedData->promises.back().getFuture();
+  auto result = unloadedData->promises.back().getSemiFuture();
 
   // If someone else has already started loading this inode we are done.
   // The current loading attempt will signal our promise when it completes.
@@ -414,12 +407,12 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
   return promises;
 }
 
-Future<TreeInodePtr> InodeMap::lookupTreeInode(InodeNumber number) {
+ImmediateFuture<TreeInodePtr> InodeMap::lookupTreeInode(InodeNumber number) {
   return lookupInode(number).thenValue(
       [](const InodePtr& inode) { return inode.asTreePtr(); });
 }
 
-Future<FileInodePtr> InodeMap::lookupFileInode(InodeNumber number) {
+ImmediateFuture<FileInodePtr> InodeMap::lookupFileInode(InodeNumber number) {
   return lookupInode(number).thenValue(
       [](const InodePtr& inode) { return inode.asFilePtr(); });
 }

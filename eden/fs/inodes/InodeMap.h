@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -160,7 +161,7 @@ class InodeMap {
    * invoked immediately in the calling thread (if the Inode is already
    * available), or it may be invoked later in a different thread.
    */
-  folly::Future<InodePtr> lookupInode(InodeNumber number);
+  ImmediateFuture<InodePtr> lookupInode(InodeNumber number);
 
   /**
    * Lookup a TreeInode object by inode number.
@@ -169,7 +170,7 @@ class InodeMap {
    * The returned Future throws ENOTDIR if this inode number does not refer to
    * a directory.
    */
-  folly::Future<TreeInodePtr> lookupTreeInode(InodeNumber number);
+  ImmediateFuture<TreeInodePtr> lookupTreeInode(InodeNumber number);
 
   /**
    * Lookup a FileInode object by inode number.
@@ -178,7 +179,7 @@ class InodeMap {
    * The returned Future throws EISDIR if this inode number refers to a
    * directory.
    */
-  folly::Future<FileInodePtr> lookupFileInode(InodeNumber number);
+  ImmediateFuture<FileInodePtr> lookupFileInode(InodeNumber number);
 
   /**
    * Lookup an Inode object by inode number, if it alread exists.

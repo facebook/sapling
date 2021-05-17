@@ -1046,9 +1046,8 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // unlinked bit wasn't set correctly.
   subTree = testMount.getEdenMount()
                 ->getInodeMap()
-                ->lookupInode(subInodeNumber)
-                .get(1ms)
-                .asTreePtr();
+                ->lookupTreeInode(subInodeNumber)
+                .get(1ms);
   {
     auto subTreeContents = subTree->getContents().rlock();
     EXPECT_TRUE(subTree->isUnlinked());
@@ -1103,9 +1102,8 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   // the same inode numbers.
   subTree = testMount.getEdenMount()
                 ->getInodeMap()
-                ->lookupInode(subInodeNumber)
-                .get(1ms)
-                .asTreePtr();
+                ->lookupTreeInode(subInodeNumber)
+                .get(1ms);
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 
@@ -1271,19 +1269,14 @@ TYPED_TEST(
 
   // Replaced files should be unlinked.
 
-  abcfile1 = edenMount->getInodeMap()
-                 ->lookupInode(abcfile1InodeNumber)
-                 .get(1ms)
-                 .asFilePtr();
+  abcfile1 =
+      edenMount->getInodeMap()->lookupFileInode(abcfile1InodeNumber).get(1ms);
   EXPECT_TRUE(abcfile1->isUnlinked());
 
   // Referenced but modified directories are not unlinked - they're updated in
   // place.
 
-  auto def = edenMount->getInodeMap()
-                 ->lookupInode(defInodeNumber)
-                 .get(1ms)
-                 .asTreePtr();
+  auto def = edenMount->getInodeMap()->lookupTreeInode(defInodeNumber).get(1ms);
   EXPECT_FALSE(def->isUnlinked());
 }
 #endif
