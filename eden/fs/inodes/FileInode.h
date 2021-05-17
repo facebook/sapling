@@ -109,7 +109,7 @@ struct FileInodeState {
    * completed and the inode transitions to the materialized state without
    * a blob. Callbacks on this future must handle that case.
    */
-  std::optional<folly::SharedPromise<std::shared_ptr<const Blob>>>
+  std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
       blobLoadingPromise;
 
   /**

@@ -312,7 +312,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       //   materialized in our parent TreeInode.
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
-      std::optional<folly::SharedPromise<std::shared_ptr<const Blob>>>
+      std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
           loadingPromise;
       SCOPE_EXIT {
         if (loadingPromise) {
@@ -957,9 +957,11 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
   // Future's .then call.
   auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
       state->nonMaterializedState->hash, fetchContext, interest);
+  auto blobLoadingPromise =
+      std::make_unique<folly::SharedPromise<std::shared_ptr<const Blob>>>();
 
   // Everything from here through blobFuture.then should be noexcept.
-  state->blobLoadingPromise.emplace();
+  state->blobLoadingPromise = std::move(blobLoadingPromise);
   auto resultFuture = state->blobLoadingPromise->getFuture();
   state->tag = State::BLOB_LOADING;
 
@@ -1005,7 +1007,7 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
             // The load raced with a someone materializing the file to truncate
             // it.  Nothing left to do here. The truncation completed the
             // promise with a null blob.
-            XCHECK_EQ(false, state->blobLoadingPromise.has_value());
+            XCHECK_EQ(state->blobLoadingPromise.get(), nullptr);
             return;
         }
       })
