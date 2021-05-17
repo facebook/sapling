@@ -21,13 +21,18 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 
 using folly::StringPiece;
 using std::optional;
 using std::string;
 
+namespace facebook {
+namespace eden {
+
 namespace {
+
 constexpr facebook::eden::PathComponentPiece kDefaultUserIgnoreFile{
     ".edenignore"};
 constexpr facebook::eden::PathComponentPiece kDefaultSystemIgnoreFile{"ignore"};
@@ -57,10 +62,40 @@ void getConfigStat(
     memset(&configStat, 0, sizeof(configStat));
   }
 }
-} // namespace
 
-namespace facebook {
-namespace eden {
+std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
+  auto pos = fullKey.find(":");
+  if (pos == std::string::npos) {
+    EDEN_BUG() << "ConfigSetting key must contain a colon: " << fullKey;
+  }
+
+  StringPiece section{fullKey.data(), pos};
+  StringPiece key{fullKey.data() + pos + 1, fullKey.end()};
+
+  // Avoid use of locales. Standardize on - instead of _.
+  auto isConfigChar = [](char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') || c == '-';
+  };
+
+  for (char c : section) {
+    if (!isConfigChar(c)) {
+      EDEN_BUG() << "not a valid section name: " << fullKey;
+    }
+  }
+  // This one slipped in:
+  if (key != "enable_tree_overlay") {
+    for (char c : key) {
+      if (!isConfigChar(c)) {
+        EDEN_BUG() << "not a valid key name: " << fullKey;
+      }
+    }
+  }
+
+  return {section, key};
+}
+
+} // namespace
 
 const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
 
@@ -225,13 +260,10 @@ void EdenConfig::doCopy(const EdenConfig& source) {
 
 void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
   StringPiece fullKeyStr = configSetting->getConfigKey();
-  auto pos = fullKeyStr.find(":");
-  if (pos != std::string::npos) {
-    StringPiece section(fullKeyStr.data(), pos);
-    StringPiece key(fullKeyStr.data() + pos + 1, fullKeyStr.end());
-    auto& keyMap = configMap_[section.str()];
-    keyMap[key.str()] = configSetting;
-  }
+  auto [section, key] = parseKey(fullKeyStr);
+
+  auto& keyMap = configMap_[section.str()];
+  keyMap[key.str()] = configSetting;
 }
 
 const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
