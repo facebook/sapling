@@ -21,6 +21,7 @@ use derived_data::BonsaiDerived;
 use futures::compat::Stream01CompatExt;
 use futures::future::{self, try_join};
 use futures::stream::{self, StreamExt, TryStreamExt};
+use futures_ext::FbStreamExt;
 use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -144,6 +145,7 @@ impl AffectedChangesets {
             excludes.into_iter().collect(),
         )
         .compat()
+        .yield_periodically()
         .try_filter(|bcs_id| {
             let exists = self.new_changesets.contains_key(bcs_id);
             future::ready(!exists)

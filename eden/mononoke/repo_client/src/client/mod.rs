@@ -33,7 +33,8 @@ use futures::{
 use futures_01_ext::{
     try_boxstream, BoxFuture, BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt,
 };
-use futures_ext::{BufferedParams, FbFutureExt, FbStreamExt, FbTryFutureExt, FbTryStreamExt};
+use futures_ext::stream::FbTryStreamExt;
+use futures_ext::{BufferedParams, FbFutureExt, FbStreamExt, FbTryFutureExt};
 use futures_old::future::ok;
 use futures_old::{
     future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
@@ -800,6 +801,7 @@ impl RepoClient {
 
                 let serialized_stream = content_stream
                     .whole_stream_timeout(getpack_timeout())
+                    .yield_periodically()
                     .flatten_err()
                     .boxed()
                     .compat()
@@ -1513,6 +1515,7 @@ impl HgCommands for RepoClient {
                 .create_bundle(ctx.clone(), args)
                 .compat()
                 .whole_stream_timeout(getbundle_timeout())
+                .yield_periodically()
                 .flatten_err()
                 .boxed()
                 .compat()
@@ -1906,6 +1909,7 @@ impl HgCommands for RepoClient {
                     .gettreepack_untimed(ctx.clone(), params)
                     .compat()
                     .whole_stream_timeout(default_timeout())
+                    .yield_periodically()
                     .flatten_err()
                     .boxed()
                     .compat()
@@ -2063,6 +2067,7 @@ impl HgCommands for RepoClient {
 
             stream
                 .whole_stream_timeout(clone_timeout())
+                .yield_periodically()
                 .flatten_err()
                 .map_ok(bytes_ext::copy_from_new)
                 .boxed()
@@ -2151,6 +2156,7 @@ impl HgCommands for RepoClient {
                     }
                 })
                 .whole_stream_timeout(default_timeout())
+                .yield_periodically()
                 .flatten_err()
                 .boxed()
                 .compat()

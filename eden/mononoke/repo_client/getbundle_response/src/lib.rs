@@ -28,6 +28,7 @@ use futures_01_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams, FutureExt as _,
     StreamExt as OldStreamExt,
 };
+use futures_ext::stream::FbStreamExt;
 use futures_old::{
     future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
 };
@@ -446,7 +447,7 @@ async fn call_difference_of_union_of_ancestors_revset(
     match (min_heads_gen_num, max_excludes_gen_num) {
         (Some(min_heads), Some(max_excludes)) => {
             if min_heads.difference_from(*max_excludes).unwrap_or(0) > GETBUNDLE_COMMIT_NUM_WARN {
-                warn_expensive_getbundle(&ctx).await;
+                warn_expensive_getbundle(&ctx);
                 notified_expensive_getbundle = true;
             }
         }
@@ -461,20 +462,14 @@ async fn call_difference_of_union_of_ancestors_revset(
         excludes,
     )
     .compat()
-    .and_then({
+    .yield_periodically()
+    .inspect({
         let mut i = 0;
-        move |value| {
+        move |_| {
             i += 1;
-            let mut should_notify = false;
             if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
-                should_notify = true;
                 notified_expensive_getbundle = true;
-            }
-            async move {
-                if should_notify {
-                    warn_expensive_getbundle(&ctx).await;
-                }
-                Ok(value)
+                warn_expensive_getbundle(&ctx);
             }
         }
     });
@@ -503,7 +498,7 @@ async fn call_difference_of_union_of_ancestors_revset(
     Ok(res)
 }
 
-async fn warn_expensive_getbundle(ctx: &CoreContext) {
+fn warn_expensive_getbundle(ctx: &CoreContext) {
     info!(
         ctx.logger(),
         "your repository is out of date and pulling new commits might take a long time. \
@@ -512,11 +507,6 @@ async fn warn_expensive_getbundle(ctx: &CoreContext) {
         https://fburl.com/wiki/brz1ysn7."
         ; o!("remote" => "true")
     );
-    // This is an attempt to mitigate S231752 - sending this warning message
-    // prevents keep alive messages to be send to clients, which might cause client disconnects.
-    // We don't yet understand the root cause, but the yield seemed to mitigate the issue
-    // locally, so we'd like to try it.
-    tokio::task::yield_now().await;
 }
 
 async fn create_hg_changeset_part(
