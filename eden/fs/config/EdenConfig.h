@@ -115,8 +115,6 @@ class EdenConfig : private ConfigSettingManager {
   /** Get the path to client certificate. */
   const std::optional<AbsolutePath> getClientCertificate() const;
 
-  std::optional<std::string> getMononokeHostName() const;
-
   void setUserConfigPath(AbsolutePath userConfigPath);
   void setSystemConfigDir(AbsolutePath systemConfigDir);
   void setSystemConfigPath(AbsolutePath systemConfigDir);
@@ -254,22 +252,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
-
-  // [mononoke]
-
-  /**
-   * Which tier to use when talking to mononoke.
-   */
-  ConfigSetting<std::string> mononokeTierName{
-      "mononoke:tier",
-      "mononoke-apiserver",
-      this};
-  ConfigSetting<std::string> mononokeHostName{"mononoke:hostname", "", this};
-  ConfigSetting<uint16_t> mononokePort{"mononoke:port", 443, this};
-  ConfigSetting<std::string> mononokeConnectionType{
-      "mononoke:connection-type",
-      "http",
-      this};
 
   // [scs]
 

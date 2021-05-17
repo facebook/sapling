@@ -248,14 +248,6 @@ const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   return std::nullopt;
 }
 
-std::optional<std::string> EdenConfig::getMononokeHostName() const {
-  auto value = mononokeHostName.getValue();
-  if (value.empty()) {
-    return std::nullopt;
-  }
-  return value;
-}
-
 void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
   userConfigPath_ = userConfigPath;
 }
