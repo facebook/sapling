@@ -428,9 +428,10 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
     MountInfo info;
     info.mountPoint_ref() = edenMount->getPath().value();
     info.edenClientPath_ref() =
-        edenMount->getConfig()->getClientDirectory().value();
+        edenMount->getCheckoutConfig()->getClientDirectory().value();
     info.state_ref() = edenMount->getState();
-    info.backingRepoPath_ref() = edenMount->getConfig()->getRepoSource();
+    info.backingRepoPath_ref() =
+        edenMount->getCheckoutConfig()->getRepoSource();
     results.push_back(info);
   }
 }

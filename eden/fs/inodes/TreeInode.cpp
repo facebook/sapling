@@ -849,8 +849,8 @@ DirContents TreeInode::saveDirFromTree(
     const Tree* tree,
     EdenMount* mount) {
   auto overlay = mount->getOverlay();
-  auto dir =
-      buildDirFromTree(tree, overlay, mount->getConfig()->getCaseSensitive());
+  auto dir = buildDirFromTree(
+      tree, overlay, mount->getCheckoutConfig()->getCaseSensitive());
   // buildDirFromTree just allocated inode numbers; they should be saved.
   overlay->saveOverlayDir(inodeNumber, dir);
   return dir;
@@ -1080,7 +1080,7 @@ TreeInodePtr TreeInode::mkdir(
     mode = S_IFDIR | (07777 & mode);
 
     // Store the overlay entry for this dir
-    DirContents emptyDir(getMount()->getConfig()->getCaseSensitive());
+    DirContents emptyDir(getMount()->getCheckoutConfig()->getCaseSensitive());
     saveOverlayDir(childNumber, emptyDir);
 
     // Add a new entry to contents_.entries

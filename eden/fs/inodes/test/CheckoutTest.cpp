@@ -587,8 +587,10 @@ void testModifyConflict(
 
   const auto currentParent =
       testMount.getEdenMount()->getParentCommits().parent1();
-  const auto configParent =
-      testMount.getEdenMount()->getConfig()->getParentCommits().parent1();
+  const auto configParent = testMount.getEdenMount()
+                                ->getCheckoutConfig()
+                                ->getParentCommits()
+                                .parent1();
   // Make sure both the mount parent and the config parent information was
   // updated
   EXPECT_EQ(currentParent, configParent);

@@ -33,7 +33,7 @@ const std::string kConfigTable{"Config"};
 std::string makeDotEdenConfig(EdenMount& mount) {
   auto repoPath = mount.getPath();
   auto socketPath = mount.getServerState()->getSocketPath();
-  auto clientPath = mount.getConfig()->getClientDirectory();
+  auto clientPath = mount.getCheckoutConfig()->getClientDirectory();
 
   auto rootTable = cpptoml::make_table();
   auto configTable = cpptoml::make_table();

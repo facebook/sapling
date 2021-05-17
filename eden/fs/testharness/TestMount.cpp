@@ -302,7 +302,7 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
 
 void TestMount::remount() {
   // Create a new copy of the CheckoutConfig
-  auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
+  auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
       localStore_,
@@ -340,7 +340,7 @@ void TestMount::remount() {
 #ifndef _WIN32
 void TestMount::remountGracefully() {
   // Create a new copy of the CheckoutConfig
-  auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
+  auto config = make_unique<CheckoutConfig>(*edenMount_->getCheckoutConfig());
   // Create a new ObjectStore pointing to our local store and backing store
   auto objectStore = ObjectStore::create(
       localStore_,
@@ -448,7 +448,8 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
       /*rdev=*/0,
       InvalidationRequired::No);
 #ifdef _WIN32
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  auto absolutePath =
+      edenMount_->getCheckoutConfig()->getMountPath() + relativePath;
   // Make sure the directory exist.
   ensureDirectoryExists(absolutePath.dirname());
   // Create the file in the File System and also update the EdenMount. In the
@@ -480,7 +481,8 @@ void TestMount::overwriteFile(
   auto file = getFileInode(relativePath);
 
 #ifdef _WIN32
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  auto absolutePath =
+      edenMount_->getCheckoutConfig()->getMountPath() + relativePath;
   // Make sure the directory exist.
   ensureDirectoryExists(absolutePath.dirname());
   // Write the file in the File System and also update the EdenMount. In the
@@ -508,8 +510,10 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
   RelativePathPiece destPath{dest};
 
 #ifdef _WIN32
-  auto absoluteSrcPath = edenMount_->getConfig()->getMountPath() + srcPath;
-  auto absoluteDestPath = edenMount_->getConfig()->getMountPath() + destPath;
+  auto absoluteSrcPath =
+      edenMount_->getCheckoutConfig()->getMountPath() + srcPath;
+  auto absoluteDestPath =
+      edenMount_->getCheckoutConfig()->getMountPath() + destPath;
   renameWithAbsolutePath(absoluteSrcPath, absoluteDestPath);
 #endif
 
@@ -553,7 +557,8 @@ void TestMount::mkdir(folly::StringPiece path) {
   auto treeInode = getTreeInode(relativePath.dirname());
 
 #ifdef _WIN32
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  auto absolutePath =
+      edenMount_->getCheckoutConfig()->getMountPath() + relativePath;
   ensureDirectoryExists(absolutePath.dirname());
 #endif
 
@@ -568,7 +573,8 @@ void TestMount::deleteFile(folly::StringPiece path) {
   auto treeInode = getTreeInode(relativePath.dirname());
 
 #ifdef _WIN32
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  auto absolutePath =
+      edenMount_->getCheckoutConfig()->getMountPath() + relativePath;
   removeFileWithAbsolutePath(absolutePath);
 #endif
 
@@ -585,7 +591,8 @@ void TestMount::rmdir(folly::StringPiece path) {
   auto treeInode = getTreeInode(relativePath.dirname());
 
 #ifdef _WIN32
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  auto absolutePath =
+      edenMount_->getCheckoutConfig()->getMountPath() + relativePath;
   removeRecursively(absolutePath);
 #endif
 

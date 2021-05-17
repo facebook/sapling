@@ -1447,9 +1447,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
             })
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
               FinishedMount event;
-              event.repo_type = edenMount->getConfig()->getRepoType();
+              event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
               event.repo_source =
-                  basename(edenMount->getConfig()->getRepoSource()).str();
+                  basename(edenMount->getCheckoutConfig()->getRepoSource())
+                      .str();
               event.is_takeover = doTakeover;
               event.duration =
                   std::chrono::duration<double>{mountStopWatch.elapsed()}

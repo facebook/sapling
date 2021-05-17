@@ -66,6 +66,7 @@ class CheckoutConfig;
 class CheckoutConflict;
 class Clock;
 class DiffContext;
+class EdenConfig;
 class FuseChannel;
 class FuseDeviceUnmountedDuringInitialization;
 class DiffCallback;
@@ -357,8 +358,10 @@ class EdenMount {
     return mountGeneration_;
   }
 
-  const CheckoutConfig* getConfig() const {
-    return config_.get();
+  std::shared_ptr<const EdenConfig> getEdenConfig() const;
+
+  const CheckoutConfig* getCheckoutConfig() const {
+    return checkoutConfig_.get();
   }
 
   /**
@@ -708,7 +711,7 @@ class EdenMount {
   void transitionToFuseInitializationErrorState();
 
   EdenMount(
-      std::unique_ptr<CheckoutConfig> config,
+      std::unique_ptr<CheckoutConfig> checkoutConfig,
       std::shared_ptr<ObjectStore> objectStore,
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
@@ -803,7 +806,7 @@ class EdenMount {
 
   static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
-  const std::unique_ptr<const CheckoutConfig> config_;
+  const std::unique_ptr<const CheckoutConfig> checkoutConfig_;
 
   /**
    * A promise associated with the future returned from

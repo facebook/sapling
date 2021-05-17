@@ -394,7 +394,7 @@ TEST(EdenMount, resetParents) {
   EXPECT_EQ(ParentCommits{makeTestHash("1")}, edenMount->getParentCommits());
   EXPECT_EQ(
       ParentCommits{makeTestHash("1")},
-      edenMount->getConfig()->getParentCommits());
+      edenMount->getCheckoutConfig()->getParentCommits());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
@@ -408,7 +408,7 @@ TEST(EdenMount, resetParents) {
   EXPECT_EQ(ParentCommits{makeTestHash("2")}, edenMount->getParentCommits());
   EXPECT_EQ(
       ParentCommits{makeTestHash("2")},
-      edenMount->getConfig()->getParentCommits());
+      edenMount->getCheckoutConfig()->getParentCommits());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);

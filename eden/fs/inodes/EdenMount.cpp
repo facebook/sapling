@@ -194,28 +194,30 @@ std::shared_ptr<EdenMount> EdenMount::create(
 }
 
 EdenMount::EdenMount(
-    std::unique_ptr<CheckoutConfig> config,
+    std::unique_ptr<CheckoutConfig> checkoutConfig,
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal)
-    : config_{std::move(config)},
+    : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
       overlay_{Overlay::create(
-          config_->getOverlayPath(),
-          config_->getCaseSensitive(),
-          static_cast<Overlay::OverlayType>(config_->getEnableTreeOverlay()),
+          checkoutConfig_->getOverlayPath(),
+          checkoutConfig_->getCaseSensitive(),
+          static_cast<Overlay::OverlayType>(
+              checkoutConfig_->getEnableTreeOverlay()),
           serverState_->getStructuredLogger())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
 #endif
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
-      straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
+      straceLogger_{
+          kEdenStracePrefix.str() + checkoutConfig_->getMountPath().value()},
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
       clock_{serverState_->getClock()} {
@@ -231,7 +233,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .via(serverState_->getThreadPool().get())
       .thenValue([this, progressCallback = std::move(progressCallback)](
                      auto&&) mutable {
-        auto parents = config_->getParentCommits();
+        auto parents = checkoutConfig_->getParentCommits();
         parentInfo_.wlock()->parents.setParents(parents);
 
         // Record the transition from no snapshot to the current snapshot in
@@ -398,13 +400,16 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         futures.emplace_back(ensureDotEdenSymlink(
             dotEdenInode,
             kDotEdenSymlinkName.copy(),
-            (config_->getMountPath() + PathComponentPiece{kDotEdenName})));
+            (checkoutConfig_->getMountPath() +
+             PathComponentPiece{kDotEdenName})));
         futures.emplace_back(ensureDotEdenSymlink(
-            dotEdenInode, "root"_pc.copy(), config_->getMountPath()));
+            dotEdenInode, "root"_pc.copy(), checkoutConfig_->getMountPath()));
         futures.emplace_back(ensureDotEdenSymlink(
             dotEdenInode, "socket"_pc.copy(), serverState_->getSocketPath()));
         futures.emplace_back(ensureDotEdenSymlink(
-            dotEdenInode, "client"_pc.copy(), config_->getClientDirectory()));
+            dotEdenInode,
+            "client"_pc.copy(),
+            checkoutConfig_->getClientDirectory()));
 #endif
 
         // Wait until we finish setting up all of the symlinks.
@@ -672,6 +677,10 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();
 }
 
+std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
+  return serverState_->getReloadableConfig().getEdenConfig();
+}
+
 #ifndef _WIN32
 InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
   return overlay_->getInodeMetadataTable();
@@ -714,7 +723,7 @@ ProcessAccessLog& EdenMount::getProcessAccessLog() const {
 }
 
 const AbsolutePath& EdenMount::getPath() const {
-  return config_->getMountPath();
+  return checkoutConfig_->getMountPath();
 }
 
 EdenStats* EdenMount::getStats() const {
@@ -1202,7 +1211,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   // TODO: Maybe we should walk the inodes and see if we can dematerialize
   // some files using the new source control state.
 
-  config_->setParentCommits(parents);
+  checkoutConfig_->setParentCommits(parents);
   parentsLock->parents.setParents(parents);
 
   journal_->recordHashUpdate(oldParents.parent1(), parents.parent1());
@@ -1259,8 +1268,8 @@ namespace {
 std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
     EdenMount* mount,
     folly::File fuseFd) {
-  std::unique_ptr<FuseChannel, FuseChannelDeleter> ret;
-  ret.reset(new FuseChannel(
+  auto edenConfig = mount->getEdenConfig();
+  return std::unique_ptr<FuseChannel, FuseChannelDeleter>{new FuseChannel(
       std::move(fuseFd),
       mount->getPath(),
       FLAGS_fuseNumThreads,
@@ -1268,14 +1277,10 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       &mount->getStraceLogger(),
       mount->getServerState()->getProcessNameCache(),
       std::chrono::duration_cast<folly::Duration>(
-          mount->getServerState()
-              ->getReloadableConfig()
-              .getEdenConfig()
-              ->fuseRequestTimeout.getValue()),
+          edenConfig->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifications(),
-      mount->getConfig()->getCaseSensitive(),
-      mount->getConfig()->getRequireUtf8Path()));
-  return ret;
+      mount->getCheckoutConfig()->getCaseSensitive(),
+      mount->getCheckoutConfig()->getRequireUtf8Path())};
 }
 } // namespace
 #endif
@@ -1284,27 +1289,26 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
       .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
+        auto edenConfig = getEdenConfig();
 #ifdef _WIN32
-        return folly::makeFutureWith(
-                   [this, mountPath = std::move(mountPath), readOnly]() {
-                     auto channel = std::make_unique<PrjfsChannel>(
-                         mountPath,
-                         EdenDispatcherFactory::makePrjfsDispatcher(this),
-                         &getStraceLogger(),
-                         serverState_->getProcessNameCache(),
-                         std::chrono::duration_cast<folly::Duration>(
-                             serverState_->getReloadableConfig()
-                                 .getEdenConfig()
-                                 ->prjfsRequestTimeout.getValue()),
-                         serverState_->getNotifications(),
-                         getConfig()->getRepoGuid());
-                     channel->start(
-                         readOnly,
-                         serverState_->getReloadableConfig()
-                             .getEdenConfig()
-                             ->prjfsUseNegativePathCaching.getValue());
-                     return channel;
-                   })
+        return folly::makeFutureWith([this,
+                                      mountPath = std::move(mountPath),
+                                      readOnly,
+                                      edenConfig]() {
+                 auto channel = std::make_unique<PrjfsChannel>(
+                     mountPath,
+                     EdenDispatcherFactory::makePrjfsDispatcher(this),
+                     &getStraceLogger(),
+                     serverState_->getProcessNameCache(),
+                     std::chrono::duration_cast<folly::Duration>(
+                         edenConfig->prjfsRequestTimeout.getValue()),
+                     serverState_->getNotifications(),
+                     getCheckoutConfig()->getRepoGuid());
+                 channel->start(
+                     readOnly,
+                     edenConfig->prjfsUseNegativePathCaching.getValue());
+                 return channel;
+               })
             .thenTry([this, mountPromise](
                          Try<std::unique_ptr<PrjfsChannel>>&& channel) {
               if (channel.hasException()) {
@@ -1320,21 +1324,17 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
               return makeFuture(folly::unit);
             });
 #else
-        if (serverState_->getReloadableConfig()
-                .getEdenConfig()
-                ->enableNfsServer.getValue() &&
-            getConfig()->getMountProtocol() == MountProtocol::NFS) {
+        if (edenConfig->enableNfsServer.getValue() &&
+            getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS) {
           auto nfsServer = serverState_->getNfsServer();
 
-          auto iosize = serverState_->getReloadableConfig()
-                            .getEdenConfig()
-                            ->nfsIoSize.getValue();
+          auto iosize = edenConfig->nfsIoSize.getValue();
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
           auto fut =
               via(nfsServer->getEventBase(),
-                  [this, mountPath, nfsServer, iosize]() {
+                  [this, mountPath, nfsServer, iosize, edenConfig]() {
                     return nfsServer->registerMount(
                         mountPath,
                         getRootInode()->getNodeId(),
@@ -1342,11 +1342,9 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                         &getStraceLogger(),
                         serverState_->getProcessNameCache(),
                         std::chrono::duration_cast<folly::Duration>(
-                            serverState_->getReloadableConfig()
-                                .getEdenConfig()
-                                ->nfsRequestTimeout.getValue()),
+                            edenConfig->nfsRequestTimeout.getValue()),
                         serverState_->getNotifications(),
-                        config_->getCaseSensitive(),
+                        checkoutConfig_->getCaseSensitive(),
                         iosize);
                   });
           return std::move(fut).thenValue(
@@ -1360,8 +1358,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
 
                 std::optional<AbsolutePath> unixSocketPath;
                 if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
-                  unixSocketPath =
-                      getConfig()->getClientDirectory() + kNfsdSocketName;
+                  unixSocketPath = getCheckoutConfig()->getClientDirectory() +
+                      kNfsdSocketName;
                 }
                 channel->initialize(
                     makeNfsSocket(std::move(unixSocketPath)), false);
@@ -1527,7 +1525,7 @@ void EdenMount::channelInitSuccessful(
         std::vector<AbsolutePath> bindMounts;
         channelCompletionPromise_.setValue(TakeoverData::MountInfo(
             getPath(),
-            config_->getClientDirectory(),
+            checkoutConfig_->getClientDirectory(),
             bindMounts,
             folly::File{},
             SerializedInodeMap{} // placeholder
@@ -1548,7 +1546,7 @@ void EdenMount::channelInitSuccessful(
 
                 channelCompletionPromise_.setValue(TakeoverData::MountInfo(
                     getPath(),
-                    config_->getClientDirectory(),
+                    checkoutConfig_->getClientDirectory(),
                     bindMounts,
                     std::move(variant.fuseDevice),
                     variant.fuseSettings,
@@ -1561,7 +1559,7 @@ void EdenMount::channelInitSuccessful(
                 std::vector<AbsolutePath> bindMounts;
                 channelCompletionPromise_.setValue(TakeoverData::MountInfo(
                     getPath(),
-                    config_->getClientDirectory(),
+                    checkoutConfig_->getClientDirectory(),
                     bindMounts,
                     // TODO(xavierd): the next 2 fields should be a variant too.
                     folly::File(),

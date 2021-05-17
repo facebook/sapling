@@ -47,7 +47,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
     // Update the in-memory snapshot ID
     parentsLock_->parents.setParents(newSnapshot);
 
-    auto config = mount_->getConfig();
+    auto config = mount_->getCheckoutConfig();
     // Save the new snapshot hash to the config
     config->setParentCommits(newSnapshot);
     XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
