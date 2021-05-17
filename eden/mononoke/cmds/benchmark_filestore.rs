@@ -175,7 +175,7 @@ async fn run_benchmark_filestore<'a>(
 }
 
 #[cfg(fbcode_build)]
-const TEST_DATA_TTL: Duration = Duration::from_secs(3600);
+const TEST_DATA_TTL: Option<Duration> = Some(Duration::from_secs(3600));
 
 async fn get_blob<'a>(
     fb: FacebookInit,
@@ -193,7 +193,7 @@ async fn get_blob<'a>(
 
                 let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
                 let put_behaviour = blobstore_options.put_behaviour;
-                let manifold = ManifoldBlob::new_with_ttl(
+                let manifold = ManifoldBlob::new(
                     fb,
                     bucket,
                     TEST_DATA_TTL,

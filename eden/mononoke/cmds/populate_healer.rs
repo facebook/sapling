@@ -381,7 +381,8 @@ fn make_key_source(
     match args {
         BlobConfig::Manifold { bucket, .. } => {
             let res = Arc::new(
-                ManifoldBlob::new(fb, &bucket, None, None, DEFAULT_PUT_BEHAVIOUR)?.into_inner(),
+                ManifoldBlob::new(fb, &bucket, None, None, None, DEFAULT_PUT_BEHAVIOUR)?
+                    .into_inner(),
             );
             Ok(res)
         }
