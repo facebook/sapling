@@ -14,12 +14,8 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/BufVec.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-namespace folly {
-template <class T>
-class Future;
-} // namespace folly
 
 namespace facebook::eden {
 
@@ -62,7 +58,7 @@ class FuseDispatcher {
    *
    * requestID is given here to assert invariants in tests.
    */
-  virtual folly::Future<fuse_entry_out> lookup(
+  virtual ImmediateFuture<fuse_entry_out> lookup(
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
@@ -121,7 +117,7 @@ class FuseDispatcher {
    *
    * @param ino the inode number
    */
-  virtual folly::Future<Attr> getattr(
+  virtual ImmediateFuture<Attr> getattr(
       InodeNumber ino,
       ObjectFetchContext& context);
 
@@ -139,7 +135,7 @@ class FuseDispatcher {
    * Changed in version 2.5:
    *     file information filled in for ftruncate
    */
-  virtual folly::Future<Attr> setattr(
+  virtual ImmediateFuture<Attr> setattr(
       InodeNumber ino,
       const fuse_setattr_in& attr);
 
@@ -150,7 +146,7 @@ class FuseDispatcher {
    * @param kernelCachesReadlink whether the kernel supports caching readlink
    * calls.
    */
-  virtual folly::Future<std::string> readlink(
+  virtual ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       bool kernelCachesReadlink);
 
@@ -165,7 +161,7 @@ class FuseDispatcher {
    * @param mode file type and mode with which to create the new file
    * @param rdev the device number (only valid if created file is a device)
    */
-  virtual folly::Future<fuse_entry_out>
+  virtual ImmediateFuture<fuse_entry_out>
   mknod(InodeNumber parent, PathComponentPiece name, mode_t mode, dev_t rdev);
 
   /**
@@ -175,7 +171,7 @@ class FuseDispatcher {
    * @param name to create
    * @param mode with which to create the new file
    */
-  virtual folly::Future<fuse_entry_out>
+  virtual ImmediateFuture<fuse_entry_out>
   mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode);
 
   /**
@@ -184,7 +180,7 @@ class FuseDispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> unlink(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context);
@@ -195,7 +191,7 @@ class FuseDispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> rmdir(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context);
@@ -207,7 +203,7 @@ class FuseDispatcher {
    * @param name to create
    * @param link the contents of the symbolic link
    */
-  virtual folly::Future<fuse_entry_out>
+  virtual ImmediateFuture<fuse_entry_out>
   symlink(InodeNumber parent, PathComponentPiece name, folly::StringPiece link);
 
   /**
@@ -218,7 +214,7 @@ class FuseDispatcher {
    * @param newparent inode number of the new parent directory
    * @param newname new name
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> rename(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
@@ -231,7 +227,7 @@ class FuseDispatcher {
    * @param newparent inode number of the new parent directory
    * @param newname new name to create
    */
-  virtual folly::Future<fuse_entry_out>
+  virtual ImmediateFuture<fuse_entry_out>
   link(InodeNumber ino, InodeNumber newparent, PathComponentPiece newname);
 
   /**
@@ -242,7 +238,7 @@ class FuseDispatcher {
    *
    * The returned fh value will be passed to release.
    */
-  virtual folly::Future<uint64_t> open(InodeNumber ino, int flags);
+  virtual ImmediateFuture<uint64_t> open(InodeNumber ino, int flags);
 
   /**
    * Release an open file
@@ -257,7 +253,7 @@ class FuseDispatcher {
    *
    * fh will contain the value returned by the open method.
    */
-  virtual folly::Future<folly::Unit> release(InodeNumber ino, uint64_t fh);
+  virtual ImmediateFuture<folly::Unit> release(InodeNumber ino, uint64_t fh);
 
   /**
    * Open a directory
@@ -266,7 +262,7 @@ class FuseDispatcher {
    *
    * The return value will be given to releasedir and readdir.
    */
-  virtual folly::Future<uint64_t> opendir(InodeNumber ino, int flags);
+  virtual ImmediateFuture<uint64_t> opendir(InodeNumber ino, int flags);
 
   /**
    * Release an open directory
@@ -275,7 +271,7 @@ class FuseDispatcher {
    * during unmount - further releasedir calls are not sent.) The fh parameter
    * contains the result of opendir.
    */
-  virtual folly::Future<folly::Unit> releasedir(InodeNumber ino, uint64_t fh);
+  virtual ImmediateFuture<folly::Unit> releasedir(InodeNumber ino, uint64_t fh);
 
   /**
    * Read data
@@ -290,7 +286,7 @@ class FuseDispatcher {
    * @param size number of bytes to read
    * @param off offset to read from
    */
-  virtual folly::Future<BufVec>
+  virtual ImmediateFuture<BufVec>
   read(InodeNumber ino, size_t size, off_t off, ObjectFetchContext& context);
 
   /**
@@ -302,7 +298,7 @@ class FuseDispatcher {
    * of the write system call will reflect the return value of this
    * operation.
    */
-  FOLLY_NODISCARD virtual folly::Future<size_t>
+  FOLLY_NODISCARD virtual ImmediateFuture<size_t>
   write(InodeNumber ino, folly::StringPiece data, off_t off);
 
   /**
@@ -322,7 +318,7 @@ class FuseDispatcher {
    * If the filesystem supports file locking operations (setlk,
    * getlk) it should remove all locks belonging to 'lock_owner'.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> flush(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> flush(
       InodeNumber ino,
       uint64_t lock_owner);
 
@@ -333,7 +329,7 @@ class FuseDispatcher {
    *
    * Only used on Linux.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit>
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
   fallocate(InodeNumber ino, uint64_t offset, uint64_t length);
 
   /**
@@ -342,7 +338,7 @@ class FuseDispatcher {
    * If the datasync parameter is true, then only the user data should be
    * flushed, not the meta data.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsync(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fsync(
       InodeNumber ino,
       bool datasync);
 
@@ -352,7 +348,7 @@ class FuseDispatcher {
    * If the datasync parameter is true, then only the directory contents should
    * be flushed, not the metadata.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fsyncdir(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fsyncdir(
       InodeNumber ino,
       bool datasync);
 
@@ -364,7 +360,7 @@ class FuseDispatcher {
    *
    * The fh parameter contains opendir's result.
    */
-  virtual folly::Future<FuseDirList> readdir(
+  virtual ImmediateFuture<FuseDirList> readdir(
       InodeNumber ino,
       FuseDirList&& dirList,
       off_t offset,
@@ -376,12 +372,12 @@ class FuseDispatcher {
    *
    * @param ino the inode number, zero means "undefined"
    */
-  virtual folly::Future<struct fuse_kstatfs> statfs(InodeNumber ino);
+  virtual ImmediateFuture<struct fuse_kstatfs> statfs(InodeNumber ino);
 
   /**
    * Set an extended attribute
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setxattr(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> setxattr(
       InodeNumber ino,
       folly::StringPiece name,
       folly::StringPiece value,
@@ -389,7 +385,7 @@ class FuseDispatcher {
   /**
    * Get an extended attribute
    */
-  virtual folly::Future<std::string> getxattr(
+  virtual ImmediateFuture<std::string> getxattr(
       InodeNumber ino,
       folly::StringPiece name);
   static const int kENOATTR;
@@ -397,7 +393,7 @@ class FuseDispatcher {
   /**
    * List extended attribute names
    */
-  virtual folly::Future<std::vector<std::string>> listxattr(InodeNumber ino);
+  virtual ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino);
 
   /**
    * Remove an extended attribute
@@ -405,7 +401,7 @@ class FuseDispatcher {
    * @param ino the inode number
    * @param name of the extended attribute
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> removexattr(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> removexattr(
       InodeNumber ino,
       folly::StringPiece name);
 
@@ -423,7 +419,7 @@ class FuseDispatcher {
    * @param ino the inode number
    * @param mask requested access mode
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> access(
       InodeNumber ino,
       int mask);
 
@@ -446,7 +442,7 @@ class FuseDispatcher {
    * @param name to create
    * @param mode file type and mode with which to create the new file
    */
-  virtual folly::Future<fuse_entry_out>
+  virtual ImmediateFuture<fuse_entry_out>
   create(InodeNumber parent, PathComponentPiece name, mode_t mode, int flags);
 
   /**
@@ -461,7 +457,7 @@ class FuseDispatcher {
    * @param blocksize unit of block index
    * @param idx block index within file
    */
-  virtual folly::Future<uint64_t>
+  virtual ImmediateFuture<uint64_t>
   bmap(InodeNumber ino, size_t blocksize, uint64_t idx);
 };
 

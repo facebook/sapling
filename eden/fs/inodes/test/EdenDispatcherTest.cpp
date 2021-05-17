@@ -121,8 +121,12 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
   FakeTreeBuilder builder;
   builder.setFile("bad", "contents");
   TestMount mount{builder, /*startReady=*/false};
-  auto entryFuture = mount.getDispatcher()->lookup(
-      0, kRootNodeId, "bad"_pc, ObjectFetchContext::getNullContext());
+  auto entryFuture =
+      mount.getDispatcher()
+          ->lookup(
+              0, kRootNodeId, "bad"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   builder.getStoredBlob("bad"_relpath)
       ->triggerError(std::runtime_error("failed to load"));
   auto entry = std::move(entryFuture).get(0ms);

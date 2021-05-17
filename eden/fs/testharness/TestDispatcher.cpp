@@ -12,20 +12,19 @@
 #include <folly/Conv.h>
 #include <folly/logging/xlog.h>
 
-using folly::Future;
 using std::string;
 
 namespace facebook {
 namespace eden {
 
-Future<fuse_entry_out> TestDispatcher::lookup(
+ImmediateFuture<fuse_entry_out> TestDispatcher::lookup(
     uint64_t requestID,
     InodeNumber parent,
     PathComponentPiece name,
     ObjectFetchContext& /*context*/) {
   XLOG(DBG5) << "received lookup " << requestID << ": parent=" << parent
              << ", name=" << name;
-  auto result = Future<fuse_entry_out>::makeEmpty();
+  ImmediateFuture<fuse_entry_out> result{};
   {
     // Whenever we receive a lookup request just add it to the pendingLookups_
     // The test harness can then respond to it later however it wants.
@@ -37,7 +36,7 @@ Future<fuse_entry_out> TestDispatcher::lookup(
     // just like the kernel should.
     XCHECK(emplaceResult.second) << "received duplicate request ID "
                                  << requestID << " from the test harness";
-    result = emplaceResult.first->second.promise.getFuture();
+    result = emplaceResult.first->second.promise.getSemiFuture();
   }
 
   requestReceived_.notify_all();

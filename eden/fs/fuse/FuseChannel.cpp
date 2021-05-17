@@ -11,6 +11,7 @@
 
 #include <boost/cast.hpp>
 #include <fmt/core.h>
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
@@ -215,7 +216,7 @@ static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 1800000);
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
 
-using Handler = folly::Future<folly::Unit> (FuseChannel::*)(
+using Handler = ImmediateFuture<folly::Unit> (FuseChannel::*)(
     FuseRequestContext& request,
     const fuse_in_header& header,
     folly::ByteRange arg);
@@ -1724,7 +1725,9 @@ void FuseChannel::processSession() {
                         handlerEntry->stat,
                         *(liveRequestWatches_.get()));
                     return (this->*handlerEntry->handler)(
-                        *request, request->getReq(), arg);
+                               *request, request->getReq(), arg)
+                        .semi()
+                        .via(&folly::QueuedImmediateExecutor::instance());
                   }).ensure([request] {
                     }).within(requestTimeout_),
                   notifications_)
@@ -1804,7 +1807,7 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
   }
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseRead(
+ImmediateFuture<folly::Unit> FuseChannel::fuseRead(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1817,7 +1820,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
       .thenValue([&request](BufVec&& buf) { request.sendReply(*buf); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseWrite(
+ImmediateFuture<folly::Unit> FuseChannel::fuseWrite(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1853,7 +1856,7 @@ PathComponentPiece extractPathComponent(StringPiece s, bool requireUtf8Path) {
 }
 } // namespace
 
-folly::Future<folly::Unit> FuseChannel::fuseLookup(
+ImmediateFuture<folly::Unit> FuseChannel::fuseLookup(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1869,7 +1872,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseForget(
+ImmediateFuture<folly::Unit> FuseChannel::fuseForget(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1881,7 +1884,7 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseGetAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
@@ -1892,7 +1895,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseSetAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1904,7 +1907,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseReadLink(
+ImmediateFuture<folly::Unit> FuseChannel::fuseReadLink(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
@@ -1920,7 +1923,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseSymlink(
+ImmediateFuture<folly::Unit> FuseChannel::fuseSymlink(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1936,7 +1939,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseMknod(
+ImmediateFuture<folly::Unit> FuseChannel::fuseMknod(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1963,7 +1966,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseMkdir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseMkdir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -1987,7 +1990,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseUnlink(
+ImmediateFuture<folly::Unit> FuseChannel::fuseUnlink(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2001,7 +2004,7 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseRmdir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseRmdir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2014,7 +2017,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseRename(
+ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2062,7 +2065,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseLink(
+ImmediateFuture<folly::Unit> FuseChannel::fuseLink(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2080,7 +2083,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseOpen(
+ImmediateFuture<folly::Unit> FuseChannel::fuseOpen(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2095,7 +2098,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
   });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseStatFs(
+ImmediateFuture<folly::Unit> FuseChannel::fuseStatFs(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange /*arg*/) {
@@ -2108,7 +2111,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseRelease(
+ImmediateFuture<folly::Unit> FuseChannel::fuseRelease(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2119,7 +2122,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
       .thenValue([&request](folly::Unit) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseFsync(
+ImmediateFuture<folly::Unit> FuseChannel::fuseFsync(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2135,7 +2138,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
   });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseSetXAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2152,7 +2155,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseGetXAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2175,7 +2178,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseListXAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2213,7 +2216,7 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
+ImmediateFuture<folly::Unit> FuseChannel::fuseRemoveXAttr(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2224,7 +2227,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseFlush(
+ImmediateFuture<folly::Unit> FuseChannel::fuseFlush(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2236,7 +2239,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFlush(
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseOpenDir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2260,7 +2263,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseReadDir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseReadDir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2275,7 +2278,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseReleaseDir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2286,7 +2289,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
       .thenValue([&request](folly::Unit) { request.replyError(0); });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
+ImmediateFuture<folly::Unit> FuseChannel::fuseFsyncDir(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2302,7 +2305,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
   });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseAccess(
+ImmediateFuture<folly::Unit> FuseChannel::fuseAccess(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2314,7 +2317,7 @@ folly::Future<folly::Unit> FuseChannel::fuseAccess(
   });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseCreate(
+ImmediateFuture<folly::Unit> FuseChannel::fuseCreate(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2341,7 +2344,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseBmap(
+ImmediateFuture<folly::Unit> FuseChannel::fuseBmap(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
@@ -2356,7 +2359,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBmap(
       });
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
+ImmediateFuture<folly::Unit> FuseChannel::fuseBatchForget(
     FuseRequestContext& request,
     const fuse_in_header& /*header*/,
     ByteRange arg) {
@@ -2374,7 +2377,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> FuseChannel::fuseFallocate(
+ImmediateFuture<folly::Unit> FuseChannel::fuseFallocate(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {

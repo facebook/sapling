@@ -42,8 +42,9 @@ class TestDispatcher : public FuseDispatcher {
   TestDispatcher(EdenStats* stats, const UserInfo& identity)
       : FuseDispatcher(stats), identity_(identity) {}
 
-  folly::Future<Attr> getattr(InodeNumber ino, ObjectFetchContext& /*context*/)
-      override {
+  ImmediateFuture<Attr> getattr(
+      InodeNumber ino,
+      ObjectFetchContext& /*context*/) override {
     if (ino == kRootNodeId) {
       struct stat st = {};
       st.st_ino = ino.get();
@@ -53,7 +54,7 @@ class TestDispatcher : public FuseDispatcher {
       st.st_gid = identity_.getGid();
       st.st_blksize = 512;
       st.st_blocks = 1;
-      return folly::makeFuture(Attr(st, /* timeout */ 0));
+      return Attr(st, /* timeout */ 0);
     }
     folly::throwSystemErrorExplicit(ENOENT);
   }

@@ -553,131 +553,131 @@ class FuseChannel {
   ~FuseChannel();
 
  public:
-  folly::Future<folly::Unit> fuseRead(
+  ImmediateFuture<folly::Unit> fuseRead(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseWrite(
+  ImmediateFuture<folly::Unit> fuseWrite(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseLookup(
+  ImmediateFuture<folly::Unit> fuseLookup(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseForget(
+  ImmediateFuture<folly::Unit> fuseForget(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseGetAttr(
+  ImmediateFuture<folly::Unit> fuseGetAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseSetAttr(
+  ImmediateFuture<folly::Unit> fuseSetAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseReadLink(
+  ImmediateFuture<folly::Unit> fuseReadLink(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseSymlink(
+  ImmediateFuture<folly::Unit> fuseSymlink(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseMknod(
+  ImmediateFuture<folly::Unit> fuseMknod(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseMkdir(
+  ImmediateFuture<folly::Unit> fuseMkdir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseUnlink(
+  ImmediateFuture<folly::Unit> fuseUnlink(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseRmdir(
+  ImmediateFuture<folly::Unit> fuseRmdir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseRename(
+  ImmediateFuture<folly::Unit> fuseRename(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseLink(
+  ImmediateFuture<folly::Unit> fuseLink(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseOpen(
+  ImmediateFuture<folly::Unit> fuseOpen(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseStatFs(
+  ImmediateFuture<folly::Unit> fuseStatFs(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseRelease(
+  ImmediateFuture<folly::Unit> fuseRelease(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseFsync(
+  ImmediateFuture<folly::Unit> fuseFsync(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseSetXAttr(
+  ImmediateFuture<folly::Unit> fuseSetXAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseGetXAttr(
+  ImmediateFuture<folly::Unit> fuseGetXAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseListXAttr(
+  ImmediateFuture<folly::Unit> fuseListXAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseRemoveXAttr(
+  ImmediateFuture<folly::Unit> fuseRemoveXAttr(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseFlush(
+  ImmediateFuture<folly::Unit> fuseFlush(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseOpenDir(
+  ImmediateFuture<folly::Unit> fuseOpenDir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseReadDir(
+  ImmediateFuture<folly::Unit> fuseReadDir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseReleaseDir(
+  ImmediateFuture<folly::Unit> fuseReleaseDir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseFsyncDir(
+  ImmediateFuture<folly::Unit> fuseFsyncDir(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseAccess(
+  ImmediateFuture<folly::Unit> fuseAccess(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseCreate(
+  ImmediateFuture<folly::Unit> fuseCreate(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseBmap(
+  ImmediateFuture<folly::Unit> fuseBmap(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseBatchForget(
+  ImmediateFuture<folly::Unit> fuseBatchForget(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
-  folly::Future<folly::Unit> fuseFallocate(
+  ImmediateFuture<folly::Unit> fuseFallocate(
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);

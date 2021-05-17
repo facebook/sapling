@@ -8,7 +8,6 @@
 #ifndef _WIN32
 
 #include "eden/fs/inodes/FuseDispatcherImpl.h"
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -59,19 +58,18 @@ FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 
-folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
+ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
     ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue(
-          [&context](const InodePtr& inode) { return inode->stat(context); })
+      .thenValue([&context](const InodePtr& inode) {
+        return inode->stat(context).semi();
+      })
       .thenValue(
           [](const struct stat& st) { return FuseDispatcher::Attr{st}; });
 }
 
-folly::Future<uint64_t> FuseDispatcherImpl::opendir(
+ImmediateFuture<uint64_t> FuseDispatcherImpl::opendir(
     InodeNumber /*ino*/,
     int /*flags*/) {
 #ifdef FUSE_NO_OPENDIR_SUPPORT
@@ -86,23 +84,21 @@ folly::Future<uint64_t> FuseDispatcherImpl::opendir(
   return 0;
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::releasedir(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::releasedir(
     InodeNumber /*ino*/,
     uint64_t /*fh*/) {
   return folly::unit;
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::lookup(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
     uint64_t /*requestID*/,
     InodeNumber parent,
     PathComponentPiece namepiece,
     ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([name = PathComponent(namepiece),
                   &context](const TreeInodePtr& tree) {
-        return tree->getOrLoadChild(name, context);
+        return tree->getOrLoadChild(name, context).semi();
       })
       .thenValue([&context](const InodePtr& inode) {
         return folly::makeFutureWith([&]() { return inode->stat(context); })
@@ -133,26 +129,31 @@ folly::Future<fuse_entry_out> FuseDispatcherImpl::lookup(
                 return computeEntryParam(
                     attrForInodeWithCorruptOverlay(inode->getNodeId()));
               }
-            });
+            })
+            .semi();
       })
-      .thenError(
-          folly::tag_t<std::system_error>{}, [](const std::system_error& err) {
+      .thenTry([](folly::Try<fuse_entry_out> try_) {
+        XLOG(WARN) << "A";
+        if (auto* err = try_.tryGetExceptionObject<std::system_error>()) {
+          XLOG(WARN) << "B";
+          if (isEnoent(*err)) {
+            XLOG(WARN) << "C";
             // Translate ENOENT into a successful response with an
             // inode number of 0 and a large entry_valid time, to let the kernel
             // cache this negative lookup result.
-            if (isEnoent(err)) {
-              fuse_entry_out entry = {};
-              entry.attr_valid =
-                  std::numeric_limits<decltype(entry.attr_valid)>::max();
-              entry.entry_valid =
-                  std::numeric_limits<decltype(entry.entry_valid)>::max();
-              return entry;
-            }
-            throw err;
-          });
+            fuse_entry_out entry = {};
+            entry.attr_valid =
+                std::numeric_limits<decltype(entry.attr_valid)>::max();
+            entry.entry_valid =
+                std::numeric_limits<decltype(entry.entry_valid)>::max();
+            return folly::Try<fuse_entry_out>{entry};
+          }
+        }
+        return try_;
+      });
 }
 
-folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
+ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
     InodeNumber ino,
     const fuse_setattr_in& attr) {
   // Even though mounts are created with the nosuid flag, explicitly disallow
@@ -165,8 +166,6 @@ folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
   }
 
   return inodeMap_->lookupInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this, attr](const InodePtr& inode) {
         auto fuseTimeToTimespec = [](uint64_t time, uint64_t ntime) {
           timespec spec;
@@ -201,7 +200,7 @@ folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
           desired.mtime = now;
         }
 
-        return inode->setattr(desired);
+        return inode->setattr(desired).semi();
       })
       .thenValue([](struct stat&& stat) {
         return FuseDispatcher::Attr{std::move(stat)};
@@ -212,7 +211,7 @@ void FuseDispatcherImpl::forget(InodeNumber ino, unsigned long nlookup) {
   inodeMap_->decFsRefcount(ino, nlookup);
 }
 
-folly::Future<uint64_t> FuseDispatcherImpl::open(
+ImmediateFuture<uint64_t> FuseDispatcherImpl::open(
     InodeNumber /*ino*/,
     int /*flags*/) {
 #ifdef FUSE_NO_OPEN_SUPPORT
@@ -226,7 +225,7 @@ folly::Future<uint64_t> FuseDispatcherImpl::open(
   return 0;
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::create(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
@@ -234,76 +233,65 @@ folly::Future<fuse_entry_out> FuseDispatcherImpl::create(
   // force 'mode' to be regular file, in which case rdev arg to mknod is ignored
   // (and thus can be zero)
   mode = S_IFREG | (07777 & mode);
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([mode,
-                  childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [mode, childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
         static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
             "FuseDispatcherImpl::create");
-        return child->stat(*context).thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+        return child->stat(*context)
+            .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
               return computeEntryParam(FuseDispatcher::Attr{st});
-            });
+            })
+            .semi();
       });
 }
 
-folly::Future<BufVec> FuseDispatcherImpl::read(
+ImmediateFuture<BufVec> FuseDispatcherImpl::read(
     InodeNumber ino,
     size_t size,
     off_t off,
     ObjectFetchContext& context) {
-  return inodeMap_->lookupFileInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([&context, size, off](FileInodePtr&& inode) {
-        return inode->read(size, off, context);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [&context, size, off](FileInodePtr&& inode) {
+        return inode->read(size, off, context).semi();
       });
 }
 
-folly::Future<size_t>
+ImmediateFuture<size_t>
 FuseDispatcherImpl::write(InodeNumber ino, folly::StringPiece data, off_t off) {
-  return inodeMap_->lookupFileInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([copy = data.str(), off](FileInodePtr&& inode) {
-        return inode->write(copy, off);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [copy = data.str(), off](FileInodePtr&& inode) {
+        return inode->write(copy, off).semi();
       });
 }
 
-Future<Unit> FuseDispatcherImpl::flush(
+ImmediateFuture<Unit> FuseDispatcherImpl::flush(
     InodeNumber /* ino */,
     uint64_t /* lock_owner */) {
   // Return ENOSYS from flush.
   // This will cause the kernel to stop sending future flush() calls.
-  return makeFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "flush"));
+  return ImmediateFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "flush"));
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::fallocate(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::fallocate(
     InodeNumber ino,
     uint64_t offset,
     uint64_t length) {
-  return inodeMap_->lookupFileInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([offset, length](FileInodePtr inode) {
-        return inode->fallocate(offset, length);
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [offset, length](FileInodePtr inode) {
+        return inode->fallocate(offset, length).semi();
       });
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::fsync(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::fsync(
     InodeNumber ino,
     bool datasync) {
-  return inodeMap_->lookupFileInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue(
-          [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
 }
 
-Future<Unit> FuseDispatcherImpl::fsyncdir(
+ImmediateFuture<Unit> FuseDispatcherImpl::fsyncdir(
     InodeNumber /* ino */,
     bool /* datasync */) {
   // Return ENOSYS from fsyncdir. The kernel will stop sending them.
@@ -311,142 +299,130 @@ Future<Unit> FuseDispatcherImpl::fsyncdir(
   // In a possible future where the tree structure is stored in a SQLite
   // database, we could handle this request by waiting for SQLite's
   // write-ahead-log to be flushed.
-  return makeFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "fsyncdir"));
+  return ImmediateFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "fsyncdir"));
 }
 
-folly::Future<std::string> FuseDispatcherImpl::readlink(
+ImmediateFuture<std::string> FuseDispatcherImpl::readlink(
     InodeNumber ino,
     bool kernelCachesReadlink) {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "FuseDispatcherImpl::readlink");
-  return inodeMap_->lookupFileInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([kernelCachesReadlink](const FileInodePtr& inode) {
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [kernelCachesReadlink](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
-        return inode->readlink(
-            *context,
-            kernelCachesReadlink ? CacheHint::NotNeededAgain
-                                 : CacheHint::LikelyNeededAgain);
+        return inode
+            ->readlink(
+                *context,
+                kernelCachesReadlink ? CacheHint::NotNeededAgain
+                                     : CacheHint::LikelyNeededAgain)
+            .semi();
       });
 }
 
-folly::Future<FuseDirList> FuseDispatcherImpl::readdir(
+ImmediateFuture<FuseDirList> FuseDispatcherImpl::readdir(
     InodeNumber ino,
     FuseDirList&& dirList,
     off_t offset,
     uint64_t /*fh*/,
     ObjectFetchContext& context) {
-  return inodeMap_->lookupTreeInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([dirList = std::move(dirList), offset, &context](
-                     TreeInodePtr inode) mutable {
+  return inodeMap_->lookupTreeInode(ino).thenValue(
+      [dirList = std::move(dirList), offset, &context](
+          TreeInodePtr inode) mutable {
         return inode->fuseReaddir(std::move(dirList), offset, context);
       });
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::mknod(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev) {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "FuseDispatcherImpl::mknod");
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([childName = PathComponent{name}, mode, rdev](
-                     const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
-        return child->stat(*context).thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+        return child->stat(*context)
+            .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
               return computeEntryParam(FuseDispatcher::Attr{st});
-            });
+            })
+            .semi();
       });
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::mkdir(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode) {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "FuseDispatcherImpl::mkdir");
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([childName = PathComponent{name},
-                  mode](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
-        return child->stat(*context).thenValue([child](struct stat st) {
-          child->incFsRefcount();
-          return computeEntryParam(FuseDispatcher::Attr{st});
-        });
+        return child->stat(*context)
+            .thenValue([child](struct stat st) {
+              child->incFsRefcount();
+              return computeEntryParam(FuseDispatcher::Attr{st});
+            })
+            .semi();
       });
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::unlink(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::unlink(
     InodeNumber parent,
     PathComponentPiece name,
     ObjectFetchContext& context) {
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([&context,
-                  childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->unlink(childName, InvalidationRequired::No, context);
+        return inode->unlink(childName, InvalidationRequired::No, context)
+            .semi();
       });
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::rmdir(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::rmdir(
     InodeNumber parent,
     PathComponentPiece name,
     ObjectFetchContext& context) {
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([&context,
-                  childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->rmdir(childName, InvalidationRequired::No, context);
+        return inode->rmdir(childName, InvalidationRequired::No, context)
+            .semi();
       });
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::symlink(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::symlink(
     InodeNumber parent,
     PathComponentPiece name,
     StringPiece link) {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "FuseDispatcherImpl::symlink");
-  return inodeMap_->lookupTreeInode(parent)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([linkContents = link.str(),
-                  childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).thenValue(
+      [linkContents = link.str(),
+       childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFsRefcount();
-        return symlinkInode->stat(*context).thenValue(
-            [symlinkInode](struct stat st) {
+        return symlinkInode->stat(*context)
+            .thenValue([symlinkInode](struct stat st) {
               return computeEntryParam(FuseDispatcher::Attr{st});
-            });
+            })
+            .semi();
       });
 }
 
-folly::Future<folly::Unit> FuseDispatcherImpl::rename(
+ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
     InodeNumber parent,
     PathComponentPiece namePiece,
     InodeNumber newParent,
     PathComponentPiece newNamePiece) {
   // Start looking up both parents
-  auto parentFuture = inodeMap_->lookupTreeInode(parent).semi().via(
-      &folly::QueuedImmediateExecutor::instance());
-  auto newParentFuture = inodeMap_->lookupTreeInode(newParent).semi().via(
-      &folly::QueuedImmediateExecutor::instance());
+  auto parentFuture = inodeMap_->lookupTreeInode(parent);
+  auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
   // Do the rename once we have looked up both parents.
   return std::move(parentFuture)
       .thenValue([npFuture = std::move(newParentFuture),
@@ -455,13 +431,14 @@ folly::Future<folly::Unit> FuseDispatcherImpl::rename(
                      const TreeInodePtr& parent) mutable {
         return std::move(npFuture).thenValue(
             [parent, name, newName](const TreeInodePtr& newParent) {
-              return parent->rename(
-                  name, newParent, newName, InvalidationRequired::No);
+              return parent
+                  ->rename(name, newParent, newName, InvalidationRequired::No)
+                  .semi();
             });
       });
 }
 
-folly::Future<fuse_entry_out> FuseDispatcherImpl::link(
+ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::link(
     InodeNumber /*ino*/,
     InodeNumber /*newParent*/,
     PathComponentPiece newName) {
@@ -474,23 +451,21 @@ folly::Future<fuse_entry_out> FuseDispatcherImpl::link(
       EPERM, "hard links are not supported in eden mount points");
 }
 
-Future<string> FuseDispatcherImpl::getxattr(InodeNumber ino, StringPiece name) {
-  return inodeMap_->lookupInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([attrName = name.str()](const InodePtr& inode) {
-        return inode->getxattr(attrName);
+ImmediateFuture<string> FuseDispatcherImpl::getxattr(
+    InodeNumber ino,
+    StringPiece name) {
+  return inodeMap_->lookupInode(ino).thenValue(
+      [attrName = name.str()](const InodePtr& inode) {
+        return inode->getxattr(attrName).semi();
       });
 }
 
-Future<vector<string>> FuseDispatcherImpl::listxattr(InodeNumber ino) {
-  return inodeMap_->lookupInode(ino)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([](const InodePtr& inode) { return inode->listxattr(); });
+ImmediateFuture<vector<string>> FuseDispatcherImpl::listxattr(InodeNumber ino) {
+  return inodeMap_->lookupInode(ino).thenValue(
+      [](const InodePtr& inode) { return inode->listxattr().semi(); });
 }
 
-folly::Future<struct fuse_kstatfs> FuseDispatcherImpl::statfs(
+ImmediateFuture<struct fuse_kstatfs> FuseDispatcherImpl::statfs(
     InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 

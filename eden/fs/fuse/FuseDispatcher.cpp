@@ -65,7 +65,7 @@ void FuseDispatcher::initConnection(const fuse_init_out& out) {
 
 void FuseDispatcher::destroy() {}
 
-folly::Future<fuse_entry_out> FuseDispatcher::lookup(
+ImmediateFuture<fuse_entry_out> FuseDispatcher::lookup(
     uint64_t /*requestID*/,
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
@@ -75,26 +75,26 @@ folly::Future<fuse_entry_out> FuseDispatcher::lookup(
 
 void FuseDispatcher::forget(InodeNumber /*ino*/, unsigned long /*nlookup*/) {}
 
-folly::Future<FuseDispatcher::Attr> FuseDispatcher::getattr(
+ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::getattr(
     InodeNumber /*ino*/,
     ObjectFetchContext& /*context*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
-folly::Future<FuseDispatcher::Attr> FuseDispatcher::setattr(
+ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::setattr(
     InodeNumber /*ino*/,
     const fuse_setattr_in& /*attr*/
 ) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::string> FuseDispatcher::readlink(
+ImmediateFuture<std::string> FuseDispatcher::readlink(
     InodeNumber /*ino*/,
     bool /*kernelCachesReadlink*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out> FuseDispatcher::mknod(
+ImmediateFuture<fuse_entry_out> FuseDispatcher::mknod(
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
     mode_t /*mode*/,
@@ -102,27 +102,27 @@ folly::Future<fuse_entry_out> FuseDispatcher::mknod(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out>
+ImmediateFuture<fuse_entry_out>
 FuseDispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit>
+ImmediateFuture<folly::Unit>
 FuseDispatcher::unlink(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit>
+ImmediateFuture<folly::Unit>
 FuseDispatcher::rmdir(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out>
+ImmediateFuture<fuse_entry_out>
 FuseDispatcher::symlink(InodeNumber, PathComponentPiece, folly::StringPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::rename(
+ImmediateFuture<folly::Unit> FuseDispatcher::rename(
     InodeNumber,
     PathComponentPiece,
     InodeNumber,
@@ -130,36 +130,36 @@ folly::Future<folly::Unit> FuseDispatcher::rename(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out>
+ImmediateFuture<fuse_entry_out>
 FuseDispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t> FuseDispatcher::open(
+ImmediateFuture<uint64_t> FuseDispatcher::open(
     InodeNumber /*ino*/,
     int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::release(
+ImmediateFuture<folly::Unit> FuseDispatcher::release(
     InodeNumber /*ino*/,
     uint64_t /*fh*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t> FuseDispatcher::opendir(
+ImmediateFuture<uint64_t> FuseDispatcher::opendir(
     InodeNumber /*ino*/,
     int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::releasedir(
+ImmediateFuture<folly::Unit> FuseDispatcher::releasedir(
     InodeNumber /*ino*/,
     uint64_t /*fh*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<BufVec> FuseDispatcher::read(
+ImmediateFuture<BufVec> FuseDispatcher::read(
     InodeNumber /*ino*/,
     size_t /*size*/,
     off_t /*off*/,
@@ -167,31 +167,31 @@ folly::Future<BufVec> FuseDispatcher::read(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<size_t> FuseDispatcher::write(
+ImmediateFuture<size_t> FuseDispatcher::write(
     InodeNumber /*ino*/,
     StringPiece /*data*/,
     off_t /*off*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::flush(InodeNumber, uint64_t) {
+ImmediateFuture<folly::Unit> FuseDispatcher::flush(InodeNumber, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit>
+ImmediateFuture<folly::Unit>
 FuseDispatcher::fallocate(InodeNumber, uint64_t, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::fsync(InodeNumber, bool) {
+ImmediateFuture<folly::Unit> FuseDispatcher::fsync(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::fsyncdir(InodeNumber, bool) {
+ImmediateFuture<folly::Unit> FuseDispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<FuseDirList> FuseDispatcher::readdir(
+ImmediateFuture<FuseDirList> FuseDispatcher::readdir(
     InodeNumber,
     FuseDirList&&,
     off_t,
@@ -200,7 +200,8 @@ folly::Future<FuseDirList> FuseDispatcher::readdir(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<struct fuse_kstatfs> FuseDispatcher::statfs(InodeNumber /*ino*/) {
+ImmediateFuture<struct fuse_kstatfs> FuseDispatcher::statfs(
+    InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 
   // Suggest a large blocksize to software that looks at that kind of thing
@@ -222,7 +223,7 @@ folly::Future<struct fuse_kstatfs> FuseDispatcher::statfs(InodeNumber /*ino*/) {
   return info;
 }
 
-folly::Future<folly::Unit> FuseDispatcher::setxattr(
+ImmediateFuture<folly::Unit> FuseDispatcher::setxattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,
@@ -238,24 +239,24 @@ const int FuseDispatcher::kENOATTR =
 #endif
     ;
 
-folly::Future<std::string> FuseDispatcher::getxattr(
+ImmediateFuture<std::string> FuseDispatcher::getxattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 
-folly::Future<std::vector<std::string>> FuseDispatcher::listxattr(
+ImmediateFuture<std::vector<std::string>> FuseDispatcher::listxattr(
     InodeNumber /*ino*/) {
   return std::vector<std::string>();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::removexattr(
+ImmediateFuture<folly::Unit> FuseDispatcher::removexattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::access(
+ImmediateFuture<folly::Unit> FuseDispatcher::access(
     InodeNumber /*ino*/,
     int /*mask*/) {
   // Note that if you mount with the "default_permissions" kernel mount option,
@@ -267,12 +268,12 @@ folly::Future<folly::Unit> FuseDispatcher::access(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out>
+ImmediateFuture<fuse_entry_out>
 FuseDispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t> FuseDispatcher::bmap(
+ImmediateFuture<uint64_t> FuseDispatcher::bmap(
     InodeNumber /*ino*/,
     size_t /*blocksize*/,
     uint64_t /*idx*/) {

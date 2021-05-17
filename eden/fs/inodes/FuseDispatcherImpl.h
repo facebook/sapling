@@ -24,85 +24,88 @@ class FuseDispatcherImpl : public FuseDispatcher {
  public:
   explicit FuseDispatcherImpl(EdenMount* mount);
 
-  folly::Future<struct fuse_kstatfs> statfs(InodeNumber ino) override;
-  folly::Future<Attr> getattr(InodeNumber ino, ObjectFetchContext& context)
+  ImmediateFuture<struct fuse_kstatfs> statfs(InodeNumber ino) override;
+  ImmediateFuture<Attr> getattr(InodeNumber ino, ObjectFetchContext& context)
       override;
-  folly::Future<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
+  ImmediateFuture<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
       override;
-  folly::Future<uint64_t> opendir(InodeNumber ino, int flags) override;
-  folly::Future<folly::Unit> releasedir(InodeNumber ino, uint64_t fh) override;
-  folly::Future<fuse_entry_out> lookup(
+  ImmediateFuture<uint64_t> opendir(InodeNumber ino, int flags) override;
+  ImmediateFuture<folly::Unit> releasedir(InodeNumber ino, uint64_t fh)
+      override;
+  ImmediateFuture<fuse_entry_out> lookup(
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context) override;
 
   void forget(InodeNumber ino, unsigned long nlookup) override;
-  folly::Future<uint64_t> open(InodeNumber ino, int flags) override;
-  folly::Future<std::string> readlink(
+  ImmediateFuture<uint64_t> open(InodeNumber ino, int flags) override;
+  ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       bool kernelCachesReadlink) override;
-  folly::Future<fuse_entry_out> mknod(
+  ImmediateFuture<fuse_entry_out> mknod(
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
       dev_t rdev) override;
-  folly::Future<fuse_entry_out>
+  ImmediateFuture<fuse_entry_out>
   mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode) override;
-  folly::Future<folly::Unit> unlink(
+  ImmediateFuture<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context) override;
-  folly::Future<folly::Unit> rmdir(
+  ImmediateFuture<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context) override;
-  folly::Future<fuse_entry_out> symlink(
+  ImmediateFuture<fuse_entry_out> symlink(
       InodeNumber parent,
       PathComponentPiece name,
       folly::StringPiece link) override;
-  folly::Future<folly::Unit> rename(
+  ImmediateFuture<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
       PathComponentPiece newname) override;
 
-  folly::Future<fuse_entry_out> link(
+  ImmediateFuture<fuse_entry_out> link(
       InodeNumber ino,
       InodeNumber newparent,
       PathComponentPiece newname) override;
 
-  folly::Future<fuse_entry_out> create(
+  ImmediateFuture<fuse_entry_out> create(
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
       int flags) override;
 
-  folly::Future<BufVec> read(
+  ImmediateFuture<BufVec> read(
       InodeNumber ino,
       size_t size,
       off_t off,
       ObjectFetchContext& context) override;
-  folly::Future<size_t>
+  ImmediateFuture<size_t>
   write(InodeNumber ino, folly::StringPiece data, off_t off) override;
 
-  folly::Future<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
+  ImmediateFuture<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
       override;
-  folly::Future<folly::Unit>
+  ImmediateFuture<folly::Unit>
   fallocate(InodeNumber ino, uint64_t offset, uint64_t length) override;
-  folly::Future<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
-  folly::Future<folly::Unit> fsyncdir(InodeNumber ino, bool datasync) override;
+  ImmediateFuture<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
+  ImmediateFuture<folly::Unit> fsyncdir(InodeNumber ino, bool datasync)
+      override;
 
-  folly::Future<FuseDirList> readdir(
+  ImmediateFuture<FuseDirList> readdir(
       InodeNumber ino,
       FuseDirList&& dirList,
       off_t offset,
       uint64_t fh,
       ObjectFetchContext& context) override;
 
-  folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
-      override;
-  folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;
+  ImmediateFuture<std::string> getxattr(
+      InodeNumber ino,
+      folly::StringPiece name) override;
+  ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:
   // The EdenMount associated with this dispatcher.

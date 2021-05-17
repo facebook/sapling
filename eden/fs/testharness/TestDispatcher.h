@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Synchronized.h>
-#include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <chrono>
 #include <condition_variable>
@@ -42,7 +41,7 @@ class TestDispatcher : public FuseDispatcher {
 
   using FuseDispatcher::FuseDispatcher;
 
-  folly::Future<fuse_entry_out> lookup(
+  ImmediateFuture<fuse_entry_out> lookup(
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
