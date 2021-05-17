@@ -1893,6 +1893,9 @@ rustextbinaries = [
     RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
 ]
 
+if havefb and iswindows:
+    rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
+
 
 setup(
     name="edenscm",
