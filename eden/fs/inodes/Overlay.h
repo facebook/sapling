@@ -110,6 +110,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *   by an older version of the software.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
+      std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {});
 
   /**
@@ -281,6 +282,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   };
 
   void initOverlay(
+      std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback = [](auto) {});
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);

@@ -133,6 +133,7 @@ struct statfs Overlay::statFs() {
 #endif // !_WIN32
 
 folly::SemiFuture<Unit> Overlay::initialize(
+    std::optional<AbsolutePath> mountPath,
     OverlayChecker::ProgressCallback&& progressCallback) {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.
@@ -143,10 +144,11 @@ folly::SemiFuture<Unit> Overlay::initialize(
   auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
 
   gcThread_ = std::thread([this,
+                           mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
                            promise = std::move(initPromise)]() mutable {
     try {
-      initOverlay(progressCallback);
+      initOverlay(std::move(mountPath), progressCallback);
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
                 << backingOverlay_->getLocalDir() << ": " << ex.what();
@@ -166,6 +168,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 }
 
 void Overlay::initOverlay(
+    std::optional<AbsolutePath> mountPath,
     const OverlayChecker::ProgressCallback& progressCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_->initOverlay(true);
@@ -210,6 +213,18 @@ void Overlay::initOverlay(
   } else {
     hadCleanStartup_ = true;
   }
+
+  // On Windows, we need to scan the state of the repository every time at
+  // start up to find any potential changes happened when EdenFS is not
+  // running.
+  //
+  // HACK: ideally we should not have multiple overlay types. However before
+  // the migration is done, this is a reliable way to look for `TreeOverlay`.
+  if (supportsSemanticOperations_) {
+    optNextInodeNumber = dynamic_cast<TreeOverlay*>(backingOverlay_.get())
+                             ->scanLocalChanges(*mountPath);
+  }
+
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
 
 #ifndef _WIN32

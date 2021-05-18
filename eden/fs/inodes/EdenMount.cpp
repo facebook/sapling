@@ -244,7 +244,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // Initialize the overlay.
         // This must be performed before we do any operations that may
         // allocate inode numbers, including creating the root TreeInode.
-        return overlay_->initialize(std::move(progressCallback))
+        return overlay_->initialize(getPath(), std::move(progressCallback))
             .deferValue([parents](auto&&) { return parents; });
       })
       .thenValue(

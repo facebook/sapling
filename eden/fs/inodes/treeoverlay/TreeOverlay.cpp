@@ -10,6 +10,7 @@
 #include <folly/File.h>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
@@ -99,5 +100,18 @@ void TreeOverlay::renameChild(
     PathComponentPiece srcName,
     PathComponentPiece dstName) {
   return store_.renameChild(src, dst, srcName, dstName);
+}
+
+InodeNumber TreeOverlay::nextInodeNumber() {
+  return store_.nextInodeNumber();
+}
+
+InodeNumber TreeOverlay::scanLocalChanges(AbsolutePathPiece mountPath) {
+#ifdef _WIN32
+  windowsFsckScanLocalChanges(*this, mountPath);
+#else
+  (void)mountPath;
+#endif
+  return store_.loadCounters();
 }
 } // namespace facebook::eden

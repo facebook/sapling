@@ -90,6 +90,15 @@ class TreeOverlay : public IOverlay {
       PathComponentPiece srcName,
       PathComponentPiece dstName) override;
 
+  InodeNumber nextInodeNumber();
+
+  /**
+   * Scan filesystem changes when EdenFS is not running. This is only required
+   * on Windows as ProjectedFS allows user to make changes under certain
+   * directory when EdenFS is not running.
+   */
+  InodeNumber scanLocalChanges(AbsolutePathPiece mountPath);
+
  private:
   AbsolutePath path_;
 
