@@ -698,7 +698,10 @@ mod tests {
 
     #[fbinit::test]
     fn test_cached_bookmarks(fb: FacebookInit) {
-        let rt = Runtime::new().unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
 
@@ -852,11 +855,10 @@ mod tests {
 
         // Spawn two queries, but without the cache being turned on. We expect 2 requests.
         let _ = spawn_query("a", Some(-1), &rt);
-        let _ = spawn_query("b", Some(-1), &rt);
-
         let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("a").unwrap());
 
+        let _ = spawn_query("b", Some(-1), &rt);
         let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("b").unwrap());
 
@@ -897,7 +899,10 @@ mod tests {
         query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let rt = Runtime::new().unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
 
