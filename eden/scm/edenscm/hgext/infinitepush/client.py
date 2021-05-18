@@ -25,8 +25,10 @@ from edenscm.mercurial import (
     phases,
     pushkey,
     pycompat,
+    registrar,
     scmutil,
     ui as uimod,
+    util,
     visibility,
     wireproto,
 )
@@ -39,6 +41,12 @@ from .constants import pathname
 _maybehash = re.compile(r"^[a-f0-9]+$").search
 # Technically it can still be a bookmark, but we consider it unlikely
 _definitelyhash = re.compile(r"^[a-f0-9]{40}$").search
+
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+# Use the http Edenapi protocol to fetch bookmarks
+configitem("infinitepush", "httpbookmarks", default=False)
 
 
 def extsetup(ui):
@@ -307,7 +315,15 @@ def _bookmarks(orig, ui, repo, *names, **opts):
                 hint='use "hg book" to get a list of your local bookmarks',
             )
         else:
-            fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
+            # prefix bookmark listing is not yet supported by Edenapi.
+            usehttp = repo.ui.configbool("infinitepush", "httpbookmarks") and not any(
+                n.endswith("*") for n in names
+            )
+
+            if usehttp:
+                fetchedbookmarks = _http_bookmark_fetch(repo, names)
+            else:
+                fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
         _showbookmarks(ui, fetchedbookmarks, **opts)
         return
     elif delete and "remotenames" in extensions._extensions:
@@ -347,6 +363,11 @@ def _showbookmarks(ui, remotebookmarks, **opts):
         fm.condwrite(not ui.quiet, "node", pad + " %s", n)
         fm.plain("\n")
     fm.end()
+
+
+def _http_bookmark_fetch(repo, names):
+    (bookmarks, _stats) = repo.edenapi.bookmarks(repo.name, names)
+    return util.sortdict(((bm, n) for (bm, n) in bookmarks.items() if n is not None))
 
 
 def _pull(orig, ui, repo, source="default", **opts):
