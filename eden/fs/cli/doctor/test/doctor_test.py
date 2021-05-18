@@ -810,13 +810,19 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    def test_edenfs_when_installed_and_running_differ(self, mock_getver):
-        fixer, out = self._test_edenfs_version(mock_getver, ("20171120", "246561"))
+    def test_edenfs_when_installed_and_running_recent(self, mock_getver):
+        fixer, out = self._test_edenfs_version(mock_getver, ("20171220", "165643"))
+        self.assertEqual("", out)
+        self.assert_results(fixer, num_problems=0)
+
+    @patch("eden.fs.cli.version.get_current_version_parts")
+    def test_edenfs_when_installed_and_running_old(self, mock_getver):
+        fixer, out = self._test_edenfs_version(mock_getver, ("20171227", "246561"))
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>
 The version of EdenFS that is installed on your machine is:
-    fb-eden-20171120-246561.x86_64
+    fb-eden-20171227-246561.x86_64
 but the version of EdenFS that is currently running is:
     fb-eden-20171213-165642.x86_64
 

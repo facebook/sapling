@@ -9,6 +9,7 @@
 import os
 import shlex
 import sys
+from datetime import datetime, date
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
@@ -587,16 +588,28 @@ the old directory from before the Eden checkouts were mounted.
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
+    def date_from_version(version: str) -> date:
+        return datetime.strptime(version, "%Y%m%d").date()
+
     rver, release = instance.get_running_version_parts()
     if not rver or not release:
         # This could be a dev build that returns the empty
         # string for both of these values.
         return
 
-    running_version = version.format_eden_version((rver, release))
-    installed_version = version.get_current_version()
-    if running_version == installed_version:
+    # get installed version parts
+    iversion, irelease = version.get_current_version_parts()
+    if not iversion or not irelease:
+        # dev build of eden client returns empty strings here
         return
+
+    # check if the runnig version is more than two weeks old
+    daysgap = date_from_version(iversion) - date_from_version(rver)
+    if daysgap.days < 14:
+        return
+
+    running_version = version.format_eden_version((rver, release))
+    installed_version = version.format_eden_version((iversion, irelease))
 
     if sys.platform == "win32":
         help_string = f"""\
