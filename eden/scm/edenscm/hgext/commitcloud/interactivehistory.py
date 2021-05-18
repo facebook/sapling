@@ -10,7 +10,7 @@ import time
 import traceback
 
 from bindings import sptui
-from edenscm.mercurial import cmdutil, graphmod, progress
+from edenscm.mercurial import cmdutil, graphmod, progress, error
 from edenscm.mercurial.i18n import _
 
 from .. import interactiveui
@@ -40,7 +40,23 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts):
             if smartlogstyle:
                 self.opts["template"] = "{%s}" % smartlogstyle
 
-            self.cur_index = len(self.versions)
+            initversion = opts.get("workspace_version")
+            if initversion:
+                initversion = int(initversion)
+                for index, version in enumerate(self.versions):
+                    if version["version_number"] == initversion:
+                        self.cur_index = index
+                        break
+                else:
+                    versionrange = [
+                        version["version_number"] for version in self.versions
+                    ]
+                    raise error.Abort(
+                        "workspace version %s is not available (%s to %s are available)"
+                        % (initversion, min(versionrange), max(versionrange))
+                    )
+            else:
+                self.cur_index = len(self.versions)
             if opts.get("all"):
                 self.limit = 0
             else:
