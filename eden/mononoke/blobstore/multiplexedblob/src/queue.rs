@@ -120,7 +120,10 @@ impl Blobstore for MultiplexedBlobstore {
                 if entries.is_empty() {
                     Ok(None)
                 } else {
-                    Err(error)
+                    // Oh boy. If we found this on the queue but we didn't find it in the
+                    // blobstores, it's possible that the content got written to the blobstore in
+                    // the meantime. To account for this ... we have to check again.
+                    self.blobstore.get(ctx, key).await
                 }
             }
         }

@@ -502,6 +502,10 @@ async fn multiplexed(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
+        // We send one more blobstore request after checking the queue
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        bs0.tick(Some("case 2: bs0 failed"));
+        bs1.tick(None);
         assert!(get_fut.await.is_err());
     }
 
