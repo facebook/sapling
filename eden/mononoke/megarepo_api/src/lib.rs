@@ -249,14 +249,12 @@ impl MegarepoApi {
         target: Target,
     ) -> Result<(), MegarepoError> {
         let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
-        sync_changeset::SyncChangeset::new(&self.megarepo_configs, &self.mononoke)
-            .sync(
-                ctx,
-                source_cs_id,
-                source_name,
-                target,
-                target_megarepo_mapping,
-            )
-            .await
+        sync_changeset::SyncChangeset::new(
+            &self.megarepo_configs,
+            &self.mononoke,
+            &target_megarepo_mapping,
+        )
+        .sync(ctx, source_cs_id, &source_name, &target)
+        .await
     }
 }

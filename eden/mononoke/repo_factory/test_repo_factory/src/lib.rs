@@ -36,6 +36,7 @@ use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use fsnodes::RootFsnodeId;
 use git_types::TreeHandle;
 use maplit::hashset;
+use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
@@ -132,6 +133,7 @@ impl TestRepoFactory {
     /// Create a new factory for test repositories with an existing Sqlite
     /// connection.
     pub fn with_sqlite_connection(con: SqliteConnection) -> Result<TestRepoFactory> {
+        con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
         con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
@@ -207,6 +209,13 @@ impl TestRepoFactory {
     ) -> &mut Self {
         self.filenodes_override = Some(Box::new(filenodes_override));
         self
+    }
+
+    /// Function to create megarepo mapping from the same connection as other DBs
+    pub fn megarepo_mapping(&self) -> Arc<MegarepoMapping> {
+        Arc::new(MegarepoMapping::from_sql_connections(
+            self.metadata_db.clone(),
+        ))
     }
 }
 

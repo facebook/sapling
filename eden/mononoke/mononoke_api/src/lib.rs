@@ -201,8 +201,7 @@ pub enum WarmBookmarksCacheDerivedData {
     None,
 }
 
-#[cfg(test)]
-mod test_impl {
+pub mod test_impl {
     use super::*;
     use blobrepo::BlobRepo;
     use cloned::cloned;
@@ -214,7 +213,7 @@ mod test_impl {
 
     impl Mononoke {
         /// Create a Mononoke instance for testing.
-        pub(crate) async fn new_test(
+        pub async fn new_test(
             ctx: CoreContext,
             repos: impl IntoIterator<Item = (String, BlobRepo)>,
         ) -> Result<Self, Error> {
@@ -237,7 +236,7 @@ mod test_impl {
             Self::new_from_repos(repos)
         }
 
-        pub(crate) async fn new_test_xrepo(
+        pub async fn new_test_xrepo(
             ctx: CoreContext,
             repos: impl IntoIterator<
                 Item = (

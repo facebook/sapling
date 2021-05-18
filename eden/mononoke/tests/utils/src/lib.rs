@@ -232,7 +232,7 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub async fn commit(self) -> Result<ChangesetId, Error> {
+    pub async fn create_commit_object(self) -> Result<BonsaiChangesetMut, Error> {
         let parents = future::try_join_all(self.parents.into_iter().map({
             let ctx = &self.ctx;
             let repo = &self.repo;
@@ -274,10 +274,17 @@ impl<'a> CreateCommitContext<'a> {
             bcs.file_changes.insert(path, file_change);
         }
 
+        Ok(bcs)
+    }
+
+    pub async fn commit(self) -> Result<ChangesetId, Error> {
+        let ctx = self.ctx.clone();
+        let repo = self.repo.clone();
+        let bcs = self.create_commit_object().await?;
         let bcs = bcs.freeze()?;
 
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], self.ctx.clone(), self.repo.clone()).await?;
+        save_bonsai_changesets(vec![bcs], ctx, repo).await?;
         Ok(bcs_id)
     }
 }
