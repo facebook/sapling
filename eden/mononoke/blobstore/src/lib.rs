@@ -16,7 +16,7 @@ use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use context::CoreContext;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -229,7 +229,7 @@ impl BlobstoreBytes {
             let cursor = Cursor::new(bytes);
             zstd::decode_all(cursor).map_err(|_| ())?
         } else {
-            bytes.bytes().into()
+            bytes.as_ref().into()
         };
 
         let get_data_serialisable =
@@ -257,7 +257,7 @@ struct BlobstoreBytesSerialisable(Vec<u8>);
 
 impl From<BlobstoreBytes> for BlobstoreBytesSerialisable {
     fn from(blob_bytes: BlobstoreBytes) -> Self {
-        BlobstoreBytesSerialisable(blob_bytes.into_bytes().bytes().into())
+        BlobstoreBytesSerialisable(blob_bytes.into_bytes().as_ref().into())
     }
 }
 
