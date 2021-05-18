@@ -25,6 +25,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
+use futures_stats::TimedTryFutureExt;
 use git2::{ObjectType, Oid, Repository, Sort, TreeWalkMode, TreeWalkResult};
 pub use git_pool::GitPool;
 use git_types::TreeHandle;
@@ -37,6 +38,7 @@ use mononoke_types::{
 };
 use slog::{debug, info};
 use sorted_vector_map::SortedVectorMap;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::path::Path;
@@ -135,7 +137,7 @@ pub trait GitimportAccumulator: Sized {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: BonsaiChangeset);
+    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: &BonsaiChangeset);
     fn get(&self, oid: &Oid) -> Option<ChangesetId>;
 }
 
@@ -154,8 +156,8 @@ impl GitimportAccumulator for BufferingGitimportAccumulator {
         self.inner.len()
     }
 
-    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: BonsaiChangeset) {
-        self.inner.insert(oid, (cs_id, bonsai));
+    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: &BonsaiChangeset) {
+        self.inner.insert(oid, (cs_id, bonsai.clone()));
     }
 
     fn get(&self, oid: &Oid) -> Option<ChangesetId> {
@@ -196,9 +198,11 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         return Ok(Acc::new());
     }
 
+    let acc = RefCell::new(Acc::new());
+
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
-    let ret = stream::iter(walk)
-        .map(|oid| async move {
+    stream::iter(walk)
+        .map(|oid| async {
             let oid = oid.with_context(|| "While walking commits")?;
 
             let ExtractedCommit {
@@ -226,46 +230,73 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
             Ok((metadata, file_changes))
         })
         .buffered(prefs.concurrency)
-        .try_fold(Acc::new(), {
-            move |mut acc, (metadata, file_changes)| async move {
-                let oid = metadata.oid;
-                let parents = metadata
-                    .parents
-                    .iter()
-                    .map(|p| {
-                        roots
-                            .get(&p)
-                            .copied()
-                            .or_else(|| acc.get(p))
-                            .ok_or_else(|| format_err!("Commit was not imported: {}", p))
-                    })
-                    .collect::<Result<Vec<_>, _>>()
-                    .with_context(|| format_err!("While looking for parents of {}", oid))?;
+        .and_then(|(metadata, file_changes)| async {
+            let oid = metadata.oid;
+            let parents = metadata
+                .parents
+                .iter()
+                .map(|p| {
+                    roots
+                        .get(&p)
+                        .copied()
+                        .or_else(|| acc.borrow().get(p))
+                        .ok_or_else(|| format_err!("Commit was not imported: {}", p))
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .with_context(|| format_err!("While looking for parents of {}", oid))?;
+            let bcs = generate_bonsai_changeset(metadata, parents, file_changes, &prefs)?;
+            let bcs_id = bcs.get_changeset_id();
+            acc.borrow_mut().insert(oid, bcs_id, &bcs);
 
-                let bcs =
-                    import_bonsai_changeset(ctx, repo, metadata, parents, file_changes, &prefs)
-                        .await?;
+            let git_sha1 = oid_to_sha1(&oid)?;
+            info!(
+                ctx.logger(),
+                "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
+                repo_name_ref,
+                acc.borrow().len(),
+                nb_commits_to_import,
+                git_sha1.to_brief(),
+                bcs_id.to_brief()
+            );
+            Ok((bcs, git_sha1))
+        })
+        // Chunk togehter into Vec<std::result::Result<(bcs, oid), Error> >
+        .chunks(prefs.concurrency)
+        // Go from Vec<Result<X,Y>> -> Result<Vec<X>,Y>
+        //.then(|v| future::ready(v.into_iter().collect::<Result<Vec<_>, Error>>()))
+        .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
+        .try_for_each(|v| async {
+            let oid_to_bcsid = v
+                .iter()
+                .map(|(bcs, git_sha1)| {
+                    BonsaiGitMappingEntry::new(*git_sha1, bcs.get_changeset_id())
+                })
+                .collect::<Vec<BonsaiGitMappingEntry>>();
+            let vbcs = v.into_iter().map(|x| x.0).collect();
 
-                let bcs_id = bcs.get_changeset_id();
+            // We know that the commits are in order (this is guaranteed by the Walk), so we
+            // can insert them as-is, one by one, without extra dependency / ordering checks.
+            let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), repo.clone())
+                .try_timed()
+                .await?;
+            debug!(
+                ctx.logger(),
+                "save_bonsai_changesets for {} commits in {:?}",
+                oid_to_bcsid.len(),
+                stats.completion_time
+            );
 
-                acc.insert(oid, bcs_id, bcs);
-
-                info!(
-                    ctx.logger(),
-                    "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
-                    repo_name_ref,
-                    acc.len(),
-                    nb_commits_to_import,
-                    oid_to_sha1(&oid)?.to_brief(),
-                    bcs_id.to_brief()
-                );
-
-                Result::<_, Error>::Ok(acc)
+            if prefs.bonsai_git_mapping {
+                repo.bonsai_git_mapping()
+                    .bulk_add(&ctx, &oid_to_bcsid)
+                    .await?;
             }
+
+            Ok(())
         })
         .await?;
 
-    Ok(ret)
+    Ok(acc.into_inner())
 }
 
 pub async fn gitimport(
@@ -338,9 +369,7 @@ pub async fn gitimport(
     Ok(import_map)
 }
 
-async fn import_bonsai_changeset(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
+fn generate_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
     file_changes: SortedVectorMap<MPath, Option<FileChange>>,
@@ -365,7 +394,7 @@ async fn import_bonsai_changeset(
     }
 
     // TODO: Should we have further extras?
-    let bcs = BonsaiChangesetMut {
+    BonsaiChangesetMut {
         parents,
         author,
         author_date,
@@ -375,12 +404,20 @@ async fn import_bonsai_changeset(
         extra,
         file_changes,
     }
-    .freeze()?;
+    .freeze()
+}
 
+async fn import_bonsai_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    metadata: CommitMetadata,
+    parents: Vec<ChangesetId>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    prefs: &GitimportPreferences,
+) -> Result<BonsaiChangeset, Error> {
+    let oid = metadata.oid;
+    let bcs = generate_bonsai_changeset(metadata, parents, file_changes, prefs)?;
     let bcs_id = bcs.get_changeset_id();
-
-    // We now that the commits are in order (this is guaranteed by the Walk), so we
-    // can insert them as-is, one by one, without extra dependency / ordering checks.
 
     save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
 
