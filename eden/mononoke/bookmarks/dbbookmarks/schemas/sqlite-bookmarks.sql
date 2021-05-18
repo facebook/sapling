@@ -11,7 +11,9 @@ CREATE TABLE bookmarks (
   changeset_id VARBINARY(32) NOT NULL,
   -- this column is named 'hg_kind' for historical reasons, but applies for non-Mercurial uses (e.g. phase calculations)
   hg_kind VARCHAR(32) NOT NULL DEFAULT (CAST('pull_default' AS BLOB)), -- enum is used in mysql
-  PRIMARY KEY (repo_id, name)
+  log_id INTEGER NULL,
+  PRIMARY KEY (repo_id, name),
+  UNIQUE(repo_id, log_id)
 );
 
 CREATE INDEX repo_id_hg_kind ON bookmarks (repo_id, hg_kind);

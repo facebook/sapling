@@ -69,7 +69,7 @@ mod test {
             ),
         ];
 
-        crate::transaction::insert_bookmarks(&conn, &rows[..]).await?;
+        crate::transaction::insert_bookmarks(&conn, rows).await?;
 
         // Using 'create_scratch' to replace a non-scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
@@ -181,12 +181,11 @@ mod test {
             .with_repo_id(repo_id);
         let conn = store.connections.write_connection.clone();
 
-        let rows: Vec<_> = bookmarks
+        let rows = bookmarks
             .iter()
-            .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind))
-            .collect();
+            .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind));
 
-        rt.block_on(crate::transaction::insert_bookmarks(&conn, rows.as_slice()))
+        rt.block_on(crate::transaction::insert_bookmarks(&conn, rows))
             .expect("insert failed");
 
         let response = store
