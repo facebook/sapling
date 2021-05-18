@@ -133,11 +133,8 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
             .semi();
       })
       .thenTry([](folly::Try<fuse_entry_out> try_) {
-        XLOG(WARN) << "A";
         if (auto* err = try_.tryGetExceptionObject<std::system_error>()) {
-          XLOG(WARN) << "B";
           if (isEnoent(*err)) {
-            XLOG(WARN) << "C";
             // Translate ENOENT into a successful response with an
             // inode number of 0 and a large entry_valid time, to let the kernel
             // cache this negative lookup result.
