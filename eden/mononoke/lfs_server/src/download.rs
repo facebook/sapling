@@ -129,6 +129,8 @@ async fn fetch_by_key(
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
 
+    let stream = stream.upgrade_bytes();
+
     let stream = match content_encoding {
         ContentEncoding::Identity => ResponseStream::new(stream)
             .set_content_length(size)
@@ -144,7 +146,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    let stream = stream.upgrade_bytes().end_on_err();
+    let stream = stream.end_on_err();
 
     let mut body = StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM);
     if range.is_some() {

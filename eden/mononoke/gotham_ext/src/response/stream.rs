@@ -8,13 +8,14 @@
 use std::pin::Pin;
 
 use anyhow::Error;
-use async_compression::stream::{GzipEncoder, ZstdEncoder};
-use bytes_05::Bytes;
+use async_compression::tokio::bufread::{GzipEncoder, ZstdEncoder};
+use bytes::Bytes;
 use futures::{
     stream::{BoxStream, Stream, StreamExt, TryStreamExt},
     task::{Context, Poll},
 };
 use pin_project::pin_project;
+use tokio_util::io::{ReaderStream, StreamReader};
 
 use crate::content_encoding::ContentCompression;
 
@@ -36,10 +37,15 @@ impl<'a> CompressedResponseStream<'a> {
 
         let inner = inner.map_err(|e| io::Error::new(io::ErrorKind::Other, e));
         let inner = YieldStream::new(inner, YIELD_EVERY);
+        let inner = StreamReader::new(inner);
 
         let inner = match content_compression {
-            ContentCompression::Zstd => ZstdEncoder::new(inner).map_err(Error::from).boxed(),
-            ContentCompression::Gzip => GzipEncoder::new(inner).map_err(Error::from).boxed(),
+            ContentCompression::Zstd => ReaderStream::new(ZstdEncoder::new(inner))
+                .map_err(Error::from)
+                .boxed(),
+            ContentCompression::Gzip => ReaderStream::new(GzipEncoder::new(inner))
+                .map_err(Error::from)
+                .boxed(),
         };
 
         Self {
