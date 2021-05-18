@@ -157,6 +157,10 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_post_clone_permissions"
     ]
 
+# Windows specific tests
+if sys.platform != "win32":
+    TEST_DISABLED["windows_fsck_test.WindowsFsckTest"] = True
+
 # We only run tests on linux currently, so we only need to disable them there.
 if sys.platform.startswith("linux"):
     # tests to skip on nfs, this list allows us to avoid writing the nfs postfix
