@@ -7,9 +7,17 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 context = { version = "0.1.0", path = "../../server/context" }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
+filestore = { version = "0.1.0", path = "../../filestore" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
+manifest = { version = "0.1.0", path = "../../manifest" }
+maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

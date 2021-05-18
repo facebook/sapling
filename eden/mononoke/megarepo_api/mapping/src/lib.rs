@@ -7,30 +7,23 @@
 
 
 #![deny(warnings)]
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
+use blobrepo::BlobRepo;
 use context::{CoreContext, PerfCounterType};
+use derived_data::BonsaiDerived;
+use fsnodes::RootFsnodeId;
+use manifest::{Entry, ManifestOps};
 pub use megarepo_configs::types::{
     Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
-use mononoke_types::ChangesetId;
-use sql::{queries, Connection, Transaction};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, ContentId, FileChange, FileType, MPath};
+use serde::{Deserialize, Serialize};
+use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
+use std::collections::BTreeMap;
 
 queries! {
-    read GetLatestSyncedSourceChangeset(
-        source_name: String,
-        target_repo_id: i64,
-        target_bookmark: String,
-    ) -> (ChangesetId) {
-        "SELECT source_bcs_id
-          FROM megarepo_latest_synced_source_changeset
-          WHERE source_name = {source_name}
-          AND target_repo_id = {target_repo_id}
-          AND target_bookmark = {target_bookmark}
-          "
-    }
-
     read GetTargetConfigVersion(
         target_repo_id: i64,
         target_bookmark: String,
@@ -42,22 +35,6 @@ queries! {
           AND target_bookmark = {target_bookmark}
           AND target_bcs_id = {target_bcs_id}
           "
-    }
-
-    write UpdateLatestSyncedCommitFromSource(values: (
-        source_name: String,
-        target_repo_id: i64,
-        target_bookmark: String,
-        source_bcs_id: ChangesetId,
-    )) {
-        none,
-        mysql("INSERT INTO megarepo_latest_synced_source_changeset
-        (source_name, target_repo_id, target_bookmark, source_bcs_id)
-        VALUES {values}
-        ON DUPLICATE KEY UPDATE source_bcs_id = VALUES(source_bcs_id)")
-        sqlite("INSERT OR REPLACE INTO megarepo_latest_synced_source_changeset
-        (source_name, target_repo_id, target_bookmark, source_bcs_id)
-        VALUES {values}")
     }
 
     write InsertMapping(values: (
@@ -79,70 +56,106 @@ pub struct MegarepoMapping {
     pub(crate) connections: SqlConnections,
 }
 
-impl MegarepoMapping {
-    /// For a given (source, target) pair return the latest changeset that was
-    /// synced from a source into a given target.
-    ///
-    /// This method can be used for validation - we can check the new commit that's synced via
-    /// sync_changeset() is an ancestor of the latest synced changeset
-    #[allow(clippy::ptr_arg)]
-    pub async fn get_latest_synced_commit_from_source(
-        &self,
+pub const REMAPPING_STATE_FILE: &str = ".megarepo/remapping_state";
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CommitRemappingState {
+    /// Mapping from source to a changeset id
+    latest_synced_changesets: BTreeMap<String, ChangesetId>,
+    /// Config version that was used to create this commit
+    sync_config_version: SyncConfigVersion,
+}
+
+impl CommitRemappingState {
+    pub fn new(
+        latest_synced_changesets: BTreeMap<String, ChangesetId>,
+        sync_config_version: SyncConfigVersion,
+    ) -> Self {
+        Self {
+            latest_synced_changesets,
+            sync_config_version,
+        }
+    }
+
+    pub async fn read_state_from_commit(
         ctx: &CoreContext,
-        source_name: &String,
-        target: &Target,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let maybe_cs_id = self
-            .get_latest_synced_commit_from_source_impl(
-                ctx,
-                source_name,
-                target,
-                PerfCounterType::SqlReadsReplica,
-                &self.connections.read_connection,
-            )
+        repo: &BlobRepo,
+        cs_id: ChangesetId,
+    ) -> Result<Self, Error> {
+        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+
+        let path = MPath::new(REMAPPING_STATE_FILE)?;
+        let maybe_entry = root_fsnode_id
+            .fsnode_id()
+            .find_entry(ctx.clone(), repo.get_blobstore(), Some(path))
             .await?;
 
-        if let Some(cs_id) = maybe_cs_id {
-            return Ok(Some(cs_id));
-        }
+        let entry = maybe_entry.ok_or_else(|| anyhow!("{} not found", REMAPPING_STATE_FILE))?;
 
-        self.get_latest_synced_commit_from_source_impl(
-            ctx,
-            source_name,
-            target,
-            PerfCounterType::SqlReadsMaster,
-            &self.connections.read_master_connection,
-        )
-        .await
+        let file = match entry {
+            Entry::Tree(_) => {
+                return Err(anyhow!(
+                    "{} is a directory, but should be a file!",
+                    REMAPPING_STATE_FILE
+                ));
+            }
+            Entry::Leaf(file) => file,
+        };
+
+        let bytes = filestore::fetch_concat(repo.blobstore(), ctx, *file.content_id()).await?;
+        let content = String::from_utf8(bytes.to_vec())
+            .with_context(|| format!("{} is not utf8", REMAPPING_STATE_FILE))?;
+        let state: CommitRemappingState = serde_json::from_str(&content)?;
+        Ok(state)
     }
 
-    #[allow(clippy::ptr_arg)]
-    async fn get_latest_synced_commit_from_source_impl(
+    pub async fn save_in_changeset(
         &self,
         ctx: &CoreContext,
-        source_name: &String,
-        target: &Target,
-        sql_perf_counter: PerfCounterType,
-        connection: &Connection,
-    ) -> Result<Option<ChangesetId>, Error> {
-        ctx.perf_counters().increment_counter(sql_perf_counter);
-        let mut rows = GetLatestSyncedSourceChangeset::query(
-            &connection,
-            source_name,
-            &target.repo_id,
-            &target.bookmark,
-        )
-        .await?;
+        repo: &BlobRepo,
+        bcs: &mut BonsaiChangesetMut,
+    ) -> Result<(), Error> {
+        let (content_id, size) = self.save(ctx, repo).await?;
+        let path = MPath::new(REMAPPING_STATE_FILE)?;
 
-        if rows.len() > 1 {
-            return Err(anyhow!(
-                "Programming error - more than 1 row returned for latest synced commit"
-            ));
+        let fc = FileChange::new(content_id, FileType::Regular, size, None);
+        if bcs.file_changes.insert(path, Some(fc)).is_some() {
+            return Err(anyhow!("New bonsai changeset already has {} file"));
         }
 
-        Ok(rows.pop().map(|x| x.0))
+        Ok(())
     }
 
+    pub fn set_source_changeset(&mut self, source: &str, cs_id: ChangesetId) {
+        self.latest_synced_changesets
+            .insert(source.to_string(), cs_id);
+    }
+
+    pub fn get_latest_synced_changeset(&self, source: &str) -> Option<&ChangesetId> {
+        self.latest_synced_changesets.get(source)
+    }
+
+    pub fn sync_config_version(&self) -> &SyncConfigVersion {
+        &self.sync_config_version
+    }
+
+    async fn save(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(ContentId, u64), Error> {
+        let bytes = self.serialize()?;
+
+        let ((content_id, size), fut) =
+            filestore::store_bytes(repo.blobstore(), repo.filestore_config(), ctx, bytes.into());
+
+        fut.await?;
+
+        Ok((content_id, size))
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, Error> {
+        serde_json::to_vec_pretty(&self).map_err(Error::from)
+    }
+}
+
+impl MegarepoMapping {
     /// For a given (target, cs_id) pair return the version that was used
     /// to create target changeset id.
     /// Usually this method is used to find what version do we need to use
@@ -203,34 +216,6 @@ impl MegarepoMapping {
         Ok(rows.pop().map(|x| x.0))
     }
 
-    /// Update the latest synced commit from a source in a given transaction.
-    /// The transaction is usually a bookmark move, so that we updated latest synced
-    /// commit only if a bookmark move in a target repo was successful.
-    #[allow(clippy::ptr_arg)]
-    pub async fn update_latest_synced_commit_from_source(
-        &self,
-        ctx: &CoreContext,
-        txn: Transaction,
-        source_name: &String,
-        target: &Target,
-        source_cs_id: ChangesetId,
-    ) -> Result<Transaction, Error> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlWrites);
-        let (txn, _) = UpdateLatestSyncedCommitFromSource::query_with_transaction(
-            txn,
-            &[(
-                source_name,
-                &target.repo_id,
-                &target.bookmark,
-                &source_cs_id,
-            )],
-        )
-        .await?;
-
-        Ok(txn)
-    }
-
     /// Add a mapping from a source commit to a target commit
     #[allow(clippy::ptr_arg)]
     pub async fn insert_source_target_cs_mapping(
@@ -278,6 +263,7 @@ impl SqlConstructFromMetadataDatabaseConfig for MegarepoMapping {}
 mod test {
     use super::*;
     use fbinit::FacebookInit;
+    use maplit::btreemap;
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
 
     #[fbinit::test]
@@ -315,35 +301,25 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_simple_latest_synced_changeset(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let mapping = MegarepoMapping::with_sqlite_in_memory()?;
-
-        let txn = mapping
-            .connections
-            .write_connection
-            .start_transaction()
-            .await?;
-
-        let target = Target {
-            repo_id: 0,
-            bookmark: "book".to_string(),
-        };
-
-        let source_name = "source_name".to_string();
-        let source_csid = ONES_CSID;
-
-        let txn = mapping
-            .update_latest_synced_commit_from_source(&ctx, txn, &source_name, &target, source_csid)
-            .await?;
-
-        txn.commit().await?;
-
-        let cs_id = mapping
-            .get_latest_synced_commit_from_source(&ctx, &source_name, &target)
-            .await?;
-
-        assert_eq!(Some(source_csid), cs_id);
+    async fn test_serialize(_fb: FacebookInit) -> Result<(), Error> {
+        let state = CommitRemappingState::new(
+            btreemap! {
+                "source_1".to_string() => ONES_CSID,
+                "source_2".to_string() => TWOS_CSID,
+            },
+            "version_1".to_string(),
+        );
+        let res = String::from_utf8(state.serialize()?)?;
+        assert_eq!(
+            res,
+            r#"{
+  "latest_synced_changesets": {
+    "source_1": "1111111111111111111111111111111111111111111111111111111111111111",
+    "source_2": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "sync_config_version": "version_1"
+}"#
+        );
 
         Ok(())
     }

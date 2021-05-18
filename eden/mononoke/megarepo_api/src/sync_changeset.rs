@@ -8,15 +8,15 @@
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkTransactionError, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::{create_source_to_target_multi_mover, rewrite_commit, upload_commits};
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
+use futures::TryFutureExt;
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
-use megarepo_mapping::MegarepoMapping;
+use megarepo_mapping::{CommitRemappingState, MegarepoMapping};
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -56,11 +56,11 @@ impl<'a> SyncChangeset<'a> {
         let (target_bookmark, target_cs_id) =
             find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
 
-        let target_config = find_target_sync_config(
+        let (commit_remapping_state, target_config) = find_target_sync_config(
             &ctx,
-            &target_megarepo_mapping,
-            &target,
+            target_repo.blob_repo(),
             target_cs_id,
+            &target,
             &self.megarepo_configs,
         )
         .await?;
@@ -86,7 +86,7 @@ impl<'a> SyncChangeset<'a> {
             &ctx,
             &target,
             &source_cs,
-            &target_megarepo_mapping,
+            &commit_remapping_state,
             &source_repo,
             &source_config,
         )
@@ -97,11 +97,13 @@ impl<'a> SyncChangeset<'a> {
         let new_target_cs_id = sync_changeset_to_target(
             &ctx,
             &source_config.mapping,
+            &source_name,
             source_repo.blob_repo(),
             source_cs,
             target_repo.blob_repo(),
             target_cs_id,
             &target,
+            commit_remapping_state,
         )
         .await?;
 
@@ -123,10 +125,6 @@ impl<'a> SyncChangeset<'a> {
             target_bookmark,
             target_cs_id,
             new_target_cs_id,
-            target_megarepo_mapping,
-            source_name,
-            source_cs_id,
-            target,
         )
         .await?;
 
@@ -184,25 +182,22 @@ async fn find_bookmark_and_value(
 
 async fn find_target_sync_config<'a>(
     ctx: &'a CoreContext,
-    target_megarepo_mapping: &'a MegarepoMapping,
-    target: &'a Target,
+    target_repo: &'a BlobRepo,
     target_cs_id: ChangesetId,
+    target: &Target,
     megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
-) -> Result<SyncTargetConfig, MegarepoError> {
-    let target_config_version = target_megarepo_mapping
-        .get_target_config_version(&ctx, &target, target_cs_id)
-        .await
-        .map_err(MegarepoError::internal)?
-        .ok_or_else(|| MegarepoError::request(anyhow!("no target exists {:?}", target)))?;
+) -> Result<(CommitRemappingState, SyncTargetConfig), MegarepoError> {
+    let state =
+        CommitRemappingState::read_state_from_commit(ctx, target_repo, target_cs_id).await?;
 
     // We have a target config version - let's fetch target config itself.
     let target_config = megarepo_configs.get_config_by_version(
         ctx.clone(),
         target.clone(),
-        target_config_version,
+        state.sync_config_version().clone(),
     )?;
 
-    Ok(target_config)
+    Ok((state, target_config))
 }
 
 fn find_source_config<'a, 'b>(
@@ -229,7 +224,7 @@ async fn validate_can_sync_changeset(
     ctx: &CoreContext,
     target: &Target,
     source_cs: &BonsaiChangeset,
-    target_megarepo_mapping: &MegarepoMapping,
+    commit_remapping_state: &CommitRemappingState,
     source_repo: &RepoContext,
     source: &Source,
 ) -> Result<(), MegarepoError> {
@@ -272,14 +267,12 @@ async fn validate_can_sync_changeset(
         }
     };
 
-    let maybe_latest_synced_cs_id = target_megarepo_mapping
-        .get_latest_synced_commit_from_source(&ctx, &source.source_name, &target)
-        .await
-        .map_err(MegarepoError::internal)?;
+    let maybe_latest_synced_cs_id =
+        commit_remapping_state.get_latest_synced_changeset(&source.source_name);
 
     match maybe_latest_synced_cs_id {
         Some(latest_synced_cs_id) => {
-            let found = source_cs.parents().find(|p| p == &latest_synced_cs_id);
+            let found = source_cs.parents().find(|p| p == latest_synced_cs_id);
             if found.is_none() {
                 return Err(MegarepoError::request(anyhow!(
                     "Can't sync {}, because its parent are not synced yet to the target. \
@@ -303,11 +296,13 @@ async fn validate_can_sync_changeset(
 async fn sync_changeset_to_target(
     ctx: &CoreContext,
     mapping: &SourceMappingRules,
+    source: &str,
     source_repo: &BlobRepo,
     source_cs: BonsaiChangeset,
     target_repo: &BlobRepo,
     target_cs_id: ChangesetId,
     target: &Target,
+    mut state: CommitRemappingState,
 ) -> Result<ChangesetId, MegarepoError> {
     let mover =
         create_source_to_target_multi_mover(mapping.clone()).map_err(MegarepoError::internal)?;
@@ -328,7 +323,7 @@ async fn sync_changeset_to_target(
         }
     }
 
-    let rewritten_commit = rewrite_commit(
+    let mut rewritten_commit = rewrite_commit(
         &ctx,
         source_cs_mut,
         &remapped_parents,
@@ -345,6 +340,11 @@ async fn sync_changeset_to_target(
         ))
     })?;
 
+    state.set_source_changeset(source, source_cs_id);
+    state
+        .save_in_changeset(ctx, target_repo, &mut rewritten_commit)
+        .await?;
+
     let rewritten_commit = rewritten_commit.freeze().map_err(MegarepoError::internal)?;
     let target_cs_id = rewritten_commit.get_changeset_id();
     upload_commits(&ctx, vec![rewritten_commit], source_repo, target_repo)
@@ -360,10 +360,6 @@ async fn update_target_bookmark(
     bookmark: BookmarkName,
     from_target_cs_id: ChangesetId,
     to_target_cs_id: ChangesetId,
-    target_megarepo_mapping: Arc<MegarepoMapping>,
-    source_name: String,
-    source_cs_id: ChangesetId,
-    target: Target,
 ) -> Result<bool, MegarepoError> {
     let mut bookmark_txn = target_repo.bookmarks().create_transaction(ctx.clone());
 
@@ -378,24 +374,7 @@ async fn update_target_bookmark(
         .map_err(MegarepoError::internal)?;
 
     let res = bookmark_txn
-        .commit_with_hook(Arc::new(move |ctx, txn| {
-            let source_name = source_name.clone();
-            let target = target.clone();
-            let target_megarepo_mapping = target_megarepo_mapping.clone();
-            async move {
-                target_megarepo_mapping
-                    .update_latest_synced_commit_from_source(
-                        &ctx,
-                        txn,
-                        &source_name,
-                        &target,
-                        source_cs_id,
-                    )
-                    .await
-                    .map_err(BookmarkTransactionError::Other)
-            }
-            .boxed()
-        }))
+        .commit()
         .await
         .map_err(MegarepoError::internal)?;
 

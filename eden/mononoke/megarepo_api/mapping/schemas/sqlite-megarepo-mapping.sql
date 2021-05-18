@@ -5,14 +5,6 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `megarepo_latest_synced_source_changeset` (
-  `source_name` varchar(255) NOT NULL,
-  `target_repo_id` INTEGER NOT NULL,
-  `target_bookmark` varchar(512) NOT NULL,
-  `source_bcs_id` binary(32) NOT NULL,
-  UNIQUE (`source_name`,`target_repo_id`,`target_bookmark`)
-);
-
 CREATE TABLE `megarepo_changeset_mapping` (
   `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `source_name` varchar(255) NOT NULL,
