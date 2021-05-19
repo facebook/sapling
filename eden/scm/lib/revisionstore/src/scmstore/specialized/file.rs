@@ -9,6 +9,7 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
@@ -26,8 +27,8 @@ use crate::{
         LfsStoreEntry,
     },
     memcache::McData,
-    ContentHash, ContentStore, EdenApiFileStore, ExtStoredPolicy, MemcacheStore, Metadata,
-    StoreKey,
+    ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
+    ExtStoredPolicy, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
 };
 
 pub struct FileStore {
@@ -699,5 +700,135 @@ impl FetchState {
             incomplete,
             other_errors: self.other_errors,
         }
+    }
+}
+
+impl HgIdDataStore for FileStore {
+    // Fetch the raw content of a single TreeManifest blob
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        Ok(
+            match self
+                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .complete
+                .drain()
+                .next()
+            {
+                Some((_, mut entry)) => StoreResult::Found(entry.hg_content()?.into_vec()),
+                None => StoreResult::NotFound(key),
+            },
+        )
+    }
+
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        Ok(
+            match self
+                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .complete
+                .drain()
+                .next()
+            {
+                Some((_, entry)) => StoreResult::Found(entry.metadata()?),
+                None => StoreResult::NotFound(key),
+            },
+        )
+    }
+
+    fn refresh(&self) -> Result<()> {
+        // AFAIK refresh only matters for DataPack / PackStore
+        Ok(())
+    }
+}
+
+impl RemoteDataStore for FileStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(self
+            .fetch(keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()))
+            .incomplete
+            .into_iter()
+            .map(|(k, _)| k)
+            .map(StoreKey::HgId)
+            .collect())
+    }
+
+    fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        unimplemented!()
+        //Ok(keys.to_vec())
+    }
+}
+
+impl LocalStore for FileStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(self
+            .local()
+            .fetch(keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()))
+            .incomplete
+            .into_iter()
+            .map(|(k, _)| k)
+            .map(StoreKey::HgId)
+            .collect())
+    }
+}
+
+impl HgIdMutableDeltaStore for FileStore {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+        if let Delta {
+            data,
+            base: None,
+            key,
+        } = delta.clone()
+        {
+            self.write_batch(std::iter::once((key, data, metadata.clone())))
+        } else {
+            bail!("Deltas with non-None base are not supported")
+        }
+    }
+
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            indexedlog_local.flush_log()?;
+        }
+        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            indexedlog_cache.flush_log()?;
+        }
+        if let Some(ref lfs_local) = self.lfs_local {
+            lfs_local.flush()?;
+        }
+        if let Some(ref lfs_cache) = self.lfs_cache {
+            lfs_cache.flush()?;
+        }
+        Ok(None)
+    }
+}
+
+// TODO(meyer): Content addressing not supported at all for trees. I could look for HgIds present here and fetch with
+// that if available, but I feel like there's probably something wrong if this is called for trees.
+impl ContentDataStore for FileStore {
+    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
+        Ok(
+            match self
+                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .complete
+                .drain()
+                .next()
+            {
+                Some((_sk, mut entry)) => StoreResult::Found(entry.file_content()?),
+                None => StoreResult::NotFound(key),
+            },
+        )
+    }
+
+    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        Ok(
+            match self
+                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .complete
+                .drain()
+                .next()
+            {
+                Some((_sk, LazyFile::Lfs(_blob, pointer))) => StoreResult::Found(pointer.into()),
+                Some(_) => StoreResult::NotFound(key),
+                None => StoreResult::NotFound(key),
+            },
+        )
     }
 }
