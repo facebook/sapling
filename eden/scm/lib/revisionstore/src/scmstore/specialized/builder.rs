@@ -25,7 +25,7 @@ use crate::{
 pub struct FileStoreBuilder<'a> {
     config: &'a ConfigSet,
     local_path: Option<PathBuf>,
-    suffix: Option<&'a Path>,
+    suffix: Option<PathBuf>,
     correlator: Option<String>,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -61,8 +61,8 @@ impl<'a> FileStoreBuilder<'a> {
         self
     }
 
-    pub fn suffix(mut self, suffix: &'a Path) -> Self {
-        self.suffix = Some(suffix);
+    pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
+        self.suffix = Some(suffix.as_ref().to_path_buf());
         self
     }
 
@@ -151,34 +151,50 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(EdenApiFileStore::new(reponame, client, None))
     }
 
-    fn build_indexedlog_local(&self, path: PathBuf) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let local_path = get_local_path(path, &self.suffix)?;
-        Ok(Arc::new(IndexedLogHgIdDataStore::new(
-            get_indexedlogdatastore_path(&local_path)?,
-            ExtStoredPolicy::Use,
-            self.config,
-            IndexedLogDataStoreType::Local,
-        )?))
+    pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+        Ok(if let Some(local_path) = self.local_path.clone() {
+            let local_path = get_local_path(local_path, &self.suffix)?;
+            Some(Arc::new(IndexedLogHgIdDataStore::new(
+                get_indexedlogdatastore_path(&local_path)?,
+                self.get_extstored_policy()?,
+                self.config,
+                IndexedLogDataStoreType::Local,
+            )?))
+        } else {
+            None
+        })
     }
 
-    fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
+    pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         Ok(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
-            ExtStoredPolicy::Use,
+            self.get_extstored_policy()?,
             self.config,
             IndexedLogDataStoreType::Shared,
         )?))
     }
 
-    fn build_lfs_local(&self, path: PathBuf) -> Result<Arc<LfsStore>> {
-        let local_path = get_local_path(path, &self.suffix)?;
-        Ok(Arc::new(LfsStore::local(&local_path, self.config)?))
+    pub fn build_lfs_local(&self) -> Result<Option<Arc<LfsStore>>> {
+        if !self.use_lfs()? {
+            return Ok(None);
+        }
+
+        Ok(if let Some(local_path) = self.local_path.clone() {
+            let local_path = get_local_path(local_path, &self.suffix)?;
+            Some(Arc::new(LfsStore::local(&local_path, self.config)?))
+        } else {
+            None
+        })
     }
 
-    fn build_lfs_cache(&self) -> Result<Arc<LfsStore>> {
+    pub fn build_lfs_cache(&self) -> Result<Option<Arc<LfsStore>>> {
+        if !self.use_lfs()? {
+            return Ok(None);
+        }
+
         let cache_path = get_cache_path(self.config, &self.suffix)?;
-        Ok(Arc::new(LfsStore::shared(&cache_path, self.config)?))
+        Ok(Some(Arc::new(LfsStore::shared(&cache_path, self.config)?)))
     }
 
     pub fn build(mut self) -> Result<FileStore> {
@@ -190,14 +206,10 @@ impl<'a> FileStoreBuilder<'a> {
         let extstored_policy = self.get_extstored_policy()?;
         let lfs_threshold_bytes = self.get_lfs_threshold()?.map(|b| b.value());
 
-        let indexedlog_local = if let Some(local_path) = self.local_path.clone() {
-            if let Some(indexedlog_local) = self.indexedlog_local.take() {
-                Some(indexedlog_local)
-            } else {
-                Some(self.build_indexedlog_local(local_path)?)
-            }
+        let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
+            Some(indexedlog_local)
         } else {
-            None
+            self.build_indexedlog_local()?
         };
 
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
@@ -206,28 +218,16 @@ impl<'a> FileStoreBuilder<'a> {
             Some(self.build_indexedlog_cache()?)
         };
 
-        let lfs_local = if self.use_lfs()? {
-            if let Some(local_path) = self.local_path.clone() {
-                if let Some(lfs_local) = self.lfs_local.take() {
-                    Some(lfs_local)
-                } else {
-                    Some(self.build_lfs_local(local_path)?)
-                }
-            } else {
-                None
-            }
+        let lfs_local = if let Some(lfs_local) = self.lfs_local.take() {
+            Some(lfs_local)
         } else {
-            None
+            self.build_lfs_local()?
         };
 
-        let lfs_cache = if self.use_lfs()? {
-            if let Some(lfs_cache) = self.lfs_cache.take() {
-                Some(lfs_cache)
-            } else {
-                Some(self.build_lfs_cache()?)
-            }
+        let lfs_cache = if let Some(lfs_cache) = self.lfs_cache.take() {
+            Some(lfs_cache)
         } else {
-            None
+            self.build_lfs_cache()?
         };
 
         let lfs_remote = if self.use_lfs()? {
@@ -285,7 +285,7 @@ impl<'a> FileStoreBuilder<'a> {
 pub struct TreeStoreBuilder<'a> {
     config: &'a ConfigSet,
     local_path: Option<PathBuf>,
-    suffix: Option<&'a Path>,
+    suffix: Option<PathBuf>,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -318,8 +318,8 @@ impl<'a> TreeStoreBuilder<'a> {
     // caller pass in, or is it just hardcoded elsewhere and we should hardcode it here?
     /// Cache path suffix for the associated indexedlog. For files, this will not be given.
     /// For trees, it will be "manifests".
-    pub fn suffix(mut self, suffix: &'a Path) -> Self {
-        self.suffix = Some(suffix);
+    pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
+        self.suffix = Some(suffix.as_ref().to_path_buf());
         self
     }
 
@@ -359,17 +359,21 @@ impl<'a> TreeStoreBuilder<'a> {
         Ok(EdenApiTreeStore::new(reponame, client, None))
     }
 
-    fn build_indexedlog_local(&self, path: PathBuf) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let local_path = get_local_path(path, &self.suffix)?;
-        Ok(Arc::new(IndexedLogHgIdDataStore::new(
-            get_indexedlogdatastore_path(&local_path)?,
-            ExtStoredPolicy::Use,
-            self.config,
-            IndexedLogDataStoreType::Local,
-        )?))
+    pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+        Ok(if let Some(local_path) = self.local_path.clone() {
+            let local_path = get_local_path(local_path, &self.suffix)?;
+            Some(Arc::new(IndexedLogHgIdDataStore::new(
+                get_indexedlogdatastore_path(&local_path)?,
+                ExtStoredPolicy::Use,
+                self.config,
+                IndexedLogDataStoreType::Local,
+            )?))
+        } else {
+            None
+        })
     }
 
-    fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
+    pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         Ok(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
@@ -387,14 +391,10 @@ impl<'a> TreeStoreBuilder<'a> {
             check_cache_buster(&self.config, &cache_path);
         }
 
-        let indexedlog_local = if let Some(local_path) = self.local_path.take() {
-            if let Some(indexedlog_local) = self.indexedlog_local.take() {
-                Some(indexedlog_local)
-            } else {
-                Some(self.build_indexedlog_local(local_path)?)
-            }
+        let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
+            Some(indexedlog_local)
         } else {
-            None
+            self.build_indexedlog_local()?
         };
 
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {

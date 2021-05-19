@@ -254,7 +254,10 @@ pub struct ContentStoreBuilder<'a> {
     suffix: Option<PathBuf>,
     memcachestore: Option<Arc<MemcacheStore>>,
     correlator: Option<String>,
-    shared_indexedlog: Option<Arc<IndexedLogHgIdDataStore>>,
+    shared_indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
+    shared_indexedlog_shared: Option<Arc<IndexedLogHgIdDataStore>>,
+    shared_lfs_local: Option<Arc<LfsStore>>,
+    shared_lfs_shared: Option<Arc<LfsStore>>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
@@ -267,7 +270,10 @@ impl<'a> ContentStoreBuilder<'a> {
             memcachestore: None,
             suffix: None,
             correlator: None,
-            shared_indexedlog: None,
+            shared_indexedlog_shared: None,
+            shared_indexedlog_local: None,
+            shared_lfs_shared: None,
+            shared_lfs_local: None,
         }
     }
 
@@ -306,8 +312,23 @@ impl<'a> ContentStoreBuilder<'a> {
         self
     }
 
-    pub fn shared_indexedlog(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
-        self.shared_indexedlog = Some(indexedlog);
+    pub fn shared_indexedlog_local(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.shared_indexedlog_local = Some(indexedlog);
+        self
+    }
+
+    pub fn shared_indexedlog_shared(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.shared_indexedlog_shared = Some(indexedlog);
+        self
+    }
+
+    pub fn shared_lfs_local(mut self, lfs: Arc<LfsStore>) -> Self {
+        self.shared_lfs_local = Some(lfs);
+        self
+    }
+
+    pub fn shared_lfs_shared(mut self, lfs: Arc<LfsStore>) -> Self {
+        self.shared_lfs_shared = Some(lfs);
         self
     }
 
@@ -359,16 +380,17 @@ impl<'a> ContentStoreBuilder<'a> {
             max_bytes,
             extstored_policy,
         )?);
-        let shared_indexedlogdatastore = if let Some(shared_indexedlog) = self.shared_indexedlog {
-            shared_indexedlog
-        } else {
-            Arc::new(IndexedLogHgIdDataStore::new(
-                get_indexedlogdatastore_path(&cache_path)?,
-                extstored_policy,
-                self.config,
-                IndexedLogDataStoreType::Shared,
-            )?)
-        };
+        let shared_indexedlogdatastore =
+            if let Some(shared_indexedlog_shared) = self.shared_indexedlog_shared {
+                shared_indexedlog_shared
+            } else {
+                Arc::new(IndexedLogHgIdDataStore::new(
+                    get_indexedlogdatastore_path(&cache_path)?,
+                    extstored_policy,
+                    self.config,
+                    IndexedLogDataStoreType::Shared,
+                )?)
+            };
 
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
@@ -380,7 +402,11 @@ impl<'a> ContentStoreBuilder<'a> {
             None
         };
 
-        let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path, self.config)?);
+        let shared_lfs_store = if let Some(shared_lfs_shared) = self.shared_lfs_shared {
+            shared_lfs_shared
+        } else {
+            Arc::new(LfsStore::shared(&cache_path, self.config)?)
+        };
         blob_stores.add(shared_lfs_store.clone());
 
         let primary: Arc<dyn HgIdMutableDeltaStore> =
@@ -421,12 +447,17 @@ impl<'a> ContentStoreBuilder<'a> {
                     None,
                     extstored_policy,
                 )?);
-                let local_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
-                    get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
-                    extstored_policy,
-                    self.config,
-                    IndexedLogDataStoreType::Local,
-                )?);
+                let local_indexedlogdatastore =
+                    if let Some(shared_indexedlog_local) = self.shared_indexedlog_local {
+                        shared_indexedlog_local
+                    } else {
+                        Arc::new(IndexedLogHgIdDataStore::new(
+                            get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
+                            extstored_policy,
+                            self.config,
+                            IndexedLogDataStoreType::Local,
+                        )?)
+                    };
 
                 let primary: Arc<dyn HgIdMutableDeltaStore> =
                     if self
@@ -443,7 +474,11 @@ impl<'a> ContentStoreBuilder<'a> {
                         local_pack_store
                     };
 
-                let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);
+                let local_lfs_store = if let Some(shared_lfs_local) = self.shared_lfs_local {
+                    shared_lfs_local
+                } else {
+                    Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?)
+                };
                 blob_stores.add(local_lfs_store.clone());
                 datastore.add(local_lfs_store.clone());
 

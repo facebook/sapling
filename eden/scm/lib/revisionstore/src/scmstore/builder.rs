@@ -139,13 +139,9 @@ impl<'a> FileScmStoreBuilder<'a> {
         )?))
     }
 
-    /// Return an Arc<IndexedLogHgIdDataStore> for another datastore to use and use this
-    /// same IndexedLog object internally, so that both datastores share the same in-memory
-    /// cache and will immediately see each other's writes reflected.
-    pub fn build_shared_indexedlog(&mut self) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let indexedlog = self.build_indexedlog()?;
-        self.shared_indexedlog = Some(indexedlog.clone());
-        Ok(indexedlog)
+    pub fn shared_indexedlog(mut self, shared_indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.shared_indexedlog = Some(shared_indexedlog);
+        self
     }
 
     pub fn build(self) -> Result<BoxedReadStore<Key, StoreFile>> {
@@ -275,13 +271,9 @@ impl<'a> TreeScmStoreBuilder<'a> {
         )?))
     }
 
-    /// Return an Arc<IndexedLogHgIdDataStore> for another datastore to use and use this
-    /// same IndexedLog object internally, so that both datastores share the same in-memory
-    /// cache and will immediately see each other's writes reflected.
-    pub fn build_shared_indexedlog(&mut self) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let indexedlog = self.build_indexedlog()?;
-        self.shared_indexedlog = Some(indexedlog.clone());
-        Ok(indexedlog)
+    pub fn shared_indexedlog(mut self, shared_indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.shared_indexedlog = Some(shared_indexedlog);
+        self
     }
 
     pub fn build(self) -> Result<BoxedReadStore<Key, StoreTree>> {
