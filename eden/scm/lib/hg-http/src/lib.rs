@@ -51,6 +51,7 @@ pub fn http_client(client_id: impl ToString) -> HttpClient {
 pub struct HgHttpConfig {
     pub verbose: bool,
     pub disable_tls_verification: bool,
+    pub convert_cert: bool,
 }
 
 /// Set a global configuration that will be applied to all HTTP requests in
@@ -63,7 +64,8 @@ pub fn set_global_config(config: HgHttpConfig) {
     Request::on_new_request(move |req| {
         req.set_verify_tls_cert(!config.disable_tls_verification)
             .set_verify_tls_host(!config.disable_tls_verification)
-            .set_verbose(config.verbose);
+            .set_verbose(config.verbose)
+            .set_convert_cert(config.convert_cert);
     });
 }
 
