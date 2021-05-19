@@ -1768,6 +1768,9 @@ rustextbinaries = [
     RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
 ]
 
+if havefb and iswindows:
+    rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
+
 
 setup(
     name="edenscm",
