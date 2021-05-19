@@ -197,7 +197,6 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
 mod facebook {
     use super::*;
 
-    use bytes::Bytes;
     use manifold_client::{
         cpp_client::{ClientOptionsBuilder, ManifoldCppClient},
         write::WriteRequestOptionsBuilder,
@@ -227,8 +226,8 @@ mod facebook {
             .context("Cannot build write request")?;
 
         let next_revision_to_import = latest_imported_rev.as_u32() + 1;
-        let mut bytes = Bytes::from(format!("{}", next_revision_to_import));
-        req.write(manifold_key, &mut bytes).await?;
+        let payload = format!("{}", next_revision_to_import);
+        req.write(manifold_key, payload.into()).await?;
 
         Ok(())
     }
