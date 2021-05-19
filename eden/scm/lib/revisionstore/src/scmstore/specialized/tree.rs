@@ -9,44 +9,75 @@
 #![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
+use minibytes::Bytes;
 use types::Key;
 
 use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
-    ContentStore, EdenApiTreeStore, MemcacheStore, StoreKey, StoreResult,
+    ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
+    HgIdMutableDeltaStore, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
 };
 
 pub struct TreeStore {
+    /// The "local" indexedlog store. Stores content that is created locally.
     pub indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
+
+    /// The "cache" indexedlog store (previously called "shared"). Stores content downloaded from
+    /// a remote store.
     pub indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+
+    /// If cache_to_local_cache is true, data found by falling back to a remote store
+    /// will the written to indexedlog_cache.
     pub cache_to_local_cache: bool,
 
+    /// If provided, memcache will be checked before other remote stores
     pub memcache: Option<Arc<MemcacheStore>>,
+
+    /// If cache_to_memcache is true, data found by falling back to another remote store
+    // will be written to memcache.
     pub cache_to_memcache: bool,
 
+    /// An EdenApi Client, EdenApiTreeStore provides the tree-specific subset of EdenApi functionality
+    /// used by TreeStore.
     pub edenapi: Option<Arc<EdenApiTreeStore>>,
+
+    /// Hook into the legacy storage architecture, if we fall back to this and succeed, we
+    /// should alert / log something, as this should never happen if TreeStore is implemented
+    /// correctly.
     pub contentstore: Option<Arc<ContentStore>>,
 }
 
+impl Drop for TreeStore {
+    fn drop(&mut self) {
+        // TODO(meyer): Should we just add a Drop impl for IndexedLogHgIdDataStore instead?
+        // It'll be called automatically when the last Arc holding a reference to it is dropped.
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            // TODO(meyer): Drop can't fail, so we ignore errors here. We should probably attempt to log them instead.
+            let _ = indexedlog_local.flush_log();
+        }
+        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            let _ = indexedlog_cache.flush_log();
+        }
+    }
+}
+
+pub struct TreeStoreFetch {
+    pub complete: Vec<Entry>,
+    pub incomplete: Vec<Key>,
+}
+
 impl TreeStore {
-    fn fetch_batch(&self, reqs: Vec<Key>) -> Result<Vec<Entry>> {
-        // TODO(meyer): Need to standardize all these APIs to accept batches in the same way,
-        // ideally supporting an iterator of references to keys (since Key is not Copy) or something
-        // general like that (StoreKey, etc)
-
-        // TODO(meyer): Can improve this considerably, but it's just to hack everything out
-        // (redundant key clones, can combine the hash sets and maps, can remove the collecting incomplete
-        // into Vec repeatedly). Also obviously the error handling is shit, a bunch of stuff fails the batch.
-
+    fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<TreeStoreFetch> {
         let mut complete = HashMap::<Key, Entry>::new();
         let mut write_to_local_cache = HashSet::new();
         let mut write_to_memcache = HashSet::new();
-        let mut incomplete: HashSet<_> = reqs.into_iter().collect();
+        let mut incomplete: HashSet<_> = reqs.collect();
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             let pending: Vec<_> = incomplete.iter().cloned().collect();
@@ -152,7 +183,144 @@ impl TreeStore {
         }
 
         // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
+        Ok(TreeStoreFetch {
+            complete: complete.drain().map(|(_k, v)| v).collect(),
+            incomplete: incomplete.drain().collect(),
+        })
+    }
 
-        Ok(complete.drain().map(|(_k, v)| v).collect())
+    fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            let mut indexedlog_local = indexedlog_local.write_lock();
+            for (key, bytes, meta) in entries {
+                indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl HgIdDataStore for TreeStore {
+    // Fetch the raw content of a single TreeManifest blob
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        Ok(
+            match self
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .complete
+                .pop()
+            {
+                Some(mut entry) => StoreResult::Found(entry.content()?.into_vec()),
+                None => StoreResult::NotFound(key),
+            },
+        )
+    }
+
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        Ok(
+            match self
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .complete
+                .pop()
+            {
+                Some(e) => StoreResult::Found(e.metadata().clone()),
+                None => StoreResult::NotFound(key),
+            },
+        )
+    }
+
+    fn refresh(&self) -> Result<()> {
+        // AFAIK refresh only matters for DataPack / PackStore
+        Ok(())
+    }
+}
+
+impl RemoteDataStore for TreeStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(self
+            .fetch_batch(keys.iter().cloned().filter_map(StoreKey::maybe_into_key))?
+            .incomplete
+            .into_iter()
+            .map(StoreKey::HgId)
+            .collect())
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
+    }
+}
+
+impl LocalStore for TreeStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let mut missing: Vec<_> = keys.to_vec();
+
+        missing = if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            let indexedlog_cache = indexedlog_cache.read_lock();
+            missing
+                .into_iter()
+                .filter(
+                    |sk| match sk.maybe_as_key().map(|k| indexedlog_cache.get_raw_entry(k)) {
+                        Some(Ok(Some(_))) => false,
+                        None | Some(Err(_)) | Some(Ok(None)) => true,
+                    },
+                )
+                .collect()
+        } else {
+            missing
+        };
+
+        missing = if let Some(ref indexedlog_local) = self.indexedlog_local {
+            let indexedlog_local = indexedlog_local.read_lock();
+            missing
+                .into_iter()
+                .filter(
+                    |sk| match sk.maybe_as_key().map(|k| indexedlog_local.get_raw_entry(k)) {
+                        Some(Ok(Some(_))) => false,
+                        None | Some(Err(_)) | Some(Ok(None)) => true,
+                    },
+                )
+                .collect()
+        } else {
+            missing
+        };
+
+        Ok(missing)
+    }
+}
+
+impl HgIdMutableDeltaStore for TreeStore {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+        if let Delta {
+            data,
+            base: None,
+            key,
+        } = delta.clone()
+        {
+            self.write_batch(std::iter::once((key, data, metadata.clone())))
+        } else {
+            bail!("Deltas with non-None base are not supported")
+        }
+    }
+
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            indexedlog_local.flush_log()?;
+        }
+        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            indexedlog_cache.flush_log()?;
+        }
+        Ok(None)
+    }
+}
+
+// TODO(meyer): Content addressing not supported at all for trees. I could look for HgIds present here and fetch with
+// that if available, but I feel like there's probably something wrong if this is called for trees. Do we need to implement
+// this at all for trees?
+impl ContentDataStore for TreeStore {
+    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
+        Ok(StoreResult::NotFound(key))
+    }
+
+    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        Ok(StoreResult::NotFound(key))
     }
 }
