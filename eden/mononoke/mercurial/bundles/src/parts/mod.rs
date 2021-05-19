@@ -16,7 +16,7 @@ use super::wirepack::packer::WirePackPacker;
 use crate::errors::ErrorKind;
 use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::{PartHeaderType, PartId};
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
@@ -32,9 +32,9 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 use phases::Phase;
-use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
+use std::{collections::HashMap, convert::TryInto};
 
 pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>);
 
@@ -327,7 +327,13 @@ where
 
     builder.add_mparam("category", "manifests")?;
 
-    let buffer_size = 10000; // TODO(stash): make it configurable
+    let mut buffer_size = tunables::tunables().get_repo_client_gettreepack_buffer_size();
+    if buffer_size <= 0 {
+        buffer_size = 1000
+    }
+    let buffer_size: usize = buffer_size
+        .try_into()
+        .with_context(|| format!("invalid buffer size {}", buffer_size))?;
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {
