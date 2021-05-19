@@ -23,6 +23,7 @@ from bindings import (
 from .. import (
     bookmarks as bookmod,
     error,
+    extensions,
     hg,
     progress,
     revlog,
@@ -491,6 +492,25 @@ def checknoisybranches(repo):
     - Most (> 50%) changes are not authored by the current user.
     """
     ui = repo.ui
+    commitcloudmod = extensions.find("commitcloud")
+    if commitcloudmod:
+        (
+            current_workspace,
+            locally_owned,
+        ) = commitcloudmod.workspace.currentworkspacewithlocallyownedinfo(repo)
+        if current_workspace:
+            ui.write(
+                _("checking irelevant draft branches for the workspace '%s'\n")
+                % current_workspace
+            )
+        if current_workspace and not locally_owned:
+            ui.write(
+                _(
+                    "skipping draft branches check because the workspace '%s' doesn't belong to the current user\n"
+                )
+                % current_workspace
+            )
+            return
     heads = repo.changelog._visibleheads.heads
     noisyheads = set()
     for head in heads:

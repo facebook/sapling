@@ -18,6 +18,7 @@
   $ hg doctor --config doctor.check-lag-threshold=1
   checking internal storage
   checking commit references
+  checking irelevant draft branches for the workspace 'user/test/default'
 
 Cause "lag" by adding a commit:
 
@@ -38,6 +39,7 @@ Cause "lag" by adding a commit:
   checking internal storage
   checking commit references
   master might be lagging, running pull
+  checking irelevant draft branches for the workspace 'user/test/default'
 
 The latest master is pulled:
 
@@ -61,6 +63,7 @@ Test too many names:
   repo has too many (4) remote bookmarks
   (only 1 of them (master) are essential)
   only keep essential remote bookmarks (Yn)? y
+  checking irelevant draft branches for the workspace 'user/test/default'
   $ hg log -r 'all()' -T '{desc}: {remotenames}.\n'
   A: .
   B: .
@@ -92,6 +95,7 @@ Test less relevant branches:
   $ hg doctor
   checking internal storage
   checking commit references
+  checking irelevant draft branches for the workspace 'user/test/default'
 
 Changing the author, F branch becomes "less relevant". G is okay as it has
 local modifications.
@@ -99,6 +103,7 @@ local modifications.
   $ HGUSER='Foo <f@o.o>' hg doctor
   checking internal storage
   checking commit references
+  checking irelevant draft branches for the workspace 'user/test/default'
   1 branches (627e777a207b) look less relevant
   hide those branches (Yn)? y
 
