@@ -1940,11 +1940,19 @@ class RageCmd(Subcmd):
             action="store_true",
             help="Print the rage report to stderr: ignore reporter.",
         )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Print the rage without any side-effects (i.e. creating a paste)",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         instance.log_sample("eden_rage")
         rage_processor = instance.get_config_value("rage.reporter", default="")
+
+        if args.dry_run:
+            rage_processor = None
 
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout and not args.stderr:
@@ -1959,7 +1967,7 @@ class RageCmd(Subcmd):
 
         # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
         #  `Optional[typing.IO[typing.Any]]`.
-        rage_mod.print_diagnostic_info(instance, sink)
+        rage_mod.print_diagnostic_info(instance, sink, args.dry_run)
         if proc:
             # pyre-fixme[16]: `Optional` has no attribute `close`.
             sink.close()

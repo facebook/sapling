@@ -30,7 +30,9 @@ from . import (
 from .config import EdenInstance
 
 
-def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
+def print_diagnostic_info(
+    instance: EdenInstance, out: IO[bytes], dry_run: bool
+) -> None:
     header = (
         f"User                    : {getpass.getuser()}\n"
         f"Hostname                : {socket.gethostname()}\n"
@@ -56,7 +58,7 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         print_eden_doctor_report(instance, out)
 
     processor = instance.get_config_value("rage.reporter", default="")
-    if processor:
+    if not dry_run and processor:
         print_expanded_log_file(instance.get_log_path(), processor, out)
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
