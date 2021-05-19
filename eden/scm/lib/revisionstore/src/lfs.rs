@@ -168,7 +168,7 @@ enum ContentHashType {
 /// On-disk format of an LFS pointer. This is directly serialized with the mincode encoding, and
 /// thus changes to this structure must be done in a backward and forward compatible fashion.
 #[derive(Serialize, Deserialize)]
-struct LfsPointersEntry {
+pub(crate) struct LfsPointersEntry {
     #[serde(with = "types::serde_with::hgid::tuple")]
     hgid: HgId,
     size: u64,
@@ -557,6 +557,11 @@ impl LfsBlobsStore {
     }
 }
 
+pub(crate) enum LfsStoreEntry {
+    PointerOnly(LfsPointersEntry),
+    PointerAndBlob(LfsPointersEntry, Bytes),
+}
+
 impl LfsStore {
     fn new(pointers: LfsPointersStore, blobs: LfsBlobsStore) -> Result<Self> {
         Ok(Self {
@@ -618,6 +623,39 @@ impl LfsStore {
                 }
             },
         }
+    }
+
+    // TODO(meyer): This is a crappy name, albeit so is blob_impl.
+    /// Fetch whatever content is available for the specified StoreKey. Like blob_impl above, but returns just
+    /// the LfsPointersEntry when that's all that's found. Mostly copy-pasted from blob_impl above.
+    pub(crate) fn fetch_available(&self, key: StoreKey) -> Result<StoreResult<LfsStoreEntry>> {
+        let pointer = self.pointers.read().entry(&key)?;
+
+        match pointer {
+            None => Ok(StoreResult::NotFound(key)),
+            Some(entry) => match entry.content_hashes.get(&ContentHashType::Sha256) {
+                // TODO(meyer): The docs for LfsPointersEntry say Sha256 will always be available.
+                // if it isn't, then should we bother returning the PointerOnly success, panic or return an error,
+                // or return NotFound like blob_impl?
+                None => Ok(StoreResult::Found(LfsStoreEntry::PointerOnly(entry))),
+                Some(content_hash) => {
+                    match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
+                        None => Ok(StoreResult::Found(LfsStoreEntry::PointerOnly(entry))),
+                        Some(blob) => Ok(StoreResult::Found(LfsStoreEntry::PointerAndBlob(
+                            entry, blob,
+                        ))),
+                    }
+                }
+            },
+        }
+    }
+
+    pub fn add_blob(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
+        self.blobs.add(hash, blob)
+    }
+
+    pub(crate) fn add_pointer(&self, pointer_entry: LfsPointersEntry) -> Result<()> {
+        self.pointers.write().add(pointer_entry)
     }
 }
 
@@ -686,6 +724,16 @@ fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
     }
 }
 
+/// Computes an LfsPointersEntry and LFS content Blob from a Mercurial file blob.
+pub(crate) fn lfs_from_hg_file_blob(
+    hgid: HgId,
+    raw_content: &Bytes,
+) -> Result<(LfsPointersEntry, Bytes)> {
+    let (data, copy_from) = strip_metadata(raw_content)?;
+    let pointer = LfsPointersEntry::from_file_content(hgid, &data, copy_from)?;
+    Ok((pointer, data))
+}
+
 impl HgIdDataStore for LfsStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.blob_impl(key)? {
@@ -718,25 +766,9 @@ impl HgIdDataStore for LfsStore {
 impl HgIdMutableDeltaStore for LfsStore {
     fn add(&self, delta: &Delta, _metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
-
-        let (data, copy_from) = strip_metadata(&delta.data)?;
-        let content_hash = ContentHash::sha256(&data);
-
-        match content_hash {
-            ContentHash::Sha256(sha256) => self.blobs.add(&sha256, data.clone())?,
-        };
-
-        let mut content_hashes = HashMap::new();
-        content_hashes.insert(ContentHashType::Sha256, content_hash);
-
-        let entry = LfsPointersEntry {
-            hgid: delta.key.hgid.clone(),
-            size: data.len().try_into()?,
-            is_binary: data.as_ref().contains(&b'\0'),
-            copy_from,
-            content_hashes,
-        };
-        self.pointers.write().add(entry)
+        let (lfs_pointer_entry, blob) = lfs_from_hg_file_blob(delta.key.hgid, &delta.data)?;
+        self.blobs.add(&lfs_pointer_entry.sha256(), blob)?;
+        self.pointers.write().add(lfs_pointer_entry)
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
@@ -896,6 +928,40 @@ impl LfsPointersEntry {
             copy_from,
             content_hashes,
         })
+    }
+
+    /// Computes an LfsPointersEntry from a file's contents as would be written to the working copy and optional copy_from information
+    pub(crate) fn from_file_content(
+        hgid: HgId,
+        content: &Bytes,
+        copied_from: Option<Key>,
+    ) -> Result<Self> {
+        let content_hash = ContentHash::sha256(content);
+
+        let mut content_hashes = HashMap::new();
+        content_hashes.insert(ContentHashType::Sha256, content_hash);
+
+        Ok(LfsPointersEntry {
+            hgid,
+            size: content.len().try_into()?,
+            is_binary: content.as_ref().contains(&b'\0'),
+            copy_from: copied_from,
+            content_hashes,
+        })
+    }
+
+    /// Returns the Sha256 ContentHash associated with this LfsPointersEntry
+    ///
+    /// Every LfsPointersEntry is guaranteed to contain at least Sha256, so this method makes it easy to access.
+    pub(crate) fn sha256(&self) -> Sha256 {
+        self.content_hashes[&ContentHashType::Sha256]
+            .clone()
+            .unwrap_sha256()
+    }
+
+    /// Returns the size of the file referenced by this LfsPointersEntry
+    pub(crate) fn size(&self) -> u64 {
+        self.size
     }
 }
 
