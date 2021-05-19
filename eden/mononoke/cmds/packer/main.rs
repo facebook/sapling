@@ -9,10 +9,12 @@
 
 use anyhow::{bail, Context, Result};
 use blobstore_factory::make_packblob;
+use borrowed::borrowed;
 use clap::Arg;
 use cmdlib::args::{self, MononokeClapApp};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream::{self, TryStreamExt};
 use metaconfig_types::{BlobConfig, BlobstoreId};
 use std::io::{self, BufRead};
 
@@ -21,6 +23,7 @@ mod pack_utils;
 const ARG_ZSTD_LEVEL: &str = "zstd-level";
 const ARG_INNER_ID: &str = "inner-blobstore-id";
 const ARG_DRY_RUN: &str = "dry-run";
+const ARG_SCHEDULED_MAX: &str = "scheduled-max";
 
 const PACK_PREFIX: &str = "multiblob-";
 
@@ -50,6 +53,13 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
             .takes_value(true)
             .required(false)
             .help("If true, do not upload the finished pack to the blobstore")
+        )
+        .arg(
+            Arg::with_name(ARG_SCHEDULED_MAX)
+                .long(ARG_SCHEDULED_MAX)
+                .takes_value(true)
+                .required(false)
+                .help("Maximum number of parallel packs to work on. Default 10"),
         )
 }
 
@@ -117,12 +127,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         repo_id.prefix()
     };
 
-    let pack_keys: Vec<String> = io::stdin()
+    let max_parallelism = matches
+        .value_of(ARG_SCHEDULED_MAX)
+        .map_or(Ok(10), str::parse::<usize>)?;
+
+    let input_lines: Vec<String> = io::stdin()
         .lock()
         .lines()
         .collect::<Result<_, io::Error>>()?;
-    let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
-
     runtime.block_on(async move {
         let blobstore = make_packblob(
             fb,
@@ -133,16 +145,23 @@ fn main(fb: FacebookInit) -> Result<()> {
             &config_store,
         )
         .await?;
-        pack_utils::repack_keys(
-            &ctx,
-            &blobstore,
-            PACK_PREFIX,
-            zstd_level,
-            &repo_prefix,
-            &pack_keys,
-            dry_run,
-        )
-        .await
-    })?;
-    Ok(())
+        stream::iter(input_lines.split(String::is_empty).map(Result::Ok))
+            .try_for_each_concurrent(max_parallelism, |pack_keys| {
+                borrowed!(ctx, repo_prefix, blobstore);
+                async move {
+                    let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
+                    pack_utils::repack_keys(
+                        &ctx,
+                        &blobstore,
+                        PACK_PREFIX,
+                        zstd_level,
+                        &repo_prefix,
+                        &pack_keys,
+                        dry_run,
+                    )
+                    .await
+                }
+            })
+            .await
+    })
 }

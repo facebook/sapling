@@ -75,6 +75,7 @@ blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytesize = "1.0"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

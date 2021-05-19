@@ -119,3 +119,16 @@
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.19dac65a9cb4bda4155d0ae8e7ad372af92351620450cea75a858253839386e0.pack'
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.85b856bc2313fcddec8464984ab2d384f61625890ee19e4f909dd80ac36e8fd7.pack'
   48 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.alias.sha256.9b798d4eb3901972c1311a3c6a21480e3f29c8c64cd6bbb81a977ecab56452e3.pack'
+
+# Split the content up into a single compressed file, and a pack, and show that the hardlink counts change.
+# Note that this uses one instance of the packer to generate multiple packs
+  $ packer --zstd-level 19 --inner-blobstore-id 0 << EOF
+  > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
+  > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
+  > 
+  > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
+  > EOF
+  $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n
+  * 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a.pack' (glob)
+  * 2 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd.pack' (glob)
+  * 2 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09.pack' (glob)
