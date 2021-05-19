@@ -606,6 +606,9 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     if ui.configbool("commitcloud", "sl_showremotebookmarks"):
         flags.append("ADD_REMOTE_BOOKMARKS")
 
+    if ui.configbool("commitcloud", "sl_showallbookmarks"):
+        flags.append("ADD_ALL_BOOKMARKS")
+
     if opts.get("force_original_backend"):
         flags.append("USE_ORIGINAL_BACKEND")
 

@@ -105,8 +105,13 @@ Configs::
     # Limit for number of commits in a group when pull (if unhydratedcommits enabled)
     unhydratedpullsizelimit = 5000
 
-    # Show remotebookmarks in Commit Cloud Smartlog (ask the server to send them)
+    # Show remotebookmarks in Commit Cloud Smartlog (ask the server to send them).
+    # By default only remote bookmarks that belong to draft commits (scratch bookmarks) or their public roots are returned.
     sl_showremotebookmarks = False
+
+    # Show all local bookmarks in Commit Cloud Smartlog (ask the server to send them).
+    # By default only local bookmarks that belong to draft commits or their public roots are returned.
+    sl_showallbookmarks = False
 
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
@@ -196,6 +201,7 @@ configitem("commitcloud", "enablestatus", default=True)
 configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "unhydratedpullsizelimit", 5000)
 configitem("commitcloud", "sl_showremotebookmarks", False)
+configitem("commitcloud", "sl_showallbookmarks", False)
 configitem(
     "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
 )
