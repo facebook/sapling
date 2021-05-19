@@ -10,16 +10,277 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi::Builder;
 
 use crate::{
     contentstore::check_cache_buster,
     indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    scmstore::TreeStore,
+    lfs::{LfsRemote, LfsStore},
+    scmstore::{FileStore, TreeStore},
     util::{get_cache_path, get_indexedlogdatastore_path, get_local_path, get_repo_name},
-    ContentStore, EdenApiTreeStore, ExtStoredPolicy, MemcacheStore,
+    ContentStore, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, MemcacheStore,
 };
+
+pub struct FileStoreBuilder<'a> {
+    config: &'a ConfigSet,
+    local_path: Option<PathBuf>,
+    suffix: Option<&'a Path>,
+    correlator: Option<String>,
+
+    indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
+    indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+    lfs_local: Option<Arc<LfsStore>>,
+    lfs_cache: Option<Arc<LfsStore>>,
+
+    edenapi: Option<Arc<EdenApiFileStore>>,
+    memcache: Option<Arc<MemcacheStore>>,
+
+    contentstore: Option<Arc<ContentStore>>,
+}
+
+impl<'a> FileStoreBuilder<'a> {
+    pub fn new(config: &'a ConfigSet) -> Self {
+        Self {
+            config,
+            local_path: None,
+            suffix: None,
+            correlator: None,
+            indexedlog_local: None,
+            indexedlog_cache: None,
+            lfs_local: None,
+            lfs_cache: None,
+            edenapi: None,
+            memcache: None,
+            contentstore: None,
+        }
+    }
+
+    pub fn local_path(mut self, path: impl AsRef<Path>) -> Self {
+        self.local_path = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn suffix(mut self, suffix: &'a Path) -> Self {
+        self.suffix = Some(suffix);
+        self
+    }
+
+    pub fn correlator(mut self, correlator: impl ToString) -> Self {
+        self.correlator = Some(correlator.to_string());
+        self
+    }
+
+    pub fn edenapi(mut self, edenapi: Arc<EdenApiFileStore>) -> Self {
+        self.edenapi = Some(edenapi);
+        self
+    }
+
+    pub fn memcache(mut self, memcache: Arc<MemcacheStore>) -> Self {
+        self.memcache = Some(memcache);
+        self
+    }
+
+    pub fn indexedlog_cache(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.indexedlog_cache = Some(indexedlog);
+        self
+    }
+
+    pub fn indexedlog_local(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.indexedlog_local = Some(indexedlog);
+        self
+    }
+
+    pub fn lfs_cache(mut self, lfs_cache: Arc<LfsStore>) -> Self {
+        self.lfs_cache = Some(lfs_cache);
+        self
+    }
+
+    pub fn lfs_local(mut self, lfs_local: Arc<LfsStore>) -> Self {
+        self.lfs_local = Some(lfs_local);
+        self
+    }
+
+    pub fn contentstore(mut self, contentstore: Arc<ContentStore>) -> Self {
+        self.contentstore = Some(contentstore);
+        self
+    }
+
+    fn get_extstored_policy(&self) -> Result<ExtStoredPolicy> {
+        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
+        let extstored_policy = if enable_lfs {
+            if self
+                .config
+                .get_or_default::<bool>("remotefilelog", "useextstored")?
+            {
+                ExtStoredPolicy::Use
+            } else {
+                ExtStoredPolicy::Ignore
+            }
+        } else {
+            ExtStoredPolicy::Use
+        };
+        Ok(extstored_policy)
+    }
+
+    fn get_lfs_threshold(&self) -> Result<Option<ByteCount>> {
+        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
+        let lfs_threshold = if enable_lfs {
+            self.config.get_opt::<ByteCount>("lfs", "threshold")?
+        } else {
+            None
+        };
+
+        Ok(lfs_threshold)
+    }
+
+    fn use_edenapi(&self) -> Result<bool> {
+        Ok(self
+            .config
+            .get_or_default::<bool>("remotefilelog", "http")?)
+    }
+
+    fn use_lfs(&self) -> Result<bool> {
+        Ok(self.get_lfs_threshold()?.is_some())
+    }
+
+    fn build_edenapi(&self) -> Result<Arc<EdenApiFileStore>> {
+        let reponame = get_repo_name(self.config)?;
+        let client = Builder::from_config(self.config)?.build()?;
+
+        Ok(EdenApiFileStore::new(reponame, client, None))
+    }
+
+    fn build_indexedlog_local(&self, path: PathBuf) -> Result<Arc<IndexedLogHgIdDataStore>> {
+        let local_path = get_local_path(path, &self.suffix)?;
+        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+            get_indexedlogdatastore_path(&local_path)?,
+            ExtStoredPolicy::Use,
+            self.config,
+            IndexedLogDataStoreType::Local,
+        )?))
+    }
+
+    fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
+        let cache_path = get_cache_path(self.config, &self.suffix)?;
+        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+            get_indexedlogdatastore_path(&cache_path)?,
+            ExtStoredPolicy::Use,
+            self.config,
+            IndexedLogDataStoreType::Shared,
+        )?))
+    }
+
+    fn build_lfs_local(&self, path: PathBuf) -> Result<Arc<LfsStore>> {
+        let local_path = get_local_path(path, &self.suffix)?;
+        Ok(Arc::new(LfsStore::local(&local_path, self.config)?))
+    }
+
+    fn build_lfs_cache(&self) -> Result<Arc<LfsStore>> {
+        let cache_path = get_cache_path(self.config, &self.suffix)?;
+        Ok(Arc::new(LfsStore::shared(&cache_path, self.config)?))
+    }
+
+    pub fn build(mut self) -> Result<FileStore> {
+        if self.contentstore.is_none() {
+            let cache_path = get_cache_path(self.config, &self.suffix)?;
+            check_cache_buster(&self.config, &cache_path);
+        }
+
+        let extstored_policy = self.get_extstored_policy()?;
+        let lfs_threshold_bytes = self.get_lfs_threshold()?.map(|b| b.value());
+
+        let indexedlog_local = if let Some(local_path) = self.local_path.clone() {
+            if let Some(indexedlog_local) = self.indexedlog_local.take() {
+                Some(indexedlog_local)
+            } else {
+                Some(self.build_indexedlog_local(local_path)?)
+            }
+        } else {
+            None
+        };
+
+        let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
+            Some(indexedlog_cache)
+        } else {
+            Some(self.build_indexedlog_cache()?)
+        };
+
+        let lfs_local = if self.use_lfs()? {
+            if let Some(local_path) = self.local_path.clone() {
+                if let Some(lfs_local) = self.lfs_local.take() {
+                    Some(lfs_local)
+                } else {
+                    Some(self.build_lfs_local(local_path)?)
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let lfs_cache = if self.use_lfs()? {
+            if let Some(lfs_cache) = self.lfs_cache.take() {
+                Some(lfs_cache)
+            } else {
+                Some(self.build_lfs_cache()?)
+            }
+        } else {
+            None
+        };
+
+        let lfs_remote = if self.use_lfs()? {
+            if let Some(ref lfs_cache) = lfs_cache {
+                // Use LfsRemote to do the construction logic then extract the actual
+                // underlying remote store, without needing to have it own a reference to the
+                // lfs_cache / shared store
+                Some(Arc::new(
+                    LfsRemote::new(lfs_cache.clone(), None, self.config, self.correlator.take())?
+                        .into_inner(),
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let memcache = self.memcache.take();
+
+        let edenapi = if self.use_edenapi()? {
+            if let Some(edenapi) = self.edenapi.take() {
+                Some(edenapi)
+            } else {
+                Some(self.build_edenapi()?)
+            }
+        } else {
+            None
+        };
+
+        let contentstore = self.contentstore;
+
+        Ok(FileStore {
+            extstored_policy,
+            lfs_threshold_bytes,
+
+            indexedlog_local,
+            lfs_local,
+
+            indexedlog_cache,
+            lfs_cache,
+            cache_to_local_cache: true,
+
+            memcache,
+            cache_to_memcache: true,
+
+            edenapi,
+            lfs_remote,
+
+            contentstore,
+        })
+    }
+}
 
 pub struct TreeStoreBuilder<'a> {
     config: &'a ConfigSet,
@@ -30,7 +291,6 @@ pub struct TreeStoreBuilder<'a> {
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     edenapi: Option<Arc<EdenApiTreeStore>>,
     memcache: Option<Arc<MemcacheStore>>,
-
     contentstore: Option<Arc<ContentStore>>,
 }
 

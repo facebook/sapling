@@ -21,7 +21,7 @@ pub use self::{
     filter_map::FilterMapStore,
     inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
-    specialized::TreeStore,
+    specialized::{FileStore, FileStoreBuilder, TreeStore, TreeStoreBuilder},
     types::{StoreFile, StoreTree},
 };
 

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+// TODO(meyer): Remove this
+#![allow(dead_code)]
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::sync::Arc;

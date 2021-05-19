@@ -63,6 +63,20 @@ impl StoreKey {
     pub fn content(hash: ContentHash) -> Self {
         StoreKey::Content(hash, None)
     }
+
+    pub fn maybe_into_key(self) -> Option<Key> {
+        match self {
+            StoreKey::HgId(key) => Some(key),
+            StoreKey::Content(_, k) => k,
+        }
+    }
+
+    pub fn maybe_as_key(&self) -> Option<&Key> {
+        match self {
+            StoreKey::HgId(ref key) => Some(key),
+            StoreKey::Content(_, ref k) => k.as_ref(),
+        }
+    }
 }
 
 impl From<Key> for StoreKey {

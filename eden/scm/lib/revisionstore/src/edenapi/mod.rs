@@ -136,6 +136,17 @@ pub enum File {}
 /// Marker type indicating that the store fetches tree data.
 pub enum Tree {}
 
+impl EdenApiFileStore {
+    pub fn files_blocking(
+        &self,
+        keys: Vec<Key>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
+        self.client
+            .files_blocking(self.repo.clone(), keys, progress)
+    }
+}
+
 impl EdenApiTreeStore {
     pub fn trees_blocking(
         &self,

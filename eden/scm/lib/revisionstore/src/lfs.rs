@@ -74,14 +74,14 @@ use crate::{
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
 
-struct LfsIndexedLogBlobsStore {
+pub(crate) struct LfsIndexedLogBlobsStore {
     inner: RwLock<Store>,
     chunk_size: usize,
 }
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
 /// blob.
-enum LfsBlobsStore {
+pub(crate) enum LfsBlobsStore {
     /// Blobs are stored on-disk and will stay on it until garbage collected.
     Loose(PathBuf, bool),
 
@@ -92,7 +92,7 @@ enum LfsBlobsStore {
     Union(Box<LfsBlobsStore>, Box<LfsBlobsStore>),
 }
 
-struct HttpLfsRemote {
+pub(crate) struct HttpLfsRemote {
     url: Url,
     client: HttpClient,
     concurrent_fetches: usize,
@@ -112,7 +112,7 @@ struct HttpOptions {
     request_timeout: Duration,
 }
 
-enum LfsRemoteInner {
+pub(crate) enum LfsRemoteInner {
     Http(HttpLfsRemote),
     File(LfsBlobsStore),
 }
@@ -158,16 +158,17 @@ pub struct LfsMultiplexer {
     Copy,
     Clone,
     Hash,
+    Debug,
     Serialize,
     Deserialize
 )]
-enum ContentHashType {
+pub(crate) enum ContentHashType {
     Sha256,
 }
 
 /// On-disk format of an LFS pointer. This is directly serialized with the mincode encoding, and
 /// thus changes to this structure must be done in a backward and forward compatible fashion.
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LfsPointersEntry {
     #[serde(with = "types::serde_with::hgid::tuple")]
     hgid: HgId,
@@ -628,22 +629,20 @@ impl LfsStore {
     // TODO(meyer): This is a crappy name, albeit so is blob_impl.
     /// Fetch whatever content is available for the specified StoreKey. Like blob_impl above, but returns just
     /// the LfsPointersEntry when that's all that's found. Mostly copy-pasted from blob_impl above.
-    pub(crate) fn fetch_available(&self, key: StoreKey) -> Result<StoreResult<LfsStoreEntry>> {
-        let pointer = self.pointers.read().entry(&key)?;
+    pub(crate) fn fetch_available(&self, key: &StoreKey) -> Result<Option<LfsStoreEntry>> {
+        let pointer = self.pointers.read().entry(key)?;
 
         match pointer {
-            None => Ok(StoreResult::NotFound(key)),
+            None => Ok(None),
             Some(entry) => match entry.content_hashes.get(&ContentHashType::Sha256) {
                 // TODO(meyer): The docs for LfsPointersEntry say Sha256 will always be available.
                 // if it isn't, then should we bother returning the PointerOnly success, panic or return an error,
                 // or return NotFound like blob_impl?
-                None => Ok(StoreResult::Found(LfsStoreEntry::PointerOnly(entry))),
+                None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                 Some(content_hash) => {
                     match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
-                        None => Ok(StoreResult::Found(LfsStoreEntry::PointerOnly(entry))),
-                        Some(blob) => Ok(StoreResult::Found(LfsStoreEntry::PointerAndBlob(
-                            entry, blob,
-                        ))),
+                        None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
+                        Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
                     }
                 }
             },
@@ -697,7 +696,7 @@ impl LocalStore for LfsStore {
 
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
 /// information
-fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
+pub(crate) fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
     if let Some(copy_from) = &entry.copy_from {
         let copy_from_path: &[u8] = copy_from.path.as_ref();
         let mut ret = Vec::with_capacity(data.len() + copy_from_path.len() + 128);
@@ -859,7 +858,7 @@ const LFS_POINTER_X_IS_BINARY: &str = "x-is-binary ";
 impl LfsPointersEntry {
     /// Attempt to convert the bytes to an LfsPointersEntry, the specification for an LFS pointer
     /// can be found at https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
-    fn from_bytes(data: impl AsRef<[u8]>, hgid: HgId) -> Result<Self> {
+    pub(crate) fn from_bytes(data: impl AsRef<[u8]>, hgid: HgId) -> Result<Self> {
         let data = str::from_utf8(data.as_ref())?;
         Ok(LfsPointersEntry::from_str(data, hgid)?)
     }
@@ -959,6 +958,10 @@ impl LfsPointersEntry {
             .unwrap_sha256()
     }
 
+    pub(crate) fn hgid(&self) -> HgId {
+        self.hgid
+    }
+
     /// Returns the size of the file referenced by this LfsPointersEntry
     pub(crate) fn size(&self) -> u64 {
         self.size
@@ -992,7 +995,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
 }
 
 impl LfsRemoteInner {
-    fn batch_fetch(
+    pub fn batch_fetch(
         &self,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
@@ -1010,7 +1013,7 @@ impl LfsRemoteInner {
         }
     }
 
-    fn batch_upload(
+    pub fn batch_upload(
         &self,
         objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
@@ -1592,6 +1595,10 @@ impl LfsRemote {
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         self.remote.batch_upload(objs, read_from_store)
+    }
+
+    pub(crate) fn into_inner(self) -> LfsRemoteInner {
+        self.remote
     }
 }
 

@@ -195,7 +195,7 @@ impl Entry {
     }
 
     /// Replaces the Entry's key in case caller looked up a different path.
-    fn with_key(self, key: Key) -> Self {
+    pub(crate) fn with_key(self, key: Key) -> Self {
         Entry {
             key,
             content: self.content,
@@ -276,7 +276,7 @@ impl IndexedLogHgIdDataStore {
 
     // TODO(meyer): Make IndexedLogHgIdDataStore "directly" lockable so we can lock and do a batch of operations (RwLock Guard pattern)
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
-    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
         let inner = self.inner.read();
         Entry::from_log(key, &inner.log)
     }
@@ -313,7 +313,7 @@ impl<'a> IndexedLogHgIdDataStoreReadGuard<'a> {
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
     ///
     /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired read lock.
-    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
         Entry::from_log(key, &self.0.log)
     }
 }
@@ -329,7 +329,7 @@ impl<'a> IndexedLogHgIdDataStoreWriteGuard<'a> {
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
     ///
     /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired write lock.
-    fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
+    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
         Entry::from_log(key, &self.0.log)
     }
 

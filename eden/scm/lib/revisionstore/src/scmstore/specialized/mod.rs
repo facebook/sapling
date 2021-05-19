@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-pub use crate::scmstore::specialized::{builder::TreeStoreBuilder, tree::TreeStore};
-
+pub use crate::scmstore::specialized::{
+    builder::{FileStoreBuilder, TreeStoreBuilder},
+    file::FileStore,
+    tree::TreeStore,
+};
 pub mod builder;
+pub mod file;
 pub mod tree;

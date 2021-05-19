@@ -42,6 +42,15 @@ pub enum StoreResult<T> {
     NotFound(StoreKey),
 }
 
+impl<T> From<StoreResult<T>> for Option<T> {
+    fn from(v: StoreResult<T>) -> Self {
+        match v {
+            StoreResult::Found(v) => Some(v),
+            StoreResult::NotFound(_) => None,
+        }
+    }
+}
+
 pub trait HgIdDataStore: LocalStore + Send + Sync {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>>;
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>>;

@@ -30,7 +30,7 @@ use crate::{
 ///
 /// Whenever this type is changed, the `CODE_VERSION` value must be incremented to avoid
 /// incompatibilities.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub(crate) struct McData {
     #[serde(with = "types::serde_with::key::tuple")]
     pub key: Key,
