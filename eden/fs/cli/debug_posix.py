@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import argparse
 import binascii
 import os
@@ -18,7 +20,7 @@ from facebook.eden.overlay.ttypes import OverlayDir
 from . import cmd_util, debug as debug_mod, overlay as overlay_mod, subcmd as subcmd_mod
 
 
-cmd = debug_mod.debug_cmd
+cmd: subcmd_mod.Decorator = debug_mod.debug_cmd
 
 
 @cmd("overlay", "Show data about the overlay")
