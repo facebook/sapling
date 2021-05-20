@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/EdenMount.h"
 
 #include <folly/File.h>
@@ -1349,3 +1351,5 @@ void EdenMountShutdownBlocker::allowShutdownToComplete() {
 EdenMountShutdownBlocker::EdenMountShutdownBlocker(InodePtr inode) noexcept
     : inode{std::move(inode)} {}
 } // namespace
+
+#endif

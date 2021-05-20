@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include <chrono>
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -185,3 +187,5 @@ TEST(FuseTest, destroyWithInitRace) {
     EXPECT_TRUE(mountInfo.fuseFD);
   }
 }
+
+#endif
