@@ -4,8 +4,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import configparser
-from typing import Dict
+from typing import Dict, Mapping, MutableMapping
 
 
 class EdenConfigInterpolator(configparser.Interpolation):
@@ -19,7 +21,7 @@ class EdenConfigInterpolator(configparser.Interpolation):
     this approach in the C++ implementation of the parser.
     """
 
-    def __init__(self, defaults) -> None:
+    def __init__(self, defaults: Dict[str, str]) -> None:
         self._defaults: Dict[str, str] = {}
         """ pre-construct the token name that we're going to substitute.
             eg: {"foo": "bar"} is stored as {"${foo}": "bar"} internally
@@ -34,8 +36,21 @@ class EdenConfigInterpolator(configparser.Interpolation):
             value = value.replace(k, v)
         return value
 
-    def before_get(self, parser, section, option, value, defaults) -> str:
+    def before_get(
+        self,
+        parser: MutableMapping[str, Mapping[str, str]],
+        section: str,
+        option: str,
+        value: str,
+        defaults: Mapping[str, str],
+    ) -> str:
         return self._interpolate(value)
 
-    def before_read(self, parser, section, option, value) -> str:
+    def before_read(
+        self,
+        parser: MutableMapping[str, Mapping[str, str]],
+        section: str,
+        option: str,
+        value: str,
+    ) -> str:
         return self._interpolate(value)
