@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bytes_05::Bytes;
+use bytes::Bytes;
 use gotham::state::State;
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;

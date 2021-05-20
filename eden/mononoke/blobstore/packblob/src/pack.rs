@@ -11,7 +11,7 @@ use crate::store;
 use anyhow::{bail, format_err, Error, Result};
 use ascii::AsciiString;
 use blobstore::{PackMetadata, SizeMetadata};
-use bytes::{buf::BufExt, buf::BufMutExt, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{
     PackedEntry, PackedFormat, PackedValue, SingleValue, StorageEnvelope, StorageFormat,

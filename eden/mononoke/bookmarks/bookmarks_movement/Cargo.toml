@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }

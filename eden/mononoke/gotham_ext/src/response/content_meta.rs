@@ -6,7 +6,6 @@
  */
 
 use crate::content_encoding::ContentEncoding;
-use crate::upgrade_bytes::UpgradeBytes;
 
 use super::stream::{CompressedResponseStream, ResponseStream};
 use super::stream_ext::{CaptureFirstErr, EndOnErr};
@@ -111,21 +110,6 @@ where
 
     fn content_encoding(&self) -> ContentEncoding {
         // CaptureFirstErr does not change the stream's encoding.
-        self.get_ref().content_encoding()
-    }
-}
-
-impl<S> ContentMetaProvider for UpgradeBytes<S>
-where
-    S: ContentMetaProvider,
-{
-    fn content_length(&self) -> Option<u64> {
-        // Changing the Bytes implementation doesn't change the content length.
-        self.get_ref().content_length()
-    }
-
-    fn content_encoding(&self) -> ContentEncoding {
-        // It doesn't change the content encoding either
         self.get_ref().content_encoding()
     }
 }

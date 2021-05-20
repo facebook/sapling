@@ -21,7 +21,6 @@ use gotham_ext::{
     response::{
         CompressedResponseStream, ResponseStream, ResponseTryStreamExt, StreamBody, TryIntoResponse,
     },
-    upgrade_bytes::UpgradeBytesExt,
 };
 use http::header::{HeaderMap, RANGE};
 use mononoke_types::{hash::Sha256, ContentId};
@@ -128,8 +127,6 @@ async fn fetch_by_key(
         .map_err(HttpError::e404)?;
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
-
-    let stream = stream.upgrade_bytes();
 
     let stream = match content_encoding {
         ContentEncoding::Identity => ResponseStream::new(stream)

@@ -27,7 +27,6 @@ use gotham_ext::{
     error::HttpError,
     middleware::{HttpScubaKey, ScubaMiddlewareState},
     response::{EmptyBody, TryIntoResponse},
-    upgrade_bytes::UpgradeBytesExt,
 };
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -160,7 +159,7 @@ where
         ctx.repo.filestore_config(),
         &ctx.ctx,
         &StoreRequest::with_sha256(size, oid),
-        data.map_ok(|b| bytes_05::Bytes::copy_from_slice(b.as_ref())),
+        data,
     )
     .await
     .context(ErrorKind::FilestoreWriteFailure)
@@ -318,7 +317,7 @@ async fn sync_internal_and_upstream(
         Some(stream) => {
             // We have the data, so presumably upstream does not have it.
             ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::UploadSync, "internal_to_upstream");
-            upstream_upload(ctx, oid, size, stream.upgrade_bytes()).await?;
+            upstream_upload(ctx, oid, size, stream).await?;
         }
         None => {
             // We do not have the data. Get it from upstream.

@@ -16,7 +16,7 @@ anyhow = "1.0"
 async-trait = "0.1.45"
 auto_impl = "0.4"
 bonsai_globalrev_mapping_thrift = { version = "0.1.0", path = "if" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../server/context" }

@@ -10,7 +10,7 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 configparser = { path = "../configparser" }
 edenapi = { path = "../edenapi" }
 env_logger = "0.7"

@@ -196,7 +196,7 @@ impl BlobstoreBytes {
         &self.0
     }
 
-    pub fn encode(self, encode_limit: Option<u64>) -> Result<bytes_1x::Bytes, ()> {
+    pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
         let mut bytes = vec![UNCOMPRESSED];
         let prepared = BlobstoreBytesSerialisable::from(self);
         unsafe {
@@ -212,13 +212,13 @@ impl BlobstoreBytes {
                 cursor.set_position(1);
                 zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
                     .map_err(|_| ())?;
-                Ok(bytes_1x::Bytes::from(compressed))
+                Ok(Bytes::from(compressed))
             }
-            _ => Ok(bytes_1x::Bytes::from(bytes)),
+            _ => Ok(Bytes::from(bytes)),
         }
     }
 
-    pub fn decode(mut bytes: bytes_1x::Bytes) -> Result<Self, ()> {
+    pub fn decode(mut bytes: Bytes) -> Result<Self, ()> {
         let prefix_size = 1;
         if bytes.len() < prefix_size {
             return Err(());

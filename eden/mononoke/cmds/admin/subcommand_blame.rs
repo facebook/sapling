@@ -343,7 +343,7 @@ async fn subcommand_compute_blame(
         {
             |
                 (csid, path, file_unode_id),
-                parents: Iter<Result<(bytes_05::Bytes, EitherBlame), BlameRejected>>,
+                parents: Iter<Result<(bytes::Bytes, EitherBlame), BlameRejected>>,
             | {
                 cloned!(ctx, repo);
                 async move {

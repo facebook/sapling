@@ -47,7 +47,7 @@ pub fn create_bundle(
     hg_server_heads: Vec<ChangesetId>,
     lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
-    push_vars: Option<HashMap<String, bytes_05::Bytes>>,
+    push_vars: Option<HashMap<String, bytes::Bytes>>,
 ) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, (ChangesetId, Timestamp)>), Error = Error>
 {
     let commits_to_push = find_commits_to_push(
@@ -226,7 +226,7 @@ fn create_bundle_impl(
     commits_to_push: Vec<HgChangesetId>,
     session_lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
-    push_vars: Option<HashMap<String, bytes_05::Bytes>>,
+    push_vars: Option<HashMap<String, bytes::Bytes>>,
 ) -> impl Future<Item = BytesOld, Error = Error> {
     let changelog_entries = stream_old::iter_ok(commits_to_push.clone())
         .map({
@@ -256,7 +256,7 @@ fn create_bundle_impl(
             mercurial_revlog::changeset::serialize_cs(&revlogcs, &mut v)?;
             Ok((
                 hg_cs_id.into_nodehash(),
-                HgBlobNode::new(bytes_05::Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
+                HgBlobNode::new(bytes::Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
             ))
         });
 

@@ -9,7 +9,6 @@ license = "GPLv2+"
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bytes = { version = "1.0", features = ["serde"] }
-bytes-05 = { package = "bytes", version = "0.5", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

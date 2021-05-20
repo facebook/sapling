@@ -12,7 +12,7 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }

@@ -669,6 +669,7 @@ mod test {
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
     use blobstore::{BlobstoreBytes, BlobstoreGetData};
+    use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::{self, StoreRequest};
@@ -964,7 +965,7 @@ mod test {
             ctx.repo.filestore_config(),
             &ctx.ctx,
             &StoreRequest::new(6),
-            stream::once(async move { Ok(bytes_05::Bytes::from("foobar")) }),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
         .await?;
 
@@ -1030,7 +1031,7 @@ mod test {
             stub.filestore_config(),
             &CoreContext::test_mock(fb),
             &StoreRequest::new(6),
-            stream::once(async move { Ok(bytes_05::Bytes::from("foobar")) }),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
         .await?;
 
@@ -1099,7 +1100,7 @@ mod test {
             repo.filestore_config(),
             &CoreContext::test_mock(fb),
             &StoreRequest::new(6),
-            stream::once(async move { Ok(bytes_05::Bytes::from("foobar")) }),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
         .await?;
 

@@ -8,7 +8,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }

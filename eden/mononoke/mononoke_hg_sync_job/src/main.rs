@@ -709,13 +709,10 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let mut vars = HashMap::new();
     if matches.is_present(ARG_BOOKMARK_MOVE_ANY_DIRECTION) {
-        vars.insert(
-            "NON_FAST_FORWARD".to_string(),
-            bytes_05::Bytes::from("true"),
-        );
+        vars.insert("NON_FAST_FORWARD".to_string(), bytes::Bytes::from("true"));
     }
     if matches.is_present(ARG_BYPASS_READONLY) {
-        vars.insert("BYPASS_READONLY".to_string(), bytes_05::Bytes::from("true"));
+        vars.insert("BYPASS_READONLY".to_string(), bytes::Bytes::from("true"));
     }
 
     let push_vars = if vars.is_empty() { None } else { Some(vars) };

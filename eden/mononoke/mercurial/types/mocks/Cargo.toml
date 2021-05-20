@@ -21,7 +21,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 quickcheck = "0.9"
 

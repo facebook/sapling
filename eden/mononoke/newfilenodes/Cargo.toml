@@ -9,7 +9,7 @@ license = "GPLv2+"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -79,7 +79,7 @@ async fn do_lfs_upload(
         blobrepo.filestore_config(),
         ctx,
         &req,
-        stream.map_ok(|b| bytes_05::Bytes::copy_from_slice(b.as_ref())),
+        stream,
     );
 
     // NOTE: We ignore the child exit code here. Since the Filestore validates the object

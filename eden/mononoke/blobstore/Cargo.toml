@@ -15,8 +15,7 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.45"
 auto_impl = "0.4"
-bytes = { version = "0.5", features = ["serde"] }
-bytes-1x = { package = "bytes", version = "1.0", features = ["serde"] }
+bytes = { version = "1.0", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1.31" }

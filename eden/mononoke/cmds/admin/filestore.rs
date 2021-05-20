@@ -119,8 +119,7 @@ pub async fn execute_command<'a>(
                 blobrepo.filestore_config(),
                 &ctx,
                 &StoreRequest::new(len),
-                data.map_ok(|b| bytes_05::Bytes::copy_from_slice(b.as_ref()))
-                    .map_err(Error::from),
+                data.map_err(Error::from),
             )
             .await?;
             info!(

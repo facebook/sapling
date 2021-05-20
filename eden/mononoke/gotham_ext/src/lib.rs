@@ -13,4 +13,3 @@ pub mod middleware;
 pub mod response;
 pub mod serve;
 pub mod socket_data;
-pub mod upgrade_bytes;
