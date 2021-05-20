@@ -73,11 +73,14 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_correct).await.unwrap(),
-        Some(ONES_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_correct).await.unwrap(),
+        Some((ONES_CSID, Some(1)))
     );
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_incorrect).await.unwrap(),
+        bookmarks
+            .get_raw(ctx.clone(), &name_incorrect)
+            .await
+            .unwrap(),
         None
     );
 
@@ -117,13 +120,13 @@ async fn test_multi_unconditional_set_get(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(ONES_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(1)))
     );
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_2).await.unwrap(),
-        Some(TWOS_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_2).await.unwrap(),
+        Some((TWOS_CSID, Some(2)))
     );
 }
 
@@ -146,8 +149,8 @@ async fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(ONES_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(2)))
     );
 }
 
@@ -165,8 +168,8 @@ async fn test_simple_create(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(ONES_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(1)))
     );
 
     compare_log_entries(
@@ -341,8 +344,8 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(TWOS_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((TWOS_CSID, Some(2)))
     );
 
     compare_log_entries(
@@ -389,8 +392,8 @@ async fn test_noop_update(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(ONES_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(2)))
     );
 }
 
@@ -411,8 +414,8 @@ async fn test_scratch_update_bookmark(fb: FacebookInit) {
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
-        bookmarks.get(ctx.clone(), &name_1).await.unwrap(),
-        Some(TWOS_CSID)
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((TWOS_CSID, None))
     );
 
     compare_log_entries(
@@ -483,20 +486,23 @@ async fn test_force_delete(fb: FacebookInit) {
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
-    assert_eq!(bookmarks.get(ctx.clone(), &name_1).await.unwrap(), None);
+    assert_eq!(bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(), None);
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
         .unwrap();
     assert!(txn.commit().await.unwrap());
-    assert!(bookmarks.get(ctx.clone(), &name_1).await.unwrap().is_some());
+    assert_eq!(
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(2)))
+    );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
-    assert_eq!(bookmarks.get(ctx.clone(), &name_1).await.unwrap(), None);
+    assert_eq!(bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(), None);
 
     compare_log_entries(
         bookmarks
@@ -534,7 +540,10 @@ async fn test_delete(fb: FacebookInit) {
     txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
         .unwrap();
     assert!(txn.commit().await.unwrap());
-    assert!(bookmarks.get(ctx.clone(), &name_1).await.unwrap().is_some());
+    assert_eq!(
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(1)))
+    );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
@@ -572,7 +581,10 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
         .unwrap();
     assert!(txn.commit().await.unwrap());
-    assert!(bookmarks.get(ctx.clone(), &name_1).await.unwrap().is_some());
+    assert_eq!(
+        bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(),
+        Some((ONES_CSID, Some(1)))
+    );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.delete(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove, None)

@@ -15,8 +15,8 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
+use futures::future::{BoxFuture, Future, FutureExt, TryFutureExt};
+use futures::stream::{self, BoxStream, Stream, StreamExt, TryStreamExt};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -37,8 +37,8 @@ define_stats! {
 }
 
 queries! {
-    pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId) {
-        "SELECT changeset_id
+    pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId, Option<u64>) {
+        "SELECT changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name = {name}
@@ -49,8 +49,8 @@ queries! {
         repo_id: RepositoryId,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
+        "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND hg_kind IN {kinds}
@@ -63,9 +63,9 @@ queries! {
         limit: u64,
         tok: i32,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId, i32) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>, i32) {
         "
-        SELECT name, hg_kind, changeset_id, {tok}
+        SELECT name, hg_kind, changeset_id, log_id, {tok}
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND hg_kind IN {kinds}
@@ -77,8 +77,8 @@ queries! {
         after: BookmarkName,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
+        "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name > {after}
@@ -93,8 +93,8 @@ queries! {
         escape_character: &str,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
+        "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
@@ -109,8 +109,8 @@ queries! {
         escape_character: &str,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
+        "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
@@ -125,8 +125,8 @@ queries! {
         after: BookmarkName,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
-        "SELECT name, hg_kind, changeset_id
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
+        "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
@@ -257,10 +257,8 @@ impl SqlBookmarks {
             connections,
         }
     }
-}
 
-impl Bookmarks for SqlBookmarks {
-    fn list(
+    pub fn list_raw(
         &self,
         ctx: CoreContext,
         freshness: Freshness,
@@ -268,7 +266,7 @@ impl Bookmarks for SqlBookmarks {
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
-    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
+    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId, Option<u64>)>> + 'static {
         let is_wbc = matches!(
             ctx.session().session_class(),
             SessionClass::WarmBookmarksCache
@@ -309,7 +307,7 @@ impl Bookmarks for SqlBookmarks {
                             SelectAllUnordered::query(&conn, &repo_id, &limit, &tok, &kinds)
                                 .await?
                                 .into_iter()
-                                .map(|(name, kind, id, _)| (name, kind, id))
+                                .map(|(name, kind, cs_id, log_id, _)| (name, kind, cs_id, log_id))
                                 .collect()
                         } else {
                             SelectAll::query(&conn, &repo_id, &limit, &kinds).await?
@@ -361,19 +359,19 @@ impl Bookmarks for SqlBookmarks {
             };
 
             Ok(stream::iter(rows.into_iter().map(|row| {
-                let (name, kind, changeset_id) = row;
-                Ok((Bookmark::new(name, kind), changeset_id))
+                let (name, kind, changeset_id, log_id) = row;
+                Ok((Bookmark::new(name, kind), changeset_id, log_id))
             })))
         }
         .try_flatten_stream()
         .boxed()
     }
 
-    fn get(
+    pub fn get_raw(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
+    ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -381,9 +379,34 @@ impl Bookmarks for SqlBookmarks {
         cloned!(self.repo_id, name);
         async move {
             let rows = SelectBookmark::query(&conn, &repo_id, &name).await?;
-            Ok(rows.into_iter().next().map(|row| row.0))
+            Ok(rows.into_iter().next())
         }
-        .boxed()
+    }
+}
+
+impl Bookmarks for SqlBookmarks {
+    fn list(
+        &self,
+        ctx: CoreContext,
+        freshness: Freshness,
+        prefix: &BookmarkPrefix,
+        kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
+        limit: u64,
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
+        self.list_raw(ctx, freshness, prefix, kinds, pagination, limit)
+            .map_ok(|(bookmark, cs_id, _log_id)| (bookmark, cs_id))
+            .boxed()
+    }
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        name: &BookmarkName,
+    ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
+        self.get_raw(ctx, name)
+            .map_ok(|maybe_row| maybe_row.map(|(cs_id, _log_id)| cs_id))
+            .boxed()
     }
 
     fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
