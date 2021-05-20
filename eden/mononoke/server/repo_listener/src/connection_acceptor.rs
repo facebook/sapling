@@ -276,7 +276,7 @@ async fn handle_hgcli<S: MononokeStream>(conn: AcceptedConnection, stream: S) ->
 
     let (rx, tx) = tokio::io::split(stream);
 
-    let mut framed = FramedConn::setup(rx, tx);
+    let mut framed = FramedConn::setup(rx, tx, None)?;
 
     let preamble = match framed.rd.next().await.transpose()? {
         Some(maybe_preamble) => {
@@ -414,11 +414,11 @@ where
     R: AsyncRead + Send + std::marker::Unpin + 'static,
     W: AsyncWrite + Send + std::marker::Unpin + 'static,
 {
-    pub fn setup(rd: R, wr: W) -> Self {
+    pub fn setup(rd: R, wr: W, compression_writes: Option<i32>) -> Result<Self> {
         // NOTE: FramedRead does buffering, so no need to wrap with a BufReader here.
         let rd = FramedRead::new(rd, SshDecoder::new());
-        let wr = FramedWrite::new(wr, SshEncoder::new());
-        Self { rd, wr }
+        let wr = FramedWrite::new(wr, SshEncoder::new(compression_writes)?);
+        Ok(Self { rd, wr })
     }
 }
 

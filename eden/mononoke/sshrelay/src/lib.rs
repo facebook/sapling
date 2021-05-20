@@ -26,6 +26,7 @@ use session_id::{generate_session_id, SessionId};
 use tokio::time::timeout;
 use tokio_util::codec::{Decoder, Encoder};
 use trust_dns_resolver::TokioAsyncResolver;
+use zstd::stream::raw::{Encoder as ZstdEncoder, InBuffer, Operation, OutBuffer};
 
 use netstring::{NetstringDecoder, NetstringEncoder};
 
@@ -35,8 +36,10 @@ pub use priority::Priority;
 #[derive(Debug)]
 pub struct SshDecoder(NetstringDecoder);
 
-#[derive(Debug)]
-pub struct SshEncoder(NetstringEncoder<Bytes>);
+pub struct SshEncoder {
+    netstring: NetstringEncoder<Bytes>,
+    compressor: Option<ZstdEncoder<'static>>,
+}
 
 pub struct Stdio {
     pub metadata: Arc<Metadata>,
@@ -315,8 +318,48 @@ impl Decoder for SshDecoder {
 }
 
 impl SshEncoder {
-    pub fn new() -> Self {
-        SshEncoder(NetstringEncoder::default())
+    pub fn new(compression_level: Option<i32>) -> Result<Self> {
+        match compression_level {
+            Some(level) => Ok(SshEncoder {
+                netstring: NetstringEncoder::default(),
+                compressor: Some(ZstdEncoder::new(level)?),
+            }),
+            _ => Ok(SshEncoder {
+                netstring: NetstringEncoder::default(),
+                compressor: None,
+            }),
+        }
+    }
+
+    fn compress_into<'a>(&mut self, out: &mut BytesMut, input: &'a [u8]) -> Result<()> {
+        match &mut self.compressor {
+            Some(compressor) => {
+                let buflen = zstd_safe::compress_bound(input.len());
+                if buflen >= zstd_safe::dstream_out_size() {
+                    return Err(anyhow!(
+                        "block is too big to compress in to a single zstd block"
+                    ));
+                }
+
+                let mut src = InBuffer::around(input);
+                let mut dst = vec![0u8; buflen];
+                let mut dst = OutBuffer::around(&mut dst);
+
+                while src.pos < src.src.len() {
+                    compressor.run(&mut src, &mut dst)?;
+                }
+                loop {
+                    let remaining = compressor.flush(&mut dst)?;
+                    if remaining == 0 {
+                        break;
+                    }
+                }
+                out.put_slice(dst.as_slice());
+            }
+            None => out.put_slice(input),
+        };
+
+        Ok(())
     }
 }
 
@@ -325,21 +368,22 @@ impl Encoder<SshMsg> for SshEncoder {
 
     fn encode(&mut self, msg: SshMsg, buf: &mut BytesMut) -> io::Result<()> {
         let mut v = BytesMut::with_capacity(1 + msg.1.len());
+
         match msg.0 {
             IoStream::Stdin => {
                 v.put_u8(0);
-                v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
+                self.compress_into(&mut v, &msg.1).map_err(ioerr_cvt)?;
+                Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             IoStream::Stdout => {
                 v.put_u8(1);
-                v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
+                self.compress_into(&mut v, &msg.1).map_err(ioerr_cvt)?;
+                Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             IoStream::Stderr => {
                 v.put_u8(2);
-                v.put_slice(&msg.1);
-                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
+                self.compress_into(&mut v, &msg.1).map_err(ioerr_cvt)?;
+                Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
             IoStream::Preamble(preamble) => {
                 // msg.1 is ignored in preamble
@@ -347,7 +391,7 @@ impl Encoder<SshMsg> for SshEncoder {
                 v.put_u8(3);
                 let preamble = serde_json::to_vec(&preamble)?;
                 v.extend_from_slice(&preamble);
-                Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
+                Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
         }
     }
@@ -421,7 +465,7 @@ mod test {
     #[test]
     fn encode_simple() {
         let mut buf = BytesMut::with_capacity(1024);
-        let mut encoder = SshEncoder::new();
+        let mut encoder = SshEncoder::new(None).unwrap();
 
         encoder
             .encode(SshMsg::new(Stdin, b"ls -l".bytes()), &mut buf)
@@ -433,7 +477,7 @@ mod test {
     #[test]
     fn encode_zero() {
         let mut buf = BytesMut::with_capacity(1024);
-        let mut encoder = SshEncoder::new();
+        let mut encoder = SshEncoder::new(None).unwrap();
 
         encoder
             .encode(SshMsg::new(Stdin, b"".bytes()), &mut buf)
@@ -445,7 +489,7 @@ mod test {
     #[test]
     fn encode_one() {
         let mut buf = BytesMut::with_capacity(1024);
-        let mut encoder = SshEncoder::new();
+        let mut encoder = SshEncoder::new(None).unwrap();
 
         encoder
             .encode(SshMsg::new(Stdin, b"X".bytes()), &mut buf)
@@ -457,7 +501,7 @@ mod test {
     #[test]
     fn encode_multi() {
         let mut buf = BytesMut::with_capacity(1024);
-        let mut encoder = SshEncoder::new();
+        let mut encoder = SshEncoder::new(None).unwrap();
 
         encoder
             .encode(SshMsg::new(Stdin, b"X".bytes()), &mut buf)
@@ -470,6 +514,34 @@ mod test {
             .expect("encode failed");
 
         assert_eq!(buf.as_ref(), b"2:\x00X,2:\x01Y,2:\x02Z,");
+    }
+
+    #[test]
+    fn encode_compressed() {
+        let mut buf = BytesMut::with_capacity(1024);
+        let mut encoder = SshEncoder::new(Some(3)).unwrap();
+
+        encoder
+            .encode(
+                SshMsg::new(
+                    Stdin,
+                    b"hello hello hello hello hello hello hello hello hello".bytes(),
+                ),
+                &mut buf,
+            )
+            .expect("encode failed");
+        assert_eq!(buf.as_ref(), b"22:\x00\x28\xb5\x2f\xfd\x00\x58\x64\x00\x00\x30\x68\x65\x6c\x6c\x6f\x20\x01\x00\x24\x2a\x45\x2c");
+    }
+
+    #[test]
+    fn encode_compressed_too_big() {
+        let mut buf = BytesMut::with_capacity(1024);
+        let mut encoder = SshEncoder::new(Some(3)).unwrap();
+
+        // 1MB, which is larger then 128KB zstd streaming buffer
+        let message = vec![0u8; 1048576];
+        let result = encoder.encode(SshMsg::new(Stdin, message.as_slice().bytes()), &mut buf);
+        assert!(result.is_err());
     }
 
     #[test]

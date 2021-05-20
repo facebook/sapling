@@ -26,9 +26,11 @@ use crate::connection_acceptor::{self, AcceptedConnection, Acceptor, FramedConn,
 
 use qps::Qps;
 
+const HEADER_CLIENT_COMPRESSION: &str = "x-client-compression";
 const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
 const HEADER_WEBSOCKET_KEY: &str = "sec-websocket-key";
 const HEADER_WEBSOCKET_ACCEPT: &str = "sec-websocket-accept";
+const HEADER_MONONOKE_ENCODING: &str = "x-mononoke-encoding";
 const HEADER_MONONOKE_HOST: &str = "x-mononoke-host";
 const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
 
@@ -190,20 +192,36 @@ where
 
         let websocket_key = calculate_websocket_accept(req.headers());
 
-        let res = Response::builder()
+        let mut builder = Response::builder()
             .status(http::StatusCode::SWITCHING_PROTOCOLS)
             .header(http::header::CONNECTION, "upgrade")
             .header(http::header::UPGRADE, "websocket")
-            .header(HEADER_WEBSOCKET_ACCEPT, websocket_key)
-            .body(Body::empty())
-            .map_err(HttpError::internal)?;
+            .header(HEADER_WEBSOCKET_ACCEPT, websocket_key);
 
         let metadata = try_convert_headers_to_metadata(self.conn.is_trusted, &req.headers())
             .await
             .context("Invalid metadata")
             .map_err(HttpError::BadRequest)?;
 
+        let zstd_level = 3i32;
+        let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
+            Some(header_value) => match header_value.as_bytes() {
+                b"zstd=stdin" if zstd_level > 0 => Ok(Some(zstd_level)),
+                _ => Err(anyhow!("'{}' is not a recognized compression value")),
+            },
+            None => Ok(None),
+        }
+        .map_err(HttpError::BadRequest)?;
         let debug = req.headers().get(HEADER_CLIENT_DEBUG).is_some();
+
+        match compression {
+            Some(zstd_level) => {
+                builder = builder.header(HEADER_MONONOKE_ENCODING, format!("zstd={}", zstd_level));
+            }
+            _ => {}
+        };
+
+        let res = builder.body(Body::empty()).map_err(HttpError::internal)?;
 
         let this = self.clone();
 
@@ -219,8 +237,7 @@ where
 
             let (rx, tx) = tokio::io::split(io);
             let rx = AsyncReadExt::chain(Cursor::new(read_buf), rx);
-
-            let framed = FramedConn::setup(rx, tx);
+            let framed = FramedConn::setup(rx, tx, compression)?;
 
             connection_acceptor::handle_wireproto(this.conn, framed, reponame, metadata, debug)
                 .await

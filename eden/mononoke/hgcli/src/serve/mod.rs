@@ -405,7 +405,7 @@ impl<'a> StdioRelay<'a> {
         // Wrap the socket with the ssh codec
         let (socket_read, socket_write) = tokio::io::split(socket);
         let rx = FramedRead::new(socket_read, SshDecoder::new());
-        let tx = FramedWrite::new(socket_write, SshEncoder::new());
+        let tx = FramedWrite::new(socket_write, SshEncoder::new(None)?);
 
         let preamble =
             stream::once(async { Ok(SshMsg::new(IoStream::Preamble(preamble), Bytes::new())) });
