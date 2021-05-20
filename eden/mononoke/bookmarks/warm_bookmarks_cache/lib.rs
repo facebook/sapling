@@ -16,7 +16,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context as _, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, Freshness};
+use bookmarks::{BookmarkName, BookmarksSubscription, Freshness};
 use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
@@ -216,7 +216,13 @@ impl WarmBookmarksCache {
         let (sender, receiver) = oneshot::channel();
 
         info!(ctx.logger(), "Starting warm bookmark cache updater");
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, init_mode).await?;
+        let sub = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MaybeStale)
+            .await
+            .context("Error creating bookmarks subscription")?;
+
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, init_mode).await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         BookmarksCoordinator::new(
@@ -292,54 +298,51 @@ impl Drop for WarmBookmarksCache {
 
 async fn init_bookmarks(
     ctx: &CoreContext,
+    sub: &dyn BookmarksSubscription,
     repo: &BlobRepo,
     warmers: &Arc<Vec<Warmer>>,
     mode: InitMode,
 ) -> Result<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>, Error> {
-    let all_bookmarks = repo
-        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .try_collect::<HashMap<_, _>>()
-        .await?;
-
-    info!(ctx.logger(), "{} bookmarks to warm up", all_bookmarks.len());
-
+    let all_bookmarks = sub.bookmarks();
     let total = all_bookmarks.len();
 
+    info!(ctx.logger(), "{} bookmarks to warm up", total);
+
     let futs = all_bookmarks
-        .into_iter()
+        .iter()
         .enumerate()
-        .map(|(i, (book, cs_id))| async move {
+        .map(|(i, (book, (cs_id, kind)))| async move {
+            let book = book.clone();
+            let kind = *kind;
+            let cs_id = *cs_id;
+
             let remaining = total - i - 1;
 
-            let kind = *book.kind();
             if !is_warm(ctx, repo, &cs_id, warmers).await {
-                let book_name = book.into_name();
                 match mode {
                     InitMode::Rewind => {
                         let maybe_cs_id = move_bookmark_back_in_history_until_derived(
-                            &ctx, &repo, &book_name, &warmers,
+                            &ctx, &repo, &book, &warmers,
                         )
                         .await?;
 
                         info!(
                             ctx.logger(),
-                            "moved {} back in history to {:?}", book_name, maybe_cs_id
+                            "moved {} back in history to {:?}", book, maybe_cs_id
                         );
-                        Ok((
-                            remaining,
-                            maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))),
-                        ))
+                        Ok((remaining, maybe_cs_id.map(|cs_id| (book, (cs_id, kind)))))
                     }
                     InitMode::Warm => {
-                        info!(ctx.logger(), "warmed bookmark {} at {}", book_name, cs_id);
+                        info!(ctx.logger(), "warmed bookmark {} at {}", book, cs_id);
                         warm_all(ctx, repo, &cs_id, warmers).await?;
-                        Ok((remaining, Some((book_name, (cs_id, kind)))))
+                        Ok((remaining, Some((book, (cs_id, kind)))))
                     }
                 }
             } else {
-                Ok((remaining, Some((book.into_name(), (cs_id, kind)))))
+                Ok((remaining, Some((book, (cs_id, kind)))))
             }
-        });
+        })
+        .collect::<Vec<_>>(); // This should be unnecessary but it de-confuses the compiler: P415515287.
 
     let res = stream::iter(futs)
         .buffered(100)
@@ -876,18 +879,23 @@ mod tests {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
+        let sub = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MostRecent)
+            .await?;
+
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         // Unodes haven't been derived at all - so we should get an empty set of bookmarks
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(bookmarks, HashMap::new());
 
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         RootUnodeManifestId::derive(&ctx, &repo, master_cs_id).await?;
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master_cs_id, BookmarkKind::PullDefaultPublishing)}
@@ -934,14 +942,19 @@ mod tests {
             master = new_master;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let sub = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MostRecent)
+            .await?;
+
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         RootUnodeManifestId::derive(&ctx, &repo, master).await?;
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master, BookmarkKind::PullDefaultPublishing)}
@@ -971,7 +984,12 @@ mod tests {
             bookmark(&ctx, &repo, "master").set_to(new_master).await?;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let sub = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MostRecent)
+            .await?;
+
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
@@ -1008,7 +1026,12 @@ mod tests {
             bookmark(&ctx, &repo, "master").set_to(new_master).await?;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
+        let sub = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MostRecent)
+            .await?;
+
+        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
