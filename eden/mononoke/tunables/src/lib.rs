@@ -164,6 +164,9 @@ pub struct MononokeTunables {
 
     // Disable running SaveMappingPushrebaseHook on every Pushrebase
     disable_save_mapping_pushrebase_hook: AtomicBool,
+
+    // Set to 0 to disable compression
+    zstd_compression_level: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

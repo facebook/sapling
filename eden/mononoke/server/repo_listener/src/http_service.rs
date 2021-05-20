@@ -13,6 +13,7 @@ use hyper::{service::Service, Body};
 use sha1::{Digest, Sha1};
 use slog::{debug, error, trace, Logger};
 use sshrelay::Metadata;
+use std::convert::TryInto;
 use std::io::Cursor;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -203,7 +204,10 @@ where
             .context("Invalid metadata")
             .map_err(HttpError::BadRequest)?;
 
-        let zstd_level = 3i32;
+        let zstd_level: i32 = tunables::tunables()
+            .get_zstd_compression_level()
+            .try_into()
+            .unwrap_or_default();
         let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
             Some(header_value) => match header_value.as_bytes() {
                 b"zstd=stdin" if zstd_level > 0 => Ok(Some(zstd_level)),

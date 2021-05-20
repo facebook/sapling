@@ -24,6 +24,15 @@ setup master bookmarks
   $ blobimport repo-hg/.hg repo
   $ rm -rf repo-hg
 
+Setup the right configuration
+  $ merge_tunables <<EOF
+  > {
+  >   "ints": {
+  >     "zstd_compression_level": 3
+  >   }
+  > }
+  > EOF
+
 start mononoke
   $ mononoke
   $ wait_for_mononoke
