@@ -4,17 +4,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import contextlib
 import os
 import pathlib
 import subprocess
 import sys
-from typing import Generator, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status
 
+from .lib import start
 from .lib import testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
@@ -59,7 +59,7 @@ class StartTest(testcase.EdenTestCase):
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
         # `eden start --if-necessary` should start edenfs now
-        if eden_start_needs_allow_root_option(systemd=False):
+        if start.eden_start_needs_allow_root_option(systemd=False):
             output = self.eden.run_cmd(
                 "start", "--if-necessary", "--", "--allowRoot", capture_stderr=True
             )
@@ -109,7 +109,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
     def test_eden_start_mounts_checkouts(self) -> None:
         self.eden.shutdown()
 
-        with run_eden_start_with_real_daemon(
+        with start.run_eden_start_with_real_daemon(
             eden_dir=pathlib.Path(self.eden_dir),
             etc_eden_dir=pathlib.Path(self.etc_eden_dir),
             home_dir=pathlib.Path(self.home_dir),
@@ -397,44 +397,3 @@ class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
             # edenfsctl should show the output of 'systemctl status'.
             self.assertRegex(proc.stdout, r"\bfb-edenfs@.*?\.service\b")
             self.assertRegex(proc.stdout, r"Active:[^\n]*active \(running\)")
-
-
-@contextlib.contextmanager
-def run_eden_start_with_real_daemon(
-    eden_dir: pathlib.Path,
-    etc_eden_dir: pathlib.Path,
-    home_dir: pathlib.Path,
-    systemd: bool,
-) -> Generator[None, None, None]:
-    env = dict(os.environ)
-    if systemd:
-        env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
-    else:
-        env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
-    eden_cli_args: List[str] = [
-        FindExe.EDEN_CLI,
-        "--config-dir",
-        str(eden_dir),
-        "--etc-eden-dir",
-        str(etc_eden_dir),
-        "--home-dir",
-        str(home_dir),
-    ]
-
-    start_cmd: List[str] = eden_cli_args + [
-        "start",
-        "--daemon-binary",
-        FindExe.EDEN_DAEMON,
-    ]
-    if eden_start_needs_allow_root_option(systemd=systemd):
-        start_cmd.extend(["--", "--allowRoot"])
-    subprocess.check_call(start_cmd, env=env)
-
-    yield
-
-    stop_cmd = eden_cli_args + ["stop"]
-    subprocess.check_call(stop_cmd, env=env)
-
-
-def eden_start_needs_allow_root_option(systemd: bool) -> bool:
-    return not systemd and "SANDCASTLE" in os.environ

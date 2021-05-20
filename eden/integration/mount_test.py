@@ -22,7 +22,7 @@ from facebook.eden.ttypes import (
     WorkingDirectoryParents,
 )
 from fb303_core.ttypes import fb303_status
-from thrift.Thrift import TException
+from thrift.Thrift import TException  # @manual=//thrift/lib/py:base
 
 from .lib import testcase
 

@@ -11,7 +11,7 @@ from .lib.service_test_case import (
     ServiceTestCaseBase,
     service_test,
 )
-from .start_test import run_eden_start_with_real_daemon
+from .lib.start import run_eden_start_with_real_daemon
 
 
 class ServiceLogTestBase(ServiceTestCaseBase):
