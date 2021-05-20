@@ -25,6 +25,7 @@ use crate::store::{GetLargestLogId, SelectAllUnordered, SqlBookmarks};
 define_stats! {
     prefix = "mononoke.dbbookmarks.subscription";
     aged_out: timeseries(Sum),
+    master_protected: timeseries(Sum),
 }
 
 const DEFAULT_SUBSCRIPTION_MAX_AGE_MS: u64 = 600_000; // 10 minutes.
@@ -160,6 +161,17 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
                     self.bookmarks.insert(book, value);
                 }
                 None => {
+                    if tunables().get_bookmark_subscription_protect_master() {
+                        if book.as_str() == "master" {
+                            warn!(
+                                ctx.logger(),
+                                "BookmarksSubscription: protect master kicked in!"
+                            );
+                            STATS::master_protected.add_value(1);
+                            continue;
+                        }
+                    }
+
                     self.bookmarks.remove(&book);
                 }
             }
@@ -200,10 +212,12 @@ queries! {
 mod test {
     use super::*;
 
+    use bookmarks::{BookmarkUpdateReason, Bookmarks};
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types_mocks::{changesetid::ONES_CSID, repo::REPO_ZERO};
     use sql_construct::SqlConstruct;
+    use tunables::MononokeTunables;
 
     use crate::builder::SqlBookmarksBuilder;
 
@@ -240,6 +254,47 @@ mod test {
             *sub.bookmarks(),
             hashmap! { book => (ONES_CSID, BookmarkKind::Publishing)}
         );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_protect_master(fb: FacebookInit) -> Result<()> {
+        let protect_master = MononokeTunables::default();
+        protect_master
+            .update_bools(&hashmap! {"bookmark_subscription_protect_master".to_string() => true});
+
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+        let conn = bookmarks.connections.write_connection.clone();
+
+        let book = BookmarkName::new("master")?;
+
+        let rows = vec![(
+            &bookmarks.repo_id,
+            &book,
+            &ONES_CSID,
+            &BookmarkKind::Publishing,
+        )];
+        crate::transaction::insert_bookmarks(&conn, rows).await?;
+
+        let mut sub1 =
+            SqlBookmarksSubscription::create(&ctx, bookmarks.clone(), Freshness::MostRecent)
+                .await?;
+
+        let mut sub2 =
+            SqlBookmarksSubscription::create(&ctx, bookmarks.clone(), Freshness::MostRecent)
+                .await?;
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.force_delete(&book, BookmarkUpdateReason::TestMove, None)?;
+        txn.commit().await?;
+
+        tunables::with_tunables_async(protect_master, sub1.refresh(&ctx)).await?;
+        assert!(sub1.bookmarks.get(&book).is_some());
+
+        sub2.refresh(&ctx).await?;
+        assert!(sub2.bookmarks.get(&book).is_none());
 
         Ok(())
     }

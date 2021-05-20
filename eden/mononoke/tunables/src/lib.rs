@@ -75,6 +75,7 @@ pub struct MononokeTunables {
     warm_bookmark_cache_disable_subscription: AtomicBool,
     /// Maximum age of bookmarks subscriptions.
     bookmark_subscription_max_age_ms: AtomicI64,
+    bookmark_subscription_protect_master: AtomicBool,
     max_scuba_msg_length: AtomicI64,
     wishlist_read_qps: AtomicI64,
     wishlist_write_qps: AtomicI64,
