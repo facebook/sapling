@@ -33,6 +33,10 @@ impl PermissionCheckerBuilder {
     pub fn allowlist_checker(allowlist: MononokeIdentitySet) -> BoxPermissionChecker {
         Box::new(AllowlistChecker { allowlist })
     }
+
+    pub fn always_allow_arc() -> ArcPermissionChecker {
+        Arc::new(AlwaysAllow {})
+    }
 }
 
 struct AlwaysAllow {}

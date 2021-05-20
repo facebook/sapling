@@ -134,8 +134,15 @@ impl LfsServerContext {
         };
 
         let enforce_acl_check = enforce_acl_check && config.enforce_acl_check();
+        let enforce_authentication = config.enforce_authentication();
 
-        acl_check(aclchecker, identities, enforce_acl_check).await?;
+        acl_check(
+            aclchecker,
+            identities,
+            enforce_acl_check,
+            enforce_authentication,
+        )
+        .await?;
 
         Ok(RepositoryRequestContext {
             ctx,
@@ -173,10 +180,14 @@ impl LfsServerContext {
 async fn acl_check(
     aclchecker: ArcPermissionChecker,
     identities: Option<&MononokeIdentitySet>,
-    enforce_acl_check: bool,
+    enforce_authorization: bool,
+    enforce_authentication: bool,
 ) -> Result<(), LfsServerContextErrorKind> {
     let identities: Cow<MononokeIdentitySet> = match identities {
         Some(idents) => Cow::Borrowed(idents),
+        None if enforce_authentication => {
+            return Err(LfsServerContextErrorKind::NotAuthenticated);
+        }
         None => Cow::Owned(MononokeIdentitySet::new()),
     };
 
@@ -185,7 +196,7 @@ async fn acl_check(
         .await
         .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
 
-    if !acl_check && enforce_acl_check {
+    if !acl_check && enforce_authorization {
         return Err(LfsServerContextErrorKind::Forbidden.into());
     } else {
         return Ok(());
@@ -504,9 +515,11 @@ impl BaseUri {
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::anyhow;
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::{hash::Sha256, ContentId};
+    use permission_checker::PermissionCheckerBuilder;
     use std::str::FromStr;
     use test_repo_factory::TestRepoFactory;
 
@@ -788,5 +801,17 @@ mod test {
             Some(format!("http://bar.com/foo/objects/batch")),
         );
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_acl_check_no_certificates(_fb: FacebookInit) -> Result<(), Error> {
+        let aclchecker = PermissionCheckerBuilder::always_allow_arc();
+
+        let res = acl_check(aclchecker, None, false, true).await;
+
+        match res.err().unwrap() {
+            LfsServerContextErrorKind::NotAuthenticated => Ok(()),
+            _ => Err(anyhow!("test failed")),
+        }
     }
 }

@@ -167,6 +167,7 @@ impl Default for ServerConfig {
             tasks_per_content: 1,
             disable_compression: false,
             disable_compression_identities: vec![],
+            enforce_authentication: false,
         };
 
         Self {
@@ -194,6 +195,9 @@ impl ServerConfig {
     }
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
+    }
+    pub fn enforce_authentication(&self) -> bool {
+        self.raw_server_config.enforce_authentication
     }
     pub fn object_popularity(&self) -> Option<&ObjectPopularity> {
         self.object_popularity.as_ref()
