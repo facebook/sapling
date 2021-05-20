@@ -163,7 +163,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mut builder = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
-        .with_address(&host, port.into(), false)?
+        .with_address(&host, port, false)?
         .with_tls()
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected();
@@ -172,7 +172,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let thrift: ThriftServer = builder.with_factory(exec, move || service).build();
 
-    let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift, port as u32)
+    let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift, port)
         .context("Failed to create service framework server")?;
 
     service_framework.add_module(BuildModule)?;
