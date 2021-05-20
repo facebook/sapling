@@ -98,13 +98,13 @@ async fn maybe_status_fastpath_internal(
         .map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(sock);
-    let client = EdenService::new(BinaryProtocol, transport);
+    let client = <dyn EdenService>::new(BinaryProtocol, transport);
     let sock2 = UnixStream::connect(sock_addr)
         .await
         .map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(sock2);
-    let fb303_client = BaseService::new(BinaryProtocol, transport);
+    let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
     let dirstate_data = read_hg_dirstate(&repo_root)?;

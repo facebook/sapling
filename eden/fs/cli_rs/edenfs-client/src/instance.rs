@@ -52,7 +52,7 @@ impl EdenFsInstance {
             .await
             .map_err(EdenFsError::ThriftIoError)?;
         let transport = SocketTransport::new(stream);
-        let client = EdenService::new(BinaryProtocol, transport);
+        let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
         Ok(client)
     }

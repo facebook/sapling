@@ -14762,7 +14762,7 @@ pub mod client {
     ///
     /// let protocol = BinaryProtocol::new();
     /// let transport = HttpClient::new();
-    /// let client = BuckGraphService::new(protocol, transport);
+    /// let client = <dyn BuckGraphService>::new(protocol, transport);
     /// # };
     /// ```
     impl dyn EdenService {
@@ -14789,7 +14789,7 @@ pub mod client {
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
         {
-            EdenService::new(protocol, transport)
+            <dyn EdenService>::new(protocol, transport)
         }
     }
 }
@@ -14864,7 +14864,7 @@ pub mod client {
 ///
 /// #[test]
 /// fn test_my_client() {
-///     let mock = Arc::new(MyService::mock());
+///     let mock = Arc::new(<dyn MyService>::mock());
 ///
 ///     // directly return a success response
 ///     let resp = FunctionResponse {...};
@@ -14949,7 +14949,7 @@ pub mod mock {
     impl dyn super::client::EdenService {
         pub fn mock<'mock>() -> EdenService<'mock> {
             EdenService {
-                parent: fb303_core::client::BaseService::mock(),
+                parent: <dyn fb303_core::client::BaseService>::mock(),
                 listMounts: r#impl::eden_service::listMounts::unimplemented(),
                 mount: r#impl::eden_service::mount::unimplemented(),
                 unmount: r#impl::eden_service::unmount::unimplemented(),

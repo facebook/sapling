@@ -2537,7 +2537,7 @@ pub mod client {
     ///
     /// let protocol = BinaryProtocol::new();
     /// let transport = HttpClient::new();
-    /// let client = BuckGraphService::new(protocol, transport);
+    /// let client = <dyn BuckGraphService>::new(protocol, transport);
     /// # };
     /// ```
     impl dyn FacebookService {
@@ -2564,7 +2564,7 @@ pub mod client {
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
         {
-            FacebookService::new(protocol, transport)
+            <dyn FacebookService>::new(protocol, transport)
         }
     }
 }
@@ -2639,7 +2639,7 @@ pub mod client {
 ///
 /// #[test]
 /// fn test_my_client() {
-///     let mock = Arc::new(MyService::mock());
+///     let mock = Arc::new(<dyn MyService>::mock());
 ///
 ///     // directly return a success response
 ///     let resp = FunctionResponse {...};
@@ -2685,7 +2685,7 @@ pub mod mock {
     impl dyn super::client::FacebookService {
         pub fn mock<'mock>() -> FacebookService<'mock> {
             FacebookService {
-                parent: fb303_core::client::BaseService::mock(),
+                parent: <dyn fb303_core::client::BaseService>::mock(),
                 getCpuProfile: r#impl::facebook_service::getCpuProfile::unimplemented(),
                 getCpuProfileWithOptions: r#impl::facebook_service::getCpuProfileWithOptions::unimplemented(),
                 getHeapProfile: r#impl::facebook_service::getHeapProfile::unimplemented(),
