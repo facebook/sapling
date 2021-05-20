@@ -675,8 +675,12 @@ def migrateto(repo, name):
         "lazy",
     }:
         raise error.Abort(_("cannot migrate away from lazytext backend"))
-    if "lazychangelog" in repo.storerequirements and name != "lazy":
-        raise error.Abort(_("cannot migrate away from lazy backend"))
+    if "lazychangelog" in repo.storerequirements:
+        if name != "lazy":
+            raise error.Abort(_("cannot migrate away from lazy backend"))
+        else:
+            # No need to migrate.
+            return
     if name == "revlog":
         migratetorevlog(repo)
     elif name == "rustrevlog":

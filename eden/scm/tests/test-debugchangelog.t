@@ -175,10 +175,18 @@ The revlog backend does not need segmented data.
     │
     o  D
   
-Cannot migrate hgsql repos
+To lazy:
 
-  $ echo hgsql >> .hg/requires
+  $ hg debugchangelog --migrate lazytext
+  abort: lazytext backend can only be migrated from hybrid or doublewrite
+  [255]
 
-(filters out hgsql mysql import errors)
-  $ hg debugchangelog --migrate revlog --config extensions.hgsql= --config hgsql.bypass=1 2>&1 | grep migrate
-  abort: cannot migrate hgsql repo
+  $ hg debugchangelog --migrate doublewrite
+
+  $ setconfig paths.default=test:server1
+
+  $ hg debugchangelog --migrate lazytext
+
+  $ hg debugchangelog --migrate lazy
+
+  $ hg debugchangelog --migrate lazy
