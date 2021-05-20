@@ -404,7 +404,7 @@ Show all commands + options
   debugbundle: all, part-type, spec
   debugcapabilities: 
   debugcauserusterror: 
-  debugchangelog: migrate
+  debugchangelog: migrate, unless
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 

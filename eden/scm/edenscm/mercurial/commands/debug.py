@@ -456,8 +456,20 @@ def debugcapabilities(ui, path, **opts):
                 ui.write(_x("    %s\n") % v)
 
 
-@command("debugchangelog", [("", "migrate", "", _("migrate to another format"))], "")
-def debugchangelog(ui, repo, migrate=None):
+@command(
+    "debugchangelog",
+    [
+        ("", "migrate", "", _("migrate to another format")),
+        (
+            "",
+            "unless",
+            [],
+            _("skip migrating from specified formats"),
+        ),
+    ],
+    "",
+)
+def debugchangelog(ui, repo, migrate=None, unless=[]):
     """show or migrate changelog backend
 
     If --migrate is not set, print details about the current changelog backend.
@@ -513,6 +525,8 @@ def debugchangelog(ui, repo, migrate=None):
     """
     cl = repo.changelog
     if migrate:
+        if unless and changelog2.backendname(repo) in unless:
+            return
         changelog2.migrateto(repo, migrate)
         return
     if isinstance(cl, changelog2.changelog):

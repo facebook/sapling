@@ -181,6 +181,8 @@ To lazy:
   abort: lazytext backend can only be migrated from hybrid or doublewrite
   [255]
 
+  $ hg debugchangelog --migrate lazytext --unless doublewrite --unless revlog
+
   $ hg debugchangelog --migrate doublewrite
 
   $ setconfig paths.default=test:server1
@@ -190,3 +192,5 @@ To lazy:
   $ hg debugchangelog --migrate lazy
 
   $ hg debugchangelog --migrate lazy
+
+  $ hg debugchangelog --migrate doublewrite --unless lazy

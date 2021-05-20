@@ -896,3 +896,23 @@ def _removechangelogrequirements(repo):
 
 def _isempty(repo):
     return len(repo.changelog) == 0
+
+
+_BACKEND_REQUIREMENT_MAP = {
+    "doublewritechangelog": "doublewrite",
+    "fullsegments": "segmentedchangelog",
+    "hybrid": "hybridchangelog",
+    "lazy": "lazychangelog",
+    "lazytext": "lazytextchangelog",
+    "pythonrevlog": "pythonrevlogchangelog",
+    "rustrevlog": "rustrevlogchangelog",
+}
+
+
+def backendname(repo):
+    """Obtain the changelog backend name that can be used as a migrate name"""
+    for name, req in _BACKEND_REQUIREMENT_MAP.items():
+        if req in repo.storerequirements:
+            return name
+    # Fallback
+    return "revlog"
