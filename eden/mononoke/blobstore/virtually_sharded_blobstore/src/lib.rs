@@ -11,7 +11,7 @@ mod shard;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
-use bytes::{buf::ext::Chain, BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use cacheblob::CachelibBlobstoreOptions;
 use cachelib::VolatileLruCachePool;
 use cloned::cloned;
@@ -255,7 +255,7 @@ impl Cache {
             .map_err(|()| anyhow!("Could not encode"))
             .and_then(|encoded| {
                 (self.cache_filter)(&encoded)?;
-                self.blob_pool.set(key, Chain::new(STORED.clone(), encoded))
+                self.blob_pool.set(key, STORED.chain(encoded))
             })
             .unwrap_or(false);
 

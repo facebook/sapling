@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, CountedBlobstore};
-use bytes::Bytes;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
 use std::fmt;
@@ -129,7 +128,9 @@ impl CacheOps for CachelibOps {
 
     async fn put(&self, key: &str, value: BlobstoreGetData) {
         // A failure to set presence is considered fine, here.
-        let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
+        let _ = self
+            .presence_pool
+            .set(key, bytes_1x::Bytes::from(b"P".as_ref()));
 
         let encode_limit = if self.options.attempt_zstd {
             Some(MAX_CACHELIB_VALUE_SIZE)
