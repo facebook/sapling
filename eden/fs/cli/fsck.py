@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import contextlib
 import enum
 import logging
@@ -48,20 +50,20 @@ class InodeInfo:
         mtime: Optional[float],
         error: Optional[Exception],
     ) -> None:
-        self.inode_number = inode_number
-        self.type = type
+        self.inode_number: int = inode_number
+        self.type: InodeType = type
 
         # The mtime is the modification time on the overlay file itself, not the
         # value for the logical file represented by this overlay entry.
         # This is mainly present for helping identify when a problem was introduced in
         # the overlay.
-        self.mtime = mtime
+        self.mtime: Optional[float] = mtime
 
-        self.error = error
+        self.error: Optional[Exception] = error
 
         # The other inode(s) that list this as a child
         self.parents: List[Tuple[InodeInfo, ChildInfo]] = []
-        self.children = children
+        self.children: List[ChildInfo] = children
 
     def compute_path(self) -> str:
         if not self.parents:
@@ -107,7 +109,7 @@ class UnexpectedOverlayFile(Error):
     def __init__(self, path: str) -> None:
         super().__init__(ErrorLevel.WARNING)
         self.path = path
-        self.mtime = None
+        self.mtime: Optional[float] = None
         with contextlib.suppress(OSError):
             self.mtime = os.lstat(path).st_mtime
 
@@ -162,7 +164,7 @@ class InvalidMaterializedInode(Error):
     def __init__(self, inode: InodeInfo) -> None:
         super().__init__(ErrorLevel.ERROR)
         self.inode = inode
-        self.expected_type = self._compute_expected_type()
+        self.expected_type: Optional[InodeType] = self._compute_expected_type()
 
     def _compute_expected_type(self) -> Optional[InodeType]:
         # Look at the parents to see if this looks like it should be a file or directory
