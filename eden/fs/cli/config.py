@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import binascii
 import collections
 import datetime
@@ -165,6 +167,10 @@ class EdenInstance:
     """
 
     _telemetry_logger: Optional[telemetry.TelemetryLogger] = None
+    _home_dir: Path
+    _user_config_path: Path
+    _system_config_path: Path
+    _config_dir: Path
 
     def __init__(
         self,
@@ -255,16 +261,16 @@ class EdenInstance:
         else:
             user_id = os.getuid()
             user_name = "USER"
-        # pyre-fixme[7]: Expected `Dict[str, str]` but got `Optional[Dict[str, str]]`.
-        return (
-            self._interpolate_dict
-            if self._interpolate_dict is not None
-            else {
+
+        interpolate_dict = self._interpolate_dict
+        if interpolate_dict is not None:
+            return interpolate_dict
+        else:
+            return {
                 "USER": os.environ.get(user_name, ""),
                 "USER_ID": str(user_id),
                 "HOME": str(self._home_dir),
             }
-        )
 
     def get_rc_files(self) -> List[Path]:
         result: List[Path] = []
@@ -416,7 +422,7 @@ class EdenInstance:
             timeout=timeout,
         )
 
-    def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
+    def get_checkout_info(self, path: Union[Path, str]) -> typing.Mapping[str, str]:
         """
         Given a path to a checkout, return a dictionary containing diagnostic
         information about it.
@@ -428,7 +434,7 @@ class EdenInstance:
 
     def get_checkout_info_from_checkout(
         self, checkout: "EdenCheckout"
-    ) -> collections.OrderedDict:
+    ) -> typing.Mapping[str, str]:
         checkout_config = checkout.get_config()
         snapshot = checkout.get_snapshot()
         return collections.OrderedDict(
@@ -991,11 +997,11 @@ class EdenCheckout:
         """Returns CheckoutConfig or raises an Exception if the config.toml
         under self.state_dir is not properly formatted or does not exist.
         """
-        config_path = self._config_path()
+        config_path: Path = self._config_path()
         config = load_toml_config(config_path)
         repo_field = config.get("repository")
         if isinstance(repo_field, dict):
-            repository = repo_field
+            repository: typing.Mapping[str, str] = repo_field
         else:
             raise Exception(f"{config_path} is missing [repository]")
 
