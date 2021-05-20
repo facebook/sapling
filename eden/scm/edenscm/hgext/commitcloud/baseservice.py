@@ -71,6 +71,9 @@ class FakeCtx(object):
     def phasestr(self):
         return self._nodeinfo.phase
 
+    def mutable(self):
+        return self.phasestr() != PUBLICPHASE
+
     def description(self):
         return self._nodeinfo.message
 
