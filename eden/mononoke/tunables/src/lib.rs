@@ -73,6 +73,8 @@ pub struct MononokeTunables {
     /// Don't read from the BookmarksSubscription when updating the WBC, and instead poll for the
     /// entire list of bookmarks on every iteration.
     warm_bookmark_cache_disable_subscription: AtomicBool,
+    /// Maximum age of bookmarks subscriptions.
+    bookmark_subscription_max_age_ms: AtomicI64,
     max_scuba_msg_length: AtomicI64,
     wishlist_read_qps: AtomicI64,
     wishlist_write_qps: AtomicI64,

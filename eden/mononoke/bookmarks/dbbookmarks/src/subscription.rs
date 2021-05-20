@@ -12,10 +12,22 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use rand::Rng;
+use slog::warn;
 use sql::queries;
+use stats::prelude::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
+use std::time::{Duration, Instant};
+use tunables::tunables;
 
 use crate::store::{GetLargestLogId, SelectAllUnordered, SqlBookmarks};
+
+define_stats! {
+    prefix = "mononoke.dbbookmarks.subscription";
+    aged_out: timeseries(Sum),
+}
+
+const DEFAULT_SUBSCRIPTION_MAX_AGE_MS: u64 = 600_000; // 10 minutes.
 
 #[derive(Clone)]
 pub struct SqlBookmarksSubscription {
@@ -23,6 +35,7 @@ pub struct SqlBookmarksSubscription {
     freshness: Freshness,
     log_id: u64,
     bookmarks: HashMap<BookmarkName, (ChangesetId, BookmarkKind)>,
+    last_refresh: Instant,
 }
 
 impl SqlBookmarksSubscription {
@@ -80,13 +93,38 @@ impl SqlBookmarksSubscription {
             freshness,
             log_id,
             bookmarks,
+            last_refresh: Instant::now(),
         })
+    }
+
+    fn has_aged_out(&self) -> bool {
+        let max_age_ms = match tunables().get_bookmark_subscription_max_age_ms().try_into() {
+            Ok(duration) if duration > 0 => duration,
+            _ => DEFAULT_SUBSCRIPTION_MAX_AGE_MS,
+        };
+
+        self.last_refresh.elapsed() > Duration::from_millis(max_age_ms)
     }
 }
 
 #[async_trait]
 impl BookmarksSubscription for SqlBookmarksSubscription {
     async fn refresh(&mut self, ctx: &CoreContext) -> Result<()> {
+        if self.has_aged_out() {
+            warn!(
+                ctx.logger(),
+                "BookmarksSubscription has aged out! Last refresh was {:?} ago.",
+                self.last_refresh.elapsed()
+            );
+
+            STATS::aged_out.add_value(1);
+
+            *self = Self::create(ctx, self.sql_bookmarks.clone(), self.freshness)
+                .await
+                .context("Failed to re-initialize expired BookmarksSubscription")?;
+            return Ok(());
+        }
+
         let conn = self.sql_bookmarks.connection(ctx, self.freshness);
 
         let changes =
@@ -131,6 +169,8 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
             self.log_id = max_log_id;
         }
 
+        self.last_refresh = Instant::now();
+
         Ok(())
     }
 
@@ -153,5 +193,54 @@ queries! {
         WHERE bookmarks_update_log.repo_id = {repo_id} AND bookmarks_update_log.id > {log_id}
         ORDER BY bookmarks_update_log.id DESC
         "
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use fbinit::FacebookInit;
+    use maplit::hashmap;
+    use mononoke_types_mocks::{changesetid::ONES_CSID, repo::REPO_ZERO};
+    use sql_construct::SqlConstruct;
+
+    use crate::builder::SqlBookmarksBuilder;
+
+    #[fbinit::test]
+    async fn test_age_out(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+        let conn = bookmarks.connections.write_connection.clone();
+
+        let mut sub =
+            SqlBookmarksSubscription::create(&ctx, bookmarks.clone(), Freshness::MostRecent)
+                .await?;
+
+        // Insert a bookmark, but without going throguh the log. This won't happen in prod.
+        // However, for the purposes of this test, it makes the update invisible to the
+        // subscription, and only a full refresh will find it.
+        let book = BookmarkName::new("book")?;
+        let rows = vec![(
+            &bookmarks.repo_id,
+            &book,
+            &ONES_CSID,
+            &BookmarkKind::Publishing,
+        )];
+        crate::transaction::insert_bookmarks(&conn, rows).await?;
+
+        sub.refresh(&ctx).await?;
+        assert_eq!(*sub.bookmarks(), hashmap! {});
+
+        sub.last_refresh =
+            Instant::now() - Duration::from_millis(DEFAULT_SUBSCRIPTION_MAX_AGE_MS + 1);
+
+        sub.refresh(&ctx).await?;
+        assert_eq!(
+            *sub.bookmarks(),
+            hashmap! { book => (ONES_CSID, BookmarkKind::Publishing)}
+        );
+
+        Ok(())
     }
 }
