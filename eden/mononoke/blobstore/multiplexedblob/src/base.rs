@@ -13,7 +13,7 @@ use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::{
-    future::{join_all, select, Either as FutureEither, FutureExt},
+    future::{self, join_all, select, Either as FutureEither, FutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -39,6 +39,8 @@ use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::time::timeout;
 use twox_hash::XxHash;
+
+use crate::scrub::ScrubWriteMostly;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
@@ -171,6 +173,7 @@ impl MultiplexedBlobstoreBase {
         &self,
         ctx: &CoreContext,
         key: &str,
+        write_mostly: ScrubWriteMostly,
     ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
@@ -185,14 +188,26 @@ impl MultiplexedBlobstoreBase {
             )
             .map(|f| f.map(|v| (false, v)).left_future())
             .chain(
-                multiplexed_get(
-                    ctx,
-                    self.write_mostly_blobstores.as_ref(),
-                    key,
-                    OperationType::ScrubGet,
-                    scuba,
-                )
-                .map(|f| f.map(|v| (true, v)).right_future()),
+                match write_mostly {
+                    ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => Either::Left(
+                        // Generate queries
+                        multiplexed_get(
+                            ctx,
+                            self.write_mostly_blobstores.as_ref(),
+                            key,
+                            OperationType::ScrubGet,
+                            scuba,
+                        )
+                        .map(|f| f.map(|v| (true, v)).left_future()),
+                    ),
+                    ScrubWriteMostly::PopulateIfAbsent => Either::Right(
+                        // No need to query, give None for each store
+                        self.write_mostly_blobstores.iter().map(|(id, _store)| {
+                            future::ready((true, (*id, Ok(None)))).right_future()
+                        }),
+                    ),
+                }
+                .map(|f| f.right_future()),
             ),
         )
         .await;

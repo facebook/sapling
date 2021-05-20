@@ -295,7 +295,8 @@ async fn scrub_none(
 #[fbinit::test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     scrub_none(fb, ScrubWriteMostly::Scrub).await?;
-    scrub_none(fb, ScrubWriteMostly::SkipMissing).await
+    scrub_none(fb, ScrubWriteMostly::SkipMissing).await?;
+    scrub_none(fb, ScrubWriteMostly::PopulateIfAbsent).await
 }
 
 #[fbinit::test]
@@ -812,7 +813,10 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
-        bs2.tick(None);
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+            // this read doesn't happen in this mode
+            bs2.tick(None);
+        }
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         // Tick the repairs
         bs1.tick(None);
@@ -824,7 +828,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         match scrub_action_on_missing_write_mostly {
-            ScrubWriteMostly::Scrub => {
+            ScrubWriteMostly::Scrub | ScrubWriteMostly::PopulateIfAbsent => {
                 assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()))
             }
             ScrubWriteMostly::SkipMissing => {
@@ -838,6 +842,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
 async fn scrubbed(fb: FacebookInit) {
     scrub_scenarios(fb, ScrubWriteMostly::Scrub).await;
     scrub_scenarios(fb, ScrubWriteMostly::SkipMissing).await;
+    scrub_scenarios(fb, ScrubWriteMostly::PopulateIfAbsent).await;
 }
 
 #[fbinit::test]

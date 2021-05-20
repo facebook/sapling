@@ -19,7 +19,6 @@ use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
-use itertools::Either;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, Timestamp};
 use once_cell::sync::Lazy;
@@ -72,6 +71,9 @@ pub enum ScrubWriteMostly {
     SkipMissing,
     /// take the normal scrub action for write mostly stores
     Scrub,
+    /// Mode for populating empty stores.  Assumes its already missing. Don't attempt to read. Write with IfAbsent so won't overwrite if run incorrectluy.
+    /// More efficient than the above if thes store is totally empty.
+    PopulateIfAbsent,
 }
 
 #[derive(Clone, Debug)]
@@ -215,6 +217,7 @@ async fn put_and_mark_repaired(
     key: &str,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
+    put_behaviour: PutBehaviour,
 ) -> Result<()> {
     let (_, res) = inner_put(
         ctx,
@@ -224,9 +227,7 @@ async fn put_and_mark_repaired(
         store,
         key.to_owned(),
         value.as_bytes().clone(),
-        // We are repairing, overwrite is right thing to do as
-        // bad keys may be is_present, but not retrievable.
-        Some(PutBehaviour::Overwrite),
+        Some(put_behaviour),
     )
     .await;
     scrub_handler.on_repair(&ctx, id, key, res.is_ok(), value.as_meta());
@@ -244,7 +245,10 @@ async fn blobstore_get(
     scrub_handler: &dyn ScrubHandler,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
-    match inner_blobstore.scrub_get(ctx, key).await {
+    match inner_blobstore
+        .scrub_get(ctx, key, scrub_options.scrub_action_on_missing_write_mostly)
+        .await
+    {
         Ok(value) => return Ok(value),
         Err(error) => match error {
             ErrorKind::SomeFailedOthersNone(_) => {
@@ -277,7 +281,8 @@ async fn blobstore_get(
                     _ => {}
                 }
 
-                let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
+                let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstorePutOps)> =
+                    HashMap::new();
 
                 // For write mostly stores we can chose not to do the scrub action
                 // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
@@ -296,17 +301,26 @@ async fn blobstore_get(
 
                     // Only attempt the action if we don't know of pending writes from the queue
                     if entries.is_empty() {
-                        let missing_reads = if scrub_options.scrub_action_on_missing_write_mostly
-                            == ScrubWriteMostly::Scrub
-                        {
-                            Either::Left(missing_main.iter().chain(missing_write_mostly.iter()))
-                        } else {
-                            Either::Right(missing_main.iter())
-                        };
-
-                        for k in missing_reads {
+                        for k in missing_main.iter() {
                             if let Some(s) = scrub_stores.get(k) {
-                                needs_repair.insert(*k, s.as_ref());
+                                // We are repairing, overwrite is right thing to do as
+                                // bad keys may be is_present, but not retrievable.
+                                needs_repair.insert(*k, (PutBehaviour::Overwrite, s.as_ref()));
+                            }
+                        }
+                        for k in missing_write_mostly.iter() {
+                            if let Some(s) = scrub_stores.get(k) {
+                                let put_behaviour =
+                                    match scrub_options.scrub_action_on_missing_write_mostly {
+                                        ScrubWriteMostly::SkipMissing => None,
+                                        ScrubWriteMostly::Scrub => Some(PutBehaviour::Overwrite),
+                                        ScrubWriteMostly::PopulateIfAbsent => {
+                                            Some(PutBehaviour::IfAbsent)
+                                        }
+                                    };
+                                if let Some(put_behaviour) = put_behaviour {
+                                    needs_repair.insert(*k, (put_behaviour, s.as_ref()));
+                                }
                             }
                         }
                     }
@@ -321,7 +335,7 @@ async fn blobstore_get(
                     let order = AtomicUsize::new(0);
                     let repair_puts: FuturesUnordered<_> = needs_repair
                         .into_iter()
-                        .map(|(id, store)| {
+                        .map(|(id, (put_behaviour, store))| {
                             put_and_mark_repaired(
                                 ctx,
                                 scuba,
@@ -331,6 +345,7 @@ async fn blobstore_get(
                                 key,
                                 &value,
                                 scrub_handler,
+                                put_behaviour,
                             )
                         })
                         .collect();
