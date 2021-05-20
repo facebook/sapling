@@ -11,6 +11,7 @@ use std::time::Duration;
 use anyhow::Error;
 use futures_stats::FutureStats;
 use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
+use strum_macros::{AsRefStr, Display, EnumString, EnumVariantNames};
 use time_ext::DurationExt;
 
 use blobstore::{BlobstoreGetData, OverwriteStatus};
@@ -32,20 +33,31 @@ const WRITE_ORDER: &str = "write_order";
 
 const OVERWRITE_STATUS: &str = "overwrite_status";
 
-#[derive(Clone, Copy)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    PartialEq,
+    Hash,
+    Display,
+    AsRefStr,
+    EnumString,
+    EnumVariantNames
+)]
+#[strum(serialize_all = "kebab_case")]
 pub enum OperationType {
     Get,
     Put,
     ScrubGet,
+    IsPresent,
+    Link,
+    Unlink,
 }
 
 impl From<OperationType> for ScubaValue {
     fn from(value: OperationType) -> ScubaValue {
-        match value {
-            OperationType::Get => ScubaValue::from("get"),
-            OperationType::Put => ScubaValue::from("put"),
-            OperationType::ScrubGet => ScubaValue::from("scrub_get"),
-        }
+        ScubaValue::from(value.as_ref())
     }
 }
 
