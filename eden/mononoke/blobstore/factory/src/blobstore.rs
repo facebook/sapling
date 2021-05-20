@@ -41,11 +41,6 @@ use throttledblob::{ThrottleOptions, ThrottledBlob};
 
 use crate::ReadOnlyStorage;
 
-#[cfg(fbcode_build)]
-use crate::facebook::ManifoldBlobstore;
-#[cfg(not(fbcode_build))]
-type ManifoldBlobstore = DisabledBlob;
-
 #[derive(Clone, Debug)]
 pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
@@ -283,33 +278,26 @@ async fn make_manifold_blobstore(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
-) -> Result<ManifoldBlobstore, Error> {
+) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
     use BlobConfig::*;
-    match blobconfig {
-        Manifold { bucket, prefix } => crate::facebook::make_manifold_blobstore(
-            fb,
-            &prefix,
-            &bucket,
-            None,
-            blobstore_options.manifold_api_key.as_deref(),
-            blobstore_options.manifold_weak_consistency_ms,
-            blobstore_options.put_behaviour,
-        ),
+    let (bucket, prefix, ttl) = match blobconfig {
+        Manifold { bucket, prefix } => (bucket, prefix, None),
         ManifoldWithTtl {
             bucket,
             prefix,
             ttl,
-        } => crate::facebook::make_manifold_blobstore(
-            fb,
-            &prefix,
-            &bucket,
-            Some(ttl),
-            blobstore_options.manifold_api_key.as_deref(),
-            blobstore_options.manifold_weak_consistency_ms,
-            blobstore_options.put_behaviour,
-        ),
+        } => (bucket, prefix, Some(ttl)),
         _ => bail!("Not a Manifold blobstore"),
-    }
+    };
+    crate::facebook::make_manifold_blobstore(
+        fb,
+        &prefix,
+        &bucket,
+        ttl,
+        blobstore_options.manifold_api_key.as_deref(),
+        blobstore_options.manifold_weak_consistency_ms,
+        blobstore_options.put_behaviour,
+    )
 }
 
 #[cfg(not(fbcode_build))]
@@ -317,7 +305,7 @@ async fn make_manifold_blobstore(
     _fb: FacebookInit,
     _blobconfig: BlobConfig,
     _blobstore_options: &BlobstoreOptions,
-) -> Result<ManifoldBlobstore, Error> {
+) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
     unimplemented!("This is implemented only for fbcode_build")
 }
 
@@ -357,7 +345,6 @@ async fn make_blobstore_with_link<'a>(
             make_manifold_blobstore(fb, blobconfig, blobstore_options)
                 .watched(logger)
                 .await
-                .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>)
         }
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
