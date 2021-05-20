@@ -16,7 +16,7 @@ pub use ::blobstore::{PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
 pub use multiplexedblob::{
-    scrub::{default_scrub_handler, ScrubOptions},
+    scrub::{default_scrub_handler, ScrubOptions, ScrubWriteMostly},
     ScrubAction, ScrubHandler,
 };
 pub use packblob::PackOptions;

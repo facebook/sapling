@@ -14,7 +14,7 @@ use clap::{App, Arg, ArgGroup};
 use fbinit::FacebookInit;
 use once_cell::sync::OnceCell;
 
-use blobstore_factory::{PutBehaviour, ScrubAction, DEFAULT_PUT_BEHAVIOUR};
+use blobstore_factory::{PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR};
 use repo_factory::ReadOnlyStorage;
 use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
@@ -185,7 +185,7 @@ pub struct MononokeAppBuilder {
     scrub_grace_secs_default: Option<u64>,
 
     // Whether to report missing keys in write mostly blobstores as a scrub action when scrubbing
-    scrub_action_on_missing_write_mostly_default: Option<bool>,
+    scrub_action_on_missing_write_mostly_default: Option<ScrubWriteMostly>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -425,7 +425,10 @@ impl MononokeAppBuilder {
     }
 
     /// This command has a special handling of write mostly stores when scrubbing
-    pub fn with_scrub_action_on_missing_write_mostly_default(mut self, d: Option<bool>) -> Self {
+    pub fn with_scrub_action_on_missing_write_mostly_default(
+        mut self,
+        d: Option<ScrubWriteMostly>,
+    ) -> Self {
         self.scrub_action_on_missing_write_mostly_default = d;
         self
     }
@@ -755,13 +758,13 @@ impl MononokeAppBuilder {
                     .long(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
                     .takes_value(true)
                     .required(false)
-                    .possible_values(BOOL_VALUES)
+                    .possible_values(ScrubWriteMostly::VARIANTS)
                     .help(
                         "Whether to allow missing values from write mostly stores when scrubbing",
                     );
             if let Some(default) = self.scrub_action_on_missing_write_mostly_default {
                 scrub_action_on_missing_write_mostly_arg =
-                    scrub_action_on_missing_write_mostly_arg.default_value(bool_as_str(default));
+                    scrub_action_on_missing_write_mostly_arg.default_value(default.into());
             }
             app.arg(scrub_action_arg)
                 .arg(scrub_grace_arg)

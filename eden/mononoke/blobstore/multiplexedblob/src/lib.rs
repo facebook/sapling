@@ -13,7 +13,7 @@ pub mod scrub;
 
 pub use crate::queue::MultiplexedBlobstore;
 pub use crate::scrub::{
-    LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions,
+    LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
 };
 
 #[cfg(test)]

@@ -15,7 +15,9 @@ use std::{
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
-use crate::scrub::{LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions};
+use crate::scrub::{
+    LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
+};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
@@ -233,7 +235,10 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
     }
 }
 
-async fn scrub_none(fb: FacebookInit, scrub_action_on_missing_write_mostly: bool) -> Result<()> {
+async fn scrub_none(
+    fb: FacebookInit,
+    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+) -> Result<()> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
     let bid1 = BlobstoreId::new(1);
@@ -289,8 +294,8 @@ async fn scrub_none(fb: FacebookInit, scrub_action_on_missing_write_mostly: bool
 
 #[fbinit::test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
-    scrub_none(fb, true).await?;
-    scrub_none(fb, false).await
+    scrub_none(fb, ScrubWriteMostly::Scrub).await?;
+    scrub_none(fb, ScrubWriteMostly::SkipMissing).await
 }
 
 #[fbinit::test]
@@ -625,7 +630,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly: bool) {
+async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly: ScrubWriteMostly) {
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -818,18 +823,21 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         // Now all populated.
         assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
-        if scrub_action_on_missing_write_mostly {
-            assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
-        } else {
-            assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), None);
+        match scrub_action_on_missing_write_mostly {
+            ScrubWriteMostly::Scrub => {
+                assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()))
+            }
+            ScrubWriteMostly::SkipMissing => {
+                assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), None)
+            }
         }
     }
 }
 
 #[fbinit::test]
 async fn scrubbed(fb: FacebookInit) {
-    scrub_scenarios(fb, true).await;
-    scrub_scenarios(fb, false).await;
+    scrub_scenarios(fb, ScrubWriteMostly::Scrub).await;
+    scrub_scenarios(fb, ScrubWriteMostly::SkipMissing).await;
 }
 
 #[fbinit::test]

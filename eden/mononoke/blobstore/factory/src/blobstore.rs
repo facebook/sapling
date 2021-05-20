@@ -24,7 +24,7 @@ use metaconfig_types::{
     ShardableRemoteDatabaseConfig,
 };
 use multiplexedblob::{
-    MultiplexedBlobstore, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions,
+    MultiplexedBlobstore, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
 };
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
@@ -110,9 +110,12 @@ impl BlobstoreOptions {
         }
     }
 
-    pub fn with_scrub_action_on_missing_write_mostly(self, scrub_missing: Option<bool>) -> Self {
+    pub fn with_scrub_action_on_missing_write_mostly(
+        self,
+        scrub_missing: ScrubWriteMostly,
+    ) -> Self {
         if let Some(mut scrub_options) = self.scrub_options {
-            scrub_options.scrub_action_on_missing_write_mostly = scrub_missing.unwrap_or(true);
+            scrub_options.scrub_action_on_missing_write_mostly = scrub_missing;
             Self {
                 scrub_options: Some(scrub_options),
                 ..self

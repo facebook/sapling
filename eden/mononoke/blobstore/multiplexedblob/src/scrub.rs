@@ -55,11 +55,30 @@ pub enum ScrubAction {
     Repair,
 }
 
+// How to treat write mostly stores during the scrub
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Hash,
+    EnumString,
+    EnumVariantNames,
+    IntoStaticStr
+)]
+pub enum ScrubWriteMostly {
+    /// don't take action on scrub missing keys from write mostly stores
+    SkipMissing,
+    /// take the normal scrub action for write mostly stores
+    Scrub,
+}
+
 #[derive(Clone, Debug)]
 pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
     pub scrub_grace: Option<Duration>,
-    pub scrub_action_on_missing_write_mostly: bool,
+    pub scrub_action_on_missing_write_mostly: ScrubWriteMostly,
 }
 
 impl Default for ScrubOptions {
@@ -67,7 +86,7 @@ impl Default for ScrubOptions {
         Self {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
-            scrub_action_on_missing_write_mostly: true,
+            scrub_action_on_missing_write_mostly: ScrubWriteMostly::Scrub,
         }
     }
 }
@@ -262,7 +281,10 @@ async fn blobstore_get(
 
                 // For write mostly stores we can chose not to do the scrub action
                 // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
-                if scrub_options.scrub_action_on_missing_write_mostly || !missing_main.is_empty() {
+                if scrub_options.scrub_action_on_missing_write_mostly
+                    != ScrubWriteMostly::SkipMissing
+                    || !missing_main.is_empty()
+                {
                     // Only peek the queue if needed
                     let entries = match ctime_age.as_ref() {
                         // Avoid false alarms for recently written items still on the healer queue
@@ -274,7 +296,9 @@ async fn blobstore_get(
 
                     // Only attempt the action if we don't know of pending writes from the queue
                     if entries.is_empty() {
-                        let missing_reads = if scrub_options.scrub_action_on_missing_write_mostly {
+                        let missing_reads = if scrub_options.scrub_action_on_missing_write_mostly
+                            == ScrubWriteMostly::Scrub
+                        {
                             Either::Left(missing_main.iter().chain(missing_write_mostly.iter()))
                         } else {
                             Either::Right(missing_main.iter())

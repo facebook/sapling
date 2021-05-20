@@ -30,7 +30,7 @@ use tokio::runtime::{Handle, Runtime};
 
 use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
-    ScrubAction, ThrottleOptions,
+    ScrubAction, ScrubWriteMostly, ThrottleOptions,
 };
 use environment::{Caching, MononokeEnvironment};
 use metaconfig_types::PackFormat;
@@ -659,12 +659,16 @@ fn parse_blobstore_options(
             .transpose()?;
         let scrub_action_on_missing_write_mostly = matches
             .value_of(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
-            .map(bool::from_str)
+            .map(ScrubWriteMostly::from_str)
             .transpose()?;
-        blobstore_options
+        let blobstore_options = blobstore_options
             .with_scrub_action(scrub_action)
-            .with_scrub_grace(scrub_grace)
-            .with_scrub_action_on_missing_write_mostly(scrub_action_on_missing_write_mostly)
+            .with_scrub_grace(scrub_grace);
+        if let Some(v) = scrub_action_on_missing_write_mostly {
+            blobstore_options.with_scrub_action_on_missing_write_mostly(v)
+        } else {
+            blobstore_options
+        }
     } else {
         blobstore_options
     };
