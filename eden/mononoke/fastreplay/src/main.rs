@@ -255,10 +255,10 @@ async fn bootstrap_repositories<'a>(
 
     info!(&logger, "Creating {} repositories", config.repos.len());
 
-    let RepoConfigs { repos, common } = config;
+    let RepoConfigs { repos, common: _ } = config;
 
     let repos = future::try_join_all(repos.into_iter().map(|(name, mut config)| {
-        borrowed!(env, common, mysql_options, blobstore_options);
+        borrowed!(env, mysql_options, blobstore_options);
 
         let logger = logger.new(o!("repo" => name.clone()));
 

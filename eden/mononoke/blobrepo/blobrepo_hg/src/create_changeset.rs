@@ -302,7 +302,7 @@ impl CreateChangeset {
         let repoid = repo.get_repoid();
         let complete_changesets = repo.get_changesets_object();
         let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
-        cloned!(repo);
+        let _repo = repo.clone();
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 
