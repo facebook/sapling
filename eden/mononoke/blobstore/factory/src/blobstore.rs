@@ -10,6 +10,7 @@ use blobstore::{
     Blobstore, BlobstorePutOps, BlobstoreWithLink, DisabledBlob, ErrorKind, PutBehaviour,
     DEFAULT_PUT_BEHAVIOUR,
 };
+use blobstore_stats::OperationType;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
@@ -34,6 +35,7 @@ use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::{CountedSqlblob, Sqlblob};
+use std::collections::HashSet;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,6 +49,7 @@ pub struct BlobstoreOptions {
     pub throttle_options: ThrottleOptions,
     pub manifold_api_key: Option<String>,
     pub manifold_weak_consistency_ms: Option<i64>,
+    pub manifold_thrift_ops: Option<HashSet<OperationType>>,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
@@ -60,6 +63,7 @@ impl BlobstoreOptions {
         throttle_options: ThrottleOptions,
         manifold_api_key: Option<String>,
         manifold_weak_consistency_ms: Option<i64>,
+        manifold_thrift_ops: Option<HashSet<OperationType>>,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
@@ -70,6 +74,7 @@ impl BlobstoreOptions {
             throttle_options,
             manifold_api_key,
             manifold_weak_consistency_ms,
+            manifold_thrift_ops,
             pack_options,
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
@@ -297,6 +302,7 @@ async fn make_manifold_blobstore(
         blobstore_options.manifold_api_key.as_deref(),
         blobstore_options.manifold_weak_consistency_ms,
         blobstore_options.put_behaviour,
+        blobstore_options.manifold_thrift_ops.clone(),
     )
 }
 

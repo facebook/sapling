@@ -8,6 +8,7 @@
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::ffi::OsStr;
+use std::iter::FromIterator;
 use std::num::{NonZeroU32, NonZeroUsize};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -29,8 +30,8 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use tokio::runtime::{Handle, Runtime};
 
 use blobstore_factory::{
-    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
-    ScrubAction, ScrubWriteMostly, ThrottleOptions,
+    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, OperationType, PackOptions,
+    PutBehaviour, ScrubAction, ScrubWriteMostly, ThrottleOptions,
 };
 use environment::{Caching, MononokeEnvironment};
 use metaconfig_types::PackFormat;
@@ -51,15 +52,16 @@ use super::{
         BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG,
         BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG, CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG,
         DISABLE_TUNABLES, ENABLE_MCROUTER, LOCAL_CONFIGERATOR_PATH_ARG, LOG_EXCLUDE_TAG,
-        LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_WEAK_CONSISTENCY_MS_ARG,
-        MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT,
-        MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
-        MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
-        MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
-        READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
-        RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY,
-        WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG,
-        WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+        LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_THRIFT_OPS_ARG,
+        MANIFOLD_WEAK_CONSISTENCY_MS_ARG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
+        MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT,
+        MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
+        MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
+        READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
+        TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
+        WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
+        WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
     },
     cache::parse_and_init_cachelib,
 };
@@ -574,6 +576,16 @@ fn parse_blobstore_options(
         .value_of(MANIFOLD_API_KEY_ARG)
         .map(|api_key| api_key.to_string());
 
+    let manifold_thrift_ops: Option<HashSet<OperationType>> =
+        match matches.values_of(MANIFOLD_THRIFT_OPS_ARG) {
+            None => None,
+            Some(values) => Some(HashSet::from_iter(
+                values
+                    .map(|v| OperationType::from_str(v).map_err(Error::from))
+                    .collect::<Result<Vec<OperationType>>>()?,
+            )),
+        };
+
     let manifold_weak_consistency_ms: Option<i64> = matches
         .value_of(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
         .map(|v| v.parse())
@@ -641,6 +653,7 @@ fn parse_blobstore_options(
         },
         manifold_api_key,
         manifold_weak_consistency_ms,
+        manifold_thrift_ops,
         PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
