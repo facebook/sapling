@@ -47,20 +47,21 @@ fn generate_thrift_subcrates(thrift_units: &[ThriftUnit]) -> io::Result<()> {
         let subcrate_path = crate_path.join(unit.name);
         fs::create_dir_all(&subcrate_path)?;
         let out_path = subcrate_path.join("src");
-        let thrift_source_path = fbcode_path.join(unit.path);
+        let thrift_source_path = unit.path;
         println!(
             "cargo:rerun-if-changed={}",
-            &thrift_source_path.to_string_lossy()
+            fbcode_path.join(thrift_source_path).to_string_lossy()
         );
 
         let out = Command::new(&thrift_bin_path)
+            .current_dir(fbcode_path)
             .arg("-I")
-            .arg(fbcode_path)
+            .arg(".")
             .arg("-gen")
             .arg("mstch_rust:serde,noserver")
             .arg("-out")
             .arg(&out_path)
-            .arg(&thrift_source_path)
+            .arg(thrift_source_path)
             .output()
             .unwrap();
         if !out.status.success() {
