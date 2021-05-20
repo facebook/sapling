@@ -393,6 +393,15 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> fuseUseEdenFS{"fuse:use-edenfs", false, this};
 
+  /**
+   * The maximum number of concurrent requests allowed into userspace from the
+   * kernel. This corresponds to fuse_init_out::max_background. The
+   * documentation this applies to only readaheads and async direct IO, but
+   * empirically we have observed the number of concurrent requests is limited
+   * to 12 (FUSE_DEFAULT_MAX_BACKGROUND) unless this is set high.
+   */
+  ConfigSetting<uint32_t> maximumFuseRequests{"fuse:max-requests", 1000, this};
+
   // [nfs]
 
   /**
@@ -425,18 +434,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * The maximum number of concurrent requests allowed into userspace from the
-   * kernel. This corresponds to fuse_init_out::max_background. The
-   * documentation this applies to only readaheads and async direct IO, but
-   * empirically we have observed the number of concurrent requests is limited
-   * to 12 (FUSE_DEFAULT_MAX_BACKGROUND) unless this is set high.
-   */
-  ConfigSetting<uint32_t> maximumFuseRequests{"fuse:max-requests", 1000, this};
-
-  /**
    * Buffer size for read and writes requests. Default to 1 MiB.
    */
   ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
+
+  /**
+   * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
+   * TCP ones.
+   *
+   * Unix sockets bypass the overhead of TCP and are thus significantly faster.
+   * This is only supported on macOS.
+   */
+  ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
   // [prjfs]
 
@@ -584,15 +593,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint64_t> maxRotatedLogFiles{"log:num-rotated-logs", 3, this};
 
   // [prefetch-profiles]
-
-  /**
-   * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
-   * TCP ones.
-   *
-   * Unix sockets bypass the overhead of TCP and are thus significantly faster.
-   * This is only supported on macOS.
-   */
-  ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
   /**
    * Kill switch for the prefetch profiles feature.
