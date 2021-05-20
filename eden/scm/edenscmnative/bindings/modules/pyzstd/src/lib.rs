@@ -7,11 +7,13 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::RefCell;
 use std::io;
 
 use cpython::*;
-use cpython_ext::SimplePyBuf;
+use cpython_ext::{ResultPyErrExt, SimplePyBuf};
 
+use zstd::stream::raw::{Decoder, InBuffer, Operation, OutBuffer};
 use zstd::stream::{decode_all, encode_all};
 use zstdelta::{apply, diff};
 
@@ -34,6 +36,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "encode_all",
         py_fn!(py, encode_all_py(data: &PyObject, level: i32)),
     )?;
+    m.add_class::<zstream>(py)?;
     Ok(m)
 }
 
@@ -65,3 +68,26 @@ fn encode_all_py(py: Python, data: &PyObject, level: i32) -> PyResult<PyBytes> {
     let data = SimplePyBuf::new(py, data);
     convert(py, encode_all(io::Cursor::new(data.as_ref()), level))
 }
+
+py_class!(pub class zstream |py| {
+    data decoder: RefCell<Decoder<'static>>;
+
+    def __new__(_cls) -> PyResult<zstream> {
+        let decoder = Decoder::new().map_pyerr(py)?;
+
+        zstream::create_instance(py, RefCell::new(decoder))
+    }
+
+    def decompress_buffer(&self, data: &PyObject) -> PyResult<PyBytes> {
+        let data = SimplePyBuf::new(py, data);
+        let mut decoder = self.decoder(py).borrow_mut();
+        let mut src = InBuffer::around(data.as_ref());
+        let mut dst = vec![0u8; zstd_safe::dstream_out_size()];
+        let mut dst = OutBuffer::around(&mut dst);
+
+        while src.pos < src.src.len() {
+            decoder.run(&mut src, &mut dst).map_pyerr(py)?;
+        }
+        Ok(PyBytes::new(py, dst.as_slice()))
+    }
+});

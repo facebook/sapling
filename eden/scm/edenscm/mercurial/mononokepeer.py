@@ -37,6 +37,8 @@ import ssl
 from enum import Enum
 from struct import pack, unpack
 
+from bindings import zstd
+
 from . import error, progress, httpconnection, sslutil, util, stdiopeer
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
@@ -55,12 +57,20 @@ class IoStream(Enum):
 class mononokepipe(object):
     """Wraps a pipe that count the number of bytes read/written to it"""
 
-    def __init__(self, ui, pipe):
+    def __init__(self, ui, pipe, decompress=False):
         self._sendbuf = b""
         self._readbuf = b""
         self._readoffset = 0
-        self._ui = ui
         self._pipe = pipe
+        self._ui = ui
+
+        self._ui.log("mononokepeer", compression_enabled=decompress)
+
+        if decompress:
+            self._ui.debug("zstd compression on the wire is enabled\n")
+            self._decompresser = zstd.zstream()
+        else:
+            self._decompresser = None
 
     def write(self, data):
         assert isinstance(data, bytes)
@@ -102,6 +112,9 @@ class mononokepipe(object):
                 "'%s' is not expected netencoding ending segment '%s'"
                 % (r[segmentlength], NETSTRING_ENDING)
             )
+
+        if self._decompresser:
+            segment = self._decompresser.decompress_buffer(segment)
 
         if stdtype == IoStream.STDOUT.value:
             return segment
@@ -199,6 +212,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._host = u.host
         self._port = u.port or 443
         self._path = u.path
+        self._compression = ui.configwith(bool, "mononokepeer", "compression")
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
 
@@ -250,6 +264,7 @@ class mononokepeer(stdiopeer.stdiopeer):
     def _validaterepo(self):
         # cleanup up previous run
         self._cleanup()
+        decompress = False
 
         try:
             if self._unix_socket_proxy:
@@ -286,6 +301,9 @@ class mononokepeer(stdiopeer.stdiopeer):
                 b"Upgrade: websocket",
             ]
 
+            if self._compression:
+                headers.append(b"X-Client-Compression: zstd=stdin")
+
             if os.getenv("CLIENT_DEBUG"):
                 headers.append(b"X-Client-Debug: true")
 
@@ -312,12 +330,13 @@ class mononokepeer(stdiopeer.stdiopeer):
             # wire protocol
             while line:
                 line = self.handle.readline(1024).strip()
+                if line.lower().startswith(b"x-mononoke-encoding:"):
+                    decompress = True
 
         except IOError as ex:
             self._connectionerror(ex)
 
-        self._pipei = mononokepipe(self.ui, self.handle)
-        self._pipeo = mononokepipe(self.ui, self.handle)
+        self._pipeo = self._pipei = mononokepipe(self.ui, self.handle, decompress)
 
         self.ui.metrics.gauge("mononoke_connections")
 

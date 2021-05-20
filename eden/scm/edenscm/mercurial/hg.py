@@ -1083,6 +1083,7 @@ def remoteui(src, opts):
         "edenapi",
         "infinitepush",
         "lfs",
+        "mononokepeer",
     ):
         for key, val in src.configitems(sect):
             dst.setconfig(sect, key, val, "copied")
