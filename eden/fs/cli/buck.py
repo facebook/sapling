@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import errno
 import glob
 import os
@@ -46,7 +48,9 @@ def is_buckd_running_for_path(path: str) -> bool:
 
 # Buck is sensitive to many environment variables, so we need to set them up
 # properly before calling into buck
-def run_buck_command(buck_command: List[str], path: str) -> subprocess.CompletedProcess:
+def run_buck_command(
+    buck_command: List[str], path: str
+) -> "subprocess.CompletedProcess[bytes]":
     # Using BUCKVERSION=last here to avoid triggering a download of a new
     # version of buck just to kill off buck.  This is specific to Facebook's
     # deployment of buck, and has no impact on the behavior of the opensource
