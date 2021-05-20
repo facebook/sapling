@@ -11,6 +11,7 @@ path = "tests/main.rs"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1.45"
 bookmarks = { version = "0.1.0", path = ".." }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -33,6 +34,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 quickcheck = "0.9"
+quickcheck_derive = "0.2"
 tokio = { version = "1.5", features = ["full", "test-util"] }
 
 [patch.crates-io]

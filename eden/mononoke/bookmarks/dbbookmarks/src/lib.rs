@@ -9,6 +9,7 @@
 
 pub mod builder;
 pub mod store;
+mod subscription;
 pub mod transaction;
 
 pub use crate::builder::SqlBookmarksBuilder;

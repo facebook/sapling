@@ -19,11 +19,12 @@ use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
-use mononoke_types::Timestamp;
+use mononoke_types::{ChangesetId, Timestamp};
 use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
+use quickcheck_derive::Arbitrary;
 use sql::mysql_async::{prelude::ConvIr, Value};
 use sql_construct::SqlConstruct;
 use std::collections::HashMap;
@@ -1336,4 +1337,247 @@ async fn test_pagination_ordering(fb: FacebookInit) {
             )
         );
     }
+}
+
+#[fbinit::test]
+async fn bookmark_subscription_initialization(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+    let book1 = create_bookmark_name("book1");
+    let book2 = create_bookmark_name("book2");
+    let book3 = create_bookmark_name("book3");
+
+    // Create some history we won't care about.
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.force_delete(&book1, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    // Create some bookmarks now that we're going to keep.
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    txn.create_publishing(&book2, TWOS_CSID, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.create_publishing(&book3, THREES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    let mut sub = bookmarks
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    sub.refresh(&ctx).await?;
+    assert_eq!(
+        *sub.bookmarks(),
+        hashmap! {
+            book1.clone() => (ONES_CSID, BookmarkKind::Publishing),
+            book2.clone() => (TWOS_CSID, BookmarkKind::Publishing),
+            book3.clone() => (THREES_CSID, BookmarkKind::Publishing),
+        }
+    );
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+    let book = create_bookmark_name("book");
+
+    let mut sub = bookmarks
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    assert_eq!(*sub.bookmarks(), hashmap! {});
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.create_publishing(&book, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    sub.refresh(&ctx).await?;
+    assert_eq!(
+        *sub.bookmarks(),
+        hashmap! { book.clone() => (ONES_CSID, BookmarkKind::Publishing)}
+    );
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.update(
+        &book,
+        TWOS_CSID,
+        ONES_CSID,
+        BookmarkUpdateReason::TestMove,
+        None,
+    )?;
+    assert!(txn.commit().await?);
+
+    sub.refresh(&ctx).await?;
+    assert_eq!(
+        *sub.bookmarks(),
+        hashmap! { book.clone() => (TWOS_CSID, BookmarkKind::Publishing)}
+    );
+
+    let mut txn = bookmarks.create_transaction(ctx.clone());
+    txn.force_delete(&book, BookmarkUpdateReason::TestMove, None)?;
+    assert!(txn.commit().await?);
+
+    sub.refresh(&ctx).await?;
+    assert_eq!(*sub.bookmarks(), hashmap! {});
+
+    Ok(())
+}
+
+#[derive(Arbitrary, Clone, Copy, Debug)]
+enum TestBookmark {
+    Book1,
+    Book2,
+}
+
+#[derive(Arbitrary, Clone, Copy, Debug)]
+enum BookmarkOp {
+    /// Set this bookmark.
+    Set(ChangesetId),
+    /// ForceSet this bookmark (this also changes the kind)
+    ForceSet(ChangesetId),
+    /// Delete this bookmark
+    Delete,
+}
+
+/// Use Quickcheck to produce a test scenario of bookmark updates.
+#[derive(Arbitrary, Clone, Copy, Debug)]
+enum TestOp {
+    /// Update one of our test bookmarks
+    Bookmark(TestBookmark, BookmarkOp),
+    /// Do nothing. This allows multiple refreshes to occur in sequence.
+    Noop,
+    /// Update the BookmarksSubscription and check that it returns the right bookmark values.
+    Refresh,
+}
+
+/// Verify bookmark subscriptions using Quickcheck. We create a test scenario and verify that the
+/// bookmark subscriptions returns the same data it would return if it was freshly created now (we
+/// test that this satisfies our assumptions in separate tests for the bookmarks subscription).
+#[fbinit::test]
+fn bookmark_subscription_quickcheck(fb: FacebookInit) {
+    #[tokio::main(flavor = "current_thread")]
+    async fn check(fb: FacebookInit, mut ops: Vec<TestOp>) -> bool {
+        async move {
+            ops.push(TestOp::Refresh);
+
+            let ctx = CoreContext::test_mock(fb);
+
+            let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+
+            let book1 = create_bookmark_name("book1");
+            let book2 = create_bookmark_name("book2");
+
+            let mut book1_id = None;
+            let mut book2_id = None;
+
+            let mut sub = bookmarks
+                .create_subscription(&ctx, Freshness::MostRecent)
+                .await?;
+
+            for op in ops {
+                match op {
+                    TestOp::Bookmark(book, op) => {
+                        let current_cs_id = match book {
+                            TestBookmark::Book1 => &mut book1_id,
+                            TestBookmark::Book2 => &mut book2_id,
+                        };
+
+                        let book = match book {
+                            TestBookmark::Book1 => &book1,
+                            TestBookmark::Book2 => &book2,
+                        };
+
+                        let mut txn = bookmarks.create_transaction(ctx.clone());
+
+                        match op {
+                            BookmarkOp::Set(cs_id) => {
+                                match *current_cs_id {
+                                    Some(current_cs_id) => {
+                                        txn.update(
+                                            &book,
+                                            cs_id,
+                                            current_cs_id,
+                                            BookmarkUpdateReason::TestMove,
+                                            None,
+                                        )?;
+                                    }
+                                    None => {
+                                        txn.create_publishing(
+                                            &book,
+                                            cs_id,
+                                            BookmarkUpdateReason::TestMove,
+                                            None,
+                                        )?;
+                                    }
+                                }
+
+                                *current_cs_id = Some(cs_id);
+                            }
+                            BookmarkOp::ForceSet(cs_id) => {
+                                txn.force_set(&book, cs_id, BookmarkUpdateReason::TestMove, None)?;
+                                *current_cs_id = Some(cs_id);
+                            }
+                            BookmarkOp::Delete => {
+                                match *current_cs_id {
+                                    Some(current_cs_id) => {
+                                        txn.delete(
+                                            &book,
+                                            current_cs_id,
+                                            BookmarkUpdateReason::TestMove,
+                                            None,
+                                        )?;
+                                    }
+                                    None => {
+                                        txn.force_delete(
+                                            &book,
+                                            BookmarkUpdateReason::TestMove,
+                                            None,
+                                        )?;
+                                    }
+                                }
+
+                                *current_cs_id = None;
+                            }
+                        };
+
+                        assert!(txn.commit().await?);
+                    }
+                    TestOp::Noop => {
+                        // It's a noop
+                    }
+                    TestOp::Refresh => {
+                        sub.refresh(&ctx).await?;
+
+                        let control = bookmarks
+                            .create_subscription(&ctx, Freshness::MostRecent)
+                            .await?;
+
+                        if control.bookmarks() != sub.bookmarks() {
+                            return Ok(false);
+                        }
+                    }
+                };
+            }
+
+            Result::<_, Error>::Ok(true)
+        }
+        .await
+        .unwrap()
+    }
+
+    quickcheck::quickcheck(check as fn(FacebookInit, Vec<TestOp>) -> bool);
+
+    // We need to hold the FacebookInit until this point because Arbitrary for FacebookInit just
+    // assumes init!
+    drop(fb)
 }

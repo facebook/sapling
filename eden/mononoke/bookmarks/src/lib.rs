@@ -9,6 +9,7 @@
 #![feature(never_type)]
 
 use anyhow::Result;
+use async_trait::async_trait;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
@@ -16,6 +17,7 @@ use mononoke_types::ChangesetId;
 
 mod cache;
 mod log;
+mod subscription;
 mod transaction;
 
 pub use bookmarks_types::{
@@ -27,9 +29,11 @@ pub use log::{
     ArcBookmarkUpdateLog, BookmarkUpdateLog, BookmarkUpdateLogArc, BookmarkUpdateLogEntry,
     BookmarkUpdateLogRef, BookmarkUpdateReason, BundleReplay, RawBundleReplayData,
 };
+pub use subscription::BookmarksSubscription;
 pub use transaction::{BookmarkTransaction, BookmarkTransactionError, BookmarkTransactionHook};
 
 #[facet::facet]
+#[async_trait]
 pub trait Bookmarks: Send + Sync + 'static {
     /// Get the current value of a bookmark.
     ///
@@ -67,6 +71,14 @@ pub trait Bookmarks: Send + Sync + 'static {
 
     /// Create a transaction to modify bookmarks.
     fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction>;
+
+    /// Create a subscription to efficiently observe changes to publishing & pull default
+    /// bookmarks.
+    async fn create_subscription(
+        &self,
+        ctx: &CoreContext,
+        freshness: Freshness,
+    ) -> Result<Box<dyn BookmarksSubscription>>;
 
     /// Drop any caches held by this instance of Bookmarks.
     fn drop_caches(&self) {

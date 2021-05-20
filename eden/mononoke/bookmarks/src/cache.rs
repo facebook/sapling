@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use bookmarks_types::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
 };
@@ -23,6 +24,7 @@ use stats::prelude::*;
 use tunables::tunables;
 
 use crate::log::{BookmarkUpdateReason, BundleReplay};
+use crate::subscription::BookmarksSubscription;
 use crate::transaction::{BookmarkTransaction, BookmarkTransactionHook};
 use crate::Bookmarks;
 
@@ -267,6 +269,7 @@ impl CachedBookmarksTransaction {
     }
 }
 
+#[async_trait]
 impl Bookmarks for CachedBookmarks {
     fn list(
         &self,
@@ -301,6 +304,14 @@ impl Bookmarks for CachedBookmarks {
             self.clone(),
             self.bookmarks.create_transaction(ctx),
         ))
+    }
+
+    async fn create_subscription(
+        &self,
+        ctx: &CoreContext,
+        freshness: Freshness,
+    ) -> Result<Box<dyn BookmarksSubscription>> {
+        self.bookmarks.create_subscription(ctx, freshness).await
     }
 
     fn get(
@@ -515,12 +526,21 @@ mod tests {
         transaction
     }
 
+    #[async_trait]
     impl Bookmarks for MockBookmarks {
         fn get(
             &self,
             _ctx: CoreContext,
             _name: &BookmarkName,
         ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
+            unimplemented!()
+        }
+
+        async fn create_subscription(
+            &self,
+            _: &CoreContext,
+            _: Freshness,
+        ) -> Result<Box<dyn BookmarksSubscription>> {
             unimplemented!()
         }
 

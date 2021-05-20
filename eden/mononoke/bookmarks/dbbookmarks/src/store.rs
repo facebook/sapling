@@ -7,24 +7,26 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
+use async_trait::async_trait;
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
-    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
-    RawBundleReplayData,
+    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
+    BookmarksSubscription, Freshness, RawBundleReplayData,
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::future::{BoxFuture, Future, FutureExt, TryFutureExt};
-use futures::stream::{self, BoxStream, Stream, StreamExt, TryStreamExt};
+use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use rand::Rng;
-use sql::queries;
+use sql::{queries, Connection};
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
+use crate::subscription::SqlBookmarksSubscription;
 use crate::transaction::SqlBookmarksTransaction;
 
 define_stats! {
@@ -58,7 +60,7 @@ queries! {
          LIMIT {limit}"
     }
 
-    read SelectAllUnordered(
+    pub(crate) read SelectAllUnordered(
         repo_id: RepositoryId,
         limit: u64,
         tok: i32,
@@ -134,6 +136,17 @@ queries! {
            AND hg_kind IN {kinds}
          ORDER BY name ASC
          LIMIT {limit}"
+    }
+
+    read SelectAfterLogId(
+        repo_id: RepositoryId,
+        log_id: u64,
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, u64) {
+        "SELECT name, hg_kind, changeset_id, log_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND log_id IS NOT NULL
+           AND log_id > {log_id}"
     }
 
     read ReadNextBookmarkLogEntries(min_id: u64, repo_id: RepositoryId, limit: u64) -> (
@@ -236,7 +249,7 @@ queries! {
          OFFSET {offset}"
     }
 
-    read GetLargestLogId(repo_id: RepositoryId) -> (Option<u64>) {
+    pub(crate) read GetLargestLogId(repo_id: RepositoryId) -> (Option<u64>) {
         "SELECT MAX(id)
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}"
@@ -246,7 +259,7 @@ queries! {
 #[facet::facet]
 #[derive(Clone)]
 pub struct SqlBookmarks {
-    repo_id: RepositoryId,
+    pub(crate) repo_id: RepositoryId,
     pub(crate) connections: SqlConnections,
 }
 
@@ -258,15 +271,31 @@ impl SqlBookmarks {
         }
     }
 
+    pub fn connection(&self, ctx: &CoreContext, freshness: Freshness) -> &Connection {
+        match freshness {
+            Freshness::MaybeStale => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
+                &self.connections.read_connection
+            }
+            Freshness::MostRecent => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                &self.connections.read_master_connection
+            }
+        }
+    }
+
     pub fn list_raw(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
-    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId, Option<u64>)>> + 'static {
+    ) -> impl Future<Output = Result<Vec<(BookmarkName, BookmarkKind, ChangesetId, Option<u64>)>>>
+    {
         let is_wbc = matches!(
             ctx.session().session_class(),
             SessionClass::WarmBookmarksCache
@@ -358,13 +387,8 @@ impl SqlBookmarks {
                 }
             };
 
-            Ok(stream::iter(rows.into_iter().map(|row| {
-                let (name, kind, changeset_id, log_id) = row;
-                Ok((Bookmark::new(name, kind), changeset_id, log_id))
-            })))
+            Ok(rows)
         }
-        .try_flatten_stream()
-        .boxed()
     }
 
     pub fn get_raw(
@@ -384,6 +408,7 @@ impl SqlBookmarks {
     }
 }
 
+#[async_trait]
 impl Bookmarks for SqlBookmarks {
     fn list(
         &self,
@@ -394,9 +419,18 @@ impl Bookmarks for SqlBookmarks {
         pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        self.list_raw(ctx, freshness, prefix, kinds, pagination, limit)
-            .map_ok(|(bookmark, cs_id, _log_id)| (bookmark, cs_id))
-            .boxed()
+        let fut = self.list_raw(&ctx, freshness, prefix, kinds, pagination, limit);
+
+        async move {
+            let rows = fut.await?;
+
+            Ok(stream::iter(rows.into_iter().map(|row| {
+                let (name, kind, changeset_id, _log_id) = row;
+                Ok((Bookmark::new(name, kind), changeset_id))
+            })))
+        }
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn get(
@@ -407,6 +441,18 @@ impl Bookmarks for SqlBookmarks {
         self.get_raw(ctx, name)
             .map_ok(|maybe_row| maybe_row.map(|(cs_id, _log_id)| cs_id))
             .boxed()
+    }
+
+    async fn create_subscription(
+        &self,
+        ctx: &CoreContext,
+        freshness: Freshness,
+    ) -> Result<Box<dyn BookmarksSubscription>> {
+        let sub = SqlBookmarksSubscription::create(ctx, self.clone(), freshness)
+            .await
+            .context("Failed to create SqlBookmarksSubscription")?;
+
+        Ok(Box::new(sub))
     }
 
     fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
