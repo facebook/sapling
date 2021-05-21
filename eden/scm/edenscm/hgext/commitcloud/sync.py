@@ -536,7 +536,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         _pullheadgroups(repo, remotepath, headgroups)
 
     omittedbookmarks.extend(
-        _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
+        _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate, omittedheads)
     )
 
     newremotebookmarks = {}
@@ -851,7 +851,7 @@ def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     )
 
 
-def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
+def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
     """merge any changes to the cloud bookmarks with any changes to local ones
 
     This performs a 3-way diff between the old cloud bookmark state, the new
@@ -913,10 +913,11 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
                         omittedbookmarks.discard(name)
                     else:
                         # The commit is not available locally.  Omit it.
-                        repo.ui.warn(
-                            _("%s not found, omitting %s bookmark\n")
-                            % (cloudnode, name)
-                        )
+                        if cloudnode not in omittedheads:
+                            repo.ui.warn(
+                                _("%s not found, omitting %s bookmark\n")
+                                % (cloudnode, name)
+                            )
                         omittedbookmarks.add(name)
                         if name in localbookmarks:
                             changes.append((name, None))

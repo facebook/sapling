@@ -477,7 +477,6 @@ Do a sync in the new client - the bookmark is left where it was
   commitcloud: synchronizing 'server' with 'user/test/default'
   omitting 1 head that is older than 14 days:
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-  d133b886da6874fe25998d26ae1b2b8528b07c59 not found, omitting oldbook bookmark
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -608,7 +607,6 @@ A part sync omitting everything
     46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
     ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-  * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
   commitcloud: commits synchronized
