@@ -59,15 +59,21 @@ const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
 
 // Constants for use with the SNAPSHOT file
 //
-// The SNAPSHOT file format is:
 // - 4 byte identifier: "eden"
 // - 4 byte format version number (big endian)
+//
+// Followed by:
+// Version 1:
 // - 20 byte commit ID
 // - (Optional 20 byte commit ID, only present when there are 2 parents)
+// Version 2:
+// - 32-bit length
+// - Arbitrary-length binary string of said length
 constexpr folly::StringPiece kSnapshotFileMagic{"eden"};
 enum : uint32_t {
   kSnapshotHeaderSize = 8,
-  kSnapshotFormatVersion = 1,
+  kSnapshotFormatVersion1 = 1,
+  kSnapshotFormatVersion2 = 2,
 };
 } // namespace
 
@@ -102,31 +108,56 @@ Hash CheckoutConfig::getParentCommit() const {
   folly::io::Cursor cursor(&buf);
   cursor += kSnapshotFileMagic.size();
   auto version = cursor.readBE<uint32_t>();
-  if (version != kSnapshotFormatVersion) {
-    throw std::runtime_error(folly::sformat(
-        "unsupported eden SNAPSHOT file format (version {}): {}",
-        uint32_t{version},
-        snapshotFile));
-  }
-
   auto sizeLeft = cursor.length();
-  if (sizeLeft != Hash::RAW_SIZE && sizeLeft != (Hash::RAW_SIZE * 2)) {
-    throw std::runtime_error(folly::sformat(
-        "unexpected length for eden SNAPSHOT file ({} bytes): {}",
-        contents.size(),
-        snapshotFile));
+  switch (version) {
+    case kSnapshotFormatVersion1: {
+      if (sizeLeft != Hash::RAW_SIZE && sizeLeft != (Hash::RAW_SIZE * 2)) {
+        throw std::runtime_error(folly::sformat(
+            "unexpected length for eden SNAPSHOT file ({} bytes): {}",
+            contents.size(),
+            snapshotFile));
+      }
+
+      Hash parent1;
+      cursor.pull(parent1.mutableBytes().data(), Hash::RAW_SIZE);
+
+      if (!cursor.isAtEnd()) {
+        // This is never used by EdenFS.
+        Hash secondParent;
+        cursor.pull(secondParent.mutableBytes().data(), Hash::RAW_SIZE);
+      }
+
+      return parent1;
+    }
+
+    case kSnapshotFormatVersion2: {
+      auto bodyLength = cursor.readBE<uint32_t>();
+
+      // The remainder of the file is the root ID.
+      std::string rootId = cursor.readFixedString(bodyLength);
+
+      // For now, we only support Hash root IDs, but soon this will become
+      // variable-width.
+      if (rootId.size() == Hash::RAW_SIZE) {
+        // The plan is for 20-byte root IDs to always be written as 40-byte
+        // ASCII hex, but just in case, for backward and forward compatibility,
+        // handle the case that it was written as 20 byte binary.
+        return Hash{folly::ByteRange{folly::StringPiece{rootId}}};
+      } else if (rootId.size() == Hash::RAW_SIZE * 2) {
+        return Hash{folly::StringPiece{rootId}};
+      } else {
+        throw std::runtime_error(folly::sformat(
+            "SNAPSHOT file parent ID must be 20 or 40 bytes: was {} bytes",
+            rootId.size()));
+      }
+    }
+
+    default:
+      throw std::runtime_error(folly::sformat(
+          "unsupported eden SNAPSHOT file format (version {}): {}",
+          uint32_t{version},
+          snapshotFile));
   }
-
-  Hash parent1;
-  cursor.pull(parent1.mutableBytes().data(), Hash::RAW_SIZE);
-
-  if (!cursor.isAtEnd()) {
-    // This is never used by EdenFS.
-    Hash secondParent;
-    cursor.pull(secondParent.mutableBytes().data(), Hash::RAW_SIZE);
-  }
-
-  return parent1;
 }
 
 void CheckoutConfig::setParentCommit(Hash parent) const {
@@ -138,7 +169,7 @@ void CheckoutConfig::setParentCommit(Hash parent) const {
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
-  cursor.writeBE<uint32_t>(kSnapshotFormatVersion);
+  cursor.writeBE<uint32_t>(kSnapshotFormatVersion1);
   // 20-byte commit ID: parent1
   cursor.push(parent.getBytes());
   // Older versions of EdenFS would write a second 20-byte hash here to track

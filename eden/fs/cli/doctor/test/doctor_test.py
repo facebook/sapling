@@ -4,7 +4,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import binascii
 import os
+import struct
 import typing
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -24,6 +26,49 @@ from eden.fs.cli.test.lib.output import TestOutput
 from fb303_core.ttypes import fb303_status
 
 
+class SnapshotFormatTest(DoctorTestBase):
+    """
+    Eden doctor can parse the SNAPSHOT file directly. Validate its parse
+    against different formats.
+    """
+
+    def setUp(self) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        self.checkout = instance.create_test_mount(
+            "path",
+        )
+
+    def test_format1_one_parent(self) -> None:
+        (self.checkout.state_dir / "SNAPSHOT").write_bytes(
+            b"eden\x00\x00\x00\x01" + binascii.unhexlify("11223344556677889900" * 2)
+        )
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+
+    def test_format1_two_parents(self) -> None:
+        (self.checkout.state_dir / "SNAPSHOT").write_bytes(
+            b"eden\x00\x00\x00\x01"
+            + binascii.unhexlify("11223344556677889900" * 2)
+            + binascii.unhexlify("00998877665544332211" * 2)
+        )
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+
+    def test_format2_ascii(self) -> None:
+        (self.checkout.state_dir / "SNAPSHOT").write_bytes(
+            b"eden\x00\x00\x00\x02"
+            + struct.pack(">L", 40)
+            + b"11223344556677889900" * 2
+        )
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+
+    def test_format2_binary(self) -> None:
+        (self.checkout.state_dir / "SNAPSHOT").write_bytes(
+            b"eden\x00\x00\x00\x02"
+            + struct.pack(">L", 20)
+            + binascii.unhexlify(b"11223344556677889900" * 2)
+        )
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+
+
 class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
     maxDiff = None
@@ -40,13 +85,12 @@ class DoctorTest(DoctorTestBase):
         # In edenfs_path1, we will break the snapshot check.
         edenfs_path1_snapshot = "abcd" * 10
         edenfs_path1_dirstate_parent = "12345678" * 5
-        edenfs_path1 = str(
-            instance.create_test_mount(
-                "path1",
-                snapshot=edenfs_path1_snapshot,
-                dirstate_parent=edenfs_path1_dirstate_parent,
-            ).path
+        checkout = instance.create_test_mount(
+            "path1",
+            snapshot=edenfs_path1_snapshot,
+            dirstate_parent=edenfs_path1_dirstate_parent,
         )
+        edenfs_path1 = str(checkout.path)
 
         # In edenfs_path2, we will break the inotify check and the Nuclide
         # subscriptions check.

@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -89,7 +90,8 @@ CONFIG_JSON = "config.json"
 CLONE_SUCCEEDED = "clone-succeeded"
 MOUNT_CONFIG = "config.toml"
 SNAPSHOT = "SNAPSHOT"
-SNAPSHOT_MAGIC = b"eden\x00\x00\x00\x01"
+SNAPSHOT_MAGIC_1 = b"eden\x00\x00\x00\x01"
+SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
 
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
@@ -1105,15 +1107,27 @@ class EdenCheckout:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
         with snapshot_path.open("rb") as f:
-            assert f.read(8) == SNAPSHOT_MAGIC
-            return binascii.hexlify(f.read(20)).decode("utf-8")
+            header = f.read(8)
+            if header == SNAPSHOT_MAGIC_1:
+                return binascii.hexlify(f.read(20)).decode()
+            elif header == SNAPSHOT_MAGIC_2:
+                (bodyLength,) = struct.unpack(">L", f.read(4))
+                parent = f.read(bodyLength)
+                if len(parent) == 20:
+                    return binascii.hexlify(parent).decode()
+                elif len(parent) == 40:
+                    return parent.decode()
+                else:
+                    raise RuntimeError("SNAPSHOT file contains invalid Mercurial hash")
+            else:
+                raise RuntimeError("SNAPSHOT file has invalid header")
 
     def save_snapshot(self, commid_id: str) -> None:
         """Write a new parent commit ID into the SNAPSOHT file."""
         snapshot_path = self.state_dir / SNAPSHOT
         assert len(commid_id) == 40
         commit_bin = binascii.unhexlify(commid_id)
-        write_file_atomically(snapshot_path, SNAPSHOT_MAGIC + commit_bin)
+        write_file_atomically(snapshot_path, SNAPSHOT_MAGIC_1 + commit_bin)
 
     def get_backing_repo(self) -> util.HgRepo:
         repo_path = self.get_config().backing_repo

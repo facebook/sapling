@@ -93,7 +93,7 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
-TEST_F(CheckoutConfigTest, testMultipleParents) {
+TEST_F(CheckoutConfigTest, testVersion1MultipleParents) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
@@ -105,6 +105,41 @@ TEST_F(CheckoutConfigTest, testMultipleParents) {
       "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
       "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
       48};
+  auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
+  writeFile(snapshotPath, snapshotContents).value();
+
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+}
+
+TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
+
+  // Overwrite the SNAPSHOT file to contain a binary hash.
+  auto snapshotContents = folly::StringPiece{
+      "eden\00\00\00\02"
+      "\x00\x00\x00\x14"
+      "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+      "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99",
+      32};
+  auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
+  writeFile(snapshotPath, snapshotContents).value();
+
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+}
+
+TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
+
+  // Overwrite the SNAPSHOT file to contain a hexadecimal hash.
+  auto snapshotContents = folly::StringPiece{
+      "eden\00\00\00\02"
+      "\x00\x00\x00\x28"
+      "99887766554433221100aabbccddeeffabcdef99",
+      52};
   auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
   writeFile(snapshotPath, snapshotContents).value();
 
@@ -148,7 +183,7 @@ void CheckoutConfigTest::testBadSnapshot(
   EXPECT_THROW_RE(config->getParentCommit(), ExceptionType, errorRegex);
 }
 
-TEST_F(CheckoutConfigTest, testBadSnapshot) {
+TEST_F(CheckoutConfigTest, testBadSnapshotV1) {
   testBadSnapshot("ede", "SNAPSHOT file is too short");
   testBadSnapshot("eden", "SNAPSHOT file is too short");
   testBadSnapshot(StringPiece{"eden\0\0\0", 7}, "SNAPSHOT file is too short");
@@ -189,4 +224,13 @@ TEST_F(CheckoutConfigTest, testBadSnapshot) {
           "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
           48},
       "unsupported legacy SNAPSHOT file");
+}
+
+TEST_F(CheckoutConfigTest, testBadSnapshotV2) {
+  testBadSnapshot<std::out_of_range>(
+      StringPiece{"eden\0\0\0\2", 8}, "underflow");
+  testBadSnapshot<std::out_of_range>(
+      StringPiece{"eden\0\0\0\2\x00\x00\x00", 11}, "underflow");
+  testBadSnapshot<std::out_of_range>(
+      StringPiece{"eden\0\0\0\2\x00\x00\x00\x02\x32", 13}, "string underflow");
 }
