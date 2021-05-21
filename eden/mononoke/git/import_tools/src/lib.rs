@@ -204,30 +204,29 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
     stream::iter(walk)
         .map(|oid| async {
             let oid = oid.with_context(|| "While walking commits")?;
-
-            let ExtractedCommit {
-                metadata,
-                tree,
-                parent_trees,
-            } = ExtractedCommit::new(oid, pool)
-                .await
-                .with_context(|| format!("While extracting {}", oid))?;
-
-            let file_changes = task::spawn({
+            task::spawn({
                 cloned!(ctx, repo, pool);
                 async move {
-                    find_file_changes(
+                    let ExtractedCommit {
+                        metadata,
+                        tree,
+                        parent_trees,
+                    } = ExtractedCommit::new(oid, &pool)
+                        .await
+                        .with_context(|| format!("While extracting {}", oid))?;
+
+                    let file_changes = find_file_changes(
                         &ctx,
                         repo.blobstore(),
                         pool.clone(),
                         bonsai_diff(ctx.clone(), pool, tree, parent_trees),
                     )
-                    .await
+                    .await?;
+
+                    Result::<_, Error>::Ok((metadata, file_changes))
                 }
             })
-            .await??;
-
-            Ok((metadata, file_changes))
+            .await?
         })
         .buffered(prefs.concurrency)
         .and_then(|(metadata, file_changes)| async {
@@ -266,33 +265,38 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         //.then(|v| future::ready(v.into_iter().collect::<Result<Vec<_>, Error>>()))
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
         .try_for_each(|v| async {
-            let oid_to_bcsid = v
-                .iter()
-                .map(|(bcs, git_sha1)| {
-                    BonsaiGitMappingEntry::new(*git_sha1, bcs.get_changeset_id())
-                })
-                .collect::<Vec<BonsaiGitMappingEntry>>();
-            let vbcs = v.into_iter().map(|x| x.0).collect();
+            task::spawn({
+                cloned!(ctx, repo, prefs);
+                async move {
+                    let oid_to_bcsid = v
+                        .iter()
+                        .map(|(bcs, git_sha1)| {
+                            BonsaiGitMappingEntry::new(*git_sha1, bcs.get_changeset_id())
+                        })
+                        .collect::<Vec<BonsaiGitMappingEntry>>();
+                    let vbcs = v.into_iter().map(|x| x.0).collect();
 
-            // We know that the commits are in order (this is guaranteed by the Walk), so we
-            // can insert them as-is, one by one, without extra dependency / ordering checks.
-            let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), repo.clone())
-                .try_timed()
-                .await?;
-            debug!(
-                ctx.logger(),
-                "save_bonsai_changesets for {} commits in {:?}",
-                oid_to_bcsid.len(),
-                stats.completion_time
-            );
+                    // We know that the commits are in order (this is guaranteed by the Walk), so we
+                    // can insert them as-is, one by one, without extra dependency / ordering checks.
+                    let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), repo.clone())
+                        .try_timed()
+                        .await?;
+                    debug!(
+                        ctx.logger(),
+                        "save_bonsai_changesets for {} commits in {:?}",
+                        oid_to_bcsid.len(),
+                        stats.completion_time
+                    );
 
-            if prefs.bonsai_git_mapping {
-                repo.bonsai_git_mapping()
-                    .bulk_add(&ctx, &oid_to_bcsid)
-                    .await?;
-            }
-
-            Ok(())
+                    if prefs.bonsai_git_mapping {
+                        repo.bonsai_git_mapping()
+                            .bulk_add(&ctx, &oid_to_bcsid)
+                            .await?;
+                    }
+                    Result::<_, Error>::Ok(())
+                }
+            })
+            .await?
         })
         .await?;
 
