@@ -11,6 +11,7 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{Arc, Mutex},
+    time::SystemTime,
 };
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
@@ -20,7 +21,9 @@ use crate::scrub::{
 };
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
 };
@@ -72,12 +75,6 @@ impl<T> Tickable<T> {
         }
     }
 
-    pub fn add_content(&self, key: String, value: T) {
-        self.storage.with(|s| {
-            s.insert(key, value);
-        })
-    }
-
     // Broadcast either success or error to a set of outstanding futures, advancing the
     // overall state by one tick.
     pub fn tick(&self, error: Option<&str>) {
@@ -103,8 +100,25 @@ impl<T> Tickable<T> {
     }
 }
 
+impl Tickable<(BlobstoreBytes, u64)> {
+    pub fn get_bytes(&self, key: &str) -> Option<BlobstoreBytes> {
+        self.storage
+            .with(|s| s.get(key).map(|(v, _ctime)| v).cloned())
+    }
+
+    pub fn add_bytes(&self, key: String, value: BlobstoreBytes) {
+        let ctime = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        self.storage.with(|s| {
+            s.insert(key, (value, ctime));
+        })
+    }
+}
+
 #[async_trait]
-impl Blobstore for Tickable<BlobstoreBytes> {
+impl Blobstore for Tickable<(BlobstoreBytes, u64)> {
     async fn get<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -114,7 +128,11 @@ impl Blobstore for Tickable<BlobstoreBytes> {
         let on_tick = self.on_tick();
 
         on_tick.await?;
-        Ok(storage.with(|s| s.get(key).cloned().map(Into::into)))
+        Ok(storage.with(|s| {
+            s.get(key).cloned().map(|(v, ctime)| {
+                BlobstoreGetData::new(BlobstoreMetadata::new(Some(ctime as i64), None), v)
+            })
+        }))
     }
 
     async fn put<'a>(
@@ -129,21 +147,21 @@ impl Blobstore for Tickable<BlobstoreBytes> {
 }
 
 #[async_trait]
-impl BlobstorePutOps for Tickable<BlobstoreBytes> {
+impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
-        _put_behaviour: PutBehaviour,
+        put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        let storage = self.storage.clone();
-        let on_tick = self.on_tick();
-
-        on_tick.await?;
-        storage.with(|s| {
-            s.insert(key, value);
-        });
+        self.on_tick().await?;
+        if put_behaviour == PutBehaviour::IfAbsent {
+            if self.storage.with(|s| s.contains_key(&key)) {
+                return Ok(OverwriteStatus::Prevented);
+            }
+        }
+        self.add_bytes(key, value);
         Ok(OverwriteStatus::NotChecked)
     }
 
@@ -331,7 +349,7 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(bs0.storage.with(|s| s.get(k0).cloned()), Some(v0.clone()));
+        assert_eq!(bs0.get_bytes(k0), Some(v0.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
         bs1.tick(Some("bs1 failed"));
         assert!(
@@ -364,8 +382,8 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(None);
         put_fut.await.unwrap();
-        assert!(bs0.storage.with(|s| s.get(k1).is_none()));
-        assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs0.get_bytes(k1), None);
+        assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
         assert!(
             log.log
                 .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
@@ -377,7 +395,7 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
-        assert!(bs0.storage.with(|s| s.get(k1).is_none()));
+        assert_eq!(bs0.get_bytes(k1), None);
 
         log.clear();
     }
@@ -437,12 +455,12 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(bs0.storage.with(|s| s.get(k4).cloned()), Some(v4.clone()));
+        assert_eq!(bs0.get_bytes(k4), Some(v4.clone()));
         bs1.tick(None);
         while log.log.with(|log| log.len() != 2) {
             tokio::task::yield_now().await;
         }
-        assert_eq!(bs1.storage.with(|s| s.get(k4).cloned()), Some(v4.clone()));
+        assert_eq!(bs1.get_bytes(k4), Some(v4.clone()));
     }
 }
 
@@ -803,7 +821,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         }
 
         // bs1 and bs2 empty at this point
-        assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
         assert!(bs2.storage.with(|s| s.is_empty()));
 
@@ -823,16 +841,16 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         bs2.tick(None);
 
         // Succeeds
-        assert_eq!(get_fut.await.unwrap(), Some(v1.clone().into()));
+        assert_eq!(get_fut.await.unwrap().map(|v| v.into()), Some(v1.clone()));
         // Now all populated.
-        assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
-        assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
         match scrub_action_on_missing_write_mostly {
             ScrubWriteMostly::Scrub | ScrubWriteMostly::PopulateIfAbsent => {
-                assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()))
+                assert_eq!(bs2.get_bytes(k1), Some(v1.clone()))
             }
             ScrubWriteMostly::SkipMissing => {
-                assert_eq!(bs2.storage.with(|s| s.get(k1).cloned()), None)
+                assert_eq!(bs2.get_bytes(k1), None)
             }
         }
     }
@@ -969,11 +987,11 @@ async fn write_mostly_get(fb: FacebookInit) {
     borrowed!(ctx);
 
     // Put one blob into both blobstores
-    main_bs.add_content(both_key.to_owned(), value.clone());
-    main_bs.add_content(main_only_key.to_owned(), value.clone());
-    write_mostly_bs.add_content(both_key.to_owned(), value.clone());
+    main_bs.add_bytes(both_key.to_owned(), value.clone());
+    main_bs.add_bytes(main_only_key.to_owned(), value.clone());
+    write_mostly_bs.add_bytes(both_key.to_owned(), value.clone());
     // Put a blob only into the write mostly blobstore
-    write_mostly_bs.add_content(write_mostly_key.to_owned(), value.clone());
+    write_mostly_bs.add_bytes(write_mostly_key.to_owned(), value.clone());
 
     // Fetch the blob that's in both blobstores, see that the write mostly blobstore isn't being
     // read from by ticking it
@@ -1090,10 +1108,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(
-            main_bs.storage.with(|s| s.get(k0).cloned()),
-            Some(v0.clone())
-        );
+        assert_eq!(main_bs.get_bytes(k0), Some(v0.clone()));
         assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
         write_mostly_bs.tick(Some("write_mostly_bs failed"));
         assert!(
@@ -1126,10 +1141,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         write_mostly_bs.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(k0).cloned()),
-            Some(v0.clone())
-        );
+        assert_eq!(write_mostly_bs.get_bytes(k0), Some(v0.clone()));
         assert!(main_bs.storage.with(|s| s.is_empty()));
         main_bs.tick(Some("main_bs failed"));
         assert!(
@@ -1166,10 +1178,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         write_mostly_bs.tick(None);
         put_fut.await.unwrap();
         assert!(main_bs.storage.with(|s| s.get(k1).is_none()));
-        assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(k1).cloned()),
-            Some(v1.clone())
-        );
+        assert_eq!(write_mostly_bs.get_bytes(k1), Some(v1.clone()));
         assert!(
             log.log
                 .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
@@ -1219,18 +1228,12 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(
-            main_bs.storage.with(|s| s.get(k4).cloned()),
-            Some(v4.clone())
-        );
+        assert_eq!(main_bs.get_bytes(k4), Some(v4.clone()));
         write_mostly_bs.tick(None);
         while log.log.with(|log| log.len() != 2) {
             tokio::task::yield_now().await;
         }
-        assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(k4).cloned()),
-            Some(v4.clone())
-        );
+        assert_eq!(write_mostly_bs.get_bytes(k4), Some(v4.clone()));
     }
 }
 
@@ -1296,15 +1299,9 @@ async fn needed_writes(fb: FacebookInit) {
             )
         });
 
-        assert_eq!(
-            main_bs0.storage.with(|s| s.get(k0).cloned()),
-            Some(v0.clone())
-        );
-        assert_eq!(
-            main_bs2.storage.with(|s| s.get(k0).cloned()),
-            Some(v0.clone())
-        );
-        assert_eq!(write_mostly_bs.storage.with(|s| s.get(k0).cloned()), None);
+        assert_eq!(main_bs0.get_bytes(k0), Some(v0.clone()));
+        assert_eq!(main_bs2.get_bytes(k0), Some(v0.clone()));
+        assert_eq!(write_mostly_bs.get_bytes(k0), None);
         write_mostly_bs.tick(Some("Error"));
         log.clear();
     }
@@ -1348,15 +1345,9 @@ async fn needed_writes(fb: FacebookInit) {
             )
         });
 
-        assert_eq!(
-            main_bs0.storage.with(|s| s.get(k1).cloned()),
-            Some(v1.clone())
-        );
-        assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(k1).cloned()),
-            Some(v1.clone())
-        );
-        assert_eq!(main_bs2.storage.with(|s| s.get(k1).cloned()), None);
+        assert_eq!(main_bs0.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(write_mostly_bs.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(main_bs2.get_bytes(k1), None);
         main_bs2.tick(Some("Error"));
         log.clear();
     }
