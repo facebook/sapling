@@ -152,7 +152,7 @@ Connect to commit cloud
   $ hgfakedate 1990-02-20T16:00Z cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
+  omitting 1 head that is older than 14 days:
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
   pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
@@ -292,7 +292,7 @@ Second client syncs that in, but still leaves the old commits missing
   $ cd ../client2
   $ hgfakedate 1990-02-28T02:02Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
+  omitting 1 head that is older than 14 days:
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
   pulling 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
@@ -416,7 +416,7 @@ Connect to commit cloud
   $ hgfakedate 1990-03-05T12:00Z cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
+  omitting 1 head that is older than 14 days:
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   pulling ff52de2f760c 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
@@ -475,7 +475,7 @@ Do a sync in the new client - the bookmark is left where it was
   $ cd ../client3
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
+  omitting 1 head that is older than 14 days:
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   d133b886da6874fe25998d26ae1b2b8528b07c59 not found, omitting oldbook bookmark
   commitcloud: commits synchronized
@@ -603,11 +603,11 @@ A part sync omitting everything
   $ hgfakedate 1990-04-01T12:01Z cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
-    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
-    46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+  omitting 4 heads that are older than 14 days:
     2b8dce7bd745 from Sun Mar 04 03:00:00 1990 +0000
+    46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
@@ -629,21 +629,21 @@ Check that it doesn't break cloud sync
   $ cd ../client4
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
-    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
-    46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+  omitting 4 heads that are older than 14 days:
     2b8dce7bd745 from Sun Mar 04 03:00:00 1990 +0000
+    46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   commitcloud: commits synchronized
   finished in * (glob)
 
 Pull in some of the commits by setting max age manually
   $ hgfakedate 1990-04-01T12:01Z cloud sync --config commitcloud.max_sync_age=30
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 30 days:
-    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+  omitting 3 heads that are older than 30 days:
     46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -666,10 +666,10 @@ Create a bookmark with the same name as an omitted bookmark
   $ hg book -r tip midbook
   $ hgfakedate 1990-04-01T12:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  omitting heads that are older than 14 days:
-    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+  omitting 3 heads that are older than 14 days:
     46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
+    ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
+    d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   commitcloud: commits synchronized
   finished in * (glob)
 

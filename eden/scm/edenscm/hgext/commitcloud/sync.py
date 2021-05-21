@@ -25,7 +25,7 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import hex
 from edenscm.mercurial.pycompat import encodeutf8
 
@@ -47,6 +47,8 @@ from . import (
 
 # Sync status file.  Contains whether the previous sync was successful or not.
 _syncstatusfile = "commitcloudsyncstatus"
+
+_maxomittedheadsoutput = 30
 
 
 def _isremotebookmarkssyncenabled(ui):
@@ -451,13 +453,32 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             if head in cloudrefs.headdates and cloudrefs.headdates[head] < mindate
         ]
         if omittedheads:
-            repo.ui.status(_("omitting heads that are older than %d days:\n") % maxage)
-            for head in omittedheads:
+            omittedheadslen = len(omittedheads)
+            repo.ui.status(
+                _n(
+                    "omitting %d head that is older than %d days:\n",
+                    "omitting %d heads that are older than %d days:\n",
+                    omittedheadslen,
+                )
+                % (omittedheadslen, maxage)
+            )
+            counter = 0
+            for head in reversed(omittedheads):
+                if counter == _maxomittedheadsoutput:
+                    remaining = len(omittedheads) - counter
+                    repo.ui.status(
+                        _n("  and %d older head\n", "  and %d older heads\n", remaining)
+                        % remaining
+                    )
+                    break
                 headdatestr = util.datestr(util.makedate(cloudrefs.headdates[head]))
                 repo.ui.status(_("  %s from %s\n") % (head[:12], headdatestr))
+                counter = counter + 1
+
+        omittedheads = set(omittedheads)
         newheads = [head for head in newheads if head not in omittedheads]
     else:
-        omittedheads = []
+        omittedheads = set()
     omittedbookmarks = []
     omittedremotebookmarks = []
 
@@ -600,7 +621,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newbookmarks=cloudrefs.bookmarks,
         newremotebookmarks=newremotebookmarks,
         newmaxage=maxage,
-        newomittedheads=omittedheads,
+        newomittedheads=list(omittedheads),
         newomittedbookmarks=omittedbookmarks,
         newomittedremotebookmarks=omittedremotebookmarks,
         newsnapshots=newsnapshots,
