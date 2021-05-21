@@ -220,16 +220,19 @@ impl HookManager {
                 .hooks
                 .get(hook_name)
                 .ok_or_else(|| ErrorKind::NoSuchHook(hook_name.to_string()))?;
-            if is_hook_bypassed(
+
+            let mut scuba = scuba.clone();
+            scuba.add("hook", hook_name.to_string());
+
+            if let Some(bypass_reason) = get_bypass_reason(
                 hook.get_config().bypass.as_ref(),
                 cs.message(),
                 maybe_pushvars,
             ) {
+                scuba.add("bypass_reason", bypass_reason);
+                scuba.log();
                 continue;
             }
-
-            let mut scuba = scuba.clone();
-            scuba.add("hook", hook_name.to_string());
 
             for future in hook.get_futures(
                 ctx,
@@ -247,35 +250,34 @@ impl HookManager {
     }
 }
 
-fn is_hook_bypassed(
+fn get_bypass_reason(
     bypass: Option<&HookBypass>,
     cs_msg: &str,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
-) -> bool {
-    bypass.map_or(false, move |bypass| {
-        let bypassed_by_message = bypass
-            .commit_message_bypass()
-            .map_or(false, |bypass_string| cs_msg.contains(bypass_string));
+) -> Option<String> {
+    let bypass = bypass?;
 
-        if bypassed_by_message {
-            // Let's short-circuit
-            return true;
+    if let Some(bypass_string) = bypass.commit_message_bypass() {
+        if cs_msg.contains(bypass_string) {
+            return Some(format!("bypass string: {}", bypass_string));
         }
+    }
 
-        bypass.pushvar_bypass().map_or(false, |(name, value)| {
-            if let Some(pushvars) = maybe_pushvars {
-                let pushvar_val = pushvars
-                    .get(name)
-                    .map(|bytes| String::from_utf8(bytes.to_vec()));
+    if let Some((name, value)) = bypass.pushvar_bypass() {
+        if let Some(pushvars) = maybe_pushvars {
+            let pushvar_val = pushvars
+                .get(name)
+                .map(|bytes| String::from_utf8(bytes.to_vec()));
 
-                if let Some(Ok(pushvar_val)) = pushvar_val {
-                    return &pushvar_val == value;
+            if let Some(Ok(pushvar_val)) = pushvar_val {
+                if pushvar_val == *value {
+                    return Some(format!("bypass pushvar: {}={}", name, value));
                 }
-                return false;
             }
-            false
-        })
-    })
+        }
+    }
+
+    None
 }
 
 /// An enum to represent the origin of the changeset
@@ -630,4 +632,45 @@ pub struct FileHookExecutionID {
 pub struct ChangesetHookExecutionID {
     pub cs_id: ChangesetId,
     pub hook_name: String,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_commit_message_bypass() {
+        let bypass = HookBypass::new_with_commit_msg("@mybypass".into());
+
+        let r = get_bypass_reason(Some(&bypass), "@notbypass", None);
+        assert!(r.is_none());
+
+        let r = get_bypass_reason(Some(&bypass), "foo @mybypass bar", None);
+        assert!(r.is_some());
+    }
+
+    #[test]
+    fn test_pushvar_bypass() {
+        let bypass = HookBypass::new_with_pushvar("myvar".into(), "myvalue".into());
+
+        let mut m = HashMap::new();
+        let r = get_bypass_reason(Some(&bypass), "", Some(&m));
+        assert!(r.is_none()); // No var
+
+        m.insert("somevar".into(), "somevalue".as_bytes().into());
+        let r = get_bypass_reason(Some(&bypass), "", Some(&m));
+        assert!(r.is_none()); // wrong var
+
+        m.insert("myvar".into(), "somevalue".as_bytes().into());
+        let r = get_bypass_reason(Some(&bypass), "", Some(&m));
+        assert!(r.is_none()); // wrong value
+
+        m.insert("myvar".into(), "myvalue foo".as_bytes().into());
+        let r = get_bypass_reason(Some(&bypass), "", Some(&m));
+        assert!(r.is_none()); // wrong value
+
+        m.insert("myvar".into(), "myvalue".as_bytes().into());
+        let r = get_bypass_reason(Some(&bypass), "", Some(&m));
+        assert!(r.is_some());
+    }
 }
