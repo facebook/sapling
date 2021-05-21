@@ -125,7 +125,7 @@ Sync in client2.   This will omit the bookmark because we don't have the landed 
 
   $ cd ../client2
   $ hg cloud sync -q
-  67d363c9001e1d7227625f0fa5004aca4572d214 not found, omitting foo bookmark
+  67d363c9001e not found, omitting foo bookmark
   $ tglogp
   @  df4f53cec30a public 'base'
   

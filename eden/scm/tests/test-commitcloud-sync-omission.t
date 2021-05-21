@@ -69,6 +69,10 @@ Connect the first client
 
 Make some stacks with various dates.  We will use Feb 1990 for these tests.
 
+- Bookmark for public commit
+  $ hg up -q 'desc(base)'
+  $ hg bookmark 'mytag'
+
 - Old stack
   $ hg up -q 'desc(base)'
   $ touch oldstack-feb1
@@ -128,13 +132,14 @@ Sync these to commit cloud - they all get pushed even though they are old
   │ │
   │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
   ├─╯
-  o  df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base' mytag
   
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 2
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -166,7 +171,8 @@ Connect to commit cloud
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  1f9ebd6d1390ebc603e401171eda0c444a0f8754 not found, omitting oldbook bookmark
+  1f9ebd6d1390 not found, omitting oldbook bookmark
+  df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -224,7 +230,7 @@ Sync these commits to the first client - it has everything
   │ │
   │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
   ├─╯
-  o  df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base' mytag
   
 
 Second client can still sync
@@ -251,6 +257,7 @@ Second client can still sync
   version: 3
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -280,6 +287,7 @@ Add a new commit to a stack on the first client
   version: 4
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -322,6 +330,7 @@ Second client syncs that in, but still leaves the old commits missing
   version: 4
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -353,6 +362,7 @@ First client add a new commit to the old stack
   version: 5
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -398,6 +408,7 @@ Second client syncs the old stack in, and now has the bookmark
   version: 5
   bookmarks:
       midbook => 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8
+      mytag => df4f53cec30af1e4f669102135076fd4f9673fcc
       newbook => 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97
       oldbook => 1f9ebd6d1390ebc603e401171eda0c444a0f8754
   heads:
@@ -434,7 +445,8 @@ Connect to commit cloud
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  1c1b7955142cd8a3beec705c9cca9d775ecb0fa8 not found, omitting midbook bookmark
+  1c1b7955142c not found, omitting midbook bookmark
+  df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -545,7 +557,7 @@ Move the bookmark locally - this still gets synced ok.
   │ │
   o │  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
-  o  df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base' mytag
   
 
 A full sync pulls the old commits in
@@ -590,7 +602,7 @@ A full sync pulls the old commits in
   │ │
   │ o  56a352317b67 draft 'newstack-feb13' newbook
   ├─╯
-  @  df4f53cec30a public 'base'
+  @  df4f53cec30a public 'base' mytag
   
 Create a new client that isn't connected yet
   $ cd ..
@@ -609,6 +621,7 @@ A part sync omitting everything
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   * not found, omitting * bookmark (glob)
   * not found, omitting * bookmark (glob)
+  df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -697,7 +710,7 @@ other bookmark is treated like a move.
   │ │
   │ o  56a352317b67 draft 'newstack-feb13'
   ├─╯
-  @  df4f53cec30a public 'base'
+  @  df4f53cec30a public 'base' mytag
   
 
 In client1 (which hasn't synced yet), make the midbook commit obsolete.
@@ -728,7 +741,7 @@ Attempt to sync.  The midbook bookmark should make it visible again.
   │ │
   o │  1f9ebd6d1390 'oldstack-feb1'
   ├─╯
-  o  df4f53cec30a 'base'
+  o  df4f53cec30a 'base' mytag
   
 Sync in client2.  It should match.
   $ cd ../client2
@@ -795,7 +808,7 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
 
   $ cd ../client2
   $ hg cloud sync -q
-  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
+  f770b7f72fa5 not found, omitting midbook bookmark
   $ tglogp
   o  2ace67ee4791 draft 'oldstack-mar4 amended'
   │
@@ -816,7 +829,7 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   │ │
   │ o  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
-  o  df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base' mytag
   
 Sync in client 4.  Some of the omitted heads in this client have been removed
 from the cloud workspace, but the sync should still work.
@@ -830,6 +843,6 @@ from the cloud workspace, but the sync should still work.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 3 files
-  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
+  f770b7f72fa5 not found, omitting midbook bookmark
   commitcloud: commits synchronized
   finished in 0.00 sec

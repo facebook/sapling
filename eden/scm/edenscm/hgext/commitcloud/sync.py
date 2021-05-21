@@ -50,6 +50,8 @@ _syncstatusfile = "commitcloudsyncstatus"
 
 _maxomittedheadsoutput = 30
 
+_maxomittedbookmarksoutput = 30
+
 
 def _isremotebookmarkssyncenabled(ui):
     return ui.configbool("remotenames", "selectivepull") and ui.configbool(
@@ -291,7 +293,7 @@ def _sync(
                     )
 
                 # Check if any omissions are now included in the repo
-                _checkomissions(repo, remotepath, lastsyncstate, tr)
+                _checkomissions(repo, remotepath, lastsyncstate, tr, maxage)
 
             # We committed the transaction so that data downloaded from the cloud is
             # committed.  Start a new transaction for uploading the local changes.
@@ -536,7 +538,9 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         _pullheadgroups(repo, remotepath, headgroups)
 
     omittedbookmarks.extend(
-        _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate, omittedheads)
+        _mergebookmarks(
+            repo, tr, cloudrefs.bookmarks, lastsyncstate, omittedheads, maxage
+        )
     )
 
     newremotebookmarks = {}
@@ -851,7 +855,7 @@ def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     )
 
 
-def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
+def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxage):
     """merge any changes to the cloud bookmarks with any changes to local ones
 
     This performs a 3-way diff between the old cloud bookmark state, the new
@@ -863,6 +867,9 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
     Some of the bookmark changes may not be possible to apply, as the bookmarked
     commit has been omitted locally.  In that case the bookmark is omitted.
 
+    Some of the bookmarks unknown locally are for the public commits,
+    we apply them according to the requested maxage. If they are too old, they are omitted.
+
     Returns a list of the omitted bookmark names.
     """
     unfi = repo
@@ -871,6 +878,8 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
     changes = []
     allnames = set(list(localbookmarks.keys()) + list(cloudbookmarks.keys()))
     newnames = set()
+    mindate = (time.time() - maxage * 86400) if maxage is not None else 0
+    oldbookmarks = {}
     for name in allnames:
         # We are doing a 3-way diff between the local bookmark and the cloud
         # bookmark, using the previous cloud bookmark's value as the common
@@ -907,16 +916,26 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
                 if cloudnode is not None:
                     # The cloud bookmark has been set to point to a new commit.
                     if cloudnode in unfi:
-                        # The commit is available locally, so update the
-                        # bookmark.
-                        changes.append((name, nodemod.bin(cloudnode)))
-                        omittedbookmarks.discard(name)
+                        ctx = unfi[cloudnode]
+                        # The cloud bookmark is for a public commit but older than the requested age.
+                        if (
+                            localnode is None
+                            and not ctx.mutable()
+                            and ctx.date()[0] < mindate
+                        ):
+                            oldbookmarks[name] = cloudnode
+                            omittedbookmarks.add(name)
+                        else:
+                            # The commit is available locally, so update the
+                            # bookmark.
+                            changes.append((name, nodemod.bin(cloudnode)))
+                            omittedbookmarks.discard(name)
                     else:
                         # The commit is not available locally.  Omit it.
                         if cloudnode not in omittedheads:
                             repo.ui.warn(
                                 _("%s not found, omitting %s bookmark\n")
-                                % (cloudnode, name)
+                                % (cloudnode[:12], name)
                             )
                         omittedbookmarks.add(name)
                         if name in localbookmarks:
@@ -932,6 +951,28 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads):
                     else:
                         # Remove the bookmark locally.
                         changes.append((name, None))
+
+    if oldbookmarks:
+        counter = 0
+        for name, node in oldbookmarks.items():
+            if counter == _maxomittedbookmarksoutput:
+                remaining = len(oldbookmarks) - counter
+                repo.ui.status(
+                    _n(
+                        "  and %d more old bookmark\n",
+                        "  and %d more old bookmarks\n",
+                        remaining,
+                    )
+                    % remaining
+                )
+                break
+            repo.ui.status(
+                _(
+                    "%s is older than %d days, omitting %s bookmark\n",
+                )
+                % (node[:12], maxage, name)
+            )
+            counter = counter + 1
 
     repo._bookmarks.applychanges(repo, tr, changes)
     return list(omittedbookmarks)
@@ -960,7 +1001,7 @@ def _mergeobsmarkers(repo, tr, obsmarkers):
 
 
 @perftrace.tracefunc("Check Omissions")
-def _checkomissions(repo, remotepath, lastsyncstate, tr):
+def _checkomissions(repo, remotepath, lastsyncstate, tr, maxage):
     """check omissions are still not available locally
 
     Check that the commits that have been deliberately omitted are still not
@@ -977,6 +1018,7 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr):
     omittedremotebookmarks = set()
     changes = []
     remotechanges = {}
+    mindate = (time.time() - maxage * 86400) if maxage is not None else 0
     for head in lastomittedheads:
         if head not in repo:
             omittedheads.add(head)
@@ -986,7 +1028,10 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr):
             continue
         node = lastsyncstate.bookmarks[name]
         if node in unfi:
-            changes.append((name, nodemod.bin(node)))
+            if unfi[node].mutable() or (unfi[node].date()[0] >= mindate):
+                changes.append((name, nodemod.bin(node)))
+            else:
+                omittedbookmarks.add(name)
         else:
             omittedbookmarks.add(name)
     for name in lastomittedremotebookmarks:
