@@ -21,6 +21,7 @@ import weakref
 from contextlib import contextmanager
 
 import bindings
+from edenscm import tracing
 from edenscm.hgext.extlib.phabricator import diffprops
 
 from . import (
@@ -910,9 +911,25 @@ class localrepository(object):
 
             # Resolve the bookmark names to heads.
             if bookmarknames:
-                remotebookmarks = remote.listkeyspatterns(
-                    "bookmarks", patterns=list(bookmarknames)
-                )  # {name: hexnode}
+                if (
+                    self.ui.configbool("pull", "httpbookmarks")
+                    and getattr(self, "edenapi", None) is not None
+                ):
+                    (fetchedbookmarks, _stats) = self.edenapi.bookmarks(
+                        self.name, list(bookmarknames)
+                    )
+                    tracing.debug(
+                        "edenapi fetched bookmarks: %s" % str(fetchedbookmarks),
+                        target="pull::httpbookmarks",
+                    )
+                    remotebookmarks = {
+                        bm: n for (bm, n) in fetchedbookmarks.items() if n is not None
+                    }
+                else:
+                    remotebookmarks = remote.listkeyspatterns(
+                        "bookmarks", patterns=list(bookmarknames)
+                    )  # {name: hexnode}
+
                 for name in bookmarknames:
                     if name in remotebookmarks:
                         hexnode = remotebookmarks[name]

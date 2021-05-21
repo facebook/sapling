@@ -434,6 +434,7 @@ coreconfigitem("pull", "automigrate", default=True)
 # Practically, 100k commit data takes about 200MB memroy (or 400MB if
 # duplicated in Python / Rust).
 coreconfigitem("pull", "buffer-commit-count", default=(util.istest() and 5 or 100000))
+coreconfigitem("pull", "httpbookmarks", default=False)
 coreconfigitem("push", "pushvars.server", default=True)
 coreconfigitem("push", "requirereason", default=False)
 coreconfigitem("push", "requirereasonmsg", default="")
