@@ -73,6 +73,7 @@ pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 pub const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
 pub const BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG: &str = "blobstore-scrub-write-mostly-missing";
+pub const BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG: &str = "blobstore-scrub-queue-peek";
 
 pub const WITH_READONLY_STORAGE_ARG: &str = "with-readonly-storage";
 
@@ -189,6 +190,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to report missing keys in write mostly blobstores as a scrub action when scrubbing
     scrub_action_on_missing_write_mostly_default: Option<ScrubWriteMostly>,
+
+    // Whether to set a default for how long to peek back at the multiplex queue when scrubbing
+    scrub_queue_peek_bound_secs_default: Option<u64>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -282,6 +286,7 @@ impl MononokeAppBuilder {
             scrub_action_default: None,
             scrub_grace_secs_default: None,
             scrub_action_on_missing_write_mostly_default: None,
+            scrub_queue_peek_bound_secs_default: None,
         }
     }
 
@@ -766,6 +771,19 @@ impl MononokeAppBuilder {
                 scrub_grace_arg = scrub_grace_arg
                     .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
             }
+            let mut scrub_queue_peek_bound_arg = Arg::with_name(
+                BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG,
+            )
+            .long(BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG)
+            .takes_value(true)
+            .required(false)
+            .requires(BLOBSTORE_SCRUB_ACTION_ARG)
+            .help("Number of seconds within which we consider it worth checking the healer queue.");
+            if let Some(default) = self.scrub_queue_peek_bound_secs_default {
+                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                scrub_queue_peek_bound_arg = scrub_queue_peek_bound_arg
+                    .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
+            };
             let mut scrub_action_on_missing_write_mostly_arg =
                 Arg::with_name(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
                     .long(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
@@ -782,6 +800,7 @@ impl MononokeAppBuilder {
             app.arg(scrub_action_arg)
                 .arg(scrub_grace_arg)
                 .arg(scrub_action_on_missing_write_mostly_arg)
+                .arg(scrub_queue_peek_bound_arg)
         } else {
             app
         }

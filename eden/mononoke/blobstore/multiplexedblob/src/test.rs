@@ -11,7 +11,7 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{Arc, Mutex},
-    time::SystemTime,
+    time::{Duration, SystemTime},
 };
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
@@ -280,6 +280,7 @@ async fn scrub_none(
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
             scrub_action_on_missing_write_mostly,
+            queue_peek_bound: None,
         },
         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
     );
@@ -672,6 +673,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
             scrub_action_on_missing_write_mostly,
+            queue_peek_bound: None,
         },
         scrub_handler.clone(),
     );
@@ -772,8 +774,9 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             scrub_action: ScrubAction::Repair,
             scrub_grace: None,
             scrub_action_on_missing_write_mostly,
+            queue_peek_bound: None,
         },
-        scrub_handler,
+        scrub_handler.clone(),
     );
 
     // Non-existing key in all blobstores, new blobstore failing
@@ -802,6 +805,59 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         bs1.tick(None);
         bs2.tick(None);
         assert!(get_fut.await.is_err(), "Empty replacement against error");
+    }
+
+    // One working replica after failure, queue lookback means scrub action not performed
+    {
+        // Create with different queue_peek_bound
+        let bs = ScrubBlobstore::new(
+            MultiplexId::new(1),
+            vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+            vec![(bid2, bs2.clone())],
+            nonzero!(1usize),
+            queue.clone(),
+            MononokeScubaSampleBuilder::with_discard(),
+            nonzero!(1u64),
+            ScrubOptions {
+                scrub_action: ScrubAction::Repair,
+                scrub_grace: None,
+                scrub_action_on_missing_write_mostly,
+                queue_peek_bound: Some(Duration::from_secs(7200)),
+            },
+            scrub_handler,
+        );
+        let v1 = make_value("v1");
+        let k1 = "k1";
+        // Check there is an entry on the queue
+        match queue.get(ctx, k1).await.unwrap().as_slice() {
+            [entry] => {
+                assert_eq!(entry.blobstore_id, bid0, "Queue bad");
+            }
+            _ => panic!("only one entry expected"),
+        }
+        // bs1 and bs2 empty at this point
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
+        assert!(bs1.storage.with(|s| s.is_empty()));
+        assert!(bs2.storage.with(|s| s.is_empty()));
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        // tick the gets
+        bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        bs1.tick(None);
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+            // this read doesn't happen in this mode
+            bs2.tick(None);
+        }
+        // No repairs to tick, as its on queue within the peek lookback
+
+        // Succeeds
+        assert_eq!(get_fut.await.unwrap().map(|v| v.into()), Some(v1.clone()));
+
+        // bs1 and bs2 still empty at this point. assumption is item on queue will be healed later.
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
+        assert!(bs1.storage.with(|s| s.is_empty()));
+        assert!(bs2.storage.with(|s| s.is_empty()));
     }
 
     // One working replica after failure.

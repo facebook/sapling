@@ -81,6 +81,7 @@ pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
     pub scrub_grace: Option<Duration>,
     pub scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+    pub queue_peek_bound: Option<Duration>,
 }
 
 impl Default for ScrubOptions {
@@ -89,6 +90,7 @@ impl Default for ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
             scrub_action_on_missing_write_mostly: ScrubWriteMostly::Scrub,
+            queue_peek_bound: Some(*HEAL_MAX_BACKLOG),
         }
     }
 }
@@ -291,13 +293,14 @@ async fn blobstore_get(
                     || !missing_main.is_empty()
                 {
                     // Only peek the queue if needed
-                    let entries = match ctime_age.as_ref() {
-                        // Avoid false alarms for recently written items still on the healer queue
-                        Some(ctime_age) if ctime_age < &*HEAL_MAX_BACKLOG => {
-                            queue.get(ctx, key).await?
-                        }
-                        _ => vec![],
-                    };
+                    let entries =
+                        match (ctime_age.as_ref(), scrub_options.queue_peek_bound.as_ref()) {
+                            // Avoid false alarms for recently written items still on the healer queue
+                            (Some(ctime_age), Some(bound)) if ctime_age < bound => {
+                                queue.get(ctx, key).await?
+                            }
+                            _ => vec![],
+                        };
 
                     // Only attempt the action if we don't know of pending writes from the queue
                     if entries.is_empty() {

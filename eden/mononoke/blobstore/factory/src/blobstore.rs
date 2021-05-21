@@ -124,6 +124,18 @@ impl BlobstoreOptions {
             self
         }
     }
+
+    pub fn with_scrub_queue_peek_bound(self, queue_peek_bound_secs: u64) -> Self {
+        if let Some(mut scrub_options) = self.scrub_options {
+            scrub_options.queue_peek_bound = Some(Duration::from_secs(queue_peek_bound_secs));
+            Self {
+                scrub_options: Some(scrub_options),
+                ..self
+            }
+        } else {
+            self
+        }
+    }
 }
 
 /// Construct a blobstore according to the specification. The multiplexed blobstore
