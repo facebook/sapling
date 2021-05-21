@@ -20,7 +20,6 @@
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {

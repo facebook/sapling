@@ -233,22 +233,21 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .via(serverState_->getThreadPool().get())
       .thenValue([this, progressCallback = std::move(progressCallback)](
                      auto&&) mutable {
-        auto parents = checkoutConfig_->getParentCommits();
-        parentInfo_.wlock()->parents.setParents(parents);
+        auto parent = checkoutConfig_->getParentCommit();
+        *parentCommit_.wlock() = parent;
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
         // snapshot id forward through subsequent journal entries.
-        journal_->recordHashUpdate(parents.parent1());
+        journal_->recordHashUpdate(parent);
 
         // Initialize the overlay.
         // This must be performed before we do any operations that may
         // allocate inode numbers, including creating the root TreeInode.
         return overlay_->initialize(getPath(), std::move(progressCallback))
-            .deferValue([parents](auto&&) { return parents; });
+            .deferValue([parent](auto&&) { return parent; });
       })
-      .thenValue(
-          [this](ParentCommits&& parents) { return createRootInode(parents); })
+      .thenValue([this](Hash&& parent) { return createRootInode(parent); })
       .thenValue([this, takeover](TreeInodePtr initTreeNode) {
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
@@ -272,7 +271,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 }
 
 folly::Future<TreeInodePtr> EdenMount::createRootInode(
-    const ParentCommits& parentCommits) {
+    const Hash& parentCommit) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (!rootOverlayDir.empty()) {
@@ -282,7 +281,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::createRootInode");
-  return objectStore_->getTreeForCommit(parentCommits.parent1(), *context)
+  return objectStore_->getTreeForCommit(parentCommit, *context)
       .thenValue([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
@@ -737,7 +736,7 @@ TreeInodePtr EdenMount::getRootInode() const {
 folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::getRootTree");
-  auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
+  Hash commitHash = *parentCommit_.rlock();
   return objectStore_->getTreeForCommit(commitHash, *context);
 }
 
@@ -873,9 +872,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   //
   // This prevents multiple checkout operations from running in parallel.
 
-  auto parentsLock = parentInfo_.wlock(std::chrono::milliseconds{500});
+  auto parentLock = parentCommit_.wlock(std::chrono::milliseconds{500});
 
-  if (!parentsLock) {
+  if (!parentLock) {
     // We failed to get the lock, which generally means a checkout is in
     // progress.
     // Someone could be holding the lock in read-mode, but we normally only
@@ -892,15 +891,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
   checkoutTimes->didAcquireParentsLock = stopWatch.elapsed();
 
-  auto oldParents = parentsLock->parents;
+  auto oldParent = *parentLock;
   auto ctx = std::make_shared<CheckoutContext>(
-      this,
-      std::move(parentsLock),
-      checkoutMode,
-      clientPid,
-      thriftMethodCaller);
-  XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
-             << oldParents << " to " << snapshotHash;
+      this, std::move(parentLock), checkoutMode, clientPid, thriftMethodCaller);
+  XLOG(DBG1) << "starting checkout for " << this->getPath() << ": " << oldParent
+             << " to " << snapshotHash;
 
   // Update lastCheckoutTime_ before starting the checkout operation.
   // This ensures that any inode objects created once the checkout starts will
@@ -912,8 +907,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().stringPiece())
       .via(serverState_->getThreadPool().get())
-      .thenValue([this, ctx, parent1Hash = oldParents.parent1(), snapshotHash](
-                     auto&&) {
+      .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         auto fromTreeFuture =
             objectStore_->getTreeForCommit(parent1Hash, ctx->getFetchContext());
         auto toTreeFuture = objectStore_->getTreeForCommit(
@@ -996,7 +990,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
            ctx,
            checkoutTimes,
            stopWatch,
-           oldParents,
+           oldParent,
            snapshotHash,
            journalDiffCallback](std::vector<CheckoutConflict>&& conflicts) {
             checkoutTimes->didFinish = stopWatch.elapsed();
@@ -1024,15 +1018,15 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             // includes information that these files changed.
             auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
             journal_->recordUncleanPaths(
-                oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
+                oldParent, snapshotHash, std::move(uncleanPaths));
 
             return result;
           })
-      .thenTry([this, ctx, stopWatch, oldParents, snapshotHash, checkoutMode](
+      .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
         XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
-                   << this->getPath() << " from " << oldParents << " to "
+                   << this->getPath() << " from " << oldParent << " to "
                    << snapshotHash << " accessed "
                    << fetchStats.tree.accessCount << " trees ("
                    << fetchStats.tree.cacheHitRate << "% chr), "
@@ -1147,7 +1141,7 @@ Future<Unit> EdenMount::diff(
     bool enforceCurrentParent,
     ResponseChannelRequest* request) const {
   if (enforceCurrentParent) {
-    auto parentInfo = parentInfo_.rlock(std::chrono::milliseconds{500});
+    auto parentInfo = parentCommit_.rlock(std::chrono::milliseconds{500});
 
     if (!parentInfo) {
       // We failed to get the lock, which generally means a checkout is in
@@ -1157,16 +1151,16 @@ Future<Unit> EdenMount::diff(
           "cannot compute status while a checkout is currently in progress"));
     }
 
-    if (parentInfo->parents.parent1() != commitHash) {
+    if (*parentInfo != commitHash) {
       // Log this occurrence to Scuba
-      getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
-          commitHash.toString(), parentInfo->parents.parent1().toString()});
+      getServerState()->getStructuredLogger()->logEvent(
+          ParentMismatch{commitHash.toString(), parentInfo->toString()});
       return makeFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
           commitHash,
           ", but current parent commit is ",
-          parentInfo->parents.parent1(),
+          *parentInfo,
           ".\nTry running `eden doctor` to remediate"));
     }
 
@@ -1201,20 +1195,20 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-void EdenMount::resetParents(const ParentCommits& parents) {
+void EdenMount::resetParent(const Hash& parent) {
   // Hold the snapshot lock around the entire operation.
-  auto parentsLock = parentInfo_.wlock();
-  auto oldParents = parentsLock->parents;
+  auto parentLock = parentCommit_.wlock();
+  auto oldParent = *parentLock;
   XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
-             << oldParents << " to " << parents;
+             << oldParent << " to " << parent;
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize
   // some files using the new source control state.
 
-  checkoutConfig_->setParentCommits(parents);
-  parentsLock->parents.setParents(parents);
+  checkoutConfig_->setParentCommit(parent);
+  *parentLock = parent;
 
-  journal_->recordHashUpdate(oldParents.parent1(), parents.parent1());
+  journal_->recordHashUpdate(oldParent, parent);
 }
 
 EdenTimestamp EdenMount::getLastCheckoutTime() const {
@@ -1224,10 +1218,6 @@ EdenTimestamp EdenMount::getLastCheckoutTime() const {
 
 void EdenMount::setLastCheckoutTime(EdenTimestamp time) {
   lastCheckoutTime_.store(time, std::memory_order_release);
-}
-
-void EdenMount::resetParent(const Hash& parent) {
-  resetParents(ParentCommits{parent});
 }
 
 RenameLock EdenMount::acquireRenameLock() {

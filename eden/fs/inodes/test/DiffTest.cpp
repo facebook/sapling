@@ -92,13 +92,13 @@ class DiffTest {
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents),
         std::move(loadFileContentsFromPath)};
-    auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
+    auto commitHash = mount_.getEdenMount()->getParentCommit();
     auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractStatus();
   }
   folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
-    auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
+    auto commitHash = mount_.getEdenMount()->getParentCommit();
     auto diffFuture = mount_.getEdenMount()->diff(
         commitHash,
         listIgnored,

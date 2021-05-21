@@ -22,13 +22,13 @@ namespace eden {
 
 CheckoutContext::CheckoutContext(
     EdenMount* mount,
-    folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
+    folly::Synchronized<Hash>::LockedPtr&& parentLock,
     CheckoutMode checkoutMode,
     std::optional<pid_t> clientPid,
     folly::StringPiece thriftMethodName)
     : checkoutMode_{checkoutMode},
       mount_{mount},
-      parentsLock_(std::move(parentsLock)),
+      parentLock_(std::move(parentLock)),
       fetchContext_{
           clientPid,
           ObjectFetchContext::Cause::Thrift,
@@ -41,17 +41,17 @@ void CheckoutContext::start(RenameLock&& renameLock) {
 }
 
 Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
-  // Only update the parents if it is not a dry run.
+  // Only update the parent if it is not a dry run.
   if (!isDryRun()) {
-    auto oldParents = parentsLock_->parents;
+    auto oldParent = *parentLock_;
     // Update the in-memory snapshot ID
-    parentsLock_->parents.setParents(newSnapshot);
+    *parentLock_ = newSnapshot;
 
     auto config = mount_->getCheckoutConfig();
     // Save the new snapshot hash to the config
-    config->setParentCommits(newSnapshot);
+    config->setParentCommit(newSnapshot);
     XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
-               << oldParents << " to " << newSnapshot;
+               << oldParent << " to " << newSnapshot;
   }
 
   // Release the rename lock.
@@ -71,7 +71,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
     XLOG(DBG4) << "waiting for inode invalidations to complete";
     return fuseChannel->flushInvalidations().thenValue([this](auto&&) {
       XLOG(DBG4) << "finished processing inode invalidations";
-      parentsLock_.unlock();
+      parentLock_.unlock();
       return std::move(*conflicts_.wlock());
     });
   }
@@ -82,9 +82,9 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
   }
 #endif
 
-  // Release the parentsLock_.
+  // Release the parentLock_.
   // Once this is released other checkout operations may proceed.
-  parentsLock_.unlock();
+  parentLock_.unlock();
 
   // Return conflicts_ via a move operation.  We don't need them any more, and
   // can give ownership directly to our caller.

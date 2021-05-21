@@ -585,12 +585,9 @@ void testModifyConflict(
   EXPECT_EQ(path, *result.conflicts[0].path_ref());
   EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type_ref());
 
-  const auto currentParent =
-      testMount.getEdenMount()->getParentCommits().parent1();
-  const auto configParent = testMount.getEdenMount()
-                                ->getCheckoutConfig()
-                                ->getParentCommits()
-                                .parent1();
+  const auto currentParent = testMount.getEdenMount()->getParentCommit();
+  const auto configParent =
+      testMount.getEdenMount()->getCheckoutConfig()->getParentCommit();
   // Make sure both the mount parent and the config parent information was
   // updated
   EXPECT_EQ(currentParent, configParent);
@@ -680,7 +677,7 @@ TEST(Checkout, modifyThenRevert) {
   srcBuilder.setFile("a/test.txt", "test contents\n");
   srcBuilder.setFile("a/xyz.txt", "bar\n");
   TestMount testMount{srcBuilder};
-  auto originalCommit = testMount.getEdenMount()->getParentCommits().parent1();
+  auto originalCommit = testMount.getEdenMount()->getParentCommit();
 
   // Modify a file.
   // We use the "normal" dispatcher APIs here, which will materialize the file.

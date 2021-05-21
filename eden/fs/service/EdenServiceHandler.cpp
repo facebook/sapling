@@ -462,13 +462,9 @@ void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<WorkingDirectoryParents> parents) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1, *mountPoint, logHash(*parents->parent1_ref()));
-  ParentCommits edenParents;
-  edenParents.parent1() = hashFromThrift(*parents->parent1_ref());
-  if (auto parent2 = parents->parent2_ref()) {
-    edenParents.parent2() = hashFromThrift(*parent2);
-  }
+  Hash parent1 = hashFromThrift(*parents->parent1_ref());
   auto edenMount = server_->getMount(*mountPoint);
-  edenMount->resetParents(edenParents);
+  edenMount->resetParent(parent1);
 }
 
 void EdenServiceHandler::getSHA1(
@@ -1198,7 +1194,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     }
   } else {
     const Hash& originHash =
-        originHashes->emplace_back(edenMount->getParentCommits().parent1());
+        originHashes->emplace_back(edenMount->getParentCommit());
     globResults.emplace_back(
         edenMount->getInode(searchRoot, helper->getFetchContext())
             .thenValue([helper = helper.get(),

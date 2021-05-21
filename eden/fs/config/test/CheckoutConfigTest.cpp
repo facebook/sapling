@@ -69,10 +69,8 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(std::nullopt, parents.parent2());
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(Hash{"1234567812345678123456781234567812345678"}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -90,10 +88,8 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(std::nullopt, parents.parent2());
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(Hash{"1234567812345678123456781234567812345678"}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -112,11 +108,8 @@ TEST_F(CheckoutConfigTest, testMultipleParents) {
   auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
   writeFile(snapshotPath, snapshotContents).value();
 
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(
-      Hash{"99887766554433221100aabbccddeeffabcdef99"}, parents.parent1());
-  EXPECT_EQ(
-      Hash{"abcdef98765432100123456789abcdef00112233"}, parents.parent2());
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
 }
 
 TEST_F(CheckoutConfigTest, testWriteSnapshot) {
@@ -125,38 +118,21 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
 
   Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
   Hash hash2{"abcdef98765432100123456789abcdef00112233"};
-  Hash zeroHash{};
 
   // Write out a single parent and read it back
-  config->setParentCommits(hash1);
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(hash1, parents.parent1());
-  EXPECT_EQ(std::nullopt, parents.parent2());
+  config->setParentCommit(hash1);
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(hash1, parent);
 
   // Change the parent
-  config->setParentCommits(hash2);
-  parents = config->getParentCommits();
-  EXPECT_EQ(hash2, parents.parent1());
-  EXPECT_EQ(std::nullopt, parents.parent2());
+  config->setParentCommit(hash2);
+  parent = config->getParentCommit();
+  EXPECT_EQ(hash2, parent);
 
-  // Set multiple parents
-  config->setParentCommits(hash1, hash2);
-  parents = config->getParentCommits();
-  EXPECT_EQ(hash1, parents.parent1());
-  EXPECT_EQ(hash2, parents.parent2());
-
-  // We should be able to distinguish between the second parent being the
-  // 0-hash and between not being set at all.
-  config->setParentCommits(hash2, zeroHash);
-  parents = config->getParentCommits();
-  EXPECT_EQ(hash2, parents.parent1());
-  EXPECT_EQ(zeroHash, parents.parent2());
-
-  // Move back to a single parent
-  config->setParentCommits(hash1);
-  parents = config->getParentCommits();
-  EXPECT_EQ(hash1, parents.parent1());
-  EXPECT_EQ(std::nullopt, parents.parent2());
+  // Change the parent back
+  config->setParentCommit(hash1);
+  parent = config->getParentCommit();
+  EXPECT_EQ(hash1, parent);
 }
 
 template <typename ExceptionType>
@@ -169,7 +145,7 @@ void CheckoutConfigTest::testBadSnapshot(
 
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
-  EXPECT_THROW_RE(config->getParentCommits(), ExceptionType, errorRegex);
+  EXPECT_THROW_RE(config->getParentCommit(), ExceptionType, errorRegex);
 }
 
 TEST_F(CheckoutConfigTest, testBadSnapshot) {

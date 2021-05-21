@@ -10,7 +10,6 @@
 #include <folly/dynamic.h>
 #include <optional>
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -62,17 +61,14 @@ class CheckoutConfig {
   static folly::dynamic loadClientDirectoryMap(AbsolutePathPiece edenDir);
 
   /**
-   * Get the parent commit(s) of the working directory.
+   * Get the parent commit of the working directory.
    */
-  ParentCommits getParentCommits() const;
+  Hash getParentCommit() const;
 
   /**
-   * Set the parent commit(s) of the working directory.
+   * Set the parent commit of the working directory.
    */
-  void setParentCommits(const ParentCommits& parents) const;
-  void setParentCommits(
-      Hash parent1,
-      std::optional<Hash> parent2 = std::nullopt) const;
+  void setParentCommit(Hash parent) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

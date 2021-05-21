@@ -40,7 +40,7 @@ class CheckoutContext {
  public:
   CheckoutContext(
       EdenMount* mount,
-      folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
+      folly::Synchronized<Hash>::LockedPtr&& parentLock,
       CheckoutMode checkoutMode,
       std::optional<pid_t> clientPid,
       folly::StringPiece thriftMethodName);
@@ -114,7 +114,7 @@ class CheckoutContext {
  private:
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
-  folly::Synchronized<EdenMount::ParentInfo>::LockedPtr parentsLock_;
+  folly::Synchronized<Hash>::LockedPtr parentLock_;
   RenameLock renameLock_;
   StatsFetchContext fetchContext_;
 

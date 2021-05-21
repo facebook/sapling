@@ -393,10 +393,9 @@ TEST(EdenMount, resetParents) {
   // Initialize the TestMount pointing at commit1
   testMount.initialize(makeTestHash("1"));
   const auto& edenMount = testMount.getEdenMount();
-  EXPECT_EQ(ParentCommits{makeTestHash("1")}, edenMount->getParentCommits());
+  EXPECT_EQ(makeTestHash("1"), edenMount->getParentCommit());
   EXPECT_EQ(
-      ParentCommits{makeTestHash("1")},
-      edenMount->getCheckoutConfig()->getParentCommits());
+      makeTestHash("1"), edenMount->getCheckoutConfig()->getParentCommit());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
@@ -407,10 +406,9 @@ TEST(EdenMount, resetParents) {
   // Reset the TestMount to pointing to commit2
   edenMount->resetParent(makeTestHash("2"));
   // The snapshot ID should be updated, both in memory and on disk
-  EXPECT_EQ(ParentCommits{makeTestHash("2")}, edenMount->getParentCommits());
+  EXPECT_EQ(makeTestHash("2"), edenMount->getParentCommit());
   EXPECT_EQ(
-      ParentCommits{makeTestHash("2")},
-      edenMount->getCheckoutConfig()->getParentCommits());
+      makeTestHash("2"), edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);

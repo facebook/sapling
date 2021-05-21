@@ -27,7 +27,6 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/journal/Journal.h"
-#include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -288,10 +287,10 @@ class EdenMount {
   const AbsolutePath& getPath() const;
 
   /**
-   * Get the commit IDs of the working directory's parent commit(s).
+   * Get the commit ID of the working directory's parent commit.
    */
-  ParentCommits getParentCommits() const {
-    return parentInfo_.rlock()->parents;
+  Hash getParentCommit() const {
+    return *parentCommit_.rlock();
   }
 
   /**
@@ -501,18 +500,8 @@ class EdenMount {
       Hash commitHash) const;
 
   /**
-   * Reset the state to point to the specified parent commit(s), without
-   * modifying the working directory contents at all.
-   */
-  void resetParents(const ParentCommits& parents);
-
-  /**
    * Reset the state to point to the specified parent commit, without
    * modifying the working directory contents at all.
-   *
-   * This is a small wrapper around resetParents() for when the code knows at
-   * compile time that it will only ever have a single parent commit on this
-   * code path.
    */
   void resetParent(const Hash& parent);
 
@@ -555,10 +544,6 @@ class EdenMount {
    * Returns the key value to an fb303 counter.
    */
   std::string getCounterName(CounterName name);
-
-  struct ParentInfo {
-    ParentCommits parents;
-  };
 
   /**
    * Mounts the filesystem in the VFS and spawns worker threads to
@@ -721,8 +706,7 @@ class EdenMount {
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
 
-  folly::Future<TreeInodePtr> createRootInode(
-      const ParentCommits& parentCommits);
+  folly::Future<TreeInodePtr> createRootInode(const Hash& parentCommit);
 
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
 
@@ -848,13 +832,10 @@ class EdenMount {
   folly::SharedMutex renameMutex_;
 
   /**
-   * The IDs of the parent commit(s) of the working directory.
-   *
-   * In most circumstances there will only be a single parent, but there
-   * will be two parents when in the middle of resolving a merge conflict.
+   * The IDs of the parent commit of the working directory.
    */
 
-  folly::Synchronized<ParentInfo> parentInfo_;
+  folly::Synchronized<Hash> parentCommit_;
 
   std::unique_ptr<Journal> journal_;
 
