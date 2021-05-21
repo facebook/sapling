@@ -424,10 +424,7 @@ size_t TestMount::drainServerExecutor() {
 
 void TestMount::setInitialCommit(Hash commitHash) {
   // Write the commit hash to the snapshot file
-  auto snapshotPath = config_->getSnapshotPath();
-  writeFileAtomic(
-      snapshotPath, folly::StringPiece(commitHash.toString() + "\n"))
-      .value();
+  config_->setParentCommit(commitHash);
 }
 
 void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {

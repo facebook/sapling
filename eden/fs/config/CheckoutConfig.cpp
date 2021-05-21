@@ -85,22 +85,17 @@ Hash CheckoutConfig::getParentCommit() const {
   auto snapshotFileContents = readFile(snapshotFile).value();
 
   StringPiece contents{snapshotFileContents};
-  if (!contents.startsWith(kSnapshotFileMagic)) {
-    // Try reading an old-style SNAPSHOT file that just contains a single
-    // commit ID, as an ASCII hexadecimal string.
-    //
-    // TODO: In the not-to-distant future we can remove support for this old
-    // format, and simply throw an exception here if the snapshot file does not
-    // start with the correct identifier bytes.
-    auto snapshotID = folly::trimWhitespace(contents);
-    return Hash{snapshotID};
-  }
 
   if (contents.size() < kSnapshotHeaderSize) {
     throw std::runtime_error(folly::sformat(
         "eden SNAPSHOT file is too short ({} bytes): {}",
         contents.size(),
         snapshotFile));
+  }
+
+  if (!contents.startsWith(kSnapshotFileMagic)) {
+    throw std::runtime_error(
+        folly::sformat("unsupported legacy SNAPSHOT file"));
   }
 
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
