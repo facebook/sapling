@@ -315,10 +315,9 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
           if (root.entryShouldLoadChildTree(entry)) {
             recurse.emplace_back(std::make_pair(name, node));
           } else {
-            auto candidateName = rootPath + name;
             futures.emplace_back(
                 store->getTree(root.entryHash(entry), context)
-                    .thenValue([candidateName,
+                    .thenValue([candidateName = rootPath + name,
                                 store,
                                 &context,
                                 innerNode = node,
@@ -382,11 +381,10 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   // Recursively load child inodes and evaluate matches
 
   for (auto& item : recurse) {
-    auto candidateName = rootPath + item.first;
     futures.emplace_back(root.getOrLoadChildTree(item.first)
                              .thenValue([store,
                                          &context,
-                                         candidateName,
+                                         candidateName = rootPath + item.first,
                                          node = item.second,
                                          fileBlobsToPrefetch,
                                          &originHash](TreeInodePtr dir) {
@@ -526,12 +524,12 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
       // the lock on the contents.
       if (root.entryIsTree(entry)) {
         if (root.entryShouldLoadChildTree(entry)) {
-          subDirNames.emplace_back(candidateName);
+          subDirNames.emplace_back(std::move(candidateName));
         } else {
           futures.emplace_back(
               store->getTree(root.entryHash(entry), context)
                   .thenValue(
-                      [candidateName,
+                      [candidateName = std::move(candidateName),
                        store,
                        &context,
                        this,
