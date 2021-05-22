@@ -413,9 +413,7 @@ class PathBase :
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
   explicit PathBase(std::string&& str, SkipPathSanityCheck)
-      : path_(std::move(str)) {
-    SanityChecker()(path_);
-  }
+      : path_(std::move(str)) {}
 
   /// Return the path as a StringPiece
   folly::StringPiece stringPiece() const {
