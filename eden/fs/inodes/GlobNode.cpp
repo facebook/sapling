@@ -36,7 +36,7 @@ namespace {
 struct TreeInodePtrRoot {
   TreeInodePtr root;
 
-  explicit TreeInodePtrRoot(TreeInodePtr root) : root(root) {}
+  explicit TreeInodePtrRoot(TreeInodePtr root) : root(std::move(root)) {}
 
   /** Return an object that holds a lock over the children */
   folly::Synchronized<TreeInodeState>::RLockedPtr lockContents() {
@@ -139,7 +139,7 @@ struct TreeInodePtrRoot {
 struct TreeRoot {
   std::shared_ptr<const Tree> tree;
 
-  explicit TreeRoot(const std::shared_ptr<const Tree>& tree) : tree(tree) {}
+  explicit TreeRoot(std::shared_ptr<const Tree> tree) : tree(std::move(tree)) {}
 
   /** We don't need to lock the contents, so we just return a reference
    * to the entries */
@@ -327,7 +327,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
                           store,
                           context,
                           candidateName,
-                          TreeRoot(dir),
+                          TreeRoot(std::move(dir)),
                           fileBlobsToPrefetch,
                           originHash);
                     }));
@@ -392,7 +392,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
                                    store,
                                    context,
                                    candidateName,
-                                   TreeInodePtrRoot(dir),
+                                   TreeInodePtrRoot(std::move(dir)),
                                    fileBlobsToPrefetch,
                                    originHash);
                              }));
@@ -428,7 +428,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluate(
       store,
       context,
       rootPath,
-      TreeInodePtrRoot(root),
+      TreeInodePtrRoot(std::move(root)),
       fileBlobsToPrefetch,
       originHash);
 }
@@ -437,14 +437,14 @@ folly::Future<vector<GlobNode::GlobResult>> GlobNode::evaluate(
     const ObjectStore* store,
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
-    const std::shared_ptr<const Tree>& tree,
+    std::shared_ptr<const Tree> tree,
     GlobNode::PrefetchList fileBlobsToPrefetch,
     const Hash& originHash) {
   return evaluateImpl(
       store,
       context,
       rootPath,
-      TreeRoot(tree),
+      TreeRoot(std::move(tree)),
       fileBlobsToPrefetch,
       originHash);
 }
@@ -528,21 +528,20 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
         } else {
           futures.emplace_back(
               store->getTree(root.entryHash(entry), context)
-                  .thenValue(
-                      [candidateName = std::move(candidateName),
-                       store,
-                       &context,
-                       this,
-                       fileBlobsToPrefetch,
-                       &originHash](const std::shared_ptr<const Tree>& tree) {
-                        return evaluateRecursiveComponentImpl(
-                            store,
-                            context,
-                            candidateName,
-                            TreeRoot(tree),
-                            fileBlobsToPrefetch,
-                            originHash);
-                      }));
+                  .thenValue([candidateName = std::move(candidateName),
+                              store,
+                              &context,
+                              this,
+                              fileBlobsToPrefetch,
+                              &originHash](std::shared_ptr<const Tree> tree) {
+                    return evaluateRecursiveComponentImpl(
+                        store,
+                        context,
+                        candidateName,
+                        TreeRoot(std::move(tree)),
+                        fileBlobsToPrefetch,
+                        originHash);
+                  }));
         }
       }
     }
@@ -561,7 +560,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
                                    store,
                                    context,
                                    candidateName,
-                                   TreeInodePtrRoot(dir),
+                                   TreeInodePtrRoot(std::move(dir)),
                                    fileBlobsToPrefetch,
                                    originHash);
                              }));

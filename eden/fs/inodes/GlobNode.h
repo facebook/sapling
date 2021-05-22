@@ -108,7 +108,7 @@ class GlobNode {
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
-      const std::shared_ptr<const Tree>& tree,
+      std::shared_ptr<const Tree> tree,
       PrefetchList fileBlobsToPrefetch,
       const Hash& originHash);
 

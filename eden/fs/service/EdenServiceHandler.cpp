@@ -1187,7 +1187,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                     edenMount->getObjectStore(),
                     fetchContext,
                     RelativePathPiece(),
-                    tree,
+                    std::move(tree),
                     fileBlobsToPrefetch,
                     originHash);
               }));
