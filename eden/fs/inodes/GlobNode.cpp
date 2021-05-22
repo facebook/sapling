@@ -39,7 +39,7 @@ struct TreeInodePtrRoot {
   explicit TreeInodePtrRoot(TreeInodePtr root) : root(root) {}
 
   /** Return an object that holds a lock over the children */
-  auto lockContents() {
+  folly::Synchronized<TreeInodeState>::RLockedPtr lockContents() {
     return root->getContents().rlock();
   }
 
@@ -61,8 +61,8 @@ struct TreeInodePtrRoot {
    * the CONTENTS object you obtained via lockContents().
    * The returned iterator yields ENTRY elements that can be
    * used with the entryXXX methods below. */
-  template <typename CONTENTS>
-  auto& iterate(CONTENTS& contents) {
+  const DirContents& iterate(
+      const folly::Synchronized<TreeInodeState>::RLockedPtr& contents) const {
     return contents->entries;
   }
 
@@ -143,17 +143,17 @@ struct TreeRoot {
 
   /** We don't need to lock the contents, so we just return a reference
    * to the entries */
-  auto& lockContents() {
+  const std::vector<TreeEntry>& lockContents() {
     return tree->getTreeEntries();
   }
 
   /** Return an object that can be used in a generic for()
    * constructor to iterate over the contents.  You must supply
-   * the CONTENTS object you obtained via lockContents().
+   * the object you obtained via lockContents().
    * The returned iterator yields ENTRY elements that can be
    * used with the entryXXX methods below. */
-  template <typename CONTENTS>
-  auto& iterate(CONTENTS& contents) {
+  const std::vector<TreeEntry>& iterate(
+      const std::vector<TreeEntry>& contents) {
     return contents;
   }
 
@@ -337,7 +337,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
       };
 
   {
-    auto contents = root.lockContents();
+    const auto& contents = root.lockContents();
     for (auto& node : children_) {
       if (!node->hasSpecials_) {
         // We can try a lookup for the exact name
@@ -505,7 +505,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
   vector<RelativePath> subDirNames;
   vector<Future<vector<GlobResult>>> futures;
   {
-    auto contents = root.lockContents();
+    const auto& contents = root.lockContents();
     for (auto& entry : root.iterate(contents)) {
       auto candidateName = rootPath + root.entryName(entry);
 
