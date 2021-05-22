@@ -109,6 +109,10 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
 }
 
 folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
+  if (!enableBlobCaching) {
+    return std::unique_ptr<Blob>(nullptr);
+  }
+
   return getFuture(KeySpace::BlobFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
