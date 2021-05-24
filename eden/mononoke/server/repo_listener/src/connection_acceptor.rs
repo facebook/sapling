@@ -491,8 +491,12 @@ impl ChannelConn {
                         data.last_successful_flush.map(|dt| dt.timestamp()),
                     );
                     scuba.add_opt(
-                        "last_failed_flush",
-                        data.last_failed_flush.map(|dt| dt.timestamp()),
+                        "last_successful_io",
+                        data.last_successful_io.map(|dt| dt.timestamp()),
+                    );
+                    scuba.add_opt(
+                        "last_failed_io",
+                        data.last_failed_io.map(|dt| dt.timestamp()),
                     );
                     scuba.add("stdout_bytes", data.stdout.bytes);
                     scuba.add("stdout_messages", data.stdout.messages);

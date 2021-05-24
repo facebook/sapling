@@ -37,7 +37,9 @@ where
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
-        this.inner.poll_ready(cx)
+        let ret = this.inner.poll_ready(cx);
+        this.data.peek_io(&ret);
+        ret
     }
 
     fn start_send(self: Pin<&mut Self>, item: SshMsg) -> Result<(), Self::Error> {
@@ -49,19 +51,23 @@ where
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
         let ret = this.inner.poll_flush(cx);
+        this.data.peek_io(&ret);
         this.data.peek_flush(&ret);
         ret
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let this = self.project();
-        this.inner.poll_close(cx)
+        let ret = this.inner.poll_close(cx);
+        this.data.peek_io(&ret);
+        ret
     }
 }
 
 pub struct WireprotoSinkData {
     pub last_successful_flush: Option<DateTime<Utc>>,
-    pub last_failed_flush: Option<DateTime<Utc>>,
+    pub last_successful_io: Option<DateTime<Utc>>,
+    pub last_failed_io: Option<DateTime<Utc>>,
     pub stdout: ChannelData,
     pub stderr: ChannelData,
 }
@@ -70,7 +76,8 @@ impl WireprotoSinkData {
     fn new() -> Self {
         Self {
             last_successful_flush: None,
-            last_failed_flush: None,
+            last_successful_io: None,
+            last_failed_io: None,
             stdout: ChannelData::default(),
             stderr: ChannelData::default(),
         }
@@ -85,6 +92,18 @@ impl WireprotoSinkData {
         }
     }
 
+    fn peek_io<E>(&mut self, res: &Poll<Result<(), E>>) {
+        match res {
+            Poll::Pending => {}
+            Poll::Ready(Ok(())) => {
+                self.last_successful_io = Some(Utc::now());
+            }
+            Poll::Ready(Err(..)) => {
+                self.last_failed_io = Some(Utc::now());
+            }
+        }
+    }
+
     fn peek_flush<E>(&mut self, res: &Poll<Result<(), E>>) {
         match res {
             Poll::Pending => {}
@@ -92,7 +111,7 @@ impl WireprotoSinkData {
                 self.last_successful_flush = Some(Utc::now());
             }
             Poll::Ready(Err(..)) => {
-                self.last_failed_flush = Some(Utc::now());
+                // No need for this it's already tracked in peek_io.
             }
         }
     }
