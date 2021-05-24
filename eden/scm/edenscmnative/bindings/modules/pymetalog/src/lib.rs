@@ -9,6 +9,8 @@
 
 use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
 use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
 use std::cell::RefCell;
 use std::path::Path;
@@ -23,7 +25,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 py_class!(pub class metalog |py| {
     data log: RefCell<MetaLog>;
-    data path: String;
+    data fspath: String;
 
     def __new__(_cls, path: String, root: Option<Bytes> = None) -> PyResult<Self> {
         let root = root.and_then(|s| Id20::from_slice(s.as_ref()).ok());
@@ -33,17 +35,25 @@ py_class!(pub class metalog |py| {
 
     /// List all roots.
     def roots(&self) -> PyResult<Vec<Bytes>> {
-        let path = self.path(py);
+        let path = self.fspath(py);
         let root_ids = MetaLog::list_roots(&path).map_pyerr(py)?;
         Ok(root_ids.into_iter().map(|id| Bytes::from(id.as_ref().to_vec())).collect())
     }
 
     /// Check out a "root".
     def checkout(&self, root: Bytes) -> PyResult<Self> {
-        let path = self.path(py);
+        let path = self.fspath(py);
         let root = Id20::from_slice(root.as_ref()).map_pyerr(py)?;
         let log = MetaLog::open(&path, Some(root)).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(log), path.clone())
+    }
+
+    /// Compact the metalog at the given path by only keeping the last entry.
+    /// Reduce filesystem usage.
+    @staticmethod
+    def compact(path: String) -> PyResult<PyNone> {
+        MetaLog::compact(path).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     @staticmethod
@@ -119,6 +129,11 @@ py_class!(pub class metalog |py| {
     /// The root id.
     def root(&self) -> PyResult<PyBytes> {
         Ok(PyBytes::new(py, self.log(py).borrow().root_id().as_ref()))
+    }
+
+    /// Path on the filesystem.
+    def path(&self) -> PyResult<PyPathBuf> {
+        Ok(PyPath::from_str(self.fspath(py)).to_owned())
     }
 
     def __getitem__(&self, key: String) -> PyResult<Option<PyBytes>> {
