@@ -456,6 +456,11 @@ impl BlobstorePutOps for Sqlblob {
             ));
         }
 
+        if put_behaviour == PutBehaviour::IfAbsent && self.data_store.is_present(&key).await? {
+            // Can short circuit here as key already exists, and is keeping its chunks live
+            return Ok(OverwriteStatus::Prevented);
+        }
+
         let chunking_method = ChunkingMethod::ByContentHashBlake2;
         let chunk_key = {
             let mut hash_context = HashContext::new(b"sqlblob");
