@@ -34,7 +34,6 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
-tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]

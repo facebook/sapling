@@ -24,7 +24,7 @@ use cmdlib::{
     args::{self, MononokeMatches, RepoRequirement},
     helpers,
 };
-use context::CoreContext;
+use context::{CoreContext, SessionContainer};
 use derived_data::BonsaiDerivable;
 use derived_data_utils::{
     derived_data_utils, derived_data_utils_for_backfill, DerivedUtils, ThinOut,
@@ -40,6 +40,7 @@ use futures::{
 use futures_stats::TimedFutureExt;
 use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, DateTime};
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -51,6 +52,7 @@ use std::{
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
+use tunables::tunables;
 
 mod dry_run;
 mod slice;
@@ -711,6 +713,25 @@ fn truncate_duration(duration: Duration) -> Duration {
     Duration::from_secs(duration.as_secs())
 }
 
+async fn get_batch_ctx(ctx: &CoreContext, limit_qps: bool) -> CoreContext {
+    if limit_qps {
+        // create new context so each derivation batch has its own trace
+        // and is rate-limited
+        let session = SessionContainer::builder(ctx.fb)
+            .blobstore_maybe_read_qps_limiter(tunables().get_backfill_read_qps())
+            .await
+            .blobstore_maybe_write_qps_limiter(tunables().get_backfill_write_qps())
+            .await
+            .build();
+        session.new_context(
+            ctx.logger().clone(),
+            MononokeScubaSampleBuilder::with_discard(),
+        )
+    } else {
+        ctx.clone()
+    }
+}
+
 async fn subcommand_backfill(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -756,7 +777,13 @@ async fn subcommand_backfill(
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
-                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk, parallel, gap_size)
+                .backfill_batch_dangerous(
+                    get_batch_ctx(ctx, parallel || gap_size.is_some()).await,
+                    repo.clone(),
+                    chunk,
+                    parallel,
+                    gap_size,
+                )
                 .await?;
             Result::<_>::Ok(chunk_size)
         }
@@ -1030,15 +1057,17 @@ async fn tail_batch_iteration(
                     if let Some(deriver) = &node.deriver {
                         warmup::warmup(&ctx, &repo, deriver.name(), &node.csids).await?;
                         let timestamp = Instant::now();
+
                         deriver
                             .backfill_batch_dangerous(
-                                ctx.clone(),
+                                get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
                                 repo,
                                 node.csids.clone(),
                                 parallel,
                                 gap_size,
                             )
                             .await?;
+
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::info!(
                                 ctx.logger(),
