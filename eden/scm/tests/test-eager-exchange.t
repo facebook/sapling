@@ -124,6 +124,22 @@ Trigger file and tree downloading:
    TRACE eagerepo::api:  found: 35e7525ce3a48913275d7061dd9a867ffef1e34d, 41 bytes
   AB (no-eol)
 
+Clone (using edenapi clonedata, bypassing peer interface):
+
+  $ cd $TESTTMP
+  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x --config clone.force-edenapi-clonedata=1 cloned1
+  fetching lazy changelog
+   DEBUG eagerepo::api: clone_data
+  populating main commit graph
+  tip commit: 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+  fetching selected remote bookmarks
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+   DEBUG eagerepo::api: bookmarks master
+   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
+
 Clone:
 
   $ cd $TESTTMP
