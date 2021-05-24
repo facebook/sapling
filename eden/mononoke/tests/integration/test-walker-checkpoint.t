@@ -120,6 +120,24 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   Deferred: 0
   Completed in 4 chunks of size 1
 
+OldestFirst setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Repo bounds: (1, 5)
+  Starting chunk 1 with bounds (1, 2)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Starting chunk 2 with bounds (2, 3)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Starting chunk 3 with bounds (3, 4)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Chunk 3 inserting checkpoint (1, 4)
+  Starting chunk 4 with bounds (4, 5)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Completed in 4 chunks of size 1
+
 now the additional commit
   $ cd repo-hg
   $ mkcommit E
@@ -140,10 +158,33 @@ finally, should have a run with both catchup and main bounds
   Deferred edge counts by type were: ChangesetToBonsaiParent:1
   Completed in 5 chunks of size 1
 
+OldestFirst, has only main bounds as the start point of the repo hasnot changed
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Found checkpoint with bounds: (1, 4)
+  Repo bounds: (1, 6)
+  Continuing from checkpoint run 1 chunk 3 with catchup None and main Some((4, 6)) bounds
+  Starting chunk 4 with bounds (4, 5)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Starting chunk 5 with bounds (5, 6)
+  Seen,Loaded: 2,2
+  Deferred: 0
+  Completed in 5 chunks of size 1
+
 Check that the checkpoint low bound is not used if its too old
   $ sleep 2
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 5)
+  Repo bounds: (1, 6)
+  Checkpoint run 1 chunk 3 is too old at *s, running from repo bounds (glob)
+  Starting chunk 1 with bounds (1, 6)
+  Seen,Loaded: 10,10
+  Deferred: 0
+  Completed in 1 chunks of size 5
+
+OldestFirst, Check that the checkpoint high bound is not used if its too old
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Found checkpoint with bounds: (1, 4)
   Repo bounds: (1, 6)
   Checkpoint run 1 chunk 3 is too old at *s, running from repo bounds (glob)
   Starting chunk 1 with bounds (1, 6)

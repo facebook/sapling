@@ -64,7 +64,7 @@ impl Checkpoint {
             // First work out the main bound from checkpoint restart
             let main_bound = match repo_upper.cmp(&self.upper_bound) {
                 // Checkpoint didn't get to the end, continue from it
-                Ordering::Greater => Some((repo_upper, self.upper_bound)),
+                Ordering::Greater => Some((self.upper_bound, repo_upper)),
                 Ordering::Less => bail!(
                     "Repo upper bound reversed from {} to {}",
                     self.upper_bound,
@@ -76,7 +76,7 @@ impl Checkpoint {
             // Then if we need to catchup due to lower bound moving (unlikely, but lets cover it)
             match repo_lower.cmp(&self.lower_bound) {
                 // repo bounds have widened. We'll do the new wider part first, then continue from checkpoint
-                Ordering::Less => Ok((Some((self.lower_bound, repo_lower)), main_bound)),
+                Ordering::Less => Ok((Some((repo_lower, self.lower_bound)), main_bound)),
                 Ordering::Greater => bail!(
                     "Repo lower bound reversed from {} to {}",
                     self.lower_bound,

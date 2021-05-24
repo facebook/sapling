@@ -372,7 +372,8 @@ where
                             if let Some(last_chunk_upper) = last_chunk_upper {
                                 chunk_low = max(last_chunk_upper, chunk_low)
                             }
-                            chunk_upper = max(chunk_upper, fetch_upper);
+                            // Top of range is exclusive, so add one to the found id
+                            chunk_upper = max(chunk_upper, id + 1);
                         }
                     } else {
                         // no need to adjust
@@ -383,12 +384,27 @@ where
                 })
                 .collect();
 
-            last_chunk_low.replace(chunk_low);
-            last_chunk_upper.replace(chunk_upper);
             cloned!(repo_params.logger);
             if is_chunking {
-                info!(logger, #log::CHUNKING, "Starting chunk {} with bounds ({}, {})", chunk_num, chunk_low, chunk_upper);
+                match (last_chunk_low, last_chunk_upper) {
+                    (Some(last_chunk_low), Some(last_chunk_upper))
+                        if last_chunk_low == chunk_low && last_chunk_upper == chunk_upper =>
+                    {
+                        bail!(
+                            "No progress at chunk {} with bounds ({}, {})",
+                            chunk_num,
+                            chunk_low,
+                            chunk_upper
+                        )
+                    }
+                    _ => {
+                        info!(logger, #log::CHUNKING, "Starting chunk {} with bounds ({}, {})", chunk_num, chunk_low, chunk_upper)
+                    }
+                }
             }
+
+            last_chunk_low.replace(chunk_low);
+            last_chunk_upper.replace(chunk_upper);
 
             cloned!(mut repo_params);
             let hg_mapping_prepop = if with_hg && is_chunking {
