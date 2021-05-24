@@ -110,3 +110,9 @@ sh % "HGFORCEMETALOGROOT=280022070a10d2a1a752f6e0951c7649fa3aeed0 hg log -G -r '
 
     hint[metalog-root-override]: MetaLog root was overridden to 280022070a10d2a1a752f6e0951c7649fa3aeed0 by an environment variable. This should only be used for debugging.
     hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""
+
+sh % "hg debugcompactmetalog"
+
+sh % "hg debugmetalogroots -v" == r"""
+    1 1970-01-01 00:00:00 +0000 e101d079054ded8fb61926aa99c6abb5162925f5 metaedit -mE1 Transaction: metaedit
+    0 1970-01-01 00:00:00 +0000 29e2dcfbb16f63bb0254df7585a15bb6fb5e927d"""

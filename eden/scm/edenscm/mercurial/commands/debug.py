@@ -597,6 +597,14 @@ def debugcolor(ui, **opts):
         return _debugdisplaycolor(ui)
 
 
+@command("debugcompactmetalog", [], "")
+def debugcompactmetalog(ui, repo):
+    """compact the metalog by dropping history"""
+    ml = repo.metalog()
+    with repo.lock():
+        ml.compact(ml.path())
+
+
 @command("debugdetectissues", [], "")
 def debugdetectissues(ui, repo):
     """various repository integrity and health checks. for automatic remediation, use doctor."""

@@ -103,6 +103,7 @@ Show debug commands if there are no other candidates
   debugcleanremotenames
   debugcolor
   debugcommands
+  debugcompactmetalog
   debugcomplete
   debugconfig
   debugcreatestreamclonebundle
@@ -411,6 +412,7 @@ Show all commands + options
   debugcleanremotenames: 
   debugcolor: style
   debugcommands: 
+  debugcompactmetalog: 
   debugcomplete: options
   debugcreatestreamclonebundle: 
   debugdag: bookmarks, branches, dots, spaces

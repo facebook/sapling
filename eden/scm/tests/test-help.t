@@ -955,6 +955,8 @@ Test list of internal help commands
    debugcolor    show available color, effects or style
    debugcommands
                  list all available commands and options
+   debugcompactmetalog
+                 compact the metalog by dropping history
    debugcomplete
                  returns the completion list associated with the given command
    debugcreatestreamclonebundle
