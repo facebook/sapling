@@ -263,8 +263,11 @@ where
                 M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size).await?;
             } else {
                 for csid in csids {
-                    // create new context so each derivation has its own trace
-                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+                    // create new context so each derivation has its own trace, but same QPS limits
+                    let ctx = ctx.session().new_context(
+                        ctx.logger().clone(),
+                        MononokeScubaSampleBuilder::with_discard(),
+                    );
 
                     // derive each changeset sequentially
                     derive_impl::derive_impl::<M::Value, _>(&ctx, &repo, &in_memory_mapping, csid)
@@ -587,7 +590,7 @@ impl DeriveGraph {
                             )
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
-                            slog::info!(
+                            slog::debug!(
                                 ctx.logger(),
                                 "[{}:{}] count:{} start:{} end:{}",
                                 deriver.name(),
@@ -713,7 +716,7 @@ pub async fn build_derive_graph(
         underived_to_derivers.insert(csid, derivers);
         found_changesets += 1;
         if found_changesets % 1000 == 0 {
-            slog::info!(
+            slog::debug!(
                 ctx.logger(),
                 "found changesets: {} {:.3}/s",
                 found_changesets,
@@ -722,7 +725,7 @@ pub async fn build_derive_graph(
         }
     }
     if found_changesets > 0 {
-        slog::info!(
+        slog::debug!(
             ctx.logger(),
             "found changesets: {} {:.3}/s",
             found_changesets,

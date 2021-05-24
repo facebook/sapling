@@ -1928,6 +1928,7 @@ function unbundle_replay() {
 
 function backfill_derived_data() {
   "$MONONOKE_BACKFILL_DERIVED_DATA" \
+    --debug \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
