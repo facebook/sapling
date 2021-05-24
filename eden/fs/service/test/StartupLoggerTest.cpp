@@ -348,7 +348,7 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
 
   // FIXME(strager): wait() could technically deadlock if the child is blocked
   // on writing to stdout or stderr.
-  auto returnCode = process.waitTimeout(10s);
+  auto returnCode = process.waitTimeout(20s);
   EXPECT_EQ("exited with status 0", returnCode.str());
 
   auto expectReadablePipeIsBroken = [](FileDescriptor& fd,
