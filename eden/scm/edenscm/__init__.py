@@ -49,6 +49,14 @@ def _fixsys():
     if sys.stdin is None:
         sys.stdin = open(os.devnull, "r")
 
+    # On Windows, the system time zone setting, if does not match the time
+    # zone from the package building machine, can cause pyc to be invalidated
+    # in a zip file. Workaround it by bypassing the mtime check.
+    if os.name == "nt" and sys.version_info[0] == 3:
+        import zipimport
+
+        zipimport._get_mtime_and_size_of_source = lambda _s, _p: (0, 0)
+
 
 _fixsys()
 
