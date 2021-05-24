@@ -96,7 +96,7 @@ class mononokepipe(object):
         try:
             r = self._pipe.read(segmentlength + 1)
         except Exception as e:
-            raise error.NetworkError(e.message)
+            raise error.NetworkError("failed reading from pipe: {}".format(e))
         if len(r) != segmentlength + 1:
             raise error.NetworkError(
                 "unexpected read length, expected length {}, got length {}: '{}'".format(
