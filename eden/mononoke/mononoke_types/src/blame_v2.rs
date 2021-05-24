@@ -109,34 +109,19 @@ impl BlameV2 {
         csid: ChangesetId,
         path: MPath,
         content: C,
-        parents: Vec<(C, BlameV2)>,
+        parents: Vec<BlameParent<C>>,
     ) -> Result<Self> {
-        let content = content.as_ref();
         // Filter out parents where the blame data was rejected.  Blame will
         // act as if these parents did not exist.
         let mut parents = parents
             .into_iter()
-            .filter_map(|(parent_content, parent_blame)| match parent_blame {
-                BlameV2::Rejected(_) => None,
-                BlameV2::Blame(blame_data) => Some((parent_content, blame_data)),
-            });
-        if let Some((parent_content, parent_blame_data)) = parents.next() {
-            let mut blame_data = BlameData::new_with_parent(
-                csid,
-                path.clone(),
-                content,
-                parent_content.as_ref(),
-                parent_blame_data,
-            )?;
+            .filter_map(BlameParent::into_blame_parent_data);
+        if let Some(blame_parent) = parents.next() {
+            let mut blame_data =
+                BlameData::new_with_parent(csid, path.clone(), &content, blame_parent)?;
             let other_blame_data = parents
-                .map(|(parent_content, parent_blame_data)| {
-                    BlameData::new_with_parent(
-                        csid,
-                        path.clone(),
-                        content,
-                        parent_content.as_ref(),
-                        parent_blame_data,
-                    )
+                .map(|blame_parent| {
+                    BlameData::new_with_parent(csid, path.clone(), &content, blame_parent)
                 })
                 .collect::<Result<Vec<_>>>()?;
             if !other_blame_data.is_empty() {
@@ -203,6 +188,45 @@ impl BlameV2 {
     }
 }
 
+/// Blame for a parent file version when constructing a new blame.
+pub struct BlameParent<C: AsRef<[u8]>> {
+    parent_index: usize,
+    path: MPath,
+    content: C,
+    blame: BlameV2,
+}
+
+impl<C: AsRef<[u8]>> BlameParent<C> {
+    pub fn new(parent_index: usize, path: MPath, content: C, blame: BlameV2) -> BlameParent<C> {
+        BlameParent {
+            parent_index,
+            path,
+            content,
+            blame,
+        }
+    }
+
+    fn into_blame_parent_data(self) -> Option<BlameParentData<C>> {
+        match self.blame {
+            BlameV2::Rejected(_) => None,
+            BlameV2::Blame(blame) => Some(BlameParentData {
+                parent_index: self.parent_index as u32,
+                path: self.path,
+                content: self.content,
+                blame,
+            }),
+        }
+    }
+}
+
+/// Blame data for a parent file version when constructing a new blame.
+pub struct BlameParentData<C: AsRef<[u8]>> {
+    parent_index: u32,
+    path: MPath,
+    content: C,
+    blame: BlameData,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BlameData {
     /// Sequence of index-based blame ranges for this file.
@@ -225,14 +249,14 @@ pub struct BlameData {
 
 impl BlameData {
     /// Create a new BlameData for a brand new file.
-    fn new_root(csid: ChangesetId, path: MPath, content: &[u8]) -> Self {
+    fn new_root<C: AsRef<[u8]>>(csid: ChangesetId, path: MPath, content: C) -> Self {
         let mut ranges = Vec::new();
         let mut csids = VecMap::new();
         // Calculate length by diffing with empty content, so the number of lines
         // is calculated the same way as xdiff does.  If `diff_hunks` yields
         // no hunks then the file is empty and the list of ranges should also
         // be empty.
-        if let Some(hunk) = diff_hunks(&b""[..], content).first() {
+        if let Some(hunk) = diff_hunks(&b""[..], content.as_ref()).first() {
             let length = (hunk.add.end - hunk.add.start) as u32;
             debug_assert!(length > 0);
             ranges.push(BlameRangeIndexes {
@@ -241,6 +265,7 @@ impl BlameData {
                 csid_index: 0,
                 path_index: 0,
                 origin_offset: 0,
+                parent: None,
             });
             csids.insert(0, csid);
         };
@@ -259,26 +284,40 @@ impl BlameData {
     }
 
     /// Create a new BlameData for a file with a single parent.
-    fn new_with_parent(
+    fn new_with_parent<C: AsRef<[u8]>>(
         csid: ChangesetId,
         path: MPath,
-        content: &[u8],
-        parent_content: &[u8],
-        parent_blame: BlameData,
+        content: &C,
+        blame_parent: BlameParentData<C>,
     ) -> Result<Self> {
         // Assign a new index for the changeset ID.  The changeset ID
         // shouldn't be present already, as this should be a child changeset.
-        let mut csids = parent_blame.csids.clone();
+        let mut csids = blame_parent.blame.csids.clone();
         if csids.values().any(|existing_csid| &csid == existing_csid) {
             return Err(anyhow!(
                 "{} already exists in the history of this blame.",
                 csid,
             ));
         }
-        let csid_index = parent_blame.max_csid_index + 1;
+        let csid_index = blame_parent.blame.max_csid_index + 1;
         csids.insert(csid_index as usize, csid);
 
-        let mut paths = parent_blame.paths.clone();
+        let mut paths = blame_parent.blame.paths.clone();
+
+        let renamed_from_path_index = if blame_parent.path != path {
+            match paths.iter().rposition(|p| &blame_parent.path == p) {
+                Some(index) => Some(index as u32),
+                None => {
+                    return Err(anyhow!(
+                        "parent path '{}' is not known to blame data",
+                        blame_parent.path
+                    ));
+                }
+            }
+        } else {
+            None
+        };
+
         let path_index = match paths.iter().rposition(|p| &path == p) {
             Some(index) => index as u32,
             None => {
@@ -294,8 +333,8 @@ impl BlameData {
         // new range corresponding to `add` after removing the range from
         // `remove`.
         let mut new_ranges = BlameRangesCollector::new();
-        let mut parent_ranges = VecDeque::from(parent_blame.ranges);
-        for hunk in diff_hunks(parent_content, content) {
+        let mut parent_ranges = VecDeque::from(blame_parent.blame.ranges);
+        for hunk in diff_hunks(blame_parent.content.as_ref(), content.as_ref()) {
             // Add unaffected ranges
             let (unaffected, remaining) =
                 BlameRangeIndexes::split_multiple_at(parent_ranges, hunk.remove.start as u32);
@@ -314,7 +353,13 @@ impl BlameData {
             // Add a new range
             if hunk.add.end > hunk.add.start {
                 let length = (hunk.add.end - hunk.add.start) as u32;
-                new_ranges.append_new(csid_index, path_index, length);
+                let parent = Some(BlameParentIndexes {
+                    parent_index: blame_parent.parent_index,
+                    offset: hunk.remove.start as u32,
+                    length: (hunk.remove.end - hunk.remove.start) as u32,
+                    renamed_from_path_index,
+                });
+                new_ranges.append_new(csid_index, path_index, length, parent);
             }
         }
 
@@ -346,7 +391,8 @@ impl BlameData {
                 }
                 Some(last)
                     if last.csid_index == range.csid_index
-                        && last.origin_offset + last.length == range.origin_offset =>
+                        && last.origin_offset + last.length == range.origin_offset
+                        && last.parent == range.parent =>
                 {
                     last.length += range.length;
                 }
@@ -445,6 +491,7 @@ impl BlameData {
         for blame_line in self.merge_lines(merge_csid, others) {
             let path_index = path_indexes[blame_line.path];
             let csid_index = csid_indexes[blame_line.changeset_id];
+            let parent = blame_line.parent(&path_indexes);
             match merged_ranges.last_mut() {
                 None if blame_line.offset != 0 => {
                     return Err(anyhow!(
@@ -463,7 +510,8 @@ impl BlameData {
                 Some(last)
                     if last.csid_index == csid_index
                         && last.path_index == path_index
-                        && last.origin_offset + last.length == blame_line.origin_offset =>
+                        && last.origin_offset + last.length == blame_line.origin_offset
+                        && last.parent == parent =>
                 {
                     last.length += 1;
                 }
@@ -474,6 +522,7 @@ impl BlameData {
                         csid_index,
                         path_index,
                         origin_offset: blame_line.origin_offset,
+                        parent,
                     });
                 }
             }
@@ -527,12 +576,25 @@ impl BlameData {
                 ));
             }
             let origin_offset = range.origin_offset as u32;
+            let parent = if let (Some(parent_offset), Some(parent_length)) =
+                (range.parent_offset, range.parent_length)
+            {
+                Some(BlameParentIndexes {
+                    offset: parent_offset as u32,
+                    length: parent_length as u32,
+                    parent_index: range.parent_index.unwrap_or(0) as u32,
+                    renamed_from_path_index: range.renamed_from_path_index.map(|i| i.0 as u32),
+                })
+            } else {
+                None
+            };
             ranges.push(BlameRangeIndexes {
                 offset,
                 length,
                 csid_index,
                 path_index,
                 origin_offset,
+                parent,
             });
             offset += length;
         }
@@ -553,6 +615,19 @@ impl BlameData {
                 csid_index: thrift::BlameChangeset(range.csid_index as i32),
                 path_index: thrift::BlamePath(range.path_index as i32),
                 origin_offset: range.origin_offset as i32,
+                parent_offset: range.parent.as_ref().map(|p| p.offset as i32),
+                parent_length: range.parent.as_ref().map(|p| p.length as i32),
+                renamed_from_path_index: range.parent.as_ref().and_then(|p| {
+                    p.renamed_from_path_index
+                        .map(|i| thrift::BlamePath(i as i32))
+                }),
+                parent_index: range.parent.as_ref().and_then(|p| {
+                    if p.parent_index != 0 {
+                        Some(p.parent_index as i32)
+                    } else {
+                        None
+                    }
+                }),
             })
             .collect();
         let csids = self
@@ -611,6 +686,7 @@ pub struct BlameRangeIndexes {
     pub csid_index: u32,
     pub path_index: u32,
     pub origin_offset: u32,
+    pub parent: Option<BlameParentIndexes>,
 }
 
 impl BlameRangeIndexes {
@@ -626,6 +702,7 @@ impl BlameRangeIndexes {
                 csid_index: self.csid_index,
                 path_index: self.path_index,
                 origin_offset: self.origin_offset,
+                parent: self.parent.clone(),
             };
             let right = BlameRangeIndexes {
                 offset,
@@ -633,6 +710,7 @@ impl BlameRangeIndexes {
                 csid_index: self.csid_index,
                 path_index: self.path_index,
                 origin_offset: self.origin_offset + left.length,
+                parent: self.parent,
             };
             (Some(left), Some(right))
         }
@@ -662,6 +740,22 @@ impl BlameRangeIndexes {
     }
 }
 
+/// Parent of a blame range - the range that was replaced.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct BlameParentIndexes {
+    /// Index of the parent in the bonsai changeset.
+    pub parent_index: u32,
+
+    /// Offset of the replaced range.
+    pub offset: u32,
+
+    /// Length of the replaced range.
+    pub length: u32,
+
+    /// If the file was renamed, index into "paths" of the old filename.
+    pub renamed_from_path_index: Option<u32>,
+}
+
 /// Struct to collect a new set of blame ranges while maintaining
 /// the offsets correctly.
 struct BlameRangesCollector {
@@ -687,13 +781,20 @@ impl BlameRangesCollector {
 
     /// Append a new range to the set of ranges.  The range offset is
     /// determined automatically.
-    fn append_new(&mut self, csid_index: u32, path_index: u32, length: u32) {
+    fn append_new(
+        &mut self,
+        csid_index: u32,
+        path_index: u32,
+        length: u32,
+        parent: Option<BlameParentIndexes>,
+    ) {
         self.ranges.push(BlameRangeIndexes {
             offset: self.offset,
             length,
             csid_index,
             path_index,
             origin_offset: self.offset,
+            parent,
         });
         self.offset += length;
     }
@@ -766,6 +867,13 @@ impl<'a> BlameLines<'a> {
     }
 }
 
+pub struct BlameLineParent<'a> {
+    pub parent_index: u32,
+    pub offset: u32,
+    pub length: u32,
+    pub renamed_from_path: Option<&'a MPath>,
+}
+
 /// Blame line produced by iteration.
 pub struct BlameLine<'a> {
     pub offset: u32,
@@ -774,10 +882,19 @@ pub struct BlameLine<'a> {
     pub path_index: u32,
     pub path: &'a MPath,
     pub origin_offset: u32,
+    pub parent: Option<BlameLineParent<'a>>,
 }
 
 impl<'a> BlameLine<'a> {
     fn new(data: &'a BlameData, range: &BlameRangeIndexes, range_offset: u32) -> Self {
+        let parent = range.parent.as_ref().map(|parent| BlameLineParent {
+            parent_index: parent.parent_index,
+            offset: parent.offset,
+            length: parent.length,
+            renamed_from_path: parent
+                .renamed_from_path_index
+                .map(|i| &data.paths[i as usize]),
+        });
         BlameLine {
             offset: range.offset + range_offset,
             changeset_index: range.csid_index,
@@ -785,7 +902,17 @@ impl<'a> BlameLine<'a> {
             path_index: range.path_index,
             path: &data.paths[range.path_index as usize],
             origin_offset: range.origin_offset + range_offset,
+            parent,
         }
+    }
+
+    fn parent(&self, path_indexes: &HashMap<MPath, u32>) -> Option<BlameParentIndexes> {
+        self.parent.as_ref().map(|parent| BlameParentIndexes {
+            parent_index: parent.parent_index,
+            offset: parent.offset,
+            length: parent.length,
+            renamed_from_path_index: parent.renamed_from_path.map(|p| path_indexes[p]),
+        })
     }
 }
 
@@ -843,8 +970,8 @@ impl<'a> Iterator for BlameMergeLines<'a> {
         // values yielded from the `lines` iterators, we take the first one
         // that does *not* match the merge changeset.  This give us the first
         // parent which blames the line on itself or one of its ancestors.
-        let (last, rest) = self.lines.split_last_mut()?;
-        let mut rest = rest.iter_mut();
+        let mut first_blame_line = None;
+        let mut rest = self.lines.iter_mut();
         while let Some(lines) = rest.next() {
             let blame_line = lines.next()?;
             if blame_line.changeset_id != &self.csid {
@@ -857,15 +984,18 @@ impl<'a> Iterator for BlameMergeLines<'a> {
                 for lines in rest {
                     lines.next();
                 }
-                last.next();
                 return Some(blame_line);
             }
+            // If this is the first parent, save it so that we can return its
+            // blame line if all the others fail.
+            if first_blame_line.is_none() {
+                first_blame_line = Some(blame_line);
+            }
         }
-        // None of the other parents blame this line on an ancestor.  Take the
-        // value from the final parent as-is.  It will either be one of its
-        // ancestors, or the merge commit if this line was truly added in the
-        // merge commit.
-        last.next()
+        // None of the parents blame this line on an ancestor.  Take the
+        // value from the first parent as-is, which will blame it on the merge
+        // commit.
+        first_blame_line
     }
 }
 
@@ -882,6 +1012,7 @@ mod test {
     const THREES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x33; 32]));
     const FOURS_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x44; 32]));
     const FIVES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x55; 32]));
+    const SIXES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x66; 32]));
 
     macro_rules! vec_map {
         () => {
@@ -915,6 +1046,7 @@ mod test {
                     csid_index: 1,
                     path_index: 0,
                     origin_offset: 5,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 1,
@@ -922,6 +1054,7 @@ mod test {
                     csid_index: 4,
                     path_index: 0,
                     origin_offset: 31,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 2,
@@ -929,6 +1062,7 @@ mod test {
                     csid_index: 0,
                     path_index: 0,
                     origin_offset: 127,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 3,
@@ -936,6 +1070,7 @@ mod test {
                     csid_index: 3,
                     path_index: 1,
                     origin_offset: 15,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 5,
@@ -943,6 +1078,7 @@ mod test {
                     csid_index: 4,
                     path_index: 0,
                     origin_offset: 3,
+                    parent: None,
                 },
             ],
             csids,
@@ -972,6 +1108,7 @@ mod test {
                     csid_index: 1,
                     path_index: 0,
                     origin_offset: 5,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 1,
@@ -979,6 +1116,7 @@ mod test {
                     csid_index: 3,
                     path_index: 0,
                     origin_offset: 2,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 2,
@@ -986,6 +1124,7 @@ mod test {
                     csid_index: 4,
                     path_index: 0,
                     origin_offset: 1,
+                    parent: None,
                 },
                 BlameRangeIndexes {
                     offset: 3,
@@ -993,6 +1132,7 @@ mod test {
                     csid_index: 0,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: None,
                 },
             ],
             csids,
@@ -1026,10 +1166,30 @@ mod test {
         let c5 = "one\n";
 
         let b1 = BlameV2::new(ONES_CSID, path1.clone(), c1, vec![])?;
-        let b2 = BlameV2::new(TWOS_CSID, path1.clone(), c2, vec![(c1, b1.clone())])?;
-        let b3 = BlameV2::new(THREES_CSID, path1.clone(), c3, vec![(c2, b2.clone())])?;
-        let b4 = BlameV2::new(FOURS_CSID, path2.clone(), c4, vec![(c3, b3.clone())])?;
-        let b5 = BlameV2::new(FIVES_CSID, path2.clone(), c5, vec![(c4, b4.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path1.clone(),
+            c2,
+            vec![BlameParent::new(0, path1.clone(), c1, b1.clone())],
+        )?;
+        let b3 = BlameV2::new(
+            THREES_CSID,
+            path1.clone(),
+            c3,
+            vec![BlameParent::new(0, path1.clone(), c2, b2.clone())],
+        )?;
+        let b4 = BlameV2::new(
+            FOURS_CSID,
+            path2.clone(),
+            c4,
+            vec![BlameParent::new(0, path1.clone(), c3, b3.clone())],
+        )?;
+        let b5 = BlameV2::new(
+            FIVES_CSID,
+            path2.clone(),
+            c5,
+            vec![BlameParent::new(0, path2.clone(), c4, b4.clone())],
+        )?;
 
         assert_eq!(
             b1,
@@ -1040,6 +1200,7 @@ mod test {
                     csid_index: 0,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: None,
                 }],
                 csids: vec_map! {
                     0 => ONES_CSID,
@@ -1059,6 +1220,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1066,6 +1228,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 3,
@@ -1073,6 +1241,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: None,
                     },
                 ],
                 csids: vec_map! {
@@ -1094,6 +1263,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 0,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1101,6 +1276,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1108,6 +1284,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 3,
@@ -1115,6 +1297,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 4,
@@ -1122,6 +1310,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: None,
                     },
                 ],
                 csids: vec_map! {
@@ -1144,6 +1333,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 0,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1151,6 +1346,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1158,6 +1354,12 @@ mod test {
                         csid_index: 3,
                         path_index: 1,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 2,
+                            length: 1,
+                            renamed_from_path_index: Some(0),
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 4,
@@ -1165,6 +1367,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 5,
@@ -1172,6 +1380,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: None,
                     },
                 ],
                 csids: vec_map! {
@@ -1193,6 +1402,7 @@ mod test {
                     csid_index: 0,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: None,
                 },],
                 csids: vec_map! {
                     0 => ONES_CSID,
@@ -1221,13 +1431,21 @@ mod test {
         let c4 = "one\nfour\nfive\nseven\neight\nsix\nnine\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
-        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![(c1, b1.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path.clone(),
+            c2,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
         let b3 = BlameV2::new(THREES_CSID, path.clone(), c3, vec![])?;
         let b4 = BlameV2::new(
             FOURS_CSID,
             path.clone(),
             c4,
-            vec![(c2, b2.clone()), (c3, b3.clone())],
+            vec![
+                BlameParent::new(0, path.clone(), c2, b2.clone()),
+                BlameParent::new(1, path.clone(), c3, b3.clone()),
+            ],
         )?;
 
         assert_eq!(
@@ -1240,6 +1458,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1247,6 +1466,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 1,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 3,
@@ -1254,6 +1479,7 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 5,
@@ -1261,6 +1487,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 4,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 6,
@@ -1268,6 +1500,7 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: None,
                     },
                 ],
                 csids: vec_map! {
@@ -1300,13 +1533,26 @@ mod test {
         let c4 = "one\nfour\nten\nfive\nseven\neight\nsix\nnine\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
-        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![(c1, b1.clone())])?;
-        let b3 = BlameV2::new(THREES_CSID, path.clone(), c3, vec![(c1, b1.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path.clone(),
+            c2,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b3 = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
         let b4 = BlameV2::new(
             FOURS_CSID,
             path.clone(),
             c4,
-            vec![(c2, b2.clone()), (c3, b3.clone())],
+            vec![
+                BlameParent::new(0, path.clone(), c2, b2.clone()),
+                BlameParent::new(0, path.clone(), c3, b3.clone()),
+            ],
         )?;
 
         assert_eq!(
@@ -1319,6 +1565,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1326,6 +1573,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 1,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1333,6 +1586,12 @@ mod test {
                         csid_index: 3,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 2,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 3,
@@ -1340,6 +1599,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 1,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 4,
@@ -1347,6 +1612,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 6,
@@ -1354,6 +1625,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 4,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 7,
@@ -1361,6 +1638,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 4,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                 ],
                 csids: vec_map! {
@@ -1399,13 +1682,26 @@ mod test {
         let c4 = "one\nseven\nnine\nten\nfour\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
-        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![(c1, b1.clone())])?;
-        let b3 = BlameV2::new(THREES_CSID, path.clone(), c3, vec![(c1, b1.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path.clone(),
+            c2,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b3 = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
         let b4 = BlameV2::new(
             FOURS_CSID,
             path.clone(),
             c4,
-            vec![(c2, b2.clone()), (c3, b3.clone())],
+            vec![
+                BlameParent::new(0, path.clone(), c2, b2.clone()),
+                BlameParent::new(1, path.clone(), c3, b3.clone()),
+            ],
         )?;
 
         assert_eq!(
@@ -1418,6 +1714,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 1,
@@ -1425,6 +1722,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1432,6 +1735,12 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 4,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 2,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 4,
@@ -1439,6 +1748,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 3,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                 ],
                 csids: vec_map! {
@@ -1471,13 +1786,21 @@ mod test {
         let c4 = "one\ntwo\nthree\nfour\n";
 
         let b1 = BlameV2::rejected(BlameRejected::Binary);
-        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![(c1, b1.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path.clone(),
+            c2,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
         let b3 = BlameV2::rejected(BlameRejected::TooBig);
         let b4 = BlameV2::new(
             FOURS_CSID,
             path.clone(),
             c4,
-            vec![(c2, b2.clone()), (c3, b3.clone())],
+            vec![
+                BlameParent::new(0, path.clone(), c2, b2.clone()),
+                BlameParent::new(1, path.clone(), c3, b3.clone()),
+            ],
         )?;
 
         assert_eq!(
@@ -1489,6 +1812,7 @@ mod test {
                     csid_index: 0,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: None,
                 }],
                 csids: vec_map! {
                     0 => TWOS_CSID,
@@ -1508,6 +1832,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 0,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1515,6 +1840,12 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 2,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     }
                 ],
                 csids: vec_map! {
@@ -1548,7 +1879,11 @@ mod test {
             FOURS_CSID,
             path.clone(),
             c4,
-            vec![(c1, b1.clone()), (c2, b2.clone()), (c3, b3.clone())],
+            vec![
+                BlameParent::new(0, path.clone(), c1, b1.clone()),
+                BlameParent::new(1, path.clone(), c2, b2.clone()),
+                BlameParent::new(2, path.clone(), c3, b3.clone()),
+            ],
         )?;
 
         assert_eq!(
@@ -1561,6 +1896,7 @@ mod test {
                         csid_index: 0,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 2,
@@ -1568,6 +1904,7 @@ mod test {
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 4,
@@ -1575,6 +1912,7 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 1,
+                        parent: None,
                     },
                     BlameRangeIndexes {
                         offset: 5,
@@ -1582,6 +1920,12 @@ mod test {
                         csid_index: 3,
                         path_index: 0,
                         origin_offset: 5,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
                     },
                     BlameRangeIndexes {
                         offset: 7,
@@ -1589,6 +1933,7 @@ mod test {
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
+                        parent: None,
                     },
                 ],
                 csids: vec_map! {
@@ -1615,9 +1960,24 @@ mod test {
         let c4 = "more data\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
-        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![(c1, b1.clone())])?;
-        let b3 = BlameV2::new(THREES_CSID, path.clone(), c3, vec![(c2, b2.clone())])?;
-        let b4 = BlameV2::new(FOURS_CSID, path.clone(), c4, vec![(c3, b3.clone())])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path.clone(),
+            c2,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b3 = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c2, b2.clone())],
+        )?;
+        let b4 = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3.clone())],
+        )?;
 
         assert_eq!(
             b1,
@@ -1638,6 +1998,12 @@ mod test {
                     csid_index: 1,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: Some(BlameParentIndexes {
+                        parent_index: 0,
+                        offset: 0,
+                        length: 0,
+                        renamed_from_path_index: None,
+                    }),
                 }],
                 csids: vec_map! {1 => TWOS_CSID},
                 max_csid_index: 1,
@@ -1664,10 +2030,179 @@ mod test {
                     csid_index: 3,
                     path_index: 0,
                     origin_offset: 0,
+                    parent: Some(BlameParentIndexes {
+                        parent_index: 0,
+                        offset: 0,
+                        length: 0,
+                        renamed_from_path_index: None,
+                    }),
                 }],
                 csids: vec_map! {3 => FOURS_CSID},
                 max_csid_index: 3,
                 paths: vec![path.clone()],
+            })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_skip_past_this_change() -> Result<()> {
+        //  6
+        //  |
+        //  5
+        //  |\
+        //  | 4
+        //  | |\
+        //  | X 3
+        //  |  /
+        //  2 /
+        //  |/
+        //  1
+        //
+        //  Commit 4 is a merge where the file is not present in the first
+        //  parent.  Commits 2 and 4 also rename the file to path2, and
+        //  commit 5 renames it to path3.
+        let path1 = MPath::new("path1")?;
+        let path2 = MPath::new("path2")?;
+        let path3 = MPath::new("path3")?;
+
+        let c1 = "one\nthree\nfive\n";
+        let c2 = "one\ntwo\nthree\nfive\n";
+        let c3 = "zero\none\nthree\nfour\nfive\n";
+        let c4 = "zero\none\nsix\nseven\n";
+        let c5 = "zero\nhalf\ntwo\nsix\nseven\n";
+        let c6 = "zero\nhalf\ntwo\nthree\nfour\nfive\nsix\nseven\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path1.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(
+            TWOS_CSID,
+            path2.clone(),
+            c2,
+            vec![BlameParent::new(0, path1.clone(), c1, b1.clone())],
+        )?;
+        let b3 = BlameV2::new(
+            THREES_CSID,
+            path1.clone(),
+            c3,
+            vec![BlameParent::new(0, path1.clone(), c1, b1.clone())],
+        )?;
+        let b4 = BlameV2::new(
+            FOURS_CSID,
+            path2.clone(),
+            c4,
+            vec![
+                // BlameParent 0 is omitted as the file is not present there.
+                BlameParent::new(1, path1.clone(), c3, b3.clone()),
+            ],
+        )?;
+        let b5 = BlameV2::new(
+            FIVES_CSID,
+            path3.clone(),
+            c5,
+            vec![
+                BlameParent::new(0, path2.clone(), c2, b2.clone()),
+                BlameParent::new(1, path2.clone(), c4, b4.clone()),
+            ],
+        )?;
+        let b6 = BlameV2::new(
+            SIXES_CSID,
+            path3.clone(),
+            c6,
+            vec![BlameParent::new(0, path3.clone(), c5, b5.clone())],
+        )?;
+
+        assert_eq!(
+            b6,
+            BlameV2::Blame(BlameData {
+                ranges: vec![
+                    BlameRangeIndexes {
+                        offset: 0,
+                        length: 1,
+                        csid_index: 2,
+                        path_index: 0,
+                        origin_offset: 0,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 0,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
+                        // Skip past this change goes to p1 of commit 3
+                        // (commit 1), inserting before line 0.
+                    },
+                    BlameRangeIndexes {
+                        offset: 1,
+                        length: 1,
+                        csid_index: 4,
+                        path_index: 2,
+                        origin_offset: 1,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 0,
+                            length: 1,
+                            renamed_from_path_index: Some(1),
+                        }),
+                        // Skip past this change goes to p1 of commit 5
+                        // (commit 2), replacing line 0 ("one" -> "zero, half").
+                        // The file was renamed from path2.
+                    },
+                    BlameRangeIndexes {
+                        offset: 2,
+                        length: 1,
+                        csid_index: 1,
+                        path_index: 1,
+                        origin_offset: 1,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 1,
+                            length: 0,
+                            renamed_from_path_index: Some(0),
+                        }),
+                        // Skip past this change goes to p1 of commit 2
+                        // (commit 2), inserting before line 1.  The file
+                        // was renamed from path1.
+                    },
+                    BlameRangeIndexes {
+                        offset: 3,
+                        length: 3,
+                        csid_index: 5,
+                        path_index: 2,
+                        origin_offset: 3,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 0,
+                            offset: 3,
+                            length: 0,
+                            renamed_from_path_index: None,
+                        }),
+                        // Skip past this change goes to p1 of commit 6
+                        // (commit 5), inserting before line 3.
+                    },
+                    BlameRangeIndexes {
+                        offset: 6,
+                        length: 2,
+                        csid_index: 3,
+                        path_index: 1,
+                        origin_offset: 2,
+                        parent: Some(BlameParentIndexes {
+                            parent_index: 1,
+                            offset: 2,
+                            length: 3,
+                            renamed_from_path_index: Some(0),
+                        }),
+                        // Skip past this change goes to p2 of commit 4
+                        // (commit 3), replacing lines 2 to 5.  The file was
+                        // renamed from path1.
+                    },
+                ],
+                csids: vec_map! {
+                    1 => TWOS_CSID,
+                    2 => THREES_CSID,
+                    3 => FOURS_CSID,
+                    4 => FIVES_CSID,
+                    5 => SIXES_CSID,
+                },
+                max_csid_index: 5,
+                paths: vec![path1.clone(), path2.clone(), path3.clone()],
             })
         );
         Ok(())

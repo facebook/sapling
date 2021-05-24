@@ -30,7 +30,7 @@ use futures::{
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameMaybeRejected, BlameRejected},
-    blame_v2::BlameV2,
+    blame_v2::{BlameParent, BlameV2},
     BlameId, ChangesetId, FileUnodeId, MPath,
 };
 use slog::Logger;
@@ -304,14 +304,14 @@ async fn subcommand_compute_blame(
     let blame_mapping = BlameRoot::default_mapping(&ctx, &repo)?;
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path.clone()).await?;
     let blame_options = blame_mapping.options();
-    let (content, blame) = bounded_traversal_dag(
+    let (_, _, content, blame) = bounded_traversal_dag(
         256,
-        (file_unode_id, path),
+        (None, path.clone(), file_unode_id),
         {
             // unfold operator traverses all parents of a given unode, accounting for
             // renames and treating them as another parent.
             //
-            |(file_unode_id, path)| {
+            |(parent_index, path, file_unode_id)| {
                 cloned!(ctx, repo, blobstore);
                 async move {
                     let file_unode = file_unode_id.load(&ctx, &blobstore).await?;
@@ -321,29 +321,43 @@ async fn subcommand_compute_blame(
                         .file_changes_map()
                         .get(&path)
                         .and_then(|file_change| Some(file_change.as_ref()?.copy_from().clone()?));
-                    let copy_parent: Option<(FileUnodeId, MPath)> = match copy_from {
+                    let copy_parent: Option<(Option<usize>, MPath, FileUnodeId)> = match copy_from {
                         None => None,
                         Some((r_path, r_csid)) => {
+                            let r_parent_index = bonsai
+                                .parents()
+                                .position(|csid| csid == *r_csid)
+                                .ok_or_else(|| {
+                                    format_err!(
+                                        "commit {} path {} has copy-from with invalid parent {}",
+                                        csid,
+                                        path,
+                                        r_csid,
+                                    )
+                                })?;
                             let r_unode_id =
                                 find_leaf(ctx.clone(), repo, *r_csid, r_path.clone()).await?;
-                            Some((r_unode_id, r_path.clone()))
+                            Some((Some(r_parent_index), r_path.clone(), r_unode_id))
                         }
                     };
                     let parents: Vec<_> = file_unode
                         .parents()
                         .iter()
-                        .map(|unode_id| (*unode_id, path.clone()))
+                        .enumerate()
+                        .map(|(index, unode_id)| (Some(index), path.clone(), *unode_id))
                         .chain(copy_parent)
                         .collect();
-                    Ok::<_, Error>(((csid, path, file_unode_id), parents))
+                    Ok::<_, Error>(((csid, parent_index, path, file_unode_id), parents))
                 }
                 .boxed()
             }
         },
         {
             |
-                (csid, path, file_unode_id),
-                parents: Iter<Result<(bytes::Bytes, EitherBlame), BlameRejected>>,
+                (csid, parent_index, path, file_unode_id),
+                parents: Iter<
+                    Result<(Option<usize>, MPath, bytes::Bytes, EitherBlame), BlameRejected>,
+                >,
             | {
                 cloned!(ctx, repo);
                 async move {
@@ -355,7 +369,17 @@ async fn subcommand_compute_blame(
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {
-                                    Ok((content, EitherBlame::V2(blame))) => Some((content, blame)),
+                                    Ok((
+                                        Some(parent_index),
+                                        parent_path,
+                                        content,
+                                        EitherBlame::V2(blame),
+                                    )) => Some(BlameParent::new(
+                                        parent_index,
+                                        parent_path,
+                                        content,
+                                        blame,
+                                    )),
                                     _ => None,
                                 })
                                 .collect();
@@ -369,7 +393,9 @@ async fn subcommand_compute_blame(
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {
-                                    Ok((content, EitherBlame::V1(blame))) => Some((content, blame)),
+                                    Ok((_, _, content, EitherBlame::V1(blame))) => {
+                                        Some((content, blame))
+                                    }
                                     _ => None,
                                 })
                                 .collect();
@@ -380,7 +406,7 @@ async fn subcommand_compute_blame(
                                 parents,
                             )?))
                         }
-                        .map(move |blame| Ok((content, blame))),
+                        .map(move |blame| Ok((parent_index, path, content, blame))),
                     }
                 }
                 .boxed()

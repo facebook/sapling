@@ -398,6 +398,75 @@ struct BlameRangeV2 {
 
   // The offset of this range at the time that this line was introduced.
   4: i32 origin_offset,
+
+  // "Skip past this change" support.
+  //
+  // The following fields allows clients to provide an accurate "skip past this
+  // change" feature.  From any given range in a blame file, "skip path this
+  // change" will direct the user to a *range* of lines in the same file in
+  // one of the parents of the changeset that this range is blamed to (i.e.,
+  // the changeset specified by `csid_index`).
+  //
+  // If the range originates in the first version of the file (i.e. this is
+  // a root commit for the file), then these fields will not be present.
+  //
+  // In the simplest case, the target file is the file with the name specified
+  // by `path_index` in the first parent of the changeset specified by
+  // `csid_index`.
+  //
+  // The range of lines specified by `parent_offset` and `parent_length`
+  // corresponds to the lines that were *replaced* by this range.  In the case
+  // of pure insertions, `parent_length` will be 0, indicating that the new
+  // lines were *inserted* before the line at `parent_offset`.
+  //
+  // If the file was renamed during this change, then `renamed_from_path_index`
+  // will contain the index into paths of the name of the file before the rename.
+  // This should be used in preference to `path_index` to find the target file.
+  //
+  // If the target commit was a merge commit, and the file was not present in
+  // the first parent, then `parent_index` will contain the index (in the list
+  // of parents in the bonsai changeset) of the first parent that does contain
+  // the file.
+  //
+  // Thus, the algorithm for finding the destination for "skip past this change"
+  // is:
+  //
+  //  1. Look up `csid_index` in `csids` to find the blamed changeset, and load
+  //     its BonsaiChangeset.
+  //  2. Find the parent at `parent_index` in the list of parents, or the first
+  //     parent if `parent_index` is not present.  This is the target changeset.
+  //  3. Look up the path at `renamed_from_path_index` in `paths`, or
+  //     `path_index` if `renamed_from_path_index` is not present.  This is the
+  //     target path.
+  //  4. Load the file at the target path in the target changeset.
+  //  5. Jump to the range of lines of length `parent_length` starting at
+  //     `parent_offset`.  This is the range of lines that were changed by the
+  //     change we are skipping over.  Note that the length might be 0,
+  //     indicating an insertion.
+
+  // The offset of this range in the file before this range was introduced that
+  // was replaced by this range.  Not present for root commits.
+  5: optional i32 parent_offset,
+
+  // The length of the range in the file before this range was introduced that
+  // was replaced by this range.  Not present for root commits.
+  6: optional i32 parent_length,
+
+  // If this file was being renamed when this line was introduced, this is
+  // the index into paths of the original path.  Not present for root commits
+  // or if the file has the same name as path_index.
+  7: optional BlamePath renamed_from_path_index,
+
+  // If this is a merge commit, and the file is not in the first parent, then
+  // this is the index of the first parent that contains the file that contains
+  // the range that this range replaces.
+  //
+  // Not present for ranges in root commits or commits with single parents, or
+  // if the file is present in the first parent.
+  //
+  // Note that this is an index into the list of parents in the bonsai
+  // changeset, and *not* an index into csids.
+  8: optional i32 parent_index,
 }
 
 struct BlameDataV2 {
