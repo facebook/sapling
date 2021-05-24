@@ -50,6 +50,10 @@ class DoctorTest(EdenHgTestCase):
         cmd_result = self.run_doctor(dry_run=False)
         self.assertNotIn(b"AssertionError", cmd_result.stdout)
 
+    def get_eden_parent(self) -> str:
+        data = self.eden.run_cmd("debug", "parents", cwd=self.mount)
+        return data.rstrip()
+
     def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
         # this specifically tests when EdenFS and Mercurial are out of sync,
         # but and mercurial does know about EdenFS's WCP
@@ -68,8 +72,7 @@ class DoctorTest(EdenHgTestCase):
             b"requested parent commit is out-of-date", status_context.exception.stderr
         )
 
-        # hg whereami reads eden's SNAPSHOT file
-        eden_parent = self.hg("whereami").strip("\n")
+        eden_parent = self.get_eden_parent()
         hg_parent = self.hg("log", "-r.", "-T{node}")
 
         # make sure that eden and mercurial are out of sync
@@ -86,7 +89,7 @@ class DoctorTest(EdenHgTestCase):
         fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
 
-        eden_parent_fixed = self.hg("whereami").strip("\n")
+        eden_parent_fixed = self.get_eden_parent()
         hg_parent_fixed = self.hg("log", "-r.", "-T{node}")
         self.assertEqual(eden_parent_fixed, hg_parent_fixed)
 
@@ -114,8 +117,7 @@ class DoctorTest(EdenHgTestCase):
             b"requested parent commit is out-of-date", status_context.exception.stderr
         )
 
-        # hg whereami reads eden's SNAPSHOT file
-        eden_parent = self.hg("whereami").strip("\n")
+        eden_parent = self.get_eden_parent()
         hg_parent = self.hg("log", "-r.", "-T{node}")
 
         # make sure that eden and mercurial are out of sync
@@ -128,7 +130,7 @@ class DoctorTest(EdenHgTestCase):
         fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
 
-        eden_parent_fixed = self.hg("whereami").strip("\n")
+        eden_parent_fixed = self.get_eden_parent()
         hg_parent_fixed = self.hg("log", "-r.", "-T{node}")
         self.assertEqual(eden_parent_fixed, hg_parent_fixed)
 
