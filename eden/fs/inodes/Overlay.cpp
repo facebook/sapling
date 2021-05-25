@@ -169,7 +169,8 @@ folly::SemiFuture<Unit> Overlay::initialize(
 
 void Overlay::initOverlay(
     std::optional<AbsolutePath> mountPath,
-    const OverlayChecker::ProgressCallback& progressCallback) {
+    FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback&
+        progressCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_->initOverlay(true);
   if (!optNextInodeNumber.has_value()) {

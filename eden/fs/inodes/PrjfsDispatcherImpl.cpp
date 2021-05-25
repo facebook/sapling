@@ -327,8 +327,8 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::preRename(
-    RelativePath oldPath,
-    RelativePath newPath,
+    RelativePath /*oldPath*/,
+    RelativePath /*newPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& /*context*/) {
   return folly::unit;

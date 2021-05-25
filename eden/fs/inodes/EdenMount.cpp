@@ -78,6 +78,7 @@ DEFINE_string(
 namespace facebook {
 namespace eden {
 
+#ifndef _WIN32
 namespace {
 // We used to play tricks and hard link the .eden directory
 // into every tree, but the linux kernel doesn't seem to like
@@ -88,6 +89,7 @@ namespace {
 constexpr PathComponentPiece kDotEdenSymlinkName{"this-dir"_pc};
 constexpr PathComponentPiece kNfsdSocketName{"nfsd.socket"_pc};
 } // namespace
+#endif
 
 /**
  * Helper for computing unclean paths when changing parents
@@ -1510,58 +1512,60 @@ void EdenMount::channelInitSuccessful(
 
   std::move(channelCompleteFuture)
       .via(serverState_->getThreadPool().get())
-      .thenValue([this](EdenMount::ChannelStopData&& stopData) {
+      .thenValue(
+          [this](FOLLY_MAYBE_UNUSED EdenMount::ChannelStopData&& stopData) {
 #ifdef _WIN32
-        inodeMap_->setUnmounted();
-        std::vector<AbsolutePath> bindMounts;
-        channelCompletionPromise_.setValue(TakeoverData::MountInfo(
-            getPath(),
-            checkoutConfig_->getClientDirectory(),
-            bindMounts,
-            folly::File{},
-            SerializedInodeMap{} // placeholder
-            ));
+            inodeMap_->setUnmounted();
+            std::vector<AbsolutePath> bindMounts;
+            channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+                getPath(),
+                checkoutConfig_->getClientDirectory(),
+                bindMounts,
+                folly::File{},
+                SerializedInodeMap{} // placeholder
+                ));
 #else
-        std::visit(
-            [this](auto&& variant) {
-              using T = std::decay_t<decltype(variant)>;
+            std::visit(
+                [this](auto&& variant) {
+                  using T = std::decay_t<decltype(variant)>;
 
-              if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
-                // If the FUSE device is no longer valid then the mount point
-                // has been unmounted.
-                if (!variant.fuseDevice) {
-                  inodeMap_->setUnmounted();
-                }
+                  if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
+                    // If the FUSE device is no longer valid then the mount
+                    // point has been unmounted.
+                    if (!variant.fuseDevice) {
+                      inodeMap_->setUnmounted();
+                    }
 
-                std::vector<AbsolutePath> bindMounts;
+                    std::vector<AbsolutePath> bindMounts;
 
-                channelCompletionPromise_.setValue(TakeoverData::MountInfo(
-                    getPath(),
-                    checkoutConfig_->getClientDirectory(),
-                    bindMounts,
-                    std::move(variant.fuseDevice),
-                    variant.fuseSettings,
-                    SerializedInodeMap{} // placeholder
-                    ));
-              } else {
-                static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
+                    channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+                        getPath(),
+                        checkoutConfig_->getClientDirectory(),
+                        bindMounts,
+                        std::move(variant.fuseDevice),
+                        variant.fuseSettings,
+                        SerializedInodeMap{} // placeholder
+                        ));
+                  } else {
+                    static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
 
-                inodeMap_->setUnmounted();
-                std::vector<AbsolutePath> bindMounts;
-                channelCompletionPromise_.setValue(TakeoverData::MountInfo(
-                    getPath(),
-                    checkoutConfig_->getClientDirectory(),
-                    bindMounts,
-                    // TODO(xavierd): the next 2 fields should be a variant too.
-                    folly::File(),
-                    fuse_init_out{},
-                    SerializedInodeMap{} // placeholder
-                    ));
-              }
-            },
-            stopData);
+                    inodeMap_->setUnmounted();
+                    std::vector<AbsolutePath> bindMounts;
+                    channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+                        getPath(),
+                        checkoutConfig_->getClientDirectory(),
+                        bindMounts,
+                        // TODO(xavierd): the next 2 fields should be a variant
+                        // too.
+                        folly::File(),
+                        fuse_init_out{},
+                        SerializedInodeMap{} // placeholder
+                        ));
+                  }
+                },
+                stopData);
 #endif
-      })
+          })
       .thenError([this](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "session complete with err: " << ew.what();
         channelCompletionPromise_.setException(std::move(ew));

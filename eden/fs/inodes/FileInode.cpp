@@ -745,7 +745,7 @@ folly::Future<struct stat> FileInode::stat(ObjectFetchContext& context) {
   }
 }
 
-void FileInode::updateBlockCount(struct stat& st) {
+void FileInode::updateBlockCount(FOLLY_MAYBE_UNUSED struct stat& st) {
   // win32 does not have stat::st_blocks
 #ifndef _WIN32
   // Compute a value to store in st_blocks based on st_size.

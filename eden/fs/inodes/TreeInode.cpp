@@ -883,7 +883,7 @@ FileInodePtr TreeInode::createImpl(
     folly::Synchronized<TreeInodeState>::LockedPtr contents,
     PathComponentPiece name,
     mode_t mode,
-    ByteRange fileContents,
+    FOLLY_MAYBE_UNUSED ByteRange fileContents,
     InvalidationRequired invalidate) {
 #ifndef _WIN32
   // This relies on the fact that the dotEdenInodeNumber field of EdenMount is

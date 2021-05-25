@@ -132,8 +132,8 @@ void InodeMap::initialize(TreeInodePtr root) {
 }
 
 void InodeMap::initializeFromTakeover(
-    TreeInodePtr root,
-    const SerializedInodeMap& takeover) {
+    FOLLY_MAYBE_UNUSED TreeInodePtr root,
+    FOLLY_MAYBE_UNUSED const SerializedInodeMap& takeover) {
 #ifndef _WIN32
   auto data = data_.wlock();
 
@@ -528,7 +528,8 @@ void InodeMap::setUnmounted() {
   data->isUnmounted_ = true;
 }
 
-Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
+Future<SerializedInodeMap> InodeMap::shutdown(
+    FOLLY_MAYBE_UNUSED bool doTakeover) {
   // Record that we are in the process of shutting down.
   auto future = Future<folly::Unit>::makeEmpty();
   {
@@ -600,7 +601,12 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
 
-  return std::move(future).thenValue([this, doTakeover](auto&&) {
+  return std::move(future).thenValue([
+#ifndef _WIN32
+                                         this,
+                                         doTakeover
+#endif
+  ](auto&&) {
 #ifdef _WIN32
     // On Windows we don't have the takeover implemented yet, so we will return
     // from here.
