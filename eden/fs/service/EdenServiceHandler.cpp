@@ -532,9 +532,9 @@ void EdenServiceHandler::getBindMounts(
 }
 
 void EdenServiceHandler::addBindMount(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> repoPath,
-    std::unique_ptr<std::string> targetPath) {
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPath,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> targetPath) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
@@ -549,8 +549,8 @@ void EdenServiceHandler::addBindMount(
 }
 
 void EdenServiceHandler::removeBindMount(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> repoPath) {
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPath) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
@@ -664,12 +664,15 @@ TraceEventTimes thriftTraceEventTimes(const TraceEventBase& event) {
   return times;
 }
 
+#ifndef _WIN32
 RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
   RequestInfo info;
   info.pid_ref() = pid;
   info.processName_ref().from_optional(processNameCache.getProcessName(pid));
   return info;
 }
+#endif
+
 } // namespace
 
 #ifndef _WIN32
@@ -1340,9 +1343,9 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(
-    std::unique_ptr<std::string> mountPoint,
-    int32_t uid,
-    int32_t gid) {
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
+    FOLLY_MAYBE_UNUSED int32_t uid,
+    FOLLY_MAYBE_UNUSED int32_t gid) {
 #ifndef _WIN32
   return server_->getMount(*mountPoint)->chown(uid, gid);
 #else
@@ -1695,8 +1698,8 @@ void EdenServiceHandler::debugInodeStatus(
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(
-    std::vector<FuseCall>& outstandingCalls,
-    std::unique_ptr<std::string> mountPoint) {
+    FOLLY_MAYBE_UNUSED std::vector<FuseCall>& outstandingCalls,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
@@ -1806,9 +1809,9 @@ void EdenServiceHandler::debugCompactLocalStorage() {
 }
 
 int64_t EdenServiceHandler::unloadInodeForPath(
-    unique_ptr<string> mountPoint,
-    std::unique_ptr<std::string> path,
-    std::unique_ptr<TimeSpec> age) {
+    FOLLY_MAYBE_UNUSED unique_ptr<string> mountPoint,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<TimeSpec> age) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
@@ -1900,8 +1903,8 @@ void EdenServiceHandler::flushStatsNow() {
 }
 
 Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> path) {
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);

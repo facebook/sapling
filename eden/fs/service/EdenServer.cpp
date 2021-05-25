@@ -165,7 +165,9 @@ using namespace facebook::eden;
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kHgStorePrefix{"store.hg"};
+#ifndef _WIN32
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
+#endif
 constexpr StringPiece kStateConfig{"config.toml"};
 
 std::optional<std::string> getUnixDomainSocketPath(
@@ -198,6 +200,7 @@ std::string getCounterNameForImportMetric(
       RequestMetricsScope::stringOfRequestMetric(metric));
 }
 
+#ifndef _WIN32
 std::string getCounterNameForFuseRequests(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
@@ -213,6 +216,7 @@ std::string getCounterNameForFuseRequests(
       ".",
       RequestMetricsScope::stringOfRequestMetric(metric));
 }
+#endif
 
 std::string normalizeMountPoint(StringPiece mountPath) {
 #ifdef _WIN32
@@ -1307,8 +1311,8 @@ folly::Future<folly::Unit> EdenServer::performFreshStart(
 }
 
 Future<Unit> EdenServer::performTakeoverStart(
-    std::shared_ptr<EdenMount> edenMount,
-    TakeoverData::MountInfo&& info) {
+    FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
+    FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
 #ifndef _WIN32
   std::vector<std::string> bindMounts;
   for (const auto& bindMount : info.bindMounts) {
@@ -1327,8 +1331,8 @@ Future<Unit> EdenServer::performTakeoverStart(
 }
 
 Future<Unit> EdenServer::completeTakeoverStart(
-    std::shared_ptr<EdenMount> edenMount,
-    TakeoverData::MountInfo&& info) {
+    FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
+    FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
 #ifndef _WIN32
   FuseChannelData channelData;
   channelData.fd = std::move(info.fuseFD);
