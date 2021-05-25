@@ -244,7 +244,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
         let blobstore = repo.blobstore();
-        borrowed!(ctx, repo);
+        borrowed!(ctx);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let batch = FastlogBatch::new_from_raw_list(ctx, blobstore, d).await?;
@@ -261,7 +261,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
         let blobstore = repo.blobstore();
-        borrowed!(ctx, repo);
+        borrowed!(ctx);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let batch = FastlogBatch::new_from_raw_list(ctx, blobstore, d).await?;
