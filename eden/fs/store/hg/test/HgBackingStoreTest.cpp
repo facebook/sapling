@@ -89,14 +89,10 @@ class SkipMetadatPrefetchFetchContext : public ObjectFetchContext {
 
 struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgBackingStoreTest() {
-    std::shared_ptr<EdenConfig> rawEdenConfig{
-        EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
         kTreeCacheMaximumSize, ConfigSource::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
         kTreeCacheMinimumEntries, ConfigSource::Default, true);
-    auto edenConfig = std::make_shared<ReloadableConfig>(
-        rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);
     objectStore = ObjectStore::create(
         localStore,
@@ -113,6 +109,11 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>()};
   std::shared_ptr<EdenStats> stats{std::make_shared<EdenStats>()};
   HgImporter importer{repo.path(), stats};
+  std::shared_ptr<EdenConfig> rawEdenConfig{EdenConfig::createTestEdenConfig()};
+  std::shared_ptr<ReloadableConfig> edenConfig{
+      std::make_shared<ReloadableConfig>(
+          rawEdenConfig,
+          ConfigReloadBehavior::NoReload)};
   std::shared_ptr<HgQueuedBackingStore> backingStore{std::make_shared<
       HgQueuedBackingStore>(
       localStore,
@@ -123,7 +124,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
           localStore,
           stats,
           MetadataImporter::getMetadataImporterFactory<TestMetadataImporter>()),
-      nullptr,
+      edenConfig,
       std::make_shared<NullStructuredLogger>(),
       nullptr)};
   std::shared_ptr<ObjectStore> objectStore;

@@ -70,7 +70,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
         localStore,
         stats,
         std::move(backingStore),
-        std::shared_ptr<ReloadableConfig>(),
+        edenConfig,
         std::make_shared<NullStructuredLogger>(),
         std::make_unique<BackingStoreLogger>(),
         1);

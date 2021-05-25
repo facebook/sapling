@@ -48,8 +48,6 @@ static_assert(sizeof(HgImportTraceEvent) == 56);
 static_assert(kTraceBusCapacity * sizeof(HgImportTraceEvent) == 5600000);
 } // namespace
 
-DEFINE_uint64(hg_queue_batch_size, 1, "Number of requests per Hg import batch");
-
 HgImportTraceEvent::HgImportTraceEvent(
     uint64_t unique,
     EventType eventType,
@@ -202,7 +200,8 @@ void HgQueuedBackingStore::processPrefetchRequests(
 void HgQueuedBackingStore::processRequest() {
   folly::setThreadName("hgqueue");
   for (;;) {
-    auto requests = queue_.dequeue(FLAGS_hg_queue_batch_size);
+    auto requests =
+        queue_.dequeue(config_->getEdenConfig()->importBatchSize.getValue());
 
     if (requests.empty()) {
       break;

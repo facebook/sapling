@@ -477,6 +477,11 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
 
+  /**
+   * Controls the number of import requests we batch in HgBackingStore
+   */
+  ConfigSetting<uint32_t> importBatchSize{"hg:import-batch-size", 1, this};
+
   // [telemetry]
 
   /**
