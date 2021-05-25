@@ -99,4 +99,10 @@ folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
       std::move(inner_));
 }
 
+template <typename Func>
+auto makeImmediateFutureWith(Func&& func) {
+  return ImmediateFuture<folly::Unit>().thenTry(
+      [func = std::forward<Func>(func)](auto&&) mutable { return func(); });
+}
+
 } // namespace facebook::eden

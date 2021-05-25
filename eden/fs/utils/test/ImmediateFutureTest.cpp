@@ -181,3 +181,19 @@ TEST(ImmediateFuture, getTimeout) {
   ImmediateFuture<int> fut{std::move(semiFut)};
   EXPECT_THROW(std::move(fut).get(0ms), folly::FutureTimeout);
 }
+
+TEST(ImmediateFuture, makeImmediateFutureWith) {
+  auto fut1 = makeImmediateFutureWith([]() { return 42; });
+  EXPECT_TRUE(fut1.hasImmediate());
+  EXPECT_EQ(std::move(fut1).get(), 42);
+
+  auto fut2 = makeImmediateFutureWith(
+      []() { throw std::logic_error("Test exception"); });
+  EXPECT_TRUE(fut2.hasImmediate());
+  EXPECT_THROW_RE(std::move(fut2).get(), std::logic_error, "Test exception");
+
+  auto fut3 =
+      makeImmediateFutureWith([]() { return folly::makeSemiFuture(42); });
+  EXPECT_FALSE(fut3.hasImmediate());
+  EXPECT_EQ(std::move(fut3).get(), 42);
+}

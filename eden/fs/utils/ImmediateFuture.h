@@ -149,6 +149,18 @@ class ImmediateFuture {
   std::variant<folly::Try<T>, folly::SemiFuture<T>> inner_;
 };
 
+/**
+ * Build an ImmediateFuture from func.
+ *
+ * Exceptions thrown by func will be captured in the returned ImmediateFuture.
+ *
+ * This is a shorthand for:
+ *
+ *   ImmediateFuture<folly::Unit>().thenTry([](auto&&) { return func(); });
+ */
+template <typename Func>
+auto makeImmediateFutureWith(Func&& func);
+
 } // namespace facebook::eden
 
 #include "eden/fs/utils/ImmediateFuture-inl.h"
