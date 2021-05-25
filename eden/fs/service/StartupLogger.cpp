@@ -165,7 +165,7 @@ void DaemonStartupLogger::spawn(
 
 std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
     StringPiece logPath,
-    PrivHelper* privHelper,
+    FOLLY_MAYBE_UNUSED PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
   XDCHECK(!logPath.empty());
 
