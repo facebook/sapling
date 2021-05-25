@@ -16,5 +16,6 @@
   `started_processing_at` bigint(20) DEFAULT NULL,
   `ready_at` bigint(20) DEFAULT NULL,
   `polled_at` bigint(20) DEFAULT NULL,
-  `status` VARCHAR(32) NOT NULL -- enum('new','in_progress','ready','polled') NOT NULL DEFAULT 'new',
+  `status` VARCHAR(32) NOT NULL, -- enum('new','in_progress','ready','polled') NOT NULL DEFAULT 'new',
+  `claimed_by` VARCHAR(255) NULL
 );

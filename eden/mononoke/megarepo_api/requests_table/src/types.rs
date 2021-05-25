@@ -91,6 +91,7 @@ macro_rules! mysql_string_newtype {
 
 mysql_string_newtype!(BlobstoreKey);
 mysql_string_newtype!(RequestType);
+mysql_string_newtype!(ClaimedBy);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
 pub enum RequestStatus {
@@ -113,6 +114,7 @@ pub struct LongRunningRequestEntry {
     pub ready_at: Option<Timestamp>,
     pub polled_at: Option<Timestamp>,
     pub status: RequestStatus,
+    pub claimed_by: Option<ClaimedBy>,
 }
 
 impl std::fmt::Display for RequestStatus {

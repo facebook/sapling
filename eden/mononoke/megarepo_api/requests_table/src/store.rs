@@ -15,7 +15,9 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 
 use crate::LongRunningRequestsQueue;
-use crate::{BlobstoreKey, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId};
+use crate::{
+    BlobstoreKey, ClaimedBy, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId,
+};
 
 queries! {
     read TestGetRequest(id: RowId) -> (
@@ -29,6 +31,7 @@ queries! {
         Option<Timestamp>,
         Option<Timestamp>,
         RequestStatus,
+        Option<ClaimedBy>,
     ) {
         "SELECT request_type,
             repo_id,
@@ -39,7 +42,8 @@ queries! {
             started_processing_at,
             ready_at,
             polled_at,
-            status
+            status,
+            claimed_by
         FROM long_running_request_queue
         WHERE id = {id}"
     }
@@ -54,6 +58,7 @@ queries! {
         Option<Timestamp>,
         Option<Timestamp>,
         RequestStatus,
+        Option<ClaimedBy>,
     ) {
         "SELECT repo_id,
             bookmark,
@@ -63,7 +68,8 @@ queries! {
             started_processing_at,
             ready_at,
             polled_at,
-            status
+            status,
+            claimed_by
         FROM long_running_request_queue
         WHERE id = {id} AND request_type = {request_type}"
     }
@@ -79,15 +85,15 @@ queries! {
     write MarkRequestAsNewAgain(id: RowId, request_type: RequestType) {
         none,
         "UPDATE long_running_request_queue
-         SET status = 'new'
+         SET status = 'new', claimed_by = NULL
          WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress'
         "
     }
 
-    write MarkRequestInProgress(id: RowId, request_type: RequestType, started_processing_at: Timestamp) {
+    write MarkRequestInProgress(id: RowId, request_type: RequestType, started_processing_at: Timestamp, claimed_by: ClaimedBy) {
         none,
         "UPDATE long_running_request_queue
-         SET started_processing_at = {started_processing_at}, status = 'inprogress'
+         SET started_processing_at = {started_processing_at}, status = 'inprogress', claimed_by = {claimed_by}
          WHERE id = {id} AND request_type = {request_type} AND status = 'new'
         "
     }
@@ -168,6 +174,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     ready_at,
                     polled_at,
                     status,
+                    claimed_by,
                 ) = row;
                 Ok(Some(LongRunningRequestEntry {
                     id: *id,
@@ -181,17 +188,24 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     ready_at,
                     polled_at,
                     status,
+                    claimed_by,
                 }))
             }
         }
     }
 
-    async fn mark_in_progress(&self, _ctx: &CoreContext, req_id: &RequestId) -> Result<bool> {
+    async fn mark_in_progress(
+        &self,
+        _ctx: &CoreContext,
+        req_id: &RequestId,
+        claimed_by: &ClaimedBy,
+    ) -> Result<bool> {
         let res = MarkRequestInProgress::query(
             &self.connections.write_connection,
             &req_id.0,
             &req_id.1,
             &Timestamp::now(),
+            &claimed_by,
         )
         .await?;
         Ok(res.affected_rows() > 0)
@@ -249,6 +263,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                     ready_at,
                     polled_at,
                     status,
+                    claimed_by,
                 ) = row;
 
                 match status {
@@ -281,6 +296,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                                 ready_at,
                                 polled_at,
                                 status: RequestStatus::Polled,
+                                claimed_by,
                             },
                         ))
                     }
@@ -298,6 +314,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                             ready_at,
                             polled_at,
                             status: RequestStatus::Polled,
+                            claimed_by: None,
                         },
                     )),
                     _ => None,

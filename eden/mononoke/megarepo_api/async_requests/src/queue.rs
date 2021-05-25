@@ -140,7 +140,7 @@ mod tests {
     use blobstore::{Loadable, Storable};
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use requests_table::RequestStatus;
+    use requests_table::{ClaimedBy, RequestStatus};
 
     use source_control::{
         MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
@@ -210,7 +210,7 @@ mod tests {
 
                 // Verify that poll_once on this request in a "in_progress" state
                 // returns None
-                q.table.mark_in_progress(&ctx, &req_id).await?;
+                q.table.mark_in_progress(&ctx, &req_id, &ClaimedBy("test".to_string())).await?;
                 let in_progress_poll = q.poll_once::<<$token as Token>::R>(&ctx,  &req_id).await?;
                 assert!(in_progress_poll.is_none());
 

@@ -18,7 +18,7 @@ mod types;
 
 pub use crate::store::SqlLongRunningRequestsQueue;
 pub use crate::types::{
-    BlobstoreKey, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId,
+    BlobstoreKey, ClaimedBy, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId,
 };
 
 /// A queue of long-running requests
@@ -54,7 +54,12 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     ) -> Result<Option<LongRunningRequestEntry>>;
 
     /// Mark request as in-progress
-    async fn mark_in_progress(&self, ctx: &CoreContext, req_id: &RequestId) -> Result<bool>;
+    async fn mark_in_progress(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+        claimed_by: &ClaimedBy,
+    ) -> Result<bool>;
 
     /// Mark request as ready
     async fn mark_ready(
