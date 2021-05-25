@@ -453,32 +453,29 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
         });
   }
 
-  // XXX: makeImmediateFuture
-  auto immFut = ImmediateFuture<folly::Unit>{folly::unit};
-  return std::move(immFut)
-      .thenValue([this, args = std::move(args)](auto&&) mutable {
-        if (args.what.name == ".") {
-          return dispatcher_->getattr(args.what.dir.ino, *context)
-              .thenValue(
-                  [ino = args.what.dir.ino](struct stat && stat)
-                      -> std::tuple<InodeNumber, struct stat> {
-                    return {ino, std::move(stat)};
-                  });
-        } else if (args.what.name == "..") {
-          return dispatcher_->getParent(args.what.dir.ino, *context)
-              .thenValue([this](InodeNumber ino) {
-                return dispatcher_->getattr(ino, *context)
-                    .thenValue(
-                        [ino](struct stat && stat)
-                            -> std::tuple<InodeNumber, struct stat> {
-                          return {ino, std::move(stat)};
-                        });
-              });
-        } else {
-          return dispatcher_->lookup(
-              args.what.dir.ino, PathComponent(args.what.name), *context);
-        }
-      })
+  return makeImmediateFutureWith([this, args = std::move(args)]() {
+           if (args.what.name == ".") {
+             return dispatcher_->getattr(args.what.dir.ino, *context)
+                 .thenValue(
+                     [ino = args.what.dir.ino](struct stat && stat)
+                         -> std::tuple<InodeNumber, struct stat> {
+                       return {ino, std::move(stat)};
+                     });
+           } else if (args.what.name == "..") {
+             return dispatcher_->getParent(args.what.dir.ino, *context)
+                 .thenValue([this](InodeNumber ino) {
+                   return dispatcher_->getattr(ino, *context)
+                       .thenValue(
+                           [ino](struct stat && stat)
+                               -> std::tuple<InodeNumber, struct stat> {
+                             return {ino, std::move(stat)};
+                           });
+                 });
+           } else {
+             return dispatcher_->lookup(
+                 args.what.dir.ino, PathComponent(args.what.name), *context);
+           }
+         })
       .thenTry([ser = std::move(ser), dirAttrFut = std::move(dirAttrFut)](
                    folly::Try<std::tuple<InodeNumber, struct stat>>&&
                        lookupTry) mutable {
