@@ -9,7 +9,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use context::CoreContext;
+use mononoke_types::RepositoryId;
 
 mod store;
 mod types;
@@ -29,13 +31,15 @@ pub use crate::types::{
 #[facet::facet]
 #[async_trait]
 pub trait LongRunningRequestsQueue: Send + Sync {
-    /// Schedule an execution of a request, given
-    /// the request type and the blobstore key of
-    /// serialized request parameters
+    /// Schedule an execution of a request, given the request type, the blobstore
+    /// key of serialized request parameters and (repo, bookmark) pair
+    /// representing the target of the request.
     async fn add_request(
         &self,
         ctx: &CoreContext,
         request_type: &RequestType,
+        repo_id: &RepositoryId,
+        bookmark: &BookmarkName,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId>;
 

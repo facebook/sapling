@@ -7,6 +7,8 @@
 
  CREATE TABLE long_running_request_queue (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `repo_id` INTEGER NOT NULL,
+  `bookmark` VARBINARY NOT NULL,
   `request_type` varchar(255) NOT NULL,
   `args_blobstore_key` varchar(255) NOT NULL,
   `result_blobstore_key` varchar(255) DEFAULT NULL,

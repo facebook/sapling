@@ -7,8 +7,9 @@
 
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use context::CoreContext;
-use mononoke_types::Timestamp;
+use mononoke_types::{RepositoryId, Timestamp};
 use sql::queries;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -19,6 +20,8 @@ use crate::{BlobstoreKey, LongRunningRequestEntry, RequestId, RequestStatus, Req
 queries! {
     read TestGetRequest(id: RowId) -> (
         RequestType,
+        RepositoryId,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -28,6 +31,8 @@ queries! {
         RequestStatus,
     ) {
         "SELECT request_type,
+            repo_id,
+            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -40,6 +45,8 @@ queries! {
     }
 
     read GetRequest(id: RowId, request_type: RequestType) -> (
+        RepositoryId,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -48,7 +55,9 @@ queries! {
         Option<Timestamp>,
         RequestStatus,
     ) {
-        "SELECT args_blobstore_key,
+        "SELECT repo_id,
+            bookmark,
+            args_blobstore_key,
             result_blobstore_key,
             created_at,
             started_processing_at,
@@ -59,11 +68,11 @@ queries! {
         WHERE id = {id} AND request_type = {request_type}"
     }
 
-    write AddRequest(request_type: RequestType, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
+    write AddRequest(request_type: RequestType, repo_id: RepositoryId, bookmark: BookmarkName, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
-         (request_type, args_blobstore_key, status, created_at)
-         VALUES ({request_type}, {args_blobstore_key}, 'new', {created_at})
+         (request_type, repo_id, bookmark, args_blobstore_key, status, created_at)
+         VALUES ({request_type}, {repo_id}, {bookmark}, {args_blobstore_key}, 'new', {created_at})
         "
     }
 
@@ -119,11 +128,15 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         &self,
         _ctx: &CoreContext,
         request_type: &RequestType,
+        repo_id: &RepositoryId,
+        bookmark: &BookmarkName,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId> {
         let res = AddRequest::query(
             &self.connections.write_connection,
             request_type,
+            &repo_id,
+            &bookmark,
             args_blobstore_key,
             &Timestamp::now(),
         )
@@ -146,6 +159,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             Some(row) => {
                 let (
                     request_type,
+                    repo_id,
+                    bookmark,
                     args_blobstore_key,
                     result_blobstore_key,
                     created_at,
@@ -156,6 +171,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                 ) = row;
                 Ok(Some(LongRunningRequestEntry {
                     id: *id,
+                    repo_id,
+                    bookmark,
                     request_type,
                     args_blobstore_key,
                     result_blobstore_key,
@@ -223,6 +240,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             None => bail!("unknown request polled: {:?}", req_id),
             Some(row) => {
                 let (
+                    repo_id,
+                    bookmark,
                     args_blobstore_key,
                     result_blobstore_key,
                     created_at,
@@ -252,6 +271,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                             true,
                             LongRunningRequestEntry {
                                 id: req_id.0,
+                                repo_id,
+                                bookmark,
                                 request_type: req_id.1.clone(),
                                 args_blobstore_key,
                                 result_blobstore_key,
@@ -267,6 +288,8 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                         false,
                         LongRunningRequestEntry {
                             id: req_id.0,
+                            repo_id,
+                            bookmark,
                             request_type: req_id.1.clone(),
                             args_blobstore_key,
                             result_blobstore_key,

@@ -10,13 +10,16 @@
 use anyhow::{anyhow, Error};
 use blobstore::PutBehaviour;
 use blobstore::{Blobstore, Loadable, Storable};
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
+use mononoke_types::RepositoryId;
 use requests_table::{
     BlobstoreKey, LongRunningRequestsQueue, RequestId, RequestType, SqlLongRunningRequestsQueue,
 };
 use sql_construct::SqlConstruct;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -58,7 +61,13 @@ impl AsyncMethodRequestQueue {
         let blobstoke_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
             .table
-            .add_request(&ctx, &request_type, &blobstoke_key)
+            .add_request(
+                &ctx,
+                &request_type,
+                &RepositoryId::new(i32::try_from(target.repo_id)?),
+                &BookmarkName::new(&target.bookmark)?,
+                &blobstoke_key,
+            )
             .await?;
         let token = <P::R as Request>::Token::from_db_id_and_target(table_id, target);
         Ok(token)

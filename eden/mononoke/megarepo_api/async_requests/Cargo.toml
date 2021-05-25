@@ -8,6 +8,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 megarepo_config = { version = "0.1.0", path = "../megarepo_config" }
