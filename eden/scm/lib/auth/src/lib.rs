@@ -20,9 +20,10 @@ pub mod x509;
 pub use x509::{check_certs, X509Error};
 
 #[derive(Debug, Error)]
-#[error("Certificate(s) or private key(s) not found: {missing:?}")]
+#[error("Certificate(s) or private key(s) not found: {missing:?}\n{msg}")]
 pub struct MissingCerts {
     missing: Vec<PathBuf>,
+    msg: String,
 }
 
 /// A group of client authentiation settings from the user's config.
@@ -104,12 +105,13 @@ impl AuthGroup {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct AuthSection {
+#[derive(Clone)]
+pub struct AuthSection<'a> {
     groups: Vec<AuthGroup>,
+    config: &'a dyn Config,
 }
 
-impl AuthSection {
+impl<'a> AuthSection<'a> {
     /// Parse the `[auth]` section of a Mercurial config into a map
     /// of grouped auth settings.
     ///
@@ -119,7 +121,7 @@ impl AuthSection {
     ///
     /// Values are parsed `Auth` structs containing all of the values
     /// found for the given grouping.
-    pub fn from_config(config: &dyn Config) -> Self {
+    pub fn from_config(config: &'a dyn Config) -> Self {
         // Use an IndexMap to preserve ordering; needed to correctly handle precedence.
         let mut groups = IndexMap::new();
 
@@ -144,7 +146,7 @@ impl AuthSection {
             .filter_map(|(group, settings)| AuthGroup::new(group, settings).ok())
             .collect();
 
-        Self { groups }
+        Self { groups, config }
     }
 
     /// Find the best matching auth group for the given URL.
@@ -221,7 +223,11 @@ impl AuthSection {
         if let Some(best) = best {
             Ok(Some(best.clone()))
         } else if !missing.is_empty() {
-            Err(MissingCerts { missing })
+            let msg = self.config.get("help", "tlsauthhelp").unwrap_or_default();
+            Err(MissingCerts {
+                missing,
+                msg: msg.to_string(),
+            })
         } else {
             Ok(None)
         }

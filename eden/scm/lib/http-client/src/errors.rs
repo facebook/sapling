@@ -64,7 +64,7 @@ impl Abort {
 ///
 /// Full list of error codes: https://curl.se/libcurl/c/libcurl-errors.html
 #[derive(Error, Debug)]
-#[error("{source}")]
+#[error("Try renewing your certificates. Run `eden doctor`. TlsError: {source}")]
 pub struct TlsError {
     pub source: curl::Error,
     pub kind: TlsErrorKind,
