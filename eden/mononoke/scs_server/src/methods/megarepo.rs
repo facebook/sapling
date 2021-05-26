@@ -8,11 +8,12 @@
 use anyhow::Result;
 use async_requests::tokens::{MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken};
 use async_requests::types::{ThriftParams, Token};
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use source_control as thrift;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -74,12 +75,18 @@ impl SourceControlServiceImpl {
         let config = params.config_with_new_target;
         let target = config.target.clone();
         self.verify_repos_by_config(&config)?;
-        // TODO (ikostia): stop using the fake token
-        let megarepo_configs = self.megarepo_api.configs();
-        megarepo_configs
-            .add_target_with_config_version(ctx, config)
+
+        let mut changesets_to_merge = HashMap::new();
+        for (s, cs_id) in params.changesets_to_merge {
+            let cs_id = ChangesetId::from_bytes(cs_id).map_err(errors::invalid_request)?;
+            changesets_to_merge.insert(s, cs_id);
+        }
+
+        self.megarepo_api
+            .add_sync_target(&ctx, config, changesets_to_merge, params.message)
             .await?;
 
+        // TODO (mateusz, stash, simonfar): stop using the fake token
         let token = thrift::MegarepoAddTargetToken {
             id: FAKE_ADD_TARGET_TOKEN,
             target,
@@ -90,16 +97,32 @@ impl SourceControlServiceImpl {
 
     pub(crate) async fn megarepo_add_sync_target_poll(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         token: thrift::MegarepoAddTargetToken,
     ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
         // TODO (ikostia, stash, mitrandir): stop using the fake token
         if token.id == FAKE_ADD_TARGET_TOKEN {
+            let bookmark =
+                BookmarkName::new(token.target.bookmark).map_err(errors::invalid_request)?;
+            let repo_id = RepositoryId::new(token.target.repo_id as i32);
+            let maybe_repo = self.mononoke.repo_by_id(ctx.clone(), repo_id).await?;
+            let repo = maybe_repo
+                .ok_or_else(|| errors::invalid_request(format!("Repo id{} not found", repo_id)))?;
+
+            let maybe_bookmark_val = repo
+                .blob_repo()
+                .bookmarks()
+                .get(ctx, &bookmark)
+                .await
+                .map_err(errors::internal_error)?;
+            let bookmark_val = maybe_bookmark_val
+                .ok_or_else(|| errors::invalid_request("{} bookmark not found"))?;
+
             Ok(thrift::MegarepoAddTargetPollResponse {
                 response: Some(thrift::MegarepoAddTargetResponse {
                     // This is obviously incorrect and should be removed together
                     // with the fake token
-                    cs_id: Default::default(),
+                    cs_id: Vec::from(bookmark_val.as_ref()),
                 }),
             })
         } else {
@@ -167,14 +190,29 @@ impl SourceControlServiceImpl {
 
     pub(crate) async fn megarepo_sync_changeset_poll(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         token: thrift::MegarepoSyncChangesetToken,
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
         if token.id == FAKE_ADD_TARGET_TOKEN {
+            let bookmark =
+                BookmarkName::new(token.target.bookmark).map_err(errors::invalid_request)?;
+            let repo_id = RepositoryId::new(token.target.repo_id as i32);
+            let maybe_repo = self.mononoke.repo_by_id(ctx.clone(), repo_id).await?;
+            let repo = maybe_repo
+                .ok_or_else(|| errors::invalid_request(format!("Repo id{} not found", repo_id)))?;
+
+            let maybe_bookmark_val = repo
+                .blob_repo()
+                .bookmarks()
+                .get(ctx, &bookmark)
+                .await
+                .map_err(errors::internal_error)?;
+            let bookmark_val = maybe_bookmark_val
+                .ok_or_else(|| errors::invalid_request("{} bookmark not found"))?;
             Ok(thrift::MegarepoSyncChangesetPollResponse {
                 response: Some(thrift::MegarepoSyncChangesetResponse {
-                    // TODO(stash, mitrandir) - return the actual commit here
-                    cs_id: Default::default(),
+                    // TODO(stash, mitrandir, simonfar) - return the actual commit here
+                    cs_id: Vec::from(bookmark_val.as_ref()),
                 }),
             })
         } else {
