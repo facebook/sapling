@@ -336,20 +336,21 @@ enum LocalStoreType {
 }
 
 pub struct FetchState {
-    // The originally requested keys that haven't been found yet.
-    incomplete_hgid: HashSet<Key>,
-
-    // Requests that we've found an LFS pointer for but no content so far
-    incomplete_pointers: HashMap<Key, LfsPointersEntry>,
-    // Metadata about LFS pointers we've found (originating store of the LFS pointer)
-    pointer_meta: Arc<RwLock<HashMap<Sha256, LocalStoreType>>>,
+    /// Requested keys for which at least some attributes haven't been found.
+    pending: HashSet<Key>,
 
     // Completed requests accumulated here
-    complete: HashMap<Key, LazyFile>,
+    found: HashMap<Key, LazyFile>,
+    /// LFS pointers we've discovered corresponding to a request Key.
+    lfs_pointers: HashMap<Key, LfsPointersEntry>,
 
-    // Store the last error seen for a key
+    /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
+    pointer_origin: Arc<RwLock<HashMap<Sha256, LocalStoreType>>>,
+
+    /// Errors encountered for specific keys
     fetch_errors: HashMap<Key, Vec<Error>>,
-    // Store errors that don't just apply to a single key
+
+    /// Errors encountered that don't apply to a single key
     other_errors: Vec<Error>,
 
     // Requests that required remote fallback, might be cached locally
@@ -363,12 +364,11 @@ pub struct FetchState {
 impl FetchState {
     fn new(keys: impl Iterator<Item = Key>, extstored_policy: ExtStoredPolicy) -> Self {
         FetchState {
-            incomplete_hgid: keys.collect(),
+            pending: keys.collect(),
 
-            incomplete_pointers: HashMap::new(),
-            pointer_meta: Arc::new(RwLock::new(HashMap::new())),
-
-            complete: HashMap::new(),
+            found: HashMap::new(),
+            lfs_pointers: HashMap::new(),
+            pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
             fetch_errors: HashMap::new(),
             other_errors: vec![],
@@ -380,29 +380,34 @@ impl FetchState {
         }
     }
 
-    /// Returns all incomplete HgId requests, not including those that we've discovered correspond to an LFS pointer.
-    fn pending_hgid(&self) -> Vec<Key> {
-        self.incomplete_hgid.iter().cloned().collect()
-    }
-
-    /// Returns all incomplete requests as StoreKey, returning discovered LFS pointers as StoreKey::Content.
-    /// Every StoreKey returned here is guaranteed to have a Key available, so unwrapping is safe.
-    fn pending_all(&self) -> Vec<StoreKey> {
-        self.incomplete_hgid
+    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer
+    fn pending_nonlfs(&self) -> Vec<Key> {
+        self.pending
             .iter()
+            .filter(|k| !self.lfs_pointers.contains_key(k))
             .cloned()
-            .map(StoreKey::HgId)
-            .chain(
-                self.incomplete_pointers.iter().map(|(k, v)| {
-                    StoreKey::Content(ContentHash::Sha256(v.sha256()), Some(k.clone()))
-                }),
-            )
             .collect()
     }
 
+    /// Returns all incomplete requested Keys as StoreKey, with content Sha256 from the LFS pointer if available
+    fn pending_storekey(&self) -> Vec<StoreKey> {
+        self.pending.iter().map(|k| self.storekey(k)).collect()
+    }
+
+    /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
+    /// Every StoreKey returned from this function is guaranteed to have an associated Key, so unwrapping is fine.
+    fn storekey(&self, key: &Key) -> StoreKey {
+        self.lfs_pointers.get(key).map_or_else(
+            || StoreKey::HgId(key.clone()),
+            |ptr| StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key.clone())),
+        )
+    }
+
     fn mark_complete(&mut self, key: &Key) {
-        self.incomplete_hgid.remove(key);
-        self.incomplete_pointers.remove(key);
+        self.pending.remove(key);
+        if let Some(ptr) = self.lfs_pointers.remove(key) {
+            self.pointer_origin.write().remove(&ptr.sha256());
+        }
     }
 
     fn found_error(&mut self, maybe_key: Option<Key>, err: Error) {
@@ -417,23 +422,22 @@ impl FetchState {
     }
 
     fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: LocalStoreType) {
-        self.mark_complete(&key);
         let sha256 = ptr.sha256();
         // Overwrite LocalStoreType::Local with LocalStoreType::Cache, but not vice versa
         match typ {
             LocalStoreType::Cache => {
-                self.pointer_meta.write().insert(sha256, typ);
+                self.pointer_origin.write().insert(sha256, typ);
             }
             LocalStoreType::Local => {
-                self.pointer_meta.write().entry(sha256).or_insert(typ);
+                self.pointer_origin.write().entry(sha256).or_insert(typ);
             }
         }
-        self.incomplete_pointers.insert(key, ptr);
+        self.lfs_pointers.insert(key, ptr);
     }
 
     fn found_file(&mut self, key: Key, f: LazyFile) {
         self.mark_complete(&key);
-        self.complete.insert(key, f);
+        self.found.insert(key, f);
     }
 
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: LocalStoreType) {
@@ -450,7 +454,7 @@ impl FetchState {
     }
 
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
-        let pending = self.pending_hgid();
+        let pending = self.pending_nonlfs();
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -472,7 +476,7 @@ impl FetchState {
     }
 
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
-        let pending = self.pending_all();
+        let pending = self.pending_storekey();
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
@@ -499,7 +503,7 @@ impl FetchState {
     }
 
     fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
-        let pending = self.pending_hgid();
+        let pending = self.pending_nonlfs();
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
@@ -529,7 +533,7 @@ impl FetchState {
     }
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
-        let pending = self.pending_hgid();
+        let pending = self.pending_nonlfs();
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
         }
@@ -549,7 +553,7 @@ impl FetchState {
         cache: Option<Arc<LfsStore>>,
     ) -> Result<()> {
         let pending: HashSet<_> = self
-            .incomplete_pointers
+            .lfs_pointers
             .iter()
             .map(|(_k, v)| (v.sha256(), v.size() as usize))
             .collect();
@@ -557,9 +561,9 @@ impl FetchState {
         store.batch_fetch(&pending, {
             let lfs_local = local.clone();
             let lfs_cache = cache.clone();
-            let pointer_meta = self.pointer_meta.clone();
+            let pointer_origin = self.pointer_origin.clone();
             move |sha256, data| -> Result<()> {
-                match pointer_meta.read().get(&sha256).ok_or_else(|| {
+                match pointer_origin.read().get(&sha256).ok_or_else(|| {
                     anyhow!(
                         "no source found for Sha256; received unexpected Sha256 from LFS server"
                     )
@@ -614,11 +618,11 @@ impl FetchState {
     }
 
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
-        let pending = self.pending_all();
+        let pending = self.pending_storekey();
         store.prefetch(&pending)?;
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
-                "no Key present in StoreKey, even though this should be guaranteed by pending_all",
+                "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
             );
             // Using the ContentStore API, fetch the hg file blob, then, if it's found, also fetch the file metadata.
             // Returns the requested file as Result<(Option<Vec<u8>>, Option<Metadata>)>
@@ -664,7 +668,7 @@ impl FetchState {
         let mut indexedlog_cache = indexedlog_cache.map(|s| s.write_lock());
 
         for key in self.found_in_edenapi.drain() {
-            if let Ok(Some(cache_entry)) = self.complete[&key].indexedlog_cache_entry(key) {
+            if let Ok(Some(cache_entry)) = self.found[&key].indexedlog_cache_entry(key) {
                 if let Some(memcache) = memcache {
                     if let Ok(mcdata) = cache_entry.clone().try_into() {
                         memcache.add_mcdata(mcdata)
@@ -677,7 +681,7 @@ impl FetchState {
         }
 
         for key in self.found_in_memcache.drain() {
-            if let Ok(Some(cache_entry)) = self.complete[&key].indexedlog_cache_entry(key) {
+            if let Ok(Some(cache_entry)) = self.found[&key].indexedlog_cache_entry(key) {
                 if let Some(ref mut indexedlog_cache) = indexedlog_cache {
                     let _ = indexedlog_cache.put_entry(cache_entry);
                 }
@@ -685,18 +689,14 @@ impl FetchState {
         }
     }
     fn finish(self) -> FileStoreFetch {
-        // Collect all incomplete request Keys
-        let incomplete_hgid = self.incomplete_hgid.into_iter();
-        let incomplete_pointers = self.incomplete_pointers.into_iter().map(|(key, _ptr)| key);
-
         // Combine and collect errors
         let mut incomplete = self.fetch_errors;
-        for key in incomplete_hgid.chain(incomplete_pointers) {
+        for key in self.pending.into_iter() {
             incomplete.entry(key).or_insert_with(Vec::new);
         }
 
         FileStoreFetch {
-            complete: self.complete,
+            complete: self.found,
             incomplete,
             other_errors: self.other_errors,
         }
