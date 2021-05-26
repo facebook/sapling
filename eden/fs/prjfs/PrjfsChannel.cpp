@@ -200,7 +200,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
 }
 
 HRESULT PrjfsChannelInner::endEnumeration(
-    std::shared_ptr<PrjfsRequestContext> context,
+    std::shared_ptr<PrjfsRequestContext> /* context */,
     const PRJ_CALLBACK_DATA* /*callbackData*/,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
