@@ -21,7 +21,7 @@ from facebook.eden.ttypes import (
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
-@hg_test("TreeOnly")
+@hg_test
 # pyre-ignore[13]: T62487924
 class StatusTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: HgRepository) -> None:
@@ -218,7 +218,7 @@ enforce-parents = false
         self.assert_status_empty()
 
 
-@hg_test("TreeOnly")
+@hg_test
 # pyre-ignore[13]: T62487924
 class StatusEdgeCaseTest(EdenHgTestCase):
     commit1: str

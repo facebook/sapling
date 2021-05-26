@@ -15,7 +15,7 @@ from eden.integration.lib import hgrepo
 # We don't care too much about the mercurial configuration, so only run this
 # test with the TreeOnly configuration, rather than running it with
 # multiple configurations.
-@hg_test("TreeOnly")
+@hg_test
 # pyre-ignore[13]: T62487924
 class NegativeCachingTest(EdenHgTestCase):
     commit1: str

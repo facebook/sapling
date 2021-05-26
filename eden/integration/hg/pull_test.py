@@ -9,7 +9,7 @@ from eden.integration.lib import hgrepo
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
-@hg_test("TreeOnly")
+@hg_test
 # pyre-ignore[13]: T62487924
 class PullTest(EdenHgTestCase):
     server_repo: hgrepo.HgRepository
@@ -35,11 +35,10 @@ class PullTest(EdenHgTestCase):
         # Create a server repository.
         hgrc = self.get_hgrc()
         self.apply_hg_config_variant(hgrc)
-        if self.config_variant_name in ("Treemanifest", "TreeOnly"):
-            # fastmanifest must be disabled on the server repository.
-            # The treemanifest server-side code breaks otherwise.
-            hgrc["extensions"]["fastmanifest"] = "!"
-            hgrc["treemanifest"] = {"server": "True", "autocreatetrees": "True"}
+        # fastmanifest must be disabled on the server repository.
+        # The treemanifest server-side code breaks otherwise.
+        hgrc["extensions"]["fastmanifest"] = "!"
+        hgrc["treemanifest"] = {"server": "True", "autocreatetrees": "True"}
 
         repo = self.create_hg_repo("server_repo", hgrc=hgrc)
 

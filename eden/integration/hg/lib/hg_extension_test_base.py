@@ -12,9 +12,11 @@ import logging
 import os
 import re
 import textwrap
+import typing
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, Type, Iterable
 
+import eden.config
 from eden.integration.lib import hgrepo, testcase
 
 
@@ -77,7 +79,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     repo: hgrepo.HgRepository
     backing_repo: hgrepo.HgRepository
-    config_variant_name: str  # set by the @hg_test decorator
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -87,7 +88,9 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
-        self.eden.clone(self.backing_repo.path, self.mount, allow_empty=True)
+        self.eden.clone(
+            self.backing_repo.path, self.mount, allow_empty=True, nfs=self.use_nfs()
+        )
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)
@@ -103,9 +106,14 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.apply_hg_config_variant(hgrc)
         return hgrc
 
-    @abc.abstractmethod
     def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
-        raise NotImplementedError()
+        hgrc["extensions"]["treemanifest"] = ""
+        hgrc["extensions"]["pushrebase"] = ""
+        hgrc["treemanifest"] = {"treeonly": "True"}
+        hgrc["remotefilelog"] = {
+            "reponame": "eden_integration_tests",
+            "cachepath": os.path.join(self.tmp_dir, "hgcache"),
+        }
 
     @abc.abstractmethod
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
@@ -449,43 +457,18 @@ class JournalEntry(object):
         return command[m.end() :]
 
 
-def _apply_treeonly_config(test, config):
-    config["extensions"]["treemanifest"] = ""
-    config["extensions"]["pushrebase"] = ""
-    config["treemanifest"] = {"treeonly": "True"}
-    config["remotefilelog"] = {
-        "reponame": "eden_integration_tests",
-        "cachepath": os.path.join(test.tmp_dir, "hgcache"),
-    }
+def _replicate_hg_test(
+    test_class: Type[EdenHgTestCase],
+) -> Iterable[Tuple[str, Type[EdenHgTestCase]]]:
+    class NFSEdenHgTestCase(testcase.NFSTestMixin, test_class):
+        pass
+
+    class DefaultEdenHgTestCase(test_class):
+        pass
+
+    yield "TreeOnly", typing.cast(Type[EdenHgTestCase], DefaultEdenHgTestCase)
+    if eden.config.HAVE_NFS:
+        yield "TreeOnlyNFS", typing.cast(Type[EdenHgTestCase], NFSEdenHgTestCase)
 
 
-ALL_CONFIGS = {"TreeOnly": _apply_treeonly_config}
-
-
-def _replicate_hg_test(test_class, *variants):
-    if not variants:
-        variants = ("TreeOnly",)
-
-    for name in variants:
-        config_fn = ALL_CONFIGS[name]
-
-        class HgTestVariant(test_class):
-            config_variant_name = name
-            apply_hg_config_variant = config_fn
-
-        yield name, HgTestVariant
-
-
-# A decorator function used to define test cases that test eden+mercurial.
-#
-# This decorator creates multiple TestCase subclasses from a single input
-# class.  This allows us to re-run the same test code with several different
-# mercurial extension configurations.
-#
-# The test case subclasses will have different suffixes to identify their
-# configuration.  Currently for a given input test class named "MyTest",
-# this will create subclasses named:
-# - "MyTestFlat": configures hg using the vanilla flat manifest
-# - "MyTestTree": configures hg using treemanifest
-# - "MyTestTreeOnly": configures hg using treemanifest.treeonly
 hg_test = testcase.test_replicator(_replicate_hg_test)

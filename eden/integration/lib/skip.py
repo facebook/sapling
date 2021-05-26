@@ -208,6 +208,15 @@ if sys.platform.startswith("linux"):
             ],
             "fsck_test.FsckTestNFS": ["test_fsck_force_and_check_only"],  # T89442010
             "stale_test.StaleTestNFS": True,  # T89442539
+            "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnlyNFS": [
+                "test_contents_are_the_same_if_handle_is_held_open"  # T89344844
+            ],
+            "hg.post_clone_test.SymlinkTestTreeOnlyNFS": [
+                "test_post_clone_permissions"  # T90881659
+            ],
+            "hg.update_test.UpdateTestTreeOnlyNFS": [
+                "test_mount_state_during_unmount_with_in_progress_checkout"  # T90881795
+            ],
         }
     )
 
