@@ -407,6 +407,7 @@ impl ChunkSqlStore {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(crate) async fn get_generation(
         &self,
         key: &str,

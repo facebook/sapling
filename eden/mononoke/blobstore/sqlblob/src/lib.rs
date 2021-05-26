@@ -353,6 +353,7 @@ impl Sqlblob {
         self.chunk_store.set_initial_generation(shard_num).await
     }
 
+    #[cfg(test)]
     pub async fn get_chunk_generations(&self, key: &str) -> Result<Vec<Option<u64>>> {
         let chunked = self.data_store.get(key).await?;
         if let Some(chunked) = chunked {
