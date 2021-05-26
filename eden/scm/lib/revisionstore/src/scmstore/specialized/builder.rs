@@ -18,7 +18,10 @@ use crate::{
     indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
     lfs::{LfsRemote, LfsStore},
     scmstore::{FileStore, TreeStore},
-    util::{get_cache_path, get_indexedlogdatastore_path, get_local_path, get_repo_name},
+    util::{
+        get_cache_path, get_indexedlogdatastore_aux_path, get_indexedlogdatastore_path,
+        get_local_path, get_repo_name,
+    },
     ContentStore, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, MemcacheStore,
 };
 
@@ -27,6 +30,7 @@ pub struct FileStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
     correlator: Option<String>,
+    store_aux_data: bool,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -46,6 +50,7 @@ impl<'a> FileStoreBuilder<'a> {
             local_path: None,
             suffix: None,
             correlator: None,
+            store_aux_data: false,
             indexedlog_local: None,
             indexedlog_cache: None,
             lfs_local: None,
@@ -68,6 +73,11 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn correlator(mut self, correlator: impl ToString) -> Self {
         self.correlator = Some(correlator.to_string());
+        self
+    }
+
+    pub fn store_aux_data(mut self) -> Self {
+        self.store_aux_data = true;
         self
     }
 
@@ -175,6 +185,32 @@ impl<'a> FileStoreBuilder<'a> {
         )?))
     }
 
+    pub fn build_aux_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+        Ok(if let Some(local_path) = self.local_path.clone() {
+            let local_path = get_local_path(local_path, &self.suffix)?;
+            let local_path = get_indexedlogdatastore_aux_path(&local_path)?;
+            Some(Arc::new(IndexedLogHgIdDataStore::new(
+                local_path,
+                ExtStoredPolicy::Use,
+                self.config,
+                IndexedLogDataStoreType::Local,
+            )?))
+        } else {
+            None
+        })
+    }
+
+    pub fn build_aux_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
+        let cache_path = get_cache_path(self.config, &self.suffix)?;
+        let cache_path = get_indexedlogdatastore_aux_path(&cache_path)?;
+        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+            cache_path,
+            ExtStoredPolicy::Use,
+            self.config,
+            IndexedLogDataStoreType::Shared,
+        )?))
+    }
+
     pub fn build_lfs_local(&self) -> Result<Option<Arc<LfsStore>>> {
         if !self.use_lfs()? {
             return Ok(None);
@@ -230,6 +266,15 @@ impl<'a> FileStoreBuilder<'a> {
             self.build_lfs_cache()?
         };
 
+
+        let (aux_local, aux_cache) = if self.store_aux_data {
+            let aux_local = self.build_aux_local()?;
+            let aux_cache = Some(self.build_aux_cache()?);
+            (aux_local, aux_cache)
+        } else {
+            (None, None)
+        };
+
         let lfs_remote = if self.use_lfs()? {
             if let Some(ref lfs_cache) = lfs_cache {
                 // Use LfsRemote to do the construction logic then extract the actual
@@ -279,8 +324,8 @@ impl<'a> FileStoreBuilder<'a> {
 
             contentstore,
 
-            aux_local: None,
-            aux_cache: None,
+            aux_local,
+            aux_cache,
         })
     }
 }

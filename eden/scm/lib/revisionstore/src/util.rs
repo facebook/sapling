@@ -76,6 +76,13 @@ pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
+pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = path.as_ref().to_owned();
+    path.push("indexedlogdatastore_aux");
+    create_shared_dir(&path)?;
+    Ok(path)
+}
+
 pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedloghistorystore");
