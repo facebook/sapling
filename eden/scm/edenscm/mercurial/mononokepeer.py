@@ -266,77 +266,82 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._cleanup()
         decompress = False
 
-        try:
-            if self._unix_socket_proxy:
-                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                self.sock.settimeout(self._sockettimeout)
-                self.sock.connect(self._unix_socket_proxy)
-            else:
-                self.sock = socket.create_connection(
-                    (self._host, self._port), self._sockettimeout
-                )
-        except IOError as ex:
-            self._connectionerror(ex)
+        with self.ui.timeblockedsection("mononoke_tcp"):
+            try:
+                if self._unix_socket_proxy:
+                    self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    self.sock.settimeout(self._sockettimeout)
+                    self.sock.connect(self._unix_socket_proxy)
+                else:
+                    self.sock = socket.create_connection(
+                        (self._host, self._port), self._sockettimeout
+                    )
+            except IOError as ex:
+                self._connectionerror(ex)
 
         if not self._unix_socket_proxy:
+            with self.ui.timeblockedsection("mononoke_tls"):
+                try:
+                    self.sock = sslutil.wrapsocket(
+                        self.sock,
+                        self._key,
+                        self._cert,
+                        ui=self.ui,
+                        serverhostname=self._cn,
+                    )
+                    sslutil.validatesocket(self.sock)
+
+                except IOError as ex:
+                    self._connectionerror(ex, tlserror=True)
+
+        with self.ui.timeblockedsection("mononoke_headers"):
             try:
-                self.sock = sslutil.wrapsocket(
-                    self.sock,
-                    self._key,
-                    self._cert,
-                    ui=self.ui,
-                    serverhostname=self._cn,
-                )
-                sslutil.validatesocket(self.sock)
+                headers = [
+                    encodeutf8("GET /{} HTTP/1.1".format(self._path)),
+                    encodeutf8("Host: {}".format(self._host)),
+                    b"User-Agent: mercurial/mononoke-peer",
+                    b"Connection: Upgrade",
+                    b"Upgrade: websocket",
+                ]
+
+                if self._compression:
+                    headers.append(b"X-Client-Compression: zstd=stdin")
+
+                if os.getenv("CLIENT_DEBUG"):
+                    headers.append(b"X-Client-Debug: true")
+
+                self.sock.send(b"\r\n".join(headers) + b"\r\n\r\n")
+
+                # Read HTTP response headers so we can start our own
+                # protocol afterwards
+                self.handle = self.sock.makefile(mode="rwb")
+
+                # First line is wether request was successful
+                line = self.handle.readline(1024).strip()
+                headerparts = line.split()
+                if len(headerparts) < 2:
+                    self._abort(
+                        error.BadResponseError("invalid http response: %s" % line)
+                    )
+
+                if headerparts[0] != b"HTTP/1.1" or headerparts[1] != b"101":
+                    self._abort(
+                        error.BadResponseError(
+                            'unexpected server response: "{}"'.format(decodeutf8(line))
+                        )
+                    )
+
+                # Strip away all headers so we can start decoding Mercurial
+                # wire protocol
+                while line:
+                    line = self.handle.readline(1024).strip()
+                    if line.lower().startswith(b"x-mononoke-encoding:"):
+                        decompress = True
 
             except IOError as ex:
-                self._connectionerror(ex, tlserror=True)
+                self._connectionerror(ex)
 
-        try:
-            headers = [
-                encodeutf8("GET /{} HTTP/1.1".format(self._path)),
-                encodeutf8("Host: {}".format(self._host)),
-                b"User-Agent: mercurial/mononoke-peer",
-                b"Connection: Upgrade",
-                b"Upgrade: websocket",
-            ]
-
-            if self._compression:
-                headers.append(b"X-Client-Compression: zstd=stdin")
-
-            if os.getenv("CLIENT_DEBUG"):
-                headers.append(b"X-Client-Debug: true")
-
-            self.sock.send(b"\r\n".join(headers) + b"\r\n\r\n")
-
-            # Read HTTP response headers so we can start our own
-            # protocol afterwards
-            self.handle = self.sock.makefile(mode="rwb")
-
-            # First line is wether request was successful
-            line = self.handle.readline(1024).strip()
-            headerparts = line.split()
-            if len(headerparts) < 2:
-                self._abort(error.BadResponseError("invalid http response: %s" % line))
-
-            if headerparts[0] != b"HTTP/1.1" or headerparts[1] != b"101":
-                self._abort(
-                    error.BadResponseError(
-                        'unexpected server response: "{}"'.format(decodeutf8(line))
-                    )
-                )
-
-            # Strip away all headers so we can start decoding Mercurial
-            # wire protocol
-            while line:
-                line = self.handle.readline(1024).strip()
-                if line.lower().startswith(b"x-mononoke-encoding:"):
-                    decompress = True
-
-        except IOError as ex:
-            self._connectionerror(ex)
-
-        self._pipeo = self._pipei = mononokepipe(self.ui, self.handle, decompress)
+            self._pipeo = self._pipei = mononokepipe(self.ui, self.handle, decompress)
 
         self.ui.metrics.gauge("mononoke_connections")
 
@@ -346,21 +351,22 @@ class mononokepeer(stdiopeer.stdiopeer):
                 msg += ": '%s'" % errortext
             self._abort(error.BadResponseError(msg))
 
-        try:
-            reader = self._callstream("hello")
+        with self.ui.timeblockedsection("mononoke_hello"):
+            try:
+                reader = self._callstream("hello")
 
-            # availlength of capabilities line, safe to skip
-            reader.readline()
+                # availlength of capabilities line, safe to skip
+                reader.readline()
 
-            # actual capabilities, which we should parse
-            l = decodeutf8(reader.readline())
-            if not l.startswith("capabilities:"):
-                self._abort(
-                    error.BadResponseError("no capabilities advertised by mononoke")
-                )
-            self._caps.update(l[:-1].split(":")[1].split())
-        except IOError as ex:
-            badresponse(str(ex))
+                # actual capabilities, which we should parse
+                l = decodeutf8(reader.readline())
+                if not l.startswith("capabilities:"):
+                    self._abort(
+                        error.BadResponseError("no capabilities advertised by mononoke")
+                    )
+                self._caps.update(l[:-1].split(":")[1].split())
+            except IOError as ex:
+                badresponse(str(ex))
 
     def _cleanup(self):
         self._pipeo = self._pipei = None
