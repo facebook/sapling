@@ -508,33 +508,6 @@ class basicstore(object):
         return self.vfs.exists(path)
 
 
-class encodedstore(basicstore):
-    def __init__(self, path, vfstype):
-        vfs = vfstype(path + "/store")
-        self.path = vfs.base
-        self.createmode = _calcmode(vfs)
-        vfs.createmode = self.createmode
-        self.rawvfs = vfs
-        self.vfs = vfsmod.filtervfs(vfs, encodefilename)
-        self.opener = self.vfs
-
-    def datafiles(self):
-        for a, b, size in super(encodedstore, self).datafiles():
-            try:
-                a = decodefilename(a)
-            except KeyError:
-                a = None
-            yield a, b, size
-
-    def join(self, f):
-        return self.path + "/" + encodefilename(f)
-
-    def copylist(self):
-        return ["requires", "00changelog.i", "store/requires"] + [
-            "store/" + f for f in _data.split()
-        ]
-
-
 class fncache(object):
     # the filename used to be partially encoded
     # hence the encodedir/decodedir dance
@@ -808,19 +781,14 @@ class fncachestore(basicstore):
 
 
 def store(requirements, path, vfstype, uiconfig=None):
-    if "store" in requirements:
-        if "fncache" in requirements:
-            store = fncachestore(path, vfstype, "dotencode" in requirements)
-            if uiconfig and uiconfig.configbool("experimental", "metalog"):
-                # Change remotenames and visibleheads to be backed by metalog,
-                # so they can be atomically read or written.
-                store.vfs.metapaths = {
-                    "remotenames",
-                    "visibleheads",
-                    "bookmarks",
-                    "config",
-                    "tip",
-                }
-            return store
-        return encodedstore(path, vfstype)
-    return basicstore(path, vfstype)
+    store = fncachestore(path, vfstype, "dotencode" in requirements)
+    # Change remotenames and visibleheads to be backed by metalog,
+    # so they can be atomically read or written.
+    store.vfs.metapaths = {
+        "remotenames",
+        "visibleheads",
+        "bookmarks",
+        "config",
+        "tip",
+    }
+    return store

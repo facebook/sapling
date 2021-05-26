@@ -66,6 +66,8 @@ creating repo with format.usefncache=false
   $ checknewrepo old2
   store created
   00changelog.i created
+  dotencode
+  fncache
   generaldelta
   lz4revlog
   revlogv1
@@ -78,6 +80,7 @@ creating repo with format.dotencode=false
   $ checknewrepo old3
   store created
   00changelog.i created
+  dotencode
   fncache
   generaldelta
   lz4revlog

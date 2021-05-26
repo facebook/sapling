@@ -19,9 +19,3 @@ With metalog it works fine:
 
   $ hg log -r A -T '{desc}\n' --config hooks.pre-bookmark-load='hg commit -m A3'
   A2
-
-Without metalog:
-
-  $ setconfig experimental.metalog=false
-  $ hg log -r A -T '{desc}\n' --config hooks.pre-bookmark-load='hg commit -m A4'
-  A4

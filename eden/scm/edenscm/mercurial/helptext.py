@@ -1067,26 +1067,6 @@ Example for ``~/.hgrc``::
 
     Enabled by default.
 
-``dotencode``
-    Enable or disable the "dotencode" repository format which enhances
-    the "fncache" repository format (which has to be enabled to use
-    dotencode) to avoid issues with filenames starting with ._ on
-    Mac OS X and spaces on Windows.
-
-    Repositories with this on-disk format require Mercurial version 1.7.
-
-    Enabled by default.
-
-``usefncache``
-    Enable or disable the "fncache" repository format which enhances
-    the "store" repository format (which has to be enabled to use
-    fncache) to allow longer filenames and avoids using Windows
-    reserved names, e.g. "nul".
-
-    Repositories with this on-disk format require Mercurial version 1.1.
-
-    Enabled by default.
-
 ``dirstate``
     Dirstate format version to use. One of 0 (flat dirstate), 1
     (treedirstate), and 2 (treestate). Default is 1.

@@ -1265,10 +1265,6 @@ Separate sections from subsections
   
       "usegeneraldelta"
   
-      "dotencode"
-  
-      "usefncache"
-  
       "dirstate"
   
       "uselz4"
