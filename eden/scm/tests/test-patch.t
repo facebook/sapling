@@ -88,3 +88,16 @@ Clone and apply patch:
   
   
   $ cd ..
+
+Test invalid patch
+  $ cd d
+  $ hg export -r . -o patch.patch
+  $ hg up -q .^
+  $ hg debugpython <<EOF
+  > s = b''.join(open('patch.patch', 'rb').readlines()[:-2])
+  > open('patch.patch', 'wb').write(s)
+  > EOF
+  $ hg import patch.patch
+  applying patch.patch
+  abort: hunk processing error - hunk too short
+  [255]

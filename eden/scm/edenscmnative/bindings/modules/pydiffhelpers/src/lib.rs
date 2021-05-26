@@ -62,9 +62,14 @@ fn addlines(
             break;
         }
         for _i in 0..num {
-            let s = match fp_iter.next() {
+            let s: PyBytes = match fp_iter.next() {
                 Some(s) => s?.extract(py)?,
-                None => PyBytes::new(py, b""),
+                None => {
+                    return Err(PyErr::new::<exc::IOError, _>(
+                        py,
+                        "hunk processing error - hunk too short",
+                    ));
+                }
             };
             let s = s.data(py);
             if s.starts_with(b"\\ No newline at end of file") {
