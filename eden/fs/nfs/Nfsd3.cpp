@@ -326,6 +326,22 @@ wcc_data statToWccData(
   };
 }
 
+/**
+ * Convert the given string onto a PathComponent.
+ *
+ * Any raised exception that constructing the PathComponent may raise will be
+ * captured by the returned ImmediateFuture.
+ */
+ImmediateFuture<PathComponent> extractPathComponent(std::string str) {
+  return makeImmediateFutureWith([&]() {
+    try {
+      return PathComponent{str};
+    } catch (const PathComponentNotUtf8& ex) {
+      throw std::system_error(EINVAL, std::system_category(), ex.what());
+    }
+  });
+}
+
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
@@ -489,8 +505,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                            });
                  });
            } else {
-             return dispatcher_->lookup(
-                 args.what.dir.ino, PathComponent(args.what.name), *context);
+             return extractPathComponent(std::move(args.what.name))
+                 .thenValue([this,
+                             ino = args.what.dir.ino](PathComponent&& name) {
+                   return dispatcher_->lookup(ino, std::move(name), *context);
+                 });
            }
          })
       .thenTry([ser = std::move(ser), dirAttrFut = std::move(dirAttrFut)](
@@ -760,9 +779,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
   auto& attr = std::get<sattr3>(args.how.v);
   auto mode = S_IFREG | setMode3ToMode(attr.mode);
 
-  return dispatcher_
-      ->create(
-          args.where.dir.ino, PathComponent{args.where.name}, mode, *context)
+  return extractPathComponent(std::move(args.where.name))
+      .thenValue([this, ino = args.where.dir.ino, mode](PathComponent&& name) {
+        return dispatcher_->create(ino, std::move(name), mode, *context);
+      })
       .thenTry([ser = std::move(ser), createmode = args.how.tag](
                    folly::Try<NfsDispatcher::CreateRes> try_) mutable {
         if (try_.hasException()) {
@@ -837,9 +857,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
   // TODO(xavierd): For now, all the other args.attributes are ignored, is it
   // OK?
 
-  return dispatcher_
-      ->mkdir(
-          args.where.dir.ino, PathComponent{args.where.name}, mode, *context)
+  return extractPathComponent(std::move(args.where.name))
+      .thenValue([this, ino = args.where.dir.ino, mode](PathComponent&& name) {
+        return dispatcher_->mkdir(ino, std::move(name), mode, *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MkdirRes> try_) mutable {
         if (try_.hasException()) {
@@ -884,12 +905,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
 
   // TODO(xavierd): set the attributes of the symlink with symlink_attr
 
-  return dispatcher_
-      ->symlink(
-          args.where.dir.ino,
-          PathComponent{args.where.name},
-          std::move(args.symlink.symlink_data),
-          *context)
+  return extractPathComponent(std::move(args.where.name))
+      .thenValue([this,
+                  ino = args.where.dir.ino,
+                  symlink_data = std::move(args.symlink.symlink_data)](
+                     PathComponent&& name) mutable {
+        return dispatcher_->symlink(
+            ino, std::move(name), std::move(symlink_data), *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SymlinkRes> try_) mutable {
         if (try_.hasException()) {
@@ -964,13 +987,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
   // TODO(xavierd): we should probably respect the rest of the sattr3
   // attributes.
 
-  return dispatcher_
-      ->mknod(
-          args.where.dir.ino,
-          PathComponent(args.where.name),
-          mode,
-          rdev,
-          *context)
+  return extractPathComponent(std::move(args.where.name))
+      .thenValue([this, ino = args.where.dir.ino, mode, rdev](
+                     PathComponent&& name) {
+        return dispatcher_->mknod(ino, std::move(name), mode, rdev, *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MknodRes> try_) mutable {
         if (try_.hasException()) {
@@ -1018,8 +1039,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
   // here, "REMOVE can be used to remove directories, subject to restrictions
   // imposed by either the client or server interfaces"
 
-  return dispatcher_
-      ->unlink(args.object.dir.ino, PathComponent(args.object.name), *context)
+  return extractPathComponent(std::move(args.object.name))
+      .thenValue([this, ino = args.object.dir.ino](PathComponent&& name) {
+        return dispatcher_->unlink(ino, std::move(name), *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::UnlinkRes> try_) mutable {
         if (try_.hasException()) {
@@ -1060,8 +1083,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("rmdir");
 
-  return dispatcher_
-      ->rmdir(args.object.dir.ino, PathComponent(args.object.name), *context)
+  return extractPathComponent(std::move(args.object.name))
+      .thenValue([this, ino = args.object.dir.ino](PathComponent&& name) {
+        return dispatcher_->rmdir(ino, std::move(name), *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RmdirRes> try_) mutable {
         if (try_.hasException()) {
@@ -1106,13 +1131,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("rename");
 
-  return dispatcher_
-      ->rename(
-          args.from.dir.ino,
-          PathComponent{args.from.name},
-          args.to.dir.ino,
-          PathComponent{args.to.name},
-          *context)
+  return extractPathComponent(std::move(args.from.name))
+      .thenValue([toName = args.to.name](PathComponent&& fromName) mutable {
+        return extractPathComponent(std::move(toName))
+            .thenValue(
+                [fromName = std::move(fromName)](PathComponent&& toName) mutable
+                -> std::tuple<PathComponent, PathComponent> {
+                  return {std::move(fromName), std::move(toName)};
+                });
+      })
+      .thenValue([this, fromIno = args.from.dir.ino, toIno = args.to.dir.ino](
+                     std::tuple<PathComponent, PathComponent>&& paths) {
+        auto [fromName, toName] = std::move(paths);
+        return dispatcher_->rename(
+            fromIno, std::move(fromName), toIno, std::move(toName), *context);
+      })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RenameRes> try_) mutable {
         if (try_.hasException()) {

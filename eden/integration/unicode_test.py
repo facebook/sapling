@@ -37,7 +37,10 @@ class UnicodeTest(testcase.EdenRepoTest):
             with self.assertRaises(OSError) as exc:
                 yield
 
-            self.assertEqual(errno.EILSEQ, exc.exception.errno)
+            expectedErrno = errno.EILSEQ
+            if self.use_nfs():
+                expectedErrno = errno.EINVAL
+            self.assertEqual(expectedErrno, exc.exception.errno)
 
     def test_mkdir_non_utf8(self) -> None:
         with self.verifyUtf8Error():

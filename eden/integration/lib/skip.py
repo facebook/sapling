@@ -178,7 +178,6 @@ if sys.platform.startswith("linux"):
             "test_chown_uid_as_nonroot_fails",
             "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
         ],
-        "unicode_test.UnicodeTest": True,  # T89439956
         "stats_test.CountersTest": True,  # T89440036
         "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
