@@ -179,16 +179,13 @@ if sys.platform.startswith("linux"):
         ],
         "setattr_test.SetAttrTest": [  # T89439721
             "test_chown_gid_as_nonroot_fails_if_not_member",
-            "test_chmod",
             "test_chown_uid_as_nonroot_fails",
-            "test_umask",
             "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
         ],
         "unicode_test.UnicodeTest": True,  # T89439956
         "stats_test.CountersTest": True,  # T89440036
         "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
-        "basic_test.PosixTest": ["test_mkdir_umask"],  # T89440718
         "debug_getpath_test.DebugGetPathTest": [  # T89440930
             "test_getpath_unlinked_inode"
         ],
@@ -210,9 +207,6 @@ if sys.platform.startswith("linux"):
             "stale_test.StaleTestNFS": True,  # T89442539
             "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnlyNFS": [
                 "test_contents_are_the_same_if_handle_is_held_open"  # T89344844
-            ],
-            "hg.post_clone_test.SymlinkTestTreeOnlyNFS": [
-                "test_post_clone_permissions"  # T90881659
             ],
             "hg.update_test.UpdateTestTreeOnlyNFS": [
                 "test_mount_state_during_unmount_with_in_progress_checkout"  # T90881795

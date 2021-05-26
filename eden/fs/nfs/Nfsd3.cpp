@@ -221,13 +221,29 @@ mode_t ftype3ToMode(ftype3 type) {
 
 /**
  * Convert the POSIX mode to NFS mode.
- *
- * TODO(xavierd): For now, the owner always has RW access, the group R access
- * and others no access.
  */
 uint32_t modeToNfsMode(mode_t mode) {
-  return kReadOwnerBit | kWriteOwnerBit | kReadGroupBit |
-      ((mode & S_IXUSR) ? kExecOwnerBit : 0);
+  uint32_t nfsMode = 0;
+
+  // Owner bits:
+  nfsMode |= mode & S_IRUSR ? kReadOwnerBit : 0;
+  nfsMode |= mode & S_IWUSR ? kWriteOwnerBit : 0;
+  nfsMode |= mode & S_IXUSR ? kExecOwnerBit : 0;
+
+  // Group bits:
+  nfsMode |= mode & S_IRGRP ? kReadGroupBit : 0;
+  nfsMode |= mode & S_IWGRP ? kWriteGroupBit : 0;
+  nfsMode |= mode & S_IXGRP ? kExecGroupBit : 0;
+
+  // Other bits:
+  nfsMode |= mode & S_IROTH ? kReadOtherBit : 0;
+  nfsMode |= mode & S_IWOTH ? kWriteOtherBit : 0;
+  nfsMode |= mode & S_IXOTH ? kExecOtherBit : 0;
+
+  nfsMode |= mode & S_ISUID ? kSUIDBit : 0;
+  nfsMode |= mode & S_ISGID ? kGIDBit : 0;
+
+  return nfsMode;
 }
 
 /**
