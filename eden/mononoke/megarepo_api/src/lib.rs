@@ -34,6 +34,8 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
+#[cfg(test)]
+mod megarepo_test_utils;
 mod sync_changeset;
 
 /// A cache for AsyncMethodRequestQueue instances
