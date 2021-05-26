@@ -42,7 +42,7 @@ getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_respo
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 hgserver_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/hgserverconf" }
 http = "0.2"
-hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 hyper-openssl = "0.9"
 itertools = "0.8"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }

@@ -34,7 +34,7 @@ gotham_ext = { version = "0.1.0", path = "../../gotham_ext" }
 hgproto = { version = "0.1.0", path = "../../hgproto" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 http = "0.2"
-hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
 load_limiter = { version = "0.1.0", path = "../../load_limiter" }
 maplit = "1.0"

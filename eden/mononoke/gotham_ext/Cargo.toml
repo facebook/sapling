@@ -17,7 +17,7 @@ gotham = { version = "0.6.0", default-features = false }
 gotham_derive = "0.6.0"
 hex = "0.4"
 http = "0.2"
-hyper = { version = "0.14.5", features = ["client", "http1", "http2"] }
+hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
 load_limiter = { version = "0.1.0", path = "../load_limiter" }
 mime = "0.3.14"
