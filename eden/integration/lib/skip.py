@@ -168,10 +168,6 @@ if sys.platform.startswith("linux"):
     # fail for both if they fail.
     NFS_TEST_DISABLED = {
         "takeover_test.TakeoverTest": True,  # T89344844
-        "materialized_query_test.MaterializedQueryTest": [  # T89437962
-            "test_getFileInformation",
-            "test_getFileInformation",
-        ],
         # These won't be fixed anythime soon, this requires NFSv4
         "xattr_test.XattrTest": [  # T89439481
             "test_get_sha1_xattr",
