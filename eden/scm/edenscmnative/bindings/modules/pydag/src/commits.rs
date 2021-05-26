@@ -20,8 +20,10 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use dag::ops::DagExportCloneData;
 use dag::ops::DagImportCloneData;
+use dag::ops::DagPersistent;
 use dag::ops::IdConvert;
 use dag::ops::IdMapSnapshot;
+use dag::ops::Parents;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::ops::ToSet;
@@ -45,6 +47,7 @@ use minibytes::Bytes;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
 use std::cell::RefCell;
+use std::sync::Arc;
 
 /// A combination of other traits: commit read/write + DAG algorithms.
 pub trait Commits:
@@ -198,18 +201,30 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// exportsparsesegments(src, dst).
+    /// migratesparsesegments(src, dst, heads=[]).
     ///
-    /// Load full Dag from src directory, export sparse dag to dst directory.
+    /// Load full Dag from src directory, migrate a subset of dag to dst directory.
+    ///
+    /// If heads is empty, then only the master group and IdMap that are essential
+    /// are migrated. If heads is not empty, specified vertexes and their ancestors
+    /// are also migrated.
     ///
     /// This can be used to create a commit backend with lazy commit hashes
     /// from an existing repo.
     @staticmethod
-    def exportsparsesegments(src: &PyPath, dst: &PyPath) -> PyResult<PyNone> {
+    def migratesparsesegments(src: &PyPath, dst: &PyPath, heads: Vec<PyBytes> = Vec::new()) -> PyResult<PyNone> {
         let src = Dag::open(src.as_path()).map_pyerr(py)?;
         let mut dst = Dag::open(dst.as_path()).map_pyerr(py)?;
         let clone_data = py.allow_threads(|| block_on(src.export_clone_data())).map_pyerr(py)?;
         py.allow_threads(|| block_on(dst.import_clone_data(clone_data))).map_pyerr(py)?;
+
+        // Also migrate specified heads and their ancestors.
+        let heads = heads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
+        let src_snapshot = src.dag_snapshot().map_pyerr(py)?;
+        dst.set_remote_protocol(Arc::new(src));
+        let src_dag: &dyn Parents = &src_snapshot;
+        py.allow_threads(|| block_on(dst.add_heads_and_flush(src_dag, &[], &heads))).map_pyerr(py)?;
+
         Ok(PyNone)
     }
 
