@@ -12,23 +12,25 @@ use megarepo_configs::types::{SyncConfigVersion, SyncTargetConfig, Target};
 use megarepo_error::MegarepoError;
 use slog::{info, Logger};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::MononokeMegarepoConfigs;
 
 pub struct TestMononokeMegarepoConfigs {
-    config_versions: HashMap<(Target, SyncConfigVersion), SyncTargetConfig>,
+    config_versions: Arc<Mutex<HashMap<(Target, SyncConfigVersion), SyncTargetConfig>>>,
 }
 
 impl TestMononokeMegarepoConfigs {
     pub fn new(logger: &Logger) -> Self {
         info!(logger, "Creating a new TestMononokeMegarepoConfigs");
         Self {
-            config_versions: HashMap::new(),
+            config_versions: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub fn add(&mut self, key: (Target, SyncConfigVersion), target: SyncTargetConfig) {
-        self.config_versions.insert(key, target);
+        let mut config_versions = self.config_versions.lock().unwrap();
+        config_versions.insert(key, target);
     }
 }
 
@@ -48,7 +50,8 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
         target: Target,
         version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError> {
-        self.config_versions
+        let config_versions = self.config_versions.lock().unwrap();
+        config_versions
             .get(&(target.clone(), version.clone()))
             .cloned()
             .ok_or_else(|| anyhow!("{:?} not found", (target, version)))
@@ -58,9 +61,12 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
     async fn add_target_with_config_version(
         &self,
         _ctx: CoreContext,
-        _config: SyncTargetConfig,
+        config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::add_target_with_config_version")
+        let mut config_versions = self.config_versions.lock().unwrap();
+        let key = (config.target.clone(), config.version.clone());
+        config_versions.insert(key, config);
+        Ok(())
     }
 
     async fn add_config_version(
