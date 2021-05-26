@@ -455,7 +455,7 @@ folly::Try<ssize_t> FileDescriptor::doVecOp(
   if (!count) {
     return Try<ssize_t>(0);
   }
-  if (count < 0 || count > folly::kIovMax) {
+  if (count > folly::kIovMax) {
     return Try<ssize_t>(make_exception_wrapper<std::system_error>(
         std::error_code(EINVAL, std::generic_category())));
   }
@@ -475,7 +475,7 @@ folly::Try<ssize_t> FileDescriptor::doVecOp(
   };
 
   ssize_t bytesProcessed = 0;
-  int curIov = 0;
+  size_t curIov = 0;
   void* curBase = iov[0].iov_base;
   size_t curLen = iov[0].iov_len;
   while (curIov < count) {
@@ -494,9 +494,9 @@ folly::Try<ssize_t> FileDescriptor::doVecOp(
       return opResult;
     }
 
-    size_t res = size_t(opResult.value());
+    ssize_t res = opResult.value();
 
-    if (res == curLen) {
+    if (size_t(res) == curLen) {
       curIov++;
       if (curIov < count) {
         curBase = iov[curIov].iov_base;
