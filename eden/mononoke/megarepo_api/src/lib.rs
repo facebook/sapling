@@ -34,6 +34,7 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
+mod common;
 #[cfg(test)]
 mod megarepo_test_utils;
 mod sync_changeset;

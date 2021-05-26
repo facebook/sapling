@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use crate::common::MegarepoOp;
 use anyhow::anyhow;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -19,16 +21,22 @@ use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, MegarepoMapping};
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::sync::Arc;
 
 pub(crate) struct SyncChangeset<'a> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     mononoke: &'a Arc<Mononoke>,
     target_megarepo_mapping: &'a Arc<MegarepoMapping>,
+}
+
+#[async_trait]
+impl<'a> MegarepoOp for SyncChangeset<'a> {
+    fn mononoke(&self) -> &Arc<Mononoke> {
+        &self.mononoke
+    }
 }
 
 impl<'a> SyncChangeset<'a> {
@@ -138,21 +146,6 @@ impl<'a> SyncChangeset<'a> {
         }
 
         Ok(())
-    }
-
-    async fn find_repo_by_id(
-        &self,
-        ctx: &CoreContext,
-        repo_id: i64,
-    ) -> Result<RepoContext, MegarepoError> {
-        let target_repo_id = RepositoryId::new(repo_id.try_into().unwrap());
-        let target_repo = self
-            .mononoke
-            .repo_by_id(ctx.clone(), target_repo_id)
-            .await
-            .map_err(MegarepoError::internal)?
-            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?;
-        Ok(target_repo)
     }
 }
 
