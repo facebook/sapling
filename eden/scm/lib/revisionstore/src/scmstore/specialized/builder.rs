@@ -278,6 +278,9 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_remote,
 
             contentstore,
+
+            aux_local: None,
+            aux_cache: None,
         })
     }
 }

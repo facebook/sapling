@@ -7,13 +7,15 @@
 
 // TODO(meyer): Remove this
 #![allow(dead_code)]
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map, HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
+use std::ops::{BitAnd, Not};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 
 use edenapi_types::FileEntry;
 use minibytes::Bytes;
@@ -57,6 +59,10 @@ pub struct FileStore {
 
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,
+
+    // Aux Data Stores
+    pub(crate) aux_local: Option<Arc<IndexedLogHgIdDataStore>>,
+    pub(crate) aux_cache: Option<Arc<IndexedLogHgIdDataStore>>,
 }
 
 impl Drop for FileStore {
@@ -76,19 +82,33 @@ impl Drop for FileStore {
         if let Some(ref lfs_cache) = self.lfs_cache {
             let _ = lfs_cache.flush();
         }
+        if let Some(ref aux_local) = self.aux_local {
+            let _ = aux_local.flush_log();
+        }
+        if let Some(ref aux_cache) = self.aux_cache {
+            let _ = aux_cache.flush_log();
+        }
     }
 }
 
 #[derive(Debug)]
 pub struct FileStoreFetch {
-    complete: HashMap<Key, LazyFile>,
+    complete: HashMap<Key, StoreFile>,
     incomplete: HashMap<Key, Vec<Error>>,
     other_errors: Vec<Error>,
 }
 
 impl FileStore {
-    pub fn fetch(&self, keys: impl Iterator<Item = Key>) -> FileStoreFetch {
-        let mut state = FetchState::new(keys, self.extstored_policy);
+    pub fn fetch(&self, keys: impl Iterator<Item = Key>, attrs: FileAttributes) -> FileStoreFetch {
+        let mut state = FetchState::new(keys, self.extstored_policy, attrs);
+
+        if let Some(ref aux_cache) = self.aux_cache {
+            state.fetch_aux_indexedlog(aux_cache);
+        }
+
+        if let Some(ref aux_local) = self.aux_local {
+            state.fetch_aux_indexedlog(aux_local);
+        }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             state.fetch_indexedlog(indexedlog_cache, LocalStoreType::Cache);
@@ -195,6 +215,89 @@ impl FileStore {
             lfs_remote: None,
 
             contentstore: None,
+
+            aux_local: self.aux_local.clone(),
+            aux_cache: self.aux_cache.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct FileAuxData {
+    content_sha256: Sha256,
+}
+
+#[derive(Debug)]
+pub struct StoreFile {
+    // TODO(meyer): We'll probably eventually need a better "canonical lazy file" abstraction, since EdenApi FileEntry won't always carry content
+    content: Option<LazyFile>,
+    aux_data: Option<FileAuxData>,
+}
+
+impl StoreFile {
+    fn attrs(&self) -> FileAttributes {
+        FileAttributes {
+            content: self.content.is_some(),
+            aux_data: self.aux_data.is_some(),
+        }
+    }
+
+    fn missing(&self, attrs: FileAttributes) -> FileAttributes {
+        !self.attrs() & attrs
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FileAttributes {
+    content: bool,
+    aux_data: bool,
+}
+
+impl FileAttributes {
+    fn is_none(&self) -> bool {
+        !(self.content | self.aux_data)
+    }
+
+    fn none() -> Self {
+        FileAttributes {
+            content: false,
+            aux_data: false,
+        }
+    }
+
+    fn content() -> Self {
+        FileAttributes {
+            content: true,
+            aux_data: false,
+        }
+    }
+
+    fn aux_data() -> Self {
+        FileAttributes {
+            content: false,
+            aux_data: true,
+        }
+    }
+}
+
+impl Not for FileAttributes {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        FileAttributes {
+            content: !self.content,
+            aux_data: !self.aux_data,
+        }
+    }
+}
+
+impl BitAnd for FileAttributes {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        FileAttributes {
+            content: self.content & rhs.content,
+            aux_data: self.aux_data & rhs.aux_data,
         }
     }
 }
@@ -339,8 +442,12 @@ pub struct FetchState {
     /// Requested keys for which at least some attributes haven't been found.
     pending: HashSet<Key>,
 
-    // Completed requests accumulated here
-    found: HashMap<Key, LazyFile>,
+    /// Which attributes were requested
+    request_attrs: FileAttributes,
+
+    /// All attributes which have been found so far
+    found: HashMap<Key, StoreFile>,
+
     /// LFS pointers we've discovered corresponding to a request Key.
     lfs_pointers: HashMap<Key, LfsPointersEntry>,
 
@@ -353,8 +460,10 @@ pub struct FetchState {
     /// Errors encountered that don't apply to a single key
     other_errors: Vec<Error>,
 
-    // Requests that required remote fallback, might be cached locally
+    /// File content found in memcache, may be cached locally (currently only content may be found in memcache)
     found_in_memcache: HashSet<Key>,
+
+    /// Attributes found in EdenApi, may be cached locally (currently only content may be found in EdenApi)
     found_in_edenapi: HashSet<Key>,
 
     // Config
@@ -362,11 +471,17 @@ pub struct FetchState {
 }
 
 impl FetchState {
-    fn new(keys: impl Iterator<Item = Key>, extstored_policy: ExtStoredPolicy) -> Self {
+    fn new(
+        keys: impl Iterator<Item = Key>,
+        extstored_policy: ExtStoredPolicy,
+        attrs: FileAttributes,
+    ) -> Self {
         FetchState {
             pending: keys.collect(),
+            request_attrs: attrs,
 
             found: HashMap::new(),
+
             lfs_pointers: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
@@ -380,18 +495,49 @@ impl FetchState {
         }
     }
 
-    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer
-    fn pending_nonlfs(&self) -> Vec<Key> {
+    /// Return all incomplete requested Keys which are missing at least some of the specified attributes
+    fn pending_all(&self, attrs: FileAttributes) -> Vec<Key> {
+        if attrs.is_none() {
+            return vec![];
+        }
         self.pending
             .iter()
-            .filter(|k| !self.lfs_pointers.contains_key(k))
+            .filter(|k| !self.missing_attrs(k, attrs).is_none())
             .cloned()
             .collect()
     }
 
-    /// Returns all incomplete requested Keys as StoreKey, with content Sha256 from the LFS pointer if available
-    fn pending_storekey(&self) -> Vec<StoreKey> {
-        self.pending.iter().map(|k| self.storekey(k)).collect()
+    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and are missing at least some of the specified attributes
+    fn pending_nonlfs(&self, attrs: FileAttributes) -> Vec<Key> {
+        if attrs.is_none() {
+            return vec![];
+        }
+        self.pending
+            .iter()
+            .filter(|k| !self.lfs_pointers.contains_key(k))
+            .filter(|k| !self.missing_attrs(k, attrs).is_none())
+            .cloned()
+            .collect()
+    }
+
+    /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, which are missing at least some of the specified attributes
+    fn pending_storekey(&self, attrs: FileAttributes) -> Vec<StoreKey> {
+        if attrs.is_none() {
+            return vec![];
+        }
+        self.pending
+            .iter()
+            .filter(|k| !self.missing_attrs(k, attrs).is_none())
+            .map(|k| self.storekey(k))
+            .collect()
+    }
+
+    /// Returns which of the specified attributes have not been found for a specified Key
+    fn missing_attrs(&self, key: &Key, attrs: FileAttributes) -> FileAttributes {
+        if attrs.is_none() {
+            return attrs;
+        }
+        self.found.get(key).map_or(attrs, |f| f.missing(attrs))
     }
 
     /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
@@ -436,8 +582,27 @@ impl FetchState {
     }
 
     fn found_file(&mut self, key: Key, f: LazyFile) {
-        self.mark_complete(&key);
-        self.found.insert(key, f);
+        use hash_map::Entry::*;
+        match self.found.entry(key.clone()) {
+            Occupied(mut entry) => {
+                entry.get_mut().content = Some(f);
+                if entry.get().missing(self.request_attrs).is_none() {
+                    self.mark_complete(&key);
+                }
+            }
+            Vacant(entry) => {
+                if entry
+                    .insert(StoreFile {
+                        content: Some(f),
+                        aux_data: None,
+                    })
+                    .missing(self.request_attrs)
+                    .is_none()
+                {
+                    self.mark_complete(&key);
+                }
+            }
+        }
     }
 
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: LocalStoreType) {
@@ -454,7 +619,7 @@ impl FetchState {
     }
 
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
-        let pending = self.pending_nonlfs();
+        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -463,6 +628,56 @@ impl FetchState {
                 Ok(None) => {}
                 Err(err) => self.found_error(Some(key), err),
             }
+        }
+    }
+
+    fn found_aux_indexedlog(&mut self, key: Key, mut entry: Entry) -> Result<()> {
+        // TODO(meyer): We could make aux data lazy too.
+        let aux_data = serde_json::from_slice(&entry.content()?)?;
+
+        use hash_map::Entry::*;
+        match self.found.entry(key.clone()) {
+            Occupied(mut entry) => {
+                entry.get_mut().aux_data = Some(aux_data);
+                if entry.get().missing(self.request_attrs).is_none() {
+                    self.mark_complete(&key);
+                }
+            }
+            Vacant(entry) => {
+                if entry
+                    .insert(StoreFile {
+                        content: None,
+                        aux_data: Some(aux_data),
+                    })
+                    .missing(self.request_attrs)
+                    .is_none()
+                {
+                    self.mark_complete(&key);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn fetch_aux_indexedlog_inner(&mut self, store: &IndexedLogHgIdDataStore) -> Result<()> {
+        let pending = self.pending_all(self.request_attrs & FileAttributes::aux_data());
+        let store = store.read_lock();
+        for key in pending.into_iter() {
+            let res = store.get_raw_entry(&key);
+            match res {
+                Ok(Some(aux)) => self.found_aux_indexedlog(key, aux)?,
+                Ok(None) => {}
+                Err(err) => self.found_error(Some(key), err),
+            }
+        }
+
+        Ok(())
+    }
+
+    fn fetch_aux_indexedlog(&mut self, store: &IndexedLogHgIdDataStore) {
+        if let Err(err) = self.fetch_aux_indexedlog_inner(store) {
+            self.found_error(None, err);
         }
     }
 
@@ -476,7 +691,7 @@ impl FetchState {
     }
 
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
-        let pending = self.pending_storekey();
+        let pending = self.pending_storekey(self.request_attrs & FileAttributes::content());
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
@@ -503,7 +718,7 @@ impl FetchState {
     }
 
     fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
-        let pending = self.pending_nonlfs();
+        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
@@ -533,7 +748,8 @@ impl FetchState {
     }
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
-        let pending = self.pending_nonlfs();
+        // TODO(meyer): Implement aux data fetching for EdenApi Files
+        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
         }
@@ -618,7 +834,7 @@ impl FetchState {
     }
 
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
-        let pending = self.pending_storekey();
+        let pending = self.pending_storekey(self.request_attrs & FileAttributes::content());
         store.prefetch(&pending)?;
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
@@ -668,7 +884,13 @@ impl FetchState {
         let mut indexedlog_cache = indexedlog_cache.map(|s| s.write_lock());
 
         for key in self.found_in_edenapi.drain() {
-            if let Ok(Some(cache_entry)) = self.found[&key].indexedlog_cache_entry(key) {
+            // todo
+            if let Ok(Some(cache_entry)) = self.found[&key]
+                .content
+                .as_ref()
+                .unwrap()
+                .indexedlog_cache_entry(key)
+            {
                 if let Some(memcache) = memcache {
                     if let Ok(mcdata) = cache_entry.clone().try_into() {
                         memcache.add_mcdata(mcdata)
@@ -681,17 +903,24 @@ impl FetchState {
         }
 
         for key in self.found_in_memcache.drain() {
-            if let Ok(Some(cache_entry)) = self.found[&key].indexedlog_cache_entry(key) {
+            if let Ok(Some(cache_entry)) = self.found[&key]
+                .content
+                .as_ref()
+                .unwrap()
+                .indexedlog_cache_entry(key)
+            {
                 if let Some(ref mut indexedlog_cache) = indexedlog_cache {
                     let _ = indexedlog_cache.put_entry(cache_entry);
                 }
             }
         }
+        // do computed
     }
-    fn finish(self) -> FileStoreFetch {
+    fn finish(mut self) -> FileStoreFetch {
         // Combine and collect errors
         let mut incomplete = self.fetch_errors;
         for key in self.pending.into_iter() {
+            self.found.remove(&key);
             incomplete.entry(key).or_insert_with(Vec::new);
         }
 
@@ -708,12 +937,17 @@ impl HgIdDataStore for FileStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .fetch(
+                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
+                    FileAttributes::content(),
+                )
                 .complete
                 .drain()
                 .next()
             {
-                Some((_, mut entry)) => StoreResult::Found(entry.hg_content()?.into_vec()),
+                Some((_, entry)) => {
+                    StoreResult::Found(entry.content.unwrap().hg_content()?.into_vec())
+                }
                 None => StoreResult::NotFound(key),
             },
         )
@@ -722,12 +956,15 @@ impl HgIdDataStore for FileStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         Ok(
             match self
-                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .fetch(
+                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
+                    FileAttributes::content(),
+                )
                 .complete
                 .drain()
                 .next()
             {
-                Some((_, entry)) => StoreResult::Found(entry.metadata()?),
+                Some((_, entry)) => StoreResult::Found(entry.content.unwrap().metadata()?),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -742,7 +979,10 @@ impl HgIdDataStore for FileStore {
 impl RemoteDataStore for FileStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(self
-            .fetch(keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()))
+            .fetch(
+                keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
+                FileAttributes::content(),
+            )
             .incomplete
             .into_iter()
             .map(|(k, _)| k)
@@ -760,7 +1000,10 @@ impl LocalStore for FileStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(self
             .local()
-            .fetch(keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()))
+            .fetch(
+                keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
+                FileAttributes::content(),
+            )
             .incomplete
             .into_iter()
             .map(|(k, _)| k)
@@ -796,6 +1039,12 @@ impl HgIdMutableDeltaStore for FileStore {
         if let Some(ref lfs_cache) = self.lfs_cache {
             lfs_cache.flush()?;
         }
+        if let Some(ref aux_local) = self.aux_local {
+            aux_local.flush_log()?;
+        }
+        if let Some(ref aux_cache) = self.aux_cache {
+            aux_cache.flush_log()?;
+        }
         Ok(None)
     }
 }
@@ -806,12 +1055,15 @@ impl ContentDataStore for FileStore {
     fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
         Ok(
             match self
-                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .fetch(
+                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
+                    FileAttributes::content(),
+                )
                 .complete
                 .drain()
                 .next()
             {
-                Some((_sk, mut entry)) => StoreResult::Found(entry.file_content()?),
+                Some((_sk, entry)) => StoreResult::Found(entry.content.unwrap().file_content()?),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -820,12 +1072,21 @@ impl ContentDataStore for FileStore {
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         Ok(
             match self
-                .fetch(std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()))
+                .fetch(
+                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
+                    FileAttributes::content(),
+                )
                 .complete
                 .drain()
                 .next()
             {
-                Some((_sk, LazyFile::Lfs(_blob, pointer))) => StoreResult::Found(pointer.into()),
+                Some((
+                    _sk,
+                    StoreFile {
+                        content: Some(LazyFile::Lfs(_blob, pointer)),
+                        ..
+                    },
+                )) => StoreResult::Found(pointer.into()),
                 Some(_) => StoreResult::NotFound(key),
                 None => StoreResult::NotFound(key),
             },
