@@ -1,10 +1,17 @@
 #chg-compatible
 
+  $ configure modern
+  $ setconfig treemanifest.flatcompat=0
+
   $ newrepo
   $ drawdag << 'EOS'
   > B C
   > |/|
   > A D
+  > | |
+  > E F
+  > | |
+  > G H
   > EOS
 
   $ hg debugchangelog
@@ -34,8 +41,16 @@
   │ │ o  B
   ├───╯
   │ o  D
+  │ │
+  o │  A
+  │ │
+  │ o  F
+  │ │
+  o │  E
+  │ │
+  │ o  H
   │
-  o  A
+  o  G
   
 
 Migration
@@ -91,9 +106,17 @@ To doublewrite:
   │
   │ o  C
   ╭─┤
-  o │  A
-    │
-    o  D
+  │ o  D
+  │ │
+  │ o  F
+  │ │
+  │ o  H
+  │
+  o  A
+  │
+  o  E
+  │
+  o  G
   
 
 To full segments:
@@ -118,20 +141,20 @@ To full segments:
      Next Free Id: 0
      Segments: 0
     Group Non-Master:
-     Next Free Id: N4
+     Next Free Id: N8
      Segments: 1
-      058c1e1fb10a+N0 : 417dca1c740d+N2 [] Root
+      1fc8102cda62+N0 : 5e98a0f69ae0+N6 [] Root
    Level 0
     Group Master:
      Next Free Id: 0
      Segments: 0
     Group Non-Master:
-     Next Free Id: N4
+     Next Free Id: N8
      Segments: 4
-      112478962961+N3 : 112478962961+N3 [426bada5c675+N1]
-      417dca1c740d+N2 : 417dca1c740d+N2 [058c1e1fb10a+N0, 426bada5c675+N1]
-      426bada5c675+N1 : 426bada5c675+N1 [] Root
-      058c1e1fb10a+N0 : 058c1e1fb10a+N0 [] Root
+      f535a6a0548e+N7 : f535a6a0548e+N7 [4ec7ca77ac1a+N2]
+      5e98a0f69ae0+N6 : 5e98a0f69ae0+N6 [4ec7ca77ac1a+N2, 50e53efd5222+N5]
+      e7050b6e5048+N3 : 50e53efd5222+N5 [] Root
+      1fc8102cda62+N0 : 4ec7ca77ac1a+N2 [] Root
 
 The segments backend does not need revlog data.
 
@@ -141,9 +164,17 @@ The segments backend does not need revlog data.
   │
   │ o  C
   ╭─┤
-  o │  A
-    │
-    o  D
+  │ o  D
+  │ │
+  │ o  F
+  │ │
+  │ o  H
+  │
+  o  A
+  │
+  o  E
+  │
+  o  G
   
 
 To revlog:
@@ -171,11 +202,19 @@ The revlog backend does not need segmented data.
   │
   │ o  C
   ╭─┤
-  o │  A
-    │
-    o  D
+  │ o  D
+  │ │
+  │ o  F
+  │ │
+  │ o  H
+  │
+  o  A
+  │
+  o  E
+  │
+  o  G
   
-To lazy:
+To doublewrite:
 
   $ hg debugchangelog --migrate lazytext
   abort: lazytext backend can only be migrated from hybrid or doublewrite
@@ -185,7 +224,42 @@ To lazy:
 
   $ hg debugchangelog --migrate doublewrite
 
+Prepare the "master" group. Note the "Group Master" output in debugchangelog:
+
   $ setconfig paths.default=test:server1
+  $ hg push -q -r 'desc(C)' --to master --create
+  $ hg push -q -r 'desc(B)' --allow-anon
+  $ hg pull -q -B master
+
+  $ hg debugchangelog --debug
+  The changelog is backed by Rust. More backend information:
+  Backend (doublewrite):
+    Local:
+      Segments + IdMap: $TESTTMP/repo1/.hg/store/segments/v1
+      Zstore: $TESTTMP/repo1/.hg/store/hgcommits/v1
+      Revlog + Nodemap: $TESTTMP/repo1/.hg/store/00changelog.{i,d,nodemap}
+  Feature Providers:
+    Commit Graph Algorithms:
+      Segments
+    Commit Hash / Rev Lookup:
+      IdMap
+    Commit Data (user, message):
+      Zstore (incomplete)
+      Revlog
+  Max Level: 0
+   Level 0
+    Group Master:
+     Next Free Id: 7
+     Segments: 3
+      5e98a0f69ae0+6 : 5e98a0f69ae0+6 [4ec7ca77ac1a+2, 50e53efd5222+5] OnlyHead
+      e7050b6e5048+3 : 50e53efd5222+5 [] Root
+      1fc8102cda62+0 : 4ec7ca77ac1a+2 [] Root OnlyHead
+    Group Non-Master:
+     Next Free Id: N1
+     Segments: 1
+      f535a6a0548e+N0 : f535a6a0548e+N0 [4ec7ca77ac1a+2]
+
+To lazy:
 
   $ hg debugchangelog --migrate lazytext
 
@@ -194,3 +268,22 @@ To lazy:
   $ hg debugchangelog --migrate lazy
 
   $ hg debugchangelog --migrate doublewrite --unless lazy
+
+  $ LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
+  o  B
+  │
+  │ o  C remote/master
+  ╭─┤
+  │ o  D
+  │ │
+  │ o  F
+  │ │
+   DEBUG dag::protocol: resolve names [0000000000000000000000000000000000000000] remotely
+  │ o  H
+  │
+  o  A
+  │
+  o  E
+  │
+  o  G
+  
