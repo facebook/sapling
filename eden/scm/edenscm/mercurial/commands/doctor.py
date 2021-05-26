@@ -376,11 +376,7 @@ def _try(ui, func, *args, **kwargs):
 
 
 def checkmissingmaster(repo, source="default"):
-    ml = getattr(repo.svfs, "metalog", None)
-    if ml is None:
-        # Does not support non-metalog repo.
-        return
-
+    ml = repo.metalog()
     ui = repo.ui
     if source not in ui.paths:
         # No such remote.

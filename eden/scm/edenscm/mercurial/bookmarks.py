@@ -1396,8 +1396,6 @@ def cleanupremotenames(repo):
     if not repo.changelog.userust():
         raise error.Abort(_("legacy changelog backend is not supported"))
     metalog = repo.metalog()
-    if metalog is None:
-        raise error.Abort(_("metalog is required"))
 
     essentialnames = selectivepullinitbookmarkfullnames(repo)
     namenodes = decoderemotenames(metalog["remotenames"])

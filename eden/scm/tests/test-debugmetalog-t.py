@@ -11,7 +11,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh.setconfig(
-    "experimental.metalog=1",
     "visibility.enabled=true",
     "experimental.narrow-heads=1",
     "remotenames.selectivepull=1",

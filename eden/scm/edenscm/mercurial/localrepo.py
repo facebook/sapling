@@ -2061,28 +2061,25 @@ class localrepository(object):
 
         svfs = self.svfs
         # Invalidate metalog state.
-        metalog = svfs.__dict__.pop("metalog", None)
-        if metalog and metalog.isdirty():
+        metalog = self.metalog()
+        if metalog.isdirty():
             # |<- A ->|<----------- repo lock --------->|
             #         |<- B ->|<- transaction ->|<- C ->|
             #  ^^^^^^^
             raise errormod.ProgrammingError(
                 "metalog should not be changed before repo.lock"
             )
-        releasefn = None
-        if self.ui.configbool("experimental", "metalog"):
 
-            def metalogdirtycheck():
-                metalog = svfs.__dict__.pop("metalog", None)
-                # |<- A ->|<----------- repo lock --------->|
-                #         |<- B ->|<- transaction ->|<- C ->|
-                #                                    ^^^^^^^
-                if metalog and metalog.isdirty():
-                    raise errormod.ProgrammingError(
-                        "metalog change outside a transaction is unsupported"
-                    )
+        def metalogdirtycheck(metalog=metalog):
+            # |<- A ->|<----------- repo lock --------->|
+            #         |<- B ->|<- transaction ->|<- C ->|
+            #                                    ^^^^^^^
+            if metalog.isdirty():
+                raise errormod.ProgrammingError(
+                    "metalog change outside a transaction is unsupported"
+                )
 
-            releasefn = metalogdirtycheck
+        releasefn = metalogdirtycheck
 
         l = self._lock(
             self.svfs,
@@ -2726,11 +2723,8 @@ class localrepository(object):
             publickey = None
 
         # Invalidate heads if metalog root has changed.
-        metalog = getattr(self.svfs, "metalog", None)
-        if metalog:
-            mlroot = metalog.root()
-        else:
-            mlroot = None
+        metalog = self.metalog()
+        mlroot = metalog.root()
 
         key = (tuple(self.dirstate.parents()), mlroot, len(cl), draftkey, publickey)
         result = self._headcache.get(key)
@@ -2958,7 +2952,7 @@ class localrepository(object):
         return self._smallcommitmetadata
 
     def metalog(self):
-        return getattr(self.svfs, "metalog", None)
+        return self.svfs.metalog
 
 
 # used to avoid circular references so destructors work

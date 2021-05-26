@@ -29,7 +29,7 @@ just in case somebody has a strange $TMPDIR
   >         allnames.append(name)
   > allnames.sort()
   > for name in allnames:
-  >     if 'blackbox' in name:
+  >     if 'blackbox' in name or 'metalog' in name:
   >         continue
   >     suffix = name in isdir and '/' or ''
   >     print('%05o %s%s' % (os.lstat(name).st_mode & 0o7777, name, suffix))
@@ -94,15 +94,6 @@ new directories are setgid
   00660 ./.hg/store/data/dir/bar.i
   00660 ./.hg/store/data/foo.i
   00660 ./.hg/store/fncache
-  02775 ./.hg/store/metalog/
-  02775 ./.hg/store/metalog/blobs/
-  00664 ./.hg/store/metalog/blobs/index2-id
-  00664 ./.hg/store/metalog/blobs/log
-  00664 ./.hg/store/metalog/blobs/meta
-  02775 ./.hg/store/metalog/roots/
-  00664 ./.hg/store/metalog/roots/index2-reverse
-  00664 ./.hg/store/metalog/roots/log
-  00664 ./.hg/store/metalog/roots/meta
   00600 ./.hg/store/requires
   006?? ./.hg/store/tip (glob)
   00660 ./.hg/store/undo
@@ -162,15 +153,6 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/data/dir/bar.i
   00660 ../push/.hg/store/data/foo.i
   00660 ../push/.hg/store/fncache
-  02775 ../push/.hg/store/metalog/
-  02775 ../push/.hg/store/metalog/blobs/
-  00664 ../push/.hg/store/metalog/blobs/index2-id
-  00664 ../push/.hg/store/metalog/blobs/log
-  00664 ../push/.hg/store/metalog/blobs/meta
-  02775 ../push/.hg/store/metalog/roots/
-  00664 ../push/.hg/store/metalog/roots/index2-reverse
-  00664 ../push/.hg/store/metalog/roots/log
-  00664 ../push/.hg/store/metalog/roots/meta
   00660 ../push/.hg/store/requires
   006?? ../push/.hg/store/tip (glob)
   00660 ../push/.hg/store/undo

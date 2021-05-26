@@ -122,6 +122,12 @@ you can't check out.
   warning: path 'nested/.hg/00changelog.i' is within a nested repository, which Mercurial cannot check out.
   warning: path 'nested/.hg/hgrc.dynamic' is within a nested repository, which Mercurial cannot check out.
   warning: path 'nested/.hg/requires' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/blobs/index2-id' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/blobs/log' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/blobs/meta' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/roots/index2-reverse' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/roots/log' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/store/metalog/roots/meta' is within a nested repository, which Mercurial cannot check out.
   warning: path 'nested/.hg/store/requires' is within a nested repository, which Mercurial cannot check out.
   updating to branch default
   abort: path 'nested/.hg/00changelog.i' is inside nested repo 'nested'

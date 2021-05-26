@@ -3637,8 +3637,6 @@ def debugresetheads(ui, repo):
     This is usually used by automation to clean up draft commits.
     """
     metalog = repo.metalog()
-    if metalog is None:
-        raise error.Abort(_("metalog is required"))
 
     # Only keep essential remote bookmarks
     essentialnames = bookmarks.selectivepullinitbookmarkfullnames(repo)

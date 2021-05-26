@@ -57,9 +57,7 @@ def _assignobjects(objects, repo):
                 "repo": repo,
                 "cl": repo.changelog,
                 "mf": repo.manifestlog,
-                # metalog is not available on hg server-side repos. Consider making it
-                # available unconditionally once we get rid of hg servers.
-                "ml": getattr(repo.svfs, "metalog", None),
+                "ml": repo.metalog(),
                 "ms": getattr(repo, "_mutationstore", None),
             }
         )
