@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::MononokeMegarepoConfigs;
 
+#[derive(Clone)]
 pub struct TestMononokeMegarepoConfigs {
     config_versions: Arc<Mutex<HashMap<(Target, SyncConfigVersion), SyncTargetConfig>>>,
 }

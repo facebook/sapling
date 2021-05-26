@@ -7,6 +7,8 @@
 
 #![deny(warnings)]
 
+use crate::common::SourceName;
+use add_sync_target::AddSyncTarget;
 use anyhow::{bail, Error};
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
@@ -14,8 +16,8 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use megarepo_config::{
-    CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions, Target,
-    TestMononokeMegarepoConfigs,
+    CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
+    SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::MegarepoMapping;
@@ -34,6 +36,7 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
+mod add_sync_target;
 mod common;
 #[cfg(test)]
 mod megarepo_test_utils;
@@ -242,6 +245,27 @@ impl MegarepoApi {
             .await?;
 
         Ok(megarepo_mapping)
+    }
+
+    pub async fn add_sync_target(
+        &self,
+        ctx: &CoreContext,
+        sync_target_config: SyncTargetConfig,
+        changesets_to_merge: HashMap<String, ChangesetId>,
+        message: Option<String>,
+    ) -> Result<(), MegarepoError> {
+        let add_sync_target = AddSyncTarget::new(&self.megarepo_configs, &self.mononoke);
+
+        let changesets_to_merge = changesets_to_merge
+            .into_iter()
+            .map(|(source, cs_id)| (SourceName(source), cs_id))
+            .collect();
+
+        add_sync_target
+            .run(ctx, sync_target_config, changesets_to_merge, message)
+            .await?;
+
+        Ok(())
     }
 
     pub async fn sync_changeset(

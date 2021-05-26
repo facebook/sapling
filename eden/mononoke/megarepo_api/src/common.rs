@@ -13,6 +13,9 @@ use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::RepositoryId;
 use std::{convert::TryInto, sync::Arc};
 
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct SourceName(pub String);
+
 #[async_trait]
 pub trait MegarepoOp {
     fn mononoke(&self) -> &Arc<Mononoke>;
