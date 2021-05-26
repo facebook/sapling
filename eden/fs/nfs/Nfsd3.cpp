@@ -14,6 +14,7 @@
 #endif
 
 #include <folly/Utility.h>
+#include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/utils/Clock.h"
@@ -1705,13 +1706,44 @@ Nfsd3::Nfsd3(
               iosize),
           evb,
           std::move(threadPool)),
-      processAccessLog_(std::move(processNameCache)) {}
+      processAccessLog_(std::move(processNameCache)),
+      invalidationExecutor_{
+          folly::SerialExecutor::create(folly::getGlobalCPUExecutor())} {}
 
 void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   server_.initialize(addr);
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }
+}
+
+void Nfsd3::invalidate(AbsolutePath path) {
+  invalidationExecutor_->add([path = std::move(path)]() {
+    try {
+      folly::File(path.c_str());
+    } catch (const std::exception& ex) {
+      if (const auto* system_error =
+              dynamic_cast<const std::system_error*>(&ex)) {
+        if (isEnoent(*system_error)) {
+          // A removed path would result in an ENOENT error, this is expected,
+          // don't warn about it.
+          return;
+        }
+      }
+      XLOGF(ERR, "Couldn't invalidate {}: {}", path, folly::exceptionStr(ex));
+    }
+  });
+}
+
+folly::Future<folly::Unit> Nfsd3::flushInvalidations() {
+  folly::Promise<folly::Unit> promise;
+  auto result = promise.getFuture();
+  invalidationExecutor_->add([promise = std::move(promise)]() mutable {
+    // Since the invalidationExecutor_ is a SerialExecutor, this lambda will
+    // run only when all the previously added open have completed.
+    promise.setValue(folly::unit);
+  });
+  return result;
 }
 
 Nfsd3::~Nfsd3() {

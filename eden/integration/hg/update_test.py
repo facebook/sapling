@@ -673,6 +673,19 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
 
         self.assertEqual({"file1", "file2"}, self._list_contents("dir"))
 
+    def test_update_change_stat(self) -> None:
+        self.repo.write_file("dir/file2", "foobar")
+        self.repo.commit("Change file2")
+
+        filepath = self.get_path("dir/file2")
+        prestats = os.stat(filepath)
+        self.assertEqual(prestats.st_size, 6)
+
+        self.repo.update(self.commit4)
+
+        poststats = os.stat(filepath)
+        self.assertEqual(poststats.st_size, 7)
+
     if sys.platform == "win32":
 
         def _open_locked(self, path: str, directory: bool = False) -> Handle:

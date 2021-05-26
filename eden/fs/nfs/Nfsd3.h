@@ -60,6 +60,31 @@ class Nfsd3 {
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
 
   /**
+   * Trigger an invalidation for the given path.
+   *
+   * To avoid a very large amount of traffic between an NFS client and the
+   * server, the client will cache attributes that the server previously
+   * returned for a file. This allows stat(2) calls to be fully resolved on the
+   * client. However, clients do respect a close-to-open consistency (CTO)
+   * whereas opening a file will refresh the client attributes. This invalidate
+   * method simply tries to open the given file in a background thread.
+   *
+   * Note that the open(2) call runs asynchronously in a background thread as
+   * both the kernel and EdenFS are holding locks that would otherwise cause
+   * EdenFS to deadlock. The flushInvalidations method below should be called
+   * with all the locks released to wait for all the invalidation to complete.
+   */
+  void invalidate(AbsolutePath path);
+
+  /**
+   * Wait for all pending invalidation to complete.
+   *
+   * The future will complete when all the previously triggered invalidation
+   * completed.
+   */
+  folly::Future<folly::Unit> flushInvalidations();
+
+  /**
    * Obtain the address that this NFSv3 program is listening on.
    */
   folly::SocketAddress getAddr() const {
@@ -86,6 +111,7 @@ class Nfsd3 {
   RpcServer server_;
   ProcessAccessLog processAccessLog_;
   folly::Promise<StopData> stopPromise_;
+  folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
 };
 
 } // namespace facebook::eden

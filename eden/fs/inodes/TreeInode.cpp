@@ -3065,6 +3065,8 @@ folly::Try<void> TreeInode::invalidateChannelEntryCache(
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
   }
+  // For NFS, the entry cache is flushed when the directory mtime is changed.
+  // Directly invalidating an entry is not possible.
 #else
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
@@ -3090,6 +3092,11 @@ folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
     // when an entry is removed or modified. But when new entries are
     // added, the inode itself must be invalidated.
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
+  } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
+    const auto path = getPath();
+    if (path.has_value()) {
+      nfsdChannel->invalidate(getMount()->getPath() + *path);
+    }
   }
 #else
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
