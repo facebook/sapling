@@ -48,7 +48,7 @@ build the skiplist that will be used to slice the repository
   $ mononoke_admin skiplist build skiplist_4 --exponent 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
   *] creating a skiplist from scratch (glob)
-  *] build 17 skiplist nodes (glob)
+  *] build 5 skiplist nodes (glob)
 
 enable some more derived data types for normal usage and backfilling
   $ SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \

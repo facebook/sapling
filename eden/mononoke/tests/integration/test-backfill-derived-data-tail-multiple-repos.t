@@ -75,7 +75,7 @@ build the skiplist that will be used to slice the repository
   $ prod_setup_skiplist
   *] using repo "repo" repoid RepositoryId(0) (glob)
   *] creating a skiplist from scratch (glob)
-  *] build 17 skiplist nodes (glob)
+  *] build 5 skiplist nodes (glob)
 
   $ cd "$TESTTMP"
   $ REPOID=1 REPONAME=backup setup_common_config
@@ -86,7 +86,7 @@ build the skiplist that will be used to slice the repository
   $ backup_setup_skiplist
   *] using repo "backup" repoid RepositoryId(1) (glob)
   *] creating a skiplist from scratch (glob)
-  *] build 17 skiplist nodes (glob)
+  *] build 5 skiplist nodes (glob)
 
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it

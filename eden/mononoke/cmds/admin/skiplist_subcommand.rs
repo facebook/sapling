@@ -17,7 +17,7 @@ use cmdlib::args::{self, MononokeMatches};
 use context::{CoreContext, SessionClass};
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{future::try_join, stream, StreamExt, TryStreamExt};
+use futures::{future::try_join, TryStreamExt};
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
 use skiplist::{deserialize_skiplist_index, sparse, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
@@ -53,6 +53,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .long("rebuild")
                         .help("forces the full rebuild instead of incremental update"),
                 )
+                // TODO(yancouto): Remove this once the argument is not used anymore
                 .arg(
                     Arg::with_name(ARG_SPARSE)
                         .long(ARG_SPARSE)
@@ -77,22 +78,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-#[derive(Copy, Clone)]
-enum SkiplistType {
-    Full,
-    Sparse,
-}
-
-impl SkiplistType {
-    fn new(sparse: bool) -> Self {
-        if sparse {
-            SkiplistType::Sparse
-        } else {
-            SkiplistType::Full
-        }
-    }
-}
-
 pub async fn subcommand_skiplist<'a>(
     fb: FacebookInit,
     logger: Logger,
@@ -106,7 +91,6 @@ pub async fn subcommand_skiplist<'a>(
                 .expect("blobstore key is not specified")
                 .to_string();
             let rebuild = sub_m.is_present("rebuild");
-            let skiplist_ty = SkiplistType::new(sub_m.is_present(ARG_SPARSE));
             let exponent = sub_m
                 .value_of(ARG_EXPONENT)
                 .expect("exponent must be set")
@@ -119,7 +103,7 @@ pub async fn subcommand_skiplist<'a>(
             ctx.session_mut()
                 .override_session_class(SessionClass::Background);
             let repo = args::open_repo(fb, &logger, &matches).await?;
-            build_skiplist_index(&ctx, &repo, key, &logger, rebuild, skiplist_ty, exponent)
+            build_skiplist_index(&ctx, &repo, key, &logger, rebuild, exponent)
                 .await
                 .map_err(SubcommandError::Error)
         }
@@ -156,14 +140,11 @@ async fn build_skiplist_index<'a, S: ToString>(
     key: S,
     logger: &'a Logger,
     force_full_rebuild: bool,
-    skiplist_ty: SkiplistType,
     exponent: u32,
 ) -> Result<(), Error> {
     let blobstore = repo.get_blobstore();
     // Depth must be one more than the maximum exponent.
     let skiplist_depth = exponent + 1;
-    // Index all changesets
-    let max_index_depth = 20000000000;
     let key = key.to_string();
     let maybe_skiplist = if force_full_rebuild {
         None
@@ -198,23 +179,12 @@ async fn build_skiplist_index<'a, S: ToString>(
 
     let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;
 
-    let updated_skiplist = match skiplist_ty {
-        SkiplistType::Full => {
-            stream::iter(heads)
-                .map(Ok)
-                .try_for_each_concurrent(100, |head| {
-                    skiplist_index.add_node(&ctx, &cs_fetcher, head, max_index_depth)
-                })
-                .await?;
-            skiplist_index.get_all_skip_edges()
-        }
-        SkiplistType::Sparse => {
-            let mut index = skiplist_index.get_all_skip_edges();
-            let max_skip = NonZeroU64::new(2u64.pow(skiplist_depth - 1))
-                .ok_or(anyhow!("invalid skiplist depth"))?;
-            sparse::update_sparse_skiplist(&ctx, heads, &mut index, max_skip, &cs_fetcher).await?;
-            index
-        }
+    let updated_skiplist = {
+        let mut index = skiplist_index.get_all_skip_edges();
+        let max_skip = NonZeroU64::new(2u64.pow(skiplist_depth - 1))
+            .ok_or_else(|| anyhow!("invalid skiplist depth"))?;
+        sparse::update_sparse_skiplist(&ctx, heads, &mut index, max_skip, &cs_fetcher).await?;
+        index
     };
 
     info!(logger, "build {} skiplist nodes", updated_skiplist.len());
