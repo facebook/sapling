@@ -7,7 +7,9 @@
 
 #pragma once
 #include <folly/portability/SysTypes.h>
+#ifndef _WIN32
 #include <gtest/gtest_prod.h>
+#endif
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -79,7 +81,9 @@ class UserInfo {
   static constexpr gid_t kDefaultNobodyGid = 65534;
 
  private:
+#ifndef _WIN32
   FRIEND_TEST(UserInfo, initFromSudo);
+#endif
 
   UserInfo() {}
 
