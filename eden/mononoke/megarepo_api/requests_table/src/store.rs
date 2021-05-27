@@ -21,6 +21,7 @@ use crate::{
 
 queries! {
     read TestGetRequest(id: RowId) -> (
+        RowId,
         RequestType,
         RepositoryId,
         BookmarkName,
@@ -33,7 +34,8 @@ queries! {
         RequestStatus,
         Option<ClaimedBy>,
     ) {
-        "SELECT request_type,
+        "SELECT id,
+            request_type,
             repo_id,
             bookmark,
             args_blobstore_key,
@@ -49,6 +51,8 @@ queries! {
     }
 
     read GetRequest(id: RowId, request_type: RequestType) -> (
+        RowId,
+        RequestType,
         RepositoryId,
         BookmarkName,
         BlobstoreKey,
@@ -60,7 +64,9 @@ queries! {
         RequestStatus,
         Option<ClaimedBy>,
     ) {
-        "SELECT repo_id,
+        "SELECT id,
+            request_type,
+            repo_id,
             bookmark,
             args_blobstore_key,
             result_blobstore_key,
@@ -123,6 +129,52 @@ queries! {
     }
 }
 
+fn row_to_entry(
+    row: (
+        RowId,
+        RequestType,
+        RepositoryId,
+        BookmarkName,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+    ),
+) -> LongRunningRequestEntry {
+    let (
+        id,
+        request_type,
+        repo_id,
+        bookmark,
+        args_blobstore_key,
+        result_blobstore_key,
+        created_at,
+        started_processing_at,
+        ready_at,
+        polled_at,
+        status,
+        claimed_by,
+    ) = row;
+    LongRunningRequestEntry {
+        id,
+        repo_id,
+        bookmark,
+        request_type,
+        args_blobstore_key,
+        result_blobstore_key,
+        created_at,
+        started_processing_at,
+        ready_at,
+        polled_at,
+        status,
+        claimed_by,
+    }
+}
+
 #[derive(Clone)]
 pub struct SqlLongRunningRequestsQueue {
     pub(crate) connections: SqlConnections,
@@ -162,35 +214,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         let rows = TestGetRequest::query(&self.connections.read_connection, id).await?;
         match rows.into_iter().next() {
             None => Ok(None),
-            Some(row) => {
-                let (
-                    request_type,
-                    repo_id,
-                    bookmark,
-                    args_blobstore_key,
-                    result_blobstore_key,
-                    created_at,
-                    started_processing_at,
-                    ready_at,
-                    polled_at,
-                    status,
-                    claimed_by,
-                ) = row;
-                Ok(Some(LongRunningRequestEntry {
-                    id: *id,
-                    repo_id,
-                    bookmark,
-                    request_type,
-                    args_blobstore_key,
-                    result_blobstore_key,
-                    created_at,
-                    started_processing_at,
-                    ready_at,
-                    polled_at,
-                    status,
-                    claimed_by,
-                }))
-            }
+            Some(row) => Ok(Some(row_to_entry(row))),
         }
     }
 
@@ -253,24 +277,17 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         let entry = match rows.into_iter().next() {
             None => bail!("unknown request polled: {:?}", req_id),
             Some(row) => {
-                let (
-                    repo_id,
-                    bookmark,
-                    args_blobstore_key,
-                    result_blobstore_key,
-                    created_at,
-                    started_processing_at,
-                    ready_at,
-                    polled_at,
-                    status,
-                    claimed_by,
-                ) = row;
+                let mut entry = row_to_entry(row);
 
-                match status {
+                match &entry.status {
                     RequestStatus::Ready | RequestStatus::Polled
-                        if result_blobstore_key.is_none() =>
+                        if entry.result_blobstore_key.is_none() =>
                     {
-                        bail!("no result stored for {:?} request {:?}", status, req_id);
+                        bail!(
+                            "no result stored for {:?} request {:?}",
+                            entry.status,
+                            req_id
+                        );
                     }
                     RequestStatus::Ready => {
                         txn = MarkRequestPolled::query_with_transaction(
@@ -282,41 +299,10 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
                         .await?
                         .0;
 
-                        Some((
-                            true,
-                            LongRunningRequestEntry {
-                                id: req_id.0,
-                                repo_id,
-                                bookmark,
-                                request_type: req_id.1.clone(),
-                                args_blobstore_key,
-                                result_blobstore_key,
-                                created_at,
-                                started_processing_at,
-                                ready_at,
-                                polled_at,
-                                status: RequestStatus::Polled,
-                                claimed_by,
-                            },
-                        ))
+                        entry.status = RequestStatus::Polled;
+                        Some((true, entry))
                     }
-                    RequestStatus::Polled => Some((
-                        false,
-                        LongRunningRequestEntry {
-                            id: req_id.0,
-                            repo_id,
-                            bookmark,
-                            request_type: req_id.1.clone(),
-                            args_blobstore_key,
-                            result_blobstore_key,
-                            created_at,
-                            started_processing_at,
-                            ready_at,
-                            polled_at,
-                            status: RequestStatus::Polled,
-                            claimed_by: None,
-                        },
-                    )),
+                    RequestStatus::Polled => Some((false, entry)),
                     _ => None,
                 }
             }
