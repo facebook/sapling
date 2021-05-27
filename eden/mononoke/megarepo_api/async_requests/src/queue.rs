@@ -133,6 +133,17 @@ impl AsyncMethodRequestQueue {
         }
     }
 
+    pub async fn complete(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+        result: MegarepoAsynchronousRequestResult,
+    ) -> Result<bool, MegarepoError> {
+        let result_object_id = result.store(&ctx, &self.blobstore).await?;
+        let blobstore_key = BlobstoreKey(result_object_id.blobstore_key());
+        Ok(self.table.mark_ready(&ctx, req_id, blobstore_key).await?)
+    }
+
     async fn poll_once<R: Request>(
         &self,
         ctx: &CoreContext,
@@ -284,9 +295,7 @@ mod tests {
                 // returns injected result
                 let fake_response: Result<$response, MegarepoError> = Ok(Default::default());
                 let fake_result: MegarepoAsynchronousRequestResult = fake_response.clone().into();
-                let fake_result_id = fake_result.clone().store(&ctx, &q.blobstore).await?;
-                let fake_result_key = BlobstoreKey(fake_result_id.blobstore_key());
-                q.table.mark_ready(&ctx, &req_id, fake_result_key).await?;
+                q.complete(&ctx, &req_id, fake_result).await?;
                 let ready_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
                 let ready_poll_response = ready_poll.unwrap().into_result();
                 assert_eq!(ready_poll_response.unwrap(), fake_response.unwrap());
