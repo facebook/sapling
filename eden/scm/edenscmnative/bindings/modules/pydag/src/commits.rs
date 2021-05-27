@@ -10,7 +10,7 @@ use crate::idmap;
 use crate::Names;
 use crate::Spans;
 use anyhow::Result;
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::convert::BytesLike;
 use cpython_ext::ExtractInner;

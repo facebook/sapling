@@ -8,7 +8,7 @@
 use crate::dagalgo::dagalgo;
 use crate::idmap::NULL_NODE;
 use anyhow::Result;
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::nameset::hints::Flags;
@@ -169,7 +169,7 @@ py_class!(pub class nameiter |py| {
 
     def __next__(&self) -> PyResult<Option<PyBytes>> {
         let mut iter = self.iter(py).borrow_mut();
-        let next: Option<Vertex> = block_on(iter.next()).transpose().map_pyerr(py)?;
+        let next: Option<Vertex> = block_on(async { iter.next().await.transpose() }).map_pyerr(py)?;
         Ok(next.map(|name| PyBytes::new(py, name.as_ref())))
     }
 

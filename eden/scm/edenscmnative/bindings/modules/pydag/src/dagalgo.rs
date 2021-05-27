@@ -6,7 +6,7 @@
  */
 
 use crate::Names;
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
