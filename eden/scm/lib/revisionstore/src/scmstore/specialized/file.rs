@@ -237,6 +237,7 @@ pub struct StoreFile {
 }
 
 impl StoreFile {
+    /// Returns which attributes are present in this StoreFile
     fn attrs(&self) -> FileAttributes {
         FileAttributes {
             content: self.content.is_some(),
@@ -256,30 +257,25 @@ pub struct FileAttributes {
 }
 
 impl FileAttributes {
-    fn is_none(&self) -> bool {
-        !(self.content | self.aux_data)
+    /// Returns true if no attributes are set, otherwise false.
+    fn none(&self) -> bool {
+        *self == FileAttributes::NONE
     }
 
-    fn none() -> Self {
-        FileAttributes {
-            content: false,
-            aux_data: false,
-        }
-    }
+    const NONE: Self = FileAttributes {
+        content: false,
+        aux_data: false,
+    };
 
-    fn content() -> Self {
-        FileAttributes {
-            content: true,
-            aux_data: false,
-        }
-    }
+    const CONTENT: Self = FileAttributes {
+        content: true,
+        aux_data: false,
+    };
 
-    fn aux_data() -> Self {
-        FileAttributes {
-            content: false,
-            aux_data: true,
-        }
-    }
+    const AUX: Self = FileAttributes {
+        content: false,
+        aux_data: true,
+    };
 }
 
 impl Not for FileAttributes {
@@ -557,7 +553,7 @@ impl FetchState {
     fn satisfies(&self, provides: FileAttributes) -> FileAttributes {
         self.request_attrs
             & if self.compute_aux_data && provides.content {
-                provides | FileAttributes::aux_data()
+                provides | FileAttributes::AUX
             } else {
                 provides
             }
@@ -566,12 +562,12 @@ impl FetchState {
     /// Return all incomplete requested Keys for which additional attributes may be gathered by querying a store which provides the specified attributes.
     fn pending_all(&self, provides: FileAttributes) -> Vec<Key> {
         let satisfies = self.satisfies(provides);
-        if satisfies.is_none() {
+        if satisfies.none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).none())
             .cloned()
             .collect()
     }
@@ -579,13 +575,13 @@ impl FetchState {
     /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
     fn pending_nonlfs(&self, provides: FileAttributes) -> Vec<Key> {
         let satisfies = self.satisfies(provides);
-        if satisfies.is_none() {
+        if satisfies.none() {
             return vec![];
         }
         self.pending
             .iter()
             .filter(|k| !self.lfs_pointers.contains_key(k))
-            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).none())
             .cloned()
             .collect()
     }
@@ -593,20 +589,20 @@ impl FetchState {
     /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, for which additional attributes may be gathered by querying a store which provides the specified attributes
     fn pending_storekey(&self, provides: FileAttributes) -> Vec<StoreKey> {
         let satisfies = self.satisfies(provides);
-        if satisfies.is_none() {
+        if satisfies.none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).none())
             .map(|k| self.storekey(k))
             .collect()
     }
 
     /// Returns which of the specified attributes have not been found for a specified Key
     fn missing_attrs(&self, key: &Key, attrs: FileAttributes) -> FileAttributes {
-        if attrs.is_none() {
-            return FileAttributes::none();
+        if attrs.none() {
+            return FileAttributes::NONE;
         }
         self.found.get(key).map_or(attrs, |f| f.missing(attrs))
     }
@@ -646,8 +642,8 @@ impl FetchState {
 
         let aux_data = if self.compute_aux_data
             && !self
-                .missing_attrs(&key, self.request_attrs & FileAttributes::aux_data())
-                .is_none()
+                .missing_attrs(&key, self.request_attrs & FileAttributes::AUX)
+                .none()
         {
             // If aux data was requested, it's missing, and computing aux data is enabled, compute it here.
             match f.aux_data() {
@@ -669,8 +665,8 @@ impl FetchState {
             Occupied(mut entry) => {
                 if !entry
                     .get()
-                    .missing(self.request_attrs & FileAttributes::aux_data())
-                    .is_none()
+                    .missing(self.request_attrs & FileAttributes::AUX)
+                    .none()
                 {
                     entry.get_mut().aux_data = aux_data;
                 }
@@ -679,7 +675,7 @@ impl FetchState {
                     entry.get_mut().content = Some(f);
                 }
 
-                if entry.get().missing(self.request_attrs).is_none() {
+                if entry.get().missing(self.request_attrs).none() {
                     self.mark_complete(&key);
                 }
             }
@@ -693,7 +689,7 @@ impl FetchState {
                 if entry
                     .insert(StoreFile { content, aux_data })
                     .missing(self.request_attrs)
-                    .is_none()
+                    .none()
                 {
                     self.mark_complete(&key);
                 }
@@ -715,7 +711,7 @@ impl FetchState {
     }
 
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
-        let pending = self.pending_nonlfs(FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
         }
@@ -738,7 +734,7 @@ impl FetchState {
         match self.found.entry(key.clone()) {
             Occupied(mut entry) => {
                 entry.get_mut().aux_data = Some(aux_data);
-                if entry.get().missing(self.request_attrs).is_none() {
+                if entry.get().missing(self.request_attrs).none() {
                     self.mark_complete(&key);
                 }
             }
@@ -749,7 +745,7 @@ impl FetchState {
                         aux_data: Some(aux_data),
                     })
                     .missing(self.request_attrs)
-                    .is_none()
+                    .none()
                 {
                     self.mark_complete(&key);
                 }
@@ -760,7 +756,7 @@ impl FetchState {
     }
 
     fn fetch_aux_indexedlog_inner(&mut self, store: &IndexedLogHgIdDataStore) -> Result<()> {
-        let pending = self.pending_all(FileAttributes::aux_data());
+        let pending = self.pending_all(FileAttributes::AUX);
         if pending.is_empty() {
             return Ok(());
         }
@@ -793,7 +789,7 @@ impl FetchState {
     }
 
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
-        let pending = self.pending_storekey(FileAttributes::content());
+        let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
         }
@@ -823,7 +819,7 @@ impl FetchState {
     }
 
     fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
-        let pending = self.pending_nonlfs(FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return Ok(());
         }
@@ -857,7 +853,7 @@ impl FetchState {
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
         // TODO(meyer): Implement aux data fetching for EdenApi Files
-        let pending = self.pending_nonlfs(FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return Ok(());
         }
@@ -952,7 +948,7 @@ impl FetchState {
     }
 
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
-        let pending = self.pending_storekey(FileAttributes::content());
+        let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
             return Ok(());
         }
@@ -1075,7 +1071,7 @@ impl HgIdDataStore for FileStore {
             match self
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::content(),
+                    FileAttributes::CONTENT,
                 )
                 .complete
                 .drain()
@@ -1094,7 +1090,7 @@ impl HgIdDataStore for FileStore {
             match self
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::content(),
+                    FileAttributes::CONTENT,
                 )
                 .complete
                 .drain()
@@ -1117,7 +1113,7 @@ impl RemoteDataStore for FileStore {
         Ok(self
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                FileAttributes::content(),
+                FileAttributes::CONTENT,
             )
             .incomplete
             .into_iter()
@@ -1138,7 +1134,7 @@ impl LocalStore for FileStore {
             .local()
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                FileAttributes::content(),
+                FileAttributes::CONTENT,
             )
             .incomplete
             .into_iter()
@@ -1193,7 +1189,7 @@ impl ContentDataStore for FileStore {
             match self
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::content(),
+                    FileAttributes::CONTENT,
                 )
                 .complete
                 .drain()
@@ -1210,7 +1206,7 @@ impl ContentDataStore for FileStore {
             match self
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::content(),
+                    FileAttributes::CONTENT,
                 )
                 .complete
                 .drain()
