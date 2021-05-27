@@ -821,7 +821,10 @@ def getdiff(expected, output, ref, err):
         # output directly.
         return servefail, output
     for line in _unified_diff(
-        expected, output, os.path.basename(ref), os.path.basename(err)
+        expected,
+        output,
+        _bytespath(os.path.basename(ref)),
+        _bytespath(os.path.basename(err)),
     ):
         if line.startswith(b"+++") or line.startswith(b"---"):
             line = line.replace(b"\\", b"/")
@@ -1154,9 +1157,7 @@ class Test(unittest.TestCase):
 
         if self._watchman:
             shortname = hashlib.sha1("%s" % name).hexdigest()[:6]
-            self._watchmandir = os.path.join(
-                self._threadtmp, "%s.watchman" % shortname
-            )
+            self._watchmandir = os.path.join(self._threadtmp, "%s.watchman" % shortname)
             os.mkdir(self._watchmandir)
             cfgfile = os.path.join(self._watchmandir, "config.json")
 
