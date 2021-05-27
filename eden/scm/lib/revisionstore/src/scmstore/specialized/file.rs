@@ -93,8 +93,8 @@ impl Drop for FileStore {
 
 #[derive(Debug)]
 pub struct FileStoreFetch {
-    complete: HashMap<Key, StoreFile>,
-    incomplete: HashMap<Key, Vec<Error>>,
+    pub complete: HashMap<Key, StoreFile>,
+    pub incomplete: HashMap<Key, Vec<Error>>,
     other_errors: Vec<Error>,
 }
 
@@ -227,8 +227,8 @@ impl FileStore {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct FileAuxData {
-    content_sha256: Sha256,
+pub struct FileAuxData {
+    pub content_sha256: Sha256,
 }
 
 #[derive(Debug)]
@@ -253,6 +253,10 @@ impl StoreFile {
             content: if attrs.content { self.content } else { None },
             aux_data: if attrs.aux_data { self.aux_data } else { None },
         }
+    }
+
+    pub fn aux_data(&self) -> Option<FileAuxData> {
+        self.aux_data.clone()
     }
 
     fn compute_aux_data(&mut self) -> Result<()> {
@@ -306,8 +310,8 @@ impl From<LazyFile> for StoreFile {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FileAttributes {
-    content: bool,
-    aux_data: bool,
+    pub content: bool,
+    pub aux_data: bool,
 }
 
 impl FileAttributes {
@@ -687,14 +691,8 @@ impl FetchState {
             .get(key)
             .map_or(FileAttributes::NONE, |f| f.attrs());
         let (available, fetchable) = if self.compute_aux_data {
-            // I do (available | fetchable) here in case we introduce attributes which require multiple others to compute
-            // (though this code might not survive that long, we still need to change it to support preferring remote aux data)
-            (
-                available.with_computable(),
-                (available | fetchable).with_computable(),
-            )
+            (available.with_computable(), fetchable.with_computable())
         } else {
-            // Without computing attributes (available | fetchable) vs. (fetchable) makes no difference.
             (available, fetchable)
         };
         let missing = self.request_attrs - available;

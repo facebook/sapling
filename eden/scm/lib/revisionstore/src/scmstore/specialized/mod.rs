@@ -7,7 +7,7 @@
 
 pub use crate::scmstore::specialized::{
     builder::{FileStoreBuilder, TreeStoreBuilder},
-    file::FileStore,
+    file::{FileAttributes, FileStore, StoreFile},
     tree::TreeStore,
 };
 pub mod builder;

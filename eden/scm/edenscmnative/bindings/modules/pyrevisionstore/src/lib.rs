@@ -33,9 +33,9 @@ use pyprogress::PyProgressFactory;
 use revisionstore::{
     repack,
     scmstore::{
-        util::file_to_async_key_stream, BoxedReadStore, FileScmStoreBuilder, FileStore,
-        FileStoreBuilder, LegacyDatastore, StoreFile, StoreTree, TreeScmStoreBuilder, TreeStore,
-        TreeStoreBuilder,
+        specialized::FileAttributes, util::file_to_async_key_stream, BoxedReadStore,
+        FileScmStoreBuilder, FileStore, FileStoreBuilder, LegacyDatastore, StoreFile, StoreTree,
+        TreeScmStoreBuilder, TreeStore, TreeStoreBuilder,
     },
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
@@ -56,7 +56,7 @@ use crate::{
         HgIdHistoryStorePyExt, HgIdMutableHistoryStorePyExt, IterableHgIdHistoryStorePyExt,
         RemoteHistoryStorePyExt,
     },
-    pythonutil::from_key,
+    pythonutil::{from_key, from_key_to_tuple, from_tuple_to_key},
 };
 
 mod datastorepyext;
@@ -1267,6 +1267,38 @@ py_class!(pub class filescmstore |py| {
         }
 
         Ok(PyNone)
+    }
+
+    def fetch_contentsha256(&self, keys: PyList) -> PyResult<PyList> {
+        let keys = keys
+            .iter(py)
+            .map(|tuple| from_tuple_to_key(py, &tuple))
+            .collect::<PyResult<Vec<Key>>>()?;
+        let results = PyList::new(py, &[]);
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: false, aux_data: true} );
+        // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
+        // For now we just error with the first incomplete key, passing on the last recorded error if any are available.
+        if let Some((key, mut errors)) = fetch_result.incomplete.into_iter().next() {
+            if let Some(err) = errors.pop() {
+                return Err(err.context(format!("failed to fetch {}, received error", key))).map_pyerr(py);
+            } else {
+                return Err(format_err!("failed to fetch {}", key)).map_pyerr(py);
+            }
+        }
+        for (key, storefile) in fetch_result.complete.into_iter() {
+            let key_tuple = from_key_to_tuple(py, &key).into_object();
+            let content_sha256 = storefile.aux_data().ok_or_else(|| format_err!("missing aux data even though result is complete")).map_pyerr(py)?.content_sha256;
+            let content_sha256 = PyBytes::new(py, &content_sha256.into_inner());
+            let result_tuple = PyTuple::new(
+                py,
+                &[
+                    key_tuple,
+                    content_sha256.into_object(),
+                ],
+            );
+            results.append(py, result_tuple.into_object());
+        }
+        Ok(results)
     }
 });
 
