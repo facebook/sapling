@@ -6,28 +6,16 @@
  */
 
 use anyhow::{anyhow, Error, Result};
-use blobstore::{impl_loadable_storable, Blobstore, Loadable, Storable};
+use blobstore::{impl_loadable_storable, Blobstore};
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_types_thrift::{
-    MegarepoAddTargetParamsId as ThriftMegarepoAddTargetParamsId,
-    MegarepoChangeTargetConfigParamsId as ThriftMegarepoChangeTargetConfigParamsId,
-    MegarepoRemergeSourceParamsId as ThriftMegarepoRemergeSourceParamsId,
-    MegarepoSyncChangesetParamsId as ThriftMegarepoSyncChangesetParamsId,
-};
-use megarepo_types_thrift::{
     MegarepoAddTargetResult as ThriftMegarepoAddTargetResult,
     MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult,
     MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult,
     MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult,
-};
-use megarepo_types_thrift::{
-    MegarepoAddTargetResultId as ThriftMegarepoAddTargetResultId,
-    MegarepoChangeTargetConfigResultId as ThriftMegarepoChangeTargetConfigResultId,
-    MegarepoRemergeSourceResultId as ThriftMegarepoRemergeSourceResultId,
-    MegarepoSyncChangesetResultId as ThriftMegarepoSyncChangesetResultId,
 };
 use megarepo_types_thrift::{
     MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,
@@ -70,16 +58,8 @@ use std::sync::Arc;
 pub trait Request: Sized + Send + Sync {
     /// Name of the request
     const NAME: &'static str;
-    /// Id type for request stored result
-    type StoredResultId: FromStr<Err = Error>
-        + Loadable<Value = Self::StoredResult>
-        + BlobstoreKeyWrapper;
-    /// Id type for request params
-    type ParamsId: FromStr<Err = Error> + Loadable<Value = Self::Params> + BlobstoreKeyWrapper;
     /// Rust newtype for a polling token
     type Token: Token;
-    /// Rust type for request params
-    type Params: Storable<Key = Self::ParamsId> + TryFrom<Self::ThriftParams, Error = Error>;
 
     /// Underlying thrift type for request params
     type ThriftParams: ThriftParams<R = Self>;
@@ -90,23 +70,15 @@ pub trait Request: Sized + Send + Sync {
     /// Underlying thrift type for for request result (response or error)
     type ThriftResult: ThriftResult<R = Self>;
 
-    /// Rust type for request result (response or error),
-    /// stored in a blobstore
-    type StoredResult: Storable<Key = Self::StoredResultId>;
-
     /// A type representing potentially present response
     type PollResponse;
 
-    /// Convert stored result into a result of a poll response
-    /// Stored result is a serialization of either a successful
+    /// Convert thrift result into a result of a poll response
+    /// Thrift result is a representation of either a successful
     /// respone, or an error. Poll response cannot convey an error,
     /// so we use result of a poll response to do so.
     /// Note that this function should return either a
     /// non-empty poll-response, or an error
-    fn stored_result_into_poll_response(
-        sr: Self::StoredResult,
-    ) -> Result<Self::PollResponse, MegarepoError>;
-
     fn thrift_result_into_poll_response(
         tr: Self::ThriftResult,
     ) -> Result<Self::PollResponse, MegarepoError>;
@@ -298,18 +270,10 @@ macro_rules! impl_async_svc_method_types {
         method_name => $method_name: expr,
         request_struct => $request_struct: ident,
 
-        params_handle_type => $params_handle_type: ident,
-        params_handle_thrift_type => $params_handle_thrift_type: ident,
-        params_value_type => $params_value_type: ident,
         params_value_thrift_type => $params_value_thrift_type: ident,
-        params_context_type => $params_context_type: ident,
         params_union_variant => $params_union_variant: ident,
 
-        result_handle_type => $result_handle_type: ident,
-        result_handle_thrift_type => $result_handle_thrift_type: ident,
-        result_value_type => $result_value_type: ident,
         result_value_thrift_type => $result_value_thrift_type: ident,
-        result_context_type => $result_context_type: ident,
         result_union_variant => $result_union_variant: ident,
 
         response_type => $response_type: ident,
@@ -320,25 +284,6 @@ macro_rules! impl_async_svc_method_types {
         fn target(&$self_ident: ident: ThriftParams) -> &Target $target_in_params: tt
 
     } => {
-        impl_async_svc_stored_type! {
-            handle_type => $params_handle_type,
-            handle_thrift_type => $params_handle_thrift_type,
-            value_type => $params_value_type,
-            value_thrift_type => $params_value_thrift_type,
-            context_type => $params_context_type,
-        }
-
-        impl_async_svc_stored_type! {
-            handle_type => $result_handle_type,
-            handle_thrift_type => $result_handle_thrift_type,
-            value_type => $result_value_type,
-            value_thrift_type => $result_value_thrift_type,
-            context_type => $result_context_type,
-        }
-
-        #[derive(Clone)]
-        pub struct $token_type(pub $token_thrift_type);
-
         impl ThriftParams for $params_value_thrift_type {
             type R = $request_struct;
 
@@ -346,6 +291,9 @@ macro_rules! impl_async_svc_method_types {
                 $target_in_params
             }
         }
+
+        #[derive(Clone)]
+        pub struct $token_type(pub $token_thrift_type);
 
         impl Token for $token_type {
             type ThriftToken = $token_thrift_type;
@@ -376,17 +324,6 @@ macro_rules! impl_async_svc_method_types {
 
             fn target(&self) -> &Target {
                 &self.0.target
-            }
-        }
-
-        impl From<Result<$response_type, MegarepoError>> for $result_value_type {
-            fn from(r: Result<$response_type, MegarepoError>) -> $result_value_type {
-                let thrift = match r {
-                    Ok(payload) => $result_value_thrift_type::success(payload),
-                    Err(e) => $result_value_thrift_type::error(e.into())
-                };
-
-                $result_value_type::from_thrift(thrift)
             }
         }
 
@@ -430,12 +367,6 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
-        impl From<$result_value_type> for Result<$response_type, MegarepoError> {
-            fn from(r: $result_value_type) -> Result<$response_type, MegarepoError> {
-                r.thrift.into_result()
-            }
-        }
-
         impl TryFrom<MegarepoAsynchronousRequestResult> for $result_value_thrift_type {
             type Error = MegarepoError;
 
@@ -470,23 +401,12 @@ macro_rules! impl_async_svc_method_types {
         impl Request for $request_struct {
             const NAME: &'static str = $method_name;
 
-            type StoredResultId = $result_handle_type;
-            type ParamsId = $params_handle_type;
             type Token = $token_type;
             type ThriftParams = $params_value_thrift_type;
             type ThriftResult = $result_value_thrift_type;
             type ThriftResponse = $response_type;
 
-            type Params = $params_value_type;
-            type StoredResult = $result_value_type;
             type PollResponse = $poll_response_type;
-
-            fn stored_result_into_poll_response(
-                stored_result: Self::StoredResult,
-            ) -> Result<Self::PollResponse, MegarepoError> {
-                let r: Result<$response_type, MegarepoError> = stored_result.into();
-                r.map(|r| $poll_response_type { response: Some(r) })
-            }
 
             fn thrift_result_into_poll_response(
                 thrift_result: Self::ThriftResult,
@@ -509,18 +429,10 @@ impl_async_svc_method_types! {
     method_name => "megarepo_add_sync_target",
     request_struct => MegarepoAddSyncTarget,
 
-    params_handle_type => MegarepoAddTargetParamsId,
-    params_handle_thrift_type => ThriftMegarepoAddTargetParamsId,
-    params_value_type => MegarepoAddTargetParams,
     params_value_thrift_type => ThriftMegarepoAddTargetParams,
-    params_context_type => MegarepoAddTargetParamsIdContext,
     params_union_variant => megarepo_add_target_params,
 
-    result_handle_type => MegarepoAddTargetResultId,
-    result_handle_thrift_type => ThriftMegarepoAddTargetResultId,
-    result_value_type => MegarepoAddTargetResult,
     result_value_thrift_type => ThriftMegarepoAddTargetResult,
-    result_context_type => MegarepoAddTargetResultIdContext,
     result_union_variant => megarepo_add_target_result,
 
     response_type => ThriftMegarepoAddTargetResponse,
@@ -539,18 +451,10 @@ impl_async_svc_method_types! {
     method_name => "megarepo_change_target_config",
     request_struct => MegarepoChangeTargetConfig,
 
-    params_handle_type => MegarepoChangeTargetConfigParamsId,
-    params_handle_thrift_type => ThriftMegarepoChangeTargetConfigParamsId,
-    params_value_type => MegarepoChangeTargetConfigParams,
     params_value_thrift_type => ThriftMegarepoChangeTargetConfigParams,
-    params_context_type => MegarepoChangeTargetConfigParamsIdContext,
     params_union_variant => megarepo_change_target_params,
 
-    result_handle_type => MegarepoChangeTargetConfigResultId,
-    result_handle_thrift_type => ThriftMegarepoChangeTargetConfigResultId,
-    result_value_type => MegarepoChangeTargetConfigResult,
     result_value_thrift_type => ThriftMegarepoChangeTargetConfigResult,
-    result_context_type => MegarepoChangeTargetConfigResultIdContext,
     result_union_variant => megarepo_change_target_result,
 
     response_type => ThriftMegarepoChangeTargetConfigResponse,
@@ -569,18 +473,10 @@ impl_async_svc_method_types! {
     method_name => "megarepo_sync_changeset",
     request_struct => MegarepoSyncChangeset,
 
-    params_handle_type => MegarepoSyncChangesetParamsId,
-    params_handle_thrift_type => ThriftMegarepoSyncChangesetParamsId,
-    params_value_type => MegarepoSyncChangesetParams,
     params_value_thrift_type => ThriftMegarepoSyncChangesetParams,
-    params_context_type => MegarepoSyncChangesetParamsIdContext,
     params_union_variant => megarepo_sync_changeset_params,
 
-    result_handle_type => MegarepoSyncChangesetResultId,
-    result_handle_thrift_type => ThriftMegarepoSyncChangesetResultId,
-    result_value_type => MegarepoSyncChangesetResult,
     result_value_thrift_type => ThriftMegarepoSyncChangesetResult,
-    result_context_type => MegarepoSyncChangesetResultIdContext,
     result_union_variant => megarepo_sync_changeset_result,
 
     response_type => ThriftMegarepoSyncChangesetResponse,
@@ -599,18 +495,10 @@ impl_async_svc_method_types! {
     method_name => "megarepo_remerge_source",
     request_struct => MegarepoRemergeSource,
 
-    params_handle_type => MegarepoRemergeSourceParamsId,
-    params_handle_thrift_type => ThriftMegarepoRemergeSourceParamsId,
-    params_value_type => MegarepoRemergeSourceParams,
     params_value_thrift_type => ThriftMegarepoRemergeSourceParams,
-    params_context_type => MegarepoRemergeSourceParamsIdContext,
     params_union_variant => megarepo_remerge_source_params,
 
-    result_handle_type => MegarepoRemergeSourceResultId,
-    result_handle_thrift_type => ThriftMegarepoRemergeSourceResultId,
-    result_value_type => MegarepoRemergeSourceResult,
     result_value_thrift_type => ThriftMegarepoRemergeSourceResult,
-    result_context_type => MegarepoRemergeSourceResultIdContext,
     result_union_variant => megarepo_remerge_source_result,
 
     response_type => ThriftMegarepoRemergeSourceResponse,
@@ -698,36 +586,12 @@ mod test {
         // These IDs are persistent, and this test is really to make sure that they don't change
         // accidentally. Same as in typed_hash.rs
         test_blobstore_key!(
-            MegarepoAddTargetParamsId,
-            "async.svc.MegarepoAddTargetParams"
+            MegarepoAsynchronousRequestParamsId,
+            "async.svc.MegarepoAsynchronousRequestParams"
         );
         test_blobstore_key!(
-            MegarepoAddTargetResultId,
-            "async.svc.MegarepoAddTargetResult"
-        );
-        test_blobstore_key!(
-            MegarepoChangeTargetConfigParamsId,
-            "async.svc.MegarepoChangeTargetConfigParams"
-        );
-        test_blobstore_key!(
-            MegarepoChangeTargetConfigResultId,
-            "async.svc.MegarepoChangeTargetConfigResult"
-        );
-        test_blobstore_key!(
-            MegarepoRemergeSourceParamsId,
-            "async.svc.MegarepoRemergeSourceParams"
-        );
-        test_blobstore_key!(
-            MegarepoRemergeSourceResultId,
-            "async.svc.MegarepoRemergeSourceResult"
-        );
-        test_blobstore_key!(
-            MegarepoSyncChangesetParamsId,
-            "async.svc.MegarepoSyncChangesetParams"
-        );
-        test_blobstore_key!(
-            MegarepoSyncChangesetResultId,
-            "async.svc.MegarepoSyncChangesetResult"
+            MegarepoAsynchronousRequestResultId,
+            "async.svc.MegarepoAsynchronousRequestResult"
         );
         test_blobstore_key!(
             MegarepoAsynchronousRequestParamsId,
@@ -741,14 +605,6 @@ mod test {
 
     #[test]
     fn test_serialize_deserialize() {
-        serialize_deserialize!(MegarepoAddTargetParamsId);
-        serialize_deserialize!(MegarepoAddTargetResultId);
-        serialize_deserialize!(MegarepoChangeTargetConfigParamsId);
-        serialize_deserialize!(MegarepoChangeTargetConfigResultId);
-        serialize_deserialize!(MegarepoRemergeSourceParamsId);
-        serialize_deserialize!(MegarepoRemergeSourceResultId);
-        serialize_deserialize!(MegarepoSyncChangesetParamsId);
-        serialize_deserialize!(MegarepoSyncChangesetResultId);
         serialize_deserialize!(MegarepoAsynchronousRequestParamsId);
         serialize_deserialize!(MegarepoAsynchronousRequestResultId);
     }
@@ -776,14 +632,6 @@ mod test {
     async fn test_megaerpo_add_target_params_type(fb: FacebookInit) {
         let blobstore = Memblob::new(PutBehaviour::IfAbsent);
         let ctx = CoreContext::test_mock(fb);
-        test_store_load!(MegarepoAddTargetParams, ctx, blobstore);
-        test_store_load!(MegarepoAddTargetResult, ctx, blobstore);
-        test_store_load!(MegarepoChangeTargetConfigParams, ctx, blobstore);
-        test_store_load!(MegarepoChangeTargetConfigResult, ctx, blobstore);
-        test_store_load!(MegarepoRemergeSourceParams, ctx, blobstore);
-        test_store_load!(MegarepoRemergeSourceResult, ctx, blobstore);
-        test_store_load!(MegarepoSyncChangesetParams, ctx, blobstore);
-        test_store_load!(MegarepoSyncChangesetResult, ctx, blobstore);
         test_store_load!(MegarepoAsynchronousRequestParams, ctx, blobstore);
         test_store_load!(MegarepoAsynchronousRequestResult, ctx, blobstore);
     }
