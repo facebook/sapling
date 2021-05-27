@@ -80,6 +80,39 @@ queries! {
         WHERE id = {id} AND request_type = {request_type}"
     }
 
+    read GetOneNewRequestForRepos(>list supported_repo_ids: RepositoryId) -> (
+        RowId,
+        RequestType,
+        RepositoryId,
+        BookmarkName,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            bookmark,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by
+        FROM long_running_request_queue
+        WHERE status = 'new' AND repo_id IN {supported_repo_ids}
+        ORDER BY created_at ASC
+        LIMIT 1
+        "
+    }
+
     write AddRequest(request_type: RequestType, repo_id: RepositoryId, bookmark: BookmarkName, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
@@ -203,6 +236,42 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         match res.last_insert_id() {
             Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
             _ => bail!("Failed to insert a new request of type {}", request_type),
+        }
+    }
+
+    /// Claim one of new requests. Mark it as in-progress and return it.
+    async fn claim_and_get_new_request(
+        &self,
+        ctx: &CoreContext,
+        claimed_by: &ClaimedBy,
+        supported_repos: &[RepositoryId],
+    ) -> Result<Option<LongRunningRequestEntry>> {
+        // Spin until we win the race or there's nothing to do.
+        loop {
+            let rows = GetOneNewRequestForRepos::query(
+                &self.connections.read_master_connection, // reaching DB master improves our chances.
+                supported_repos,
+            )
+            .await?;
+            let mut entry = match rows.into_iter().next() {
+                None => {
+                    return Ok(None);
+                }
+                Some(row) => row_to_entry(row),
+            };
+            if self
+                .mark_in_progress(
+                    ctx,
+                    &RequestId(entry.id, entry.request_type.clone()),
+                    claimed_by,
+                )
+                .await?
+            {
+                // Success, we won the race!
+                entry.status = RequestStatus::InProgress;
+                return Ok(Some(entry));
+            }
+            // Failure, let's try again.
         }
     }
 

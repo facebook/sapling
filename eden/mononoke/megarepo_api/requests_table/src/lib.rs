@@ -43,6 +43,14 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId>;
 
+    /// Claim one of new requests. Mark it as in-progress and return it.
+    async fn claim_and_get_new_request(
+        &self,
+        ctx: &CoreContext,
+        claimed_by: &ClaimedBy,
+        supported_repos: &[RepositoryId],
+    ) -> Result<Option<LongRunningRequestEntry>>;
+
     /// Get the full request object entry by id
     /// Since this does not take `request_type`, it is
     /// mainly intended to be used in tests (`request_type`
