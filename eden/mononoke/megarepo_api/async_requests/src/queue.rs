@@ -16,7 +16,8 @@ use megarepo_error::MegarepoError;
 use memblob::Memblob;
 use mononoke_types::RepositoryId;
 use requests_table::{
-    BlobstoreKey, LongRunningRequestsQueue, RequestId, RequestType, SqlLongRunningRequestsQueue,
+    BlobstoreKey, ClaimedBy, LongRunningRequestsQueue, RequestId, RequestType,
+    SqlLongRunningRequestsQueue,
 };
 use sql_construct::SqlConstruct;
 use std::convert::TryFrom;
@@ -73,6 +74,32 @@ impl AsyncMethodRequestQueue {
             .await?;
         let token = <P::R as Request>::Token::from_db_id_and_target(table_id, target);
         Ok(token)
+    }
+
+    pub async fn dequeue(
+        &self,
+        ctx: &CoreContext,
+        claimed_by: &ClaimedBy,
+        supported_repos: &[RepositoryId],
+    ) -> Result<Option<(RequestId, MegarepoAsynchronousRequestParams)>, MegarepoError> {
+        let entry = self
+            .table
+            .claim_and_get_new_request(ctx, claimed_by, supported_repos)
+            .await?;
+
+        if let Some(entry) = entry {
+            let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+                ctx,
+                &self.blobstore,
+                &entry.args_blobstore_key.0,
+            )
+            .await?;
+            let req_id = RequestId(entry.id, entry.request_type);
+            Ok(Some((req_id, thrift_params)))
+        } else {
+            // empty queue
+            Ok(None)
+        }
     }
 
     async fn poll_once<R: Request>(
@@ -142,7 +169,6 @@ impl AsyncMethodRequestQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blobstore::Loadable;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use requests_table::{ClaimedBy, RequestStatus};
@@ -154,9 +180,7 @@ mod tests {
         MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams,
     };
 
-    use crate::types::{
-        MegarepoAsynchronousRequestParamsId, MegarepoAsynchronousRequestResult, ThriftResult,
-    };
+    use crate::types::{MegarepoAsynchronousRequestResult, ThriftResult};
 
     use source_control::{
         MegarepoAddTargetResponse, MegarepoChangeTargetConfigResponse,
@@ -168,7 +192,7 @@ mod tests {
         MegarepoSyncChangeset,
     };
 
-    macro_rules! test_enqueue_and_poll_once {
+    macro_rules! test_enqueue_dequeue_and_poll_once {
         {
             $fn_name: ident,
             $request_struct: ident,
@@ -196,16 +220,11 @@ mod tests {
                 assert_eq!(entry.started_processing_at, None);
                 assert_eq!(entry.ready_at, None);
                 assert_eq!(entry.polled_at, None);
+                assert_eq!(entry.repo_id,  RepositoryId::new(0));
                 assert_eq!(
                     entry.request_type,
                     RequestType($request_type.to_string())
                 );
-
-                // Verify that request params are in the blobstore
-                let id = MegarepoAsynchronousRequestParamsId::parse_blobstore_key(&entry.args_blobstore_key.0)?;
-                let args = id.load(&ctx, &q.blobstore).await?;
-                assert_eq!(args, params.into());
-
                 let req_id = RequestId(row_id, entry.request_type);
 
                 // Verify that poll_once on this request in a "new" state
@@ -213,9 +232,17 @@ mod tests {
                 let new_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
                 assert!(new_poll.is_none());
 
+                // Simulate the tailer and grab the element from the queue, this should return the params
+                // back and flip its state back to "in_progress"
+                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string()), &[entry.repo_id]).await?.unwrap();
+
+                // Verify that request params from blobstore match what we put there
+                assert_eq!(params_from_store, params.into());
+
+                // Verify that request params are in the blobstore
+
                 // Verify that poll_once on this request in a "in_progress" state
                 // returns None
-                q.table.mark_in_progress(&ctx, &req_id, &ClaimedBy("test".to_string())).await?;
                 let in_progress_poll = q.poll_once::<$request_struct>(&ctx,  &req_id).await?;
                 assert!(in_progress_poll.is_none());
 
@@ -240,32 +267,32 @@ mod tests {
         }
     }
 
-    test_enqueue_and_poll_once! {
-        test_enqueue_and_poll_once_add_target,
+    test_enqueue_dequeue_and_poll_once! {
+        test_enqueue_dequeue_and_poll_once_add_target,
         MegarepoAddSyncTarget,
         ThriftMegarepoAddTargetParams,
         MegarepoAddTargetResponse,
         "megarepo_add_sync_target",
     }
 
-    test_enqueue_and_poll_once! {
-        test_enqueue_and_poll_once_sync_changeset,
+    test_enqueue_dequeue_and_poll_once! {
+        test_enqueue_dequeue_and_poll_once_sync_changeset,
         MegarepoSyncChangeset,
         ThriftMegarepoSyncChangesetParams,
         MegarepoSyncChangesetResponse,
         "megarepo_sync_changeset",
     }
 
-    test_enqueue_and_poll_once! {
-        test_enqueue_and_poll_once_change_config,
+    test_enqueue_dequeue_and_poll_once! {
+        test_enqueue_dequeue_and_poll_once_change_config,
         MegarepoChangeTargetConfig,
         ThriftMegarepoChangeTargetConfigParams,
         MegarepoChangeTargetConfigResponse,
         "megarepo_change_target_config",
     }
 
-    test_enqueue_and_poll_once! {
-        test_enqueue_and_poll_once_remerge_source,
+    test_enqueue_dequeue_and_poll_once! {
+        test_enqueue_dequeue_and_poll_once_remerge_source,
         MegarepoRemergeSource,
         ThriftMegarepoRemergeSourceParams,
         MegarepoRemergeSourceResponse,
