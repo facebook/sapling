@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import time
 import weakref
 from typing import IO, Optional, Union
 
@@ -750,7 +751,12 @@ def migratetolazy(repo):
     """Migrate to "lazy" backend.
 
     The migration can only be done from hybrid or doublewrite, or lazytext.
+    The migration cannot be undone.
     """
+    if "lazychangelog" in repo.storerequirements:
+        # No need to migrate.
+        return
+
     if (
         not any(
             s in repo.storerequirements
@@ -771,10 +777,35 @@ def migratetolazy(repo):
 
     # Migration from doublewrite or hybrid backends is a no-op.
     with repo.lock():
+        ml = repo.metalog()
+        # Truncate metalog because older references will be invalidated.
+        ml.compact(ml.path())
+        # Reload metalog
+        repo.invalidatemetalog()
+        _migratetosparsesegments(repo)
         _removechangelogrequirements(repo)
         repo.storerequirements.add("lazychangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
+
+
+def _migratetosparsesegments(repo):
+    """Migrate segments to sparse changelog segments (ex. commit hashes are lazy)
+
+    This will also drop invisible heads.
+    """
+    heads = repo.heads()
+    srcdir = repo.svfs.join(SEGMENTS_DIR)
+    tmpreldir = "%s.%s" % (SEGMENTS_DIR, time.strftime("%Y%m%d_%H%M%S"))
+    tmpdir = repo.svfs.join(tmpreldir)
+    repo.invalidatechangelog()
+    try:
+        bindings.dag.commits.migratesparsesegments(srcdir, tmpdir, heads)
+    except Exception:
+        repo.svfs.rmtree(tmpreldir, ignore_errors=True)
+        raise
+    repo.svfs.rename(SEGMENTS_DIR, "%s.bak" % tmpreldir)
+    repo.svfs.rename(tmpreldir, SEGMENTS_DIR)
 
 
 def migratetohybird(repo):

@@ -1978,6 +1978,10 @@ class localrepository(object):
         self._headcache.clear()
         self._phasecache.invalidate()
 
+    def invalidatemetalog(self):
+        """Invalidates the metalog. Discard pending changes."""
+        self.svfs.__dict__.pop("metalog", None)
+
     def invalidateall(self):
         """Fully invalidates both store and non-store parts, causing the
         subsequent operation to reread any outside changes."""
