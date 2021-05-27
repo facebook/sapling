@@ -465,6 +465,34 @@ enum LocalStoreType {
     Cache,
 }
 
+pub struct FetchErrors {
+    /// Errors encountered for specific keys
+    fetch_errors: HashMap<Key, Vec<Error>>,
+
+    /// Errors encountered that don't apply to a single key
+    other_errors: Vec<Error>,
+}
+
+impl FetchErrors {
+    fn new() -> Self {
+        FetchErrors {
+            fetch_errors: HashMap::new(),
+            other_errors: Vec::new(),
+        }
+    }
+
+    fn keyed_error(&mut self, key: Key, err: Error) {
+        self.fetch_errors
+            .entry(key)
+            .or_insert_with(Vec::new)
+            .push(err);
+    }
+
+    fn other_error(&mut self, err: Error) {
+        self.other_errors.push(err);
+    }
+}
+
 pub struct FetchState {
     /// Requested keys for which at least some attributes haven't been found.
     pending: HashSet<Key>,
@@ -481,11 +509,8 @@ pub struct FetchState {
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
     pointer_origin: Arc<RwLock<HashMap<Sha256, LocalStoreType>>>,
 
-    /// Errors encountered for specific keys
-    fetch_errors: HashMap<Key, Vec<Error>>,
-
-    /// Errors encountered that don't apply to a single key
-    other_errors: Vec<Error>,
+    /// Errors encountered during fetching.
+    errors: FetchErrors,
 
     /// File content found in memcache, may be cached locally (currently only content may be found in memcache)
     found_in_memcache: HashSet<Key>,
@@ -516,8 +541,7 @@ impl FetchState {
             lfs_pointers: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
-            fetch_errors: HashMap::new(),
-            other_errors: vec![],
+            errors: FetchErrors::new(),
 
             found_in_memcache: HashSet::new(),
             found_in_edenapi: HashSet::new(),
@@ -603,17 +627,6 @@ impl FetchState {
         }
     }
 
-    fn found_error(&mut self, maybe_key: Option<Key>, err: Error) {
-        if let Some(key) = maybe_key {
-            self.fetch_errors
-                .entry(key)
-                .or_insert_with(Vec::new)
-                .push(err);
-        } else {
-            self.other_errors.push(err);
-        }
-    }
-
     fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: LocalStoreType) {
         let sha256 = ptr.sha256();
         // Overwrite LocalStoreType::Local with LocalStoreType::Cache, but not vice versa
@@ -643,7 +656,7 @@ impl FetchState {
                     Some(aux_data)
                 }
                 Err(err) => {
-                    self.found_error(Some(key.clone()), err);
+                    self.errors.keyed_error(key.clone(), err);
                     None
                 }
             }
@@ -693,7 +706,7 @@ impl FetchState {
             if self.extstored_policy == ExtStoredPolicy::Use {
                 match entry.try_into() {
                     Ok(ptr) => self.found_pointer(key, ptr, typ),
-                    Err(err) => self.found_error(Some(key), err),
+                    Err(err) => self.errors.keyed_error(key, err),
                 }
             }
         } else {
@@ -712,7 +725,7 @@ impl FetchState {
             match res {
                 Ok(Some(entry)) => self.found_indexedlog(key, entry, typ),
                 Ok(None) => {}
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
             }
         }
     }
@@ -757,7 +770,7 @@ impl FetchState {
             match res {
                 Ok(Some(aux)) => self.found_aux_indexedlog(key, aux)?,
                 Ok(None) => {}
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
             }
         }
 
@@ -766,7 +779,7 @@ impl FetchState {
 
     fn fetch_aux_indexedlog(&mut self, store: &IndexedLogHgIdDataStore) {
         if let Err(err) = self.fetch_aux_indexedlog_inner(store) {
-            self.found_error(None, err);
+            self.errors.other_error(err);
         }
     }
 
@@ -791,7 +804,7 @@ impl FetchState {
             match store.fetch_available(&store_key) {
                 Ok(Some(entry)) => self.found_lfs(key, entry, typ),
                 Ok(None) => {}
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
             }
         }
     }
@@ -801,7 +814,7 @@ impl FetchState {
         if entry.metadata.is_lfs() {
             match entry.try_into() {
                 Ok(ptr) => self.found_pointer(key, ptr, LocalStoreType::Cache),
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
             }
         } else {
             self.found_in_memcache.insert(key.clone());
@@ -817,7 +830,7 @@ impl FetchState {
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
-                Err(err) => self.found_error(None, err),
+                Err(err) => self.errors.other_error(err),
             }
         }
         Ok(())
@@ -825,7 +838,7 @@ impl FetchState {
 
     fn fetch_memcache(&mut self, store: &MemcacheStore) {
         if let Err(err) = self.fetch_memcache_inner(store) {
-            self.found_error(None, err);
+            self.errors.other_error(err);
         }
     }
 
@@ -834,7 +847,7 @@ impl FetchState {
         if entry.metadata().is_lfs() {
             match entry.try_into() {
                 Ok(ptr) => self.found_pointer(key, ptr, LocalStoreType::Cache),
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
             }
         } else {
             self.found_in_edenapi.insert(key.clone());
@@ -856,7 +869,7 @@ impl FetchState {
 
     fn fetch_edenapi(&mut self, store: &EdenApiFileStore) {
         if let Err(err) = self.fetch_edenapi_inner(store) {
-            self.found_error(None, err);
+            self.errors.other_error(err);
         }
     }
 
@@ -919,7 +932,7 @@ impl FetchState {
         cache: Option<Arc<LfsStore>>,
     ) {
         if let Err(err) = self.fetch_lfs_remote_inner(store, local, cache) {
-            self.found_error(None, err);
+            self.errors.other_error(err);
         }
     }
 
@@ -968,7 +981,7 @@ impl FetchState {
 
             match res {
                 Ok((Some(blob), Some(meta))) => self.found_contentstore(key, blob, meta),
-                Err(err) => self.found_error(Some(key), err),
+                Err(err) => self.errors.keyed_error(key, err),
                 _ => {}
             }
         }
@@ -978,7 +991,7 @@ impl FetchState {
 
     fn fetch_contentstore(&mut self, store: &ContentStore) {
         if let Err(err) = self.fetch_contentstore_inner(store) {
-            self.found_error(None, err);
+            self.errors.other_error(err);
         }
     }
 
@@ -1041,7 +1054,7 @@ impl FetchState {
 
     fn finish(mut self) -> FileStoreFetch {
         // Combine and collect errors
-        let mut incomplete = self.fetch_errors;
+        let mut incomplete = self.errors.fetch_errors;
         for key in self.pending.into_iter() {
             self.found.remove(&key);
             incomplete.entry(key).or_insert_with(Vec::new);
@@ -1050,7 +1063,7 @@ impl FetchState {
         FileStoreFetch {
             complete: self.found,
             incomplete,
-            other_errors: self.other_errors,
+            other_errors: self.errors.other_errors,
         }
     }
 }
