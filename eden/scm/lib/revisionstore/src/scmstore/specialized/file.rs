@@ -9,7 +9,7 @@
 #![allow(dead_code)]
 use std::collections::{hash_map, HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ops::{BitAnd, Not};
+use std::ops::{BitAnd, BitOr, Not};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -157,6 +157,8 @@ impl FileStore {
                     None
                 }
             }),
+            self.aux_cache.as_ref().map(|s| s.as_ref()),
+            self.aux_local.as_ref().map(|s| s.as_ref()),
         );
 
         state.finish()
@@ -302,6 +304,17 @@ impl BitAnd for FileAttributes {
     }
 }
 
+impl BitOr for FileAttributes {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        FileAttributes {
+            content: self.content | rhs.content,
+            aux_data: self.aux_data | rhs.aux_data,
+        }
+    }
+}
+
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)
 #[derive(Debug)]
@@ -332,6 +345,20 @@ impl LazyFile {
             EdenApi(ref entry) => Some(entry.key().hgid),
             Memcache(ref entry) => Some(entry.key.hgid),
         }
+    }
+
+    /// Compute's the aux data associated with this file from the content.
+    fn aux_data(&mut self) -> Result<FileAuxData> {
+        // TODO(meyer): Implement the rest of the aux data fields
+        Ok(if let LazyFile::Lfs(_, ref ptr) = self {
+            FileAuxData {
+                content_sha256: ptr.sha256(),
+            }
+        } else {
+            FileAuxData {
+                content_sha256: ContentHash::sha256(&self.file_content()?).unwrap_sha256(),
+            }
+        })
     }
 
     /// The file content, as would be found in the working copy (stripped of copy header)
@@ -466,8 +493,12 @@ pub struct FetchState {
     /// Attributes found in EdenApi, may be cached locally (currently only content may be found in EdenApi)
     found_in_edenapi: HashSet<Key>,
 
+    /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
+    computed_aux_data: HashMap<Key, LocalStoreType>,
+
     // Config
     extstored_policy: ExtStoredPolicy,
+    compute_aux_data: bool,
 }
 
 impl FetchState {
@@ -490,44 +521,60 @@ impl FetchState {
 
             found_in_memcache: HashSet::new(),
             found_in_edenapi: HashSet::new(),
+            computed_aux_data: HashMap::new(),
 
             extstored_policy,
+            compute_aux_data: true,
         }
     }
 
-    /// Return all incomplete requested Keys which are missing at least some of the specified attributes
-    fn pending_all(&self, attrs: FileAttributes) -> Vec<Key> {
-        if attrs.is_none() {
+    /// Returns all the requested attributes which may be fulfilled by a store which directly provides the specified attributes,
+    /// optionally computing aux data from content.
+    fn satisfies(&self, provides: FileAttributes) -> FileAttributes {
+        self.request_attrs
+            & if self.compute_aux_data && provides.content {
+                provides | FileAttributes::aux_data()
+            } else {
+                provides
+            }
+    }
+
+    /// Return all incomplete requested Keys for which additional attributes may be gathered by querying a store which provides the specified attributes.
+    fn pending_all(&self, provides: FileAttributes) -> Vec<Key> {
+        let satisfies = self.satisfies(provides);
+        if satisfies.is_none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, attrs).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
             .cloned()
             .collect()
     }
 
-    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and are missing at least some of the specified attributes
-    fn pending_nonlfs(&self, attrs: FileAttributes) -> Vec<Key> {
-        if attrs.is_none() {
+    /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
+    fn pending_nonlfs(&self, provides: FileAttributes) -> Vec<Key> {
+        let satisfies = self.satisfies(provides);
+        if satisfies.is_none() {
             return vec![];
         }
         self.pending
             .iter()
             .filter(|k| !self.lfs_pointers.contains_key(k))
-            .filter(|k| !self.missing_attrs(k, attrs).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
             .cloned()
             .collect()
     }
 
-    /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, which are missing at least some of the specified attributes
-    fn pending_storekey(&self, attrs: FileAttributes) -> Vec<StoreKey> {
-        if attrs.is_none() {
+    /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, for which additional attributes may be gathered by querying a store which provides the specified attributes
+    fn pending_storekey(&self, provides: FileAttributes) -> Vec<StoreKey> {
+        let satisfies = self.satisfies(provides);
+        if satisfies.is_none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, attrs).is_none())
+            .filter(|k| !self.missing_attrs(k, satisfies).is_none())
             .map(|k| self.storekey(k))
             .collect()
     }
@@ -535,7 +582,7 @@ impl FetchState {
     /// Returns which of the specified attributes have not been found for a specified Key
     fn missing_attrs(&self, key: &Key, attrs: FileAttributes) -> FileAttributes {
         if attrs.is_none() {
-            return attrs;
+            return FileAttributes::none();
         }
         self.found.get(key).map_or(attrs, |f| f.missing(attrs))
     }
@@ -581,21 +628,57 @@ impl FetchState {
         self.lfs_pointers.insert(key, ptr);
     }
 
-    fn found_file(&mut self, key: Key, f: LazyFile) {
+    fn found_file(&mut self, key: Key, mut f: LazyFile, typ: LocalStoreType) {
+        // TODO(meyer): Clean this up, eliminate double lookup, probably merge with found_aux_indexedlog into "found_attributes"
+
+        let aux_data = if self.compute_aux_data
+            && !self
+                .missing_attrs(&key, self.request_attrs & FileAttributes::aux_data())
+                .is_none()
+        {
+            // If aux data was requested, it's missing, and computing aux data is enabled, compute it here.
+            match f.aux_data() {
+                Ok(aux_data) => {
+                    self.computed_aux_data.insert(key.clone(), typ);
+                    Some(aux_data)
+                }
+                Err(err) => {
+                    self.found_error(Some(key.clone()), err);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         use hash_map::Entry::*;
         match self.found.entry(key.clone()) {
             Occupied(mut entry) => {
-                entry.get_mut().content = Some(f);
+                if !entry
+                    .get()
+                    .missing(self.request_attrs & FileAttributes::aux_data())
+                    .is_none()
+                {
+                    entry.get_mut().aux_data = aux_data;
+                }
+
+                if self.request_attrs.content {
+                    entry.get_mut().content = Some(f);
+                }
+
                 if entry.get().missing(self.request_attrs).is_none() {
                     self.mark_complete(&key);
                 }
             }
             Vacant(entry) => {
+                let content = if self.request_attrs.content {
+                    Some(f)
+                } else {
+                    None
+                };
+
                 if entry
-                    .insert(StoreFile {
-                        content: Some(f),
-                        aux_data: None,
-                    })
+                    .insert(StoreFile { content, aux_data })
                     .missing(self.request_attrs)
                     .is_none()
                 {
@@ -614,12 +697,12 @@ impl FetchState {
                 }
             }
         } else {
-            self.found_file(key, LazyFile::IndexedLog(entry))
+            self.found_file(key, LazyFile::IndexedLog(entry), typ)
         }
     }
 
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
-        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::content());
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -661,7 +744,7 @@ impl FetchState {
     }
 
     fn fetch_aux_indexedlog_inner(&mut self, store: &IndexedLogHgIdDataStore) -> Result<()> {
-        let pending = self.pending_all(self.request_attrs & FileAttributes::aux_data());
+        let pending = self.pending_all(FileAttributes::aux_data());
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -684,14 +767,14 @@ impl FetchState {
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: LocalStoreType) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_file(key, LazyFile::Lfs(blob, ptr))
+                self.found_file(key, LazyFile::Lfs(blob, ptr), typ)
             }
             LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, typ),
         }
     }
 
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
-        let pending = self.pending_storekey(self.request_attrs & FileAttributes::content());
+        let pending = self.pending_storekey(FileAttributes::content());
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
@@ -713,12 +796,12 @@ impl FetchState {
             }
         } else {
             self.found_in_memcache.insert(key.clone());
-            self.found_file(key, LazyFile::Memcache(entry));
+            self.found_file(key, LazyFile::Memcache(entry), LocalStoreType::Cache);
         }
     }
 
     fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
-        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::content());
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
@@ -743,13 +826,13 @@ impl FetchState {
             }
         } else {
             self.found_in_edenapi.insert(key.clone());
-            self.found_file(key, LazyFile::EdenApi(entry));
+            self.found_file(key, LazyFile::EdenApi(entry), LocalStoreType::Cache);
         }
     }
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
         // TODO(meyer): Implement aux data fetching for EdenApi Files
-        let pending = self.pending_nonlfs(self.request_attrs & FileAttributes::content());
+        let pending = self.pending_nonlfs(FileAttributes::content());
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
         }
@@ -829,12 +912,16 @@ impl FetchState {
             // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
             // ExtStoredPolicy behavior) in which case we'll do something here.
         } else {
-            self.found_file(key, LazyFile::ContentStore(bytes.into(), meta))
+            self.found_file(
+                key,
+                LazyFile::ContentStore(bytes.into(), meta),
+                LocalStoreType::Cache,
+            )
         }
     }
 
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
-        let pending = self.pending_storekey(self.request_attrs & FileAttributes::content());
+        let pending = self.pending_storekey(FileAttributes::content());
         store.prefetch(&pending)?;
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
@@ -880,8 +967,12 @@ impl FetchState {
         &mut self,
         indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
         memcache: Option<&MemcacheStore>,
+        aux_cache: Option<&IndexedLogHgIdDataStore>,
+        aux_local: Option<&IndexedLogHgIdDataStore>,
     ) {
         let mut indexedlog_cache = indexedlog_cache.map(|s| s.write_lock());
+        let mut aux_cache = aux_cache.map(|s| s.write_lock());
+        let mut aux_local = aux_local.map(|s| s.write_lock());
 
         for key in self.found_in_edenapi.drain() {
             // todo
@@ -914,8 +1005,26 @@ impl FetchState {
                 }
             }
         }
-        // do computed
+
+        for (key, origin) in self.computed_aux_data.drain() {
+            if let Ok(blob) = serde_json::to_vec(self.found[&key].aux_data.as_ref().unwrap()) {
+                let entry = Entry::new(key, blob.into(), Metadata::default());
+                match origin {
+                    LocalStoreType::Cache => {
+                        if let Some(ref mut aux_cache) = aux_cache {
+                            let _ = aux_cache.put_entry(entry);
+                        }
+                    }
+                    LocalStoreType::Local => {
+                        if let Some(ref mut aux_local) = aux_local {
+                            let _ = aux_local.put_entry(entry);
+                        }
+                    }
+                }
+            }
+        }
     }
+
     fn finish(mut self) -> FileStoreFetch {
         // Combine and collect errors
         let mut incomplete = self.fetch_errors;
