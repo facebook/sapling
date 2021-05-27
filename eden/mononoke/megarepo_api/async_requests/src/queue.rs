@@ -58,7 +58,7 @@ impl AsyncMethodRequestQueue {
         let rust_params: <P::R as Request>::Params = thrift_params.try_into()?;
         let params_object_id: <P::R as Request>::ParamsId =
             rust_params.store(&ctx, &self.blobstore).await?;
-        let blobstoke_key = BlobstoreKey(params_object_id.blobstore_key());
+        let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
             .table
             .add_request(
@@ -66,7 +66,7 @@ impl AsyncMethodRequestQueue {
                 &request_type,
                 &RepositoryId::new(i32::try_from(target.repo_id)?),
                 &BookmarkName::new(&target.bookmark)?,
-                &blobstoke_key,
+                &blobstore_key,
             )
             .await?;
         let token = <P::R as Request>::Token::from_db_id_and_target(table_id, target);
