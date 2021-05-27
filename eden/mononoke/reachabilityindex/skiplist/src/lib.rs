@@ -135,33 +135,17 @@ pub async fn fetch_skiplist_index(
     blobstore: &Arc<dyn Blobstore>,
 ) -> Result<Arc<SkiplistIndex>, Error> {
     match maybe_skiplist_blobstore_key {
-        Some(skiplist_index_blobstore_key) => {
-            info!(ctx.logger(), "Fetching and initializing skiplist");
-            let skiplist_index = task::spawn({
-                cloned!(ctx, blobstore, skiplist_index_blobstore_key);
-                async move {
-                    let maybebytes = blobstore.get(&ctx, &skiplist_index_blobstore_key).await?;
-                    match maybebytes {
-                        Some(bytes) => {
-                            let bytes = bytes.into_raw_bytes();
-                            let logger = ctx.logger().clone();
-                            let skiplist = task::spawn_blocking(move || {
-                                deserialize_skiplist_index(logger, bytes)
-                            })
-                            .await??;
-                            info!(ctx.logger(), "Built skiplist");
-                            Ok(skiplist)
-                        }
-                        None => {
-                            info!(ctx.logger(), "Skiplist is empty!");
-                            Result::<_, Error>::Ok(SkiplistIndex::new())
-                        }
-                    }
+        Some(blobstore_key) => {
+            cloned!(ctx, blobstore_key, blobstore);
+            Ok(Arc::new(
+                SkiplistLoader {
+                    ctx,
+                    blobstore_key,
+                    blobstore,
                 }
-            });
-
-            let skiplist_index = skiplist_index.await??;
-            Ok(Arc::new(skiplist_index))
+                .load()
+                .await?,
+            ))
         }
         None => Ok(Arc::new(SkiplistIndex::new())),
     }
@@ -460,6 +444,42 @@ async fn lazy_index_node(
         }
     }
     Ok(())
+}
+
+struct SkiplistLoader {
+    ctx: CoreContext,
+    blobstore_key: String,
+    blobstore: Arc<dyn Blobstore>,
+}
+
+impl SkiplistLoader {
+    async fn load(&self) -> Result<SkiplistIndex> {
+        info!(self.ctx.logger(), "Fetching and initializing skiplist");
+        let skiplist_index = task::spawn({
+            cloned!(self.ctx, self.blobstore, self.blobstore_key);
+            async move {
+                let maybebytes = blobstore.get(&ctx, &blobstore_key).await?;
+                match maybebytes {
+                    Some(bytes) => {
+                        let bytes = bytes.into_raw_bytes();
+                        let logger = ctx.logger().clone();
+                        let skiplist =
+                            task::spawn_blocking(move || deserialize_skiplist_index(logger, bytes))
+                                .await??;
+                        info!(ctx.logger(), "Built skiplist");
+                        Ok(skiplist)
+                    }
+                    None => {
+                        info!(ctx.logger(), "Skiplist is empty!");
+                        Result::<_, Error>::Ok(SkiplistIndex::new())
+                    }
+                }
+            }
+        });
+
+        let skiplist_index = skiplist_index.await??;
+        Ok(skiplist_index)
+    }
 }
 
 impl SkiplistIndex {
