@@ -131,27 +131,17 @@ impl SkiplistNodeType {
 
 pub async fn fetch_skiplist_index(
     ctx: &CoreContext,
-    maybe_skiplist_blobstore_key: &Option<String>,
+    maybe_blobstore_key: &Option<String>,
     blobstore: &Arc<dyn Blobstore>,
 ) -> Result<Arc<SkiplistIndex>, Error> {
-    match maybe_skiplist_blobstore_key {
-        Some(blobstore_key) => {
-            cloned!(ctx, blobstore_key, blobstore);
-            Ok(Arc::new(
-                SkiplistLoader {
-                    ctx,
-                    blobstore_key,
-                    blobstore,
-                }
-                .load()
-                .await?,
-            ))
-        }
-        None => Ok(Arc::new(SkiplistIndex::new())),
-    }
+    SkiplistIndex::from_blobstore(ctx, maybe_blobstore_key, blobstore).await
 }
 
 pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<SkiplistIndex> {
+    deserialize_skiplist_mapping(logger, bytes).map(SkiplistIndex::from_edges)
+}
+
+fn deserialize_skiplist_mapping(logger: Logger, bytes: Bytes) -> Result<SkiplistEdgeMapping> {
     let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
     let cmap: CHashMap<ChangesetId, SkiplistNodeType> = CHashMap::with_capacity(map.len());
     let mut pnodecount = 0;
@@ -193,9 +183,10 @@ pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<Skipli
         maxsedgelen,
         maxpedgelen
     );
-    Ok(SkiplistIndex::new_with_skiplist_graph(cmap))
+    Ok(SkiplistEdgeMapping::from_map(cmap))
 }
 
+#[derive(Debug, Clone)]
 struct SkiplistEdgeMapping {
     pub mapping: CHashMap<ChangesetId, SkiplistNodeType>,
     pub skip_edges_per_node: u32,
@@ -334,7 +325,7 @@ async fn compute_skip_edges(
     Ok(skip_edges)
 }
 /// Structure for indexing skip list edges for reachability queries.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SkiplistIndex {
     // Each hash that the structure knows about is mapped to a  collection
     // of (Gen, Hash) pairs, wrapped in an enum. The semantics behind this are:
@@ -453,9 +444,9 @@ struct SkiplistLoader {
 }
 
 impl SkiplistLoader {
-    async fn load(&self) -> Result<SkiplistIndex> {
-        info!(self.ctx.logger(), "Fetching and initializing skiplist");
-        let skiplist_index = task::spawn({
+    async fn load(&self) -> Result<SkiplistEdgeMapping> {
+        info!(self.ctx.logger(), "Fetching skiplist");
+        let mapping_fut = task::spawn({
             cloned!(self.ctx, self.blobstore, self.blobstore_key);
             async move {
                 let maybebytes = blobstore.get(&ctx, &blobstore_key).await?;
@@ -463,46 +454,66 @@ impl SkiplistLoader {
                     Some(bytes) => {
                         let bytes = bytes.into_raw_bytes();
                         let logger = ctx.logger().clone();
-                        let skiplist =
-                            task::spawn_blocking(move || deserialize_skiplist_index(logger, bytes))
-                                .await??;
+                        let mapping = task::spawn_blocking(move || {
+                            deserialize_skiplist_mapping(logger, bytes)
+                        })
+                        .await??;
                         info!(ctx.logger(), "Built skiplist");
-                        Ok(skiplist)
+                        Ok(mapping)
                     }
                     None => {
                         info!(ctx.logger(), "Skiplist is empty!");
-                        Result::<_, Error>::Ok(SkiplistIndex::new())
+                        Ok(SkiplistEdgeMapping::new())
                     }
                 }
             }
         });
 
-        let skiplist_index = skiplist_index.await??;
-        Ok(skiplist_index)
+        mapping_fut.await?
     }
 }
 
 impl SkiplistIndex {
     pub fn new() -> Self {
-        SkiplistIndex {
-            skip_list_edges: Arc::new(SkiplistEdgeMapping::new()),
+        Self::from_edges(SkiplistEdgeMapping::new())
+    }
+
+    fn from_edges(mapping: SkiplistEdgeMapping) -> Self {
+        Self {
+            skip_list_edges: Arc::new(mapping),
+        }
+    }
+
+    pub async fn from_blobstore(
+        ctx: &CoreContext,
+        maybe_blobstore_key: &Option<String>,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<Arc<Self>> {
+        match maybe_blobstore_key {
+            Some(blobstore_key) => {
+                cloned!(ctx, blobstore_key, blobstore);
+                let loader = SkiplistLoader {
+                    ctx,
+                    blobstore_key,
+                    blobstore,
+                };
+                let skip_list_edges = Arc::new(loader.load().await?);
+                Ok(Arc::new(Self { skip_list_edges }))
+            }
+            None => Ok(Arc::new(SkiplistIndex::new())),
         }
     }
 
     pub fn new_with_skiplist_graph(
         skiplist_graph: CHashMap<ChangesetId, SkiplistNodeType>,
     ) -> Self {
-        SkiplistIndex {
-            skip_list_edges: Arc::new(SkiplistEdgeMapping::from_map(skiplist_graph)),
-        }
+        SkiplistIndex::from_edges(SkiplistEdgeMapping::from_map(skiplist_graph))
     }
 
     pub fn with_skip_edge_count(skip_edges_per_node: u32) -> Self {
-        SkiplistIndex {
-            skip_list_edges: Arc::new(
-                SkiplistEdgeMapping::new().with_skip_edge_count(skip_edges_per_node),
-            ),
-        }
+        SkiplistIndex::from_edges(
+            SkiplistEdgeMapping::new().with_skip_edge_count(skip_edges_per_node),
+        )
     }
 
     pub fn skip_edge_count(&self) -> u32 {
