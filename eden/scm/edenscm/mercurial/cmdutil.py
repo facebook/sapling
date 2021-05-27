@@ -3334,7 +3334,8 @@ def eden_files(ui, ctx, m, fm, fmt):
 
 def remove(ui, repo, m, prefix, after, force, warnings=None):
     ret = 0
-    s = repo.status(match=m, clean=True)
+    clean = force or not after
+    s = repo.status(match=m, clean=clean)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
     wctx = repo[None]
@@ -3369,15 +3370,13 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
         list = modified + deleted + clean + added
     elif after:
         list = deleted
-        remaining = modified + added + clean
-        total = len(remaining)
-        with progress.bar(ui, _("skipping"), _("files"), total) as prog:
-            for f in remaining:
-                prog.value += 1
-                if ui.verbose or (f in files):
-                    warnings.append(
-                        _("not removing %s: file still exists\n") % m.rel(f)
-                    )
+        # For performance, "remaining" only lists "exact" matches.
+        # In theory it should also list "clean" files but that's too expensive
+        # for a large repo.
+        remaining = set(files) - set(deleted) - set(s.removed)
+        for f in sorted(remaining):
+            if repo.wvfs.exists(f) and not repo.wvfs.isdir(f):
+                warnings.append(_("not removing %s: file still exists\n") % m.rel(f))
                 ret = 1
     else:
         list = deleted + clean

@@ -163,8 +163,6 @@ the table cases
   $ remove -A bar
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
-  progress: skipping: 1/1 files (100.00%)
-  progress: skipping (end)
   not removing bar: file still exists
   exit code: 1
   A bar
@@ -181,8 +179,6 @@ the table cases
   $ remove -Av foo
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
-  progress: skipping: 1/1 files (100.00%)
-  progress: skipping (end)
   not removing foo: file still exists
   exit code: 1
   ? bar
@@ -196,8 +192,6 @@ the table cases
   $ remove -Av foo
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
-  progress: skipping: 1/1 files (100.00%)
-  progress: skipping (end)
   not removing foo: file still exists
   exit code: 1
   M foo
@@ -342,13 +336,10 @@ dir, options -Av
   $ remove -Av test
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
-  progress: skipping: 1/1 files (100.00%)
-  progress: skipping (end)
   progress: deleting: 1/1 files (100.00%)
   removing test/bar
   progress: deleting (end)
-  not removing test/foo: file still exists
-  exit code: 1
+  exit code: 0
   R test/bar
   ./foo
   ./test/foo
@@ -363,12 +354,10 @@ dir, options -A <dir>
   $ remove -A test
   progress: deleting: 1/1 files (100.00%)
   progress: deleting (end)
-  progress: skipping: 1/1 files (100.00%)
-  progress: skipping (end)
   progress: deleting: 1/1 files (100.00%)
   removing test/bar
   progress: deleting (end)
-  exit code: 1
+  exit code: 0
   R test/bar
   ./foo
   ./test/foo
@@ -381,13 +370,10 @@ dir, options -A <dir>
 without any files/dirs, options -A
   $ rm test/bar
   $ remove -A
-  progress: skipping: 1/2 files (50.00%)
-  progress: skipping: 2/2 files (100.00%)
-  progress: skipping (end)
   progress: deleting: 1/1 files (100.00%)
   removing test/bar
   progress: deleting (end)
-  exit code: 1
+  exit code: 0
   R test/bar
   ./foo
   ./test/foo
