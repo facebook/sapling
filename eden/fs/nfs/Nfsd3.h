@@ -55,6 +55,10 @@ class Nfsd3 {
       CaseSensitivity caseSensitive,
       uint32_t iosize);
 
+  /**
+   * This is triggered when the kernel closes the socket. The socket is closed
+   * when the privhelper or a user runs umount.
+   */
   ~Nfsd3();
 
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
@@ -108,9 +112,9 @@ class Nfsd3 {
   Nfsd3& operator=(Nfsd3&&) = delete;
 
  private:
+  folly::Promise<StopData> stopPromise_;
   RpcServer server_;
   ProcessAccessLog processAccessLog_;
-  folly::Promise<StopData> stopPromise_;
   folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
 };
 

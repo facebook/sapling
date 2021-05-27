@@ -181,6 +181,10 @@ if sys.platform.startswith("linux"):
         "stats_test.CountersTest": True,  # T89440036
         "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
+        "mount_test.MountTest": [  # T91790656
+            "test_unmount_succeeds_while_file_handle_is_open",
+            "test_unmount_succeeds_while_dir_handle_is_open",
+        ],
     }
 
     for (testModule, disabled) in NFS_TEST_DISABLED.items():

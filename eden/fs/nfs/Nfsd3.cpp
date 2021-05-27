@@ -33,11 +33,13 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       CaseSensitivity caseSensitive,
-      uint32_t iosize)
+      uint32_t iosize,
+      folly::Promise<Nfsd3::StopData>& stopPromise)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         caseSensitive_(caseSensitive),
-        iosize_(iosize) {}
+        iosize_(iosize),
+        stopPromise_{stopPromise} {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -51,6 +53,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber) override;
+
+  void onSocketClosed() override;
 
   ImmediateFuture<folly::Unit>
   null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
@@ -104,6 +108,11 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   const folly::Logger* straceLogger_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
+  // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
+  // this server processor. This promise should only be used during the
+  // lifetime of  nfs3d. The way we currently enforce this is by waiting for
+  // this promise to be set before destroying of the nfs3d.
+  folly::Promise<Nfsd3::StopData>& stopPromise_;
 };
 
 /**
@@ -1735,6 +1744,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       handlerEntry.formatArgs(deser));
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
+
+void Nfsd3ServerProcessor::onSocketClosed() {
+  // Note this triggers the Nfsd3 destruction which will also destroy
+  // Nfsd3ServerProcessor. Don't do anything will the Nfsd3ServerProcessor
+  // member variables after this!
+  stopPromise_.setValue(Nfsd3::StopData{});
+}
 } // namespace
 
 Nfsd3::Nfsd3(
@@ -1752,7 +1768,8 @@ Nfsd3::Nfsd3(
               std::move(dispatcher),
               straceLogger,
               caseSensitive,
-              iosize),
+              iosize,
+              stopPromise_),
           evb,
           std::move(threadPool)),
       processAccessLog_(std::move(processNameCache)),
@@ -1796,9 +1813,9 @@ folly::Future<folly::Unit> Nfsd3::flushInvalidations() {
 }
 
 Nfsd3::~Nfsd3() {
-  // TODO(xavierd): wait for the pending requests, and the sockets being tore
-  // down
-  stopPromise_.setValue(Nfsd3::StopData{});
+  // TODO(xavierd): wait for the pending requests,
+  // Note the socket will already have been torn down, as this is only destroyed
+  // when the socket was closed.
 }
 
 folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {

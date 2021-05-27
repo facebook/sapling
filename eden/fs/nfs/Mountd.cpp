@@ -137,6 +137,8 @@ ImmediateFuture<folly::Unit> MountdServerProcessor::umount(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
     uint32_t xid) {
+  // TODO: This needs to be implemented to support umount without the
+  // lazy flag.
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
 }

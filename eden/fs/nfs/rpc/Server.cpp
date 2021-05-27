@@ -137,7 +137,15 @@ class RpcTcpHandler : public folly::DelayedDestruction {
    * Delete the reader, called when the socket is closed.
    */
   void resetReader() {
+    // The lifetimes here are tricky. The reader holds the last reference to the
+    // RpcTcpHandler, so when we reset the reader, this class will be destroyed.
+    // Thus, we make a local shared_ptr to use after the reset call. We could
+    // move the onSocketClosed call earlier, but it triggers a lot of
+    // destruction, so first we finish cleaning up our socket reading and then
+    // trigger the socket closed callback.
+    auto proc = proc_;
     reader_.reset();
+    proc->onSocketClosed();
   }
 
   /**
@@ -389,6 +397,8 @@ ImmediateFuture<folly::Unit> RpcServerProcessor::dispatchRpc(
     uint32_t /*procNumber*/) {
   return folly::unit;
 }
+
+void RpcServerProcessor::onSocketClosed() {}
 
 RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,

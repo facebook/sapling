@@ -646,15 +646,8 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .ensure([this] { channel_.reset(); });
 #else
           if (getNfsdChannel() != nullptr) {
-            serverState_->getNfsServer()->unregisterMount(getPath());
-            return serverState_->getPrivHelper()
-                ->nfsUnmount(getPath().stringPiece())
-                // Make sure that the Nfsd3 is destroyed in the EventBase that
-                // it was created on. This is necessary as the various async
-                // sockets cannot be used in multiple threads and can only be
-                // manipulated in the EventBase they are attached to.
-                .via(serverState_->getNfsServer()->getEventBase())
-                .thenValue([this](auto&&) { channel_ = std::monostate{}; });
+            return serverState_->getPrivHelper()->nfsUnmount(
+                getPath().stringPiece());
           } else {
             return serverState_->getPrivHelper()->fuseUnmount(
                 getPath().stringPiece());
@@ -1503,13 +1496,8 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
   return *mountingUnmountingState->channelMountPromise;
 }
 
-void EdenMount::channelInitSuccessful(
+void EdenMount::preparePostChannelCompletion(
     EdenMount::StopFuture&& channelCompleteFuture) {
-  // Try to transition to the RUNNING state.
-  // This state transition could fail if shutdown() was called before we saw
-  // the FUSE_INIT message from the kernel.
-  transitionState(State::STARTING, State::RUNNING);
-
   std::move(channelCompleteFuture)
       .via(serverState_->getThreadPool().get())
       .thenValue(
@@ -1548,7 +1536,7 @@ void EdenMount::channelInitSuccessful(
                         ));
                   } else {
                     static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
-
+                    serverState_->getNfsServer()->unregisterMount(getPath());
                     inodeMap_->setUnmounted();
                     std::vector<AbsolutePath> bindMounts;
                     channelCompletionPromise_.setValue(TakeoverData::MountInfo(
@@ -1570,6 +1558,33 @@ void EdenMount::channelInitSuccessful(
         XLOG(ERR) << "session complete with err: " << ew.what();
         channelCompletionPromise_.setException(std::move(ew));
       });
+}
+
+void EdenMount::channelInitSuccessful(
+    EdenMount::StopFuture&& channelCompleteFuture) {
+  // Try to transition to the RUNNING state.
+  // This state transition could fail if shutdown() was called before we saw
+  // the FUSE_INIT message from the kernel.
+  transitionState(State::STARTING, State::RUNNING);
+#ifndef _WIN32
+  if (auto channel = std::get_if<NfsdChannelVariant>(&channel_)) {
+    // Make sure that the Nfsd3 is destroyed in the EventBase that it was
+    // created on. This is necessary as the various async sockets cannot be
+    // used in multiple threads and can only be manipulated in the EventBase
+    // they are attached to.
+    preparePostChannelCompletion(
+        std::move(channelCompleteFuture)
+            .via(serverState_->getNfsServer()->getEventBase())
+            .thenValue([this](EdenMount::ChannelStopData&& stopData) {
+              channel_ = std::monostate{};
+              return std::move(stopData);
+            }));
+  } else {
+    preparePostChannelCompletion(std::move(channelCompleteFuture));
+  }
+#else
+  preparePostChannelCompletion(std::move(channelCompleteFuture));
+#endif
 }
 
 #ifndef _WIN32

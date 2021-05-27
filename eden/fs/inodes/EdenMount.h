@@ -776,6 +776,9 @@ class EdenMount {
    */
   void channelInitSuccessful(EdenMount::StopFuture&& channelCompleteFuture);
 
+  void preparePostChannelCompletion(
+      EdenMount::StopFuture&& channelCompleteFuture);
+
   /**
    * Private destructor.
    *
