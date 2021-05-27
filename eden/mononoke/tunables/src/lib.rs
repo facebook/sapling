@@ -89,7 +89,11 @@ pub struct MononokeTunables {
     pushrebase_disable_rebased_commit_validation: AtomicBool,
     filenodes_disabled: AtomicBool,
     filenodes_master_fallback_ratio: AtomicI64,
+    // Skiplist config
     skiplist_max_skips_without_yield: AtomicI64,
+    skiplist_reload_disabled: AtomicBool,
+    skiplist_reload_interval: AtomicI64,
+
     deduplicated_put_sampling_rate: AtomicI64,
     disable_repo_client_warm_bookmarks_cache: AtomicBool,
     remotefilelog_file_history_limit: AtomicI64,

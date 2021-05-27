@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use arc_swap::ArcSwap;
+use futures_ext::future::{spawn_controlled, ControlledHandle};
 use std::cmp::min;
 #[deny(warnings)]
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
+use std::num::NonZeroI64;
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
@@ -21,7 +25,7 @@ use futures::future::try_join_all;
 use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
-use slog::{info, Logger};
+use slog::{info, warn, Logger};
 use tokio::task;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -335,7 +339,9 @@ pub struct SkiplistIndex {
     // - If the enum type is ParentEdges, then we couldn't safely add skip edges
     //   from this node (which is always the case for a merge node), so we must
     //   recurse on all the children.
-    skip_list_edges: Arc<SkiplistEdgeMapping>,
+    skip_list_edges: Arc<ArcSwap<SkiplistEdgeMapping>>,
+    /// Handle of the background task reloading the index, if it exists
+    _maybe_handle: Option<ControlledHandle>,
 }
 
 // Find nodes to index during lazy indexing
@@ -480,7 +486,8 @@ impl SkiplistIndex {
 
     fn from_edges(mapping: SkiplistEdgeMapping) -> Self {
         Self {
-            skip_list_edges: Arc::new(mapping),
+            skip_list_edges: Arc::new(ArcSwap::from_pointee(mapping)),
+            _maybe_handle: None,
         }
     }
 
@@ -493,12 +500,43 @@ impl SkiplistIndex {
             Some(blobstore_key) => {
                 cloned!(ctx, blobstore_key, blobstore);
                 let loader = SkiplistLoader {
-                    ctx,
+                    ctx: ctx.clone(),
                     blobstore_key,
                     blobstore,
                 };
-                let skip_list_edges = Arc::new(loader.load().await?);
-                Ok(Arc::new(Self { skip_list_edges }))
+                let skip_list_edges = Arc::new(ArcSwap::from_pointee(loader.load().await?));
+                let maybe_handle = Some(spawn_controlled({
+                    cloned!(skip_list_edges);
+                    let tunables = tunables::tunables();
+                    async move {
+                        loop {
+                            let interval = std::time::Duration::from_secs(
+                                NonZeroI64::new(tunables.get_skiplist_reload_interval())
+                                    .and_then(|n| u64::try_from(n.get()).ok())
+                                    .unwrap_or(60 * 15),
+                            );
+                            if !tunables.get_skiplist_reload_disabled() {
+                                info!(
+                                    ctx.logger(),
+                                    "Waiting {:?} before reloading skip list", interval
+                                );
+                            }
+                            tokio::time::sleep(interval).await;
+                            if !tunables.get_skiplist_reload_disabled() {
+                                match loader.load().await {
+                                    Ok(new_edges) => skip_list_edges.store(Arc::new(new_edges)),
+                                    Err(err) => {
+                                        warn!(ctx.logger(), "Failed to reload skiplists: {:?}", err)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }));
+                Ok(Arc::new(Self {
+                    skip_list_edges,
+                    _maybe_handle: maybe_handle,
+                }))
             }
             None => Ok(Arc::new(SkiplistIndex::new())),
         }
@@ -517,7 +555,7 @@ impl SkiplistIndex {
     }
 
     pub fn skip_edge_count(&self) -> u32 {
-        self.skip_list_edges.skip_edges_per_node
+        self.edges().skip_edges_per_node
     }
 
     pub async fn add_node(
@@ -530,7 +568,7 @@ impl SkiplistIndex {
         lazy_index_node(
             ctx,
             changeset_fetcher,
-            &self.skip_list_edges,
+            &self.skip_list_edges.load(),
             node,
             max_index_depth,
         )
@@ -541,7 +579,7 @@ impl SkiplistIndex {
     /// returns Some(edges) if this node was indexed with skip edges
     /// returns None if this node was unindexed, or was indexed with parent edges only.
     pub fn get_skip_edges(&self, node: ChangesetId) -> Option<Vec<(ChangesetId, Generation)>> {
-        if let Some(read_guard) = self.skip_list_edges.mapping.get(&node) {
+        if let Some(read_guard) = self.edges().mapping.get(&node) {
             if let SkiplistNodeType::SkipEdges(edges) = &*read_guard {
                 Some(edges.clone())
             } else {
@@ -555,7 +593,7 @@ impl SkiplistIndex {
     /// Returns the changesets that are the furthest distance from the
     /// originating changeset.
     pub fn get_furthest_edges(&self, node: ChangesetId) -> Option<Vec<(ChangesetId, Generation)>> {
-        if let Some(read_guard) = self.skip_list_edges.mapping.get(&node) {
+        if let Some(read_guard) = self.edges().mapping.get(&node) {
             match &*read_guard {
                 SkiplistNodeType::SingleEdge(edge) => Some(vec![edge.clone()]),
                 SkiplistNodeType::SkipEdges(edges) => {
@@ -571,8 +609,9 @@ impl SkiplistIndex {
     /// Returns true if there are any skip edges originating from changesets
     /// in a node frontier.
     pub fn has_any_skip_edges(&self, node_frontier: &NodeFrontier) -> bool {
+        let skip_list_edges = self.edges();
         node_frontier.iter().any(|(changeset, _)| {
-            if let Some(read_guard) = self.skip_list_edges.mapping.get(changeset) {
+            if let Some(read_guard) = skip_list_edges.mapping.get(changeset) {
                 if let SkiplistNodeType::SkipEdges(_) = &*read_guard {
                     true
                 } else {
@@ -584,27 +623,32 @@ impl SkiplistIndex {
         })
     }
 
+    fn edges(&self) -> arc_swap::Guard<Arc<SkiplistEdgeMapping>> {
+        self.skip_list_edges.load()
+    }
+
     pub fn get_all_skip_edges(&self) -> HashMap<ChangesetId, SkiplistNodeType> {
-        self.skip_list_edges.mapping.clone().into_iter().collect()
+        self.edges().mapping.clone().into_iter().collect()
     }
 
     pub fn is_node_indexed(&self, node: ChangesetId) -> bool {
-        self.skip_list_edges.mapping.contains_key(&node)
+        self.edges().mapping.contains_key(&node)
     }
 
     pub fn indexed_node_count(&self) -> usize {
-        self.skip_list_edges.mapping.len()
+        self.edges().mapping.len()
     }
 
     // Remove all but latest skip entry (i.e. entry with the longest jump) to save space.
     pub fn trim_to_single_entry_per_changeset(&self) {
-        for (cs_id, old_node) in self.skip_list_edges.mapping.clone().into_iter() {
+        let skip_list_edges = self.edges();
+        for (cs_id, old_node) in skip_list_edges.mapping.clone().into_iter() {
             let new_node = if let SkiplistNodeType::SkipEdges(skip_edges) = old_node {
                 SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
             } else {
                 old_node
             };
-            let _old_node = self.skip_list_edges.mapping.insert(cs_id, new_node);
+            let _old_node = skip_list_edges.mapping.insert(cs_id, new_node);
         }
     }
 }
@@ -631,7 +675,7 @@ impl ReachabilityIndex for SkiplistIndex {
         let frontier = process_frontier(
             &ctx,
             &changeset_fetcher,
-            &self.skip_list_edges,
+            &self.skip_list_edges.load(),
             NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
             anc_gen,
             &None,
@@ -889,7 +933,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
         process_frontier(
             ctx,
             changeset_fetcher,
-            &self.skip_list_edges,
+            &self.skip_list_edges.load(),
             node_frontier,
             gen,
             &None,
@@ -943,7 +987,7 @@ impl SkiplistIndex {
     ) -> Result<Vec<ChangesetId>, Error> {
         // When using skiplists we'll be only using the maximum skip size as in
         // practice that's the only skip that's present.
-        let skip_step_size: u64 = 1 << (self.skip_list_edges.skip_edges_per_node - 1);
+        let skip_step_size: u64 = 1 << (self.edges().skip_edges_per_node - 1);
 
         // STAGE 1: look for any common ancestor (not neccesarily lowest) while using
         // skiplists as much as possible.
@@ -1071,7 +1115,7 @@ impl SkiplistIndex {
         let node_frontier = process_frontier(
             &ctx,
             changeset_fetcher,
-            &self.skip_list_edges,
+            &self.skip_list_edges.load(),
             node_frontier,
             ancestor_gen,
             &Some(&mut trace),
@@ -1122,7 +1166,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
     use futures::stream::{iter, StreamExt, TryStreamExt};
-    use futures_ext::{BoxFuture, FutureExt as FBFutureExt};
+    use futures_ext_compat::{BoxFuture, FutureExt as FBFutureExt};
     use futures_old::future::{join_all, Future};
     use futures_old::stream::Stream;
     use futures_util::future::{FutureExt, TryFutureExt};
@@ -2196,7 +2240,7 @@ mod test {
                 let f = advance_node_forward(
                     ctx.clone(),
                     repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
+                    sli.skip_list_edges.load_full(),
                     (node, Generation::new(gen as u64 + 1)),
                     Generation::new(gen_earlier as u64 + 1),
                 );
@@ -2222,7 +2266,7 @@ mod test {
                 let f = advance_node_forward(
                     ctx.clone(),
                     repo.get_changeset_fetcher(),
-                    sli.skip_list_edges.clone(),
+                    sli.skip_list_edges.load_full(),
                     (node, Generation::new(gen as u64 + 1)),
                     Generation::new(gen_later as u64 + 1),
                 );
@@ -2343,7 +2387,7 @@ mod test {
             let f = advance_node_forward(
                 ctx.clone(),
                 repo.get_changeset_fetcher(),
-                sli.skip_list_edges.clone(),
+                sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
             );
@@ -2375,7 +2419,7 @@ mod test {
             let f = advance_node_forward(
                 ctx.clone(),
                 repo.get_changeset_fetcher(),
-                sli.skip_list_edges.clone(),
+                sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
             );
@@ -2392,7 +2436,7 @@ mod test {
         let f = advance_node_forward(
             ctx,
             repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
+            sli.skip_list_edges.load_full(),
             (merge_node, Generation::new(10)),
             Generation::new(1),
         );
@@ -2512,7 +2556,7 @@ mod test {
         let f = advance_node_forward(
             ctx.clone(),
             repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
+            sli.skip_list_edges.load_full(),
             (merge_node, Generation::new(10)),
             Generation::new(1),
         );
@@ -2538,7 +2582,7 @@ mod test {
             let f = advance_node_forward(
                 ctx.clone(),
                 repo.get_changeset_fetcher(),
-                sli.skip_list_edges.clone(),
+                sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
             );
@@ -2570,7 +2614,7 @@ mod test {
             let f = advance_node_forward(
                 ctx.clone(),
                 repo.get_changeset_fetcher(),
-                sli.skip_list_edges.clone(),
+                sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
             );
@@ -2637,7 +2681,7 @@ mod test {
                     advance_node_forward(
                         ctx.clone(),
                         repo.get_changeset_fetcher(),
-                        sli.skip_list_edges.clone(),
+                        sli.skip_list_edges.load_full(),
                         (branch_tip, Generation::new(3)),
                         Generation::new(1),
                     )
@@ -2714,7 +2758,7 @@ mod test {
         let f = process_frontier(
             &ctx,
             &repo.get_changeset_fetcher(),
-            &sli.skip_list_edges,
+            &sli.skip_list_edges.load(),
             NodeFrontier::new(starting_frontier_map.clone()),
             Generation::new(2),
             &None,
@@ -2729,7 +2773,7 @@ mod test {
         let f = process_frontier(
             &ctx,
             &repo.get_changeset_fetcher(),
-            &sli.skip_list_edges,
+            &sli.skip_list_edges.load(),
             NodeFrontier::new(starting_frontier_map),
             Generation::new(1),
             &Some(&mut trace),

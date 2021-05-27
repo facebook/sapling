@@ -7,6 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
+arc-swap = "1.1"
 async-trait = "0.1.45"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.0", features = ["serde"] }
@@ -18,6 +19,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = ".." }
@@ -33,7 +35,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext_compat = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 revset = { version = "0.1.0", path = "../../revset" }
 test-helpers = { version = "0.1.0", path = "../test-helpers" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
