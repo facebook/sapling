@@ -28,6 +28,12 @@ use megarepo_types_thrift::{
     MegarepoRemergeSourceResultId as ThriftMegarepoRemergeSourceResultId,
     MegarepoSyncChangesetResultId as ThriftMegarepoSyncChangesetResultId,
 };
+use megarepo_types_thrift::{
+    MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,
+    MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId,
+    MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult,
+    MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId,
+};
 use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context};
 use requests_table::RowId;
 use source_control::{
@@ -75,9 +81,16 @@ pub trait Request: Sized + Send + Sync {
     /// Underlying thrift type for request params
     type ThriftParams: ThriftParams<R = Self>;
 
+    /// Underlying thrift type for successful request response
+    type ThriftResponse;
+
+    /// Underlying thrift type for for request result (response or error)
+    type ThriftResult: ThriftResult<R = Self>;
+
     /// Rust type for request result (response or error),
     /// stored in a blobstore
     type StoredResult: Storable<Key = Self::StoredResultId>;
+
     /// A type representing potentially present response
     type PollResponse;
 
@@ -89,6 +102,10 @@ pub trait Request: Sized + Send + Sync {
     /// non-empty poll-response, or an error
     fn stored_result_into_poll_response(
         sr: Self::StoredResult,
+    ) -> Result<Self::PollResponse, MegarepoError>;
+
+    fn thrift_result_into_poll_response(
+        tr: Self::ThriftResult,
     ) -> Result<Self::PollResponse, MegarepoError>;
 
     /// Return an empty poll response. This indicates
@@ -107,13 +124,20 @@ pub trait BlobstoreKeyWrapper: FromStr<Err = Error> {
 }
 
 /// Thrift type representing async service method parameters
-pub trait ThriftParams: Sized + Send + Sync {
+pub trait ThriftParams: Sized + Send + Sync + Into<MegarepoAsynchronousRequestParams> {
     type R: Request<ThriftParams = Self>;
 
     /// Every *Params argument referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
     fn target(&self) -> &Target;
+}
+pub trait ThriftResult:
+    Sized + Send + Sync + TryFrom<MegarepoAsynchronousRequestResult, Error = MegarepoError>
+{
+    type R: Request<ThriftResult = Self>;
+
+    fn into_result(self) -> Result<<Self::R as Request>::ThriftResponse, MegarepoError>;
 }
 
 /// Polling token for an async service method
@@ -262,12 +286,14 @@ macro_rules! impl_async_svc_method_types {
         params_value_type => $params_value_type: ident,
         params_value_thrift_type => $params_value_thrift_type: ident,
         params_context_type => $params_context_type: ident,
+        params_union_variant => $params_union_variant: ident,
 
         result_handle_type => $result_handle_type: ident,
         result_handle_thrift_type => $result_handle_thrift_type: ident,
         result_value_type => $result_value_type: ident,
         result_value_thrift_type => $result_value_thrift_type: ident,
         result_context_type => $result_context_type: ident,
+        result_union_variant => $result_union_variant: ident,
 
         response_type => $response_type: ident,
         poll_response_type => $poll_response_type: ident,
@@ -347,9 +373,30 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
-        impl From<$result_value_type> for Result<$response_type, MegarepoError> {
-            fn from(r: $result_value_type) -> Result<$response_type, MegarepoError> {
-                match r.thrift {
+        impl From<Result<$response_type, MegarepoError>> for MegarepoAsynchronousRequestResult {
+            fn from(r: Result<$response_type, MegarepoError>) -> MegarepoAsynchronousRequestResult {
+                let thrift = match r {
+                    Ok(payload) => ThriftMegarepoAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::success(payload)),
+                    Err(e) => ThriftMegarepoAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::error(e.into()))
+                };
+
+                MegarepoAsynchronousRequestResult::from_thrift(thrift)
+            }
+        }
+
+        impl From<$params_value_thrift_type> for MegarepoAsynchronousRequestParams{
+            fn from(params: $params_value_thrift_type) -> MegarepoAsynchronousRequestParams {
+                MegarepoAsynchronousRequestParams::from_thrift(
+                    ThriftMegarepoAsynchronousRequestParams::$params_union_variant(params)
+                )
+            }
+        }
+
+        impl ThriftResult for $result_value_thrift_type {
+            type R = $request_struct;
+
+            fn into_result(self) -> Result<$response_type, MegarepoError> {
+                match self {
                     $result_value_thrift_type::success(payload) => Ok(payload),
                     $result_value_thrift_type::error(e) => Err(e.into()),
                     $result_value_thrift_type::UnknownField(x) => {
@@ -357,6 +404,41 @@ macro_rules! impl_async_svc_method_types {
                         Err(MegarepoError::internal(
                             anyhow!(
                                 "failed to parse {} thrift. UnknownField: {}",
+                                stringify!($result_value_thrift_type),
+                                x,
+                            )
+                        ))
+                    }
+                }
+            }
+        }
+
+        impl From<$result_value_type> for Result<$response_type, MegarepoError> {
+            fn from(r: $result_value_type) -> Result<$response_type, MegarepoError> {
+                r.thrift.into_result()
+            }
+        }
+
+        impl TryFrom<MegarepoAsynchronousRequestResult> for $result_value_thrift_type {
+            type Error = MegarepoError;
+
+            fn try_from(r: MegarepoAsynchronousRequestResult) -> Result<$result_value_thrift_type, Self::Error> {
+                match r.thrift {
+                    ThriftMegarepoAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
+                    ThriftMegarepoAsynchronousRequestResult::UnknownField(x) => {
+                        // TODO: maybe use structured error?
+                        Err(MegarepoError::internal(
+                            anyhow!(
+                                "failed to parse {} thrift. UnknownField: {}",
+                                stringify!($result_value_thrift_type),
+                                x,
+                            )
+                        ))
+                    },
+                    x => {
+                        Err(MegarepoError::internal(
+                            anyhow!(
+                                "failed to parse {} thrift. The result union contains the wrong result variant: {:?}",
                                 stringify!($result_value_thrift_type),
                                 x,
                             )
@@ -375,6 +457,9 @@ macro_rules! impl_async_svc_method_types {
             type ParamsId = $params_handle_type;
             type Token = $token_type;
             type ThriftParams = $params_value_thrift_type;
+            type ThriftResult = $result_value_thrift_type;
+            type ThriftResponse = $response_type;
+
             type Params = $params_value_type;
             type StoredResult = $result_value_type;
             type PollResponse = $poll_response_type;
@@ -383,6 +468,13 @@ macro_rules! impl_async_svc_method_types {
                 stored_result: Self::StoredResult,
             ) -> Result<Self::PollResponse, MegarepoError> {
                 let r: Result<$response_type, MegarepoError> = stored_result.into();
+                r.map(|r| $poll_response_type { response: Some(r) })
+            }
+
+            fn thrift_result_into_poll_response(
+                thrift_result: Self::ThriftResult,
+            ) -> Result<Self::PollResponse, MegarepoError> {
+                let r: Result<$response_type, MegarepoError> = thrift_result.into_result();
                 r.map(|r| $poll_response_type { response: Some(r) })
             }
 
@@ -405,12 +497,14 @@ impl_async_svc_method_types! {
     params_value_type => MegarepoAddTargetParams,
     params_value_thrift_type => ThriftMegarepoAddTargetParams,
     params_context_type => MegarepoAddTargetParamsIdContext,
+    params_union_variant => megarepo_add_target_params,
 
     result_handle_type => MegarepoAddTargetResultId,
     result_handle_thrift_type => ThriftMegarepoAddTargetResultId,
     result_value_type => MegarepoAddTargetResult,
     result_value_thrift_type => ThriftMegarepoAddTargetResult,
     result_context_type => MegarepoAddTargetResultIdContext,
+    result_union_variant => megarepo_add_target_result,
 
     response_type => ThriftMegarepoAddTargetResponse,
     poll_response_type => ThriftMegarepoAddTargetPollResponse,
@@ -433,12 +527,14 @@ impl_async_svc_method_types! {
     params_value_type => MegarepoChangeTargetConfigParams,
     params_value_thrift_type => ThriftMegarepoChangeTargetConfigParams,
     params_context_type => MegarepoChangeTargetConfigParamsIdContext,
+    params_union_variant => megarepo_change_target_params,
 
     result_handle_type => MegarepoChangeTargetConfigResultId,
     result_handle_thrift_type => ThriftMegarepoChangeTargetConfigResultId,
     result_value_type => MegarepoChangeTargetConfigResult,
     result_value_thrift_type => ThriftMegarepoChangeTargetConfigResult,
     result_context_type => MegarepoChangeTargetConfigResultIdContext,
+    result_union_variant => megarepo_change_target_result,
 
     response_type => ThriftMegarepoChangeTargetConfigResponse,
     poll_response_type => ThriftMegarepoChangeTargetConfigPollResponse,
@@ -461,12 +557,14 @@ impl_async_svc_method_types! {
     params_value_type => MegarepoSyncChangesetParams,
     params_value_thrift_type => ThriftMegarepoSyncChangesetParams,
     params_context_type => MegarepoSyncChangesetParamsIdContext,
+    params_union_variant => megarepo_sync_changeset_params,
 
     result_handle_type => MegarepoSyncChangesetResultId,
     result_handle_thrift_type => ThriftMegarepoSyncChangesetResultId,
     result_value_type => MegarepoSyncChangesetResult,
     result_value_thrift_type => ThriftMegarepoSyncChangesetResult,
     result_context_type => MegarepoSyncChangesetResultIdContext,
+    result_union_variant => megarepo_sync_changeset_result,
 
     response_type => ThriftMegarepoSyncChangesetResponse,
     poll_response_type => ThriftMegarepoSyncChangesetPollResponse,
@@ -489,12 +587,14 @@ impl_async_svc_method_types! {
     params_value_type => MegarepoRemergeSourceParams,
     params_value_thrift_type => ThriftMegarepoRemergeSourceParams,
     params_context_type => MegarepoRemergeSourceParamsIdContext,
+    params_union_variant => megarepo_remerge_source_params,
 
     result_handle_type => MegarepoRemergeSourceResultId,
     result_handle_thrift_type => ThriftMegarepoRemergeSourceResultId,
     result_value_type => MegarepoRemergeSourceResult,
     result_value_thrift_type => ThriftMegarepoRemergeSourceResult,
     result_context_type => MegarepoRemergeSourceResultIdContext,
+    result_union_variant => megarepo_remerge_source_result,
 
     response_type => ThriftMegarepoRemergeSourceResponse,
     poll_response_type => ThriftMegarepoRemergeSourcePollResponse,
@@ -503,6 +603,47 @@ impl_async_svc_method_types! {
 
     fn target(&self: ThriftParams) -> &Target {
         &self.target
+    }
+}
+
+impl_async_svc_stored_type! {
+    handle_type => MegarepoAsynchronousRequestParamsId,
+    handle_thrift_type => ThriftMegarepoAsynchronousRequestParamsId,
+    value_type => MegarepoAsynchronousRequestParams,
+    value_thrift_type => ThriftMegarepoAsynchronousRequestParams,
+    context_type => MegarepoAsynchronousRequestParamsIdContext,
+}
+
+impl_async_svc_stored_type! {
+    handle_type => MegarepoAsynchronousRequestResultId,
+    handle_thrift_type => ThriftMegarepoAsynchronousRequestResultId,
+    value_type => MegarepoAsynchronousRequestResult,
+    value_thrift_type => ThriftMegarepoAsynchronousRequestResult,
+    context_type => MegarepoAsynchronousRequestResultIdContext,
+}
+
+impl MegarepoAsynchronousRequestParams {
+    pub fn target(&self) -> Result<&Target, MegarepoError> {
+        match &self.thrift {
+            ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(params) => {
+                Ok(params.target())
+            }
+            ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
+                Ok(params.target())
+            }
+            ThriftMegarepoAsynchronousRequestParams::megarepo_remerge_source_params(params) => {
+                Ok(params.target())
+            }
+            ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
+                Ok(params.target())
+            }
+            ThriftMegarepoAsynchronousRequestParams::UnknownField(union_tag) => {
+                Err(MegarepoError::internal(anyhow!(
+                    "this type of reuqest (MegarepoAsynchronousRequestParams tag {}) not supported by this worker!",
+                    union_tag
+                )))
+            }
+        }
     }
 }
 
@@ -571,6 +712,14 @@ mod test {
             MegarepoSyncChangesetResultId,
             "async.svc.MegarepoSyncChangesetResult"
         );
+        test_blobstore_key!(
+            MegarepoAsynchronousRequestParamsId,
+            "async.svc.MegarepoAsynchronousRequestParams"
+        );
+        test_blobstore_key!(
+            MegarepoAsynchronousRequestResultId,
+            "async.svc.MegarepoAsynchronousRequestResult"
+        );
     }
 
     #[test]
@@ -583,6 +732,8 @@ mod test {
         serialize_deserialize!(MegarepoRemergeSourceResultId);
         serialize_deserialize!(MegarepoSyncChangesetParamsId);
         serialize_deserialize!(MegarepoSyncChangesetResultId);
+        serialize_deserialize!(MegarepoAsynchronousRequestParamsId);
+        serialize_deserialize!(MegarepoAsynchronousRequestResultId);
     }
 
     macro_rules! test_store_load {
@@ -616,5 +767,7 @@ mod test {
         test_store_load!(MegarepoRemergeSourceResult, ctx, blobstore);
         test_store_load!(MegarepoSyncChangesetParams, ctx, blobstore);
         test_store_load!(MegarepoSyncChangesetResult, ctx, blobstore);
+        test_store_load!(MegarepoAsynchronousRequestParams, ctx, blobstore);
+        test_store_load!(MegarepoAsynchronousRequestResult, ctx, blobstore);
     }
 }

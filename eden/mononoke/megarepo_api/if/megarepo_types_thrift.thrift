@@ -65,3 +65,19 @@ union MegarepoSyncChangesetResult {
     1: source_control.MegarepoSyncChangesetResponse success,
     2: StoredError error,
 }
+
+typedef mononoke_types_thrift.IdType MegarepoAsynchronousRequestResultId (rust.newtype)
+union MegarepoAsynchronousRequestResult {
+    1: MegarepoAddTargetResult megarepo_add_target_result,
+    2: MegarepoChangeTargetConfigResult megarepo_change_target_result,
+    3: MegarepoRemergeSourceResult megarepo_remerge_source_result,
+    4: MegarepoSyncChangesetResult megarepo_sync_changeset_result,
+}
+
+typedef mononoke_types_thrift.IdType MegarepoAsynchronousRequestParamsId (rust.newtype)
+union MegarepoAsynchronousRequestParams {
+    1: source_control.MegarepoAddTargetParams megarepo_add_target_params,
+    2: source_control.MegarepoChangeTargetConfigParams megarepo_change_target_params,
+    3: source_control.MegarepoRemergeSourceParams megarepo_remerge_source_params,
+    4: source_control.MegarepoSyncChangesetParams megarepo_sync_changeset_params,
+}
