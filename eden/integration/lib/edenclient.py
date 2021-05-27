@@ -36,6 +36,7 @@ class EdenFS(object):
     """Manages an instance of the EdenFS fuse server."""
 
     _eden_dir: Path
+    _use_nfs: bool
 
     def __init__(
         self,
@@ -46,6 +47,7 @@ class EdenFS(object):
         logging_settings: Optional[Dict[str, str]] = None,
         extra_args: Optional[List[str]] = None,
         storage_engine: str = "memory",
+        use_nfs: bool = False,
     ) -> None:
         """
         Construct a new EdenFS object.
@@ -87,6 +89,7 @@ class EdenFS(object):
         self._storage_engine = storage_engine
         self._logging_settings = logging_settings
         self._extra_args = extra_args
+        self._use_nfs = use_nfs
 
         self._process: Optional[subprocess.Popen] = None
 
@@ -545,7 +548,7 @@ class EdenFS(object):
         params = ["clone", repo, str(path)]
         if allow_empty:
             params.append("--allow-empty-repo")
-        if nfs:
+        if nfs or self._use_nfs:
             params.append("--nfs")
         self.run_cmd(*params)
 

@@ -35,7 +35,7 @@ class CloneTest(testcase.EdenRepoTest):
         tmp = self.make_temporary_directory()
         non_existent_dir = os.path.join(tmp, "foo/bar/baz")
 
-        self.eden.run_cmd("clone", self.repo.path, non_existent_dir)
+        self.eden.clone(self.repo.path, non_existent_dir)
         self.assertTrue(
             os.path.isfile(os.path.join(non_existent_dir, "hello")),
             msg="clone should succeed in non-existent directory",
@@ -51,7 +51,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         symlinked_target = os.path.join(symlink_dir, "bar")
 
-        self.eden.run_cmd("clone", self.repo.path, symlinked_target)
+        self.eden.clone(self.repo.path, symlinked_target)
         self.assertTrue(
             os.path.isfile(os.path.join(empty_dir, "hello")),
             msg="clone should succeed in empty directory",
@@ -72,7 +72,7 @@ class CloneTest(testcase.EdenRepoTest):
         empty_dir = os.path.join(tmp, "foo/bar/baz")
         os.makedirs(empty_dir)
 
-        self.eden.run_cmd("clone", self.repo.path, empty_dir)
+        self.eden.clone(self.repo.path, empty_dir)
         self.assertTrue(
             os.path.isfile(os.path.join(empty_dir, "hello")),
             msg="clone should succeed in empty directory",
@@ -82,7 +82,7 @@ class CloneTest(testcase.EdenRepoTest):
         # Specify the source of the clone as an existing local repo rather than
         # an alias for a config.
         destination_dir = self.make_temporary_directory()
-        self.eden.run_cmd("clone", self.repo.path, destination_dir)
+        self.eden.clone(self.repo.path, destination_dir)
         self.assertTrue(
             os.path.isfile(os.path.join(destination_dir, "hello")),
             msg="clone should succeed in empty directory",
@@ -121,7 +121,7 @@ class CloneTest(testcase.EdenRepoTest):
         # We should find the config from the project_id field in
         # the .arcconfig file
         eden_clone = self.make_temporary_directory()
-        self.eden.run_cmd("clone", self.repo.path, eden_clone)
+        self.eden.clone(self.repo.path, eden_clone)
         self.assertFalse(
             os.path.isdir(os.path.join(eden_clone, "foo/stuff/build_output")),
             msg="clone should not create bind mounts from legacy config",
@@ -131,10 +131,16 @@ class CloneTest(testcase.EdenRepoTest):
             msg="clone should not create bind mounts from legacy config",
         )
 
+    def clone_rev(self, rev, repo, path) -> None:
+        extra_args = []
+        if self.use_nfs:
+            extra_args.append("--nfs")
+        self.eden.run_cmd("clone", "--rev", rev, repo, path, *extra_args)
+
     def test_clone_from_eden_repo(self) -> None:
         # Create an Eden mount from the config alias.
         eden_clone1 = self.make_temporary_directory()
-        self.eden.run_cmd("clone", self.repo.path, eden_clone1)
+        self.eden.clone(self.repo.path, eden_clone1)
 
         self.assertFalse(
             os.path.isdir(os.path.join(eden_clone1, "tmp/bm1")),
@@ -143,16 +149,12 @@ class CloneTest(testcase.EdenRepoTest):
 
         # Clone the Eden clone! Note it should inherit its config.
         eden_clone2 = self.make_temporary_directory()
-        self.eden.run_cmd(
-            "clone", "--rev", self.repo.get_head_hash(), eden_clone1, eden_clone2
-        )
+        self.clone_rev(self.repo.get_head_hash(), eden_clone1, eden_clone2)
 
     def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
         tmp = self.make_temporary_directory()
         target = os.path.join(tmp, "foo/bar/baz")
-        self.eden.run_cmd(
-            "clone", "--rev", self.repo.get_head_hash(), self.repo.path, target
-        )
+        self.clone_rev(self.repo.get_head_hash(), self.repo.path, target)
         self.assertTrue(
             os.path.isfile(os.path.join(target, "hello")),
             msg="clone should succeed with --snapshop arg.",
@@ -162,7 +164,7 @@ class CloneTest(testcase.EdenRepoTest):
         tmp = self.make_temporary_directory()
         target = os.path.join(tmp, "foo/bar/baz")
         short = self.repo.get_head_hash()[:6]
-        self.eden.run_cmd("clone", "--rev", short, self.repo.path, target)
+        self.clone_rev(short, self.repo.path, target)
         self.assertTrue(
             os.path.isfile(os.path.join(target, "hello")),
             msg="clone should succeed with short --snapshop arg.",
@@ -176,7 +178,7 @@ class CloneTest(testcase.EdenRepoTest):
             f.write("I am not empty.\n")
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden.run_cmd("clone", self.repo.path, non_empty_dir)
+            self.eden.clone(self.repo.path, non_empty_dir)
         stderr = context.exception.stderr
         self.assertRegex(
             stderr,
@@ -190,7 +192,7 @@ class CloneTest(testcase.EdenRepoTest):
         os.makedirs(empty_dir)
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden.run_cmd("clone", self.repo.path, empty_dir, "--rev", "X")
+            self.clone_rev("X", self.repo.path, empty_dir)
         stderr = context.exception.stderr
         self.assertIn(
             "unable to find hash for commit 'X': ",
@@ -207,7 +209,7 @@ class CloneTest(testcase.EdenRepoTest):
             f.write("I am not empty.\n")
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden.run_cmd("clone", self.repo.path, file_in_directory)
+            self.eden.clone(self.repo.path, file_in_directory)
         stderr = context.exception.stderr
         self.assertIn(
             f"error: destination path {file_in_directory} is not a directory\n", stderr
@@ -220,7 +222,7 @@ class CloneTest(testcase.EdenRepoTest):
             f.write("I am not empty.\n")
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
-            self.eden.run_cmd("clone", self.repo.path, non_existent_dir)
+            self.eden.clone(self.repo.path, non_existent_dir)
         stderr = context.exception.stderr
         self.assertIn(
             f"error: destination path {non_existent_dir} is not a directory\n", stderr
@@ -231,7 +233,7 @@ class CloneTest(testcase.EdenRepoTest):
         repo_path = "/this/directory/does/not/exist"
 
         with self.assertRaises(edenclient.EdenCommandError) as context:
-            self.eden.run_cmd("clone", repo_path, tmp)
+            self.eden.clone(repo_path, tmp)
         self.assertIn(
             f"error: {repo_path!r} does not look like a valid hg or git repository\n",
             context.exception.stderr,
@@ -285,7 +287,7 @@ class CloneTest(testcase.EdenRepoTest):
         # Perform a clone
         new_mount = Path(self.make_temporary_directory())
         readme_path = new_mount / "README_EDEN.txt"
-        self.eden.run_cmd("clone", self.repo.path, str(new_mount))
+        self.eden.clone(self.repo.path, str(new_mount))
         self.assertEqual("hola\n", (new_mount / "hello").read_text())
         self.assertFalse(os.path.exists(readme_path))
 

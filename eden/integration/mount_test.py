@@ -273,7 +273,7 @@ class MountTest(testcase.EdenRepoTest):
         # Create a second checkout in a directory a couple levels deep so that
         # we can remove some of the parent directories of the checkout.
         checkout_path = Path(self.tmp_dir) / "checkouts" / "stuff" / "myproject"
-        self.eden.run_cmd("clone", self.repo.path, str(checkout_path))
+        self.eden.clone(self.repo.path, str(checkout_path))
         self.assert_checkout_root_entries(self.expected_mount_entries, checkout_path)
 
         self.eden.run_cmd("unmount", str(checkout_path))

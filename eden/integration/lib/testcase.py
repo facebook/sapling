@@ -141,6 +141,7 @@ class EdenTestCase(EdenTestCaseBase):
             logging_settings=logging_settings,
             extra_args=extra_args,
             storage_engine=storage_engine,
+            use_nfs=self.use_nfs(),
         )
         # Just to better reflect normal user environments, update $HOME
         # to point to our test home directory for the duration of the test.
@@ -348,7 +349,7 @@ class EdenRepoTest(EdenTestCase):
         self.populate_repo()
         self.report_time("repository setup done")
 
-        self.eden.clone(self.repo.path, self.mount, nfs=self.use_nfs())
+        self.eden.clone(self.repo.path, self.mount)
         self.report_time("eden clone done")
 
     def populate_repo(self) -> None:

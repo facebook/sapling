@@ -195,7 +195,10 @@ if sys.platform.startswith("linux"):
                 "test_unlink_deletes_corrupted_files",
                 "test_unmount_succeeds",
             ],
-            "fsck_test.FsckTestNFS": ["test_fsck_force_and_check_only"],  # T89442010
+            "fsck_test.FsckTestNFS": [  # T89442010
+                "test_fsck_force_and_check_only",
+                "test_fsck_multiple_mounts",
+            ],
             "stale_test.StaleTestNFS": True,  # T89442539
             "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnlyNFS": [
                 "test_contents_are_the_same_if_handle_is_held_open"  # T89344844
