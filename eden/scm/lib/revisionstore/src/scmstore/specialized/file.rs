@@ -703,6 +703,9 @@ impl FetchState {
 
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
         let pending = self.pending_nonlfs(FileAttributes::content());
+        if pending.is_empty() {
+            return;
+        }
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -745,6 +748,9 @@ impl FetchState {
 
     fn fetch_aux_indexedlog_inner(&mut self, store: &IndexedLogHgIdDataStore) -> Result<()> {
         let pending = self.pending_all(FileAttributes::aux_data());
+        if pending.is_empty() {
+            return Ok(());
+        }
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
@@ -775,6 +781,9 @@ impl FetchState {
 
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
         let pending = self.pending_storekey(FileAttributes::content());
+        if pending.is_empty() {
+            return;
+        }
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
@@ -802,6 +811,9 @@ impl FetchState {
 
     fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
         let pending = self.pending_nonlfs(FileAttributes::content());
+        if pending.is_empty() {
+            return Ok(());
+        }
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
@@ -833,6 +845,9 @@ impl FetchState {
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
         // TODO(meyer): Implement aux data fetching for EdenApi Files
         let pending = self.pending_nonlfs(FileAttributes::content());
+        if pending.is_empty() {
+            return Ok(());
+        }
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
         }
@@ -856,6 +871,9 @@ impl FetchState {
             .iter()
             .map(|(_k, v)| (v.sha256(), v.size() as usize))
             .collect();
+        if pending.is_empty() {
+            return Ok(());
+        }
         // Fetch & write to local LFS stores
         store.batch_fetch(&pending, {
             let lfs_local = local.clone();
@@ -922,6 +940,9 @@ impl FetchState {
 
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
         let pending = self.pending_storekey(FileAttributes::content());
+        if pending.is_empty() {
+            return Ok(());
+        }
         store.prefetch(&pending)?;
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
@@ -975,33 +996,26 @@ impl FetchState {
         let mut aux_local = aux_local.map(|s| s.write_lock());
 
         for key in self.found_in_edenapi.drain() {
-            // todo
-            if let Ok(Some(cache_entry)) = self.found[&key]
-                .content
-                .as_ref()
-                .unwrap()
-                .indexedlog_cache_entry(key)
-            {
-                if let Some(memcache) = memcache {
-                    if let Ok(mcdata) = cache_entry.clone().try_into() {
-                        memcache.add_mcdata(mcdata)
+            if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
+                    if let Some(memcache) = memcache {
+                        if let Ok(mcdata) = cache_entry.clone().try_into() {
+                            memcache.add_mcdata(mcdata)
+                        }
                     }
-                }
-                if let Some(ref mut indexedlog_cache) = indexedlog_cache {
-                    let _ = indexedlog_cache.put_entry(cache_entry);
+                    if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                        let _ = indexedlog_cache.put_entry(cache_entry);
+                    }
                 }
             }
         }
 
         for key in self.found_in_memcache.drain() {
-            if let Ok(Some(cache_entry)) = self.found[&key]
-                .content
-                .as_ref()
-                .unwrap()
-                .indexedlog_cache_entry(key)
-            {
-                if let Some(ref mut indexedlog_cache) = indexedlog_cache {
-                    let _ = indexedlog_cache.put_entry(cache_entry);
+            if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
+                    if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                        let _ = indexedlog_cache.put_entry(cache_entry);
+                    }
                 }
             }
         }
