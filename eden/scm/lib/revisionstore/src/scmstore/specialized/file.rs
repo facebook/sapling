@@ -9,7 +9,7 @@
 #![allow(dead_code)]
 use std::collections::{hash_map, HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ops::{BitAnd, BitOr, Not};
+use std::ops::{BitAnd, BitOr, Not, Sub};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -142,6 +142,8 @@ impl FileStore {
             state.fetch_contentstore(contentstore);
         }
 
+        state.derive_computable();
+
         state.write_to_cache(
             self.indexedlog_cache.as_ref().and_then(|s| {
                 if self.cache_to_local_cache {
@@ -245,8 +247,60 @@ impl StoreFile {
         }
     }
 
-    fn missing(&self, attrs: FileAttributes) -> FileAttributes {
-        !self.attrs() & attrs
+    /// Return a StoreFile with only the specified subset of attributes
+    fn mask(self, attrs: FileAttributes) -> Self {
+        StoreFile {
+            content: if attrs.content { self.content } else { None },
+            aux_data: if attrs.aux_data { self.aux_data } else { None },
+        }
+    }
+
+    fn compute_aux_data(&mut self) -> Result<()> {
+        self.aux_data = Some(
+            self.content
+                .as_mut()
+                .ok_or_else(|| anyhow!("failed to compute aux data, no content available"))?
+                .aux_data()?,
+        );
+        Ok(())
+    }
+}
+
+impl BitOr for StoreFile {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        StoreFile {
+            content: self.content.or(rhs.content),
+            aux_data: self.aux_data.or(rhs.aux_data),
+        }
+    }
+}
+
+impl Default for StoreFile {
+    fn default() -> Self {
+        StoreFile {
+            content: None,
+            aux_data: None,
+        }
+    }
+}
+
+impl From<FileAuxData> for StoreFile {
+    fn from(v: FileAuxData) -> Self {
+        StoreFile {
+            content: None,
+            aux_data: Some(v),
+        }
+    }
+}
+
+impl From<LazyFile> for StoreFile {
+    fn from(v: LazyFile) -> Self {
+        StoreFile {
+            content: Some(v),
+            aux_data: None,
+        }
     }
 }
 
@@ -257,9 +311,33 @@ pub struct FileAttributes {
 }
 
 impl FileAttributes {
+    /// Returns all the attributes which are present or can be computed from present attributes.
+    fn with_computable(&self) -> FileAttributes {
+        if self.content {
+            *self | FileAttributes::AUX
+        } else {
+            *self
+        }
+    }
+
+    /// Returns true if all the specified attributes are set, otherwise false.
+    fn has(&self, attrs: FileAttributes) -> bool {
+        (attrs - *self).none()
+    }
+
     /// Returns true if no attributes are set, otherwise false.
     fn none(&self) -> bool {
         *self == FileAttributes::NONE
+    }
+
+    /// Returns true if at least one attribute is set, otherwise false.
+    fn any(&self) -> bool {
+        *self != FileAttributes::NONE
+    }
+
+    /// Returns true if all attributes are set, otherwise false.
+    fn all(&self) -> bool {
+        !*self == FileAttributes::NONE
     }
 
     const NONE: Self = FileAttributes {
@@ -308,6 +386,15 @@ impl BitOr for FileAttributes {
             content: self.content | rhs.content,
             aux_data: self.aux_data | rhs.aux_data,
         }
+    }
+}
+
+/// The subtraction operator is implemented here to mean "set difference" aka relative complement.
+impl Sub for FileAttributes {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self & !rhs
     }
 }
 
@@ -505,6 +592,9 @@ pub struct FetchState {
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
     pointer_origin: Arc<RwLock<HashMap<Sha256, LocalStoreType>>>,
 
+    /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
+    key_origin: HashMap<Key, LocalStoreType>,
+
     /// Errors encountered during fetching.
     errors: FetchErrors,
 
@@ -535,6 +625,7 @@ impl FetchState {
             found: HashMap::new(),
 
             lfs_pointers: HashMap::new(),
+            key_origin: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
             errors: FetchErrors::new(),
@@ -548,63 +639,67 @@ impl FetchState {
         }
     }
 
-    /// Returns all the requested attributes which may be fulfilled by a store which directly provides the specified attributes,
-    /// optionally computing aux data from content.
-    fn satisfies(&self, provides: FileAttributes) -> FileAttributes {
-        self.request_attrs
-            & if self.compute_aux_data && provides.content {
-                provides | FileAttributes::AUX
-            } else {
-                provides
-            }
-    }
-
     /// Return all incomplete requested Keys for which additional attributes may be gathered by querying a store which provides the specified attributes.
-    fn pending_all(&self, provides: FileAttributes) -> Vec<Key> {
-        let satisfies = self.satisfies(provides);
-        if satisfies.none() {
+    fn pending_all(&self, fetchable: FileAttributes) -> Vec<Key> {
+        if fetchable.none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, satisfies).none())
+            .filter(|k| self.pending(k, fetchable))
             .cloned()
             .collect()
     }
 
     /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
-    fn pending_nonlfs(&self, provides: FileAttributes) -> Vec<Key> {
-        let satisfies = self.satisfies(provides);
-        if satisfies.none() {
+    fn pending_nonlfs(&self, fetchable: FileAttributes) -> Vec<Key> {
+        if fetchable.none() {
             return vec![];
         }
         self.pending
             .iter()
             .filter(|k| !self.lfs_pointers.contains_key(k))
-            .filter(|k| !self.missing_attrs(k, satisfies).none())
+            .filter(|k| self.pending(k, fetchable))
             .cloned()
             .collect()
     }
 
     /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, for which additional attributes may be gathered by querying a store which provides the specified attributes
-    fn pending_storekey(&self, provides: FileAttributes) -> Vec<StoreKey> {
-        let satisfies = self.satisfies(provides);
-        if satisfies.none() {
+    fn pending_storekey(&self, fetchable: FileAttributes) -> Vec<StoreKey> {
+        if fetchable.none() {
             return vec![];
         }
         self.pending
             .iter()
-            .filter(|k| !self.missing_attrs(k, satisfies).none())
+            .filter(|k| self.pending(k, fetchable))
             .map(|k| self.storekey(k))
             .collect()
     }
 
-    /// Returns which of the specified attributes have not been found for a specified Key
-    fn missing_attrs(&self, key: &Key, attrs: FileAttributes) -> FileAttributes {
-        if attrs.none() {
-            return FileAttributes::NONE;
+    /// A key is pending with respect to a store if we can "make progress" on it by requesting from that store.
+    fn pending(&self, key: &Key, fetchable: FileAttributes) -> bool {
+        if fetchable.none() {
+            return false;
         }
-        self.found.get(key).map_or(attrs, |f| f.missing(attrs))
+
+        let available = self
+            .found
+            .get(key)
+            .map_or(FileAttributes::NONE, |f| f.attrs());
+        let (available, fetchable) = if self.compute_aux_data {
+            // I do (available | fetchable) here in case we introduce attributes which require multiple others to compute
+            // (though this code might not survive that long, we still need to change it to support preferring remote aux data)
+            (
+                available.with_computable(),
+                (available | fetchable).with_computable(),
+            )
+        } else {
+            // Without computing attributes (available | fetchable) vs. (fetchable) makes no difference.
+            (available, fetchable)
+        };
+        let missing = self.request_attrs - available;
+        let actionable = missing & fetchable;
+        actionable.any()
     }
 
     /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
@@ -637,64 +732,27 @@ impl FetchState {
         self.lfs_pointers.insert(key, ptr);
     }
 
-    fn found_file(&mut self, key: Key, mut f: LazyFile, typ: LocalStoreType) {
-        // TODO(meyer): Clean this up, eliminate double lookup, probably merge with found_aux_indexedlog into "found_attributes"
-
-        let aux_data = if self.compute_aux_data
-            && !self
-                .missing_attrs(&key, self.request_attrs & FileAttributes::AUX)
-                .none()
-        {
-            // If aux data was requested, it's missing, and computing aux data is enabled, compute it here.
-            match f.aux_data() {
-                Ok(aux_data) => {
-                    self.computed_aux_data.insert(key.clone(), typ);
-                    Some(aux_data)
-                }
-                Err(err) => {
-                    self.errors.keyed_error(key.clone(), err);
-                    None
-                }
-            }
-        } else {
-            None
-        };
-
+    fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<LocalStoreType>) {
+        self.key_origin
+            .insert(key.clone(), typ.unwrap_or(LocalStoreType::Cache));
         use hash_map::Entry::*;
         match self.found.entry(key.clone()) {
             Occupied(mut entry) => {
-                if !entry
-                    .get()
-                    .missing(self.request_attrs & FileAttributes::AUX)
-                    .none()
-                {
-                    entry.get_mut().aux_data = aux_data;
-                }
+                // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
+                // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
+                let available = entry.get_mut();
+                *available = sf | std::mem::take(available);
 
-                if self.request_attrs.content {
-                    entry.get_mut().content = Some(f);
-                }
-
-                if entry.get().missing(self.request_attrs).none() {
+                if available.attrs().has(self.request_attrs) {
                     self.mark_complete(&key);
                 }
             }
             Vacant(entry) => {
-                let content = if self.request_attrs.content {
-                    Some(f)
-                } else {
-                    None
-                };
-
-                if entry
-                    .insert(StoreFile { content, aux_data })
-                    .missing(self.request_attrs)
-                    .none()
-                {
+                if entry.insert(sf).attrs().has(self.request_attrs) {
                     self.mark_complete(&key);
                 }
             }
-        }
+        };
     }
 
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: LocalStoreType) {
@@ -706,7 +764,7 @@ impl FetchState {
                 }
             }
         } else {
-            self.found_file(key, LazyFile::IndexedLog(entry), typ)
+            self.found_attributes(key, LazyFile::IndexedLog(entry).into(), Some(typ))
         }
     }
 
@@ -728,30 +786,8 @@ impl FetchState {
 
     fn found_aux_indexedlog(&mut self, key: Key, mut entry: Entry) -> Result<()> {
         // TODO(meyer): We could make aux data lazy too.
-        let aux_data = serde_json::from_slice(&entry.content()?)?;
-
-        use hash_map::Entry::*;
-        match self.found.entry(key.clone()) {
-            Occupied(mut entry) => {
-                entry.get_mut().aux_data = Some(aux_data);
-                if entry.get().missing(self.request_attrs).none() {
-                    self.mark_complete(&key);
-                }
-            }
-            Vacant(entry) => {
-                if entry
-                    .insert(StoreFile {
-                        content: None,
-                        aux_data: Some(aux_data),
-                    })
-                    .missing(self.request_attrs)
-                    .none()
-                {
-                    self.mark_complete(&key);
-                }
-            }
-        }
-
+        let aux_data: FileAuxData = serde_json::from_slice(&entry.content()?)?;
+        self.found_attributes(key, aux_data.into(), None);
         Ok(())
     }
 
@@ -782,7 +818,7 @@ impl FetchState {
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: LocalStoreType) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_file(key, LazyFile::Lfs(blob, ptr), typ)
+                self.found_attributes(key, LazyFile::Lfs(blob, ptr).into(), Some(typ))
             }
             LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, typ),
         }
@@ -814,7 +850,7 @@ impl FetchState {
             }
         } else {
             self.found_in_memcache.insert(key.clone());
-            self.found_file(key, LazyFile::Memcache(entry), LocalStoreType::Cache);
+            self.found_attributes(key, LazyFile::Memcache(entry).into(), None);
         }
     }
 
@@ -847,7 +883,7 @@ impl FetchState {
             }
         } else {
             self.found_in_edenapi.insert(key.clone());
-            self.found_file(key, LazyFile::EdenApi(entry), LocalStoreType::Cache);
+            self.found_attributes(key, LazyFile::EdenApi(entry).into(), None);
         }
     }
 
@@ -939,11 +975,7 @@ impl FetchState {
             // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
             // ExtStoredPolicy behavior) in which case we'll do something here.
         } else {
-            self.found_file(
-                key,
-                LazyFile::ContentStore(bytes.into(), meta),
-                LocalStoreType::Cache,
-            )
+            self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
         }
     }
 
@@ -988,6 +1020,36 @@ impl FetchState {
     fn fetch_contentstore(&mut self, store: &ContentStore) {
         if let Err(err) = self.fetch_contentstore_inner(store) {
             self.errors.other_error(err);
+        }
+    }
+
+    fn derive_computable(&mut self) {
+        if !self.compute_aux_data {
+            return;
+        }
+
+        for (key, value) in self.found.iter_mut() {
+            let missing = self.request_attrs - value.attrs();
+            let actionable = value.attrs().with_computable() & missing;
+
+            if actionable.aux_data {
+                if let Err(err) = value.compute_aux_data() {
+                    self.errors.keyed_error(key.clone(), err);
+                } else {
+                    self.computed_aux_data
+                        .insert(key.clone(), self.key_origin[key]);
+                }
+            }
+
+            // mark complete if applicable
+            if value.attrs().has(self.request_attrs) {
+                // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
+                // to share a "mark complete" implementation while holding a mutable reference to self.found.
+                self.pending.remove(key);
+                if let Some(ptr) = self.lfs_pointers.remove(key) {
+                    self.pointer_origin.write().remove(&ptr.sha256());
+                }
+            }
         }
     }
 
@@ -1054,6 +1116,14 @@ impl FetchState {
         for key in self.pending.into_iter() {
             self.found.remove(&key);
             incomplete.entry(key).or_insert_with(Vec::new);
+        }
+
+        for (key, value) in self.found.iter_mut() {
+            // Remove attributes that weren't requested (content only used to compute attributes)
+            *value = std::mem::take(value).mask(self.request_attrs);
+
+            // Don't return errors for keys we eventually found.
+            incomplete.remove(key);
         }
 
         FileStoreFetch {
