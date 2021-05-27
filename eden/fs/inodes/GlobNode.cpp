@@ -305,8 +305,11 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   vector<GlobResult> results;
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
   vector<Future<vector<GlobResult>>> futures;
-  futures.emplace_back(evaluateRecursiveComponentImpl(
-      store, context, rootPath, root, fileBlobsToPrefetch, originHash));
+
+  if (!recursiveChildren_.empty()) {
+    futures.emplace_back(evaluateRecursiveComponentImpl(
+        store, context, rootPath, root, fileBlobsToPrefetch, originHash));
+  }
 
   auto recurseIfNecessary =
       [&](PathComponentPiece name, GlobNode* node, const auto& entry) {
@@ -496,10 +499,6 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
     GlobNode::PrefetchList fileBlobsToPrefetch,
     const Hash& originHash) {
   vector<GlobResult> results;
-  if (recursiveChildren_.empty()) {
-    return results;
-  }
-
   vector<RelativePath> subDirNames;
   vector<Future<vector<GlobResult>>> futures;
   {
