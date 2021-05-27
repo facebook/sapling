@@ -6,7 +6,8 @@
  */
 
 use anyhow::{anyhow, Error, Result};
-use blobstore::{impl_loadable_storable, Loadable, Storable};
+use blobstore::{impl_loadable_storable, Blobstore, Loadable, Storable};
+use context::CoreContext;
 use fbthrift::compact_protocol;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
@@ -61,7 +62,9 @@ use source_control::{
     MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken,
 };
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::str::FromStr;
+use std::sync::Arc;
 
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
@@ -223,6 +226,20 @@ macro_rules! impl_async_svc_stored_type {
                 context.update(&data);
                 let id = context.finish();
                 Self { id, thrift }
+            }
+
+            pub async fn load_from_key(ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>, key: &str) -> Result<Self, MegarepoError> {
+                let bytes = blobstore.get(ctx, key).await?;
+
+                let prefix = concat!("async.svc.", stringify!($value_type), ".blake2.");
+                if key.strip_prefix(prefix).is_none() {
+                    return Err(MegarepoError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
+                }
+
+                match bytes {
+                    Some(bytes) => Ok(bytes.into_bytes().try_into()?),
+                    None => Err(MegarepoError::internal(anyhow!("Missing blob: {}", key))),
+                }
             }
 
             pub fn handle(&self) -> &$handle_type {
