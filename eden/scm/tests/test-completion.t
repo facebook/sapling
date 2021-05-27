@@ -471,7 +471,7 @@ Show all commands + options
   debugpython: 
   debugracyoutput: time-series, progress-bars, progress-total, progress-interval-ms, output-total, output-interval-ms
   debugreadauthforuri: user
-  debugrebuildchangelog: 
+  debugrebuildchangelog: revlog
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugremotefilelog: decompress

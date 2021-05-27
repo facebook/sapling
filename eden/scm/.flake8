@@ -61,6 +61,7 @@ select =
 # dageval defined names
 builtins =
   ancestors,
+  children,
   draft,
   gcaall,
   heads,

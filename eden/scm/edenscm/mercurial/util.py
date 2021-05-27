@@ -5030,3 +5030,11 @@ def eachslice(iterable, n, maxtime=None):
                 deadline = timer() + maxtime
     if buf:
         yield buf
+
+
+def faultinjection(ui, name, ex=None):
+    """Fault injection for testing purpose"""
+    if istest() and ui.configbool("fault-injection", name):
+        if ex is None:
+            ex = error.Abort(_("injected error by tests: %s") % name)
+        raise ex
