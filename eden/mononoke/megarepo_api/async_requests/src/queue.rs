@@ -8,13 +8,10 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, Error};
-use async_stream::try_stream;
 use blobstore::PutBehaviour;
 use blobstore::{Blobstore, Storable};
 use bookmarks::BookmarkName;
-use cloned::cloned;
 use context::CoreContext;
-use futures::stream::Stream;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
 use mononoke_types::RepositoryId;
@@ -35,8 +32,6 @@ use crate::types::{
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
-
-const DEQUEUE_STREAM_MAX_LATENCY_MS: u64 = 1000;
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestQueue {
@@ -104,32 +99,6 @@ impl AsyncMethodRequestQueue {
         } else {
             // empty queue
             Ok(None)
-        }
-    }
-
-    pub fn dequeue_stream(
-        &self,
-        ctx: &CoreContext,
-        claimed_by: &ClaimedBy,
-        supported_repos: &[RepositoryId],
-    ) -> impl Stream<Item = Result<(RequestId, MegarepoAsynchronousRequestParams), MegarepoError>>
-    {
-        let queue = self.clone();
-        let supported_repos: Vec<_> = supported_repos.into();
-        cloned!(ctx, claimed_by);
-        try_stream! {
-            let sleep_time = Duration::from_millis(DEQUEUE_STREAM_MAX_LATENCY_MS);
-            loop {
-                match queue.dequeue(&ctx, &claimed_by, &supported_repos).await? {
-                    Some((request_id, params)) => {
-                        yield (request_id, params);
-                    },
-                    None => {
-                        // Nothing to do, let's sleep before trying again.
-                        tokio::time::sleep(sleep_time).await;
-                    }
-                }
-            }
         }
     }
 
@@ -213,7 +182,6 @@ mod tests {
     use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::stream::{StreamExt, TryStreamExt};
     use requests_table::{ClaimedBy, RequestStatus};
 
     use source_control::{
@@ -275,10 +243,9 @@ mod tests {
                 let new_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
                 assert!(new_poll.is_none());
 
-                let mut request_stream = q.dequeue_stream(&ctx, &ClaimedBy("tests".to_string()), &[entry.repo_id]).boxed();
                 // Simulate the tailer and grab the element from the queue, this should return the params
                 // back and flip its state back to "in_progress"
-                let (req_id, params_from_store) = request_stream.try_next().await?.unwrap();
+                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string()), &[entry.repo_id]).await?.unwrap();
 
                 // Verify that request params from blobstore match what we put there
                 assert_eq!(params_from_store, params.into());

@@ -278,6 +278,7 @@ members = [
   "manifest",
   "megarepo_api",
   "megarepo_api/async_requests",
+  "megarepo_api/async_requests_worker",
   "megarepo_api/commit_transformation",
   "megarepo_api/configo_client",
   "megarepo_api/if",

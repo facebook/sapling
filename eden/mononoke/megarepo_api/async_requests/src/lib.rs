@@ -8,7 +8,7 @@
 pub mod types;
 
 mod queue;
-pub use queue::AsyncMethodRequestQueue;
+pub use queue::{AsyncMethodRequestQueue, ClaimedBy, RequestId};
 
 pub mod tokens {
     pub use crate::types::{

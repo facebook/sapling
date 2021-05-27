@@ -15,6 +15,7 @@ use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
 use context::CoreContext;
 use environment::MononokeEnvironment;
+use futures::future::try_join_all;
 use megarepo_config::{
     CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
     SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
@@ -27,7 +28,7 @@ use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
 use parking_lot::Mutex;
 use repo_factory::RepoFactory;
-use repo_identity::ArcRepoIdentity;
+use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::LongRunningRequestsQueue;
 use slog::{info, o, warn};
 use std::collections::HashMap;
@@ -127,25 +128,69 @@ impl MegarepoApi {
         self.megarepo_configs.clone()
     }
 
-    /// Get an `AsyncMethodRequestQueue`
+    /// Get mononoke object
+    pub fn mononoke(&self) -> Arc<Mononoke> {
+        self.mononoke.clone()
+    }
+
+    /// Get an `AsyncMethodRequestQueue` for a given target
     pub async fn async_method_request_queue(
         &self,
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<AsyncMethodRequestQueue, MegarepoError> {
         let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+        self.async_method_request_queue_for_repo(ctx, &repo_identity, &repo_config)
+            .await
+    }
 
+    /// Get an `AsyncMethodRequestQueue` for a given repo
+    pub async fn async_method_request_queue_for_repo(
+        &self,
+        ctx: &CoreContext,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<AsyncMethodRequestQueue, MegarepoError> {
         let queue = self
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
                 let table = self
                     .requests_table(ctx, &repo_identity, &repo_config)
                     .await?;
-                let blobstore = self.blobstore(ctx, repo_identity, &repo_config).await?;
+                let blobstore = self
+                    .blobstore(ctx, repo_identity.clone(), &repo_config)
+                    .await?;
                 Ok(AsyncMethodRequestQueue::new(table, blobstore))
             })
             .await?;
         Ok(queue)
+    }
+
+    /// Get all queues used by configured repos.
+    pub async fn all_async_method_request_queues(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>, MegarepoError> {
+        // TODO(mitrandir): instead of creating a queue per repo create a queue
+        // per group of repos with exactly same storage configs. This way even with
+        // a lot of repos we'll have few queues.
+        let queues = try_join_all(self.mononoke.repos().map(|repo| {
+            let repo_id = repo.repoid();
+            let repo_identity = RepoIdentity::new(repo_id, repo.name().to_string());
+            let repo_config = repo.config().clone();
+            async move {
+                let queue = self
+                    .async_method_request_queue_for_repo(
+                        ctx,
+                        &Arc::new(repo_identity),
+                        &Arc::new(repo_config),
+                    )
+                    .await?;
+                Ok::<_, MegarepoError>((vec![repo_id], queue))
+            }
+        }))
+        .await?;
+        Ok(queues)
     }
 
     /// Build an instance of `LongRunningRequestsQueue` to be embedded
