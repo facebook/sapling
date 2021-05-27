@@ -67,10 +67,12 @@ import unittest
 import uuid
 import xml.dom.minidom as minidom
 
-
+# If we're running in an embedded Python build, it won't add the test directory
+# to the path automatically, so let's add it manually.
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 try:
     import features
-except ImportError:
+except:
     features = None
 
 try:
@@ -113,7 +115,6 @@ if os.environ.get("RTUNICODEPEDANTRY", False):
         pass
 
 origenviron = os.environ.copy()
-osenvironb = getattr(os, "environb", os.environ)
 processlock = threading.Lock()
 
 pygmentspresent = False
@@ -307,10 +308,10 @@ def Popen4(cmd, wd, timeout, env=None):
 if buckpath:
     PYTHON = buckpath("//eden/scm:hgpython", buckruletype.SH_BINARY)
 else:
-    PYTHON = _bytespath(os.environ.get("PYTHON_SYS_EXECUTABLE", sys.executable))
-IMPL_PATH = b"PYTHONPATH"
+    PYTHON = os.environ.get("PYTHON_SYS_EXECUTABLE", sys.executable)
+IMPL_PATH = "PYTHONPATH"
 if "java" in sys.platform:
-    IMPL_PATH = b"JYTHONPATH"
+    IMPL_PATH = "JYTHONPATH"
 
 defaults = {
     "jobs": ("HGTEST_JOBS", multiprocessing.cpu_count()),
@@ -342,7 +343,7 @@ def parselistfiles(files, listtype, warn=True):
     for filename in files:
         try:
             path = os.path.expanduser(os.path.expandvars(filename))
-            f = open(path, "rb")
+            f = open(path, "r")
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -351,7 +352,7 @@ def parselistfiles(files, listtype, warn=True):
             continue
 
         for line in f.readlines():
-            line = line.split(b"#", 1)[0].strip()
+            line = line.split("#", 1)[0].strip()
             if line:
                 entries[line] = filename
 
@@ -366,9 +367,9 @@ def parsettestcases(path):
     """
     cases = set()
     try:
-        with open(path, "rb") as f:
+        with open(path, "r") as f:
             for l in f:
-                if l.startswith(b"#testcases "):
+                if l.startswith("#testcases "):
                     cases.update(l[11:].split())
     except IOError as ex:
         if ex.errno != errno.ENOENT:
@@ -665,17 +666,17 @@ def parseargs(args, parser):
         options.with_watchman = buckpath("//watchman:watchman", buckruletype.CXX_BINARY)
 
     if options.with_hg:
-        options.with_hg = canonpath(_bytespath(options.with_hg))
+        options.with_hg = canonpath(options.with_hg)
         # HGEXECUTABLEPATH is used by util.hgcmd()
-        os.environ["HGEXECUTABLEPATH"] = _strpath(options.with_hg)
+        os.environ["HGEXECUTABLEPATH"] = options.with_hg
         if not (
             os.path.isfile(options.with_hg) and os.access(options.with_hg, os.X_OK)
         ):
             parser.error("--with-hg must specify an executable hg script")
     if options.local:
-        testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
+        testdir = os.path.dirname(canonpath(sys.argv[0]))
         reporootdir = os.path.dirname(testdir)
-        pathandattrs = [(b"hg", "with_hg")]
+        pathandattrs = [("hg", "with_hg")]
         for relpath, attr in pathandattrs:
             if getattr(options, attr, None):
                 continue
@@ -764,7 +765,7 @@ def parseargs(args, parser):
         options.with_python3 = canonpath(options.with_python3)
         # Verify Python3 executable is acceptable.
         proc = subprocess.Popen(
-            [options.with_python3, b"--version"],
+            [options.with_python3, "--version"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
@@ -1059,12 +1060,11 @@ class Test(unittest.TestCase):
         if slowtimeout is None:
             slowtimeout = defaults["slowtimeout"]
         self.path = path
-        self.bname = os.path.basename(path)
-        self.name = _strpath(self.bname)
+        self.name = os.path.basename(path)
         self._testdir = os.path.dirname(path)
         self._outputdir = outputdir
         self._tmpname = os.path.basename(path)
-        self.errpath = os.path.join(self._outputdir, b"%s.err" % self.bname)
+        self.errpath = os.path.join(self._outputdir, "%s.err" % self.name)
 
         self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
@@ -1076,8 +1076,8 @@ class Test(unittest.TestCase):
         self._extraconfigopts = extraconfigopts or []
         self._extrarcpaths = extrarcpaths or []
         self._py3kwarnings = py3kwarnings
-        self._shell = _bytespath(shell)
-        self._hgcommand = hgcommand or b"hg"
+        self._shell = shell
+        self._hgcommand = hgcommand or "hg"
         self._usechg = usechg
         self._chgsockpath = chgsockpath
         self._useipv6 = useipv6
@@ -1153,33 +1153,33 @@ class Test(unittest.TestCase):
                     raise
 
         if self._watchman:
-            shortname = hashlib.sha1(b"%s" % name).hexdigest()[:6].encode("utf-8")
+            shortname = hashlib.sha1("%s" % name).hexdigest()[:6]
             self._watchmandir = os.path.join(
-                self._threadtmp, b"%s.watchman" % shortname
+                self._threadtmp, "%s.watchman" % shortname
             )
             os.mkdir(self._watchmandir)
-            cfgfile = os.path.join(self._watchmandir, b"config.json")
+            cfgfile = os.path.join(self._watchmandir, "config.json")
 
             if os.name == "nt":
                 sockfile = "\\\\.\\pipe\\watchman-test-%s" % uuid.uuid4().hex
                 closefd = False
             else:
-                sockfile = os.path.join(self._watchmandir, b"sock")
+                sockfile = os.path.join(self._watchmandir, "sock")
                 closefd = True
 
             self._watchmansock = sockfile
 
-            clilogfile = os.path.join(self._watchmandir, b"cli-log")
-            logfile = os.path.join(self._watchmandir, b"log")
-            pidfile = os.path.join(self._watchmandir, b"pid")
-            statefile = os.path.join(self._watchmandir, b"state")
+            clilogfile = os.path.join(self._watchmandir, "cli-log")
+            logfile = os.path.join(self._watchmandir, "log")
+            pidfile = os.path.join(self._watchmandir, "pid")
+            statefile = os.path.join(self._watchmandir, "state")
 
             with open(cfgfile, "w") as f:
                 f.write(json.dumps({}))
 
-            envb = osenvironb.copy()
-            envb[b"WATCHMAN_CONFIG_FILE"] = cfgfile
-            envb[b"WATCHMAN_SOCK"] = sockfile
+            env = os.environ.copy()
+            env["WATCHMAN_CONFIG_FILE"] = cfgfile
+            env["WATCHMAN_SOCK"] = sockfile
 
             argv = [
                 self._watchman,
@@ -1197,7 +1197,7 @@ class Test(unittest.TestCase):
 
             with open(clilogfile, "wb") as f:
                 self._watchmanproc = subprocess.Popen(
-                    argv, env=envb, stdin=None, stdout=f, stderr=f, close_fds=closefd
+                    argv, env=env, stdin=None, stdout=f, stderr=f, close_fds=closefd
                 )
 
             # Wait for watchman socket to become available
@@ -1215,7 +1215,7 @@ class Test(unittest.TestCase):
                 try:
                     # The watchman CLI can wait for a short time if sockfile
                     # is not ready.
-                    subprocess.check_output(argv, env=envb, close_fds=closefd)
+                    subprocess.check_output(argv, env=env, close_fds=closefd)
                     watchmanavailable = True
                 except Exception:
                     time.sleep(0.1)
@@ -1287,7 +1287,7 @@ class Test(unittest.TestCase):
         env = self._getenv()
         self._genrestoreenv(env)
         self._daemonpids.append(env["DAEMON_PIDS"])
-        hgrcpath = env["HGRCPATH"].rsplit(os.pathsep.encode("utf-8"), 1)[-1]
+        hgrcpath = env["HGRCPATH"].rsplit(os.pathsep, 1)[-1]
         self._createhgrc(hgrcpath)
         if features and not self._options.nofeatures:
             features.setup(self.name.split()[0], hgrcpath)
@@ -1426,10 +1426,10 @@ class Test(unittest.TestCase):
             (br"([^0-9])%s" % re.escape(self._localip()), br"\1$LOCALIP"),
             (br"\bHG_TXNID=TXN:[a-f0-9]{40}\b", br"HG_TXNID=TXN:$ID$"),
         ]
-        r.append((self._escapepath(self._testtmp), b"$TESTTMP"))
+        r.append((_bytespath(self._escapepath(self._testtmp)), b"$TESTTMP"))
         r.append((br"eager:///", br"eager://"))
 
-        replacementfile = os.path.join(self._testdir, b"common-pattern.py")
+        replacementfile = os.path.join(self._testdir, "common-pattern.py")
 
         if os.path.exists(replacementfile):
             data = {}
@@ -1465,7 +1465,7 @@ class Test(unittest.TestCase):
         """Generate a script that can be used by tests to restore the original
         environment."""
         # Put the restoreenv script inside self._threadtmp
-        scriptpath = os.path.join(self._threadtmp, b"restoreenv.sh")
+        scriptpath = os.path.join(self._threadtmp, "restoreenv.sh")
         testenv["HGTEST_RESTOREENV"] = scriptpath
 
         # Only restore environment variable names that the shell allows
@@ -1491,9 +1491,9 @@ class Test(unittest.TestCase):
                 envf.write("unset %s\n" % (name,))
 
     def _gethgrcpath(self):
-        rcpath = os.path.join(self._threadtmp, b".hgrc")
-        rcpaths = [p.encode("utf-8") for p in self._extrarcpaths] + [rcpath]
-        return os.pathsep.encode("utf-8").join(rcpaths)
+        rcpath = os.path.join(self._threadtmp, ".hgrc")
+        rcpaths = [p for p in self._extrarcpaths] + [rcpath]
+        return os.pathsep.join(rcpaths)
 
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
@@ -1522,7 +1522,7 @@ class Test(unittest.TestCase):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
         env["HGRCPATH"] = self._gethgrcpath()
-        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
+        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, "daemon.pids")
         env["HGEDITOR"] = "internal:none"
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"] = "test"
@@ -1583,49 +1583,49 @@ class Test(unittest.TestCase):
 
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
-        with open(path, "wb") as hgrc:
-            hgrc.write(b"[ui]\n")
-            hgrc.write(b"slash = True\n")
-            hgrc.write(b"interactive = False\n")
-            hgrc.write(b"mergemarkers = detailed\n")
-            hgrc.write(b"promptecho = True\n")
-            hgrc.write(b"[defaults]\n")
-            hgrc.write(b"[devel]\n")
-            hgrc.write(b"all-warnings = true\n")
-            hgrc.write(b"default-date = 0 0\n")
-            hgrc.write(b"[experimental]\n")
-            hgrc.write(b"metalog = true\n")
-            hgrc.write(b"[lfs]\n")
-            hgrc.write(b"[extensions]\npatchrmdir=\n")
+        with open(path, "w") as hgrc:
+            hgrc.write("[ui]\n")
+            hgrc.write("slash = True\n")
+            hgrc.write("interactive = False\n")
+            hgrc.write("mergemarkers = detailed\n")
+            hgrc.write("promptecho = True\n")
+            hgrc.write("[defaults]\n")
+            hgrc.write("[devel]\n")
+            hgrc.write("all-warnings = true\n")
+            hgrc.write("default-date = 0 0\n")
+            hgrc.write("[experimental]\n")
+            hgrc.write("metalog = true\n")
+            hgrc.write("[lfs]\n")
+            hgrc.write("[extensions]\npatchrmdir=\n")
             if self._watchman:
-                hgrc.write(b"[extensions]\nfsmonitor=\n")
-                hgrc.write(b"[fsmonitor]\ndetectrace=1\n")
-            hgrc.write(b"[web]\n")
-            hgrc.write(b"address = localhost\n")
-            hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
-            hgrc.write(b"[workingcopy]\n")
-            hgrc.write(b"enablerustwalker=True\n")
+                hgrc.write("[extensions]\nfsmonitor=\n")
+                hgrc.write("[fsmonitor]\ndetectrace=1\n")
+            hgrc.write("[web]\n")
+            hgrc.write("address = localhost\n")
+            hgrc.write("ipv6 = %s\n" % str(self._useipv6))
+            hgrc.write("[workingcopy]\n")
+            hgrc.write("enablerustwalker=True\n")
 
             # treemanifest
-            hgrc.write(b"[extensions]\n")
-            hgrc.write(b"treemanifest=\n")
-            hgrc.write(b"[treemanifest]\n")
-            hgrc.write(b"flatcompat=True\n")
-            hgrc.write(b"sendtrees=True\n")
-            hgrc.write(b"treeonly=True\n")
-            hgrc.write(b"rustmanifest=True\n")
-            hgrc.write(b"useruststore=True\n")
-            hgrc.write(b"[remotefilelog]\n")
-            hgrc.write(b"reponame=reponame-default\n")
-            hgrc.write(b"localdatarepack=True\n")
-            hgrc.write(b"cachepath=%s/default-hgcache\n" % self._testtmp)
+            hgrc.write("[extensions]\n")
+            hgrc.write("treemanifest=\n")
+            hgrc.write("[treemanifest]\n")
+            hgrc.write("flatcompat=True\n")
+            hgrc.write("sendtrees=True\n")
+            hgrc.write("treeonly=True\n")
+            hgrc.write("rustmanifest=True\n")
+            hgrc.write("useruststore=True\n")
+            hgrc.write("[remotefilelog]\n")
+            hgrc.write("reponame=reponame-default\n")
+            hgrc.write("localdatarepack=True\n")
+            hgrc.write("cachepath=%s/default-hgcache\n" % self._testtmp)
 
             for opt in self._extraconfigopts:
-                section, key = opt.encode("utf-8").split(b".", 1)
-                assert b"=" in key, (
+                section, key = opt.split(".", 1)
+                assert "=" in key, (
                     "extra config opt %s must have an = for assignment" % opt
                 )
-                hgrc.write(b"[%s]\n%s\n" % (section, key))
+                hgrc.write("[%s]\n%s\n" % (section, key))
 
     def fail(self, msg):
         # unittest differentiates between errored and failed.
@@ -1703,7 +1703,7 @@ class PythonTest(Test):
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, b"%s.out" % self.bname)
+        return os.path.join(self._testdir, "%s.out" % self.name)
 
     def readrefout(self):
         if self._isdotttest():
@@ -1746,7 +1746,7 @@ class PythonTest(Test):
         return processed
 
     def _run(self, env):
-        debugargs = b""
+        debugargs = ""
         if self._options.debug:
             try:
                 import ipdb
@@ -1757,11 +1757,11 @@ class PythonTest(Test):
                 )
                 pass
             else:
-                debugargs = b" -m ipdb "
-        cmd = b'%s debugpython -- %s "%s"' % (self._hgcommand, debugargs, self.path)
+                debugargs = " -m ipdb "
+        cmd = '%s debugpython -- %s "%s"' % (self._hgcommand, debugargs, self.path)
         if self._options.interactive and self._isdotttest():
             # --fix is picked up by testutil.autofix, which will autofix the test.
-            cmd += b" --fix"
+            cmd += " --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
         with open(self.path, "r") as f:
@@ -1781,7 +1781,7 @@ class PythonTest(Test):
 
     def _isdotttest(self):
         """Returns true if the test is using testutil.dott"""
-        if self.bname.endswith(b"-t.py"):
+        if self.name.endswith("-t.py"):
             return True
         else:
             try:
@@ -1828,14 +1828,14 @@ class TTest(Test):
         self._allcases = parsettestcases(path)
         super(TTest, self).__init__(path, *args, **kwds)
         if case:
-            self.name = "%s (case %s)" % (self.name, _strpath(case))
-            self.errpath = b"%s.%s.err" % (self.errpath[:-4], case)
-            self._tmpname += b"-%s" % case
+            self.name = "%s (case %s)" % (self.name, case)
+            self.errpath = "%s.%s.err" % (self.errpath[:-4], case)
+            self._tmpname += "-%s" % case
         self._hghavecache = {}
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, self.bname)
+        return os.path.join(self._testdir, self.name)
 
     def _run(self, env):
         with open(self.path, "rb") as f:
@@ -1851,12 +1851,12 @@ class TTest(Test):
         self.progress = (0, saltcount)
 
         # Write out the generated script.
-        fname = b"%s.sh" % self._testtmp
+        fname = "%s.sh" % self._testtmp
         with open(fname, "wb") as f:
             for l in script:
                 f.write(l)
 
-        cmd = b'%s "%s"' % (self._shell, fname)
+        cmd = '%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
         saltseen = [0]
@@ -1893,11 +1893,11 @@ class TTest(Test):
 
     def _computehghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
-        runtestdir = os.path.abspath(os.path.dirname(_bytespath(__file__)))
-        tdir = runtestdir.replace(b"\\", b"/")
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        tdir = runtestdir.replace("\\", "/")
         proc = Popen4(
-            b'%s debugpython -- "%s/hghave" %s'
-            % (self._hgcommand, tdir, b" ".join(reqs)),
+            '%s debugpython -- "%s/hghave" %s'
+            % (self._hgcommand, tdir, " ".join(reqs)),
             self._testtmp,
             0,
             self._getenv(),
@@ -1916,7 +1916,7 @@ class TTest(Test):
         if ret != 0:
             return False, stdout
 
-        if b"slow" in reqs:
+        if "slow" in reqs:
             self._timeout = self._slowtimeout
         return True, None
 
@@ -1924,7 +1924,7 @@ class TTest(Test):
         # implements "#if"
         reqs = []
         for arg in args:
-            if arg.startswith(b"no-") and arg[3:] in self._allcases:
+            if arg.startswith("no-") and arg[3:] in self._allcases:
                 if arg[3:] == self._case:
                     return False
             elif arg in self._allcases:
@@ -2006,20 +2006,20 @@ class TTest(Test):
             if not l.endswith(b"\n"):
                 l += b"\n"
             if l.startswith(b"#require"):
-                lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != b"#require":
+                lsplit = _strpath(l).split()
+                if len(lsplit) < 2 or lsplit[0] != "#require":
                     after.setdefault(pos, []).append("  !!! invalid #require\n")
                 if not skipping:
                     haveresult, message = self._hghave(lsplit[1:])
                     if not haveresult:
-                        script = [b'echo "%s"\nexit 80\n' % message]
+                        script = [b'echo "%s"\nexit 80\n' % _bytespath(message)]
                         break
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#chg-"):
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#if"):
-                lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != b"#if":
+                lsplit = _strpath(l).split()
+                if len(lsplit) < 2 or lsplit[0] != "#if":
                     after.setdefault(pos, []).append("  !!! invalid #if\n")
                 if skipping is not None:
                     after.setdefault(pos, []).append("  !!! nested #if\n")
@@ -2554,9 +2554,7 @@ class TestResult(unittest._TextTestResult):
                 pass
             elif self._options.view:
                 v = self._options.view
-                if PYTHON3:
-                    v = _bytespath(v)
-                os.system(b"%s %s %s" % (v, test.refpath, test.errpath))
+                os.system("%s %s %s" % (v, test.refpath, test.errpath))
             else:
                 servefail, lines = getdiff(expected, got, test.refpath, test.errpath)
                 if servefail:
@@ -2600,7 +2598,7 @@ class TestResult(unittest._TextTestResult):
                         else:
                             isyes = answer.lower() in ("y", "yes")
                     if isyes:
-                        if test.path.endswith(b".t"):
+                        if test.path.endswith(".t"):
                             rename(test.errpath, test.path)
                         else:
                             rename(test.errpath, "%s.out" % test.path)
@@ -2723,8 +2721,8 @@ class TestSuite(unittest.TestSuite):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
-            if not (self._whitelist and test.bname in self._whitelist):
-                if self._blacklist and test.bname in self._blacklist:
+            if not (self._whitelist and test.name in self._whitelist):
+                if self._blacklist and test.name in self._blacklist:
                     result.addSkip(test, "blacklisted")
                     continue
 
@@ -2734,7 +2732,7 @@ class TestSuite(unittest.TestSuite):
 
                 if self._keywords:
                     with open(test.path, "rb") as f:
-                        t = f.read().lower() + test.bname.lower()
+                        t = f.read().lower() + test.name.lower()
                     ignored = False
                     for k in self._keywords.lower().split():
                         if k not in t:
@@ -2919,7 +2917,7 @@ class TestSuite(unittest.TestSuite):
 def loadtimes(outputdir):
     times = []
     try:
-        with open(os.path.join(outputdir, b".testtimes-")) as fp:
+        with open(os.path.join(outputdir, ".testtimes-")) as fp:
             for line in fp:
                 ts = line.split()
                 times.append((ts[0], [float(t) for t in ts[1:]]))
@@ -2940,11 +2938,11 @@ def savetimes(outputdir, result):
             ts.append(real)
             ts[:] = ts[-maxruns:]
 
-    fd, tmpname = tempfile.mkstemp(prefix=b".testtimes", dir=outputdir, text=True)
+    fd, tmpname = tempfile.mkstemp(prefix=".testtimes", dir=outputdir, text=True)
     with os.fdopen(fd, "w") as fp:
         for name, ts in sorted(saved.items()):
             fp.write("%s %s\n" % (name, " ".join(["%.3f" % (t,) for t in ts])))
-    timepath = os.path.join(outputdir, b".testtimes")
+    timepath = os.path.join(outputdir, ".testtimes")
     try:
         os.unlink(timepath)
     except OSError:
@@ -2986,7 +2984,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 self._writexunit(result, xuf)
 
         if self._runner.options.json:
-            jsonpath = os.path.join(self._runner._outputdir, b"report.json")
+            jsonpath = os.path.join(self._runner._outputdir, "report.json")
             with open(jsonpath, "w") as fp:
                 self._writejson(result, fp)
 
@@ -3041,7 +3039,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     self._writexunit(result, xuf)
 
             if self._runner.options.json:
-                jsonpath = os.path.join(self._runner._outputdir, b"report.json")
+                jsonpath = os.path.join(self._runner._outputdir, "report.json")
                 with open(jsonpath, "w") as fp:
                     self._writejson(result, fp)
 
@@ -3065,7 +3063,7 @@ class TextTestRunner(unittest.TextTestRunner):
 
             if self._runner.options.exceptions:
                 exceptions = aggregateexceptions(
-                    os.path.join(self._runner._outputdir, b"exceptions")
+                    os.path.join(self._runner._outputdir, "exceptions")
                 )
                 total = sum(exceptions.values())
 
@@ -3105,8 +3103,8 @@ class TextTestRunner(unittest.TextTestRunner):
             opts = ""
             withhg = self._runner.options.with_hg
             if withhg:
-                opts += " --with-hg=%s " % shellquote(_strpath(withhg))
-            rtc = "%s %s %s %s" % (PYTHON.decode("utf-8"), sys.argv[0], opts, test)
+                opts += " --with-hg=%s " % shellquote(withhg)
+            rtc = "%s %s %s %s" % (PYTHON, sys.argv[0], opts, test)
             data = pread(bisectcmd + ["--command", rtc])
             m = re.search(
                 (
@@ -3269,11 +3267,11 @@ class TestpilotTestRunner(object):
                 {
                     "type": "custom",
                     "target": "hg-%s-%s" % (sys.platform, t),
-                    "command": [os.path.abspath(_bytespath(__file__)), "%s" % t.path],
+                    "command": [os.path.abspath(__file__), "%s" % t.path],
                 }
             )
 
-        jsonpath = os.path.join(self._runner._outputdir, b"buck-test-info.json")
+        jsonpath = os.path.join(self._runner._outputdir, "buck-test-info.json")
         with open(jsonpath, "w") as fp:
             json.dump(testlist, fp)
 
@@ -3283,7 +3281,7 @@ class TestpilotTestRunner(object):
         env["http_proxy"] = ""
         env["https_proxy"] = ""
 
-        testpilotjson = os.path.join(self._runner._outputdir, b"testpilot-result.json")
+        testpilotjson = os.path.join(self._runner._outputdir, "testpilot-result.json")
         try:
             os.remove(testpilotjson)
         except OSError as e:
@@ -3312,18 +3310,18 @@ class TestRunner(object):
 
     # Programs required to run tests.
     REQUIREDTOOLS = [
-        b"diff",
-        b"grep",
-        b"unzip",
-        b"gunzip",
-        b"bunzip2",
-        b"sed",
-        b"cmp",
-        b"dd",
+        "diff",
+        "grep",
+        "unzip",
+        "gunzip",
+        "bunzip2",
+        "sed",
+        "cmp",
+        "dd",
     ]
 
     # Maps file extensions to test class.
-    TESTTYPES = [(b".py", PythonTest), (b".t", TTest)]
+    TESTTYPES = [(".py", PythonTest), (".t", TTest)]
 
     def __init__(self):
         self.options = None
@@ -3350,10 +3348,10 @@ class TestRunner(object):
                 progress.setup()
             parser = parser or getparser()
             options = parseargs(args, parser)
-            tests = [_bytespath(a) for a in options.tests]
+            tests = list(options.tests)
             if options.test_list is not None:
                 for listfile in options.test_list:
-                    with open(listfile, "rb") as f:
+                    with open(listfile, "r") as f:
                         tests.extend(t for t in f.read().splitlines() if t)
             self.options = options
 
@@ -3380,16 +3378,16 @@ class TestRunner(object):
         else:
             # keywords for slow tests
             slow = {
-                b"svn": 10,
-                b"cvs": 10,
-                b"hghave": 10,
-                b"run-tests": 10,
-                b"corruption": 10,
-                b"race": 10,
-                b"i18n": 10,
-                b"check": 100,
-                b"gendoc": 100,
-                b"contrib-perf": 200,
+                "svn": 10,
+                "cvs": 10,
+                "hghave": 10,
+                "run-tests": 10,
+                "corruption": 10,
+                "race": 10,
+                "i18n": 10,
+                "check": 100,
+                "gendoc": 100,
+                "contrib-perf": 200,
             }
             perf = {}
 
@@ -3409,21 +3407,24 @@ class TestRunner(object):
                     for kw, mul in slow.items():
                         if kw in f:
                             val *= mul
-                    if f.endswith(b".py"):
+                    if f.endswith(".py"):
                         val /= 10.0
                     perf[f] = val / 1000.0
                     return perf[f]
 
             testdescs.sort(key=sortkey)
 
-        self._testdir = osenvironb[b"TESTDIR"] = getattr(os, "getcwdb", os.getcwd)()
+        testdir = os.getcwd()
+        os.environ["TESTDIR"] = testdir
+        self._testdir = testdir
+
         # assume all tests in same folder for now
         if testdescs:
             pathname = os.path.dirname(testdescs[0]["path"])
             if pathname:
-                osenvironb[b"TESTDIR"] = os.path.join(osenvironb[b"TESTDIR"], pathname)
+                os.environ["TESTDIR"] = os.path.join(os.environ["TESTDIR"], pathname)
         if self.options.outputdir:
-            self._outputdir = canonpath(_bytespath(self.options.outputdir))
+            self._outputdir = canonpath(self.options.outputdir)
         else:
             self._outputdir = self._testdir
             if testdescs and pathname:
@@ -3439,7 +3440,7 @@ class TestRunner(object):
 
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
-            tmpdir = _bytespath(self.options.tmpdir)
+            tmpdir = self.options.tmpdir
             if os.path.exists(tmpdir):
                 # Meaning of tmpdir has changed since 1.3: we used to create
                 # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
@@ -3458,19 +3459,20 @@ class TestRunner(object):
             if os.name == "nt":
                 # without this, we get the default temp dir location, but
                 # in all lowercase, which causes troubles with paths (issue3490)
-                d = osenvironb.get(b"TMP", None)
-            tmpdir = tempfile.mkdtemp(b"", b"hgtests.", d)
+                d = os.environ.get("TMP", None)
+            tmpdir = tempfile.mkdtemp("", "hgtests.", d)
 
-        self._hgtmp = osenvironb[b"HGTMP"] = os.path.realpath(tmpdir)
+        hgtmp = os.path.realpath(tmpdir)
+        self._hgtmp = hgtmp
+        os.environ["HGTMP"] = hgtmp
 
         if self.options.with_hg:
             self._installdir = None
             whg = self.options.with_hg
             self._bindir = os.path.dirname(os.path.realpath(whg))
-            assert isinstance(self._bindir, bytes)
             # use full path, since _hgcommand will also be used as ui.remotecmd
             self._hgcommand = os.path.realpath(whg)
-            self._tmpbindir = os.path.join(self._hgtmp, b"install", b"bin")
+            self._tmpbindir = os.path.join(self._hgtmp, "install", "bin")
             os.makedirs(self._tmpbindir)
 
             # This looks redundant with how Python initializes sys.path from
@@ -3480,46 +3482,41 @@ class TestRunner(object):
             # ... which means it's not really redundant at all.
             self._pythondir = self._bindir
         else:
-            self._installdir = os.path.join(self._hgtmp, b"install")
-            self._bindir = os.path.join(self._installdir, b"bin")
-            self._hgcommand = os.path.join(self._bindir, b"hg")
+            self._installdir = os.path.join(self._hgtmp, "install")
+            self._bindir = os.path.join(self._installdir, "bin")
+            self._hgcommand = os.path.join(self._bindir, "hg")
             self._tmpbindir = self._bindir
-            self._pythondir = os.path.join(self._installdir, b"lib", b"python")
+            self._pythondir = os.path.join(self._installdir, "lib", "python")
 
         if self.options.with_watchman or self.options.watchman:
             self._watchman = self.options.with_watchman or "watchman"
-            osenvironb[b"HGFSMONITOR_TESTS"] = b"1"
+            os.environ["HGFSMONITOR_TESTS"] = "1"
         else:
-            osenvironb[b"BINDIR"] = self._bindir
+            os.environ["BINDIR"] = self._bindir
             self._watchman = None
-            if b"HGFSMONITOR_TESTS" in osenvironb:
-                del osenvironb[b"HGFSMONITOR_TESTS"]
+            if "HGFSMONITOR_TESTS" in os.environ:
+                del os.environ["HGFSMONITOR_TESTS"]
 
-        osenvironb[b"BINDIR"] = self._bindir
-        osenvironb[b"TMPBINDIR"] = self._tmpbindir
-        osenvironb[b"PYTHON"] = PYTHON
+        os.environ["BINDIR"] = self._bindir
+        os.environ["TMPBINDIR"] = self._tmpbindir
+        os.environ["PYTHON"] = PYTHON
 
         if self.options.with_python3:
-            osenvironb[b"PYTHON3"] = self.options.with_python3
+            os.environ["PYTHON3"] = self.options.with_python3
 
-        fileb = _bytespath(__file__)
-        runtestdir = os.path.abspath(os.path.dirname(fileb))
-        osenvironb[b"RUNTESTDIR"] = runtestdir
-        if PYTHON3:
-            sepb = _bytespath(os.pathsep)
-        else:
-            sepb = os.pathsep
-        path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        os.environ["RUNTESTDIR"] = runtestdir
+        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if os.path.islink(__file__):
             # test helper will likely be at the end of the symlink
-            realfile = os.path.realpath(fileb)
+            realfile = os.path.realpath(__file__)
             realdir = os.path.abspath(os.path.dirname(realfile))
             path.insert(2, realdir)
         if self._testdir != runtestdir:
             path = [self._testdir] + path
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
-        osenvironb[b"PATH"] = sepb.join(path)
+        os.environ["PATH"] = os.pathsep.join(path)
 
         # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
         # can run .../tests/run-tests.py test-foo where test-foo
@@ -3531,20 +3528,20 @@ class TestRunner(object):
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
         # are in /opt/subversion.)
-        oldpypath = osenvironb.get(IMPL_PATH)
+        oldpypath = os.environ.get(IMPL_PATH)
         if oldpypath:
             pypath.append(oldpypath)
-        osenvironb[IMPL_PATH] = sepb.join(pypath)
+        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
         if self.options.allow_slow_tests:
             os.environ["HGTEST_SLOW"] = "slow"
         elif "HGTEST_SLOW" in os.environ:
             del os.environ["HGTEST_SLOW"]
 
-        self._coveragefile = os.path.join(self._testdir, b".coverage")
+        self._coveragefile = os.path.join(self._testdir, ".coverage")
 
         if self.options.exceptions:
-            exceptionsdir = os.path.join(self._outputdir, b"exceptions")
+            exceptionsdir = os.path.join(self._outputdir, "exceptions")
             try:
                 os.makedirs(exceptionsdir)
             except OSError as e:
@@ -3555,17 +3552,17 @@ class TestRunner(object):
             for f in os.listdir(exceptionsdir):
                 os.unlink(os.path.join(exceptionsdir, f))
 
-            osenvironb[b"HGEXCEPTIONSDIR"] = exceptionsdir
-            logexceptions = os.path.join(self._testdir, b"logexceptions.py")
+            os.environ["HGEXCEPTIONSDIR"] = exceptionsdir
+            logexceptions = os.path.join(self._testdir, "logexceptions.py")
             self.options.extra_config_opt.append(
                 "extensions.logexceptions=%s" % logexceptions.decode("utf-8")
             )
 
         vlog("# Using TESTDIR", self._testdir)
-        vlog("# Using RUNTESTDIR", osenvironb[b"RUNTESTDIR"])
+        vlog("# Using RUNTESTDIR", os.environ["RUNTESTDIR"])
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
-        vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
+        vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
         if self._watchman:
             vlog("# Using watchman", self._watchman)
         vlog("# Writing to directory", self._outputdir)
@@ -3576,7 +3573,7 @@ class TestRunner(object):
             # O(1).
             # `chgsockpath` is inside HGTMP, and will be cleaned up by
             # self._cleanup().
-            self.options.chg_sock_path = os.path.join(self._hgtmp, b"chgserver")
+            self.options.chg_sock_path = os.path.join(self._hgtmp, "chgserver")
 
         try:
             return self._runtests(testdescs) or 0
@@ -3596,15 +3593,15 @@ class TestRunner(object):
                     'hg st --rev "%s" -man0 .' % self.options.changed, None, 0
                 )
                 stdout, stderr = proc.communicate()
-                args = stdout.strip(b"\0").split(b"\0")
+                args = _strpath(stdout).strip("\0").split("\0")
             else:
-                args = os.listdir(b".")
+                args = os.listdir(".")
 
         expanded_args = []
         for arg in args:
             if os.path.isdir(arg):
-                if not arg.endswith(b"/"):
-                    arg += b"/"
+                if not arg.endswith("/"):
+                    arg += "/"
                 expanded_args.extend([arg + a for a in os.listdir(arg)])
             else:
                 expanded_args.append(arg)
@@ -3613,11 +3610,11 @@ class TestRunner(object):
         tests = []
         for t in args:
             if not (
-                os.path.basename(t).startswith(b"test-")
-                and (t.endswith(b".py") or t.endswith(b".t"))
+                os.path.basename(t).startswith("test-")
+                and (t.endswith(".py") or t.endswith(".t"))
             ):
                 continue
-            if t.endswith(b".t"):
+            if t.endswith(".t"):
                 # .t file may contain multiple test cases
                 cases = sorted(parsettestcases(t))
                 if cases:
@@ -3647,9 +3644,9 @@ class TestRunner(object):
                     desc = testdescs[0]
                     # desc['path'] is a relative path
                     if "case" in desc:
-                        errpath = b"%s.%s.err" % (desc["path"], desc["case"])
+                        errpath = "%s.%s.err" % (desc["path"], desc["case"])
                     else:
-                        errpath = b"%s.err" % desc["path"]
+                        errpath = "%s.err" % desc["path"]
                     errpath = os.path.join(self._outputdir, errpath)
                     if os.path.exists(errpath):
                         break
@@ -3661,8 +3658,6 @@ class TestRunner(object):
             tests = [self._gettest(d, i) for i, d in enumerate(testdescs)]
 
             kws = self.options.keywords
-            if kws is not None and PYTHON3:
-                kws = kws.encode("utf-8")
 
             vlog("# Running TestSuite with %d jobs" % self.options.jobs)
             suite = TestSuite(
@@ -3754,7 +3749,7 @@ class TestRunner(object):
                 break
 
         refpath = os.path.join(self._testdir, path)
-        tmpdir = os.path.join(self._hgtmp, b"child%d" % count)
+        tmpdir = os.path.join(self._hgtmp, "child%d" % count)
 
         # extra keyword parameters. 'case' is used by .t tests
         kwds = dict((k, testdesc[k]) for k in ["case"] if k in testdesc)
@@ -3799,7 +3794,7 @@ class TestRunner(object):
     def _usecorrectpython(self):
         """Configure the environment to use the appropriate Python in tests."""
         # Tests must use the same interpreter as us or bad things will happen.
-        pyexename = sys.platform == "win32" and b"python.exe" or b"python"
+        pyexename = sys.platform == "win32" and "python.exe" or "python"
         if getattr(os, "symlink", None):
             vlog("# Making python executable in test path a symlink to '%s'" % PYTHON)
             mypython = os.path.join(self._tmpbindir, pyexename)
@@ -3837,7 +3832,7 @@ class TestRunner(object):
             # No correction is needed
             return
         if getattr(os, "symlink", None):
-            tmphgpath = os.path.join(self._tmpbindir, b"hg")
+            tmphgpath = os.path.join(self._tmpbindir, "hg")
             vlog("# Symlink %s to %s" % (self._hgcommand, tmphgpath))
 
             try:
@@ -3856,7 +3851,7 @@ class TestRunner(object):
         This will also configure hg with the appropriate testing settings.
         """
         vlog("# Performing temporary installation of HG")
-        installerrs = os.path.join(self._hgtmp, b"install.err")
+        installerrs = os.path.join(self._hgtmp, "install.err")
         compiler = ""
         if self.options.compiler:
             compiler = "--compiler " + self.options.compiler
@@ -3864,10 +3859,6 @@ class TestRunner(object):
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
         exe = PYTHON
-        if PYTHON3:
-            compiler = _bytespath(compiler)
-            script = _bytespath(script)
-            exe = _bytespath(exe)
         hgroot = os.path.dirname(os.path.dirname(script))
         self._hgroot = hgroot
         os.chdir(hgroot)
@@ -3936,7 +3927,7 @@ class TestRunner(object):
                 for line in lines:
                     f.write(line + "\n")
 
-        hgbat = os.path.join(self._bindir, b"hg.bat")
+        hgbat = os.path.join(self._bindir, "hg.bat")
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
             # installation layout put it in bin/ directly. Fix it
@@ -3975,7 +3966,7 @@ class TestRunner(object):
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, b"edenscm", b"mercurial")
+        expecthg = os.path.join(self._pythondir, "edenscm", "mercurial")
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write(
@@ -3989,13 +3980,11 @@ class TestRunner(object):
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = b'%s -c "from edenscm import mercurial; print (mercurial.__path__[0])"'
+        cmd = '%s -c "from edenscm import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
-        if PYTHON3:
-            cmd = _strpath(cmd)
         pipe = os.popen(cmd)
         try:
-            self._hgpath = _bytespath(pipe.read().strip())
+            self._hgpath = pipe.read().strip()
         finally:
             pipe.close()
 
@@ -4033,9 +4022,7 @@ class TestRunner(object):
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
-        dpb = _bytespath(os.defpath)
-        sepb = _bytespath(os.pathsep)
-        for p in osenvironb.get(b"PATH", dpb).split(sepb):
+        for p in os.environ.get("PATH", os.defpath).split(os.pathsep):
             name = os.path.join(p, program)
             if os.name == "nt" or os.access(name, os.X_OK):
                 return name
