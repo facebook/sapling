@@ -12,6 +12,7 @@ use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, Visit
 use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bulkops::Direction;
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
 use mercurial_types::HgChangesetId;
@@ -62,6 +63,7 @@ impl<T> SamplingWalkVisitor<T> {
         sample_path_regex: Option<Regex>,
         sampler: Arc<T>,
         enable_derive: bool,
+        chunk_direction: Direction,
     ) -> Self {
         Self {
             inner: WalkState::new(
@@ -69,6 +71,7 @@ impl<T> SamplingWalkVisitor<T> {
                 include_edge_types,
                 HashSet::new(),
                 enable_derive,
+                chunk_direction,
             ),
             options,
             sample_path_regex,

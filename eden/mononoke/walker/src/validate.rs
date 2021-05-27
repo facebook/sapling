@@ -32,6 +32,7 @@ use crate::walk::{
 use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bulkops::Direction;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -184,6 +185,7 @@ impl ValidatingVisitor {
         always_emit_edge_types: HashSet<EdgeType>,
         enable_derive: bool,
         lfs_threshold: Option<u64>,
+        chunk_direction: Direction,
     ) -> Self {
         Self {
             repo_stats_key,
@@ -192,6 +194,7 @@ impl ValidatingVisitor {
                 include_edge_types,
                 always_emit_edge_types,
                 enable_derive,
+                chunk_direction,
             ),
             checks_by_node_type: include_checks
                 .into_iter()
@@ -936,6 +939,7 @@ async fn run_one(
         always_emit_edge_types.clone(),
         job_params.enable_derive,
         sub_params.lfs_threshold,
+        sub_params.tail_params.chunk_direction,
     );
 
     let type_params = RepoWalkTypeParams {

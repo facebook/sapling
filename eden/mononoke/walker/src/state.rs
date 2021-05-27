@@ -17,6 +17,7 @@ use anyhow::{bail, Error};
 use array_init::array_init;
 use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bulkops::Direction;
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
 use futures::future::TryFutureExt;
@@ -169,6 +170,7 @@ pub struct WalkState {
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
     enable_derive: bool,
+    chunk_direction: Direction,
     // Interning
     bcs_ids: InternMap<ChangesetId, InternedId<ChangesetId>>,
     hg_cs_ids: InternMap<HgChangesetId, InternedId<HgChangesetId>>,
@@ -220,6 +222,7 @@ impl WalkState {
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
         enable_derive: bool,
+        chunk_direction: Direction,
     ) -> Self {
         let fac = RandomState::default();
         Self {
@@ -228,6 +231,7 @@ impl WalkState {
             include_edge_types,
             always_emit_edge_types,
             enable_derive,
+            chunk_direction,
             // Interning
             bcs_ids: InternMap::with_hasher(fac.clone()),
             hg_cs_ids: InternMap::with_hasher(fac.clone()),
@@ -974,10 +978,15 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         walk_item: &OutgoingEdge,
         _route: Option<EmptyRoute>,
     ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
-        let target = walk_item.target.clone();
-        let i = self.bcs_ids.interned(bcs_id);
-        self.record_multi(&self.deferred_bcs, i, &walk_item);
-        ((target, None, None), EmptyRoute {})
+        match self.chunk_direction {
+            Direction::NewestFirst => {
+                let i = self.bcs_ids.interned(bcs_id);
+                self.record_multi(&self.deferred_bcs, i, &walk_item);
+            }
+            // We'll never visit backward looking edges when running OldestFirst, so don't record them.
+            Direction::OldestFirst => {}
+        }
+        ((walk_item.target.clone(), None, None), EmptyRoute {})
     }
 }
 

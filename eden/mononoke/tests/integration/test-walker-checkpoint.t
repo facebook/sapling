@@ -120,6 +120,24 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   Deferred: 0
   Completed in 4 chunks of size 1
 
+ hg setup.  First create the partial checkpoint by setting sample rate
+  $ mononoke_walker -L sizing -L graph scrub -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg -i FileContent 2>&1 | strip_glog
+  Repo bounds: (1, 5)
+  Starting chunk 1 with bounds (4, 5)
+  Seen,Loaded: 9,9
+  Deferred: 0
+  Starting chunk 2 with bounds (3, 4)
+  Seen,Loaded: 17,13
+  Deferred: 2
+  Starting chunk 3 with bounds (2, 3)
+  Seen,Loaded: 9,7
+  Deferred: 1
+  Chunk 3 inserting checkpoint (2, 5)
+  Starting chunk 4 with bounds (1, 2)
+  Seen,Loaded: 7,7
+  Deferred: 0
+  Completed in 4 chunks of size 1
+
 OldestFirst setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Repo bounds: (1, 5)
@@ -138,13 +156,34 @@ OldestFirst setup for both a catchup due to a new commit, plus continuation from
   Deferred: 0
   Completed in 4 chunks of size 1
 
+OldestFirst hg setup
+  $ mononoke_walker -L sizing -L graph scrub -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Repo bounds: (1, 5)
+  Starting chunk 1 with bounds (1, 2)
+  Seen,Loaded: 1,1
+  Deferred: 0
+  Chunk 1 inserting checkpoint (1, 2)
+  Starting chunk 2 with bounds (2, 3)
+  Seen,Loaded: 1,1
+  Deferred: 0
+  Chunk 2 updating checkpoint to (1, 3)
+  Starting chunk 3 with bounds (3, 4)
+  Seen,Loaded: 1,1
+  Deferred: 0
+  Chunk 3 updating checkpoint to (1, 4)
+  Starting chunk 4 with bounds (4, 5)
+  Seen,Loaded: 1,1
+  Deferred: 0
+  Chunk 4 updating checkpoint to (1, 5)
+  Completed in 4 chunks of size 1
+
 now the additional commit
   $ cd repo-hg
   $ mkcommit E
   $ cd ..
   $ blobimport repo-hg/.hg repo
 
-finally, should have a run with both catchup and main bounds
+finally, bonsai should have a run with both catchup and main bounds
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 5)
   Repo bounds: (1, 6)
@@ -158,7 +197,21 @@ finally, should have a run with both catchup and main bounds
   Deferred edge counts by type were: ChangesetToBonsaiParent:1
   Completed in 5 chunks of size 1
 
-OldestFirst, has only main bounds as the start point of the repo hasnot changed
+hg should have a run with both catchup and main bounds, and some deferred expected at end
+  $ mononoke_walker -L sizing -L graph scrub -q -p BonsaiHgMapping --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=hg_deep --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | strip_glog
+  Found checkpoint with bounds: (2, 5)
+  Repo bounds: (1, 6)
+  Continuing from checkpoint run 1 chunk 3 with catchup Some((5, 6)) and main Some((1, 2)) bounds
+  Starting chunk 4 with bounds (5, 6)
+  Seen,Loaded: 12,9
+  Deferred: 1
+  Starting chunk 5 with bounds (1, 2)
+  Seen,Loaded: 8,8
+  Deferred: 1
+  Deferred edge counts by type were: HgChangesetToHgParent:1 HgManifestFileNodeToHgParentFileNode:1 HgManifestToHgFileNode:1
+  Completed in 5 chunks of size 1
+
+OldestFirst, has only main bounds as the start point of the repo has not changed
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset -d OldestFirst --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3_oldest --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (1, 4)
   Repo bounds: (1, 6)
@@ -169,6 +222,17 @@ OldestFirst, has only main bounds as the start point of the repo hasnot changed
   Starting chunk 5 with bounds (5, 6)
   Seen,Loaded: 2,2
   Deferred: 0
+  Completed in 5 chunks of size 1
+
+OldestFirst, hg should have a run with only main bounds
+  $ mononoke_walker -L sizing -L graph scrub -q -p BonsaiHgMapping -d OldestFirst --chunk-size=1 --checkpoint-name=hg_deep_oldest --checkpoint-path=test_sqlite -I deep -i hg 2>&1 | strip_glog
+  Found checkpoint with bounds: (1, 5)
+  Repo bounds: (1, 6)
+  Continuing from checkpoint run 1 chunk 4 with catchup None and main Some((5, 6)) bounds
+  Starting chunk 5 with bounds (5, 6)
+  Seen,Loaded: 12,9
+  Deferred: 0
+  Chunk 5 updating checkpoint to (1, 6)
   Completed in 5 chunks of size 1
 
 Check that the checkpoint low bound is not used if its too old
