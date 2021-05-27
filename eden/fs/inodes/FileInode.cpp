@@ -685,7 +685,7 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-folly::Future<struct stat> FileInode::stat(ObjectFetchContext& context) {
+ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
   st.st_ino = getNodeId().get();
@@ -732,16 +732,18 @@ folly::Future<struct stat> FileInode::stat(ObjectFetchContext& context) {
         state->nonMaterializedState->hash, context);
     state.unlock();
 
-    return std::move(sizeFut).thenValue(
-        [self = inodePtrFromThis(), st](const uint64_t size) mutable {
-          if (auto lockedState = LockedState{self};
-              !lockedState->isMaterialized()) {
-            lockedState->nonMaterializedState->size = size;
-          }
-          st.st_size = size;
-          updateBlockCount(st);
-          return st;
-        });
+    return std::move(sizeFut)
+        .thenValue(
+            [self = inodePtrFromThis(), st](const uint64_t size) mutable {
+              if (auto lockedState = LockedState{self};
+                  !lockedState->isMaterialized()) {
+                lockedState->nonMaterializedState->size = size;
+              }
+              st.st_size = size;
+              updateBlockCount(st);
+              return st;
+            })
+        .semi();
   }
 }
 

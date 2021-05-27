@@ -27,9 +27,7 @@ ImmediateFuture<struct stat> NfsDispatcherImpl::getattr(
     InodeNumber ino,
     ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino).thenValue(
-      [&context](const InodePtr& inode) {
-        return inode->stat(context).semi();
-      });
+      [&context](const InodePtr& inode) { return inode->stat(context); });
 }
 
 ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
@@ -65,14 +63,12 @@ ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
       })
       .thenValue([&context](InodePtr&& inode) {
         auto statFut = inode->stat(context);
-        return std::move(statFut)
-            .thenValue(
-                [inode = std::move(inode)](
-                    struct stat stat) -> std::tuple<InodeNumber, struct stat> {
-                  inode->incFsRefcount();
-                  return {inode->getNodeId(), stat};
-                })
-            .semi();
+        return std::move(statFut).thenValue(
+            [inode = std::move(inode)](
+                struct stat stat) -> std::tuple<InodeNumber, struct stat> {
+              inode->incFsRefcount();
+              return {inode->getNodeId(), stat};
+            });
       });
 }
 
@@ -137,16 +133,15 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
         // Set dev to 0 as this is unused for a regular file.
         auto newFile = inode->mknod(name, mode, 0, InvalidationRequired::No);
         auto statFut = newFile->stat(context);
-        return std::move(statFut)
-            .thenValue([newFile = std::move(newFile)](struct stat&& stat) {
+        return std::move(statFut).thenValue(
+            [newFile = std::move(newFile)](struct stat&& stat) {
               newFile->incFsRefcount();
               return CreateRes{
                   newFile->getNodeId(),
                   std::move(stat),
                   std::nullopt,
                   std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 
@@ -161,16 +156,12 @@ ImmediateFuture<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
         // directory.
         auto newDir = inode->mkdir(name, mode, InvalidationRequired::No);
         auto statFut = newDir->stat(context);
-        return std::move(statFut)
-            .thenValue([newDir = std::move(newDir)](struct stat&& stat) {
-              newDir->incFsRefcount();
-              return MkdirRes{
-                  newDir->getNodeId(),
-                  std::move(stat),
-                  std::nullopt,
-                  std::nullopt};
-            })
-            .semi();
+        return std::move(statFut).thenValue([newDir = std::move(newDir)](
+                                                struct stat&& stat) {
+          newDir->incFsRefcount();
+          return MkdirRes{
+              newDir->getNodeId(), std::move(stat), std::nullopt, std::nullopt};
+        });
       });
 }
 
@@ -186,16 +177,15 @@ ImmediateFuture<NfsDispatcher::SymlinkRes> NfsDispatcherImpl::symlink(
         // directory.
         auto symlink = inode->symlink(name, data, InvalidationRequired::No);
         auto statFut = symlink->stat(context);
-        return std::move(statFut)
-            .thenValue([symlink = std::move(symlink)](struct stat&& stat) {
+        return std::move(statFut).thenValue(
+            [symlink = std::move(symlink)](struct stat&& stat) {
               symlink->incFsRefcount();
               return SymlinkRes{
                   symlink->getNodeId(),
                   std::move(stat),
                   std::nullopt,
                   std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 
@@ -212,16 +202,15 @@ ImmediateFuture<NfsDispatcher::MknodRes> NfsDispatcherImpl::mknod(
         // directory.
         auto newFile = inode->mknod(name, mode, rdev, InvalidationRequired::No);
         auto statFut = newFile->stat(context);
-        return std::move(statFut)
-            .thenValue([newFile = std::move(newFile)](struct stat&& stat) {
+        return std::move(statFut).thenValue(
+            [newFile = std::move(newFile)](struct stat&& stat) {
               newFile->incFsRefcount();
               return MknodRes{
                   newFile->getNodeId(),
                   std::move(stat),
                   std::nullopt,
                   std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 

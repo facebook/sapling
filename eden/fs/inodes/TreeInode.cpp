@@ -183,7 +183,7 @@ TreeInode::TreeInode(
 
 TreeInode::~TreeInode() {}
 
-folly::Future<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
+ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   auto st = getMount()->initStatData();
   st.st_ino = folly::to_narrow(getNodeId().get());
   auto contents = contents_.rlock();
@@ -3550,7 +3550,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
                     ->loadChildLocked(
                         contents->entries, name, entry, pendingLoads, context)
                     .thenValue([&context](InodePtr inode) {
-                      return inode->stat(context);
+                      return inode->stat(context).semi();
                     })
                     .unit());
           }

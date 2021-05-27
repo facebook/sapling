@@ -273,7 +273,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
 #endif // !_WIN32
 
-  folly::Future<struct stat> stat(ObjectFetchContext& context) override;
+  ImmediateFuture<struct stat> stat(ObjectFetchContext& context) override;
 
  private:
   using State = FileInodeState;

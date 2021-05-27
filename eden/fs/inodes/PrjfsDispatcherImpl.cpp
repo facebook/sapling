@@ -9,6 +9,7 @@
 
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
 #include <cpptoml.h>
+#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -70,8 +71,8 @@ folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
       .thenValue(
           [&context](const InodePtr inode) mutable
           -> folly::Future<std::optional<LookupResult>> {
-            return inode->stat(context).thenValue(
-                [inode = std::move(inode)](struct stat&& stat) {
+            return inode->stat(context)
+                .thenValue([inode = std::move(inode)](struct stat&& stat) {
                   size_t size = stat.st_size;
                   // Ensure that the OS has a record of the canonical
                   // file name, and not just whatever case was used to
@@ -83,7 +84,9 @@ folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                   };
                   return LookupResult{
                       std::move(inodeMetadata), std::move(incFsRefcount)};
-                });
+                })
+                .semi()
+                .via(&folly::QueuedImmediateExecutor::instance());
           })
       .thenError(
           folly::tag_t<std::system_error>{},

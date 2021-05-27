@@ -1077,25 +1077,26 @@ EdenServiceHandler::semifuture_getFileInformation(
   // possible.
   return wrapSemiFuture(
       std::move(helper),
-      collectAll(
-          applyToInodes(
-              rootInode,
-              *paths,
-              [&fetchContext](InodePtr inode) {
-                return inode->stat(fetchContext).thenValue([](struct stat st) {
-                  FileInformation info;
-                  info.size_ref() = st.st_size;
-                  auto ts = stMtime(st);
-                  info.mtime_ref()->seconds_ref() = ts.tv_sec;
-                  info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
-                  info.mode_ref() = st.st_mode;
+      collectAll(applyToInodes(
+                     rootInode,
+                     *paths,
+                     [&fetchContext](InodePtr inode) {
+                       return inode->stat(fetchContext)
+                           .thenValue([](struct stat st) {
+                             FileInformation info;
+                             info.size_ref() = st.st_size;
+                             auto ts = stMtime(st);
+                             info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                             info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
+                             info.mode_ref() = st.st_mode;
 
-                  FileInformationOrError result;
-                  result.set_info(info);
+                             FileInformationOrError result;
+                             result.set_info(info);
 
-                  return result;
-                });
-              }))
+                             return result;
+                           })
+                           .semi();
+                     }))
           .deferValue([](vector<Try<FileInformationOrError>>&& done) {
             auto out = std::make_unique<vector<FileInformationOrError>>();
             out->reserve(done.size());

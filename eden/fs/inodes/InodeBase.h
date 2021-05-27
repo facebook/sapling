@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
@@ -129,7 +130,7 @@ class InodeBase {
   }
 
   // See EdenDispatcher::getattr
-  virtual folly::Future<struct stat> stat(ObjectFetchContext& context) = 0;
+  virtual ImmediateFuture<struct stat> stat(ObjectFetchContext& context) = 0;
 
 #ifndef _WIN32
   // See Dispatcher::setattr
