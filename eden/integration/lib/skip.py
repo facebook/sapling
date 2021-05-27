@@ -181,9 +181,6 @@ if sys.platform.startswith("linux"):
         "stats_test.CountersTest": True,  # T89440036
         "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
-        "debug_getpath_test.DebugGetPathTest": [  # T89440930
-            "test_getpath_unlinked_inode"
-        ],
     }
 
     for (testModule, disabled) in NFS_TEST_DISABLED.items():

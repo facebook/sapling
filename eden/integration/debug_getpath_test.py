@@ -119,15 +119,23 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         that it is unlinked
         """
         # Create the file
-        self.write_file(os.path.join("foo", "bar", "test.txt"), "blah")
+        path = os.path.join("foo", "bar", "test.txt")
+        self.write_file(path, "blah")
         # Keep an open file handle so that the inode doesn't become invalid
-        f = open(os.path.join(self.mount, "foo", "bar", "test.txt"))
+        abspath = os.path.join(self.mount, path)
+        f = open(abspath)
         # Get the inodeNumber
-        stat = os.stat(os.path.join(self.mount, "foo", "bar", "test.txt"))
+        stat = os.stat(abspath)
         # Unlink the file
-        os.unlink(os.path.join(self.mount, "foo", "bar", "test.txt"))
+        os.unlink(abspath)
         output = self.eden.run_cmd("debug", "getpath", str(stat.st_ino), cwd=self.mount)
         # Close the file handle
         f.close()
 
-        self.assertEqual("loaded [unlinked]\n", output)
+        if self.use_nfs():
+            # With NFS, the client will rename an opened file to a "silly name"
+            # on unlink. Only when the file is actually deleted the silly name
+            # is removed.
+            self.assertRegex(output, f"loaded {os.path.dirname(abspath)}/\\.nfs.*\n")
+        else:
+            self.assertEqual(output, "loaded [unlinked]\n")
