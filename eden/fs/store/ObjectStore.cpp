@@ -125,12 +125,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
         ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
 
     updateProcessFetch(fetchContext);
-    // We do not technically need to move this future onto the server threads,
-    // we do this because this code path is primarily called by globFiles
-    // and give a performance improvement for globFiles.
-    // (inode code also call this function, but only once as tree data is kept
-    // in the tree inode data structure).
-    return folly::makeSemiFuture(maybeTree).via(executor_);
+
+    return maybeTree;
   }
 
   return localStore_->getTree(id).thenValue([self = shared_from_this(),
