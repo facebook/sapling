@@ -757,6 +757,10 @@ def migratetolazy(repo):
         # No need to migrate.
         return
 
+    # Migrate revlog to segments on demand.
+    if repo.changelog.algorithmbackend == "revlog":
+        migratetodoublewrite(repo)
+
     if (
         not any(
             s in repo.storerequirements

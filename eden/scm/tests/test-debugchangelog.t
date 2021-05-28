@@ -52,6 +52,7 @@
   │
   o  G
   
+  $ cp -R . $TESTTMP/revlogrepo
 
 Migration
 =========
@@ -288,3 +289,25 @@ To lazy:
   │
   o  G
   
+Revlog -> Lazy:
+
+  $ cd $TESTTMP/revlogrepo
+  $ setconfig paths.default=test:server1
+  $ hg debugchangelog --migrate lazy
+  $ hg debugchangelog
+  The changelog is backed by Rust. More backend information:
+  Backend (lazytext):
+    Local:
+      Segments + IdMap: $TESTTMP/revlogrepo/.hg/store/segments/v1
+      Zstore: $TESTTMP/revlogrepo/.hg/store/hgcommits/v1
+      Revlog + Nodemap: (not used)
+  Feature Providers:
+    Commit Graph Algorithms:
+      Segments
+    Commit Hash / Rev Lookup:
+      IdMap
+    Commit Data (user, message):
+      Zstore (incomplete, draft)
+      EdenAPI (remaining, public)
+      Revlog (not used)
+  Commit Hashes: lazy, using EdenAPI (repo = reponame-default)
