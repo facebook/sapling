@@ -29,7 +29,6 @@ use crate::error::SubcommandError;
 
 pub const SKIPLIST: &str = "skiplist";
 const SKIPLIST_BUILD: &str = "build";
-const ARG_SPARSE: &str = "sparse";
 const SKIPLIST_READ: &str = "read";
 const ARG_EXPONENT: &str = "exponent";
 
@@ -52,12 +51,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     Arg::with_name("rebuild")
                         .long("rebuild")
                         .help("forces the full rebuild instead of incremental update"),
-                )
-                // TODO(yancouto): Remove this once the argument is not used anymore
-                .arg(
-                    Arg::with_name(ARG_SPARSE)
-                        .long(ARG_SPARSE)
-                        .help("EXPERIMENTAL: build sparse skiplist. Makes skiplist smaller"),
                 )
                 .arg(
                     Arg::with_name(ARG_EXPONENT)
