@@ -9,19 +9,23 @@ use crate::common::{MegarepoOp, SourceName};
 use anyhow::{anyhow, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bytes::Bytes;
 use commit_transformation::{create_source_to_target_multi_mover, MultiMover};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::TryStreamExt;
+use futures::{stream, StreamExt, TryStreamExt};
 use manifest::ManifestOps;
-use megarepo_config::{MononokeMegarepoConfigs, SyncTargetConfig};
+use megarepo_config::{MononokeMegarepoConfigs, Source, SyncTargetConfig};
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use mononoke_api::Mononoke;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath};
 use sorted_vector_map::SortedVectorMap;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 // Create a new sync target given a config.
 // After this command finishes it creates
@@ -127,7 +131,6 @@ impl<'a> AddSyncTarget<'a> {
         changesets_to_merge: &'b HashMap<SourceName, ChangesetId>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
         let mut moved_commits = vec![];
-        // TODO(stash): linkfiles are ignored
         for source_config in &sync_target_config.sources {
             // TODO(stash): check that changeset is allowed to be synced
             let changeset_id = changesets_to_merge
@@ -141,9 +144,12 @@ impl<'a> AddSyncTarget<'a> {
 
             let mover = create_source_to_target_multi_mover(source_config.mapping.clone())
                 .map_err(MegarepoError::internal)?;
+
+            let linkfiles = self.prepare_linkfiles(source_config, &mover)?;
+            let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
             // TODO(stash): it assumes that commit is present in target
             let moved = self
-                .create_single_move_commit(ctx, repo, *changeset_id, &mover)
+                .create_single_move_commit(ctx, repo, *changeset_id, &mover, linkfiles)
                 .await?;
             let source_and_moved_changeset = SourceAndMovedChangesets {
                 source: *changeset_id,
@@ -209,6 +215,7 @@ impl<'a> AddSyncTarget<'a> {
         repo: &'b BlobRepo,
         cs_id: ChangesetId,
         mover: &MultiMover,
+        linkfiles: BTreeMap<MPath, Option<FileChange>>,
     ) -> Result<ChangesetId, Error> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
         let fsnode_id = root_fsnode_id.fsnode_id();
@@ -217,16 +224,16 @@ impl<'a> AddSyncTarget<'a> {
             .try_collect::<Vec<_>>()
             .await?;
 
-        let mut moved_entries = vec![];
+        let mut file_changes = vec![];
         for (path, fsnode) in entries {
             let moved = mover(&path)?;
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
             if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
-                moved_entries.push((path.clone(), None));
+                file_changes.push((path.clone(), None));
             }
 
-            moved_entries.extend(moved.into_iter().map(|target| {
+            file_changes.extend(moved.into_iter().map(|target| {
                 let fc = FileChange::new(
                     *fsnode.content_id(),
                     *fsnode.file_type(),
@@ -237,6 +244,7 @@ impl<'a> AddSyncTarget<'a> {
                 (target, Some(fc))
             }));
         }
+        file_changes.extend(linkfiles.into_iter());
 
         // TODO(stash): we need to figure out what parameters to set here
         let bcs = BonsaiChangesetMut {
@@ -247,7 +255,7 @@ impl<'a> AddSyncTarget<'a> {
             committer_date: None,
             message: "move commit".to_string(),
             extra: SortedVectorMap::new(),
-            file_changes: moved_entries.into_iter().collect(),
+            file_changes: file_changes.into_iter().collect(),
         }
         .freeze()?;
 
@@ -255,6 +263,70 @@ impl<'a> AddSyncTarget<'a> {
         save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()).await?;
 
         Ok(move_cs_id)
+    }
+
+    fn prepare_linkfiles(
+        &self,
+        source_config: &Source,
+        mover: &MultiMover,
+    ) -> Result<BTreeMap<MPath, Bytes>, MegarepoError> {
+        let mut links = BTreeMap::new();
+        for (src, dst) in &source_config.mapping.linkfiles {
+            // src is a file inside a given source, so mover needs to be applied to it
+            let src = MPath::new(src).map_err(MegarepoError::request)?;
+            let dst = MPath::new(dst).map_err(MegarepoError::request)?;
+            let moved_srcs = mover(&src).map_err(MegarepoError::request)?;
+
+            let mut iter = moved_srcs.into_iter();
+            let moved_src = match (iter.next(), iter.next()) {
+                (Some(moved_src), None) => moved_src,
+                (None, None) => {
+                    return Err(MegarepoError::request(anyhow!(
+                        "linkfile source {} does not map to any file inside source {}",
+                        src,
+                        source_config.name
+                    )));
+                }
+                _ => {
+                    return Err(MegarepoError::request(anyhow!(
+                        "linkfile source {} maps to too many files inside source {}",
+                        src,
+                        source_config.name
+                    )));
+                }
+            };
+
+            let content = Bytes::from(moved_src.to_vec());
+            links.insert(dst, content);
+        }
+        Ok(links)
+    }
+
+    async fn upload_linkfiles(
+        &self,
+        ctx: &CoreContext,
+        links: BTreeMap<MPath, Bytes>,
+        repo: &BlobRepo,
+    ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+        let linkfiles = stream::iter(links.into_iter())
+            .map(Ok)
+            .map_ok(|(path, content)| async {
+                let ((content_id, size), fut) = filestore::store_bytes(
+                    repo.blobstore(),
+                    repo.filestore_config(),
+                    &ctx,
+                    content,
+                );
+                fut.await?;
+
+                let fc = Some(FileChange::new(content_id, FileType::Symlink, size, None));
+
+                Result::<_, Error>::Ok((path, fc))
+            })
+            .try_buffer_unordered(100)
+            .try_collect::<BTreeMap<_, _>>()
+            .await?;
+        Ok(linkfiles)
     }
 
     async fn move_bookmark(
@@ -298,7 +370,10 @@ mod test {
     use megarepo_config::Target;
     use megarepo_mapping::REMAPPING_STATE_FILE;
     use mononoke_types::MPath;
-    use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+    use tests_utils::{
+        bookmark, list_working_copy_utf8, list_working_copy_utf8_with_types, resolve_cs_id,
+        CreateCommitContext,
+    };
 
     #[fbinit::test]
     async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
@@ -412,6 +487,83 @@ mod test {
             hashmap! {
                 MPath::new("source_1/first")? => "first_updated".to_string(),
                 MPath::new("source_2/second")? => "second".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let first_source_name = "source_1".to_string();
+        let second_source_name = "source_2".to_string();
+        let version = "version_1".to_string();
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(first_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .linkfile("first", "linkfiles/first")
+            .build_source()?
+            .source_builder(second_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .linkfile("second", "linkfiles/second")
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commits and bookmarks");
+        let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("first", "first")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+            .set_to(first_source_cs_id)
+            .await?;
+
+        let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("second", "second")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+            .set_to(second_source_cs_id)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> =
+            Arc::new(test.configs_storage.clone());
+
+        let sync_target_config =
+            test.configs_storage
+                .get_config_by_version(ctx.clone(), target, version.clone())?;
+        let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+        add_sync_target
+            .run(
+                &ctx,
+                sync_target_config,
+                hashmap! {
+                    SourceName(first_source_name.clone()) => first_source_cs_id,
+                    SourceName(second_source_name.clone()) => second_source_cs_id,
+                },
+                None,
+            )
+            .await?;
+
+        let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+        let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
+
+        // Remove file with commit remapping state because it's never present in source
+        assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+
+        assert_eq!(
+            wc,
+            hashmap! {
+                MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
+                MPath::new("source_2/second")? => ("second".to_string(), FileType::Regular),
+                MPath::new("linkfiles/first")? => ("source_1/first".to_string(), FileType::Symlink),
+                MPath::new("linkfiles/second")? => ("source_2/second".to_string(), FileType::Symlink),
             }
         );
 

@@ -46,11 +46,36 @@ pub async fn list_working_copy_utf8(
         .collect()
 }
 
+pub async fn list_working_copy_utf8_with_types(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HashMap<MPath, (String, FileType)>, Error> {
+    let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
+
+    wc.into_iter()
+        .map(|(path, (content, ty))| Ok((path, (String::from_utf8(content.to_vec())?, ty))))
+        .collect()
+}
+
 pub async fn list_working_copy(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, Bytes>, Error> {
+    let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
+
+    Ok(wc
+        .into_iter()
+        .map(|(path, (bytes, _ty))| (path, bytes))
+        .collect())
+}
+
+pub async fn list_working_copy_with_types(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HashMap<MPath, (Bytes, FileType)>, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
@@ -59,7 +84,7 @@ pub async fn list_working_copy(
     let mf_id = hg_cs.manifestid();
     mf_id
         .list_leaf_entries(ctx.clone(), repo.blobstore().boxed())
-        .map_ok(|(path, (_file_type, filenode_id))| async move {
+        .map_ok(|(path, (file_type, filenode_id))| async move {
             let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
             let content_id = filenode.content_id();
             let maybe_content = filestore::fetch(
@@ -84,7 +109,7 @@ pub async fn list_working_copy(
                     future::ready(Ok(bytes))
                 })
                 .await?;
-            Ok((path, bytes.freeze()))
+            Ok((path, (bytes.freeze(), file_type)))
         })
         .try_buffer_unordered(100)
         .try_collect()

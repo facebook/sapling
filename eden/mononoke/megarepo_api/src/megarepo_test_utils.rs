@@ -160,6 +160,7 @@ pub struct SourceVersionBuilder {
     source_bookmark: Option<String>,
     repo_id: RepositoryId,
     config_builder: SyncTargetConfigBuilder,
+    linkfiles: BTreeMap<String, String>,
 }
 
 impl SourceVersionBuilder {
@@ -177,6 +178,7 @@ impl SourceVersionBuilder {
             source_bookmark: None,
             repo_id,
             config_builder,
+            linkfiles: BTreeMap::new(),
         }
     }
 
@@ -195,6 +197,11 @@ impl SourceVersionBuilder {
     #[allow(unused)]
     pub fn bookmark(mut self, bookmark: String) -> Self {
         self.source_bookmark = Some(bookmark);
+        self
+    }
+
+    pub fn linkfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
+        self.linkfiles.insert(src.to_string(), dst.to_string());
         self
     }
 
@@ -217,7 +224,7 @@ impl SourceVersionBuilder {
             revision: source_revision,
             mapping: SourceMappingRules {
                 default_prefix,
-                linkfiles: BTreeMap::new(),
+                linkfiles: self.linkfiles,
                 overrides: BTreeMap::new(),
             },
         };
