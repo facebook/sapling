@@ -20,7 +20,9 @@ use megarepo_config::{MononokeMegarepoConfigs, Source, SyncTargetConfig};
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use mononoke_api::Mononoke;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath};
+use mononoke_types::{
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
+};
 use sorted_vector_map::SortedVectorMap;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -54,11 +56,6 @@ impl<'a> MegarepoOp for AddSyncTarget<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
         &self.mononoke
     }
-}
-
-struct SourceAndMovedChangesets {
-    source: ChangesetId,
-    moved: ChangesetId,
 }
 
 impl<'a> AddSyncTarget<'a> {
@@ -130,20 +127,23 @@ impl<'a> AddSyncTarget<'a> {
         sync_target_config: &'b SyncTargetConfig,
         changesets_to_merge: &'b HashMap<SourceName, ChangesetId>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
+        // Keep track of all files created in all sources so that we can check
+        // if there's a conflict between
+        let mut all_files_in_target = HashMap::new();
         let mut moved_commits = vec![];
         for source_config in &sync_target_config.sources {
+            let source_name = SourceName(source_config.source_name.clone());
+
             // TODO(stash): check that changeset is allowed to be synced
-            let changeset_id = changesets_to_merge
-                .get(&SourceName(source_config.name.clone()))
-                .ok_or_else(|| {
-                    MegarepoError::request(anyhow!(
-                        "Not found changeset to merge for {}",
-                        source_config.name
-                    ))
-                })?;
+            let changeset_id = changesets_to_merge.get(&source_name).ok_or_else(|| {
+                MegarepoError::request(anyhow!(
+                    "Not found changeset to merge for {}",
+                    source_config.name
+                ))
+            })?;
 
             let mover = create_source_to_target_multi_mover(source_config.mapping.clone())
-                .map_err(MegarepoError::internal)?;
+                .map_err(MegarepoError::request)?;
 
             let linkfiles = self.prepare_linkfiles(source_config, &mover)?;
             let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
@@ -151,14 +151,16 @@ impl<'a> AddSyncTarget<'a> {
             let moved = self
                 .create_single_move_commit(ctx, repo, *changeset_id, &mover, linkfiles)
                 .await?;
-            let source_and_moved_changeset = SourceAndMovedChangesets {
-                source: *changeset_id,
-                moved,
-            };
-            moved_commits.push((
-                SourceName(source_config.name.clone()),
-                source_and_moved_changeset,
-            ));
+            add_and_check_all_paths(
+                &mut all_files_in_target,
+                &source_name,
+                moved
+                    .moved
+                    .file_changes()
+                    // Do not check deleted files
+                    .filter_map(|(path, maybe_fc)| maybe_fc.map(|_| path)),
+            )?;
+            moved_commits.push((source_name, moved));
         }
 
         Ok(moved_commits)
@@ -189,7 +191,7 @@ impl<'a> AddSyncTarget<'a> {
         let mut bcs = BonsaiChangesetMut {
             parents: moved_commits
                 .into_iter()
-                .map(|(_, css)| css.moved)
+                .map(|(_, css)| css.moved.get_changeset_id())
                 .collect(),
             author: "svcscm".to_string(),
             author_date: DateTime::now(),
@@ -216,8 +218,10 @@ impl<'a> AddSyncTarget<'a> {
         cs_id: ChangesetId,
         mover: &MultiMover,
         linkfiles: BTreeMap<MPath, Option<FileChange>>,
-    ) -> Result<ChangesetId, Error> {
-        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+    ) -> Result<SourceAndMovedChangesets, MegarepoError> {
+        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
+            .await
+            .map_err(Error::from)?;
         let fsnode_id = root_fsnode_id.fsnode_id();
         let entries = fsnode_id
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
@@ -227,6 +231,7 @@ impl<'a> AddSyncTarget<'a> {
         let mut file_changes = vec![];
         for (path, fsnode) in entries {
             let moved = mover(&path)?;
+
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
             if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
@@ -247,7 +252,7 @@ impl<'a> AddSyncTarget<'a> {
         file_changes.extend(linkfiles.into_iter());
 
         // TODO(stash): we need to figure out what parameters to set here
-        let bcs = BonsaiChangesetMut {
+        let moved_bcs = BonsaiChangesetMut {
             parents: vec![cs_id],
             author: "svcscm".to_string(),
             author_date: DateTime::now(),
@@ -259,10 +264,13 @@ impl<'a> AddSyncTarget<'a> {
         }
         .freeze()?;
 
-        let move_cs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()).await?;
+        save_bonsai_changesets(vec![moved_bcs.clone()], ctx.clone(), repo.clone()).await?;
 
-        Ok(move_cs_id)
+        let source_and_moved_changeset = SourceAndMovedChangesets {
+            source: cs_id,
+            moved: moved_bcs,
+        };
+        Ok(source_and_moved_changeset)
     }
 
     fn prepare_linkfiles(
@@ -357,6 +365,44 @@ impl<'a> AddSyncTarget<'a> {
         }
         Ok(())
     }
+}
+
+struct SourceAndMovedChangesets {
+    source: ChangesetId,
+    moved: BonsaiChangeset,
+}
+
+// Verifies that no two sources create the same path in the target
+fn add_and_check_all_paths<'a>(
+    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    source_name: &'a SourceName,
+    iter: impl Iterator<Item = &'a MPath>,
+) -> Result<(), MegarepoError> {
+    for path in iter {
+        add_and_check(all_files_in_target, source_name, path)?;
+    }
+
+    Ok(())
+}
+
+fn add_and_check<'a>(
+    all_files_in_target: &'a mut HashMap<MPath, SourceName>,
+    source_name: &'a SourceName,
+    path: &MPath,
+) -> Result<(), MegarepoError> {
+    let existing_source = all_files_in_target.insert(path.clone(), source_name.clone());
+    if let Some(existing_source) = existing_source {
+        let err = MegarepoError::request(anyhow!(
+            "File {} is remapped from two different sources: {} and {}",
+            path,
+            source_name.0,
+            existing_source.0,
+        ));
+
+        return Err(err);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -566,6 +612,223 @@ mod test {
                 MPath::new("linkfiles/second")? => ("source_2/second".to_string(), FileType::Symlink),
             }
         );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let first_source_name = "source_1".to_string();
+        let second_source_name = "source_2".to_string();
+        let version = "version_1".to_string();
+        // Use the same prefix so that files from different repos collided
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(first_source_name.clone())
+            .default_prefix("prefix")
+            .bookmark("source_1")
+            .build_source()?
+            .source_builder(second_source_name.clone())
+            .default_prefix("prefix")
+            .bookmark("source_2")
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commits and bookmarks");
+        let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+            .set_to(first_source_cs_id)
+            .await?;
+
+        let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+            .set_to(second_source_cs_id)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> =
+            Arc::new(test.configs_storage.clone());
+
+        let sync_target_config =
+            test.configs_storage
+                .get_config_by_version(ctx.clone(), target, version.clone())?;
+        let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+        let res = add_sync_target
+            .run(
+                &ctx,
+                sync_target_config,
+                hashmap! {
+                    SourceName(first_source_name.clone()) => first_source_cs_id,
+                    SourceName(second_source_name.clone()) => second_source_cs_id,
+                },
+                None,
+            )
+            .await;
+
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_add_sync_target_same_file_different_prefix(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let first_source_name = "source_1".to_string();
+        let second_source_name = "source_2".to_string();
+        let version = "version_1".to_string();
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(first_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .build_source()?
+            .source_builder(second_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commits and bookmarks");
+        let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "file")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+            .set_to(first_source_cs_id)
+            .await?;
+
+        let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "file")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+            .set_to(second_source_cs_id)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> =
+            Arc::new(test.configs_storage.clone());
+
+        let sync_target_config = test.configs_storage.get_config_by_version(
+            ctx.clone(),
+            target.clone(),
+            version.clone(),
+        )?;
+        let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+        add_sync_target
+            .run(
+                &ctx,
+                sync_target_config,
+                hashmap! {
+                    SourceName(first_source_name.clone()) => first_source_cs_id,
+                    SourceName(second_source_name.clone()) => second_source_cs_id,
+                },
+                None,
+            )
+            .await?;
+
+        let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+        let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+
+        let state =
+            CommitRemappingState::read_state_from_commit(&ctx, &test.blobrepo, target_cs_id)
+                .await?;
+        assert_eq!(
+            state.get_latest_synced_changeset(&first_source_name),
+            Some(&first_source_cs_id),
+        );
+        assert_eq!(
+            state.get_latest_synced_changeset(&second_source_name),
+            Some(&second_source_cs_id),
+        );
+        assert_eq!(state.sync_config_version(), &version);
+
+        // Remove file with commit remapping state because it's never present in source
+        assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+
+        assert_eq!(
+            wc,
+            hashmap! {
+                MPath::new("source_1/file")? => "file".to_string(),
+                MPath::new("source_2/file")? => "file".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let first_source_name = "source_1".to_string();
+        let second_source_name = "source_2".to_string();
+        let version = "version_1".to_string();
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(first_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .linkfile("first", "linkfiles/linkfile")
+            .build_source()?
+            .source_builder(second_source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .linkfile("second", "linkfiles/linkfile")
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commits and bookmarks");
+        let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("first", "first")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+            .set_to(first_source_cs_id)
+            .await?;
+
+        let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("second", "second")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+            .set_to(second_source_cs_id)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> =
+            Arc::new(test.configs_storage.clone());
+
+        let sync_target_config =
+            test.configs_storage
+                .get_config_by_version(ctx.clone(), target, version.clone())?;
+        let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+        let res = add_sync_target
+            .run(
+                &ctx,
+                sync_target_config,
+                hashmap! {
+                    SourceName(first_source_name.clone()) => first_source_cs_id,
+                    SourceName(second_source_name.clone()) => second_source_cs_id,
+                },
+                None,
+            )
+            .await;
+
+        assert!(res.is_err());
 
         Ok(())
     }

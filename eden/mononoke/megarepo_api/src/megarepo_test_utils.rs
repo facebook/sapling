@@ -189,14 +189,14 @@ impl SourceVersionBuilder {
     }
 
     #[allow(unused)]
-    pub fn default_prefix(mut self, default_prefix: String) -> Self {
-        self.default_prefix = Some(default_prefix);
+    pub fn default_prefix(mut self, default_prefix: impl ToString) -> Self {
+        self.default_prefix = Some(default_prefix.to_string());
         self
     }
 
     #[allow(unused)]
-    pub fn bookmark(mut self, bookmark: String) -> Self {
-        self.source_bookmark = Some(bookmark);
+    pub fn bookmark(mut self, bookmark: impl ToString) -> Self {
+        self.source_bookmark = Some(bookmark.to_string());
         self
     }
 
