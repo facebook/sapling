@@ -182,7 +182,6 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         };
         String::from(name_path.to_string_lossy())
     };
-    let repo_name_ref = &repo_name;
 
     let walk_repo = Repository::open(&path)?;
     let pool = &GitPool::new(path.to_path_buf())?;
@@ -251,7 +250,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
             info!(
                 ctx.logger(),
                 "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
-                repo_name_ref,
+                &repo_name,
                 acc.borrow().len(),
                 nb_commits_to_import,
                 git_sha1.to_brief(),
