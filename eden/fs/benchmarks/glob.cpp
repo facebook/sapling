@@ -37,9 +37,11 @@ void eden_glob(benchmark::State& state) {
 
   auto socketPath = path + ".eden/socket"_relpath;
 
-  folly::EventBase eventBase;
+  auto evbThread = folly::EventBaseThread();
+  auto eventBase = evbThread.getEventBase();
+
   auto socket = folly::AsyncSocket::newSocket(
-      &eventBase, folly::SocketAddress::makeFromPath(socketPath.stringPiece()));
+      eventBase, folly::SocketAddress::makeFromPath(socketPath.stringPiece()));
   auto channel =
       apache::thrift::HeaderClientChannel::newChannel(std::move(socket));
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
@@ -49,18 +51,21 @@ void eden_glob(benchmark::State& state) {
   param.globs_ref() = std::vector<std::string>{FLAGS_query};
   param.includeDotfiles_ref() = false;
   param.prefetchFiles_ref() = false;
-  param.suppressFileList_ref() = true;
+  param.suppressFileList_ref() = false;
   param.wantDtype_ref() = false;
   param.prefetchMetadata_ref() = false;
 
-  auto numIterations = 0;
   for (auto _ : state) {
-    Glob result;
-    client->sync_globFiles(result, param);
+    auto start = std::chrono::high_resolution_clock::now();
+    auto result = client->semifuture_globFiles(param).via(eventBase).get();
+    auto end = std::chrono::high_resolution_clock::now();
+
     benchmark::DoNotOptimize(result);
-    numIterations++;
+
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+    state.SetIterationTime(elapsed.count());
   }
-  state.SetItemsProcessed(numIterations);
 }
 
 void watchman_glob(benchmark::State& state) {
@@ -75,18 +80,24 @@ void watchman_glob(benchmark::State& state) {
 
   folly::dynamic query =
       folly::dynamic::object("glob", folly::dynamic::array(FLAGS_query))(
-          "fields", folly::dynamic::array());
+          "fields", folly::dynamic::array("name"));
 
-  auto numIterations = 0;
   for (auto _ : state) {
+    auto start = std::chrono::high_resolution_clock::now();
     auto res = client.query(query, watch).get();
+    auto end = std::chrono::high_resolution_clock::now();
+
     benchmark::DoNotOptimize(res);
-    numIterations++;
+
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+    state.SetIterationTime(elapsed.count());
   }
-  state.SetItemsProcessed(numIterations);
 }
 
 BENCHMARK(eden_glob)
+    ->UseManualTime()
+    ->Unit(benchmark::kMillisecond)
     ->Threads(1)
     ->Threads(2)
     ->Threads(4)
@@ -95,6 +106,8 @@ BENCHMARK(eden_glob)
     ->Threads(32);
 
 BENCHMARK(watchman_glob)
+    ->UseManualTime()
+    ->Unit(benchmark::kMillisecond)
     ->Threads(1)
     ->Threads(2)
     ->Threads(4)
