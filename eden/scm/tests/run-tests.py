@@ -1156,7 +1156,7 @@ class Test(unittest.TestCase):
                     raise
 
         if self._watchman:
-            shortname = hashlib.sha1("%s" % name).hexdigest()[:6]
+            shortname = hashlib.sha1(_bytespath("%s" % name)).hexdigest()[:6]
             self._watchmandir = os.path.join(self._threadtmp, "%s.watchman" % shortname)
             os.mkdir(self._watchmandir)
             cfgfile = os.path.join(self._watchmandir, "config.json")
@@ -1915,7 +1915,7 @@ class TTest(Test):
             raise AssertionError("feature unknown to hghave: %r" % [s(r) for r in reqs])
 
         if ret != 0:
-            return False, stdout
+            return False, _strpath(stdout)
 
         if "slow" in reqs:
             self._timeout = self._slowtimeout
@@ -2153,7 +2153,9 @@ class TTest(Test):
                         else:
                             m = optline.match(el)
                             if m:
-                                conditions = [c for c in m.group(2).split(b" ")]
+                                conditions = [
+                                    _strpath(c) for c in m.group(2).split(b" ")
+                                ]
 
                                 if not self._iftest(conditions):
                                     optional.append(i)
@@ -2184,7 +2186,9 @@ class TTest(Test):
                         if not el.endswith(b" (?)\n"):
                             m = optline.match(el)
                             if m:
-                                conditions = [c for c in m.group(2).split(b" ")]
+                                conditions = [
+                                    _strpath(c) for c in m.group(2).split(b" ")
+                                ]
 
                                 if self._iftest(conditions):
                                     # Don't append as optional line
@@ -2272,7 +2276,7 @@ class TTest(Test):
             else:
                 m = optline.match(el)
                 if m:
-                    conditions = [c for c in m.group(2).split(b" ")]
+                    conditions = [_strpath(c) for c in m.group(2).split(b" ")]
 
                     el = m.group(1) + b"\n"
                     if not self._iftest(conditions):

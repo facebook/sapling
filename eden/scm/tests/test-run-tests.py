@@ -45,7 +45,7 @@ def lm(expected, output):
     assert not re.search(
         br"[^ \w\\/\r\n()*?]", expected + output
     ), b"single backslash or unknown char"
-    test = run_tests.TTest(b"test-run-test.t", b".", b".")
+    test = run_tests.TTest("test-run-test.t", ".", ".")
     match = test.linematch(expected, output)
     if isinstance(match, str):
         return "special: " + match
