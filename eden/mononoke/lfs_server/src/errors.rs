@@ -66,7 +66,7 @@ pub enum ErrorKind {
     UploadTooLarge(u64, u64),
     #[error("Object is not internally available, and upstream is not available: {0}")]
     ObjectNotInternallyAvailableAndUpstreamUnavailable(lfs_protocol::Sha256),
-    #[error("Object could not be synced from upstream")]
+    #[error("Object could not be synced from upstream: {0:?}")]
     ObjectCannotBeSynced(RequestObject),
 
     /// A generic error occurred, and we'd like to propagate it.
