@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::pack::CTIME;
 use crate::validate::{CHECK_FAIL, CHECK_TYPE, ERROR_MSG, NODE_KEY, REPO};
 
 use anyhow::{anyhow, Error};
@@ -123,7 +124,7 @@ impl ScrubHandler for StatsScrubHandler {
             .add(CHECK_TYPE, "scrub_repair")
             .add(CHECK_FAIL, if is_repaired { 0 } else { 1 })
             .add("session", ctx.session().metadata().session_id().to_string())
-            .add("ctime", ctime)
+            .add(CTIME, ctime)
             .log();
     }
 }

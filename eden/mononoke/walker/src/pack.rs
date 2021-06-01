@@ -27,6 +27,7 @@ const UNIQUE_COMPRESSED_SIZE: &str = "unique_compressed_size";
 const PACK_KEY: &str = "pack_key";
 const RELEVANT_UNCOMPRESSED_SIZE: &str = "relevant_uncompressed_size";
 const RELEVANT_COMPRESSED_SIZE: &str = "relevant_compressed_size";
+pub const CTIME: &str = "ctime";
 
 /// What do we log for each blobstore key
 pub struct PackInfo<'a> {
@@ -38,6 +39,7 @@ pub struct PackInfo<'a> {
     pub mtime: Option<u64>, // typically the commit time of Changeset from which this item was reached
     pub uncompressed_size: u64, // How big is the value for this key, in bytes.
     pub sizes: Option<SizeMetadata>,
+    pub ctime: Option<i64>,
 }
 
 pub trait PackInfoLogger {
@@ -93,7 +95,8 @@ impl PackInfoLogger for ScubaPackInfoLogger {
             .add_opt(NODE_FINGERPRINT, info.node_fingerprint)
             .add_opt(SIMILARITY_KEY, info.similarity_key)
             .add_opt(MTIME, info.mtime)
-            .add(UNCOMPRESSED_SIZE, info.uncompressed_size);
+            .add(UNCOMPRESSED_SIZE, info.uncompressed_size)
+            .add_opt(CTIME, info.ctime);
 
         if let Some(sizes) = info.sizes {
             scuba.add(UNIQUE_COMPRESSED_SIZE, sizes.unique_compressed_size);

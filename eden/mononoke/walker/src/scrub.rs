@@ -196,7 +196,7 @@ fn record_for_packer<L>(
 {
     if let Some(mut sample) = sample {
         for (blobstore_key, mut store_to_key_sizes) in sample.data.drain() {
-            for (blobstore_id, key_sizes) in store_to_key_sizes.drain() {
+            for (blobstore_id, key_sample) in store_to_key_sizes.drain() {
                 logger.log(PackInfo {
                     blobstore_id,
                     blobstore_key: blobstore_key.as_str(),
@@ -204,8 +204,9 @@ fn record_for_packer<L>(
                     node_fingerprint: walk_key.node.sampling_fingerprint(),
                     similarity_key: walk_key.path.map(|p| p.sampling_fingerprint()),
                     mtime: mtime.map(|mtime| mtime.timestamp_secs() as u64),
-                    uncompressed_size: key_sizes.unique_uncompressed_size,
-                    sizes: key_sizes.sizes,
+                    uncompressed_size: key_sample.unique_uncompressed_size,
+                    sizes: key_sample.sizes,
+                    ctime: key_sample.ctime,
                 })
             }
         }
@@ -219,6 +220,7 @@ struct ScrubKeySample {
     unique_uncompressed_size: u64,
     // Only keys accessed via a packblob store have SizeMetadata
     sizes: Option<SizeMetadata>,
+    ctime: Option<i64>,
 }
 
 // Holds a map from blobstore keys to their samples per store
@@ -249,6 +251,7 @@ impl ComponentSamplingHandler for WalkSampleMapping<Node, ScrubSample> {
                     let sample = ScrubKeySample {
                         unique_uncompressed_size: value.as_bytes().len() as u64,
                         sizes: value.as_meta().sizes().cloned(),
+                        ctime: value.as_meta().ctime(),
                     };
                     guard
                         .data
