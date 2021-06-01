@@ -38,6 +38,8 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 mod add_sync_target;
+#[cfg(test)]
+mod add_sync_target_test;
 mod common;
 #[cfg(test)]
 mod megarepo_test_utils;
