@@ -566,15 +566,14 @@ impl DeriveGraph {
                 cloned!(ctx, repo);
                 async move {
                     if let Some(deriver) = &node.deriver {
-                        deriver
-                            .backfill_batch_dangerous(
-                                ctx.clone(),
-                                repo,
-                                node.csids.clone(),
-                                parallel,
-                                gap_size,
-                            )
-                            .await?;
+                        let job = deriver.backfill_batch_dangerous(
+                            ctx.clone(),
+                            repo,
+                            node.csids.clone(),
+                            parallel,
+                            gap_size,
+                        );
+                        tokio::spawn(job).await??;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::debug!(
                                 ctx.logger(),
