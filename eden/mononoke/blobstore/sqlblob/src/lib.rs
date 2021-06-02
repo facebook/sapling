@@ -28,7 +28,7 @@ use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
     CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -76,6 +76,7 @@ pub struct Sqlblob {
     data_store: Arc<DataSqlStore>,
     chunk_store: Arc<ChunkSqlStore>,
     put_behaviour: PutBehaviour,
+    allow_inline_put: bool,
 }
 
 impl std::fmt::Display for Sqlblob {
@@ -87,6 +88,11 @@ impl std::fmt::Display for Sqlblob {
 fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc>> {
     config_store.get_config_handle(GC_GENERATION_PATH.to_string())
 }
+
+const DEFAULT_ALLOW_INLINE_PUT: bool = false;
+
+// base64 encoding for inline hash has an overhead
+pub const MAX_INLINE_LEN: usize = 255 * 3 / 4;
 
 impl Sqlblob {
     pub async fn with_mysql(
@@ -146,6 +152,7 @@ impl Sqlblob {
                     config_handle,
                 )),
                 put_behaviour,
+                allow_inline_put: DEFAULT_ALLOW_INLINE_PUT,
             },
             shardmap,
         ))
@@ -180,6 +187,7 @@ impl Sqlblob {
                 async { res }
             },
             config_store,
+            DEFAULT_ALLOW_INLINE_PUT,
         )
         .await
     }
@@ -191,6 +199,7 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         connection_factory: CF,
         config_store: &ConfigStore,
+        allow_inline_put: bool,
     ) -> Result<CountedSqlblob, Error>
     where
         CF: Fn(usize) -> SF,
@@ -238,6 +247,7 @@ impl Sqlblob {
                     config_handle,
                 )),
                 put_behaviour,
+                allow_inline_put,
             },
             label,
         ))
@@ -246,6 +256,7 @@ impl Sqlblob {
     pub fn with_sqlite_in_memory(
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
+        allow_inline_put: bool,
     ) -> Result<CountedSqlblob> {
         Self::with_sqlite(
             put_behaviour,
@@ -255,6 +266,7 @@ impl Sqlblob {
                 Ok(con)
             },
             config_store,
+            allow_inline_put,
         )
     }
 
@@ -278,6 +290,7 @@ impl Sqlblob {
                 Ok(con)
             },
             config_store,
+            DEFAULT_ALLOW_INLINE_PUT,
         )
     }
 
@@ -285,6 +298,7 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         mut constructor: F,
         config_store: &ConfigStore,
+        allow_inline_put: bool,
     ) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
@@ -320,6 +334,7 @@ impl Sqlblob {
                     config_handle,
                 )),
                 put_behaviour,
+                allow_inline_put,
             },
             "sqlite".into(),
         ))
@@ -400,25 +415,34 @@ impl Blobstore for Sqlblob {
     ) -> Result<Option<BlobstoreGetData>> {
         let chunked = self.data_store.get(&key).await?;
         if let Some(chunked) = chunked {
-            let chunks = (0..chunked.count)
-                .map(|chunk_num| {
-                    self.chunk_store
-                        .get(&chunked.id, chunk_num, chunked.chunking_method)
-                })
-                .collect::<FuturesOrdered<_>>()
-                .try_collect::<Vec<_>>()
-                .await?;
+            let blob = match chunked.chunking_method {
+                ChunkingMethod::InlineBase64 => {
+                    let decoded = base64::decode_config(&chunked.id, base64::STANDARD_NO_PAD)?;
+                    Bytes::copy_from_slice(decoded.as_ref())
+                }
+                ChunkingMethod::ByContentHashBlake2 => {
+                    let chunks = (0..chunked.count)
+                        .map(|chunk_num| {
+                            self.chunk_store
+                                .get(&chunked.id, chunk_num, chunked.chunking_method)
+                        })
+                        .collect::<FuturesOrdered<_>>()
+                        .try_collect::<Vec<_>>()
+                        .await?;
 
-            let size = chunks.iter().map(|chunk| chunk.len()).sum();
-            let mut blob = BytesMut::with_capacity(size);
-            for chunk in chunks {
-                blob.extend_from_slice(&chunk);
-            }
+                    let size = chunks.iter().map(|chunk| chunk.len()).sum();
+                    let mut blob = BytesMut::with_capacity(size);
+                    for chunk in chunks {
+                        blob.extend_from_slice(&chunk);
+                    }
+                    blob.freeze()
+                }
+            };
 
             let meta = BlobstoreMetadata::new(Some(chunked.ctime), None);
             Ok(Some(BlobstoreGetData::new(
                 meta,
-                BlobstoreBytes::from_bytes(blob.freeze()),
+                BlobstoreBytes::from_bytes(blob),
             )))
         } else {
             Ok(None)
@@ -462,32 +486,46 @@ impl BlobstorePutOps for Sqlblob {
             return Ok(OverwriteStatus::Prevented);
         }
 
-        let chunking_method = ChunkingMethod::ByContentHashBlake2;
-        let chunk_key = {
-            let mut hash_context = HashContext::new(b"sqlblob");
-            hash_context.update(value.as_bytes());
-            hash_context.finish().to_hex()
+        let chunking_method = if self.allow_inline_put && value.len() <= MAX_INLINE_LEN {
+            ChunkingMethod::InlineBase64
+        } else {
+            ChunkingMethod::ByContentHashBlake2
         };
 
         let put_fut = async {
-            let chunks = value.as_bytes().chunks(CHUNK_SIZE);
-            let chunk_count = chunks.len().try_into()?;
-            for (chunk_num, value) in chunks.enumerate() {
-                self.chunk_store
-                    .put(
-                        chunk_key.as_str(),
-                        chunk_num.try_into()?,
-                        chunking_method,
-                        value,
-                    )
-                    .await?;
-            }
             let ctime = {
                 match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
                     Ok(offset) => offset.as_secs().try_into(),
                     Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
                 }
             }?;
+            let (chunk_key, chunk_count) = match chunking_method {
+                ChunkingMethod::ByContentHashBlake2 => {
+                    let chunk_key = {
+                        let mut hash_context = HashContext::new(b"sqlblob");
+                        hash_context.update(value.as_bytes());
+                        hash_context.finish().to_hex().to_string()
+                    };
+                    let chunks = value.as_bytes().chunks(CHUNK_SIZE);
+                    let chunk_count = chunks.len().try_into()?;
+                    for (chunk_num, value) in chunks.enumerate() {
+                        self.chunk_store
+                            .put(
+                                chunk_key.as_str(),
+                                chunk_num.try_into()?,
+                                chunking_method,
+                                value,
+                            )
+                            .await?;
+                    }
+                    (chunk_key, chunk_count)
+                }
+                ChunkingMethod::InlineBase64 => (
+                    base64::encode_config(value.as_bytes().as_ref(), base64::STANDARD_NO_PAD),
+                    0,
+                ),
+            };
+
             self.data_store
                 .put(
                     &key,

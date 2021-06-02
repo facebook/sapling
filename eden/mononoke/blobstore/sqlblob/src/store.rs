@@ -32,6 +32,7 @@ mod types {
     #[derive(Clone, Copy, Debug, PartialEq, mysql::OptTryFromRowField)]
     pub enum ChunkingMethod {
         ByContentHashBlake2,
+        InlineBase64,
     }
 
     impl From<ChunkingMethod> for Value {
@@ -40,6 +41,7 @@ mod types {
                 // When you add here, please add the reverse transform
                 // to impl ConvIr<ChunkingMethod> below
                 ChunkingMethod::ByContentHashBlake2 => Value::UInt(1),
+                ChunkingMethod::InlineBase64 => Value::UInt(2),
             }
         }
     }
@@ -53,6 +55,9 @@ mod types {
                 Value::Int(1) => Ok(ChunkingMethod::ByContentHashBlake2),
                 Value::UInt(1) => Ok(ChunkingMethod::ByContentHashBlake2),
                 Value::Bytes(ref b) if b == b"1" => Ok(ChunkingMethod::ByContentHashBlake2),
+                Value::Int(2) => Ok(ChunkingMethod::InlineBase64),
+                Value::UInt(2) => Ok(ChunkingMethod::InlineBase64),
+                Value::Bytes(ref b) if b == b"2" => Ok(ChunkingMethod::InlineBase64),
                 // If you need to add to this error path, ensure that the type you are adding cannot be converted to an integer
                 // by MySQL
                 v @ Value::NULL
@@ -349,20 +354,29 @@ impl ChunkSqlStore {
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<BytesMut, Error> {
-        let shard_id = self.shard(id, chunk_num, chunking_method);
-
-        let rows = {
-            let rows = SelectChunk::query(&self.read_connection[shard_id], &id, &chunk_num).await?;
-            if rows.is_empty() {
-                SelectChunk::query(&self.read_master_connection[shard_id], &id, &chunk_num).await?
-            } else {
-                rows
-            }
-        };
-        rows.into_iter()
-            .next()
-            .map(|(value,)| (&*value).into())
-            .ok_or_else(|| format_err!("Missing chunk with id {} shard {}", chunk_num, shard_id))
+        if let Some(shard_id) = self.shard(id, chunk_num, chunking_method) {
+            let rows = {
+                let rows =
+                    SelectChunk::query(&self.read_connection[shard_id], &id, &chunk_num).await?;
+                if rows.is_empty() {
+                    SelectChunk::query(&self.read_master_connection[shard_id], &id, &chunk_num)
+                        .await?
+                } else {
+                    rows
+                }
+            };
+            rows.into_iter()
+                .next()
+                .map(|(value,)| (&*value).into())
+                .ok_or_else(|| {
+                    format_err!("Missing chunk with id {} shard {}", chunk_num, shard_id)
+                })
+        } else {
+            bail!(
+                "ChunkSqlStore::get() unexpectedly called for inline chunking_method {:?}",
+                chunking_method
+            )
+        }
     }
 
     pub(crate) async fn put(
@@ -372,20 +386,20 @@ impl ChunkSqlStore {
         chunking_method: ChunkingMethod,
         value: &[u8],
     ) -> Result<(), Error> {
-        let shard_id = self.shard(key, chunk_num, chunking_method);
-
-        self.delay.delay(shard_id).await;
-        UpdateGeneration::query(
-            &self.write_connection[shard_id],
-            &key,
-            &(self.gc_generations.get().put_generation as u64),
-        )
-        .await?;
-        InsertChunk::query(
-            &self.write_connection[shard_id],
-            &[(&key, &chunk_num, &value)],
-        )
-        .await?;
+        if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
+            self.delay.delay(shard_id).await;
+            UpdateGeneration::query(
+                &self.write_connection[shard_id],
+                &key,
+                &(self.gc_generations.get().put_generation as u64),
+            )
+            .await?;
+            InsertChunk::query(
+                &self.write_connection[shard_id],
+                &[(&key, &chunk_num, &value)],
+            )
+            .await?;
+        }
         Ok(())
     }
 
@@ -395,15 +409,15 @@ impl ChunkSqlStore {
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<(), Error> {
-        let shard_id = self.shard(key, chunk_num, chunking_method);
-
-        self.delay.delay(shard_id).await;
-        UpdateGeneration::query(
-            &self.write_connection[shard_id],
-            &key,
-            &(self.gc_generations.get().put_generation as u64),
-        )
-        .await?;
+        if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
+            self.delay.delay(shard_id).await;
+            UpdateGeneration::query(
+                &self.write_connection[shard_id],
+                &key,
+                &(self.gc_generations.get().put_generation as u64),
+            )
+            .await?;
+        }
         Ok(())
     }
 
@@ -414,16 +428,19 @@ impl ChunkSqlStore {
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<Option<u64>, Error> {
-        let shard_id = self.shard(key, chunk_num, chunking_method);
-        let rows = {
-            let rows = GetChunkGeneration::query(&self.read_connection[shard_id], &key).await?;
-            if rows.is_empty() {
-                GetChunkGeneration::query(&self.read_master_connection[shard_id], &key).await?
-            } else {
-                rows
-            }
-        };
-        Ok(rows.into_iter().next().map(|(v,)| v))
+        if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
+            let rows = {
+                let rows = GetChunkGeneration::query(&self.read_connection[shard_id], &key).await?;
+                if rows.is_empty() {
+                    GetChunkGeneration::query(&self.read_master_connection[shard_id], &key).await?
+                } else {
+                    rows
+                }
+            };
+            Ok(rows.into_iter().next().map(|(v,)| v))
+        } else {
+            Ok(None)
+        }
     }
 
     pub(crate) async fn set_generation(
@@ -432,28 +449,34 @@ impl ChunkSqlStore {
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<(), Error> {
-        let put_generation = self.gc_generations.get().put_generation as u64;
-        let mark_generation = self.gc_generations.get().mark_generation as u64;
-        let shard_id = self.shard(key, chunk_num, chunking_method);
+        if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
+            let put_generation = self.gc_generations.get().put_generation as u64;
+            let mark_generation = self.gc_generations.get().mark_generation as u64;
 
-        // Short-circuit if we have a generation in replica, and that generation is >=
-        // mark_generation
-        let replica_generation = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
-            .await?
-            .into_iter()
-            .next();
-        if replica_generation.is_some() && replica_generation >= Some((mark_generation,)) {
-            return Ok(());
-        }
+            // Short-circuit if we have a generation in replica, and that generation is >=
+            // mark_generation
+            let replica_generation =
+                GetChunkGeneration::query(&self.read_connection[shard_id], &key)
+                    .await?
+                    .into_iter()
+                    .next();
+            if replica_generation.is_some() && replica_generation >= Some((mark_generation,)) {
+                return Ok(());
+            }
 
-        self.delay.delay(shard_id).await;
-        // First set the generation if unset, so that future writers will update it.
-        if replica_generation.is_none() {
-            InsertGeneration::query(&self.write_connection[shard_id], &[(&key, &put_generation)])
+            self.delay.delay(shard_id).await;
+            // First set the generation if unset, so that future writers will update it.
+            if replica_generation.is_none() {
+                InsertGeneration::query(
+                    &self.write_connection[shard_id],
+                    &[(&key, &put_generation)],
+                )
+                .await?;
+            }
+            // Then update it in case it already existed
+            UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation)
                 .await?;
         }
-        // Then update it in case it already existed
-        UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation).await?;
         Ok(())
     }
 
@@ -475,10 +498,16 @@ impl ChunkSqlStore {
         Ok(())
     }
 
-    fn shard(&self, key: &str, chunk_id: u32, _chunking_method: ChunkingMethod) -> usize {
-        let mut hasher = XxHash32::with_seed(0);
-        hasher.write(key.as_bytes());
-        hasher.write_u32(chunk_id);
-        (hasher.finish() % self.shard_count.get() as u64) as usize
+    // Returns None if the value is stored inline without needing chunk table lookup
+    fn shard(&self, key: &str, chunk_id: u32, chunking_method: ChunkingMethod) -> Option<usize> {
+        match chunking_method {
+            ChunkingMethod::InlineBase64 => None,
+            ChunkingMethod::ByContentHashBlake2 => {
+                let mut hasher = XxHash32::with_seed(0);
+                hasher.write(key.as_bytes());
+                hasher.write_u32(chunk_id);
+                Some((hasher.finish() % self.shard_count.get() as u64) as usize)
+            }
+        }
     }
 }
