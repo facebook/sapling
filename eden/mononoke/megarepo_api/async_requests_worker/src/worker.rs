@@ -29,6 +29,7 @@ use std::time::Duration;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 
+#[derive(Clone)]
 pub struct AsyncMethodRequestWorker {
     megarepo: MegarepoApi,
     name: String,
@@ -53,6 +54,7 @@ impl AsyncMethodRequestWorker {
         ctx: &CoreContext,
         will_exit: Arc<AtomicBool>,
         limit: Option<usize>,
+        concurrency_limit: usize,
     ) -> Result<(), MegarepoError> {
         let queues_with_repos = self.megarepo.all_async_method_request_queues(ctx).await?;
 
@@ -61,7 +63,7 @@ impl AsyncMethodRequestWorker {
             .request_stream(ctx.clone(), queues_with_repos, will_exit)
             .boxed();
 
-        let mut request_stream = if let Some(limit) = limit {
+        let request_stream = if let Some(limit) = limit {
             request_stream.take(limit).left_stream()
         } else {
             request_stream.right_stream()
@@ -72,10 +74,17 @@ impl AsyncMethodRequestWorker {
             "Worker initialization complete, starting request processing loop.",
         );
 
-        // TODO(mitrandir) process multiple requests at once
-        while let Some((req_id, params)) = request_stream.try_next().await? {
-            let _updated = self.compute_and_mark_completed(ctx, req_id, params).await?;
-        }
+
+        request_stream
+            .try_for_each_concurrent(Some(concurrency_limit), async move |(req_id, params)| {
+                let worker = self.clone();
+                let ctx = ctx.clone();
+                let _updated = tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))
+                    .await
+                    .map_err(MegarepoError::internal)??;
+                Ok(())
+            })
+            .await?;
         Ok(())
     }
 
@@ -118,8 +127,8 @@ impl AsyncMethodRequestWorker {
     /// Returns true if the result was successfully stored. Returns false if we
     /// lost the race (the request table was updated).
     async fn compute_and_mark_completed(
-        &self,
-        ctx: &CoreContext,
+        self,
+        ctx: CoreContext,
         req_id: RequestId,
         params: MegarepoAsynchronousRequestParams,
     ) -> Result<bool, MegarepoError> {
@@ -136,7 +145,7 @@ impl AsyncMethodRequestWorker {
         );
 
         // Do the actual work.
-        let result = megarepo_async_request_compute(ctx, &self.megarepo, params).await;
+        let result = megarepo_async_request_compute(&ctx, &self.megarepo, params).await;
         info!(
             ctx.logger(),
             "[{}] request complete, saving result", &req_id.0
@@ -147,7 +156,7 @@ impl AsyncMethodRequestWorker {
             .megarepo
             .async_method_request_queue(&ctx, &target)
             .await?
-            .complete(ctx, &req_id, result)
+            .complete(&ctx, &req_id, result)
             .await?;
 
         info!(ctx.logger(), "[{}] result saved", &req_id.0);

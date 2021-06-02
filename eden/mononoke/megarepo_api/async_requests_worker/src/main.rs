@@ -27,6 +27,7 @@ use mononoke_api::{
 use repo_factory::RepoFactory;
 
 const ARG_REQUEST_LIMIT: &str = "request-limit";
+const ARG_CONCURRENT_JOBS_LIMIT: &str = "jobs-limit";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -43,6 +44,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long("request-limit")
                 .value_name("LIMIT")
                 .help("Process LIMIT requests and exit."),
+        )
+        .arg(
+            Arg::with_name(ARG_CONCURRENT_JOBS_LIMIT)
+                .short("j")
+                .long("jobs")
+                .value_name("JOBS")
+                .default_value("1")
+                .help("Process at most JOBS requests concurrently."),
         );
 
     let matches = app.get_matches(fb)?;
@@ -50,6 +59,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let request_limit = matches
         .value_of(ARG_REQUEST_LIMIT)
         .map(|_limit| value_t!(matches, ARG_REQUEST_LIMIT, usize).unwrap_or_else(|e| e.exit()));
+    let jobs_limit = value_t!(matches, ARG_CONCURRENT_JOBS_LIMIT, usize)?;
     let runtime = matches.runtime();
     let logger = matches.logger();
 
@@ -98,7 +108,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime,
         {
             let will_exit = will_exit.clone();
-            async move || Ok(worker.run(&ctx, will_exit.clone(), request_limit).await?)
+            async move || {
+                Ok(worker
+                    .run(&ctx, will_exit.clone(), request_limit, jobs_limit)
+                    .await?)
+            }
         }(),
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
