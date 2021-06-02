@@ -27,4 +27,4 @@ def debugrunshell(ui, *args, **opts):
     env = encoding.environ.copy()
     env["HG"] = util.hgexecutable()
 
-    return subprocess.call(cmd, shell=True, env=env)
+    return util.system(cmd, environ=env)
