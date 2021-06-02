@@ -1240,9 +1240,14 @@ struct MegarepoAddTargetResponse {
     1: megarepo_configs.ChangesetId cs_id
 }
 
+union MegarepoAddTargetResult {
+    1: MegarepoAddTargetResponse success,
+    2: MegarepoAsynchronousRequestError error,
+}
+
 struct MegarepoAddTargetPollResponse {
     // Maybe a response to an underlying call, if it is ready
-    1: optional MegarepoAddTargetResponse response,
+    1: optional MegarepoAddTargetResult result,
 }
 
 struct MegarepoChangeTargetConfigResponse {
@@ -1251,9 +1256,14 @@ struct MegarepoChangeTargetConfigResponse {
     1: megarepo_configs.ChangesetId cs_id
 }
 
+union MegarepoChangeTargetConfigResult {
+    1: MegarepoChangeTargetConfigResponse success,
+    2: MegarepoAsynchronousRequestError error,
+}
+
 struct MegarepoChangeTargetConfigPollResponse {
     // Maybe a response to an underlying call, if it is ready
-    1: optional MegarepoChangeTargetConfigResponse response,
+    1: optional MegarepoChangeTargetConfigResult result,
 }
 
 struct MegarepoSyncChangesetResponse {
@@ -1262,9 +1272,14 @@ struct MegarepoSyncChangesetResponse {
     1: megarepo_configs.ChangesetId cs_id
 }
 
+union MegarepoSyncChangesetResult {
+    1: MegarepoSyncChangesetResponse success,
+    2: MegarepoAsynchronousRequestError error,
+}
+
 struct MegarepoSyncChangesetPollResponse {
     // Maybe a response to an underlying call, if it is ready
-    1: optional MegarepoSyncChangesetResponse response,
+    1: optional MegarepoSyncChangesetResult result,
 }
 
 struct MegarepoRemergeSourceResponse {
@@ -1273,9 +1288,14 @@ struct MegarepoRemergeSourceResponse {
     1: megarepo_configs.ChangesetId cs_id
 }
 
+union MegarepoRemergeSourceResult {
+    1: MegarepoRemergeSourceResponse success,
+    2: MegarepoAsynchronousRequestError error,
+}
+
 struct MegarepoRemergeSourcePollResponse {
     // Maybe a response to an underlying call, if it is ready
-    1: optional MegarepoRemergeSourceResponse response,
+    1: optional MegarepoRemergeSourceResult result,
 }
 
 // Exceptions
@@ -1305,6 +1325,21 @@ exception InternalError {
     3: list<string> source_chain,
 } (message = "reason")
 
+struct RequestErrorStruct {
+    1: source_control.RequestErrorKind kind,
+    2: string reason,
+}
+
+struct InternalErrorStruct {
+    1: string reason,
+    2: optional string backtrace,
+    3: list<string> source_chain,
+}
+
+union  MegarepoAsynchronousRequestError{
+    1: RequestErrorStruct request_error,
+    2: InternalErrorStruct internal_error,
+}
 
 // Service Definition
 

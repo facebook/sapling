@@ -161,7 +161,9 @@ impl AsyncMethodRequestQueue {
             match maybe_thrift_result {
                 Some(thrift_result) => {
                     // Nice, the result is ready!
-                    return <T::R as Request>::thrift_result_into_poll_response(thrift_result);
+                    return Ok(<T::R as Request>::thrift_result_into_poll_response(
+                        thrift_result,
+                    ));
                 }
                 None if before.elapsed() + next_sleep > MAX_POLL_DURATION => {
                     // The result is not yet ready, but we're out of time
@@ -191,11 +193,11 @@ mod tests {
         MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams,
     };
 
-    use crate::types::{MegarepoAsynchronousRequestResult, ThriftResult};
+    use crate::types::MegarepoAsynchronousRequestResult;
 
     use source_control::{
-        MegarepoAddTargetResponse, MegarepoChangeTargetConfigResponse,
-        MegarepoRemergeSourceResponse, MegarepoSyncChangesetResponse,
+        MegarepoAddTargetResult, MegarepoChangeTargetConfigResult, MegarepoRemergeSourceResult,
+        MegarepoSyncChangesetResult,
     };
 
     use crate::types::{
@@ -208,7 +210,7 @@ mod tests {
             $fn_name: ident,
             $request_struct: ident,
             $thrift_params: ident,
-            $response: ident,
+            $result: ident,
             $request_type: expr,
         } => {
             #[fbinit::test]
@@ -260,12 +262,12 @@ mod tests {
                 // Inject a result for this request
                 // Verify that poll_once on this request in a "in_progress" state
                 // returns injected result
-                let fake_response: Result<$response, MegarepoError> = Ok(Default::default());
-                let fake_result: MegarepoAsynchronousRequestResult = fake_response.clone().into();
+                let fake_specific_result: $result = Default::default();
+                let fake_result: MegarepoAsynchronousRequestResult = fake_specific_result.clone().into();
                 q.complete(&ctx, &req_id, fake_result).await?;
                 let ready_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
-                let ready_poll_response = ready_poll.unwrap().into_result();
-                assert_eq!(ready_poll_response.unwrap(), fake_response.unwrap());
+                let ready_poll_response = ready_poll.unwrap();
+                assert_eq!(ready_poll_response, fake_specific_result);
 
                 // After a successful poll, request is marked as polled
                 let entry = q.table.test_get_request_entry_by_id(&ctx, &req_id.0).await?.unwrap();
@@ -280,7 +282,7 @@ mod tests {
         test_enqueue_dequeue_and_poll_once_add_target,
         MegarepoAddSyncTarget,
         ThriftMegarepoAddTargetParams,
-        MegarepoAddTargetResponse,
+        MegarepoAddTargetResult,
         "megarepo_add_sync_target",
     }
 
@@ -288,7 +290,7 @@ mod tests {
         test_enqueue_dequeue_and_poll_once_sync_changeset,
         MegarepoSyncChangeset,
         ThriftMegarepoSyncChangesetParams,
-        MegarepoSyncChangesetResponse,
+        MegarepoSyncChangesetResult,
         "megarepo_sync_changeset",
     }
 
@@ -296,7 +298,7 @@ mod tests {
         test_enqueue_dequeue_and_poll_once_change_config,
         MegarepoChangeTargetConfig,
         ThriftMegarepoChangeTargetConfigParams,
-        MegarepoChangeTargetConfigResponse,
+        MegarepoChangeTargetConfigResult,
         "megarepo_change_target_config",
     }
 
@@ -304,7 +306,7 @@ mod tests {
         test_enqueue_dequeue_and_poll_once_remerge_source,
         MegarepoRemergeSource,
         ThriftMegarepoRemergeSourceParams,
-        MegarepoRemergeSourceResponse,
+        MegarepoRemergeSourceResult,
         "megarepo_remerge_source",
     }
 }

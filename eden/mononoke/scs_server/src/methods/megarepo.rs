@@ -119,11 +119,13 @@ impl SourceControlServiceImpl {
                 .ok_or_else(|| errors::invalid_request("{} bookmark not found"))?;
 
             Ok(thrift::MegarepoAddTargetPollResponse {
-                response: Some(thrift::MegarepoAddTargetResponse {
-                    // This is obviously incorrect and should be removed together
-                    // with the fake token
-                    cs_id: Vec::from(bookmark_val.as_ref()),
-                }),
+                result: Some(thrift::MegarepoAddTargetResult::success(
+                    thrift::MegarepoAddTargetResponse {
+                        // This is obviously incorrect and should be removed together
+                        // with the fake token
+                        cs_id: Vec::from(bookmark_val.as_ref()),
+                    },
+                )),
             })
         } else {
             Err(errors::ServiceError::from(errors::not_implemented(
@@ -210,10 +212,12 @@ impl SourceControlServiceImpl {
             let bookmark_val = maybe_bookmark_val
                 .ok_or_else(|| errors::invalid_request("{} bookmark not found"))?;
             Ok(thrift::MegarepoSyncChangesetPollResponse {
-                response: Some(thrift::MegarepoSyncChangesetResponse {
-                    // TODO(stash, mitrandir, simonfar) - return the actual commit here
-                    cs_id: Vec::from(bookmark_val.as_ref()),
-                }),
+                result: Some(thrift::MegarepoSyncChangesetResult::success(
+                    thrift::MegarepoSyncChangesetResponse {
+                        // TODO(stash, mitrandir, simonfar) - return the actual commit here
+                        cs_id: Vec::from(bookmark_val.as_ref()),
+                    },
+                )),
             })
         } else {
             Err(errors::ServiceError::from(errors::not_implemented(

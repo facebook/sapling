@@ -10,7 +10,6 @@
 
 pub use anyhow::anyhow;
 use blobstore::LoadableError;
-use megarepo_types_thrift::{self as thrift, StoredError};
 use source_control as scs_thrift;
 use std::backtrace::Backtrace;
 use std::backtrace::BacktraceStatus;
@@ -117,10 +116,10 @@ macro_rules! bail_internal {
     };
 }
 
-impl From<MegarepoError> for StoredError {
+impl From<MegarepoError> for scs_thrift::MegarepoAsynchronousRequestError {
     fn from(e: MegarepoError) -> Self {
         match e {
-            MegarepoError::RequestError(e) => Self::request_error(thrift::RequestErrorStruct {
+            MegarepoError::RequestError(e) => Self::request_error(scs_thrift::RequestErrorStruct {
                 kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
                 reason: format!("{}", e),
             }),
@@ -139,26 +138,12 @@ impl From<MegarepoError> for StoredError {
                     error = source;
                 }
 
-                Self::internal_error(thrift::InternalErrorStruct {
+                Self::internal_error(scs_thrift::InternalErrorStruct {
                     reason,
                     backtrace,
                     source_chain,
                 })
             }
-        }
-    }
-}
-
-impl From<StoredError> for MegarepoError {
-    fn from(other: StoredError) -> MegarepoError {
-        // TODO: do something better with error structure
-        match other {
-            StoredError::request_error(e) => MegarepoError::request(anyhow!("{}", e.reason)),
-            StoredError::internal_error(e) => MegarepoError::internal(anyhow!("{}", e.reason)),
-            StoredError::UnknownField(x) => MegarepoError::internal(anyhow!(
-                "Failed to deserialize StoredError. UnknownField {}",
-                x
-            )),
         }
     }
 }

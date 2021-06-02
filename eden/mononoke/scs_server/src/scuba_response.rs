@@ -76,23 +76,23 @@ impl AddScubaResponse for thrift::TreeListResponse {}
 
 impl AddScubaResponse for thrift::RepoListHgManifestResponse {}
 
-// TODO: report cs_ids where possible
-impl AddScubaResponse for thrift::MegarepoRemergeSourceResponse {}
+// TODO: report cs_ids and actual error where possible
+impl AddScubaResponse for thrift::MegarepoRemergeSourceResult {}
 
-impl AddScubaResponse for thrift::MegarepoSyncChangesetResponse {}
+impl AddScubaResponse for thrift::MegarepoSyncChangesetResult {}
 
-impl AddScubaResponse for thrift::MegarepoChangeTargetConfigResponse {}
+impl AddScubaResponse for thrift::MegarepoChangeTargetConfigResult {}
 
-impl AddScubaResponse for thrift::MegarepoAddTargetResponse {}
+impl AddScubaResponse for thrift::MegarepoAddTargetResult {}
 
 impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}
 
 // Helper fn to report PollResponse types
-fn report_maybe_response<R: AddScubaResponse>(
-    maybe_response: &Option<R>,
+fn report_maybe_result<R: AddScubaResponse>(
+    maybe_result: &Option<R>,
     scuba: &mut MononokeScubaSampleBuilder,
 ) {
-    match maybe_response {
+    match maybe_result {
         None => {
             scuba.add("megarepo_ready", false);
         }
@@ -105,25 +105,25 @@ fn report_maybe_response<R: AddScubaResponse>(
 
 impl AddScubaResponse for thrift::MegarepoRemergeSourcePollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        report_maybe_response(&self.response, scuba);
+        report_maybe_result(&self.result, scuba);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoSyncChangesetPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        report_maybe_response(&self.response, scuba);
+        report_maybe_result(&self.result, scuba);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoChangeTargetConfigPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        report_maybe_response(&self.response, scuba);
+        report_maybe_result(&self.result, scuba);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        report_maybe_response(&self.response, scuba);
+        report_maybe_result(&self.result, scuba);
     }
 }
 

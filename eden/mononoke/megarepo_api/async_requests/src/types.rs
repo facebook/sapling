@@ -12,12 +12,6 @@ use fbthrift::compact_protocol;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_types_thrift::{
-    MegarepoAddTargetResult as ThriftMegarepoAddTargetResult,
-    MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult,
-    MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult,
-    MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult,
-};
-use megarepo_types_thrift::{
     MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,
     MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId,
     MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult,
@@ -42,6 +36,12 @@ use source_control::{
     MegarepoChangeTargetConfigResponse as ThriftMegarepoChangeTargetConfigResponse,
     MegarepoRemergeSourceResponse as ThriftMegarepoRemergeSourceResponse,
     MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse,
+};
+use source_control::{
+    MegarepoAddTargetResult as ThriftMegarepoAddTargetResult,
+    MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult,
+    MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult,
+    MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult,
 };
 use source_control::{
     MegarepoAddTargetToken as ThriftMegarepoAddTargetToken,
@@ -74,14 +74,7 @@ pub trait Request: Sized + Send + Sync {
     type PollResponse;
 
     /// Convert thrift result into a result of a poll response
-    /// Thrift result is a representation of either a successful
-    /// respone, or an error. Poll response cannot convey an error,
-    /// so we use result of a poll response to do so.
-    /// Note that this function should return either a
-    /// non-empty poll-response, or an error
-    fn thrift_result_into_poll_response(
-        tr: Self::ThriftResult,
-    ) -> Result<Self::PollResponse, MegarepoError>;
+    fn thrift_result_into_poll_response(tr: Self::ThriftResult) -> Self::PollResponse;
 
     /// Return an empty poll response. This indicates
     /// that the request hasn't been processed yet
@@ -111,8 +104,6 @@ pub trait ThriftResult:
     Sized + Send + Sync + TryFrom<MegarepoAsynchronousRequestResult, Error = MegarepoError>
 {
     type R: Request<ThriftResult = Self>;
-
-    fn into_result(self) -> Result<<Self::R as Request>::ThriftResponse, MegarepoError>;
 }
 
 /// Polling token for an async service method
@@ -338,6 +329,13 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
+        impl From<$result_value_thrift_type> for MegarepoAsynchronousRequestResult {
+            fn from(r: $result_value_thrift_type) -> MegarepoAsynchronousRequestResult {
+                let thrift = ThriftMegarepoAsynchronousRequestResult::$result_union_variant(r);
+                MegarepoAsynchronousRequestResult::from_thrift(thrift)
+            }
+        }
+
         impl From<$params_value_thrift_type> for MegarepoAsynchronousRequestParams{
             fn from(params: $params_value_thrift_type) -> MegarepoAsynchronousRequestParams {
                 MegarepoAsynchronousRequestParams::from_thrift(
@@ -348,23 +346,6 @@ macro_rules! impl_async_svc_method_types {
 
         impl ThriftResult for $result_value_thrift_type {
             type R = $request_struct;
-
-            fn into_result(self) -> Result<$response_type, MegarepoError> {
-                match self {
-                    $result_value_thrift_type::success(payload) => Ok(payload),
-                    $result_value_thrift_type::error(e) => Err(e.into()),
-                    $result_value_thrift_type::UnknownField(x) => {
-                        // TODO: maybe use structured error?
-                        Err(MegarepoError::internal(
-                            anyhow!(
-                                "failed to parse {} thrift. UnknownField: {}",
-                                stringify!($result_value_thrift_type),
-                                x,
-                            )
-                        ))
-                    }
-                }
-            }
         }
 
         impl TryFrom<MegarepoAsynchronousRequestResult> for $result_value_thrift_type {
@@ -410,13 +391,12 @@ macro_rules! impl_async_svc_method_types {
 
             fn thrift_result_into_poll_response(
                 thrift_result: Self::ThriftResult,
-            ) -> Result<Self::PollResponse, MegarepoError> {
-                let r: Result<$response_type, MegarepoError> = thrift_result.into_result();
-                r.map(|r| $poll_response_type { response: Some(r) })
+            ) -> Self::PollResponse {
+                $poll_response_type { result: Some(thrift_result) }
             }
 
             fn empty_poll_response() -> Self::PollResponse {
-                $poll_response_type { response: None }
+                $poll_response_type { result: None }
             }
         }
 
