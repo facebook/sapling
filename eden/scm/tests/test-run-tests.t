@@ -132,55 +132,6 @@ test churn with globs
   python hash seed: * (glob)
   [1]
 
-test diff colorisation
-
-#if no-windows pygments
-  $ rt test-failure.t --color always
-  
-  \x1b[38;5;124m--- test-failure.t\x1b[39m (esc)
-  \x1b[38;5;34m+++ test-failure.t.err\x1b[39m (esc)
-  \x1b[38;5;90;01m@@ -1,4 +1,4 @@\x1b[39;00m (esc)
-     $ echo "bar-baz"; echo "bar-bad"; echo foo
-  \x1b[38;5;34m+  bar*baz (glob)\x1b[39m (esc)
-     bar*bad (glob)
-  \x1b[38;5;124m-  bar*baz (glob)\x1b[39m (esc)
-  \x1b[38;5;124m-  | fo (re)\x1b[39m (esc)
-  \x1b[38;5;34m+  foo\x1b[39m (esc)
-  
-  \x1b[38;5;88mERROR: \x1b[39m\x1b[38;5;9mtest-failure.t\x1b[39m\x1b[38;5;88m output changed\x1b[39m (esc)
-  !
-  ----------------------------------------------------------------------
-  Failed 1 tests (output changed):
-    test-failure.t
-  
-  # Ran 1 tests, 0 skipped, 1 failed.
-  python hash seed: * (glob)
-  [1]
-
-  $ rt test-failure.t 2> tmp.log
-  [1]
-  $ cat tmp.log
-  
-  --- test-failure.t
-  +++ test-failure.t.err
-  @@ -1,4 +1,4 @@
-     $ echo "bar-baz"; echo "bar-bad"; echo foo
-  +  bar*baz (glob)
-     bar*bad (glob)
-  -  bar*baz (glob)
-  -  | fo (re)
-  +  foo
-  
-  ERROR: test-failure.t output changed
-  !
-  ----------------------------------------------------------------------
-  Failed 1 tests (output changed):
-    test-failure.t
-  
-  # Ran 1 tests, 0 skipped, 1 failed.
-  python hash seed: * (glob)
-#endif
-
   $ cat > test-failure.t << EOF
   >   $ true
   >   should go away (true !)
