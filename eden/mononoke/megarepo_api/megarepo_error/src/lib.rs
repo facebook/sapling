@@ -10,8 +10,10 @@
 
 pub use anyhow::anyhow;
 use blobstore::LoadableError;
-use megarepo_types_thrift::StoredError;
+use megarepo_types_thrift::{self as thrift, StoredError};
+use source_control as scs_thrift;
 use std::backtrace::Backtrace;
+use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
 use std::error::Error as StdError;
 use std::fmt;
@@ -116,11 +118,33 @@ macro_rules! bail_internal {
 }
 
 impl From<MegarepoError> for StoredError {
-    fn from(other: MegarepoError) -> StoredError {
-        // TODO: preserve error structure
-        match other {
-            MegarepoError::RequestError(e) => StoredError::request_error(format!("{}", e)),
-            MegarepoError::InternalError(e) => StoredError::internal_error(format!("{}", e)),
+    fn from(e: MegarepoError) -> Self {
+        match e {
+            MegarepoError::RequestError(e) => Self::request_error(thrift::RequestErrorStruct {
+                kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
+                reason: format!("{}", e),
+            }),
+            MegarepoError::InternalError(error) => {
+                let reason = error.to_string();
+                let backtrace = error
+                    .backtrace()
+                    .and_then(|backtrace| match backtrace.status() {
+                        BacktraceStatus::Captured => Some(backtrace.to_string()),
+                        _ => None,
+                    });
+                let mut source_chain = Vec::new();
+                let mut error: &dyn StdError = &error;
+                while let Some(source) = error.source() {
+                    source_chain.push(source.to_string());
+                    error = source;
+                }
+
+                Self::internal_error(thrift::InternalErrorStruct {
+                    reason,
+                    backtrace,
+                    source_chain,
+                })
+            }
         }
     }
 }
@@ -129,8 +153,8 @@ impl From<StoredError> for MegarepoError {
     fn from(other: StoredError) -> MegarepoError {
         // TODO: do something better with error structure
         match other {
-            StoredError::request_error(e) => MegarepoError::request(anyhow!("{}", e)),
-            StoredError::internal_error(e) => MegarepoError::internal(anyhow!("{}", e)),
+            StoredError::request_error(e) => MegarepoError::request(anyhow!("{}", e.reason)),
+            StoredError::internal_error(e) => MegarepoError::internal(anyhow!("{}", e.reason)),
             StoredError::UnknownField(x) => MegarepoError::internal(anyhow!(
                 "Failed to deserialize StoredError. UnknownField {}",
                 x

@@ -27,11 +27,21 @@ typedef mononoke_types_thrift.IdType MegarepoAddTargetResultId (rust.newtype)
 typedef mononoke_types_thrift.IdType MegarepoRemergeSourceResultId (rust.newtype)
 typedef mononoke_types_thrift.IdType MegarepoChangeTargetConfigResultId (rust.newtype)
 
+struct RequestErrorStruct {
+    1: source_control.RequestErrorKind kind,
+    2: string reason,
+}
+
+struct InternalErrorStruct {
+    1: string reason,
+    2: optional string backtrace,
+    3: list<string> source_chain,
+}
+
 // Stored error for asynchronous service methods
-// TODO: better error structuring please
 union StoredError {
-    1: string request_error,
-    2: string internal_error,
+    1: RequestErrorStruct request_error,
+    2: InternalErrorStruct internal_error,
 }
 
 // Stored result for `source_control.megarepo_add_sync_target` calls
