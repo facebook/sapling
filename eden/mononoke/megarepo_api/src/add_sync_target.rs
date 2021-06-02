@@ -199,11 +199,11 @@ impl<'a> AddSyncTarget<'a> {
         changesets_to_merge: &HashMap<SourceName, ChangesetId>,
     ) -> Result<ChangesetId, MegarepoError> {
         let changeset_id = changesets_to_merge
-            .get(&SourceName(source_config.name.clone()))
+            .get(&SourceName(source_config.source_name.clone()))
             .ok_or_else(|| {
                 MegarepoError::request(anyhow!(
                     "Not found changeset to merge for {}",
-                    source_config.name
+                    source_config.source_name
                 ))
             })?;
 
