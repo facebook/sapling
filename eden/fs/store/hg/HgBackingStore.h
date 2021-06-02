@@ -80,6 +80,9 @@ class HgBackingStore {
       const std::vector<Hash>& ids,
       const std::vector<HgProxyHash>& hashes,
       std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises);
+  void processTreeMetadata(
+      folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
+      const Tree& tree);
   folly::SemiFuture<std::unique_ptr<Blob>>
   getBlob(const Hash& id, HgProxyHash proxyHash, ObjectFetchContext& context);
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(

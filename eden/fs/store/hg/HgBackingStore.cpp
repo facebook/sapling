@@ -279,43 +279,48 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
             stats_->getHgBackingStoreStatsForCurrentThread();
         currentThreadStats.hgBackingStoreGetTree.addValue(
             watch.elapsed().count());
-        if (treeMetadataFuture.valid()) {
-          // metadata fetching will need the eden ids of each of the
-          // children of the the tree, to store the metadata for each of the
-          // children in the local store. Thus we make a copy of this and
-          // pass it along to metadata storage.
-          std::move(treeMetadataFuture)
-              .via(serverThreadPool_)
-              .thenValue(
-                  [localStore = localStore_, tree = *result](
-                      std::unique_ptr<TreeMetadata>&& treeMetadata) mutable {
-                    // note this may throw if the localStore has already been
-                    // closed
-                    localStore->putTreeMetadata(*treeMetadata, tree);
-                  })
-              .thenError([config = std::move(config)](
-                             folly::exception_wrapper&& error) {
-#ifdef EDEN_HAVE_SERVICEROUTER
-                if (TServiceRouterException* serviceRouterError =
-                        error.get_exception<TServiceRouterException>()) {
-                  if (config &&
-                      serviceRouterError->getErrorReason() ==
-                          ErrorReason::THROTTLING_REQUEST) {
-                    XLOG_EVERY_N_THREAD(
-                        WARN,
-                        config->getEdenConfig()
-                            ->scsThrottleErrorSampleRatio.getValue())
-                        << "Error during metadata pre-fetching or storage: "
-                        << error.what();
-                    return;
-                  }
-                }
-#endif
-                XLOG(WARN) << "Error during metadata pre-fetching or storage: "
-                           << error.what();
-              });
-        }
+        this->processTreeMetadata(std::move(treeMetadataFuture), *result);
         return std::move(result);
+      });
+}
+
+void HgBackingStore::processTreeMetadata(
+    folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
+    const Tree& tree) {
+  if (!treeMetadataFuture.valid()) {
+    return;
+  }
+
+  // metadata fetching will need the eden ids of each of the
+  // children of the the tree, to store the metadata for each of the
+  // children in the local store. Thus we make a copy of this and
+  // pass it along to metadata storage.
+  std::move(treeMetadataFuture)
+      .via(serverThreadPool_)
+      .thenValue([localStore = localStore_, tree = tree](
+                     std::unique_ptr<TreeMetadata>&& treeMetadata) mutable {
+        // note this may throw if the localStore has already been
+        // closed
+        localStore->putTreeMetadata(*treeMetadata, tree);
+      })
+      .thenError([config = config_](folly::exception_wrapper&& error) {
+#ifdef EDEN_HAVE_SERVICEROUTER
+        if (TServiceRouterException* serviceRouterError =
+                error.get_exception<TServiceRouterException>()) {
+          if (config &&
+              serviceRouterError->getErrorReason() ==
+                  ErrorReason::THROTTLING_REQUEST) {
+            XLOG_EVERY_N_THREAD(
+                WARN,
+                config->getEdenConfig()->scsThrottleErrorSampleRatio.getValue())
+                << "Error during metadata pre-fetching or storage: "
+                << error.what();
+            return;
+          }
+        }
+#endif
+        XLOG(WARN) << "Error during metadata pre-fetching or storage: "
+                   << error.what();
       });
 }
 
