@@ -4,6 +4,7 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
 #pragma once
 
 #include <folly/Range.h>
@@ -41,6 +42,12 @@ class HgNativeBackingStore {
           requests,
       bool local,
       std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve);
+
+  void getTreeBatch(
+      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
+          requests,
+      bool local,
+      std::function<void(size_t, std::shared_ptr<RustTree>)>&& resolve);
 
   std::shared_ptr<RustTree> getTree(folly::ByteRange node);
 

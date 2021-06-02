@@ -1,4 +1,9 @@
 #!/bin/bash
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 #
 # This is a helper tool to help you generate C interface from the Rust code
 # using cbindgen. You will need to install cbindgen manually:
@@ -16,7 +21,7 @@ main() {
   #
   # Note: `-i"" -e` for BSD compatibility.
   sed -i"" -e "s/CFallibleBase<.*>/CFallibleBase/g"  "$OUTPUT"
-  python "$(hg root)/xplat/python/signedsource_lib/signedsource.py" sign "$OUTPUT"
+  python3 "$(hg root)/xplat/python/signedsource_lib/signedsource.py" sign "$OUTPUT"
 }
 
 main

@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<73be5ea0efc629a3d97af92a1eb36494>>
+ * @generated SignedSource<<9c7f19a15d4029f2e4117c5a82f9743d>>
  *
  */
 
@@ -74,6 +74,7 @@ public:
 #include <cstdarg>
 #include <cstdint>
 #include <cstdlib>
+#include <ostream>
 #include <new>
 
 enum class RustTreeEntryType : uint8_t {
@@ -85,7 +86,7 @@ enum class RustTreeEntryType : uint8_t {
 
 struct RustBackingStore;
 
-template<typename T>
+template<typename T = void>
 struct RustVec;
 
 struct RustCBytes {
@@ -125,6 +126,10 @@ struct RustTree {
 
 extern "C" {
 
+RustCFallibleBase rust_backingstore_new(const char *repository,
+                                                          size_t repository_len,
+                                                          bool use_edenapi);
+
 void rust_backingstore_free(RustBackingStore *store);
 
 RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
@@ -145,9 +150,14 @@ RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
                                                        const uint8_t *node,
                                                        uintptr_t node_len);
 
-RustCFallibleBase rust_backingstore_new(const char *repository,
-                                                          size_t repository_len,
-                                                          bool use_edenapi);
+void rust_backingstore_get_tree_batch(RustBackingStore *store,
+                                      const RustRequest *requests,
+                                      uintptr_t size,
+                                      bool local,
+                                      void *data,
+                                      void (*resolve)(void*, uintptr_t, RustCFallibleBase));
+
+void rust_tree_free(RustTree *tree);
 
 void rust_backingstore_refresh(RustBackingStore *store);
 
@@ -155,18 +165,16 @@ void rust_cbytes_free(RustCBytes *vec);
 
 void rust_cfallible_free_error(char *ptr);
 
-RustCBytes rust_test_cbytes();
-
-/// Returns a `CFallible` with error message "failure!". This function is intended to be called
-/// from C++ tests.
-RustCFallibleBase rust_test_cfallible_err();
-
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
 RustCFallibleBase rust_test_cfallible_ok();
 
 void rust_test_cfallible_ok_free(uint8_t *val);
 
-void rust_tree_free(RustTree *tree);
+/// Returns a `CFallible` with error message "failure!". This function is intended to be called
+/// from C++ tests.
+RustCFallibleBase rust_test_cfallible_err();
+
+RustCBytes rust_test_cbytes();
 
 } // extern "C"

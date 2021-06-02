@@ -58,6 +58,33 @@ void getBlobBatchCallback(
         (*static_cast<Fn*>(fn))(index, result);
       });
 }
+
+/**
+ * A helper function to make it easier to work with FFI function pointers. Only
+ * non-capturing lambdas can be used as FFI function pointers. To bypass this
+ * restriction, we pass in the pointer to the capturing function opaquely.
+ * Whenever we get called to process the result, we call that capturing
+ * function instead.
+ */
+template <typename Fn>
+void getTreeBatchCallback(
+    RustBackingStore* store,
+    RustRequest* request,
+    uintptr_t size,
+    bool local,
+    Fn&& fn) {
+  rust_backingstore_get_tree_batch(
+      store,
+      request,
+      size,
+      local,
+      // We need to take address of the function, not to forward it.
+      // @lint-ignore CLANGTIDY
+      &fn,
+      [](void* fn, size_t index, RustCFallibleBase result) {
+        (*static_cast<Fn*>(fn))(index, result);
+      });
+}
 } // namespace
 
 HgNativeBackingStore::HgNativeBackingStore(
@@ -161,6 +188,67 @@ void HgNativeBackingStore::getBlobBatch(
               index,
               count);
           resolve(index, std::move(content));
+        }
+      });
+}
+
+void HgNativeBackingStore::getTreeBatch(
+    const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
+    bool local,
+    std::function<void(size_t, std::shared_ptr<RustTree>)>&& resolve) {
+  size_t count = requests.size();
+
+  XLOG(DBG7) << "Import batch of trees with size:" << count;
+
+  std::vector<RustRequest> raw_requests;
+  raw_requests.reserve(count);
+
+  for (auto& [name, node] : requests) {
+
+    raw_requests.emplace_back(RustRequest{
+        name.data(),
+        name.size(),
+        node.data(),
+    });
+
+    XLOGF(
+        DBG9,
+        "Processing path=\"{}\" ({}) node={} ({:p})",
+        name.data(),
+        name.size(),
+        folly::hexlify(node),
+        node.data());
+  }
+
+  getTreeBatchCallback(
+      store_.get(),
+      raw_requests.data(),
+      count,
+      local,
+      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
+        RustCFallible<RustTree> result(std::move(raw_result), rust_tree_free);
+
+        if (result.isError()) {
+          // TODO: It would be nice if we can differentiate not found error with
+          // other errors.
+          auto error = result.getError();
+          XLOGF(
+              DBG6,
+              "Failed to import path=\"{}\" node={} from EdenAPI (batch tree {}/{}): {}",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count,
+              error);
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported path=\"{}\" node={} from EdenAPI (batch tree: {}/{})",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count);
+          resolve(index, result.unwrap());
         }
       });
 }
