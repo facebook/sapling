@@ -131,27 +131,43 @@ impl<'a> AddSyncTarget<'a> {
         sync_target_config: &'b SyncTargetConfig,
         changesets_to_merge: &'b HashMap<SourceName, ChangesetId>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
+        let moved_commits = stream::iter(sync_target_config.sources.clone())
+            .map(Ok)
+            .map_ok(|source_config| {
+                async move {
+                    let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
+
+                    let source_name = SourceName(source_config.source_name.clone());
+
+                    let changeset_id = self
+                        .validate_changeset_to_merge(
+                            ctx,
+                            &source_repo,
+                            &source_config,
+                            changesets_to_merge,
+                        )
+                        .await?;
+                    let mover = create_source_to_target_multi_mover(source_config.mapping.clone())
+                        .map_err(MegarepoError::request)?;
+
+                    let linkfiles = self.prepare_linkfiles(&source_config, &mover)?;
+                    let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
+                    // TODO(stash): it assumes that commit is present in target
+                    let moved = self
+                        .create_single_move_commit(ctx, repo, changeset_id, &mover, linkfiles)
+                        .await?;
+
+                    Result::<_, Error>::Ok((source_name, moved))
+                }
+            })
+            .try_buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+
         // Keep track of all files created in all sources so that we can check
         // if there's a conflict between
         let mut all_files_in_target = HashMap::new();
-        let mut moved_commits = vec![];
-        for source_config in &sync_target_config.sources {
-            let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
-
-            let source_name = SourceName(source_config.source_name.clone());
-
-            let changeset_id = self
-                .validate_changeset_to_merge(ctx, &source_repo, source_config, changesets_to_merge)
-                .await?;
-            let mover = create_source_to_target_multi_mover(source_config.mapping.clone())
-                .map_err(MegarepoError::request)?;
-
-            let linkfiles = self.prepare_linkfiles(source_config, &mover)?;
-            let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
-            // TODO(stash): it assumes that commit is present in target
-            let moved = self
-                .create_single_move_commit(ctx, repo, changeset_id, &mover, linkfiles)
-                .await?;
+        for (source_name, moved) in &moved_commits {
             add_and_check_all_paths(
                 &mut all_files_in_target,
                 &source_name,
@@ -161,9 +177,17 @@ impl<'a> AddSyncTarget<'a> {
                     // Do not check deleted files
                     .filter_map(|(path, maybe_fc)| maybe_fc.map(|_| path)),
             )?;
-            moved_commits.push((source_name, moved));
         }
 
+        save_bonsai_changesets(
+            moved_commits
+                .iter()
+                .map(|(_, css)| css.moved.clone())
+                .collect(),
+            ctx.clone(),
+            repo.clone(),
+        )
+        .await?;
         Ok(moved_commits)
     }
 
@@ -378,8 +402,6 @@ impl<'a> AddSyncTarget<'a> {
             file_changes: file_changes.into_iter().collect(),
         }
         .freeze()?;
-
-        save_bonsai_changesets(vec![moved_bcs.clone()], ctx.clone(), repo.clone()).await?;
 
         let source_and_moved_changeset = SourceAndMovedChangesets {
             source: cs_id,
