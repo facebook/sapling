@@ -204,7 +204,6 @@ void HgNativeBackingStore::getTreeBatch(
   raw_requests.reserve(count);
 
   for (auto& [name, node] : requests) {
-
     raw_requests.emplace_back(RustRequest{
         name.data(),
         name.size(),
