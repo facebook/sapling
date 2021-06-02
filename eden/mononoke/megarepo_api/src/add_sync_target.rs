@@ -16,7 +16,9 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{stream, StreamExt, TryStreamExt};
 use manifest::ManifestOps;
-use megarepo_config::{MononokeMegarepoConfigs, Source, SourceRevision, SyncTargetConfig};
+use megarepo_config::{
+    MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig,
+};
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use mononoke_api::Mononoke;
@@ -230,6 +232,19 @@ impl<'a> AddSyncTarget<'a> {
         Ok(*changeset_id)
     }
 
+    // Merge moved commits from a lot of sources together
+    // Instead of creating a single merge commits with lots of parents
+    // we create a stack of merge commits (the primary reason for that is
+    // that mercurial doesn't support more than 2 parents)
+    //
+    //      Merge_n
+    //    /         \
+    //  Merge_n-1   Move_n
+    //    |    \
+    //    |      Move_n-1
+    //  Merge_n-2
+    //    |    \
+    //          Move_n-2
     async fn create_merge_commits(
         &self,
         ctx: &CoreContext,
@@ -237,7 +252,7 @@ impl<'a> AddSyncTarget<'a> {
         moved_commits: Vec<(SourceName, SourceAndMovedChangesets)>,
         sync_target_config: &SyncTargetConfig,
         message: Option<String>,
-    ) -> Result<ChangesetId, Error> {
+    ) -> Result<ChangesetId, MegarepoError> {
         // Now let's create a merge commit that merges all moved changesets
 
         // We need to create a file with the latest commits that were synced from
@@ -251,28 +266,64 @@ impl<'a> AddSyncTarget<'a> {
             sync_target_config.version.clone(),
         );
 
-        // TODO(stash): avoid doing a single merge commit, and do a stack of merges instead
-        let mut bcs = BonsaiChangesetMut {
-            parents: moved_commits
-                .into_iter()
-                .map(|(_, css)| css.moved.get_changeset_id())
-                .collect(),
+        let (last_moved_commit, first_moved_commits) = match moved_commits.split_last() {
+            Some((last_moved_commit, first_moved_commits)) => {
+                (last_moved_commit, first_moved_commits)
+            }
+            None => {
+                return Err(MegarepoError::request(anyhow!(
+                    "no move commits were set - target has no sources?"
+                )));
+            }
+        };
+
+        let mut merges = vec![];
+        let mut cur_parents = vec![];
+        for (_, css) in first_moved_commits {
+            cur_parents.push(css.moved.get_changeset_id());
+            if cur_parents.len() > 1 {
+                let bcs = self.create_merge_commit(
+                    message.clone(),
+                    cur_parents,
+                    sync_target_config.version.clone(),
+                )?;
+                let merge = bcs.freeze()?;
+                cur_parents = vec![merge.get_changeset_id()];
+                merges.push(merge);
+            }
+        }
+
+        cur_parents.push(last_moved_commit.1.moved.get_changeset_id());
+        let mut final_merge =
+            self.create_merge_commit(message, cur_parents, sync_target_config.version.clone())?;
+        state.save_in_changeset(ctx, repo, &mut final_merge).await?;
+        let final_merge = final_merge.freeze()?;
+        merges.push(final_merge.clone());
+        save_bonsai_changesets(merges, ctx.clone(), repo.clone()).await?;
+
+        Ok(final_merge.get_changeset_id())
+    }
+
+    fn create_merge_commit(
+        &self,
+        message: Option<String>,
+        parents: Vec<ChangesetId>,
+        version: SyncConfigVersion,
+    ) -> Result<BonsaiChangesetMut, Error> {
+        // TODO(stash, mateusz, simonfar): figure out what fields
+        // we need to set here
+        let bcs = BonsaiChangesetMut {
+            parents,
             author: "svcscm".to_string(),
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: message.unwrap_or(format!(
-                "Add new sync target with version {}",
-                sync_target_config.version
-            )),
+            message: message.unwrap_or(format!("Add new sync target with version {}", version)),
             extra: SortedVectorMap::new(),
             file_changes: SortedVectorMap::new(),
         };
-        state.save_in_changeset(ctx, repo, &mut bcs).await?;
-        let bcs = bcs.freeze()?;
-        save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
 
-        Ok(bcs.get_changeset_id())
+        Ok(bcs)
     }
 
     async fn create_single_move_commit<'b>(

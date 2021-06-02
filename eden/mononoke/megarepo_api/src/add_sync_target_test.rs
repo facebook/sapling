@@ -10,6 +10,7 @@ use crate::common::SourceName;
 use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
 use crate::sync_changeset::SyncChangeset;
 use anyhow::Error;
+use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashmap;
@@ -552,6 +553,111 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
         .await;
 
     assert!(res.is_err());
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let target: Target = test.target("target".to_string());
+
+    let first_source_name = "source_1".to_string();
+    let second_source_name = "source_2".to_string();
+    let third_source_name = "source_3".to_string();
+    let version = "version_1".to_string();
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .source_builder(second_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .source_builder(third_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    println!("Create initial source commits and bookmarks");
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("first", "first")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+        .set_to(first_source_cs_id)
+        .await?;
+
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("second", "second")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+        .set_to(second_source_cs_id)
+        .await?;
+
+    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("third", "third")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, third_source_name.clone())
+        .set_to(third_source_cs_id)
+        .await?;
+
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+
+    let sync_target_config =
+        test.configs_storage
+            .get_config_by_version(ctx.clone(), target, version.clone())?;
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    add_sync_target
+        .run(
+            &ctx,
+            sync_target_config.clone(),
+            hashmap! {
+                SourceName(first_source_name.clone()) => first_source_cs_id,
+                SourceName(second_source_name.clone()) => second_source_cs_id,
+                SourceName(third_source_name.clone()) => third_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+    let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, target_cs_id).await?;
+    // Remove file with commit remapping state because it's never present in source
+    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
+
+    assert_eq!(
+        wc,
+        hashmap! {
+            MPath::new("source_1/first")? => "first".to_string(),
+            MPath::new("source_2/second")? => "second".to_string(),
+            MPath::new("source_3/third")? => "third".to_string(),
+        }
+    );
+
+    // Validate the shape of the graph
+    // It should look like
+    //       o
+    //      / \
+    //     o   M
+    //    / \
+
+    let target_cs = target_cs_id.load(&ctx, test.blobrepo.blobstore()).await?;
+    assert!(target_cs.is_merge());
+
+    let parents = target_cs.parents().collect::<Vec<_>>();
+    assert_eq!(parents.len(), 2);
+
+    let first_merge = parents[0].load(&ctx, test.blobrepo.blobstore()).await?;
+    assert!(first_merge.is_merge());
+
+    let move_commit = parents[1].load(&ctx, test.blobrepo.blobstore()).await?;
+    assert!(!move_commit.is_merge());
 
     Ok(())
 }
