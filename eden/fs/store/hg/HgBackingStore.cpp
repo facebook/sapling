@@ -238,10 +238,54 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
 void HgBackingStore::getTreeBatch(
     const std::vector<Hash>& ids,
     const std::vector<HgProxyHash>& hashes,
-    std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises) {
+    std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises,
+    bool prefetchMetadata) {
   auto writeBatch = localStore_->beginWrite();
 
-  datapackStore_.getTreeBatch(ids, hashes, writeBatch.get(), &promises);
+  std::vector<folly::Promise<std::unique_ptr<Tree>>> innerPromises;
+  innerPromises.reserve(promises.size());
+  std::vector<folly::SemiFuture<std::unique_ptr<TreeMetadata>>> metadataFutures;
+  metadataFutures.reserve(promises.size());
+
+  bool metadataEnabled =
+      metadataImporter_->metadataFetchingAvailable() && prefetchMetadata;
+
+  // Kick off all the fetching
+  auto proxyHash = hashes.begin();
+  auto id = ids.begin();
+  auto promise = promises.begin();
+  for (; promise != promises.end(); ++id, ++proxyHash, ++promise) {
+    innerPromises.emplace_back(folly::Promise<std::unique_ptr<Tree>>());
+
+    auto treeMetadataFuture =
+        folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
+    if (metadataEnabled) {
+      treeMetadataFuture =
+          metadataImporter_->getTreeMetadata(proxyHash->revHash(), *id);
+    }
+    metadataFutures.push_back(std::move(treeMetadataFuture));
+  }
+  datapackStore_.getTreeBatch(ids, hashes, writeBatch.get(), &innerPromises);
+
+  // Receive the fetches and tie the content and metadata together if needed.
+  auto innerPromise = innerPromises.begin();
+  promise = promises.begin();
+  auto treeMetadataFuture = std::make_move_iterator(metadataFutures.begin());
+  for (; innerPromise != innerPromises.end();
+       ++innerPromise, ++promise, ++treeMetadataFuture) {
+    // This innerPromise pattern is so we can retrieve the tree from the
+    // innerPromise and use it for tree metadata prefetching, without
+    // invalidating the passed in Promise.
+    if (!innerPromise->isFulfilled()) {
+      continue;
+    }
+
+    (*promise)->setWith([&]() mutable {
+      std::unique_ptr<Tree> tree = (*innerPromise).getFuture().get();
+      this->processTreeMetadata(std::move(*treeMetadataFuture), *tree);
+      return tree;
+    });
+  }
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(

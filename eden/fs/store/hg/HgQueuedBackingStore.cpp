@@ -169,11 +169,13 @@ void HgQueuedBackingStore::processTreeImportRequests(
   proxyHashes.reserve(requests.size());
   promises.reserve(requests.size());
 
+  bool prefetchMetadata = false;
   for (auto& request : requests) {
     auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
     auto& hash = treeImport->hash;
     auto* promise =
         request->getPromise<HgImportRequest::TreeImport::Response>();
+    prefetchMetadata |= treeImport->prefetchMetadata;
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
@@ -188,7 +190,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     promises.emplace_back(promise);
   }
 
-  backingStore_->getTreeBatch(hashes, proxyHashes, promises);
+  backingStore_->getTreeBatch(hashes, proxyHashes, promises, prefetchMetadata);
 
   {
     auto request = requests.begin();

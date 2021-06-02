@@ -79,7 +79,8 @@ class HgBackingStore {
   void getTreeBatch(
       const std::vector<Hash>& ids,
       const std::vector<HgProxyHash>& hashes,
-      std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises);
+      std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises,
+      bool prefetchMetadata);
   void processTreeMetadata(
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
       const Tree& tree);

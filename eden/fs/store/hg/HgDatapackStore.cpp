@@ -171,7 +171,7 @@ void HgDatapackStore::getTreeBatch(
     const std::vector<Hash>& ids,
     const std::vector<HgProxyHash>& hashes,
     LocalStore::WriteBatch* writeBatch,
-    std::vector<folly::Promise<std::unique_ptr<Tree>>*>* promises) {
+    std::vector<folly::Promise<std::unique_ptr<Tree>>>* promises) {
   std::vector<Hash> treehashes;
   std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
 
@@ -201,7 +201,7 @@ void HgDatapackStore::getTreeBatch(
       false,
       [promises = promises, ids = ids, hashes = hashes, writeBatch, requests](
           size_t index, std::shared_ptr<RustTree> content) mutable {
-        (*promises)[index]->setWith([&] {
+        (*promises)[index].setWith([&] {
           XLOGF(
               DBG4,
               "Imported tree name={} node={}",
