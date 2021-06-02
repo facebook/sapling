@@ -1155,6 +1155,17 @@ function start_and_wait_for_scs_server {
   fi
 }
 
+function megarepo_async_worker {
+  export SCS_PORT
+  GLOG_minloglevel=5 "$ASYNC_REQUESTS_WORKER" "$@" \
+    --log-level INFO \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --scuba-log-file "$TESTTMP/async-worker.json" \
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/megarepo_async_worker.out" 2>&1 &
+  export MEGAREPO_ASYNC_WORKER_PID=$!
+  echo "$MEGAREPO_ASYNC_WORKER_PID" >> "$DAEMON_PIDS"
+}
+
 function scsc {
   GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
 }

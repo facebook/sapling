@@ -298,10 +298,3 @@ pub(crate) fn not_available(reason: String) -> thrift::RequestError {
         reason,
     }
 }
-
-pub(crate) fn not_implemented(reason: impl ToString) -> thrift::RequestError {
-    thrift::RequestError {
-        kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
-        reason: reason.to_string(),
-    }
-}
