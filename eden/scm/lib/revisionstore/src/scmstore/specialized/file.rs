@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use edenapi_types::FileEntry;
 use minibytes::Bytes;
@@ -66,28 +67,9 @@ pub struct FileStore {
 }
 
 impl Drop for FileStore {
-    /// The shared store is a cache, so let's flush all pending data when the `ContentStore` goes
-    /// out of scope.
+    #[instrument(skip(self))]
     fn drop(&mut self) {
-        if let Some(ref indexedlog_local) = self.indexedlog_local {
-            // TODO(meyer): Drop can't fail, so we ignore errors here. We should probably attempt to log them instead.
-            let _ = indexedlog_local.flush_log();
-        }
-        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let _ = indexedlog_cache.flush_log();
-        }
-        if let Some(ref lfs_local) = self.lfs_local {
-            let _ = lfs_local.flush();
-        }
-        if let Some(ref lfs_cache) = self.lfs_cache {
-            let _ = lfs_cache.flush();
-        }
-        if let Some(ref aux_local) = self.aux_local {
-            let _ = aux_local.flush_log();
-        }
-        if let Some(ref aux_cache) = self.aux_cache {
-            let _ = aux_cache.flush_log();
-        }
+        let _ = self.flush();
     }
 }
 
@@ -99,14 +81,20 @@ pub struct FileStoreFetch {
 }
 
 impl FileStore {
+    #[instrument(skip(self, keys))]
     pub fn fetch(&self, keys: impl Iterator<Item = Key>, attrs: FileAttributes) -> FileStoreFetch {
         let mut state = FetchState::new(keys, self.extstored_policy, attrs);
 
         if let Some(ref aux_cache) = self.aux_cache {
+            // TODO(meyer): Update tracing crate so we can do `span!("fetch_aux_cache").entered()`.
+            let span = tracing::info_span!("aux_cache");
+            let _guard = span.enter();
             state.fetch_aux_indexedlog(aux_cache);
         }
 
         if let Some(ref aux_local) = self.aux_local {
+            let span = tracing::info_span!("aux_local");
+            let _guard = span.enter();
             state.fetch_aux_indexedlog(aux_local);
         }
 
@@ -166,6 +154,7 @@ impl FileStore {
         state.finish()
     }
 
+    #[instrument(skip(self, entries))]
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
@@ -200,6 +189,7 @@ impl FileStore {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     pub fn local(&self) -> Self {
         FileStore {
             extstored_policy: self.extstored_policy.clone(),
@@ -223,6 +213,54 @@ impl FileStore {
             aux_local: self.aux_local.clone(),
             aux_cache: self.aux_cache.clone(),
         }
+    }
+
+    #[allow(unused_must_use)]
+    #[instrument(skip(self))]
+    pub fn flush(&self) -> Result<()> {
+        let mut result = Ok(());
+        let mut handle_error = |error| {
+            tracing::error!(%error);
+            result = Err(error);
+        };
+
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            let span = tracing::info_span!("indexedlog_local");
+            let _guard = span.enter();
+            indexedlog_local.flush_log().map_err(&mut handle_error);
+        }
+
+        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            let span = tracing::info_span!("indexedlog_cache");
+            let _guard = span.enter();
+            indexedlog_cache.flush_log().map_err(&mut handle_error);
+        }
+
+        if let Some(ref lfs_local) = self.lfs_local {
+            let span = tracing::info_span!("lfs_local");
+            let _guard = span.enter();
+            lfs_local.flush().map_err(&mut handle_error);
+        }
+
+        if let Some(ref lfs_cache) = self.lfs_cache {
+            let span = tracing::info_span!("lfs_cache");
+            let _guard = span.enter();
+            lfs_cache.flush().map_err(&mut handle_error);
+        }
+
+        if let Some(ref aux_local) = self.aux_local {
+            let span = tracing::info_span!("aux_local");
+            let _guard = span.enter();
+            aux_local.flush_log().map_err(&mut handle_error);
+        }
+
+        if let Some(ref aux_cache) = self.aux_cache {
+            let span = tracing::info_span!("aux_cache");
+            let _guard = span.enter();
+            aux_cache.flush_log().map_err(&mut handle_error);
+        }
+
+        result
     }
 }
 
@@ -259,6 +297,7 @@ impl StoreFile {
         self.aux_data.clone()
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn compute_aux_data(&mut self) -> Result<()> {
         self.aux_data = Some(
             self.content
@@ -435,6 +474,7 @@ impl LazyFile {
     }
 
     /// Compute's the aux data associated with this file from the content.
+    #[instrument(level = "debug", skip(self))]
     fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         Ok(if let LazyFile::Lfs(_, ref ptr) = self {
@@ -449,6 +489,7 @@ impl LazyFile {
     }
 
     /// The file content, as would be found in the working copy (stripped of copy header)
+    #[instrument(level = "debug", skip(self))]
     fn file_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
@@ -462,6 +503,7 @@ impl LazyFile {
     }
 
     /// The file content, as would be encoded in the Mercurial blob (with copy header)
+    #[instrument(level = "debug", skip(self))]
     fn hg_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
@@ -473,6 +515,7 @@ impl LazyFile {
         })
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn metadata(&self) -> Result<Metadata> {
         use LazyFile::*;
         Ok(match self {
@@ -488,6 +531,7 @@ impl LazyFile {
     }
 
     /// Convert the LazyFile to an indexedlog Entry, if it should ever be written to IndexedLog cache
+    #[instrument(level = "debug", skip(self))]
     fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
         use LazyFile::*;
         Ok(match self {
@@ -568,6 +612,7 @@ impl FetchErrors {
         }
     }
 
+    #[instrument(level = "error", skip(self))]
     fn keyed_error(&mut self, key: Key, err: Error) {
         self.fetch_errors
             .entry(key)
@@ -575,6 +620,7 @@ impl FetchErrors {
             .push(err);
     }
 
+    #[instrument(level = "error", skip(self))]
     fn other_error(&mut self, err: Error) {
         self.other_errors.push(err);
     }
@@ -681,6 +727,7 @@ impl FetchState {
     }
 
     /// A key is pending with respect to a store if we can "make progress" on it by requesting from that store.
+    #[instrument(level = "trace", skip(self))]
     fn pending(&self, key: &Key, fetchable: FileAttributes) -> bool {
         if fetchable.none() {
             return false;
@@ -709,6 +756,7 @@ impl FetchState {
         )
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn mark_complete(&mut self, key: &Key) {
         self.pending.remove(key);
         if let Some(ptr) = self.lfs_pointers.remove(key) {
@@ -716,6 +764,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(level = "debug", skip(self, ptr))]
     fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: LocalStoreType) {
         let sha256 = ptr.sha256();
         // Overwrite LocalStoreType::Local with LocalStoreType::Cache, but not vice versa
@@ -730,12 +779,14 @@ impl FetchState {
         self.lfs_pointers.insert(key, ptr);
     }
 
+    #[instrument(level = "debug", skip(self, sf))]
     fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<LocalStoreType>) {
         self.key_origin
             .insert(key.clone(), typ.unwrap_or(LocalStoreType::Cache));
         use hash_map::Entry::*;
         match self.found.entry(key.clone()) {
             Occupied(mut entry) => {
+                tracing::debug!("merging into previously fetched attributes");
                 // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
                 // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
                 let available = entry.get_mut();
@@ -753,6 +804,7 @@ impl FetchState {
         };
     }
 
+    #[instrument(level = "debug", skip(self, entry))]
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: LocalStoreType) {
         if entry.metadata().is_lfs() {
             if self.extstored_policy == ExtStoredPolicy::Use {
@@ -766,6 +818,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -782,6 +835,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(level = "debug", skip(self, entry))]
     fn found_aux_indexedlog(&mut self, key: Key, mut entry: Entry) -> Result<()> {
         // TODO(meyer): We could make aux data lazy too.
         let aux_data: FileAuxData = serde_json::from_slice(&entry.content()?)?;
@@ -807,12 +861,14 @@ impl FetchState {
         Ok(())
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_aux_indexedlog(&mut self, store: &IndexedLogHgIdDataStore) {
         if let Err(err) = self.fetch_aux_indexedlog_inner(store) {
             self.errors.other_error(err);
         }
     }
 
+    #[instrument(level = "debug", skip(self, entry))]
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: LocalStoreType) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
@@ -822,6 +878,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
         let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -839,6 +896,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(level = "debug", skip(self, entry))]
     fn found_memcache(&mut self, entry: McData) {
         let key = entry.key.clone();
         if entry.metadata.is_lfs() {
@@ -866,12 +924,14 @@ impl FetchState {
         Ok(())
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_memcache(&mut self, store: &MemcacheStore) {
         if let Err(err) = self.fetch_memcache_inner(store) {
             self.errors.other_error(err);
         }
     }
 
+    #[instrument(level = "debug", skip(self, entry))]
     fn found_edenapi(&mut self, entry: FileEntry) {
         let key = entry.key.clone();
         if entry.metadata().is_lfs() {
@@ -897,6 +957,7 @@ impl FetchState {
         Ok(())
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_edenapi(&mut self, store: &EdenApiFileStore) {
         if let Err(err) = self.fetch_edenapi_inner(store) {
             self.errors.other_error(err);
@@ -955,6 +1016,7 @@ impl FetchState {
         Ok(())
     }
 
+    #[instrument(skip(self, store, local, cache), fields(local = local.is_some(), cache = cache.is_some()))]
     fn fetch_lfs_remote(
         &mut self,
         store: &LfsRemoteInner,
@@ -966,13 +1028,17 @@ impl FetchState {
         }
     }
 
+    #[instrument(level = "debug", skip(self, bytes))]
     fn found_contentstore(&mut self, key: Key, bytes: Vec<u8>, meta: Metadata) {
         if meta.is_lfs() {
-            // Do nothing. We're trying to avoid exposing LFS pointers to the consumer of this API, and
-            // if we're here, both we and ContentStore have already tried querying the remotes.
+            // Do nothing. We're trying to avoid exposing LFS pointers to the consumer of this API.
             // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
-            // ExtStoredPolicy behavior) in which case we'll do something here.
+            // ExtStoredPolicy behavior), but hopefully not, and if so we'll need to make it type safe.
+            tracing::warn!("contentstore fallback returned serialized lfs pointer");
         } else {
+            tracing::warn!(
+                "contentstore fetched a file scmstore couldn't, this indicates a bug or unsupported configuration"
+            );
             self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
         }
     }
@@ -1015,25 +1081,32 @@ impl FetchState {
         Ok(())
     }
 
+    #[instrument(skip(self, store))]
     fn fetch_contentstore(&mut self, store: &ContentStore) {
         if let Err(err) = self.fetch_contentstore_inner(store) {
             self.errors.other_error(err);
         }
     }
 
+    #[instrument(skip(self))]
     fn derive_computable(&mut self) {
         if !self.compute_aux_data {
             return;
         }
 
         for (key, value) in self.found.iter_mut() {
+            let span = tracing::debug_span!("checking derivations", %key);
+            let _guard = span.enter();
+
             let missing = self.request_attrs - value.attrs();
             let actionable = value.attrs().with_computable() & missing;
 
             if actionable.aux_data {
+                tracing::debug!("computing aux data");
                 if let Err(err) = value.compute_aux_data() {
                     self.errors.keyed_error(key.clone(), err);
                 } else {
+                    tracing::debug!("computed aux data");
                     self.computed_aux_data
                         .insert(key.clone(), self.key_origin[key]);
                 }
@@ -1041,6 +1114,7 @@ impl FetchState {
 
             // mark complete if applicable
             if value.attrs().has(self.request_attrs) {
+                tracing::debug!("marking complete");
                 // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
                 // to share a "mark complete" implementation while holding a mutable reference to self.found.
                 self.pending.remove(key);
@@ -1053,6 +1127,13 @@ impl FetchState {
 
     // TODO(meyer): Improve how local caching works. At the very least do this in the background.
     // TODO(meyer): Log errors here instead of just ignoring.
+    #[instrument(
+        skip(self, indexedlog_cache, memcache, aux_cache, aux_local),
+        fields(
+            indexedlog_cache = indexedlog_cache.is_some(),
+            memcache = memcache.is_some(),
+            aux_cache = aux_cache.is_some(),
+            aux_local = aux_local.is_some()))]
     fn write_to_cache(
         &mut self,
         indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
@@ -1064,43 +1145,55 @@ impl FetchState {
         let mut aux_cache = aux_cache.map(|s| s.write_lock());
         let mut aux_local = aux_local.map(|s| s.write_lock());
 
-        for key in self.found_in_edenapi.drain() {
-            if let Some(lazy_file) = self.found[&key].content.as_ref() {
-                if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
-                    if let Some(memcache) = memcache {
-                        if let Ok(mcdata) = cache_entry.clone().try_into() {
-                            memcache.add_mcdata(mcdata)
+        {
+            let span = tracing::trace_span!("edenapi");
+            let _guard = span.enter();
+            for key in self.found_in_edenapi.drain() {
+                if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                    if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
+                        if let Some(memcache) = memcache {
+                            if let Ok(mcdata) = cache_entry.clone().try_into() {
+                                memcache.add_mcdata(mcdata)
+                            }
                         }
-                    }
-                    if let Some(ref mut indexedlog_cache) = indexedlog_cache {
-                        let _ = indexedlog_cache.put_entry(cache_entry);
+                        if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                            let _ = indexedlog_cache.put_entry(cache_entry);
+                        }
                     }
                 }
             }
         }
 
-        for key in self.found_in_memcache.drain() {
-            if let Some(lazy_file) = self.found[&key].content.as_ref() {
-                if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
-                    if let Some(ref mut indexedlog_cache) = indexedlog_cache {
-                        let _ = indexedlog_cache.put_entry(cache_entry);
+        {
+            let span = tracing::trace_span!("memcache");
+            let _guard = span.enter();
+            for key in self.found_in_memcache.drain() {
+                if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                    if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
+                        if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                            let _ = indexedlog_cache.put_entry(cache_entry);
+                        }
                     }
                 }
             }
         }
 
-        for (key, origin) in self.computed_aux_data.drain() {
-            if let Ok(blob) = serde_json::to_vec(self.found[&key].aux_data.as_ref().unwrap()) {
-                let entry = Entry::new(key, blob.into(), Metadata::default());
-                match origin {
-                    LocalStoreType::Cache => {
-                        if let Some(ref mut aux_cache) = aux_cache {
-                            let _ = aux_cache.put_entry(entry);
+        {
+            let span = tracing::trace_span!("computed");
+            let _guard = span.enter();
+            for (key, origin) in self.computed_aux_data.drain() {
+                if let Ok(blob) = serde_json::to_vec(self.found[&key].aux_data.as_ref().unwrap()) {
+                    let entry = Entry::new(key, blob.into(), Metadata::default());
+                    match origin {
+                        LocalStoreType::Cache => {
+                            if let Some(ref mut aux_cache) = aux_cache {
+                                let _ = aux_cache.put_entry(entry);
+                            }
                         }
-                    }
-                    LocalStoreType::Local => {
-                        if let Some(ref mut aux_local) = aux_local {
-                            let _ = aux_local.put_entry(entry);
+                        LocalStoreType::Local => {
+                            if let Some(ref mut aux_local) = aux_local {
+                                let _ = aux_local.put_entry(entry);
+                            }
                         }
                     }
                 }
@@ -1108,6 +1201,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(skip(self))]
     fn finish(mut self) -> FileStoreFetch {
         // Combine and collect errors
         let mut incomplete = self.errors.fetch_errors;
@@ -1227,24 +1321,7 @@ impl HgIdMutableDeltaStore for FileStore {
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        if let Some(ref indexedlog_local) = self.indexedlog_local {
-            indexedlog_local.flush_log()?;
-        }
-        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            indexedlog_cache.flush_log()?;
-        }
-        if let Some(ref lfs_local) = self.lfs_local {
-            lfs_local.flush()?;
-        }
-        if let Some(ref lfs_cache) = self.lfs_cache {
-            lfs_cache.flush()?;
-        }
-        if let Some(ref aux_local) = self.aux_local {
-            aux_local.flush_log()?;
-        }
-        if let Some(ref aux_cache) = self.aux_cache {
-            aux_cache.flush_log()?;
-        }
+        self.flush()?;
         Ok(None)
     }
 }
