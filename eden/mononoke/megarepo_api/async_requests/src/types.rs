@@ -9,7 +9,7 @@ use anyhow::{anyhow, Error, Result};
 use blobstore::{impl_loadable_storable, Blobstore};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use megarepo_config::Target;
+pub use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_types_thrift::{
     MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,

@@ -13,11 +13,14 @@
 //! handling, enqueuing and polling should be done by the callers.
 
 use anyhow::anyhow;
-use async_requests::types::{MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult};
+use async_requests::types::{
+    MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult, Target, ThriftParams,
+};
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
-use mononoke_types::ChangesetId;
+use mononoke_api::BookmarkName;
+use mononoke_types::{ChangesetId, RepositoryId};
 use source_control as thrift;
 use std::collections::HashMap;
 
@@ -27,14 +30,13 @@ async fn megarepo_sync_changeset(
     megarepo_api: &MegarepoApi,
     params: thrift::MegarepoSyncChangesetParams,
 ) -> Result<thrift::MegarepoSyncChangesetResponse, MegarepoError> {
+    let target = params.target().clone();
     let source_cs_id = ChangesetId::from_bytes(params.cs_id).map_err(MegarepoError::request)?;
     megarepo_api
-        .sync_changeset(ctx, source_cs_id, params.source_name, params.target.clone())
+        .sync_changeset(ctx, source_cs_id, params.source_name, params.target)
         .await?;
-    Ok(thrift::MegarepoSyncChangesetResponse {
-        // TODO(stash, mitrandir) - return the actual commit here
-        cs_id: Default::default(),
-    })
+    let cs_id = resolve_current_target_bookmark_value(ctx, megarepo_api, &target).await?;
+    Ok(thrift::MegarepoSyncChangesetResponse { cs_id })
 }
 
 #[allow(dead_code)]
@@ -43,8 +45,8 @@ async fn megarepo_add_sync_target(
     megarepo_api: &MegarepoApi,
     params: thrift::MegarepoAddTargetParams,
 ) -> Result<thrift::MegarepoAddTargetResponse, MegarepoError> {
+    let target = params.target().clone();
     let config = params.config_with_new_target;
-
     let mut changesets_to_merge = HashMap::new();
     for (s, cs_id) in params.changesets_to_merge {
         let cs_id = ChangesetId::from_bytes(cs_id).map_err(MegarepoError::request)?;
@@ -54,10 +56,8 @@ async fn megarepo_add_sync_target(
         .add_sync_target(&ctx, config, changesets_to_merge, params.message)
         .await?;
 
-    Ok(thrift::MegarepoAddTargetResponse {
-        // TODO(stash, mitrandir) - return the actual commit here
-        cs_id: Default::default(),
-    })
+    let cs_id = resolve_current_target_bookmark_value(ctx, megarepo_api, &target).await?;
+    Ok(thrift::MegarepoAddTargetResponse { cs_id })
 }
 
 /// Given the request params dispatches the request to the right processing
@@ -101,4 +101,30 @@ pub(crate) async fn megarepo_async_request_compute(
 
         }
     }
+}
+
+async fn resolve_current_target_bookmark_value(
+    ctx: &CoreContext,
+    megarepo_api: &MegarepoApi,
+    target: &Target,
+) -> Result<Vec<u8>, MegarepoError> {
+    let bookmark = BookmarkName::new(target.bookmark.clone()).map_err(MegarepoError::internal)?;
+    let repo_id = RepositoryId::new(target.repo_id as i32);
+    let maybe_repo = megarepo_api
+        .mononoke()
+        .repo_by_id(ctx.clone(), repo_id)
+        .await
+        .map_err(MegarepoError::internal)?;
+
+    let repo = maybe_repo
+        .ok_or_else(|| MegarepoError::request(anyhow!("Repo id {} not found", repo_id)))?;
+
+    let cs_id = repo
+        .blob_repo()
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
+        .await
+        .map_err(MegarepoError::internal)?
+        .ok_or_else(|| MegarepoError::request(anyhow!("{} bookmark not found")))?;
+    Ok(Vec::from(cs_id.as_ref()))
 }
