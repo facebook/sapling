@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{MegarepoOp, SourceName};
+use crate::common::{find_bookmark_and_value, MegarepoOp, SourceName};
 use anyhow::{anyhow, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -16,13 +16,15 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{stream, StreamExt, TryStreamExt};
 use manifest::ManifestOps;
-use megarepo_config::{MononokeMegarepoConfigs, Source, SyncTargetConfig};
+use megarepo_config::{MononokeMegarepoConfigs, Source, SourceRevision, SyncTargetConfig};
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
 };
+use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -132,16 +134,13 @@ impl<'a> AddSyncTarget<'a> {
         let mut all_files_in_target = HashMap::new();
         let mut moved_commits = vec![];
         for source_config in &sync_target_config.sources {
+            let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
+
             let source_name = SourceName(source_config.source_name.clone());
 
-            // TODO(stash): check that changeset is allowed to be synced
-            let changeset_id = changesets_to_merge.get(&source_name).ok_or_else(|| {
-                MegarepoError::request(anyhow!(
-                    "Not found changeset to merge for {}",
-                    source_config.name
-                ))
-            })?;
-
+            let changeset_id = self
+                .validate_changeset_to_merge(ctx, &source_repo, source_config, changesets_to_merge)
+                .await?;
             let mover = create_source_to_target_multi_mover(source_config.mapping.clone())
                 .map_err(MegarepoError::request)?;
 
@@ -149,7 +148,7 @@ impl<'a> AddSyncTarget<'a> {
             let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
             // TODO(stash): it assumes that commit is present in target
             let moved = self
-                .create_single_move_commit(ctx, repo, *changeset_id, &mover, linkfiles)
+                .create_single_move_commit(ctx, repo, changeset_id, &mover, linkfiles)
                 .await?;
             add_and_check_all_paths(
                 &mut all_files_in_target,
@@ -164,6 +163,71 @@ impl<'a> AddSyncTarget<'a> {
         }
 
         Ok(moved_commits)
+    }
+
+    async fn validate_changeset_to_merge(
+        &self,
+        ctx: &CoreContext,
+        source_repo: &RepoContext,
+        source_config: &Source,
+        changesets_to_merge: &HashMap<SourceName, ChangesetId>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let changeset_id = changesets_to_merge
+            .get(&SourceName(source_config.name.clone()))
+            .ok_or_else(|| {
+                MegarepoError::request(anyhow!(
+                    "Not found changeset to merge for {}",
+                    source_config.name
+                ))
+            })?;
+
+
+        match &source_config.revision {
+            SourceRevision::hash(expected_changeset_id) => {
+                let expected_changeset_id = ChangesetId::from_bytes(expected_changeset_id)
+                    .map_err(MegarepoError::request)?;
+                if &expected_changeset_id != changeset_id {
+                    return Err(MegarepoError::request(anyhow!(
+                        "unexpected source revision for {}: expected {}, found {}",
+                        source_config.source_name,
+                        expected_changeset_id,
+                        changeset_id,
+                    )));
+                }
+            }
+            SourceRevision::bookmark(bookmark) => {
+                let (_, source_bookmark_value) =
+                    find_bookmark_and_value(ctx, source_repo, &bookmark).await?;
+
+                if &source_bookmark_value != changeset_id {
+                    let is_ancestor = source_repo
+                        .skiplist_index()
+                        .is_ancestor(
+                            ctx,
+                            &source_repo.blob_repo().get_changeset_fetcher(),
+                            *changeset_id,
+                            source_bookmark_value,
+                        )
+                        .await
+                        .map_err(MegarepoError::internal)?;
+
+                    if !is_ancestor {
+                        return Err(MegarepoError::request(anyhow!(
+                            "{} is not an ancestor of source bookmark {}",
+                            changeset_id,
+                            bookmark,
+                        )));
+                    }
+                }
+            }
+            SourceRevision::UnknownField(_) => {
+                return Err(MegarepoError::internal(anyhow!(
+                    "unexpected source revision!"
+                )));
+            }
+        };
+
+        Ok(*changeset_id)
     }
 
     async fn create_merge_commits(

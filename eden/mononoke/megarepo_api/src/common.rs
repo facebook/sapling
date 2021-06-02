@@ -7,10 +7,12 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use context::CoreContext;
+use futures::TryFutureExt;
 use megarepo_error::MegarepoError;
 use mononoke_api::{Mononoke, RepoContext};
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use std::{convert::TryInto, sync::Arc};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -34,4 +36,22 @@ pub trait MegarepoOp {
             .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?;
         Ok(target_repo)
     }
+}
+
+pub async fn find_bookmark_and_value(
+    ctx: &CoreContext,
+    repo: &RepoContext,
+    bookmark_name: &str,
+) -> Result<(BookmarkName, ChangesetId), MegarepoError> {
+    let bookmark = BookmarkName::new(bookmark_name.to_string()).map_err(MegarepoError::request)?;
+
+    let cs_id = repo
+        .blob_repo()
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
+        .map_err(MegarepoError::internal)
+        .await?
+        .ok_or_else(|| MegarepoError::request(anyhow!("bookmark {} not found", bookmark)))?;
+
+    Ok((bookmark, cs_id))
 }

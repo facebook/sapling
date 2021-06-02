@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::MegarepoOp;
+use crate::common::{find_bookmark_and_value, MegarepoOp};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -13,7 +13,6 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::{create_source_to_target_multi_mover, rewrite_commit, upload_commits};
 use context::CoreContext;
-use futures::TryFutureExt;
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, SyncTargetConfig, Target,
 };
@@ -155,24 +154,6 @@ async fn find_target_bookmark_and_value(
     target: &Target,
 ) -> Result<(BookmarkName, ChangesetId), MegarepoError> {
     find_bookmark_and_value(ctx, target_repo, &target.bookmark).await
-}
-
-async fn find_bookmark_and_value(
-    ctx: &CoreContext,
-    repo: &RepoContext,
-    bookmark_name: &str,
-) -> Result<(BookmarkName, ChangesetId), MegarepoError> {
-    let bookmark = BookmarkName::new(bookmark_name.to_string()).map_err(MegarepoError::request)?;
-
-    let cs_id = repo
-        .blob_repo()
-        .bookmarks()
-        .get(ctx.clone(), &bookmark)
-        .map_err(MegarepoError::internal)
-        .await?
-        .ok_or_else(|| MegarepoError::request(anyhow!("bookmark {} not found", bookmark)))?;
-
-    Ok((bookmark, cs_id))
 }
 
 async fn find_target_sync_config<'a>(

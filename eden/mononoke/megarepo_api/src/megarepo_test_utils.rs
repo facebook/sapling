@@ -158,6 +158,7 @@ pub struct SourceVersionBuilder {
     git_repo_name: String,
     default_prefix: Option<String>,
     source_bookmark: Option<String>,
+    source_changeset: Option<ChangesetId>,
     repo_id: RepositoryId,
     config_builder: SyncTargetConfigBuilder,
     linkfiles: BTreeMap<String, String>,
@@ -176,6 +177,7 @@ impl SourceVersionBuilder {
             git_repo_name: source_name,
             default_prefix: None,
             source_bookmark: None,
+            source_changeset: None,
             repo_id,
             config_builder,
             linkfiles: BTreeMap::new(),
@@ -200,16 +202,29 @@ impl SourceVersionBuilder {
         self
     }
 
+    pub fn source_changeset(mut self, cs_id: ChangesetId) -> Self {
+        self.source_changeset = Some(cs_id);
+        self
+    }
+
     pub fn linkfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
         self.linkfiles.insert(src.to_string(), dst.to_string());
         self
     }
 
     pub fn build_source(mut self) -> Result<SyncTargetConfigBuilder, Error> {
-        let source_revision = match self.source_bookmark {
-            Some(source_bookmark) => SourceRevision::bookmark(source_bookmark),
-            None => {
-                return Err(anyhow!("source bookmark not set"));
+        let source_revision = match (self.source_bookmark, self.source_changeset) {
+            (Some(_), Some(_)) => {
+                return Err(anyhow!("both source bookmark and changeset are specified"));
+            }
+            (Some(source_bookmark), None) => SourceRevision::bookmark(source_bookmark),
+            (None, Some(source_changeset)) => {
+                SourceRevision::hash(Vec::from(source_changeset.as_ref()))
+            }
+            (None, None) => {
+                return Err(anyhow!(
+                    "neither source bookmark nor source commit were set"
+                ));
             }
         };
 
