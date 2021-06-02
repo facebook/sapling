@@ -225,7 +225,7 @@ impl GitimportTarget for GitRangeImport {
 }
 
 /// Intended to import all git commits that are missing to fully
-/// represent specified commit with all its histroy.
+/// represent specified commit with all its history.
 /// It will check what is already present and only import the minimum set required.
 pub struct ImportMissingForCommit {
     commit: Oid,
