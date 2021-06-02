@@ -1064,6 +1064,7 @@ class Test(unittest.TestCase):
             slowtimeout = defaults["slowtimeout"]
         self.path = path
         self.name = os.path.basename(path)
+        self.basename = self.name
         self._testdir = os.path.dirname(path)
         self._outputdir = outputdir
         self._tmpname = os.path.basename(path)
@@ -1365,7 +1366,7 @@ class Test(unittest.TestCase):
         if self._keeptmpdir:
             log(
                 "\nKeeping testtmp dir: %s\nKeeping threadtmp dir: %s"
-                % (self._testtmp.decode("utf-8"), self._threadtmp.decode("utf-8"))
+                % (self._testtmp, self._threadtmp)
             )
             log(
                 "\nSet up config environment by:\n"
@@ -1836,7 +1837,7 @@ class TTest(Test):
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, self.name)
+        return os.path.join(self._testdir, self.basename)
 
     def _run(self, env):
         with open(self.path, "rb") as f:
@@ -2736,7 +2737,7 @@ class TestSuite(unittest.TestSuite):
                     continue
 
                 if self._keywords:
-                    with open(test.path, "rb") as f:
+                    with open(test.path, "r") as f:
                         t = f.read().lower() + test.name.lower()
                     ignored = False
                     for k in self._keywords.lower().split():
