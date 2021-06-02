@@ -158,6 +158,56 @@ impl BackingStore {
         manifest.list(RepoPath::empty())
     }
 
+    /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
+    /// called with the tree content or an error message, and the index of the tree in the request
+    /// array. When `local_only` is enabled, this function will only check local disk for the file
+    /// content.
+    pub fn get_tree_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    where
+        F: Fn(usize, Result<Option<List>>) -> (),
+    {
+        // logic:
+        // 1. convert all path & nodes into `StoreKey`
+        // 2. try to resolve blobs that are already local
+        // 3. fetch anything that is not local and refetch
+        let requests = keys
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, key)| match key {
+                Ok(key) => Some((index, key)),
+                Err(e) => {
+                    // return early when the key is invalid
+                    resolve(index, Err(e));
+                    None
+                }
+            });
+
+        let mut missing = Vec::new();
+        let mut missing_requests = Vec::new();
+
+        let contentstore = self.treestore.as_content_store();
+        for (index, key) in requests {
+            let store_key = StoreKey::from(&key);
+            // Assuming a blob do not exist if `.contains` call fails
+            if contentstore.contains(&store_key).unwrap_or(false) {
+                resolve(index, Some(self.get_tree(key.hgid.as_ref())).transpose())
+            } else if !local_only {
+                missing.push(store_key);
+                missing_requests.push((index, key));
+            }
+        }
+
+        // If this is a local only read, nothing else we can do.
+        if local_only {
+            return;
+        }
+
+        let _ = contentstore.prefetch(&missing);
+        for (index, key) in missing_requests {
+            resolve(index, Some(self.get_tree(key.hgid.as_ref())).transpose())
+        }
+    }
+
     /// forces backing store to rescan pack files
     pub fn refresh(&self) {
         self.blobstore.get_missing(&[]).ok();

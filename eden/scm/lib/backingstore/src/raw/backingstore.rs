@@ -16,6 +16,7 @@ use types::Key;
 
 use crate::backingstore::BackingStore;
 use crate::raw::{CBytes, CFallible, Request, Tree};
+use manifest::List;
 
 fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");
@@ -131,6 +132,31 @@ pub extern "C" fn rust_backingstore_get_tree(
     node_len: usize,
 ) -> CFallible<Tree> {
     backingstore_get_tree(store, node, node_len).into()
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_tree_batch(
+    store: *mut BackingStore,
+    requests: *const Request,
+    size: usize,
+    local: bool,
+    data: *mut c_void,
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<Tree>),
+) {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
+    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+
+    store.get_tree_batch(keys, local, |idx, result| {
+        let result: Result<List> =
+            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
+        let result: Result<Tree> = result.and_then(|list| list.try_into());
+        let result: Result<*mut Tree> = result.map(|result| Box::into_raw(Box::new(result)));
+        unsafe {
+            resolve(data, idx, result.into())
+        };
+    });
 }
 
 #[no_mangle]
