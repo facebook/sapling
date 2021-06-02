@@ -45,6 +45,12 @@ class HgDatapackStore {
       const std::vector<HgProxyHash>& hashes,
       std::vector<folly::Promise<std::unique_ptr<Blob>>*> promises);
 
+  void getTreeBatch(
+      const std::vector<Hash>& ids,
+      const std::vector<HgProxyHash>& hashes,
+      LocalStore::WriteBatch* writeBatch,
+      std::vector<folly::Promise<std::unique_ptr<Tree>>*>* promises);
+
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,
       const Hash& manifestId,

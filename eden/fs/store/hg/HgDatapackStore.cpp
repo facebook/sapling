@@ -167,6 +167,56 @@ void HgDatapackStore::getBlobBatch(
       });
 }
 
+void HgDatapackStore::getTreeBatch(
+    const std::vector<Hash>& ids,
+    const std::vector<HgProxyHash>& hashes,
+    LocalStore::WriteBatch* writeBatch,
+    std::vector<folly::Promise<std::unique_ptr<Tree>>*>* promises) {
+  std::vector<Hash> treehashes;
+  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
+
+  size_t count = hashes.size();
+  requests.reserve(count);
+  treehashes.reserve(count);
+
+  // `.revHash()` will return an owned `Hash` and `getBytes()` will return a
+  // reference to that newly created `Hash`. We need to store these `Hash` to
+  // avoid storing invalid pointers in `requests`. For a similar reason, we
+  // cannot use iterator-based loop here otherwise the reference we get will be
+  // pointing to the iterator.
+  for (size_t i = 0; i < count; i++) {
+    treehashes.emplace_back(hashes[i].revHash());
+  }
+
+  auto treehash = treehashes.begin();
+  auto hash = hashes.begin();
+  for (; treehash != treehashes.end(); treehash++, hash++) {
+    XCHECK(hash != hashes.end());
+    requests.emplace_back(std::make_pair<>(
+        folly::ByteRange{hash->path().stringPiece()}, treehash->getBytes()));
+  }
+
+  store_.getTreeBatch(
+      requests,
+      false,
+      [promises = promises, ids = ids, hashes = hashes, writeBatch, requests](
+          size_t index, std::shared_ptr<RustTree> content) mutable {
+        (*promises)[index]->setWith([&] {
+          XLOGF(
+              DBG4,
+              "Imported tree name={} node={}",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second));
+          return fromRawTree(
+              content.get(),
+              ids[index],
+              hashes[index].path(),
+              writeBatch,
+              std::optional<Hash>());
+        });
+      });
+}
+
 std::unique_ptr<Tree> HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash& manifestId,

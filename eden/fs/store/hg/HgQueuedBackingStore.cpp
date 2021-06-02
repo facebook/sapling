@@ -160,25 +160,65 @@ void HgQueuedBackingStore::processBlobImportRequests(
 
 void HgQueuedBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
+  std::vector<Hash> hashes;
+  std::vector<HgProxyHash> proxyHashes;
+  std::vector<folly::Promise<HgImportRequest::TreeImport::Response>*> promises;
+
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  hashes.reserve(requests.size());
+  proxyHashes.reserve(requests.size());
+  promises.reserve(requests.size());
+
   for (auto& request : requests) {
-    auto treeImport = request->getRequest<HgImportRequest::TreeImport>();
+    auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
+    auto& hash = treeImport->hash;
+    auto* promise =
+        request->getPromise<HgImportRequest::TreeImport::Response>();
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
 
-    request->getPromise<HgImportRequest::TreeImport::Response>()->setWith(
-        [store = backingStore_.get(),
-         hash = treeImport->hash,
-         proxyHash = treeImport->proxyHash,
-         prefetchMetadata = treeImport->prefetchMetadata]() mutable {
-          return store
-              ->getTree(
-                  hash,
-                  std::move(proxyHash),
-                  prefetchMetadata,
-                  ObjectFetchContext::getNullContext())
-              .getTry();
-        });
+    XLOGF(
+        DBG4,
+        "Processing tree request for {} ({:p})",
+        hash.toString(),
+        static_cast<void*>(promise));
+    hashes.emplace_back(hash);
+    proxyHashes.emplace_back(treeImport->proxyHash);
+    promises.emplace_back(promise);
+  }
+
+  backingStore_->getTreeBatch(hashes, proxyHashes, promises);
+
+  {
+    auto request = requests.begin();
+    auto proxyHash = proxyHashes.begin();
+    auto promise = promises.begin();
+
+    XCHECK_EQ(requests.size(), proxyHashes.size());
+    for (; request != requests.end(); ++request, ++proxyHash, ++promise) {
+      if ((*promise)->isFulfilled()) {
+        stats_->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreGetTree.addValue(watch.elapsed().count());
+        continue;
+      }
+
+      auto* treeImport = (*request)->getRequest<HgImportRequest::TreeImport>();
+
+      (*promise)->setWith(
+          [store = backingStore_.get(),
+           hash = treeImport->hash,
+           proxyHash = treeImport->proxyHash,
+           prefetchMetadata = treeImport->prefetchMetadata]() mutable {
+            return store
+                ->getTree(
+                    hash,
+                    std::move(proxyHash),
+                    prefetchMetadata,
+                    ObjectFetchContext::getNullContext())
+                .getTry();
+          });
+    }
   }
 }
 

@@ -235,6 +235,15 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
       prefetchMetadata);
 }
 
+void HgBackingStore::getTreeBatch(
+    const std::vector<Hash>& ids,
+    const std::vector<HgProxyHash>& hashes,
+    std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises) {
+  auto writeBatch = localStore_->beginWrite();
+
+  datapackStore_.getTreeBatch(ids, hashes, writeBatch.get(), &promises);
+}
+
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
