@@ -294,13 +294,14 @@ impl MegarepoApi {
         Ok(megarepo_mapping)
     }
 
+    /// Adds new sync target. Returs the commit hash of newly created target's head.
     pub async fn add_sync_target(
         &self,
         ctx: &CoreContext,
         sync_target_config: SyncTargetConfig,
         changesets_to_merge: HashMap<String, ChangesetId>,
         message: Option<String>,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError> {
         let add_sync_target = AddSyncTarget::new(&self.megarepo_configs, &self.mononoke);
 
         let changesets_to_merge = changesets_to_merge
@@ -308,20 +309,19 @@ impl MegarepoApi {
             .map(|(source, cs_id)| (SourceName(source), cs_id))
             .collect();
 
-        add_sync_target
+        Ok(add_sync_target
             .run(ctx, sync_target_config, changesets_to_merge, message)
-            .await?;
-
-        Ok(())
+            .await?)
     }
 
+    /// Syncs single changeset, returns the changeset it in the target.
     pub async fn sync_changeset(
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
         source_name: String,
         target: Target,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError> {
         let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
         sync_changeset::SyncChangeset::new(
             &self.megarepo_configs,

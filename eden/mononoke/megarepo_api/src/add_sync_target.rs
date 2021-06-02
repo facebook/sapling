@@ -75,7 +75,7 @@ impl<'a> AddSyncTarget<'a> {
         sync_target_config: SyncTargetConfig,
         changesets_to_merge: HashMap<SourceName, ChangesetId>,
         message: Option<String>,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError> {
         let repo = self
             .find_repo_by_id(ctx, sync_target_config.target.repo_id)
             .await?;
@@ -114,7 +114,7 @@ impl<'a> AddSyncTarget<'a> {
         )
         .await?;
 
-        Ok(())
+        Ok(top_merge_cs_id)
     }
 
     // Creates move commits on top of source changesets that we want to merge

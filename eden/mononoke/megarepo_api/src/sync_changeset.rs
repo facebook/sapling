@@ -58,7 +58,7 @@ impl<'a> SyncChangeset<'a> {
         source_cs_id: ChangesetId,
         source_name: &String,
         target: &Target,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<ChangesetId, MegarepoError> {
         let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
 
         // Now we need to find the target config version that was used to create the latest
@@ -145,7 +145,7 @@ impl<'a> SyncChangeset<'a> {
             )));
         }
 
-        Ok(())
+        Ok(new_target_cs_id)
     }
 }
 
