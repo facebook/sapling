@@ -67,8 +67,10 @@ struct TreeInodePtrRoot {
   }
 
   /** Arrange to load a child TreeInode */
-  Future<TreeInodePtr> getOrLoadChildTree(PathComponentPiece name) {
-    return root->getOrLoadChildTree(name);
+  Future<TreeInodePtr> getOrLoadChildTree(
+      PathComponentPiece name,
+      ObjectFetchContext& context) {
+    return root->getOrLoadChildTree(name, context);
   }
   /** Returns true if we should call getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */
@@ -160,7 +162,9 @@ struct TreeRoot {
   /** We can never load a TreeInodePtr from a raw Tree, so this always
    * fails.  We never call this method because entryShouldLoadChildTree()
    * always returns false. */
-  folly::Future<TreeInodePtr> getOrLoadChildTree(PathComponentPiece) {
+  folly::Future<TreeInodePtr> getOrLoadChildTree(
+      PathComponentPiece,
+      ObjectFetchContext&) {
     throw std::runtime_error("impossible to get here");
   }
   template <typename ENTRY>
@@ -384,7 +388,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   // Recursively load child inodes and evaluate matches
 
   for (auto& item : recurse) {
-    futures.emplace_back(root.getOrLoadChildTree(item.first)
+    futures.emplace_back(root.getOrLoadChildTree(item.first, context)
                              .thenValue([store,
                                          &context,
                                          candidateName = rootPath + item.first,
@@ -548,21 +552,22 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
 
   // Recursively load child inodes and evaluate matches
   for (auto& candidateName : subDirNames) {
-    futures.emplace_back(root.getOrLoadChildTree(candidateName.basename())
-                             .thenValue([candidateName,
-                                         store,
-                                         &context,
-                                         this,
-                                         fileBlobsToPrefetch,
-                                         &originHash](TreeInodePtr dir) {
-                               return evaluateRecursiveComponentImpl(
-                                   store,
-                                   context,
-                                   candidateName,
-                                   TreeInodePtrRoot(std::move(dir)),
-                                   fileBlobsToPrefetch,
-                                   originHash);
-                             }));
+    futures.emplace_back(
+        root.getOrLoadChildTree(candidateName.basename(), context)
+            .thenValue([candidateName,
+                        store,
+                        &context,
+                        this,
+                        fileBlobsToPrefetch,
+                        &originHash](TreeInodePtr dir) {
+              return evaluateRecursiveComponentImpl(
+                  store,
+                  context,
+                  candidateName,
+                  TreeInodePtrRoot(std::move(dir)),
+                  fileBlobsToPrefetch,
+                  originHash);
+            }));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that

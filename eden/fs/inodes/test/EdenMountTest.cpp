@@ -552,18 +552,31 @@ TEST(EdenMount, ensureDirectoryExists) {
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
 
-  edenMount->ensureDirectoryExists("sub/foo/bar"_relpath).get(0ms);
+  edenMount
+      ->ensureDirectoryExists(
+          "sub/foo/bar"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
   EXPECT_NE(nullptr, testMount.getTreeInode("sub/foo/bar"));
 
-  edenMount->ensureDirectoryExists("sub/other/stuff/here"_relpath).get(0ms);
+  edenMount
+      ->ensureDirectoryExists(
+          "sub/other/stuff/here"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
   EXPECT_NE(nullptr, testMount.getTreeInode("sub/other/stuff/here"));
 
   auto f1 =
-      edenMount->ensureDirectoryExists("sub/file.txt/baz"_relpath).wait(0ms);
+      edenMount
+          ->ensureDirectoryExists(
+              "sub/file.txt/baz"_relpath, ObjectFetchContext::getNullContext())
+          .wait(0ms);
   EXPECT_TRUE(f1.isReady());
   EXPECT_THROW(std::move(f1).get(0ms), std::system_error);
 
-  auto f2 = edenMount->ensureDirectoryExists("sub/file.txt"_relpath).wait(0ms);
+  auto f2 =
+      edenMount
+          ->ensureDirectoryExists(
+              "sub/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .wait(0ms);
   EXPECT_TRUE(f2.isReady());
   EXPECT_THROW(std::move(f2).get(0ms), std::system_error);
 }
@@ -584,7 +597,10 @@ TEST(EdenMount, concurrentDeepEnsureDirectoryExists) {
     threads.emplace_back([&, i] {
       batons[i].wait();
       try {
-        edenMount->ensureDirectoryExists(dirPath).get(0ms);
+        edenMount
+            ->ensureDirectoryExists(
+                dirPath, ObjectFetchContext::getNullContext())
+            .get(0ms);
       } catch (std::exception& e) {
         printf("ensureDirectoryExists failed: %s\n", e.what());
         throw;

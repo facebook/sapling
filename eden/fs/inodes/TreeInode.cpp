@@ -294,10 +294,10 @@ Future<InodePtr> TreeInode::getOrLoadChild(
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
-Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "TreeInode::getOrLoadChildTree");
-  return getOrLoadChild(name, *context).thenValue([](InodePtr child) {
+Future<TreeInodePtr> TreeInode::getOrLoadChildTree(
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
+  return getOrLoadChild(name, context).thenValue([](InodePtr child) {
     auto treeInode = child.asTreePtrOrNull();
     if (!treeInode) {
       return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
@@ -329,7 +329,8 @@ class LookupProcessor {
     if (iter_ == iterRange_.end()) {
       return tree->getOrLoadChild(name, context_);
     } else {
-      return tree->getOrLoadChildTree(name).then(&LookupProcessor::next, this);
+      return tree->getOrLoadChildTree(name, context_)
+          .then(&LookupProcessor::next, this);
     }
   }
 

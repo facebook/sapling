@@ -627,7 +627,8 @@ class EdenMount {
 
   FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
       RelativePathPiece repoPath,
-      AbsolutePathPiece targetPath);
+      AbsolutePathPiece targetPath,
+      ObjectFetchContext& context);
   FOLLY_NODISCARD folly::Future<folly::Unit> removeBindMount(
       RelativePathPiece repoPath);
 
@@ -637,7 +638,8 @@ class EdenMount {
    * exception.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> ensureDirectoryExists(
-      RelativePathPiece fromRoot);
+      RelativePathPiece fromRoot,
+      ObjectFetchContext& context);
 
   /**
    * Request to start a new tree prefetch.

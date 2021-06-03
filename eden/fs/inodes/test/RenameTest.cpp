@@ -429,10 +429,15 @@ TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
   auto root = mount_->getRootTree();
 
   auto x = mount_->getTreeInode("a/x");
-  auto y = x->getOrLoadChildTree("y"_pc).get(0ms);
+  auto y = x->getOrLoadChildTree("y"_pc, ObjectFetchContext::getNullContext())
+               .get(0ms);
   auto yino = y->getNodeId();
   auto newParent = mount_->getTreeInode("a/b");
-  auto toBeUnlinked = newParent->getOrLoadChildTree("emptydir"_pc).get(0ms);
+  auto toBeUnlinked =
+      newParent
+          ->getOrLoadChildTree(
+              "emptydir"_pc, ObjectFetchContext::getNullContext())
+          .get(0ms);
   toBeUnlinked->incFsRefcount();
   toBeUnlinked.reset();
 

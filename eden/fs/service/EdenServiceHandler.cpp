@@ -263,14 +263,13 @@ folly::SemiFuture<ReturnType> wrapSemiFuture(
 
 facebook::eden::InodePtr inodeFromUserPath(
     facebook::eden::EdenMount& mount,
-    StringPiece rootRelativePath) {
+    StringPiece rootRelativePath,
+    ObjectFetchContext& context) {
   if (rootRelativePath.empty() || rootRelativePath == ".") {
     return mount.getRootInode();
   } else {
-    static auto context =
-        ObjectFetchContext::getNullContextWithCauseDetail("inodeFromUserPath");
     return mount
-        .getInode(facebook::eden::RelativePathPiece{rootRelativePath}, *context)
+        .getInode(facebook::eden::RelativePathPiece{rootRelativePath}, context)
         .get();
   }
 }
@@ -542,7 +541,9 @@ void EdenServiceHandler::addBindMount(
 
   edenMount
       ->addBindMount(
-          RelativePathPiece{*repoPath}, AbsolutePathPiece{*targetPath})
+          RelativePathPiece{*repoPath},
+          AbsolutePathPiece{*targetPath},
+          helper->getFetchContext())
       .get();
 #else
   NOT_IMPLEMENTED();
@@ -1698,7 +1699,8 @@ void EdenServiceHandler::debugInodeStatus(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path, flags);
   auto edenMount = server_->getMount(*mountPoint);
 
-  auto inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
+  auto inode = inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
+                   .asTreePtr();
   auto inodePath = inode->getPath().value();
 
   InodeStatusCallbacks callbacks{edenMount.get(), flags, inodeInfo};
@@ -1825,7 +1827,9 @@ int64_t EdenServiceHandler::unloadInodeForPath(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
 
-  TreeInodePtr inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
+  TreeInodePtr inode =
+      inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
+          .asTreePtr();
   auto cutoff = std::chrono::system_clock::now() -
       std::chrono::seconds(*age->seconds_ref()) -
       std::chrono::nanoseconds(*age->nanoSeconds_ref());
@@ -1917,7 +1921,8 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
-  InodePtr inode = inodeFromUserPath(*edenMount, *path);
+  InodePtr inode =
+      inodeFromUserPath(*edenMount, *path, helper->getFetchContext());
   auto* fuseChannel = edenMount->getFuseChannel();
   if (!fuseChannel) {
     EDEN_BUG() << "Invalidating the inode cache isn't supported on NFS";

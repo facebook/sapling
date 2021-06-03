@@ -381,7 +381,9 @@ Future<Unit> ensureDotEdenSymlink(
 
 folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
-  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
+  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, *context)
       .thenTryInline([=](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;
         if (lookupResult.hasValue()) {
@@ -430,12 +432,14 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 #ifndef _WIN32
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
     RelativePathPiece repoPath,
-    AbsolutePathPiece targetPath) {
+    AbsolutePathPiece targetPath,
+    ObjectFetchContext& context) {
   auto absRepoPath = getPath() + repoPath;
 
-  return this->ensureDirectoryExists(repoPath).thenValue(
-      [this, target = targetPath.copy(), pathInMountDir = getPath() + repoPath](
-          auto&&) {
+  return this->ensureDirectoryExists(repoPath, context)
+      .thenValue([this,
+                  target = targetPath.copy(),
+                  pathInMountDir = getPath() + repoPath](auto&&) {
         return serverState_->getPrivHelper()->bindMount(
             target.stringPiece(), pathInMountDir.stringPiece());
       });
@@ -1636,7 +1640,8 @@ namespace {
 Future<Unit> ensureDirectoryExistsHelper(
     TreeInodePtr parent,
     PathComponentPiece childName,
-    RelativePathPiece rest) {
+    RelativePathPiece rest,
+    ObjectFetchContext& context) {
   auto contents = parent->getContents().rlock();
   if (auto* child = folly::get_ptr(contents->entries, childName)) {
     if (!child->isDirectory()) {
@@ -1648,10 +1653,11 @@ Future<Unit> ensureDirectoryExistsHelper(
     if (rest.empty()) {
       return folly::unit;
     }
-    return parent->getOrLoadChildTree(childName).thenValue(
-        [rest = RelativePath{rest}](TreeInodePtr child) {
+    return parent->getOrLoadChildTree(childName, context)
+        .thenValue([rest = RelativePath{rest}, &context](TreeInodePtr child) {
           auto [nextChildName, nextRest] = splitFirst(rest);
-          return ensureDirectoryExistsHelper(child, nextChildName, nextRest);
+          return ensureDirectoryExistsHelper(
+              child, nextChildName, nextRest, context);
         });
   }
 
@@ -1663,7 +1669,7 @@ Future<Unit> ensureDirectoryExistsHelper(
     // If two threads are racing to create the subdirectory, that's fine,
     // just try again.
     if (e.code().value() == EEXIST) {
-      return ensureDirectoryExistsHelper(parent, childName, rest);
+      return ensureDirectoryExistsHelper(parent, childName, rest, context);
     }
     throw;
   }
@@ -1671,13 +1677,15 @@ Future<Unit> ensureDirectoryExistsHelper(
     return folly::unit;
   }
   auto [nextChildName, nextRest] = splitFirst(rest);
-  return ensureDirectoryExistsHelper(child, nextChildName, nextRest);
+  return ensureDirectoryExistsHelper(child, nextChildName, nextRest, context);
 }
 } // namespace
 
-Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
+Future<Unit> EdenMount::ensureDirectoryExists(
+    RelativePathPiece fromRoot,
+    ObjectFetchContext& context) {
   auto [childName, rest] = splitFirst(fromRoot);
-  return ensureDirectoryExistsHelper(getRootInode(), childName, rest);
+  return ensureDirectoryExistsHelper(getRootInode(), childName, rest, context);
 }
 
 std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(

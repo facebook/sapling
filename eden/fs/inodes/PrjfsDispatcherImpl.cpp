@@ -153,7 +153,7 @@ folly::Future<TreeInodePtr> createDirInode(
       .thenValue([](const InodePtr inode) { return inode.asTreePtr(); })
       .thenError(
           folly::tag_t<std::system_error>{},
-          [=, &mount](const std::system_error& ex) {
+          [=, &mount, &context](const std::system_error& ex) {
             if (!isEnoent(ex)) {
               return folly::makeFuture<TreeInodePtr>(ex);
             }
@@ -175,7 +175,8 @@ folly::Future<TreeInodePtr> createDirInode(
 
             auto fut = folly::makeFuture(mount.getRootInode());
             for (auto parent : path.paths()) {
-              fut = std::move(fut).thenValue([parent](TreeInodePtr treeInode) {
+              fut = std::move(fut).thenValue([parent, &context](
+                                                 TreeInodePtr treeInode) {
                 try {
                   auto inode = treeInode->mkdir(
                       parent.basename(), _S_IFDIR, InvalidationRequired::No);
@@ -186,7 +187,8 @@ folly::Future<TreeInodePtr> createDirInode(
                   }
                 }
 
-                return treeInode->getOrLoadChildTree(parent.basename());
+                return treeInode->getOrLoadChildTree(
+                    parent.basename(), context);
               });
             }
 
