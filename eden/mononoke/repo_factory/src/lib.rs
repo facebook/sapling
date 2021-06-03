@@ -8,6 +8,7 @@
 //! Repository factory.
 #![feature(trait_alias)]
 
+use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
@@ -649,6 +650,24 @@ impl RepoFactory {
             Arc::new(InProcessLease::new())
         };
         Ok(Arc::new(RepoDerivedData::new(config, lease)))
+    }
+
+    pub async fn skiplist_index(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcSkiplistIndex> {
+        let repo_name = String::from(repo_identity.name());
+        let logger = self.env.logger.new(o!("repo" => repo_name));
+        let session = SessionContainer::new_with_defaults(self.env.fb);
+        let ctx = session.new_context(logger, self.env.scuba_sample_builder.clone());
+        SkiplistIndex::from_blobstore(
+            &ctx,
+            &repo_config.skiplist_index_blobstore_key,
+            &repo_blobstore.boxed(),
+        )
+        .await
     }
 
     pub async fn repo_blobstore(

@@ -59,6 +59,7 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
+use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql_construct::SqlConstruct;
 use std::{sync::Arc, time::Duration};
 
@@ -264,6 +265,10 @@ impl BenchmarkRepoFactory {
 
     pub fn filestore_config(&self) -> ArcFilestoreConfig {
         Arc::new(FilestoreConfig::default())
+    }
+
+    pub fn skiplist_index(&self) -> ArcSkiplistIndex {
+        Arc::new(SkiplistIndex::new())
     }
 }
 

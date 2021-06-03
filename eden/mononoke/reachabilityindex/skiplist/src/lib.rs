@@ -329,6 +329,7 @@ async fn compute_skip_edges(
     Ok(skip_edges)
 }
 /// Structure for indexing skip list edges for reachability queries.
+#[facet::facet]
 #[derive(Debug, Clone)]
 pub struct SkiplistIndex {
     // Each hash that the structure knows about is mapped to a  collection

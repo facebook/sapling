@@ -60,6 +60,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
 use skeleton_manifest::RootSkeletonManifestId;
+use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
@@ -394,5 +395,10 @@ impl TestRepoFactory {
             })
             .unwrap_or_default();
         Arc::new(filestore_config)
+    }
+
+    /// Create empty skiplist index
+    pub fn skiplist_index(&self) -> ArcSkiplistIndex {
+        Arc::new(SkiplistIndex::new())
     }
 }

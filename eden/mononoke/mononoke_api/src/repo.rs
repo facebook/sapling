@@ -54,7 +54,7 @@ use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use segmented_changelog::{CloneData, Location, SegmentedChangelog, StreamCloneData};
-use skiplist::{fetch_skiplist_index, SkiplistIndex};
+use skiplist::SkiplistIndex;
 use slog::{debug, error, o};
 use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
@@ -93,10 +93,21 @@ define_stats! {
     ),
 }
 
+// Eventually everything inside Repo should really be here
+// The fields of BlobRepo that are not used in e.g. LFS server should also be moved here
+// Each binary will then be able to only build what they use of the "repo attributes".
+#[facet::container]
+pub struct InnerRepo {
+    #[delegate()]
+    blob_repo: Arc<BlobRepo>,
+
+    #[facet]
+    pub skiplist_index: SkiplistIndex,
+}
+
 pub struct Repo {
+    pub(crate) inner: InnerRepo,
     pub(crate) name: String,
-    pub(crate) blob_repo: BlobRepo,
-    pub(crate) skiplist_index: Arc<SkiplistIndex>,
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
@@ -149,8 +160,6 @@ impl Repo {
         let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
 
-        let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
-
         let synced_commit_mapping = open_synced_commit_mapping(
             fb,
             config.clone(),
@@ -164,7 +173,7 @@ impl Repo {
             CfgrLiveCommitSyncConfig::new(&logger, &env.repo_factory.env.config_store)?,
         );
 
-        let blob_repo = env
+        let inner: InnerRepo = env
             .repo_factory
             .build(name.clone(), config.clone())
             .watched(&logger)
@@ -190,7 +199,7 @@ impl Repo {
 
         let hook_manager = {
             let ctx = &ctx;
-            let blob_repo = &blob_repo;
+            let blob_repo = &inner.blob_repo;
             let config = config.clone();
             let name = name.as_str();
             async move {
@@ -200,11 +209,8 @@ impl Repo {
             }
         };
 
-        let blobstore = blob_repo.get_blobstore().boxed();
-        let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
-
         let mut warm_bookmarks_cache_builder =
-            WarmBookmarksCacheBuilder::new(ctx.clone(), &blob_repo);
+            WarmBookmarksCacheBuilder::new(ctx.clone(), &inner.blob_repo);
         match env.warm_bookmarks_cache_derived_data {
             WarmBookmarksCacheDerivedData::HgOnly => {
                 warm_bookmarks_cache_builder.add_hg_warmers()?;
@@ -233,13 +239,11 @@ impl Repo {
         let (
             repo_permission_checker,
             service_permission_checker,
-            skiplist_index,
             warm_bookmarks_cache,
             hook_manager,
         ) = try_join!(
             repo_permission_checker.watched(&logger),
             service_permission_checker.watched(&logger),
-            skiplist_index.watched(&logger),
             warm_bookmarks_cache.watched(&logger),
             hook_manager.watched(&logger),
         )?;
@@ -252,8 +256,7 @@ impl Repo {
 
         Ok(Self {
             name,
-            blob_repo,
-            skiplist_index,
+            inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             synced_commit_mapping,
             config,
@@ -352,8 +355,10 @@ impl Repo {
 
         Ok(Self {
             name: String::from("test"),
-            blob_repo,
-            skiplist_index: Arc::new(SkiplistIndex::new()),
+            inner: InnerRepo {
+                blob_repo: Arc::new(blob_repo),
+                skiplist_index: Arc::new(SkiplistIndex::new()),
+            },
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             synced_commit_mapping,
             config,
@@ -377,12 +382,12 @@ impl Repo {
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
-        self.blob_repo.get_repoid()
+        self.blob_repo().get_repoid()
     }
 
     /// The underlying `BlobRepo`.
     pub fn blob_repo(&self) -> &BlobRepo {
-        &self.blob_repo
+        &self.inner.blob_repo
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
@@ -392,7 +397,7 @@ impl Repo {
 
     /// The skiplist index for the referenced repository.
     pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
-        &self.skiplist_index
+        &self.inner.skiplist_index
     }
 
     /// The commit sync mapping for the referenced repository
@@ -447,13 +452,13 @@ impl Repo {
             ctx.logger(),
             "Monitored bookmark does not exist in the cache: {}, repo: {}",
             bookmark,
-            self.blob_repo.name()
+            self.blob_repo().name()
         );
 
         STATS::missing_from_cache.set_value(
             ctx.fb,
             1,
-            (self.blob_repo.get_repoid(), bookmark.to_string()),
+            (self.blob_repo().get_repoid(), bookmark.to_string()),
         );
     }
 
@@ -466,7 +471,7 @@ impl Repo {
         STATS::missing_from_repo.set_value(
             ctx.fb,
             1,
-            (self.blob_repo.get_repoid(), bookmark.to_string()),
+            (self.blob_repo().get_repoid(), bookmark.to_string()),
         );
     }
 
@@ -480,14 +485,14 @@ impl Repo {
             ctx.logger(),
             "Reporting staleness of {} in repo {} to be {}s",
             bookmark,
-            self.blob_repo.get_repoid(),
+            self.blob_repo().get_repoid(),
             staleness
         );
 
         STATS::staleness.set_value(
             ctx.fb,
             staleness,
-            (self.blob_repo.get_repoid(), bookmark.to_string()),
+            (self.blob_repo().get_repoid(), bookmark.to_string()),
         );
     }
 
@@ -496,7 +501,7 @@ impl Repo {
         ctx: &CoreContext,
         bookmark: &BookmarkName,
     ) -> Result<(), MononokeError> {
-        let repo = &self.blob_repo;
+        let repo = self.blob_repo();
 
         let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(bookmark);
         let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
@@ -581,7 +586,7 @@ impl Repo {
 
         let mut ancestors = AncestorsNodeStream::new(
             ctx.clone(),
-            &self.blob_repo.get_changeset_fetcher(),
+            &self.blob_repo().get_changeset_fetcher(),
             descendant,
         )
         .compat();
@@ -595,7 +600,7 @@ impl Repo {
 
             let cs_id = cs_id?;
             let parents = self
-                .blob_repo
+                .blob_repo()
                 .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
                 .await?;
 
@@ -618,7 +623,7 @@ impl Repo {
         cs_id: &ChangesetId,
     ) -> Result<Generation, Error> {
         let maybe_gen_num = self
-            .blob_repo
+            .blob_repo()
             .get_generation_number(ctx.clone(), *cs_id)
             .await?;
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
@@ -1166,7 +1171,7 @@ impl RepoContext {
         let blob_repo = self.blob_repo().clone();
         // TODO(ikostia): get rid of cloning the underlying `SkiplistIndex` here
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
-            Arc::new((*self.repo.skiplist_index).clone());
+            Arc::new((*self.repo.skiplist_index()).clone());
         (Target(blob_repo), Target(lca_hint))
     }
 
