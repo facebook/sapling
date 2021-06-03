@@ -1984,7 +1984,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMkdir(
 
   InodeNumber parent{header.nodeid};
   mode_t mode = dir->mode & ~dir->umask;
-  return dispatcher_->mkdir(parent, name, mode)
+  return dispatcher_->mkdir(parent, name, mode, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });

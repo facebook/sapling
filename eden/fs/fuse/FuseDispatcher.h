@@ -176,8 +176,11 @@ class FuseDispatcher {
    * @param name to create
    * @param mode with which to create the new file
    */
-  virtual ImmediateFuture<fuse_entry_out>
-  mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode);
+  virtual ImmediateFuture<fuse_entry_out> mkdir(
+      InodeNumber parent,
+      PathComponentPiece name,
+      mode_t mode,
+      ObjectFetchContext& context);
 
   /**
    * Remove a file

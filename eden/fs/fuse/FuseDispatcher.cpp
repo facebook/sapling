@@ -104,8 +104,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::mknod(
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<fuse_entry_out>
-FuseDispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
+ImmediateFuture<fuse_entry_out> FuseDispatcher::mkdir(
+    InodeNumber,
+    PathComponentPiece,
+    mode_t,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

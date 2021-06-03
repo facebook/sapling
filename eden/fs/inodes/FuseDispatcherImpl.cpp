@@ -348,13 +348,13 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
 ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
     InodeNumber parent,
     PathComponentPiece name,
-    mode_t mode) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "FuseDispatcherImpl::mkdir");
+    mode_t mode,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
+      [childName = PathComponent{name}, mode, &context](
+          const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
-        return child->stat(*context).thenValue([child](struct stat st) {
+        return child->stat(context).thenValue([child](struct stat st) {
           child->incFsRefcount();
           return computeEntryParam(FuseDispatcher::Attr{st});
         });

@@ -57,7 +57,11 @@ TEST_F(EdenDispatcherTest, mknodReturnsNameTooLong) {
 TEST_F(EdenDispatcherTest, mkdirReturnsNameTooLong) {
   try {
     mount.getDispatcher()
-        ->mkdir(kRootNodeId, kTooLong, S_IFDIR | 0755)
+        ->mkdir(
+            kRootNodeId,
+            kTooLong,
+            S_IFDIR | 0755,
+            ObjectFetchContext::getNullContext())
         .get(0ms);
     FAIL() << "should throw";
   } catch (std::system_error& e) {
