@@ -168,6 +168,23 @@ impl Mononoke {
         }
     }
 
+    /// Start a request on a repository bypassing the ACL check.
+    ///
+    /// Should be only used for internal usecases where we don't have external user with
+    /// identity.
+    pub async fn repo_by_id_bypass_acl_check(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<RepoContext>, MononokeError> {
+        match self.repos_by_ids.get(&repo_id) {
+            None => Ok(None),
+            Some(repo) => Ok(Some(
+                RepoContext::new_bypass_acl_check(ctx, repo.clone()).await?,
+            )),
+        }
+    }
+
     /// Returns an `Iterator` over all repo names.
     pub fn repo_names(&self) -> impl Iterator<Item = &str> {
         self.repos.keys().map(AsRef::as_ref)

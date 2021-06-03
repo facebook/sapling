@@ -30,7 +30,7 @@ pub trait MegarepoOp {
         let target_repo_id = RepositoryId::new(repo_id.try_into().unwrap());
         let target_repo = self
             .mononoke()
-            .repo_by_id(ctx.clone(), target_repo_id)
+            .repo_by_id_bypass_acl_check(ctx.clone(), target_repo_id)
             .await
             .map_err(MegarepoError::internal)?
             .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?;
