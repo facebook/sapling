@@ -12,7 +12,6 @@ path = "main.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.45"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
@@ -32,6 +31,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 microwave = { version = "0.1.0", path = ".." }
+mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 slog = { version = "2.5", features = ["max_level_trace"] }

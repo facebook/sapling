@@ -198,8 +198,7 @@ impl Repo {
             }
         };
 
-        let mut warm_bookmarks_cache_builder =
-            WarmBookmarksCacheBuilder::new(ctx.clone(), &inner.blob_repo);
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
         match env.warm_bookmarks_cache_derived_data {
             WarmBookmarksCacheDerivedData::HgOnly => {
                 warm_bookmarks_cache_builder.add_hg_warmers()?;
@@ -300,6 +299,11 @@ impl Repo {
             ),
         };
 
+        let inner = InnerRepo {
+            blob_repo: Arc::new(blob_repo),
+            skiplist_index: Arc::new(SkiplistIndex::new()),
+        };
+
         let config = RepoConfig {
             commit_sync_config: init_commit_sync_config,
             infinitepush: InfinitepushParams {
@@ -320,8 +324,7 @@ impl Repo {
         };
 
         let x_repo_sync_lease = Arc::new(InProcessLease::new());
-        let mut warm_bookmarks_cache_builder =
-            WarmBookmarksCacheBuilder::new(ctx.clone(), &blob_repo);
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
         warm_bookmarks_cache_builder.add_all_warmers()?;
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.
@@ -336,7 +339,14 @@ impl Repo {
         };
 
         let hook_manager = Arc::new(
-            make_hook_manager(&ctx, &blob_repo, config.clone(), "test", &HashSet::new()).await?,
+            make_hook_manager(
+                &ctx,
+                &inner.blob_repo,
+                config.clone(),
+                "test",
+                &HashSet::new(),
+            )
+            .await?,
         );
 
         let readonly_fetcher =
@@ -344,10 +354,7 @@ impl Repo {
 
         Ok(Self {
             name: String::from("test"),
-            inner: InnerRepo {
-                blob_repo: Arc::new(blob_repo),
-                skiplist_index: Arc::new(SkiplistIndex::new()),
-            },
+            inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             synced_commit_mapping,
             config,

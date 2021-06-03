@@ -18,6 +18,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

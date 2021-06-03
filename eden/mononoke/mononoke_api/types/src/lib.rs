@@ -13,6 +13,7 @@ use std::sync::Arc;
 // The fields of BlobRepo that are not used in e.g. LFS server should also be moved here
 // Each binary will then be able to only build what they use of the "repo attributes".
 #[facet::container]
+#[derive(Clone)]
 pub struct InnerRepo {
     #[delegate()]
     pub blob_repo: Arc<BlobRepo>,

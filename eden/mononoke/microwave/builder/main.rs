@@ -13,7 +13,6 @@ mod filenodes;
 use ::changesets::ArcChangesets;
 use ::filenodes::ArcFilenodes;
 use anyhow::{format_err, Error};
-use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore_factory::PutBehaviour;
 use bookmarks::BookmarkName;
@@ -32,6 +31,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CacheWarmupParams;
 use microwave::{Snapshot, SnapshotLocation};
+use mononoke_api_types::InnerRepo;
 use repo_factory::RepoFactory;
 use slog::{info, o, Logger};
 use std::path::Path;
@@ -50,7 +50,7 @@ const SUBCOMMAND_BLOBSTORE: &str = "blobstore";
 
 async fn cache_warmup_target(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &InnerRepo,
     bookmark: &BookmarkName,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
@@ -123,7 +123,7 @@ async fn do_main<'a>(
                 let warmup = async move {
                     let repoid = config.repoid;
                     let cache_warmup = config.cache_warmup.clone();
-                    let repo: BlobRepo = repo_factory.build(name, config).await?;
+                    let repo: InnerRepo = repo_factory.build(name, config).await?;
 
                     // Rewind bookmarks to the point where we have derived data. Cache
                     // warmup requires filenodes and hg changesets to be present.
@@ -147,6 +147,7 @@ async fn do_main<'a>(
                     };
 
                     let warmup_repo = repo
+                        .blob_repo
                         .dangerous_override(|inner| -> ArcFilenodes {
                             Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
                         })
@@ -166,7 +167,7 @@ async fn do_main<'a>(
                 // the repo back.
                 let repo = handle.await??;
 
-                snapshot.commit(&ctx, &repo, location).await?;
+                snapshot.commit(&ctx, &repo.blob_repo, location).await?;
 
                 Result::<_, Error>::Ok(())
             }

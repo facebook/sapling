@@ -11,7 +11,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
@@ -29,6 +28,7 @@ futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 itertools = "0.8"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
+mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }

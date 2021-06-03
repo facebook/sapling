@@ -7,32 +7,33 @@
 
 use super::{IsWarmFn, Warmer, WarmerFn};
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_watchdog::WatchdogExt;
+use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use slog::{info, o};
 
 pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
     info!(ctx.logger(), "Warming {}", D::NAME);
-    let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
-        async move {
-            D::derive(&ctx, &repo, cs_id).await?;
-            Ok(())
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    });
+    let warmer: Box<WarmerFn> =
+        Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
+            async move {
+                D::derive(&ctx, &repo.blob_repo, cs_id).await?;
+                Ok(())
+            }
+            .boxed()
+            .compat()
+            .boxify()
+        });
 
     let is_warm: Box<IsWarmFn> =
-        Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
+        Box::new(|ctx: &CoreContext, repo: &InnerRepo, cs_id: &ChangesetId| {
             let logger = ctx.logger().new(o!("type" => D::NAME));
-            D::is_derived(&ctx, &repo, &cs_id)
+            D::is_derived(&ctx, &repo.blob_repo, &cs_id)
                 .watched(logger)
                 .map_err(Error::from)
                 .boxed()
@@ -42,22 +43,25 @@ pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer
 
 pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
     info!(ctx.logger(), "Warming public phases");
-    let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
-        async move {
-            repo.get_phases()
-                .add_reachable_as_public(ctx, vec![cs_id])
-                .await?;
-            Ok(())
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    });
+    let warmer: Box<WarmerFn> =
+        Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
+            async move {
+                repo.blob_repo
+                    .get_phases()
+                    .add_reachable_as_public(ctx, vec![cs_id])
+                    .await?;
+                Ok(())
+            }
+            .boxed()
+            .compat()
+            .boxify()
+        });
 
     let is_warm: Box<IsWarmFn> =
-        Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
+        Box::new(|ctx: &CoreContext, repo: &InnerRepo, cs_id: &ChangesetId| {
             async move {
                 let maybe_public = repo
+                    .blob_repo
                     .get_phases()
                     .get_store()
                     .get_public(ctx.clone(), vec![*cs_id], false /* ephemeral derive */)

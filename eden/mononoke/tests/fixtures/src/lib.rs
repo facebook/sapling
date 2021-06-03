@@ -19,6 +19,7 @@ use filestore::StoreRequest;
 use futures::{future::try_join_all, stream};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, RepositoryId,
 };
@@ -303,13 +304,21 @@ pub mod linear {
     }
 
     pub async fn getrepo(fb: FacebookInit) -> BlobRepo {
-        getrepo_with_id(fb, RepositoryId::new(0)).await
+        (*get_inner_repo(fb).await.blob_repo).clone()
+    }
+
+    pub async fn get_inner_repo(fb: FacebookInit) -> InnerRepo {
+        get_inner_repo_with_id(fb, RepositoryId::new(0)).await
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
-        initrepo(fb, &blobrepo).await;
-        blobrepo
+        (*get_inner_repo_with_id(fb, id).await.blob_repo).clone()
+    }
+
+    pub async fn get_inner_repo_with_id(fb: FacebookInit, id: RepositoryId) -> InnerRepo {
+        let repo: InnerRepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        initrepo(fb, &repo.blob_repo).await;
+        repo
     }
 }
 

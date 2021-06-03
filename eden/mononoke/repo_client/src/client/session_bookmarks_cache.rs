@@ -269,6 +269,7 @@ mod test {
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_api_types::InnerRepo;
     use tests_utils::{bookmark, CreateCommitContext};
     use warm_bookmarks_cache::{
         BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder,
@@ -297,32 +298,33 @@ mod test {
     async fn test_fetch_prefix_no_warm_bookmark_cache(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: InnerRepo = test_repo_factory::build_empty()?;
 
-        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo.blob_repo)
             .add_file("1", "1")
             .commit()
             .await?;
 
         let hg_cs_id = repo
+            .blob_repo
             .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
             .await?;
-        bookmark(&ctx, &repo, "prefix/scratchbook")
+        bookmark(&ctx, &repo.blob_repo, "prefix/scratchbook")
             .create_scratch(cs_id)
             .await?;
 
-        bookmark(&ctx, &repo, "prefix/publishing")
+        bookmark(&ctx, &repo.blob_repo, "prefix/publishing")
             .create_publishing(cs_id)
             .await?;
 
-        bookmark(&ctx, &repo, "prefix/pulldefault")
+        bookmark(&ctx, &repo.blob_repo, "prefix/pulldefault")
             .create_pull_default(cs_id)
             .await?;
 
         // Let's try without WarmBookmarkCache first
         println!("No warm bookmark cache");
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
-            repo: repo.clone(),
+            repo: (*repo.blob_repo).clone(),
             wbc: None,
         });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
@@ -333,7 +335,7 @@ mod test {
         builder.add_hg_warmers()?;
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
-            repo: repo.clone(),
+            repo: (*repo.blob_repo).clone(),
             wbc: Some(wbc),
         });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
