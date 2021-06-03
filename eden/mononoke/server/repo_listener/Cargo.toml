@@ -17,7 +17,7 @@ bytes = { version = "1.0", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../context" }

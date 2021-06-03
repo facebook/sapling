@@ -7,7 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }

@@ -5,5 +5,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 humantime = "1.3"

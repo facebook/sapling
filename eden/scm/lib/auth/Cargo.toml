@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { path = "../configmodel" }
 indexmap = { version = "1.6", features = ["rayon", "serde-1"] }
 pem = "0.8"
