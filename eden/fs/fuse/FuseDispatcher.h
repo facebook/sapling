@@ -388,7 +388,8 @@ class FuseDispatcher {
    */
   virtual ImmediateFuture<std::string> getxattr(
       InodeNumber ino,
-      folly::StringPiece name);
+      folly::StringPiece name,
+      ObjectFetchContext& context);
   static const int kENOATTR;
 
   /**

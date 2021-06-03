@@ -105,7 +105,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
 
   ImmediateFuture<std::string> getxattr(
       InodeNumber ino,
-      folly::StringPiece name) override;
+      folly::StringPiece name,
+      ObjectFetchContext& context) override;
   ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:

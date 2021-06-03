@@ -242,7 +242,8 @@ const int FuseDispatcher::kENOATTR =
 
 ImmediateFuture<std::string> FuseDispatcher::getxattr(
     InodeNumber /*ino*/,
-    folly::StringPiece /*name*/) {
+    folly::StringPiece /*name*/,
+    ObjectFetchContext& /*context*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 

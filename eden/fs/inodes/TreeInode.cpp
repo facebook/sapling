@@ -3596,7 +3596,9 @@ folly::Future<struct stat> TreeInode::setattr(const DesiredMetadata& desired) {
 folly::Future<std::vector<std::string>> TreeInode::listxattr() {
   return std::vector<std::string>{};
 }
-folly::Future<std::string> TreeInode::getxattr(folly::StringPiece /*name*/) {
+folly::Future<std::string> TreeInode::getxattr(
+    folly::StringPiece /*name*/,
+    ObjectFetchContext& /*context*/) {
   return makeFuture<std::string>(InodeError(kENOATTR, inodePtrFromThis()));
 }
 #endif

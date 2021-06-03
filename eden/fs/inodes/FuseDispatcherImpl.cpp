@@ -442,10 +442,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::link(
 
 ImmediateFuture<string> FuseDispatcherImpl::getxattr(
     InodeNumber ino,
-    StringPiece name) {
+    StringPiece name,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino).thenValue(
-      [attrName = name.str()](const InodePtr& inode) {
-        return inode->getxattr(attrName).semi();
+      [attrName = name.str(), &context](const InodePtr& inode) {
+        return inode->getxattr(attrName, context).semi();
       });
 }
 

@@ -2164,7 +2164,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseGetXAttr(
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_GETXATTR";
   InodeNumber ino{header.nodeid};
-  return dispatcher_->getxattr(ino, attrName)
+  return dispatcher_->getxattr(ino, attrName, request)
       .thenValue([&request, size = getxattr->size](const std::string& attr) {
         if (size == 0) {
           fuse_getxattr_out out = {};

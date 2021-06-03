@@ -143,7 +143,9 @@ class InodeBase {
       folly::StringPiece name);
 
   virtual folly::Future<std::vector<std::string>> listxattr() = 0;
-  virtual folly::Future<std::string> getxattr(folly::StringPiece name) = 0;
+  virtual folly::Future<std::string> getxattr(
+      folly::StringPiece name,
+      ObjectFetchContext& context) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 #endif // !_WIN32

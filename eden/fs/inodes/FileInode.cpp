@@ -642,15 +642,15 @@ Future<vector<string>> FileInode::listxattr() {
   return attributes;
 }
 
-Future<string> FileInode::getxattr(StringPiece name) {
+Future<string> FileInode::getxattr(
+    StringPiece name,
+    ObjectFetchContext& context) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("FileInode::getxattr");
-  return getSha1(*context).thenValue([](Hash hash) { return hash.toString(); });
+  return getSha1(context).thenValue([](Hash hash) { return hash.toString(); });
 }
 #else
 
