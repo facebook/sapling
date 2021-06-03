@@ -90,7 +90,8 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::setattr(
 
 ImmediateFuture<std::string> FuseDispatcher::readlink(
     InodeNumber /*ino*/,
-    bool /*kernelCachesReadlink*/) {
+    bool /*kernelCachesReadlink*/,
+    ObjectFetchContext& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 

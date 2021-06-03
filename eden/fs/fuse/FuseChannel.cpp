@@ -1917,7 +1917,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReadLink(
   kernelCachesReadlink = connInfo_->flags & FUSE_CACHE_SYMLINKS;
 #endif
   InodeNumber ino{header.nodeid};
-  return dispatcher_->readlink(ino, kernelCachesReadlink)
+  return dispatcher_->readlink(ino, kernelCachesReadlink, request)
       .thenValue([&request](std::string&& str) {
         request.sendReply(folly::StringPiece(str));
       });

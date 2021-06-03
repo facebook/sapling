@@ -42,7 +42,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
   ImmediateFuture<uint64_t> open(InodeNumber ino, int flags) override;
   ImmediateFuture<std::string> readlink(
       InodeNumber ino,
-      bool kernelCachesReadlink) override;
+      bool kernelCachesReadlink,
+      ObjectFetchContext& context) override;
   ImmediateFuture<fuse_entry_out> mknod(
       InodeNumber parent,
       PathComponentPiece name,

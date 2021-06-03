@@ -298,16 +298,15 @@ ImmediateFuture<Unit> FuseDispatcherImpl::fsyncdir(
 
 ImmediateFuture<std::string> FuseDispatcherImpl::readlink(
     InodeNumber ino,
-    bool kernelCachesReadlink) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "FuseDispatcherImpl::readlink");
+    bool kernelCachesReadlink,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [kernelCachesReadlink](const FileInodePtr& inode) {
+      [kernelCachesReadlink, &context](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
         return inode
             ->readlink(
-                *context,
+                context,
                 kernelCachesReadlink ? CacheHint::NotNeededAgain
                                      : CacheHint::LikelyNeededAgain)
             .semi();

@@ -148,7 +148,8 @@ class FuseDispatcher {
    */
   virtual ImmediateFuture<std::string> readlink(
       InodeNumber ino,
-      bool kernelCachesReadlink);
+      bool kernelCachesReadlink,
+      ObjectFetchContext& context);
 
   /**
    * Create file node
