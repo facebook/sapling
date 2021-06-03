@@ -30,6 +30,7 @@ use futures::{
     stream::{self, futures_unordered::FuturesUnordered},
     Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
+use git_types::{TreeHandle, TreeMapping};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
@@ -55,6 +56,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootDeletedManifestId::NAME,
     FilenodesOnlyPublic::NAME,
     RootSkeletonManifestId::NAME,
+    TreeHandle::NAME,
 ];
 
 lazy_static! {
@@ -487,6 +489,10 @@ fn derived_data_utils_impl(
         }
         RootSkeletonManifestId::NAME => {
             let mapping = RootSkeletonManifestMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+        }
+        TreeHandle::NAME => {
+            let mapping = TreeMapping::new(repo.blobstore().boxed(), config);
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),

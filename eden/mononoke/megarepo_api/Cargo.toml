@@ -17,6 +17,7 @@ bytes = { version = "1.0", features = ["serde"] }
 commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }

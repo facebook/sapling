@@ -13,8 +13,9 @@ use bytes::Bytes;
 use commit_transformation::{create_source_to_target_multi_mover, MultiMover};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use derived_data_utils::derived_data_utils;
 use fsnodes::RootFsnodeId;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::{future, stream, stream::FuturesUnordered, StreamExt, TryStreamExt};
 use manifest::ManifestOps;
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig,
@@ -105,6 +106,27 @@ impl<'a> AddSyncTarget<'a> {
                 message,
             )
             .await?;
+
+        let mut scuba = ctx.scuba().clone();
+        scuba.log_with_msg(
+            "Created add sync target merge commit",
+            Some(format!("{}", top_merge_cs_id)),
+        );
+
+        let derived_data_types = repo
+            .blob_repo()
+            .get_derived_data_config()
+            .enabled
+            .types
+            .iter();
+
+        let derivers = FuturesUnordered::new();
+        for ty in derived_data_types {
+            let utils = derived_data_utils(repo.blob_repo(), ty)?;
+            derivers.push(utils.derive(ctx.clone(), repo.blob_repo().clone(), top_merge_cs_id));
+        }
+
+        derivers.try_for_each(|_| future::ready(Ok(()))).await?;
 
         self.megarepo_configs
             .add_target_with_config_version(ctx.clone(), sync_target_config.clone())
