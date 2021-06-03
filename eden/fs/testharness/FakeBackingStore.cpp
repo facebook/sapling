@@ -17,7 +17,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/ThriftUtil.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/EnumValue.h"
@@ -33,8 +32,7 @@ using std::unique_ptr;
 namespace facebook {
 namespace eden {
 
-FakeBackingStore::FakeBackingStore(std::shared_ptr<LocalStore> localStore)
-    : localStore_(std::move(localStore)) {}
+FakeBackingStore::FakeBackingStore() = default;
 
 FakeBackingStore::~FakeBackingStore() = default;
 
@@ -81,7 +79,7 @@ SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
     const Hash& commitID,
-    ObjectFetchContext& context) {
+    ObjectFetchContext& /*context*/) {
   StoredHash* storedTreeHash;
   {
     auto data = data_.wlock();
@@ -96,35 +94,17 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
   }
 
   return storedTreeHash->getFuture().thenValue(
-      [this, commitID, &context](const std::unique_ptr<Hash>& hash) {
-        // Check in the LocalStore for the tree first.
-        return getTreeForManifest(commitID, *hash, context);
+      [this, commitID](const std::unique_ptr<Hash>& hash) {
+        auto data = data_.rlock();
+        auto treeIter = data->trees.find(*hash);
+        if (treeIter == data->trees.end()) {
+          return makeFuture<unique_ptr<Tree>>(std::domain_error(
+              "tree " + hash->toString() + " for commit " +
+              commitID.toString() + " not found"));
+        }
+
+        return treeIter->second->getFuture();
       });
-}
-
-folly::SemiFuture<std::unique_ptr<Tree>> FakeBackingStore::getTreeForManifest(
-    const Hash& commitID,
-    const Hash& manifestID,
-    ObjectFetchContext&) {
-  // Check in the LocalStore for the tree first.
-  return localStore_->getTree(manifestID)
-      .thenValue(
-          [this, commitID, manifestID](std::unique_ptr<Tree> localValue) {
-            if (localValue) {
-              return makeFuture(std::move(localValue));
-            }
-
-            // Next look up the tree in our BackingStore data
-            auto data = data_.rlock();
-            auto treeIter = data->trees.find(manifestID);
-            if (treeIter == data->trees.end()) {
-              return makeFuture<unique_ptr<Tree>>(std::domain_error(
-                  "tree " + manifestID.toString() + " for commit " +
-                  commitID.toString() + " not found"));
-            }
-
-            return treeIter->second->getFuture();
-          });
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {

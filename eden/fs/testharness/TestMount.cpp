@@ -278,7 +278,7 @@ void TestMount::initTestDirectory() {
 
   // Create localStore_ and backingStore_
   localStore_ = make_shared<MemoryLocalStore>();
-  backingStore_ = make_shared<FakeBackingStore>(localStore_);
+  backingStore_ = make_shared<FakeBackingStore>();
 
   stats_ = make_shared<EdenStats>();
 }

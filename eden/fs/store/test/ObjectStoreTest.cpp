@@ -37,7 +37,7 @@ struct ObjectStoreTest : ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     treeCache = TreeCache::create(edenConfig);
     localStore = std::make_shared<MemoryLocalStore>();
-    backingStore = std::make_shared<FakeBackingStore>(localStore);
+    backingStore = std::make_shared<FakeBackingStore>();
     stats = std::make_shared<EdenStats>();
     executor = &folly::QueuedImmediateExecutor::instance();
     objectStore = ObjectStore::create(

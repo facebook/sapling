@@ -73,7 +73,7 @@ class DiffTest : public ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);
     localStore_ = make_shared<MemoryLocalStore>();
-    backingStore_ = make_shared<FakeBackingStore>(localStore_);
+    backingStore_ = make_shared<FakeBackingStore>();
     store_ = ObjectStore::create(
         localStore_,
         backingStore_,

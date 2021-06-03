@@ -23,7 +23,6 @@ namespace facebook {
 namespace eden {
 
 class FakeTreeBuilder;
-class LocalStore;
 
 /**
  * A BackingStore implementation for test code.
@@ -32,7 +31,7 @@ class FakeBackingStore final : public BackingStore {
  public:
   struct TreeEntryData;
 
-  explicit FakeBackingStore(std::shared_ptr<LocalStore> localStore);
+  FakeBackingStore();
   ~FakeBackingStore() override;
 
   /*
@@ -51,11 +50,6 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) override;
-
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
-      const Hash& commitID,
-      const Hash& manifestID,
-      ObjectFetchContext& context);
 
   /**
    * Add a Blob to the backing store
@@ -165,7 +159,6 @@ class FakeBackingStore final : public BackingStore {
       Hash hash,
       std::vector<TreeEntry>&& sortedEntries);
 
-  const std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<Data> data_;
 };
 

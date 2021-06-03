@@ -14,8 +14,6 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -26,16 +24,13 @@ namespace {
 class FakeBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    localStore_ = std::make_shared<MemoryLocalStore>();
-    store_ = std::make_unique<FakeBackingStore>(localStore_);
+    store_ = std::make_unique<FakeBackingStore>();
   }
 
   void TearDown() override {
     store_.reset();
-    localStore_.reset();
   }
 
-  std::shared_ptr<LocalStore> localStore_;
   std::unique_ptr<FakeBackingStore> store_;
 };
 
