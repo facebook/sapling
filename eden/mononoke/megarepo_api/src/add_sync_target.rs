@@ -176,7 +176,14 @@ impl<'a> AddSyncTarget<'a> {
                     let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
                     // TODO(stash): it assumes that commit is present in target
                     let moved = self
-                        .create_single_move_commit(ctx, repo, changeset_id, &mover, linkfiles)
+                        .create_single_move_commit(
+                            ctx,
+                            repo,
+                            changeset_id,
+                            &mover,
+                            linkfiles,
+                            &source_name,
+                        )
                         .await?;
 
                     Result::<_, Error>::Ok((source_name, moved))
@@ -325,13 +332,14 @@ impl<'a> AddSyncTarget<'a> {
 
         let mut merges = vec![];
         let mut cur_parents = vec![];
-        for (_, css) in first_moved_commits {
+        for (source_name, css) in first_moved_commits {
             cur_parents.push(css.moved.get_changeset_id());
             if cur_parents.len() > 1 {
                 let bcs = self.create_merge_commit(
                     message.clone(),
                     cur_parents,
                     sync_target_config.version.clone(),
+                    &source_name,
                 )?;
                 let merge = bcs.freeze()?;
                 cur_parents = vec![merge.get_changeset_id()];
@@ -339,9 +347,14 @@ impl<'a> AddSyncTarget<'a> {
             }
         }
 
-        cur_parents.push(last_moved_commit.1.moved.get_changeset_id());
-        let mut final_merge =
-            self.create_merge_commit(message, cur_parents, sync_target_config.version.clone())?;
+        let (last_source_name, last_moved_commit) = last_moved_commit;
+        cur_parents.push(last_moved_commit.moved.get_changeset_id());
+        let mut final_merge = self.create_merge_commit(
+            message,
+            cur_parents,
+            sync_target_config.version.clone(),
+            &last_source_name,
+        )?;
         state.save_in_changeset(ctx, repo, &mut final_merge).await?;
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
@@ -355,6 +368,7 @@ impl<'a> AddSyncTarget<'a> {
         message: Option<String>,
         parents: Vec<ChangesetId>,
         version: SyncConfigVersion,
+        source_name: &SourceName,
     ) -> Result<BonsaiChangesetMut, Error> {
         // TODO(stash, mateusz, simonfar): figure out what fields
         // we need to set here
@@ -364,7 +378,10 @@ impl<'a> AddSyncTarget<'a> {
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: message.unwrap_or(format!("Add new sync target with version {}", version)),
+            message: message.unwrap_or(format!(
+                "Merging source {} for target version {}",
+                source_name.0, version
+            )),
             extra: SortedVectorMap::new(),
             file_changes: SortedVectorMap::new(),
         };
@@ -379,6 +396,7 @@ impl<'a> AddSyncTarget<'a> {
         cs_id: ChangesetId,
         mover: &MultiMover,
         linkfiles: BTreeMap<MPath, Option<FileChange>>,
+        source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
             .await
@@ -419,7 +437,7 @@ impl<'a> AddSyncTarget<'a> {
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: "move commit".to_string(),
+            message: format!("move commit for source {}", source_name.0),
             extra: SortedVectorMap::new(),
             file_changes: file_changes.into_iter().collect(),
         }
