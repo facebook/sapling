@@ -1958,6 +1958,28 @@ def copy(ui, repo, *pats, **opts):
         return cmdutil.copy(ui, repo, pats, opts)
 
 
+@command(
+    "uncopy",
+    walkopts + dryrunopts,
+    _("[OPTION]... [SOURCES]..."),
+)
+def uncopy(ui, repo, *pats, **opts):
+    """mark files as not copied for the next commit
+
+    Unmark sources previously marked by :hg:`copy` so they are no longer copies.
+
+    See :hg:`help patterns` and :hg:`help filesets` for more information
+    on specifying file patterns.
+
+    This command takes effect with the next commit.
+
+    Returns 0 on success, 1 if nothing changed.
+    """
+    with repo.wlock():
+        matcher = scmutil.match(repo[None], pats, opts)
+        return cmdutil.uncopy(ui, repo, matcher, opts)
+
+
 @command("debugcommands", [], _("[COMMAND]"), norepo=True)
 def debugcommands(ui, cmd="", *args):
     """list all available commands and options"""

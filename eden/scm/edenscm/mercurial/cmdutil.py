@@ -1452,6 +1452,21 @@ def copy(ui, repo, pats, opts, rename=False):
     return errors != 0
 
 
+def uncopy(ui, repo, matcher, opts):
+    # called with the repo lock held
+    ret = 1  # return 1 if nothing changed
+    dryrun = opts.get("dry_run")
+    status = repo.status(match=matcher)
+    matches = sorted(status.modified + status.added)
+    for fname in matches:
+        if ui.verbose:
+            ui.status(_("uncopying %s") % (fname,))
+        if not dryrun:
+            ret = 0
+            repo.dirstate.copy(None, fname)
+    return ret
+
+
 ## facility to let extension process additional data into an import patch
 # list of identifier to be executed in order
 extrapreimport = []  # run before commit

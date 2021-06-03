@@ -68,6 +68,7 @@ Show all commands except debug commands
   tip
   unbundle
   uncommit
+  uncopy
   update
   verify
   verifyremotefilelog
@@ -211,6 +212,7 @@ Do not show the alias of a debug command if there are other candidates
 Show the alias of a debug command if there are no other candidates
   $ hg debugcomplete rawc
   
+
 
 
 Show the global options
@@ -367,6 +369,7 @@ Show aliases with -v
   tip
   unbundle
   uncommit
+  uncopy
   update checkout co
   verify
   verifyremotefilelog
@@ -551,6 +554,7 @@ Show all commands + options
   tip: patch, git, style, template
   unbundle: update
   uncommit: keep, include, exclude
+  uncopy: include, exclude, dry-run
   update: clean, check, merge, date, rev, inactive, continue, tool
   verify: rev
   verifyremotefilelog: decompress
