@@ -330,14 +330,14 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
-    dev_t rdev) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "FuseDispatcherImpl::mknod");
+    dev_t rdev,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
+      [childName = PathComponent{name}, mode, rdev, &context](
+          const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
-        return child->stat(*context).thenValue(
+        return child->stat(context).thenValue(
             [child](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
               return computeEntryParam(FuseDispatcher::Attr{st});

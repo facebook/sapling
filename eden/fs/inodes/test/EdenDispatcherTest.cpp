@@ -41,7 +41,12 @@ static const auto kTooLong = PathComponentPiece{kTooLongPiece};
 TEST_F(EdenDispatcherTest, mknodReturnsNameTooLong) {
   try {
     mount.getDispatcher()
-        ->mknod(kRootNodeId, kTooLong, S_IFREG | 0644, 0)
+        ->mknod(
+            kRootNodeId,
+            kTooLong,
+            S_IFREG | 0644,
+            0,
+            ObjectFetchContext::getNullContext())
         .get(0ms);
     FAIL() << "should throw";
   } catch (std::system_error& e) {

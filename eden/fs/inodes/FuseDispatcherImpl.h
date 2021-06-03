@@ -48,7 +48,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
-      dev_t rdev) override;
+      dev_t rdev,
+      ObjectFetchContext& context) override;
   ImmediateFuture<fuse_entry_out>
   mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode) override;
   ImmediateFuture<folly::Unit> unlink(

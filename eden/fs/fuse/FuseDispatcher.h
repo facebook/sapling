@@ -162,8 +162,12 @@ class FuseDispatcher {
    * @param mode file type and mode with which to create the new file
    * @param rdev the device number (only valid if created file is a device)
    */
-  virtual ImmediateFuture<fuse_entry_out>
-  mknod(InodeNumber parent, PathComponentPiece name, mode_t mode, dev_t rdev);
+  virtual ImmediateFuture<fuse_entry_out> mknod(
+      InodeNumber parent,
+      PathComponentPiece name,
+      mode_t mode,
+      dev_t rdev,
+      ObjectFetchContext& context);
 
   /**
    * Create a directory

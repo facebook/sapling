@@ -99,7 +99,8 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::mknod(
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
     mode_t /*mode*/,
-    dev_t /*rdev*/) {
+    dev_t /*rdev*/,
+    ObjectFetchContext& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 

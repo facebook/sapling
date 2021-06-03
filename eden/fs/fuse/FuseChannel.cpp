@@ -1960,7 +1960,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMknod(
   XLOG(DBG7) << "FUSE_MKNOD " << name;
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_->mknod(parent, name, nod->mode, nod->rdev)
+  return dispatcher_->mknod(parent, name, nod->mode, nod->rdev, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });
