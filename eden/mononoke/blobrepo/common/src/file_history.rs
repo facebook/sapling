@@ -8,6 +8,7 @@
 use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
+use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
@@ -21,6 +22,8 @@ use mercurial_types::{
     HgBlobEnvelope, HgChangesetId, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath,
     NULL_CSID, NULL_HASH,
 };
+use mononoke_types::ChangesetId;
+use slog::debug;
 use stats::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
@@ -29,6 +32,12 @@ use thiserror::Error;
 pub enum ErrorKind {
     #[error("internal error: file {0} copied from directory {1}")]
     InconsistentCopyInfo(RepoPath, RepoPath),
+    #[error("Filenode is missing: {0} {1}")]
+    MissingFilenode(RepoPath, HgFileNodeId),
+    #[error("Bonsai cs {0} not found")]
+    BonsaiNotFound(ChangesetId),
+    #[error("Bonsai changeset not found for hg changeset {0}")]
+    BonsaiMappingNotFound(HgChangesetId),
 }
 
 pub enum FilenodesRelatedResult {
@@ -42,6 +51,35 @@ define_stats! {
     too_big: dynamic_timeseries("{}.too_big", (repo: String); Rate, Sum),
 }
 
+async fn get_filenode_generation(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    repo_path: &RepoPath,
+    filenode: HgFileNodeId,
+) -> Result<Option<u64>, Error> {
+    let filenode_info = match repo
+        .filenodes()
+        .get_filenode(ctx.clone(), repo_path, filenode, repo.get_repoid())
+        .compat()
+        .await?
+        .do_not_handle_disabled_filenodes()?
+    {
+        Some(a) => a,
+        None => return Ok(None),
+    };
+    let linknode = filenode_info.linknode;
+    let bcs_id = match repo
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(ctx, repo.get_repoid(), linknode)
+        .await?
+    {
+        Some(a) => a,
+        None => return Ok(None),
+    };
+    let bonsai = repo.changesets().get(ctx.clone(), bcs_id).await?;
+    Ok(bonsai.map(|b| b.gen))
+}
+
 /// Checks if one filenode is ancestor of another
 pub async fn check_if_related(
     ctx: CoreContext,
@@ -50,34 +88,72 @@ pub async fn check_if_related(
     filenode_b: HgFileNodeId,
     path: MPath,
 ) -> Result<FilenodesRelatedResult, Error> {
-    let (history_a, history_b) = try_join(
-        get_file_history(
-            ctx.clone(),
-            repo.clone(),
-            filenode_a.clone(),
-            path.clone(),
-            None,
-        ),
-        get_file_history(ctx, repo, filenode_b.clone(), path, None),
+    // Use linknodes to identify the older filenode
+    let repo_path = RepoPath::file(path.clone())?;
+    match try_join(
+        get_filenode_generation(&ctx, &repo, &repo_path, filenode_a),
+        get_filenode_generation(&ctx, &repo, &repo_path, filenode_b),
     )
-    .await?;
-    match (history_a, history_b) {
-        (FilenodeResult::Present(history_a), FilenodeResult::Present(history_b)) => {
-            if history_a
-                .iter()
-                .any(|entry| entry.filenode() == &filenode_b)
-            {
-                Ok(FilenodesRelatedResult::SecondAncestorOfFirst)
-            } else if history_b
-                .iter()
-                .any(|entry| entry.filenode() == &filenode_a)
-            {
-                Ok(FilenodesRelatedResult::FirstAncestorOfSecond)
+    .await?
+    {
+        // We have linknodes, so know which is the "old" filenode.
+        // Halve our data fetches by only fetching full history for the
+        // "new" filenode
+        (Some(gen_a), Some(gen_b)) => {
+            let (old_node, history, relationship) = if gen_a < gen_b {
+                (
+                    filenode_a,
+                    get_file_history(ctx, repo, filenode_b, path, None).await?,
+                    FilenodesRelatedResult::FirstAncestorOfSecond,
+                )
             } else {
-                Ok(FilenodesRelatedResult::Unrelated)
+                (
+                    filenode_b,
+                    get_file_history(ctx, repo, filenode_a, path, None).await?,
+                    FilenodesRelatedResult::SecondAncestorOfFirst,
+                )
+            };
+
+            if let FilenodeResult::Present(history) = history {
+                if history.iter().any(|entry| entry.filenode() == &old_node) {
+                    Ok(relationship)
+                } else {
+                    Ok(FilenodesRelatedResult::Unrelated)
+                }
+            } else {
+                Err(anyhow!("filenodes are disabled"))
             }
         }
-        _ => Err(anyhow!("filenodes are disabled")),
+        // We don't have linknodes, so go down the slow path
+        _ => {
+            debug!(
+                ctx.logger(),
+                "No filenodes for parents. Using slow path for ancestry check"
+            );
+            match try_join(
+                get_file_history(ctx.clone(), repo.clone(), filenode_a, path.clone(), None),
+                get_file_history(ctx, repo, filenode_b, path, None),
+            )
+            .await?
+            {
+                (FilenodeResult::Present(history_a), FilenodeResult::Present(history_b)) => {
+                    if history_a
+                        .iter()
+                        .any(|entry| entry.filenode() == &filenode_b)
+                    {
+                        Ok(FilenodesRelatedResult::SecondAncestorOfFirst)
+                    } else if history_b
+                        .iter()
+                        .any(|entry| entry.filenode() == &filenode_a)
+                    {
+                        Ok(FilenodesRelatedResult::FirstAncestorOfSecond)
+                    } else {
+                        Ok(FilenodesRelatedResult::Unrelated)
+                    }
+                }
+                _ => Err(anyhow!("filenodes are disabled")),
+            }
+        }
     }
 }
 
