@@ -223,6 +223,7 @@ impl HookManager {
 
             let mut scuba = scuba.clone();
             scuba.add("hook", hook_name.to_string());
+            scuba.add("hash", cs.get_changeset_id().to_string());
 
             if let Some(bypass_reason) = get_bypass_reason(
                 hook.get_config().bypass.as_ref(),
