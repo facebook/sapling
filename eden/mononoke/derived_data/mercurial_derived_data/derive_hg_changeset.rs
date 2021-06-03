@@ -101,20 +101,25 @@ async fn store_file_change(
             } else if p1.is_none() {
                 (p2, None)
             } else if p2.is_some() {
-                let res = blobrepo_common::file_history::check_if_related(
-                    ctx.clone(),
-                    repo.clone(),
-                    p1.unwrap(),
-                    p2.unwrap(),
-                    path.clone(),
-                )
-                .await?;
+                if p1 == p2 {
+                    // Both actually the same, so pick one, and ignore the other
+                    (p1, None)
+                } else {
+                    let res = blobrepo_common::file_history::check_if_related(
+                        ctx.clone(),
+                        repo.clone(),
+                        p1.unwrap(),
+                        p2.unwrap(),
+                        path.clone(),
+                    )
+                    .await?;
 
-                use blobrepo_common::file_history::FilenodesRelatedResult::*;
-                match res {
-                    Unrelated => (p1, p2),
-                    FirstAncestorOfSecond => (p2, None),
-                    SecondAncestorOfFirst => (p1, None),
+                    use blobrepo_common::file_history::FilenodesRelatedResult::*;
+                    match res {
+                        Unrelated => (p1, p2),
+                        FirstAncestorOfSecond => (p2, None),
+                        SecondAncestorOfFirst => (p1, None),
+                    }
                 }
             } else {
                 (p1, p2)
