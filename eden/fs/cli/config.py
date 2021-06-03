@@ -1122,12 +1122,14 @@ class EdenCheckout:
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
-    def save_snapshot(self, commid_id: str) -> None:
+    def save_snapshot(self, commit_id: str) -> None:
         """Write a new parent commit ID into the SNAPSOHT file."""
         snapshot_path = self.state_dir / SNAPSHOT
-        assert len(commid_id) == 40
-        commit_bin = binascii.unhexlify(commid_id)
-        write_file_atomically(snapshot_path, SNAPSHOT_MAGIC_1 + commit_bin)
+        assert len(commit_id) == 40
+        encoded = commit_id.encode()
+        write_file_atomically(
+            snapshot_path, SNAPSHOT_MAGIC_2 + struct.pack(">L", len(encoded)) + encoded
+        )
 
     def get_backing_repo(self) -> util.HgRepo:
         repo_path = self.get_config().backing_repo

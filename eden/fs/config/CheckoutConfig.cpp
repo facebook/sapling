@@ -161,7 +161,10 @@ Hash CheckoutConfig::getParentCommit() const {
 }
 
 void CheckoutConfig::setParentCommit(Hash parent) const {
-  std::array<uint8_t, kSnapshotHeaderSize + (2 * Hash::RAW_SIZE)> buffer;
+  std::array<
+      uint8_t,
+      kSnapshotHeaderSize + sizeof(uint32_t) + (2 * Hash::RAW_SIZE)>
+      buffer;
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
   folly::io::RWPrivateCursor cursor{&buf};
 
@@ -169,15 +172,14 @@ void CheckoutConfig::setParentCommit(Hash parent) const {
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
-  cursor.writeBE<uint32_t>(kSnapshotFormatVersion1);
-  // 20-byte commit ID: parent1
-  cursor.push(parent.getBytes());
-  // Older versions of EdenFS would write a second 20-byte hash here to track
-  // the second HG parent commit, but it was never used for anything. Optional
-  // 20-byte commit ID: parent2
+  cursor.writeBE<uint32_t>(kSnapshotFormatVersion2);
+  cursor.writeBE<uint32_t>(2 * Hash::RAW_SIZE);
+  // 40-byte hex commit ID: parent1
+  cursor.push(folly::StringPiece{parent.toString()});
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
-  ByteRange snapshotData{buffer.data(), writtenSize};
-  writeFileAtomic(getSnapshotPath(), snapshotData).value();
+  XCHECK_EQ(buffer.size(), writtenSize);
+  writeFileAtomic(getSnapshotPath(), ByteRange{buffer.data(), buffer.size()})
+      .value();
 }
 
 const AbsolutePath& CheckoutConfig::getClientDirectory() const {
