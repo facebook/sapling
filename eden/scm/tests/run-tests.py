@@ -1705,7 +1705,7 @@ class PythonTest(Test):
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, "%s.out" % self.name)
+        return os.path.join(self._testdir, "%s.out" % self.basename)
 
     def readrefout(self):
         if self._isdotttest():
@@ -1783,7 +1783,7 @@ class PythonTest(Test):
 
     def _isdotttest(self):
         """Returns true if the test is using testutil.dott"""
-        if self.name.endswith("-t.py"):
+        if self.basename.endswith("-t.py"):
             return True
         else:
             try:
@@ -2727,8 +2727,8 @@ class TestSuite(unittest.TestSuite):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
-            if not (self._whitelist and test.name in self._whitelist):
-                if self._blacklist and test.name in self._blacklist:
+            if not (self._whitelist and test.basename in self._whitelist):
+                if self._blacklist and test.basename in self._blacklist:
                     result.addSkip(test, "blacklisted")
                     continue
 
@@ -2738,7 +2738,7 @@ class TestSuite(unittest.TestSuite):
 
                 if self._keywords:
                     with open(test.path, "r") as f:
-                        t = f.read().lower() + test.name.lower()
+                        t = f.read().lower() + test.basename.lower()
                     ignored = False
                     for k in self._keywords.lower().split():
                         if k not in t:
