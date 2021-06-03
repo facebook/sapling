@@ -172,6 +172,10 @@ impl CheckpointsByName {
             .finish(repo_id, &self.checkpoint_name, checkpoint)
             .await
     }
+
+    pub fn name(&self) -> &str {
+        self.checkpoint_name.as_str()
+    }
 }
 
 impl fmt::Debug for CheckpointsByName {

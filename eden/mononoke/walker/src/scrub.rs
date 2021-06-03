@@ -506,7 +506,7 @@ async fn run_one(
         move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
             let repo_name = repo_params.repo.name().clone();
             cloned!(ctx, repo_params.scheduled_max);
-            async move |walk_output, run_start, chunk_num| {
+            async move |walk_output, run_start, chunk_num, checkpoint_name| {
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
                 let loading = loading_stream(
                     command.limit_data_fetch,
@@ -517,7 +517,7 @@ async fn run_one(
                     command.output_format,
                     command
                         .pack_info_log_options
-                        .map(|o| o.make_logger(repo_name, run_start, chunk_num)),
+                        .map(|o| o.make_logger(repo_name, run_start, chunk_num, checkpoint_name)),
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, loading);
 

@@ -27,6 +27,7 @@ const UNIQUE_COMPRESSED_SIZE: &str = "unique_compressed_size";
 const PACK_KEY: &str = "pack_key";
 const RELEVANT_UNCOMPRESSED_SIZE: &str = "relevant_uncompressed_size";
 const RELEVANT_COMPRESSED_SIZE: &str = "relevant_compressed_size";
+const CHECKPOINT_NAME: &str = "checkpoint_name";
 pub const CTIME: &str = "ctime";
 
 /// What do we log for each blobstore key
@@ -59,9 +60,12 @@ impl PackInfoLogOptions {
         repo_name: String,
         run_start: Timestamp,
         chunk_num: u64,
+        checkpoint_name: Option<String>,
     ) -> ScubaPackInfoLogger {
         let mut scuba = self.log_dest.clone();
-        scuba.add(REPO, repo_name);
+        scuba
+            .add(REPO, repo_name)
+            .add_opt(CHECKPOINT_NAME, checkpoint_name);
         ScubaPackInfoLogger::new(scuba, run_start, chunk_num)
     }
 }

@@ -178,7 +178,7 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
 where
     RunFac: 'static + Clone + Send + Sync + FnOnce(&CoreContext, &RepoWalkParams) -> SinkFac,
     SinkFac: 'static
-        + FnOnce(BoxStream<'static, Result<VOut, Error>>, Timestamp, u64) -> SinkOut
+        + FnOnce(BoxStream<'static, Result<VOut, Error>>, Timestamp, u64, Option<String>) -> SinkOut
         + Clone
         + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
@@ -435,7 +435,11 @@ where
             let arc_v = Arc::new(visitor);
             let walk_output =
                 walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params).boxed();
-            make_sink(walk_output, run_start, chunk_num).await?;
+            let cp_name = tail_params
+                .checkpoints
+                .as_ref()
+                .map(|v| v.name().to_string());
+            make_sink(walk_output, run_start, chunk_num, cp_name).await?;
             visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
 
             if is_chunking {
