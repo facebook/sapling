@@ -271,8 +271,12 @@ ImmediateFuture<folly::Unit> FuseDispatcher::access(
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<fuse_entry_out>
-FuseDispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
+ImmediateFuture<fuse_entry_out> FuseDispatcher::create(
+    InodeNumber,
+    PathComponentPiece,
+    mode_t,
+    int,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

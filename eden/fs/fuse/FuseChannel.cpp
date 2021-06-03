@@ -2326,7 +2326,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseCreate(
       reinterpret_cast<const char*>(create + 1), requireUtf8Path_);
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header.nodeid};
-  return dispatcher_->create(ino, name, create->mode, create->flags)
+  return dispatcher_->create(ino, name, create->mode, create->flags, request)
       .thenValue([&request](fuse_entry_out entry) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;

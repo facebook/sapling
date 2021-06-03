@@ -448,8 +448,12 @@ class FuseDispatcher {
    * @param name to create
    * @param mode file type and mode with which to create the new file
    */
-  virtual ImmediateFuture<fuse_entry_out>
-  create(InodeNumber parent, PathComponentPiece name, mode_t mode, int flags);
+  virtual ImmediateFuture<fuse_entry_out> create(
+      InodeNumber parent,
+      PathComponentPiece name,
+      mode_t mode,
+      int flags,
+      ObjectFetchContext& context);
 
   /**
    * Map block index within file to block index within device

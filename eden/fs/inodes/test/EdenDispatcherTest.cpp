@@ -99,7 +99,12 @@ TEST_F(EdenDispatcherTest, linkReturnsNameTooLong) {
 TEST_F(EdenDispatcherTest, createReturnsNameTooLong) {
   try {
     mount.getDispatcher()
-        ->create(kRootNodeId, kTooLong, S_IFREG | 0644, 0)
+        ->create(
+            kRootNodeId,
+            kTooLong,
+            S_IFREG | 0644,
+            0,
+            ObjectFetchContext::getNullContext())
         .get(0ms);
     FAIL() << "should throw";
   } catch (std::system_error& e) {

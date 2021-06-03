@@ -224,16 +224,16 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
-    int /*flags*/) {
+    int /*flags*/,
+    ObjectFetchContext& context) {
   // force 'mode' to be regular file, in which case rdev arg to mknod is ignored
   // (and thus can be zero)
   mode = S_IFREG | (07777 & mode);
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [mode, childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [mode, childName = PathComponent{name}, &context](
+          const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
-        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-            "FuseDispatcherImpl::create");
-        return child->stat(*context).thenValue(
+        return child->stat(context).thenValue(
             [child](struct stat st) -> fuse_entry_out {
               child->incFsRefcount();
               return computeEntryParam(FuseDispatcher::Attr{st});

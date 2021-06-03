@@ -79,7 +79,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
-      int flags) override;
+      int flags,
+      ObjectFetchContext& context) override;
 
   ImmediateFuture<BufVec> read(
       InodeNumber ino,
