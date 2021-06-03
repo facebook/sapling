@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet, VecDeque},
     hash::Hash,
     iter,
 };
@@ -82,10 +82,102 @@ where
     Some(output)
 }
 
+// Wrapper that allows traversing commits in toposorted order. The biggest difference
+// from sort_topological function above is that it allows visiting multiple commits
+// in parallel, however it requires the caller to mark which commits were already visited.
+// E.g. for a graph like
+// A
+// |\
+// B C
+//
+// `sort_topological` returns a single order [B, C, A]. It's not clear that B and C are independent
+// of each other and can be processed in parallel.
+//
+// On the other hand TopoSortedDagTraversal::drain() method first returns [B, C],
+// and once B and C are marked as visited then commit A is returned. This allows processing
+// commits B and C in parallel.
+pub struct TopoSortedDagTraversal<T> {
+    child_to_parents: HashMap<T, BTreeSet<T>>,
+    parent_to_children: HashMap<T, BTreeSet<T>>,
+    q: VecDeque<T>,
+}
+
+impl<T> TopoSortedDagTraversal<T>
+where
+    T: Copy + Clone + Eq + Hash + Ord,
+{
+    pub fn new(child_to_parents: HashMap<T, Vec<T>>) -> Self {
+        let child_to_parents = child_to_parents
+            .into_iter()
+            .map(|(v, parents)| {
+                let parents = parents.into_iter().collect::<BTreeSet<_>>();
+                (v, parents)
+            })
+            .collect::<HashMap<_, _>>();
+
+        // Find revert mapping - from parent to child
+        let mut parent_to_children: HashMap<_, BTreeSet<_>> = HashMap::new();
+        for (child, parents) in &child_to_parents {
+            for p in parents {
+                parent_to_children.entry(*p).or_default().insert(*child);
+            }
+        }
+
+        // If we have no parents, then we can just add it to the queue
+        let mut q = VecDeque::new();
+        for (child, parents) in &child_to_parents {
+            if parents.is_empty() {
+                q.push_back(*child);
+            }
+            // An entry from `parents` does not have to be a key in child_to_parents.
+            // e.g. child_to_parents - {1 => {2}}. `2` is not a key in child_to_parents,
+            // but we still want to return it, and that's why below we are
+            // adding it to the queue.
+            for p in parents.iter() {
+                if !child_to_parents.contains_key(p) {
+                    q.push_back(*p);
+                }
+            }
+        }
+
+        Self {
+            child_to_parents,
+            parent_to_children,
+            q,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.q.is_empty()
+    }
+
+    pub fn drain(&mut self, max_to_drain: usize) -> impl Iterator<Item = T> + '_ {
+        self.q.drain(..std::cmp::min(self.q.len(), max_to_drain))
+    }
+
+    pub fn visited(&mut self, visited: T) {
+        let children = match self.parent_to_children.get_mut(&visited) {
+            Some(children) => children,
+            None => {
+                return;
+            }
+        };
+
+        for child in children.iter() {
+            if let Some(parents) = self.child_to_parents.get_mut(child) {
+                parents.remove(&visited);
+                if parents.is_empty() {
+                    self.q.push_back(*child);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::hashmap;
+    use maplit::{hashmap, hashset};
 
     #[test]
     fn sort_topological_test() {
@@ -103,5 +195,53 @@ mod test {
 
         let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4]});
         assert!(Some(vec![4, 3, 2, 1]) == res || Some(vec![4, 2, 3, 1]) == res);
+    }
+
+    #[test]
+    fn topo_sorted_traversal() {
+        let mut dag = TopoSortedDagTraversal::new(hashmap! {1 => vec![]});
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+
+        let mut dag = TopoSortedDagTraversal::new(hashmap! {1 => vec![2], 2 => vec![3]});
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![3]);
+        dag.visited(3);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![2]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        dag.visited(2);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
+
+        //   1
+        //  / \
+        // 2   3
+        //  \ /
+        //   4
+        let mut dag = TopoSortedDagTraversal::new(
+            hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4], 4 => vec![]},
+        );
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![4]);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        dag.visited(4);
+        assert_eq!(dag.drain(10).collect::<HashSet<_>>(), hashset![2, 3]);
+        dag.visited(2);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![]);
+        dag.visited(3);
+        assert_eq!(dag.drain(10).collect::<Vec<_>>(), vec![1]);
+
+        //   1
+        //  / \
+        // 2   3
+        // |   |
+        // 4   5
+        let mut dag = TopoSortedDagTraversal::new(
+            hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![5], 4 => vec![], 5 => vec![]},
+        );
+        assert_eq!(dag.drain(2).collect::<HashSet<_>>(), hashset![4, 5]);
+        dag.visited(4);
+        dag.visited(5);
+        assert_eq!(dag.drain(2).collect::<HashSet<_>>(), hashset![2, 3]);
+        dag.visited(2);
+        dag.visited(3);
+        assert_eq!(dag.drain(2).collect::<HashSet<_>>(), hashset![1]);
     }
 }

@@ -10,10 +10,12 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cacheblob::LeaseOps;
+use cloned::cloned;
 use context::CoreContext;
 use futures::{
     channel::oneshot,
     future::{try_join, try_join_all, FutureExt, TryFutureExt},
+    stream::FuturesUnordered,
     TryStreamExt,
 };
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
@@ -25,12 +27,12 @@ use slog::warn;
 use stats::prelude::*;
 use std::convert::TryInto;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
-use topo_sort::sort_topological;
+use topo_sort::{sort_topological, TopoSortedDagTraversal};
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -97,33 +99,71 @@ pub async fn derive_impl<
     start_csid: ChangesetId,
 ) -> Result<Derivable, DeriveError> {
     let derivation = async {
-        let all_csids =
-            find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None).await?;
+        let derive_and_log = |csid: ChangesetId| {
+            cloned!(ctx, derived_mapping, repo);
+            async move {
+                ctx.scuba().clone().log_with_msg(
+                    "Waiting for derived data to be generated",
+                    Some(format!("{} {}", Derivable::NAME, csid)),
+                );
 
-        for csid in &all_csids {
-            ctx.scuba().clone().log_with_msg(
-                "Waiting for derived data to be generated",
-                Some(format!("{} {}", Derivable::NAME, csid)),
-            );
+                let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
+                    .timed()
+                    .await;
 
-            let (stats, res) = derive_may_panic(&ctx, &repo, derived_mapping, &csid)
-                .timed()
-                .await;
+                let tag = if res.is_ok() {
+                    "Got derived data"
+                } else {
+                    "Failed to get derived data"
+                };
+                ctx.scuba()
+                    .clone()
+                    .add_future_stats(&stats)
+                    .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
+                res?;
+                Result::<_, Error>::Ok(csid)
+            }
+        };
 
-            let tag = if res.is_ok() {
-                "Got derived data"
+        // T92169040 - remove get_derived_data_disable_parallel_derivation
+        if !tunables::tunables().get_derived_data_disable_parallel_derivation() {
+            let commits_not_derived_to_parents =
+                find_underived(ctx, repo, derived_mapping, Some(start_csid), None).await?;
+            let mut dag_traversal = TopoSortedDagTraversal::new(commits_not_derived_to_parents);
+            let mut inflight_futs = FuturesUnordered::new();
+
+            let buffer_size = tunables::tunables().get_derived_data_parallel_derivation_buffer();
+            let buffer_size: usize = if buffer_size > 0 {
+                buffer_size.try_into().unwrap()
             } else {
-                "Failed to get derived data"
+                10
             };
-            ctx.scuba()
-                .clone()
-                .add_future_stats(&stats)
-                .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
-            res?;
-        }
+            let mut count = 0;
+            while !dag_traversal.is_empty() || !inflight_futs.is_empty() {
+                let free = buffer_size.saturating_sub(inflight_futs.len());
+                inflight_futs.extend(
+                    dag_traversal
+                        .drain(free)
+                        .map(|csid| tokio::spawn(derive_and_log(csid))),
+                );
+                if let Some(derived) = inflight_futs.try_next().await? {
+                    count += 1;
+                    dag_traversal.visited(derived?);
+                }
+            }
 
-        let res: Result<_, DeriveError> = Ok(all_csids.len());
-        res
+            Result::<_, Error>::Ok(count)
+        } else {
+            let all_csids =
+                find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None)
+                    .await?;
+
+            for cs_id in &all_csids {
+                derive_and_log(*cs_id).await?;
+            }
+
+            Result::<_, Error>::Ok(all_csids.len())
+        }
     };
 
     let (stats, res) = derivation.timed().await;
@@ -168,7 +208,7 @@ fn should_log_slow_derivation(duration: Duration) -> bool {
     duration > Duration::from_secs(threshold)
 }
 
-pub async fn find_topo_sorted_underived<
+pub async fn find_underived<
     Derivable: BonsaiDerivable,
     Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
     Changesets: IntoIterator<Item = ChangesetId>,
@@ -178,14 +218,14 @@ pub async fn find_topo_sorted_underived<
     derived_mapping: &Mapping,
     start_csids: Changesets,
     limit: Option<u64>,
-) -> Result<Vec<ChangesetId>, Error> {
+) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
 
     let changeset_fetcher = &changeset_fetcher;
     let visited = &visited;
-    let commits_not_derived_to_parents =
+    let commits_not_derived_to_parents: HashMap<_, _> =
         bounded_traversal::bounded_traversal_stream(100, start_csids, {
             move |cs_id| {
                 async move {
@@ -224,24 +264,48 @@ pub async fn find_topo_sorted_underived<
         .try_collect()
         .await?;
 
-    let topo_sorted_commit_graph =
-        sort_topological(&commits_not_derived_to_parents).expect("commit graph has cycles!");
-    let sz = topo_sorted_commit_graph.len();
+    let sz = commits_not_derived_to_parents.len();
     if sz > 100 {
         warn!(
             ctx.logger(),
             "derive_impl is called on a graph of size {}", sz
         );
     }
-    let all_csids: Vec<_> = topo_sorted_commit_graph
-        .into_iter()
-        // Note - sort_topological returns all nodes including commits which were already
-        // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
-        // The '.filter()' below removes ["b"]
-        .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
-        .collect();
 
-    Ok(all_csids)
+    // Remove parents that were already derived - no need to derive them again
+    let commits_not_derived_to_parents = commits_not_derived_to_parents
+        .iter()
+        .map(|(cs_id, parents)| {
+            let parents = parents
+                .iter()
+                .cloned()
+                .filter(|p| commits_not_derived_to_parents.contains_key(p))
+                .collect::<Vec<_>>();
+            (cs_id.clone(), parents)
+        })
+        .collect::<HashMap<_, _>>();
+
+    Ok(commits_not_derived_to_parents)
+}
+
+pub async fn find_topo_sorted_underived<
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
+    Changesets: IntoIterator<Item = ChangesetId>,
+>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derived_mapping: &Mapping,
+    start_csids: Changesets,
+    limit: Option<u64>,
+) -> Result<Vec<ChangesetId>, Error> {
+    let commits_not_derived_to_parents =
+        find_underived(ctx, repo, derived_mapping, start_csids, limit).await?;
+
+    let topo_sorted_commit_graph =
+        sort_topological(&commits_not_derived_to_parents).expect("commit graph has cycles!");
+
+    Ok(topo_sorted_commit_graph)
 }
 
 // Panics if any of the parents is not derived yet
@@ -550,11 +614,12 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures::{compat::Stream01CompatExt, future::BoxFuture};
+    use futures_stats::TimedTryFutureExt;
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
     use mercurial_types::HgChangesetId;
-    use mononoke_types::{BonsaiChangeset, RepositoryId};
+    use mononoke_types::{BonsaiChangeset, MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use std::{
         collections::HashMap,
@@ -563,13 +628,14 @@ mod test {
         time::Duration,
     };
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::resolve_cs_id;
+    use tests_utils::{resolve_cs_id, CreateCommitContext};
     use tunables::{with_tunables, MononokeTunables};
 
     use crate::BonsaiDerived;
 
     lazy_static! {
         static ref MAPPINGS: Mutex<HashMap<SessionId, TestMapping>> = Mutex::new(HashMap::new());
+        static ref DELAY: Mutex<HashMap<SessionId, Duration>> = Mutex::new(HashMap::new());
     }
 
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
@@ -582,13 +648,19 @@ mod test {
         type Options = ();
 
         async fn derive_from_parents_impl(
-            _ctx: CoreContext,
+            ctx: CoreContext,
             _repo: BlobRepo,
             bonsai: BonsaiChangeset,
             parents: Vec<Self>,
             _options: &Self::Options,
         ) -> Result<Self, Error> {
             let parent_commits = parents.iter().map(|x| x.1).collect();
+
+            let session = ctx.metadata().session_id().clone();
+            let duration = DELAY.with(|m| m.get(&session).cloned());
+            if let Some(duration) = duration {
+                tokio::time::sleep(duration).await;
+            }
 
             Ok(Self(
                 parents.into_iter().max().map(|x| x.0).unwrap_or(0) + 1,
@@ -1026,5 +1098,44 @@ mod test {
             assert!(!should_log_slow_derivation(d10));
             assert!(should_log_slow_derivation(d20));
         });
+    }
+
+    #[fbinit::test]
+    async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = TestRepoFactory::new()?
+            .with_config_override(|repo_config| {
+                repo_config
+                    .derived_data_config
+                    .enabled
+                    .types
+                    .insert(TestGenNum::NAME.to_string());
+            })
+            .build()?;
+
+        // Create a commit with lots of parents, and make each derivation took 2 seconds.
+        // Check that derivations happen in parallel
+        let mut parents = vec![];
+        for i in 0..8 {
+            let p = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file(MPath::new(format!("file_{}", i))?, format!("{}", i))
+                .commit()
+                .await?;
+            parents.push(p);
+        }
+
+        let merge = CreateCommitContext::new(&ctx, &repo, parents)
+            .commit()
+            .await?;
+
+        let session = ctx.metadata().session_id().clone();
+        DELAY.with(|m| m.insert(session, Duration::from_secs(2)));
+
+        let (stats, _res) = TestGenNum::derive(&ctx, &repo, merge).try_timed().await?;
+
+        println!("duration {:?}", stats.completion_time);
+        assert!(stats.completion_time < Duration::from_secs(10));
+
+        Ok(())
     }
 }

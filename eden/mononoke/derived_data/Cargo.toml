@@ -13,6 +13,7 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -33,7 +34,6 @@ tunables = { version = "0.1.0", path = "../tunables" }
 [dev-dependencies]
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filestore = { version = "0.1.0", path = "../filestore" }

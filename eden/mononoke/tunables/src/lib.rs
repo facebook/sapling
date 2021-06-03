@@ -171,6 +171,14 @@ pub struct MononokeTunables {
 
     // Set to 0 to disable compression
     zstd_compression_level: AtomicI64,
+
+    // Commits that aren't related (i.e. that are not ancestors of each other)
+    // can be derived in parallel, and that's what derived data does.
+    // derived_data_disable_parallel_derivation is a killswitch to disable
+    // parallel derivation, derived_data_parallel_derivation_buffer limits
+    // how many commits will be derived at once.
+    derived_data_disable_parallel_derivation: AtomicBool,
+    derived_data_parallel_derivation_buffer: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
