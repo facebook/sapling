@@ -15,6 +15,7 @@
 #include <optional>
 #include <unordered_map>
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -164,7 +165,8 @@ class Journal {
   std::vector<DebugJournalDelta> getDebugRawJournalInfo(
       SequenceNumber from,
       std::optional<size_t> limit,
-      long mountGeneration) const;
+      long mountGeneration,
+      RootIdCodec& rootIdCodec) const;
 
   /** Removes all prior contents from the journal and sets up the journal in a
    * way such that when subscribers are notified they all get truncated results

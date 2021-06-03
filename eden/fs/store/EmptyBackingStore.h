@@ -17,10 +17,13 @@ namespace eden {
  * A dummy BackingStore implementation, that always throws std::domain_error
  * for any ID that is looked up.
  */
-class EmptyBackingStore : public BackingStore {
+class EmptyBackingStore final : public BackingStore {
  public:
   EmptyBackingStore();
   ~EmptyBackingStore() override;
+
+  Hash parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const Hash& rootId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,

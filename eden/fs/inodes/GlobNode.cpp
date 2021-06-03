@@ -316,7 +316,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
         if ((!node->children_.empty() || !node->recursiveChildren_.empty()) &&
             root.entryIsTree(entry)) {
           if (root.entryShouldLoadChildTree(entry)) {
-            recurse.emplace_back(std::make_pair(name, node));
+            recurse.emplace_back(name, node);
           } else {
             futures.emplace_back(
                 store->getTree(root.entryHash(entry), context)

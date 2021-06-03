@@ -6,8 +6,11 @@
  */
 
 #include "eden/fs/journal/Journal.h"
+
 #include <folly/portability/GTest.h>
 #include <gmock/gmock.h>
+
+#include "eden/fs/model/RootId.h"
 
 using namespace facebook::eden;
 
@@ -16,6 +19,7 @@ namespace {
 struct JournalTest : ::testing::Test {
   std::shared_ptr<EdenStats> edenStats{std::make_shared<EdenStats>()};
   Journal journal{edenStats};
+  HashRootIdCodec codec;
 };
 
 } // namespace
@@ -196,7 +200,7 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
 
   long mountGen = 333;
 
-  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen);
+  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen, codec);
   ASSERT_EQ(3, debugDeltas.size());
 
   // Debug Raw Journal Info returns info from newest->latest
@@ -222,7 +226,7 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
       *debugDeltas[2].fromPosition_ref()->mountGeneration_ref(), mountGen);
   EXPECT_EQ(*debugDeltas[2].fromPosition_ref()->sequenceNumber_ref(), 1);
 
-  debugDeltas = journal.getDebugRawJournalInfo(0, 1, mountGen);
+  debugDeltas = journal.getDebugRawJournalInfo(0, 1, mountGen, codec);
   ASSERT_EQ(1, debugDeltas.size());
   EXPECT_TRUE(
       *debugDeltas[0].changedPaths_ref()["test.txt"].existedBefore_ref());
@@ -232,7 +236,7 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
       *debugDeltas[0].fromPosition_ref()->mountGeneration_ref(), mountGen);
   EXPECT_EQ(*debugDeltas[0].fromPosition_ref()->sequenceNumber_ref(), 3);
 
-  debugDeltas = journal.getDebugRawJournalInfo(0, 0, mountGen);
+  debugDeltas = journal.getDebugRawJournalInfo(0, 0, mountGen, codec);
   ASSERT_EQ(0, debugDeltas.size());
 }
 
@@ -250,7 +254,7 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
 
   long mountGen = 333;
 
-  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen);
+  auto debugDeltas = journal.getDebugRawJournalInfo(0, 3, mountGen, codec);
   ASSERT_EQ(3, debugDeltas.size());
 
   // Debug Raw Journal Info returns info from newest->latest

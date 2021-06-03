@@ -446,11 +446,11 @@ void EdenServiceHandler::checkOutRevision(
       *mountPoint,
       logHash(*hash),
       apache::thrift::util::enumName(checkoutMode, "(unknown)"));
-  auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
+  auto rootId = edenMount->getObjectStore()->parseRootId(*hash);
   auto checkoutFuture = edenMount->checkout(
-      hashObj,
+      rootId,
       helper->getFetchContext().getClientPid(),
       helper->getFunctionName(),
       checkoutMode);
@@ -462,8 +462,9 @@ void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<WorkingDirectoryParents> parents) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1, *mountPoint, logHash(*parents->parent1_ref()));
-  Hash parent1 = hashFromThrift(*parents->parent1_ref());
   auto edenMount = server_->getMount(*mountPoint);
+  auto parent1 =
+      edenMount->getObjectStore()->parseRootId(*parents->parent1_ref());
   edenMount->resetParent(parent1);
 }
 
@@ -571,10 +572,12 @@ void EdenServiceHandler::getCurrentJournalPosition(
   *out.mountGeneration_ref() = edenMount->getMountGeneration();
   if (latest) {
     out.sequenceNumber_ref() = latest->sequenceID;
-    out.snapshotHash_ref() = thriftHash(latest->toHash);
+    out.snapshotHash_ref() =
+        edenMount->getObjectStore()->renderRootId(latest->toHash);
   } else {
     out.sequenceNumber_ref() = 0;
-    out.snapshotHash_ref() = thriftHash(kZeroHash);
+    out.snapshotHash_ref() =
+        edenMount->getObjectStore()->renderRootId(kZeroHash);
   }
 }
 
@@ -943,15 +946,17 @@ void EdenServiceHandler::getFilesChangedSince(
           "Journal entry range has been truncated.");
     }
 
+    RootIdCodec& rootIdCodec = *edenMount->getObjectStore();
+
     out.toPosition_ref()->sequenceNumber_ref() = summed->toSequence;
     out.toPosition_ref()->snapshotHash_ref() =
-        thriftHash(summed->snapshotTransitions.back());
+        rootIdCodec.renderRootId(summed->snapshotTransitions.back());
     out.toPosition_ref()->mountGeneration_ref() =
         edenMount->getMountGeneration();
 
     out.fromPosition_ref()->sequenceNumber_ref() = summed->fromSequence;
     out.fromPosition_ref()->snapshotHash_ref() =
-        thriftHash(summed->snapshotTransitions.front());
+        rootIdCodec.renderRootId(summed->snapshotTransitions.front());
     out.fromPosition_ref()->mountGeneration_ref() =
         *out.toPosition_ref()->mountGeneration_ref();
 
@@ -971,7 +976,7 @@ void EdenServiceHandler::getFilesChangedSince(
 
     out.snapshotTransitions_ref()->reserve(summed->snapshotTransitions.size());
     for (auto& hash : summed->snapshotTransitions) {
-      out.snapshotTransitions_ref()->push_back(thriftHash(hash));
+      out.snapshotTransitions_ref()->push_back(rootIdCodec.renderRootId(hash));
     }
   }
 }
@@ -1025,7 +1030,10 @@ void EdenServiceHandler::debugGetRawJournal(
   }
 
   out.allDeltas_ref() = edenMount->getJournal().getDebugRawJournalInfo(
-      *params->fromSequenceNumber_ref(), limitopt, mountGeneration);
+      *params->fromSequenceNumber_ref(),
+      limitopt,
+      mountGeneration,
+      *edenMount->getObjectStore());
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
@@ -1165,8 +1173,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     globResults.reserve(rootHashes->size());
     originHashes->reserve(rootHashes->size());
     for (auto& rootHash : *rootHashes) {
-      const Hash& originHash =
-          originHashes->emplace_back(hashFromThrift(rootHash));
+      const Hash& originHash = originHashes->emplace_back(
+          edenMount->getObjectStore()->parseRootId(rootHash));
 
       globResults.emplace_back(
           edenMount->getObjectStore()
@@ -1369,14 +1377,14 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
         folly::to<string>("listIgnored=", *params->listIgnored_ref()));
 
     auto mount = server_->getMount(*params->mountPoint_ref());
-    auto hash = hashFromThrift(*params->commit_ref());
+    auto rootId = mount->getObjectStore()->parseRootId(*params->commit_ref());
     const auto& enforceParents = server_->getServerState()
                                      ->getReloadableConfig()
                                      .getEdenConfig()
                                      ->enforceParents.getValue();
     return wrapFuture(
         std::move(helper),
-        mount->diff(hash, *params->listIgnored_ref(), enforceParents, request)
+        mount->diff(rootId, *params->listIgnored_ref(), enforceParents, request)
             .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
               auto result = std::make_unique<GetScmStatusResult>();
               *result->status_ref() = std::move(*status);
@@ -1410,7 +1418,7 @@ void EdenServiceHandler::async_tm_getScmStatus(
     // want to enforce that even for this call, if we confirm that all existing
     // callers of this method can deal with the error.
     auto mount = server_->getMount(*mountPoint);
-    auto hash = hashFromThrift(*commitHash);
+    auto hash = mount->getObjectStore()->parseRootId(*commitHash);
     return wrapFuture(
         std::move(helper),
         mount->diff(
@@ -1432,9 +1440,9 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
       *mountPoint,
       folly::to<string>("oldHash=", logHash(*oldHash)),
       folly::to<string>("newHash=", logHash(*newHash)));
-  auto id1 = hashFromThrift(*oldHash);
-  auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
+  auto id1 = mount->getObjectStore()->parseRootId(*oldHash);
+  auto id2 = mount->getObjectStore()->parseRootId(*newHash);
   return wrapFuture(
       std::move(helper),
       diffCommitsForStatus(mount->getObjectStore(), id1, id2));
@@ -1447,7 +1455,7 @@ void EdenServiceHandler::debugGetScmTree(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = hashFromThrift(*idStr);
+  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmTree");
@@ -1484,7 +1492,7 @@ void EdenServiceHandler::debugGetScmBlob(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = hashFromThrift(*idStr);
+  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlob");
@@ -1515,7 +1523,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = hashFromThrift(*idStr);
+  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlobMetadata");

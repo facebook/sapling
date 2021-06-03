@@ -484,7 +484,8 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     SequenceNumber from,
     std::optional<size_t> limit,
-    long mountGeneration) const {
+    long mountGeneration,
+    RootIdCodec& rootIdCodec) const {
   auto result = std::vector<DebugJournalDelta>();
   auto deltaState = deltaState_.lock();
   Hash currentHash = deltaState->currentHash;
@@ -492,19 +493,18 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
       *deltaState,
       from,
       limit,
-      [mountGeneration, &result, &currentHash](
-          const FileChangeJournalDelta& current) -> void {
+      [&](const FileChangeJournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
         fromPosition.mountGeneration_ref() = mountGeneration;
         fromPosition.sequenceNumber_ref() = current.sequenceID;
-        fromPosition.snapshotHash_ref() = thriftHash(currentHash);
+        fromPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
         delta.fromPosition_ref() = fromPosition;
 
         JournalPosition toPosition;
         toPosition.mountGeneration_ref() = mountGeneration;
         toPosition.sequenceNumber_ref() = current.sequenceID;
-        toPosition.snapshotHash_ref() = thriftHash(currentHash);
+        toPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
         delta.toPosition_ref() = toPosition;
 
         for (const auto& entry : current.getChangedFilesInOverlay()) {
@@ -520,19 +520,19 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
 
         result.push_back(delta);
       },
-      [mountGeneration, &result, &currentHash](
-          const HashUpdateJournalDelta& current) -> void {
+      [&](const HashUpdateJournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
         fromPosition.mountGeneration_ref() = mountGeneration;
         fromPosition.sequenceNumber_ref() = current.sequenceID;
-        fromPosition.snapshotHash_ref() = thriftHash(current.fromHash);
+        fromPosition.snapshotHash_ref() =
+            rootIdCodec.renderRootId(current.fromHash);
         delta.fromPosition_ref() = fromPosition;
 
         JournalPosition toPosition;
         toPosition.mountGeneration_ref() = mountGeneration;
         toPosition.sequenceNumber_ref() = current.sequenceID;
-        toPosition.snapshotHash_ref() = thriftHash(currentHash);
+        toPosition.snapshotHash_ref() = rootIdCodec.renderRootId(currentHash);
         delta.toPosition_ref() = toPosition;
         currentHash = current.fromHash;
 

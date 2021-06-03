@@ -17,6 +17,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
@@ -72,6 +73,14 @@ GitBackingStore::~GitBackingStore() {
 
 const char* GitBackingStore::getPath() const {
   return git_repository_path(repo_);
+}
+
+Hash GitBackingStore::parseRootId(folly::StringPiece rootId) {
+  return hashFromThrift(rootId);
+}
+
+std::string GitBackingStore::renderRootId(const Hash& rootId) {
+  return thriftHash(rootId);
 }
 
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(

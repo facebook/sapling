@@ -21,6 +21,7 @@
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -259,6 +260,13 @@ void HgQueuedBackingStore::processRequest() {
       processPrefetchRequests(std::move(requests));
     }
   }
+}
+
+Hash HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
+  return hashFromThrift(rootId);
+}
+std::string HgQueuedBackingStore::renderRootId(const Hash& rootId) {
+  return thriftHash(rootId);
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(

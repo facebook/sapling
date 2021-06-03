@@ -11,6 +11,7 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
@@ -19,12 +20,12 @@ template <typename T>
 class Future;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class Hash;
 class Tree;
+
 /**
  * Abstract interface for a BackingStore.
  *
@@ -34,7 +35,7 @@ class Tree;
  * BackingStore implementations must be thread-safe, and perform their own
  * internal locking.
  */
-class BackingStore {
+class BackingStore : public RootIdCodec {
  public:
   BackingStore() {}
   virtual ~BackingStore() {}
@@ -81,5 +82,5 @@ class BackingStore {
   BackingStore(BackingStore const&) = delete;
   BackingStore& operator=(BackingStore const&) = delete;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

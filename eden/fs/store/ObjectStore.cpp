@@ -104,6 +104,14 @@ void ObjectStore::deprioritizeWhenFetchHeavy(
   }
 }
 
+Hash ObjectStore::parseRootId(folly::StringPiece rootId) {
+  return backingStore_->parseRootId(rootId);
+}
+
+std::string ObjectStore::renderRootId(const Hash& rootId) {
+  return backingStore_->renderRootId(rootId);
+}
+
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {

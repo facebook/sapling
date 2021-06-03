@@ -9,18 +9,18 @@
 
 #include <folly/String.h>
 #include <folly/futures/Future.h>
+#include "eden/fs/service/ThriftUtil.h"
 
 using folly::Future;
 using folly::makeFuture;
 using std::make_shared;
 using std::shared_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
-FakeObjectStore::FakeObjectStore() {}
+FakeObjectStore::FakeObjectStore() = default;
 
-FakeObjectStore::~FakeObjectStore() {}
+FakeObjectStore::~FakeObjectStore() = default;
 
 void FakeObjectStore::addTree(Tree&& tree) {
   auto treeHash = tree.getHash();
@@ -92,5 +92,5 @@ size_t FakeObjectStore::getAccessCount(const Hash& hash) const {
     return 0;
   }
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

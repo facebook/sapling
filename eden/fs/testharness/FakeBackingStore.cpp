@@ -16,6 +16,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -35,7 +36,15 @@ namespace eden {
 FakeBackingStore::FakeBackingStore(std::shared_ptr<LocalStore> localStore)
     : localStore_(std::move(localStore)) {}
 
-FakeBackingStore::~FakeBackingStore() {}
+FakeBackingStore::~FakeBackingStore() = default;
+
+Hash FakeBackingStore::parseRootId(folly::StringPiece rootId) {
+  return hashFromThrift(rootId);
+}
+
+std::string FakeBackingStore::renderRootId(const Hash& rootId) {
+  return thriftHash(rootId);
+}
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
     const Hash& id,

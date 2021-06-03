@@ -25,7 +25,7 @@ class LocalStore;
 /**
  * A BackingStore implementation that loads data out of a git repository.
  */
-class GitBackingStore : public BackingStore {
+class GitBackingStore final : public BackingStore {
  public:
   /**
    * Create a new GitBackingStore.
@@ -43,6 +43,9 @@ class GitBackingStore : public BackingStore {
    * This returns the path to the .git directory itself.
    */
   const char* getPath() const;
+
+  Hash parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const Hash& rootId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,

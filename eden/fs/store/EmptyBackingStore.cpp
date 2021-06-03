@@ -24,6 +24,14 @@ EmptyBackingStore::EmptyBackingStore() {}
 
 EmptyBackingStore::~EmptyBackingStore() {}
 
+Hash EmptyBackingStore::parseRootId(folly::StringPiece /*rootId*/) {
+  throw std::domain_error("empty backing store");
+}
+
+std::string EmptyBackingStore::renderRootId(const Hash& /*rootId*/) {
+  throw std::domain_error("empty backing store");
+}
+
 SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(
     const Hash& /* id */,
     ObjectFetchContext& /* context */) {

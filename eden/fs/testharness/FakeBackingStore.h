@@ -28,7 +28,7 @@ class LocalStore;
 /**
  * A BackingStore implementation for test code.
  */
-class FakeBackingStore : public BackingStore {
+class FakeBackingStore final : public BackingStore {
  public:
   struct TreeEntryData;
 
@@ -38,6 +38,9 @@ class FakeBackingStore : public BackingStore {
   /*
    * BackingStore APIs
    */
+
+  Hash parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const Hash& rootId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,

@@ -15,10 +15,13 @@ namespace eden {
 class Hash;
 class LocalStore;
 
-class ReCasBackingStore : public BackingStore {
+class ReCasBackingStore final : public BackingStore {
  public:
   explicit ReCasBackingStore(std::shared_ptr<LocalStore> localStore);
   ~ReCasBackingStore() override;
+
+  Hash parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const Hash& rootId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,

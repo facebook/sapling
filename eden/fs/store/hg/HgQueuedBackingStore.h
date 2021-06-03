@@ -96,7 +96,7 @@ struct HgImportTraceEvent : TraceEventBase {
  * these requests via different methods (reading from hgcache, Mononoke,
  * debugimporthelper, etc.).
  */
-class HgQueuedBackingStore : public BackingStore {
+class HgQueuedBackingStore final : public BackingStore {
  public:
   HgQueuedBackingStore(
       std::shared_ptr<LocalStore> localStore,
@@ -112,6 +112,9 @@ class HgQueuedBackingStore : public BackingStore {
   TraceBus<HgImportTraceEvent>& getTraceBus() const {
     return *traceBus_;
   }
+
+  Hash parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const Hash& rootId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,

@@ -16,6 +16,7 @@
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
@@ -70,6 +71,7 @@ constexpr uint64_t importPriorityDeprioritizeAmount{1};
  *   data, and may not be available during offline operation.
  */
 class ObjectStore : public IObjectStore,
+                    public RootIdCodec,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
   static std::shared_ptr<ObjectStore> create(
@@ -107,6 +109,19 @@ class ObjectStore : public IObjectStore,
    * information
    */
   void deprioritizeWhenFetchHeavy(ObjectFetchContext& context) const;
+
+  /**
+   * Each BackingStore implementation defines its interpretation of root IDs.
+   * This function gives the BackingStore a chance to parse and canonicalize the
+   * root ID at API boundaries such as Thrift.
+   */
+  Hash parseRootId(folly::StringPiece rootId) override;
+
+  /**
+   * Each BackingStore defines the meaning and encoding of its root ID. Give it
+   * the chance to render a root ID to Thrift.
+   */
+  std::string renderRootId(const Hash& rootId) override;
 
   /**
    * Get a Tree by ID.

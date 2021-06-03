@@ -24,7 +24,7 @@ namespace eden {
  * Fake implementation of IObjectStore that allows the data to be injected
  * directly. This is designed to be used for unit tests.
  */
-class FakeObjectStore : public IObjectStore {
+class FakeObjectStore final : public IObjectStore {
  public:
   FakeObjectStore();
   ~FakeObjectStore() override;
