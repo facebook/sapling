@@ -44,6 +44,7 @@ use metaconfig_types::{
     HookManagerParams, InfinitepushNamespace, InfinitepushParams, RepoConfig,
     SourceControlServiceParams,
 };
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation, RepositoryId, Svnrev,
@@ -91,18 +92,6 @@ define_stats! {
         "missing_from_repo.{}.{}",
         (repoid: ::mononoke_types::RepositoryId, bookmark: String)
     ),
-}
-
-// Eventually everything inside Repo should really be here
-// The fields of BlobRepo that are not used in e.g. LFS server should also be moved here
-// Each binary will then be able to only build what they use of the "repo attributes".
-#[facet::container]
-pub struct InnerRepo {
-    #[delegate()]
-    blob_repo: Arc<BlobRepo>,
-
-    #[facet]
-    pub skiplist_index: SkiplistIndex,
 }
 
 pub struct Repo {
