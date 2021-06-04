@@ -28,13 +28,13 @@ use edenapi_types::{
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireToApiConversionError, WireTreeEntry,
+        WireLookupResponse, WireToApiConversionError, WireTreeEntry,
     },
-    BookmarkEntry, BookmarkRequest, CloneData, CommitHashToLocationRequestBatch,
+    AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData, CommitHashToLocationRequestBatch,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
     CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
-    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire,
-    TreeAttributes, TreeEntry, TreeRequest,
+    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, LookupRequest,
+    LookupResponse, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -49,6 +49,8 @@ use crate::response::{Fetch, ResponseMeta};
 /// found in the repo's name will be percent-encoded before being used in URLs.
 const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').remove(b'.');
 
+const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
+
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
     pub const FILES: &str = "files";
@@ -61,6 +63,7 @@ mod paths {
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const BOOKMARKS: &str = "bookmarks";
+    pub const LOOKUP: &str = "lookup";
 }
 
 pub struct Client {
@@ -622,6 +625,38 @@ impl EdenApi for Client {
         _common: Vec<HgId>,
     ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
         raise_not_implemented()
+    }
+
+    async fn lookup_batch(
+        &self,
+        repo: String,
+        items: Vec<AnyId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+        let msg = format!("Requesting lookup for {} items(s)", items.len());
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if items.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::LOOKUP, Some(&repo))?;
+        let requests = self.prepare(
+            &url,
+            items,
+            Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
+            |ids| {
+                let req = Batch::<LookupRequest> {
+                    batch: ids.into_iter().map(|id| LookupRequest { id }).collect(),
+                };
+                req.to_wire()
+            },
+        )?;
+
+        Ok(self.fetch::<WireLookupResponse>(requests, progress).await?)
     }
 }
 

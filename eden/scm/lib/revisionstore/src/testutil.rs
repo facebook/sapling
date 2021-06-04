@@ -12,9 +12,9 @@ use async_trait::async_trait;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
-    BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    TreeAttributes, TreeEntry,
+    LookupResponse, TreeAttributes, TreeEntry,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -405,6 +405,15 @@ impl EdenApi for FakeEdenApi {
         _common: Vec<HgId>,
     ) -> Result<Fetch<edenapi_types::CommitGraphEntry>, EdenApiError> {
         unimplemented!()
+    }
+
+    async fn lookup_batch(
+        &self,
+        _repo: String,
+        _items: Vec<AnyId>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+        unimplemented!();
     }
 }
 

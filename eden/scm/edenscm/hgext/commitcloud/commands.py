@@ -46,6 +46,7 @@ from . import (
     token as tokenmod,
     util as ccutil,
     workspace,
+    upload,
 )
 
 
@@ -1811,3 +1812,32 @@ def getfrombackup(ui, repo, **opts):
     service.get(ui, tokenmod.TokenLocator(ui).token).getheadsfrombackupbundlestore(
         repo, revs
     )
+
+
+@subcmd(
+    "upload",
+    [
+        ("r", "rev", [], _("revisions to upload to Commit Cloud")),
+    ]
+    + remoteopts,
+)
+def cloudupload(ui, repo, **opts):
+    """upload commits to commit cloud using EdenApi
+
+    Commits that have already been uploaded will be skipped.
+
+    The upload will be performed in stages:
+        * file content
+        * file nodes
+        * trees
+        * changesets
+
+    If no revision is specified, uploads all visible commits.
+    """
+    revs = opts.get("rev")
+    if revs:
+        revs = scmutil.revrange(repo, revs)
+    else:
+        revs = None
+
+    upload.upload(repo, revs)

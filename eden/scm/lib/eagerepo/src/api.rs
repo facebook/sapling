@@ -15,6 +15,7 @@ use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
 use dag::Vertex;
 use edenapi::configmodel;
+use edenapi::types::AnyId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashToLocationResponse;
@@ -26,6 +27,7 @@ use edenapi::types::FileEntry;
 use edenapi::types::HgId;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
+use edenapi::types::LookupResponse;
 use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
@@ -394,6 +396,17 @@ impl EdenApi for EagerRepo {
             values.push(Ok(entry));
         }
         Ok(convert_to_fetch(values))
+    }
+
+    async fn lookup_batch(
+        &self,
+        _repo: String,
+        _items: Vec<AnyId>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support lookup_batch endpoint".to_string(),
+        ))
     }
 }
 

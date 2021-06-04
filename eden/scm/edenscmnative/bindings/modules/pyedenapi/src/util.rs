@@ -11,7 +11,7 @@ use cpython::*;
 
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::{Progress, ProgressCallback, ResponseMeta};
-use edenapi_types::TreeAttributes;
+use edenapi_types::{ContentId, TreeAttributes, CONTENT_ID_HASH_LENGTH_BYTES};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use types::{HgId, Key, RepoPathBuf};
@@ -26,6 +26,12 @@ pub fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
     let mut bytes = [0u8; 20];
     bytes.copy_from_slice(&hgid.data(py)[0..20]);
     HgId::from(&bytes)
+}
+
+pub fn to_contentid(py: Python, content_id: &PyBytes) -> ContentId {
+    let mut bytes = [0u8; CONTENT_ID_HASH_LENGTH_BYTES];
+    bytes.copy_from_slice(&content_id.data(py)[0..CONTENT_ID_HASH_LENGTH_BYTES]);
+    ContentId(bytes)
 }
 
 pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {

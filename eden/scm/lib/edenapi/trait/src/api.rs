@@ -13,9 +13,9 @@ use async_trait::async_trait;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    TreeAttributes, TreeEntry,
+    LookupResponse, TreeAttributes, TreeEntry,
 };
 use http_client::Progress;
 use types::{HgId, Key, RepoPathBuf};
@@ -125,6 +125,15 @@ pub trait EdenApi: Send + Sync + 'static {
         bookmarks: Vec<String>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<BookmarkEntry>, EdenApiError>;
+
+    /// Lookup items and return signed upload tokens if an item has been uploaded
+    /// Supports: file content, hg filenode, hg tree, hg changeset
+    async fn lookup_batch(
+        &self,
+        repo: String,
+        items: Vec<AnyId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<LookupResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -267,6 +276,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .bookmarks(repo, bookmarks, progress)
+            .await
+    }
+
+    async fn lookup_batch(
+        &self,
+        repo: String,
+        items: Vec<AnyId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .lookup_batch(repo, items, progress)
             .await
     }
 }

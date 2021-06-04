@@ -17,7 +17,9 @@ use edenapi::{Builder, EdenApi};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
-use edenapi_types::{CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData};
+use edenapi_types::{
+    CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData, LookupResponse,
+};
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -225,6 +227,35 @@ py_class!(pub class client |py| {
     /// mincode-serialized CloneData.
     def clonedata(&self, repo: String) -> PyResult<PyBytes> {
         self.inner(py).clone().clone_data_py(py, repo)
+    }
+
+
+    /// lookup_file_contents(repo: str, content_ids: [bytes])
+    def lookup_file_contents(&self, repo: String, content_ids: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().lookup_file_contents(py, repo, content_ids)
+    }
+
+    /// lookup_commits(repo: str, nodes: [bytes])
+    def lookup_commits(&self, repo: String, nodes: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().lookup_commits(py, repo, nodes)
+    }
+
+    /// lookup_filenodes(repo: str, filenodes: [bytes])
+    def lookup_filenodes(&self, repo: String, hgids: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().lookup_filenodes(py, repo, hgids)
+    }
+
+    /// lookup_trees(repo: str, trees: [bytes])
+    def lookup_trees(&self, repo: String, hgids: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().lookup_trees(py, repo, hgids)
     }
 });
 

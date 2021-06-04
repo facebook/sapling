@@ -20,8 +20,9 @@ use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+    AnyFileContentId, AnyId, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
+    LookupResponse, TreeEntry,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
@@ -29,8 +30,8 @@ use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_hgid, to_hgids, to_keys, to_path,
-    to_tree_attrs, wrap_callback,
+    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_hgid, to_hgids, to_keys,
+    to_path, to_tree_attrs, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -377,6 +378,89 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
         };
         Ok(PyBytes::new(py, &bytes))
+    }
+
+    fn lookup_file_contents(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        ids: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        self.lookup_py(
+            py,
+            repo,
+            ids.into_iter()
+                .map(|id| {
+                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(to_contentid(py, &id)))
+                })
+                .collect(),
+        )
+    }
+
+    fn lookup_commits(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        nodes: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        self.lookup_py(
+            py,
+            repo,
+            nodes
+                .into_iter()
+                .map(|node| AnyId::HgChangesetId(to_hgid(py, &node)))
+                .collect(),
+        )
+    }
+
+    fn lookup_filenodes(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        ids: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        self.lookup_py(
+            py,
+            repo,
+            ids.into_iter()
+                .map(|id| AnyId::HgFilenodeId(to_hgid(py, &id)))
+                .collect(),
+        )
+    }
+
+    fn lookup_trees(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        ids: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        self.lookup_py(
+            py,
+            repo,
+            ids.into_iter()
+                .map(|id| AnyId::HgTreeId(to_hgid(py, &id)))
+                .collect(),
+        )
+    }
+
+    fn lookup_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        ids: Vec<AnyId>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self.lookup_batch(repo, ids, None).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
     }
 }
 
