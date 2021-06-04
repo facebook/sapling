@@ -670,3 +670,7 @@ def get_environment_suitable_for_subprocess() -> Dict[str, str]:
             del env[k]
 
     return env
+
+
+def is_sandcastle() -> bool:
+    return "SANDCASTLE" in os.environ
