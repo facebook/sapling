@@ -16,13 +16,20 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, Context, Error};
+use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PutBehaviour};
 use clap::Arg;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::{
+    args::{self, get_config_by_repoid, load_common_config, MononokeMatches},
+    helpers::{setup_repo_dir, CreateStorage},
+};
 use context::{CoreContext, SessionClass};
 use fbinit::FacebookInit;
 use futures::{future, stream, StreamExt, TryStreamExt};
-use slog::{debug, info, warn};
+use metaconfig_types::{BlobConfig, BlobstoreId};
+use mononoke_types::RepositoryId;
+use repo_factory::RepoFactory;
+use slog::{debug, info, warn, Logger};
 use thiserror::Error;
 use tokio::{
     fs::File,
@@ -37,6 +44,8 @@ const ARG_IN_FILE: &str = "input-file";
 const ARG_MISSING_KEYS: &str = "missing-keys-output";
 const ARG_SUCCESSFUL_KEYS: &str = "success-keys-output";
 const ARG_STRIP_SOURCE_REPO_PREFIX: &str = "strip-source-repo-prefix";
+const ARG_TARGET_INNER_BLOBSTORE_ID: &str = "target-inner-blobstore-id";
+const ARG_SOURCE_INNER_BLOBSTORE_ID: &str = "source-inner-blobstore-id";
 
 struct OutputFiles {
     error_file: File,
@@ -109,10 +118,24 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         .override_session_class(SessionClass::Background);
 
     let source_repo_id = args::get_source_repo_id(matches.config_store(), matches)?;
-    let source_repo = args::open_repo_with_repo_id(fb, ctx.logger(), source_repo_id, &matches);
+    let source_inner_blobstore_id = args::get_u64_opt(matches, ARG_SOURCE_INNER_BLOBSTORE_ID);
+
+    let source_repo = open_repo(
+        ctx.logger(),
+        source_repo_id,
+        source_inner_blobstore_id,
+        &matches,
+    );
 
     let target_repo_id = args::get_target_repo_id(matches.config_store(), matches)?;
-    let target_repo = args::open_repo_with_repo_id(fb, ctx.logger(), target_repo_id, &matches);
+    let target_inner_blobstore_id = args::get_u64_opt(matches, ARG_TARGET_INNER_BLOBSTORE_ID);
+
+    let target_repo = open_repo(
+        ctx.logger(),
+        target_repo_id,
+        target_inner_blobstore_id,
+        &matches,
+    );
 
     let (source_repo, target_repo) = future::try_join(source_repo, target_repo).await?;
 
@@ -196,68 +219,142 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
     Ok(())
 }
 
+async fn open_repo<'a>(
+    logger: &Logger,
+    repo_id: RepositoryId,
+    maybe_inner_blobstore_id: Option<u64>,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<BlobRepo, Error> {
+    let config_store = matches.config_store();
+    let common_config = load_common_config(config_store, &matches)?;
+    let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
+    if let Some(inner_id) = maybe_inner_blobstore_id {
+        override_blobconfig(&mut config.storage_config.blobstore, inner_id)?;
+    }
+    info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
+    match &config.storage_config.blobstore {
+        BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
+            setup_repo_dir(path, CreateStorage::ExistingOnly)?;
+        }
+        _ => {}
+    };
+
+    let repo_factory = RepoFactory::new(
+        matches.environment().clone(),
+        common_config.censored_scuba_params,
+    );
+
+    let repo = repo_factory.build(reponame, config).await?;
+
+    Ok(repo)
+}
+
+fn override_blobconfig(blob_config: &mut BlobConfig, inner_blobstore_id: u64) -> Result<(), Error> {
+    match blob_config {
+        BlobConfig::Multiplexed { ref blobstores, .. } => {
+            let sought_id = BlobstoreId::new(inner_blobstore_id);
+            let inner_blob_config = blobstores
+                .iter()
+                .find_map(|(blobstore_id, _, blobstore)| {
+                    if blobstore_id == &sought_id {
+                        Some(blobstore.clone())
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| {
+                    anyhow!("could not find a blobstore with id {}", inner_blobstore_id)
+                })?;
+            *blob_config = inner_blob_config;
+        }
+        _ => {
+            return Err(anyhow!(
+                "inner-blobstore-id supplied but blobstore is not multiplexed"
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches =
-        args::MononokeAppBuilder::new("Tool to copy a list of blobs from one blobstore to another")
-            .with_advanced_args_hidden()
-            .with_source_and_target_repos()
-            .with_special_put_behaviour(PutBehaviour::Overwrite)
-            .build()
-            .arg(
-                Arg::with_name(ARG_IN_FILE)
-                    .long(ARG_IN_FILE)
-                    .required(true)
-                    .takes_value(true)
-                    .help("input filename with a list of keys"),
-            )
-            .arg(
-                Arg::with_name(ARG_CONCURRENCY)
-                    .long(ARG_CONCURRENCY)
-                    .required(false)
-                    .takes_value(true)
-                    .help("How many blobs to copy at once"),
-            )
-            .arg(
-                Arg::with_name(ARG_IGNORE_ERRORS)
-                    .long(ARG_IGNORE_ERRORS)
-                    .required(false)
-                    .takes_value(false)
-                    .help("Don't terminate if failed to process a key"),
-            )
-            .arg(
-                Arg::with_name(ARG_STRIP_SOURCE_REPO_PREFIX)
-                    .long(ARG_STRIP_SOURCE_REPO_PREFIX)
-                    .required(false)
-                    .takes_value(false)
-                    .help(
-                        "If a key starts with 'repoXXXX' prefix \
+    let matches = args::MononokeAppBuilder::new(
+        "Tool to copy a list of blobs from one blobstore to another",
+    )
+    .with_advanced_args_hidden()
+    .with_source_and_target_repos()
+    .with_special_put_behaviour(PutBehaviour::Overwrite)
+    .build()
+    .arg(
+        Arg::with_name(ARG_IN_FILE)
+            .long(ARG_IN_FILE)
+            .required(true)
+            .takes_value(true)
+            .help("input filename with a list of keys"),
+    )
+    .arg(
+        Arg::with_name(ARG_CONCURRENCY)
+            .long(ARG_CONCURRENCY)
+            .required(false)
+            .takes_value(true)
+            .help("How many blobs to copy at once"),
+    )
+    .arg(
+        Arg::with_name(ARG_IGNORE_ERRORS)
+            .long(ARG_IGNORE_ERRORS)
+            .required(false)
+            .takes_value(false)
+            .help("Don't terminate if failed to process a key"),
+    )
+    .arg(
+        Arg::with_name(ARG_STRIP_SOURCE_REPO_PREFIX)
+            .long(ARG_STRIP_SOURCE_REPO_PREFIX)
+            .required(false)
+            .takes_value(false)
+            .help(
+                "If a key starts with 'repoXXXX' prefix \
                       (where XXXX matches source repository) then strip this \
                       prefix before copying",
-                    ),
-            )
-            .arg(
-                Arg::with_name(ARG_SUCCESSFUL_KEYS)
-                    .long(ARG_SUCCESSFUL_KEYS)
-                    .takes_value(true)
-                    .required(true)
-                    .help("A file to write successfully copied keys to"),
-            )
-            .arg(
-                Arg::with_name(ARG_MISSING_KEYS)
-                    .long(ARG_MISSING_KEYS)
-                    .takes_value(true)
-                    .required(true)
-                    .help("A file to write missing keys to"),
-            )
-            .arg(
-                Arg::with_name(ARG_ERROR_KEYS)
-                    .long(ARG_ERROR_KEYS)
-                    .takes_value(true)
-                    .required(true)
-                    .help("A file to write error fetching keys to"),
-            )
-            .get_matches(fb)?;
+            ),
+    )
+    .arg(
+        Arg::with_name(ARG_SUCCESSFUL_KEYS)
+            .long(ARG_SUCCESSFUL_KEYS)
+            .takes_value(true)
+            .required(true)
+            .help("A file to write successfully copied keys to"),
+    )
+    .arg(
+        Arg::with_name(ARG_MISSING_KEYS)
+            .long(ARG_MISSING_KEYS)
+            .takes_value(true)
+            .required(true)
+            .help("A file to write missing keys to"),
+    )
+    .arg(
+        Arg::with_name(ARG_ERROR_KEYS)
+            .long(ARG_ERROR_KEYS)
+            .takes_value(true)
+            .required(true)
+            .help("A file to write error fetching keys to"),
+    )
+    .arg(
+        Arg::with_name(ARG_TARGET_INNER_BLOBSTORE_ID)
+            .long(ARG_TARGET_INNER_BLOBSTORE_ID)
+            .takes_value(true)
+            .required(false)
+            .requires(ARG_SOURCE_INNER_BLOBSTORE_ID)
+            .help("In case of multiplexed blobstore this will be target id of inner blobstore"),
+    )
+    .arg(
+        Arg::with_name(ARG_SOURCE_INNER_BLOBSTORE_ID)
+            .long(ARG_SOURCE_INNER_BLOBSTORE_ID)
+            .takes_value(true)
+            .required(false)
+            .requires(ARG_TARGET_INNER_BLOBSTORE_ID)
+            .help("In case of multiplexed blobstore this will be source id of inner blobstore"),
+    )
+    .get_matches(fb)?;
 
     matches.runtime().block_on(run(fb, &matches))
 }
