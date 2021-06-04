@@ -560,7 +560,7 @@ async fn run_check_push_redirection_prereqs<'a>(
 
     info!(
         ctx.logger(),
-        "Resolving taregt chageset in {}",
+        "Resolving target changeset in {}",
         target_repo.name()
     );
     let target_cs_id = helpers::csid_resolve(

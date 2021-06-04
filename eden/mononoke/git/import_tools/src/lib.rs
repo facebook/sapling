@@ -59,7 +59,7 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
     {
         debug!(
             ctx.logger(),
-            "Found git-blob:{} size:{} in blostore.",
+            "Found git-blob:{} size:{} in blobstore.",
             sha1.to_brief(),
             meta.total_size,
         );
