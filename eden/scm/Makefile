@@ -43,6 +43,9 @@ COMPILERFLAG_tmp_ =
 COMPILERFLAG_tmp_${COMPILER} ?= -c $(COMPILER)
 COMPILERFLAG=${COMPILERFLAG_tmp_${COMPILER}}
 
+# Mac Big Sur doesn't find the standard library without this.
+export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
 help:
 	@echo 'Commonly used make targets:'
 	@echo '  all          - build program'
