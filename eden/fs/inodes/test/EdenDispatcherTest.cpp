@@ -71,7 +71,13 @@ TEST_F(EdenDispatcherTest, mkdirReturnsNameTooLong) {
 
 TEST_F(EdenDispatcherTest, symlinkReturnsNameTooLong) {
   try {
-    mount.getDispatcher()->symlink(kRootNodeId, kTooLong, "aoeu"_sp).get(0ms);
+    mount.getDispatcher()
+        ->symlink(
+            kRootNodeId,
+            kTooLong,
+            "aoeu"_sp,
+            ObjectFetchContext::getNullContext())
+        .get(0ms);
     FAIL() << "should throw";
   } catch (std::system_error& e) {
     EXPECT_EQ(ENAMETOOLONG, e.code().value());

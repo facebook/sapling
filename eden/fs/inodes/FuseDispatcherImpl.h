@@ -66,7 +66,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
   ImmediateFuture<fuse_entry_out> symlink(
       InodeNumber parent,
       PathComponentPiece name,
-      folly::StringPiece link) override;
+      folly::StringPiece link,
+      ObjectFetchContext& context) override;
   ImmediateFuture<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,

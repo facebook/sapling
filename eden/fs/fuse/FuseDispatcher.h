@@ -211,8 +211,11 @@ class FuseDispatcher {
    * @param name to create
    * @param link the contents of the symbolic link
    */
-  virtual ImmediateFuture<fuse_entry_out>
-  symlink(InodeNumber parent, PathComponentPiece name, folly::StringPiece link);
+  virtual ImmediateFuture<fuse_entry_out> symlink(
+      InodeNumber parent,
+      PathComponentPiece name,
+      folly::StringPiece link,
+      ObjectFetchContext& context);
 
   /**
    * Rename a file

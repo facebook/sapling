@@ -122,8 +122,11 @@ FuseDispatcher::rmdir(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<fuse_entry_out>
-FuseDispatcher::symlink(InodeNumber, PathComponentPiece, folly::StringPiece) {
+ImmediateFuture<fuse_entry_out> FuseDispatcher::symlink(
+    InodeNumber,
+    PathComponentPiece,
+    folly::StringPiece,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

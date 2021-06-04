@@ -1933,7 +1933,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSymlink(
   const StringPiece link{nameStr + name.stringPiece().size() + 1};
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_->symlink(parent, name, link)
+  return dispatcher_->symlink(parent, name, link, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });

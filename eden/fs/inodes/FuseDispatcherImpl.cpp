@@ -388,16 +388,15 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rmdir(
 ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::symlink(
     InodeNumber parent,
     PathComponentPiece name,
-    StringPiece link) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "FuseDispatcherImpl::symlink");
+    StringPiece link,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [linkContents = link.str(),
-       childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [linkContents = link.str(), childName = PathComponent{name}, &context](
+          const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFsRefcount();
-        return symlinkInode->stat(*context).thenValue(
+        return symlinkInode->stat(context).thenValue(
             [symlinkInode](struct stat st) {
               return computeEntryParam(FuseDispatcher::Attr{st});
             });
