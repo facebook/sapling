@@ -5,11 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use crate::ServerError;
+
+use faster_hex::hex_decode;
 use std::fmt;
+use std::str::FromStr;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
+
+pub const SHA1_HASH_LENGTH_BYTES: usize = 20;
+pub const SHA1_HASH_LENGTH_HEX: usize = SHA1_HASH_LENGTH_BYTES * 2;
+
+pub const SHA256_HASH_LENGTH_BYTES: usize = 32;
+pub const SHA256_HASH_LENGTH_HEX: usize = SHA256_HASH_LENGTH_BYTES * 2;
+
+pub const CONTENT_ID_HASH_LENGTH_BYTES: usize = 32;
+pub const CONTENT_ID_HASH_LENGTH_HEX: usize = CONTENT_ID_HASH_LENGTH_BYTES * 2;
 
 /// Directory entry metadata
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -58,7 +71,7 @@ pub struct FileMetadataRequest {
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Sha1(pub [u8; 20]);
+pub struct Sha1(pub [u8; SHA1_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for Sha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -80,8 +93,28 @@ impl fmt::Debug for Sha1 {
     }
 }
 
+impl FromStr for Sha1 {
+    type Err = ServerError;
+
+    fn from_str(s: &str) -> Result<Sha1, Self::Err> {
+        if s.len() != SHA1_HASH_LENGTH_HEX {
+            return Err(Self::Err::generic(format!(
+                "sha1 parsing failure: need exactly {} hex digits",
+                SHA1_HASH_LENGTH_HEX
+            )));
+        }
+        let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => Err(Self::Err::generic(
+                "sha1 parsing failure: bad hex character",
+            )),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Sha256(pub [u8; 32]);
+pub struct Sha256(pub [u8; SHA256_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for Sha256 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -103,8 +136,28 @@ impl fmt::Debug for Sha256 {
     }
 }
 
+impl FromStr for Sha256 {
+    type Err = ServerError;
+
+    fn from_str(s: &str) -> Result<Sha256, Self::Err> {
+        if s.len() != SHA256_HASH_LENGTH_HEX {
+            return Err(Self::Err::generic(format!(
+                "sha256 parsing failure: need exactly {} hex digits",
+                SHA256_HASH_LENGTH_HEX
+            )));
+        }
+        let mut ret = Sha256([0; SHA256_HASH_LENGTH_BYTES]);
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => Err(Self::Err::generic(
+                "sha256 parsing failure: bad hex character",
+            )),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ContentId(pub [u8; 32]);
+pub struct ContentId(pub [u8; CONTENT_ID_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for ContentId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -123,6 +176,26 @@ impl fmt::Debug for ContentId {
             write!(fmt, "{:02x}", d)?;
         }
         write!(fmt, "\")")
+    }
+}
+
+impl FromStr for ContentId {
+    type Err = ServerError;
+
+    fn from_str(s: &str) -> Result<ContentId, Self::Err> {
+        if s.len() != CONTENT_ID_HASH_LENGTH_HEX {
+            return Err(Self::Err::generic(format!(
+                "content_id parsing failure: need exactly {} hex digits",
+                CONTENT_ID_HASH_LENGTH_HEX
+            )));
+        }
+        let mut ret = ContentId([0; CONTENT_ID_HASH_LENGTH_BYTES]);
+        match hex_decode(s.as_bytes(), &mut ret.0) {
+            Ok(_) => Ok(ret),
+            Err(_) => Err(Self::Err::generic(
+                "content_id parsing failure: bad hex character",
+            )),
+        }
     }
 }
 
@@ -153,6 +226,45 @@ impl fmt::Debug for FsnodeId {
             write!(fmt, "{:02x}", d)?;
         }
         write!(fmt, "\")")
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AnyFileContentId {
+    ContentId(ContentId),
+    Sha1(Sha1),
+    Sha256(Sha256),
+}
+
+impl Default for AnyFileContentId {
+    fn default() -> Self {
+        AnyFileContentId::ContentId(ContentId::default())
+    }
+}
+
+impl FromStr for AnyFileContentId {
+    type Err = ServerError;
+
+    fn from_str(s: &str) -> Result<AnyFileContentId, Self::Err> {
+        let v: Vec<&str> = s.split('/').collect();
+        if v.len() != 2 {
+            return Err(Self::Err::generic(
+                "AnyFileContentId parsing failure: format is 'idtype/id'",
+            ));
+        }
+        let idtype = v[0];
+        let id = v[1];
+        let any_file_content_id = match idtype {
+            "content_id" => AnyFileContentId::ContentId(ContentId::from_str(id)?),
+            "sha1" => AnyFileContentId::Sha1(Sha1::from_str(id)?),
+            "sha256" => AnyFileContentId::Sha256(Sha256::from_str(id)?),
+            _ => {
+                return Err(Self::Err::generic(
+                    "AnyFileContentId parsing failure: supported id types are: 'content_id', 'sha1' and 'sha256'",
+                ));
+            }
+        };
+        Ok(any_file_content_id)
     }
 }
 

@@ -23,6 +23,7 @@
 //! TYPES MAY CAUSE VERSION SKEW, so any changes should proceed
 //! with caution.
 
+pub mod anyid;
 pub mod batch;
 pub mod bookmark;
 pub mod commit;
@@ -32,9 +33,11 @@ pub mod file;
 pub mod history;
 pub mod json;
 pub mod metadata;
+pub mod token;
 pub mod tree;
 pub mod wire;
 
+pub use crate::anyid::{AnyId, LookupRequest, LookupResponse};
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::CommitGraphEntry;
@@ -51,9 +54,10 @@ pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
 pub use crate::metadata::{
-    ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
-    FileType, FsnodeId, Sha1, Sha256,
+    AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
+    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256,
 };
+pub use crate::token::{UploadToken, UploadTokenData, UploadTokenSignature};
 pub use crate::tree::{
     TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
     TreeError, TreeRequest,

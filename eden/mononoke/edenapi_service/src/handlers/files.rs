@@ -10,10 +10,11 @@ use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
+use std::str::FromStr;
 
 use edenapi_types::{
     wire::{ToWire, WireFileRequest},
-    FileEntry, FileRequest,
+    AnyFileContentId, AnyId, FileEntry, FileRequest, UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use load_limiter::Metric;
@@ -34,6 +35,13 @@ const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct FileParams {
     repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadFileParams {
+    repo: String,
+    idtype: String,
+    id: String,
 }
 
 /// Fetch the content of the files requested by the client.
@@ -91,4 +99,35 @@ async fn fetch_file(repo: HgRepoContext, key: Key) -> Result<FileEntry, Error> {
     let parents = ctx.hg_parents().into();
 
     Ok(FileEntry::new(key, data, parents, metadata))
+}
+
+/// Generate an upload token for alredy uploaded content
+async fn generate_upload_token(
+    _repo: HgRepoContext,
+    id: AnyFileContentId,
+) -> Result<UploadToken, Error> {
+    // At first, returns a fake token
+    Ok(UploadToken::new_fake_token(AnyId::AnyFileContentId(id)))
+}
+
+/// Upload content of a file requested by the client.
+pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = UploadFileParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::UploadFile));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressGetpackFiles).await?;
+
+    let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
+        .map_err(HttpError::e400)?;
+
+    // TODO: implement uploading logic itself
+    // await for upload here
+
+    let token = generate_upload_token(repo, id).await.map(|v| v.to_wire());
+
+    Ok(cbor_stream(stream::iter(vec![token])))
 }

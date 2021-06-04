@@ -34,6 +34,7 @@ mod commit;
 mod complete_trees;
 mod files;
 mod history;
+mod lookup;
 mod repos;
 mod trees;
 
@@ -42,6 +43,8 @@ mod trees;
 #[derive(Copy, Clone)]
 pub enum EdenApiMethod {
     Files,
+    Lookup,
+    UploadFile,
     Trees,
     CompleteTrees,
     History,
@@ -68,6 +71,8 @@ impl fmt::Display for EdenApiMethod {
             Self::Clone => "clone",
             Self::FullIdMapClone => "full_idmap_clone",
             Self::Bookmarks => "bookmarks",
+            Self::Lookup => "lookup",
+            Self::UploadFile => "upload_file",
         };
         write!(f, "{}", name)
     }
@@ -154,6 +159,8 @@ define_handler!(commit_hash_lookup_handler, commit::hash_lookup);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 define_handler!(bookmarks_handler, bookmarks::bookmarks);
+define_handler!(lookup_handler, lookup::lookup);
+define_handler!(upload_file_handler, files::upload_file);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -214,5 +221,13 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/bookmarks")
             .with_path_extractor::<bookmarks::BookmarksParams>()
             .to(bookmarks_handler);
+        route
+            .post("/:repo/lookup")
+            .with_path_extractor::<lookup::LookupParams>()
+            .to(lookup_handler);
+        route
+            .put("/:repo/upload/file/:idtype/:id")
+            .with_path_extractor::<files::UploadFileParams>()
+            .to(upload_file_handler);
     })
 }

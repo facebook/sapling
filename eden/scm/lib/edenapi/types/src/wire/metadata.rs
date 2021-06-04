@@ -14,8 +14,8 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     wire::{is_default, TryFromBytesError},
-    ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
-    FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire, WireToApiConversionError,
+    AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
+    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire, WireToApiConversionError,
 };
 
 /// Directory entry metadata
@@ -516,6 +516,59 @@ impl<'de> serde::Deserialize<'de> for WireSha256 {
                 found_len: bytes.len(),
             }))
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum WireAnyFileContentId {
+    #[serde(rename = "1")]
+    WireContentId(WireContentId),
+
+    #[serde(rename = "2")]
+    WireSha1(WireSha1),
+
+    #[serde(rename = "3")]
+    WireSha256(WireSha256),
+
+    #[serde(other, rename = "0")]
+    Unknown,
+}
+
+impl Default for WireAnyFileContentId {
+    fn default() -> Self {
+        WireAnyFileContentId::WireContentId(WireContentId::default())
+    }
+}
+
+impl ToWire for AnyFileContentId {
+    type Wire = WireAnyFileContentId;
+
+    fn to_wire(self) -> Self::Wire {
+        use AnyFileContentId::*;
+        match self {
+            ContentId(id) => WireAnyFileContentId::WireContentId(id.to_wire()),
+            Sha1(id) => WireAnyFileContentId::WireSha1(id.to_wire()),
+            Sha256(id) => WireAnyFileContentId::WireSha256(id.to_wire()),
+        }
+    }
+}
+
+impl ToApi for WireAnyFileContentId {
+    type Api = AnyFileContentId;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        use WireAnyFileContentId::*;
+        Ok(match self {
+            Unknown => {
+                return Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                    "WireAnyFileContentId",
+                ));
+            }
+            WireContentId(id) => AnyFileContentId::ContentId(id.to_api()?),
+            WireSha1(id) => AnyFileContentId::Sha1(id.to_api()?),
+            WireSha256(id) => AnyFileContentId::Sha256(id.to_api()?),
+        })
     }
 }
 

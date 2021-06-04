@@ -45,6 +45,7 @@
 //! 7. If the type has a corresponding API type, add a quickcheck wire-API round
 //! trip test.
 
+pub mod anyid;
 pub mod batch;
 pub mod bookmark;
 pub mod clone;
@@ -54,11 +55,13 @@ pub mod errors;
 pub mod file;
 pub mod history;
 pub mod metadata;
+pub mod token;
 pub mod tree;
 
 use dag_types::id::Id as DagId;
 
 pub use crate::wire::{
+    anyid::{WireAnyId, WireLookupRequest, WireLookupResponse},
     batch::WireBatch,
     bookmark::{WireBookmarkEntry, WireBookmarkRequest},
     clone::{WireCloneData, WireIdMapEntry},
@@ -73,9 +76,10 @@ pub use crate::wire::{
     file::{WireFileEntry, WireFileRequest},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{
-        WireDirectoryMetadata, WireDirectoryMetadataRequest, WireFileMetadata,
-        WireFileMetadataRequest,
+        WireAnyFileContentId, WireContentId, WireDirectoryMetadata, WireDirectoryMetadataRequest,
+        WireFileMetadata, WireFileMetadataRequest, WireSha1, WireSha256,
     },
+    token::{WireUploadToken, WireUploadTokenData, WireUploadTokenSignature},
     tree::{WireTreeEntry, WireTreeRequest},
 };
 
@@ -171,9 +175,23 @@ impl<A: ToWire> ToWire for Option<A> {
 impl<W: ToApi> ToApi for Option<W> {
     type Api = Option<<W as ToApi>::Api>;
     type Error = <W as ToApi>::Error;
-
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         self.map(|w| w.to_api()).transpose()
+    }
+}
+
+impl ToApi for Vec<u8> {
+    type Api = Vec<u8>;
+    type Error = WireToApiConversionError;
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(self)
+    }
+}
+
+impl ToWire for Vec<u8> {
+    type Wire = Vec<u8>;
+    fn to_wire(self) -> Self::Wire {
+        self
     }
 }
 

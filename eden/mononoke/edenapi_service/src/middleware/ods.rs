@@ -31,6 +31,8 @@ define_stats! {
     clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     full_idmap_clone_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     bookmarks_duration: dynamic_histogram("{}.bookmarks_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    lookup_duration: dynamic_histogram("{}.files_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    upload_file_duration: dynamic_histogram("{}.files_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -70,6 +72,8 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Clone => STATS::clone_duration.add_value(dur_ms, (repo,)),
                 FullIdMapClone => STATS::full_idmap_clone_duration.add_value(dur_ms, (repo,)),
                 Bookmarks => STATS::bookmarks_duration.add_value(dur_ms, (repo,)),
+                Lookup => STATS::lookup_duration.add_value(dur_ms, (repo,)),
+                UploadFile => STATS::upload_file_duration.add_value(dur_ms, (repo,)),
             }
         }
 

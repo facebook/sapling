@@ -10,9 +10,11 @@ use std::collections::HashMap;
 use anyhow::{self, format_err, Context};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use blobstore::Blobstore;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
+use filestore::Alias;
 use futures::compat::Stream01CompatExt;
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
@@ -20,7 +22,10 @@ use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::{
+    hash::{Sha1, Sha256},
+    ChangesetId, ContentId, MPath, MononokeId,
+};
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 
@@ -54,6 +59,48 @@ impl HgRepoContext {
     /// The configuration for the repository.
     pub(crate) fn config(&self) -> &RepoConfig {
         self.repo.config()
+    }
+
+    /// Look up in blobstore by `ContentId`
+    pub async fn is_present(&self, content_id: ContentId) -> Result<bool, MononokeError> {
+        // TODO (liubovd): check in all multiplexes blobstores
+        self.blob_repo()
+            .blobstore()
+            .is_present(self.ctx(), &content_id.blobstore_key())
+            .await
+            .map_err(MononokeError::from)
+    }
+
+    /// Look up in blobstore by `Sha1 alias`
+    pub async fn is_present_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
+        // TODO (liubovd): check in all multiplexes blobstores
+        self.blob_repo()
+            .blobstore()
+            .is_present(self.ctx(), &Alias::Sha1(sha1).blobstore_key())
+            .await
+            .map_err(MononokeError::from)
+    }
+
+    /// Look up in blobstore by `Sha256 alias`
+    pub async fn is_present_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
+        // TODO (liubovd): check in all multiplexes blobstores
+        self.blob_repo()
+            .blobstore()
+            .is_present(self.ctx(), &Alias::Sha256(sha256).blobstore_key())
+            .await
+            .map_err(MononokeError::from)
+    }
+
+
+    /// Look up changeset
+    pub async fn changeset_exists(
+        &self,
+        hg_changeset_id: HgChangesetId,
+    ) -> Result<bool, MononokeError> {
+        self.blob_repo()
+            .changeset_exists(self.ctx().clone(), hg_changeset_id)
+            .await
+            .map_err(MononokeError::from)
     }
 
     /// Look up a file in the repo by `HgFileNodeId`.
