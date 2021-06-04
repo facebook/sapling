@@ -93,8 +93,12 @@ void RenameTest::renameFile(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture =
-      srcDir->rename(srcBase, destDir, destBase, InvalidationRequired::No);
+  auto renameFuture = srcDir->rename(
+      srcBase,
+      destDir,
+      destBase,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
   std::move(renameFuture).get();
@@ -174,7 +178,11 @@ TEST_F(RenameTest, renameFileToSamePath) {
   // Do the rename
   auto parentDir = mount_->getTreeInode(path.dirname());
   auto renameFuture = parentDir->rename(
-      path.basename(), parentDir, path.basename(), InvalidationRequired::No);
+      path.basename(),
+      parentDir,
+      path.basename(),
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
   std::move(renameFuture).get();
@@ -216,8 +224,12 @@ void RenameTest::renameDir(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture =
-      srcDir->rename(srcBase, destDir, destBase, InvalidationRequired::No);
+  auto renameFuture = srcDir->rename(
+      srcBase,
+      destDir,
+      destBase,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
   std::move(renameFuture).get();
@@ -297,7 +309,11 @@ TEST_F(RenameTest, renameDirToSamePath) {
   // Do the rename
   auto parentDir = mount_->getTreeInode(path.dirname());
   auto renameFuture = parentDir->rename(
-      path.basename(), parentDir, path.basename(), InvalidationRequired::No);
+      path.basename(),
+      parentDir,
+      path.basename(),
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(renameFuture.hasException());
   std::move(renameFuture).get();
@@ -327,8 +343,12 @@ void RenameTest::renameError(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture =
-      srcDir->rename(srcBase, destDir, destBase, InvalidationRequired::No);
+  auto renameFuture = srcDir->rename(
+      srcBase,
+      destDir,
+      destBase,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
 
   // The rename should fail with the expected error
   ASSERT_TRUE(renameFuture.isReady());
@@ -400,7 +420,11 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
 
   // Do the rename
   auto renameFuture = srcDir->rename(
-      srcPath.basename(), destDir, "test.txt"_pc, InvalidationRequired::No);
+      srcPath.basename(),
+      destDir,
+      "test.txt"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
 
   // The rename should fail with ENOENT since the destination directory no
   // longer exists
@@ -417,7 +441,13 @@ TEST_F(RenameTest, renameOverEmptyDir) {
   auto yino = x->getChildInodeNumber("y"_pc);
   auto newParent = mount_->getTreeInode("a/b");
 
-  (void)x->rename("y"_pc, newParent, "emptydir"_pc, InvalidationRequired::No)
+  (void)x
+      ->rename(
+          "y"_pc,
+          newParent,
+          "emptydir"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
       .get(0ms);
 
   EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
@@ -441,7 +471,13 @@ TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
   toBeUnlinked->incFsRefcount();
   toBeUnlinked.reset();
 
-  (void)x->rename("y"_pc, newParent, "emptydir"_pc, InvalidationRequired::No)
+  (void)x
+      ->rename(
+          "y"_pc,
+          newParent,
+          "emptydir"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
       .get(0ms);
 
   EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
@@ -463,7 +499,8 @@ TEST_F(RenameTest, renameUpdatesMtime) {
       PathComponentPiece{"doc.txt"},
       bInode,
       PathComponentPiece{"doc.txt"},
-      InvalidationRequired::No);
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   EXPECT_TRUE(renameFuture.isReady());
 
   EXPECT_EQ(
@@ -505,8 +542,12 @@ TEST_F(RenameLoadingTest, renameDirSameDirectory) {
   // parent inode is ready).  File inodes do not wait to load the blob data
   // from the backing store before creating the FileInode object.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "x"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -528,8 +569,12 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "x"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -564,8 +609,12 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "x"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -605,8 +654,12 @@ TEST_F(RenameLoadingTest, renameLoadFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "x"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -627,8 +680,12 @@ TEST_F(RenameLoadingTest, renameLoadDest) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "empty"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "empty"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -650,8 +707,12 @@ TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "empty"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "empty"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -675,8 +736,12 @@ TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "testdir"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "testdir"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -699,8 +764,12 @@ TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "testdir"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "testdir"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -723,8 +792,12 @@ TEST_F(RenameLoadingTest, renameLoadDestFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "empty"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "empty"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -749,8 +822,12 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "empty"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "empty"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -776,8 +853,12 @@ TEST_F(RenameLoadingTest, renameLoadBothFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture =
-      bInode->rename("c"_pc, bInode, "empty"_pc, InvalidationRequired::No);
+  auto renameFuture = bInode->rename(
+      "c"_pc,
+      bInode,
+      "empty"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 

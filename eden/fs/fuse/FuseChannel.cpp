@@ -2061,7 +2061,8 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
           parent,
           extractPathComponent(oldName, requireUtf8Path_),
           newParent,
-          extractPathComponent(newName, requireUtf8Path_))
+          extractPathComponent(newName, requireUtf8Path_),
+          request)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 

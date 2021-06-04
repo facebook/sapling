@@ -519,7 +519,8 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
                         srcPath.basename(),
                         getTreeInode(destPath.dirname()),
                         destPath.basename(),
-                        InvalidationRequired::No);
+                        InvalidationRequired::No,
+                        ObjectFetchContext::getNullContext());
   std::move(future).get();
 }
 

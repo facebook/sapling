@@ -131,7 +131,8 @@ ImmediateFuture<folly::Unit> FuseDispatcher::rename(
     InodeNumber,
     PathComponentPiece,
     InodeNumber,
-    PathComponentPiece) {
+    PathComponentPiece,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

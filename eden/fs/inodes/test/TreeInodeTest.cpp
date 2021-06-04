@@ -136,7 +136,11 @@ TEST(TreeInode, updateAndReaddir) {
 
   somedir
       ->rename(
-          "file3"_pc, somedir, "renamedfile.txt"_pc, InvalidationRequired::No)
+          "file3"_pc,
+          somedir,
+          "renamedfile.txt"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
       .get(0ms);
   result = somedir->readdir();
   ASSERT_EQ(3, result.size());
@@ -328,7 +332,12 @@ void runConcurrentModificationAndReaddirIteration(
             break;
           }
           case 2: { // rename
-            root->rename(pickName(), root, pickName(), InvalidationRequired::No)
+            root->rename(
+                    pickName(),
+                    root,
+                    pickName(),
+                    InvalidationRequired::No,
+                    ObjectFetchContext::getNullContext())
                 .get(0ms);
             break;
           }

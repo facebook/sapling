@@ -226,7 +226,8 @@ class FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
-      PathComponentPiece newname);
+      PathComponentPiece newname,
+      ObjectFetchContext& context);
 
   /**
    * Create a hard link

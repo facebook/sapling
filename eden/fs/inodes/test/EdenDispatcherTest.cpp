@@ -81,7 +81,12 @@ TEST_F(EdenDispatcherTest, symlinkReturnsNameTooLong) {
 TEST_F(EdenDispatcherTest, renameReturnsNameTooLong) {
   try {
     mount.getDispatcher()
-        ->rename(kRootNodeId, "oldname"_pc, kRootNodeId, kTooLong)
+        ->rename(
+            kRootNodeId,
+            "oldname"_pc,
+            kRootNodeId,
+            kTooLong,
+            ObjectFetchContext::getNullContext())
         .get(0ms);
     FAIL() << "should throw";
   } catch (std::system_error& e) {

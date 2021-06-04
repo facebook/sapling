@@ -251,21 +251,25 @@ ImmediateFuture<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
     PathComponent fromName,
     InodeNumber toIno,
     PathComponent toName,
-    ObjectFetchContext& /*context*/) {
+    ObjectFetchContext& context) {
   auto fromDir = inodeMap_->lookupTreeInode(fromIno);
   return inodeMap_->lookupTreeInode(toIno)
       .thenValue([fromDir = std::move(fromDir),
                   fromName = std::move(fromName),
-                  toName =
-                      std::move(toName)](TreeInodePtr&& toDirInode) mutable {
+                  toName = std::move(toName),
+                  &context](TreeInodePtr&& toDirInode) mutable {
         return std::move(fromDir).thenValue(
             [fromName = std::move(fromName),
              toName = std::move(toName),
-             toDirInode =
-                 std::move(toDirInode)](const TreeInodePtr& fromDirInode) {
+             toDirInode = std::move(toDirInode),
+             &context](const TreeInodePtr& fromDirInode) {
               return fromDirInode
                   ->rename(
-                      fromName, toDirInode, toName, InvalidationRequired::No)
+                      fromName,
+                      toDirInode,
+                      toName,
+                      InvalidationRequired::No,
+                      context)
                   .semi();
             });
       })

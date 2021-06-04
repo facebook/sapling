@@ -408,7 +408,8 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
     InodeNumber parent,
     PathComponentPiece namePiece,
     InodeNumber newParent,
-    PathComponentPiece newNamePiece) {
+    PathComponentPiece newNamePiece,
+    ObjectFetchContext& context) {
   // Start looking up both parents
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
@@ -416,12 +417,17 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
   return std::move(parentFuture)
       .thenValue([npFuture = std::move(newParentFuture),
                   name = PathComponent{namePiece},
-                  newName = PathComponent{newNamePiece}](
-                     const TreeInodePtr& parent) mutable {
+                  newName = PathComponent{newNamePiece},
+                  &context](const TreeInodePtr& parent) mutable {
         return std::move(npFuture).thenValue(
-            [parent, name, newName](const TreeInodePtr& newParent) {
+            [parent, name, newName, &context](const TreeInodePtr& newParent) {
               return parent
-                  ->rename(name, newParent, newName, InvalidationRequired::No)
+                  ->rename(
+                      name,
+                      newParent,
+                      newName,
+                      InvalidationRequired::No,
+                      context)
                   .semi();
             });
       });

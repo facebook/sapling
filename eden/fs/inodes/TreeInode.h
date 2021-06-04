@@ -148,7 +148,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       TreeInodePtr newParent,
       PathComponentPiece newName,
-      InvalidationRequired invalidate);
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context);
 
 #ifndef _WIN32
   FuseDirList

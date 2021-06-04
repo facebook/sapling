@@ -1447,7 +1447,8 @@ Future<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
     PathComponentPiece destName,
-    InvalidationRequired invalidate) {
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return makeFuture<Unit>(InodeError(EPERM, inodePtrFromThis(), name));
@@ -1549,24 +1550,24 @@ Future<Unit> TreeInode::rename(
                          nameCopy = name.copy(),
                          destParent,
                          destNameCopy = destName.copy(),
-                         invalidate](auto&&) {
-    return self->rename(nameCopy, destParent, destNameCopy, invalidate);
+                         invalidate,
+                         &context](auto&&) {
+    return self->rename(
+        nameCopy, destParent, destNameCopy, invalidate, context);
   };
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::rename");
   if (needSrc && needDest) {
-    auto srcFuture = getOrLoadChild(name, *context);
-    auto destFuture = destParent->getOrLoadChild(destName, *context);
+    auto srcFuture = getOrLoadChild(name, context);
+    auto destFuture = destParent->getOrLoadChild(destName, context);
     // folly::collect is safe here because onLoadFinish has captured strong
     // references.
     return folly::collectUnsafe(srcFuture, destFuture)
         .thenValue(onLoadFinished);
   } else if (needSrc) {
-    return getOrLoadChild(name, *context).thenValue(onLoadFinished);
+    return getOrLoadChild(name, context).thenValue(onLoadFinished);
   } else {
     XCHECK(needDest);
-    return destParent->getOrLoadChild(destName, *context)
+    return destParent->getOrLoadChild(destName, context)
         .thenValue(onLoadFinished);
   }
 }

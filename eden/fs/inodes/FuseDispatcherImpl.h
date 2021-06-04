@@ -71,7 +71,8 @@ class FuseDispatcherImpl : public FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
-      PathComponentPiece newname) override;
+      PathComponentPiece newname,
+      ObjectFetchContext& context) override;
 
   ImmediateFuture<fuse_entry_out> link(
       InodeNumber ino,

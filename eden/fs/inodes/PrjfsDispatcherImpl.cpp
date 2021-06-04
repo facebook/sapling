@@ -249,26 +249,29 @@ folly::Future<folly::Unit> renameFile(
 
   return folly::collect(oldParentInode, newParentInode)
       .via(mount.getThreadPool().get())
-      .thenValue([oldPath = std::move(oldPath), newPath = std::move(newPath)](
-                     const std::tuple<TreeInodePtr, TreeInodePtr> inodes) {
-        auto& oldParentTreePtr = std::get<0>(inodes);
-        auto& newParentTreePtr = std::get<1>(inodes);
-        // TODO(xavierd): In the case where the oldPath is actually being
-        // created in another thread, EdenFS simply might not know about
-        // it at this point. Creating the file and renaming it at this
-        // point won't help as the other thread will re-create it. In the
-        // future, we may want to try, wait a bit and retry, or re-think
-        // this and somehow order requests so the file creation always
-        // happens before the rename.
-        //
-        // This should be *extremely* rare, for now let's just let it
-        // error out.
-        return oldParentTreePtr->rename(
-            oldPath.basename(),
-            newParentTreePtr,
-            newPath.basename(),
-            InvalidationRequired::No);
-      });
+      .thenValue(
+          [oldPath = std::move(oldPath),
+           newPath = std::move(newPath),
+           &context](const std::tuple<TreeInodePtr, TreeInodePtr> inodes) {
+            auto& oldParentTreePtr = std::get<0>(inodes);
+            auto& newParentTreePtr = std::get<1>(inodes);
+            // TODO(xavierd): In the case where the oldPath is actually being
+            // created in another thread, EdenFS simply might not know about
+            // it at this point. Creating the file and renaming it at this
+            // point won't help as the other thread will re-create it. In the
+            // future, we may want to try, wait a bit and retry, or re-think
+            // this and somehow order requests so the file creation always
+            // happens before the rename.
+            //
+            // This should be *extremely* rare, for now let's just let it
+            // error out.
+            return oldParentTreePtr->rename(
+                oldPath.basename(),
+                newParentTreePtr,
+                newPath.basename(),
+                InvalidationRequired::No,
+                context);
+          });
 }
 
 folly::Future<folly::Unit> removeFile(
