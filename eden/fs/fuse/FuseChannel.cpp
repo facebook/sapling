@@ -1834,7 +1834,8 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseWrite(
 
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
-      ->write(ino, folly::StringPiece{bufPtr, write->size}, write->offset)
+      ->write(
+          ino, folly::StringPiece{bufPtr, write->size}, write->offset, request)
       .thenValue([&request](size_t written) {
         fuse_write_out out = {};
         out.size = written;
@@ -1901,7 +1902,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSetAttr(
     ByteRange arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg.data());
   XLOG(DBG7) << "FUSE_SETATTR inode=" << header.nodeid;
-  return dispatcher_->setattr(InodeNumber{header.nodeid}, *setattr)
+  return dispatcher_->setattr(InodeNumber{header.nodeid}, *setattr, request)
       .thenValue([&request](FuseDispatcher::Attr attr) {
         request.sendReply(attr.asFuseAttr());
       });
@@ -2398,7 +2399,10 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFallocate(
   // which is extremely expensive in an EdenFS checkout.
   return dispatcher_
       ->fallocate(
-          InodeNumber{header.nodeid}, allocate->offset, allocate->length)
+          InodeNumber{header.nodeid},
+          allocate->offset,
+          allocate->length,
+          request)
       .thenValue([&request](auto) { request.replyError(0); });
 }
 

@@ -163,7 +163,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const InodeTimestamps& initialTimestamps);
 
 #ifndef _WIN32
-  folly::Future<struct stat> setattr(const DesiredMetadata& desired) override;
+  folly::Future<struct stat> setattr(
+      const DesiredMetadata& desired,
+      ObjectFetchContext& fetchContext) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink(
@@ -264,14 +266,15 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<BufVec>
   read(size_t size, off_t off, ObjectFetchContext& context);
 
-  folly::Future<size_t> write(BufVec&& buf, off_t off);
-  folly::Future<size_t> write(folly::StringPiece data, off_t off);
+  folly::Future<size_t>
+  write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext);
+  folly::Future<size_t>
+  write(folly::StringPiece data, off_t off, ObjectFetchContext& fetchContext);
 
   void fsync(bool datasync);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> fallocate(
-      uint64_t offset,
-      uint64_t length);
+  FOLLY_NODISCARD folly::Future<folly::Unit>
+  fallocate(uint64_t offset, uint64_t length, ObjectFetchContext& fetchContext);
 
 #endif // !_WIN32
 
@@ -314,7 +317,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   runWhileMaterialized(
       LockedState state,
       std::shared_ptr<const Blob> blob,
-      Fn&& fn);
+      Fn&& fn,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Truncate the file and then call a function.
@@ -378,7 +382,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Transition from NOT_LOADING to MATERIALIZED_IN_OVERLAY by copying the
    * blob into the overlay.
    */
-  void materializeNow(LockedState& state, std::shared_ptr<const Blob> blob);
+  void materializeNow(
+      LockedState& state,
+      std::shared_ptr<const Blob> blob,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Get a FileInodePtr to ourself.

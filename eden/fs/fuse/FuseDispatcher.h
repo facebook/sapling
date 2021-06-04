@@ -137,7 +137,8 @@ class FuseDispatcher {
    */
   virtual ImmediateFuture<Attr> setattr(
       InodeNumber ino,
-      const fuse_setattr_in& attr);
+      const fuse_setattr_in& attr,
+      ObjectFetchContext& context);
 
   /**
    * Read symbolic link
@@ -310,8 +311,11 @@ class FuseDispatcher {
    * of the write system call will reflect the return value of this
    * operation.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<size_t>
-  write(InodeNumber ino, folly::StringPiece data, off_t off);
+  FOLLY_NODISCARD virtual ImmediateFuture<size_t> write(
+      InodeNumber ino,
+      folly::StringPiece data,
+      off_t off,
+      ObjectFetchContext& context);
 
   /**
    * This is called on each close() of the opened file.
@@ -341,8 +345,11 @@ class FuseDispatcher {
    *
    * Only used on Linux.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
-  fallocate(InodeNumber ino, uint64_t offset, uint64_t length);
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fallocate(
+      InodeNumber ino,
+      uint64_t offset,
+      uint64_t length,
+      ObjectFetchContext& context);
 
   /**
    * Ensure file content changes are flushed to disk.

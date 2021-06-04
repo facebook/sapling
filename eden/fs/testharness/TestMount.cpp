@@ -454,7 +454,8 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   // notification which will update the EdenMount.
   writeFile(absolutePath, contents).value();
 #else
-  createResult->write(contents, /*off*/ 0).get(0ms);
+  createResult->write(contents, /*off*/ 0, ObjectFetchContext::getNullContext())
+      .get(0ms);
   createResult->fsync(/*datasync*/ true);
 #endif
 }
@@ -494,10 +495,10 @@ void TestMount::overwriteFile(
 #else
   DesiredMetadata desired;
   desired.size = 0;
-  (void)file->setattr(desired).get(0ms);
+  (void)file->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
   off_t offset = 0;
-  file->write(contents, offset).get(0ms);
+  file->write(contents, offset, ObjectFetchContext::getNullContext()).get(0ms);
   file->fsync(/*datasync*/ true);
 #endif
 }
@@ -608,7 +609,7 @@ void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
 
   DesiredMetadata desiredAttr;
   desiredAttr.mode = permissions;
-  inode->setattr(desiredAttr).get();
+  inode->setattr(desiredAttr, ObjectFetchContext::getNullContext()).get();
 }
 #endif
 

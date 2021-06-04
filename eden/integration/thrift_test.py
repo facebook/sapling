@@ -59,7 +59,12 @@ class ThriftTest(testcase.EdenRepoTest):
         return inode_count
 
     def test_pid_fetch_counts(self) -> None:
-
+        # We already test that our fetch counts get incremented correctly in
+        # unit tests. This is an end to end test to make sure that our fetch
+        # counts are reasonable values. We know touching a file means we must
+        # read it at least once. So we expect at least 2 fetches here. In
+        # reality there may be more than that because touch will cause multiple
+        # requests into fuse for each file.
         touch_p = subprocess.Popen(
             "touch test_fetch1 test_fetch2".split(), cwd=self.mount_path
         )
@@ -68,7 +73,7 @@ class ThriftTest(testcase.EdenRepoTest):
         with self.get_thrift_client() as client:
             counts = client.getAccessCounts(1)
             accesses = counts.accessesByMount[self.mount_path_bytes]
-            self.assertEqual(2, accesses.fetchCountsByPid[touch_p.pid])
+            self.assertLessEqual(2, accesses.fetchCountsByPid[touch_p.pid])
 
     def test_list_mounts(self) -> None:
         with self.get_thrift_client() as client:

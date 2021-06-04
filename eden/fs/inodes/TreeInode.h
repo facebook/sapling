@@ -112,7 +112,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<struct stat> stat(ObjectFetchContext& context) override;
 
 #ifndef _WIN32
-  folly::Future<struct stat> setattr(const DesiredMetadata& desired) override;
+  folly::Future<struct stat> setattr(
+      const DesiredMetadata& desired,
+      ObjectFetchContext& fetchContext) override;
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(

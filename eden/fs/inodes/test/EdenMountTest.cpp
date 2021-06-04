@@ -512,11 +512,15 @@ TEST(EdenMount, testCanModifyPermissionsOnFilesAndDirs) {
   int modebits = 07673;
   desired.mode = modebits; // setattr ignores format flags
 
-  auto treeResult = treeInode->setattr(desired).get(0ms);
+  auto treeResult =
+      treeInode->setattr(desired, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st_ino);
   EXPECT_EQ(S_IFDIR | modebits, treeResult.st_mode);
 
-  auto fileResult = fileInode->setattr(desired).get(0ms);
+  auto fileResult =
+      fileInode->setattr(desired, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st_ino);
   EXPECT_EQ(S_IFREG | modebits, fileResult.st_mode);
 }
@@ -534,12 +538,16 @@ TEST(EdenMount, testCanChownFilesAndDirs) {
   desired.uid = 23;
   desired.gid = 27;
 
-  auto treeResult = treeInode->setattr(desired).get(0ms);
+  auto treeResult =
+      treeInode->setattr(desired, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st_ino);
   EXPECT_EQ(desired.uid.value(), treeResult.st_uid);
   EXPECT_EQ(desired.gid.value(), treeResult.st_gid);
 
-  auto fileResult = fileInode->setattr(desired).get(0ms);
+  auto fileResult =
+      fileInode->setattr(desired, ObjectFetchContext::getNullContext())
+          .get(0ms);
   EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st_ino);
   EXPECT_EQ(desired.uid.value(), fileResult.st_uid);
   EXPECT_EQ(desired.gid.value(), fileResult.st_gid);

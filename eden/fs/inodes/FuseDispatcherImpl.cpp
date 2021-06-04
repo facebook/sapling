@@ -150,7 +150,8 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
     InodeNumber ino,
-    const fuse_setattr_in& attr) {
+    const fuse_setattr_in& attr,
+    ObjectFetchContext& context) {
   // Even though mounts are created with the nosuid flag, explicitly disallow
   // setting suid, sgid, and sticky bits on any inodes. This lets us avoid
   // explicitly clearing these bits on writes() which is required for correct
@@ -161,7 +162,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
   }
 
   return inodeMap_->lookupInode(ino)
-      .thenValue([this, attr](const InodePtr& inode) {
+      .thenValue([this, attr, &context](const InodePtr& inode) {
         auto fuseTimeToTimespec = [](uint64_t time, uint64_t ntime) {
           timespec spec;
           spec.tv_sec = time;
@@ -195,7 +196,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
           desired.mtime = now;
         }
 
-        return inode->setattr(desired).semi();
+        return inode->setattr(desired, context).semi();
       })
       .thenValue([](struct stat&& stat) {
         return FuseDispatcher::Attr{std::move(stat)};
@@ -252,11 +253,14 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
       });
 }
 
-ImmediateFuture<size_t>
-FuseDispatcherImpl::write(InodeNumber ino, folly::StringPiece data, off_t off) {
+ImmediateFuture<size_t> FuseDispatcherImpl::write(
+    InodeNumber ino,
+    folly::StringPiece data,
+    off_t off,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [copy = data.str(), off](FileInodePtr&& inode) {
-        return inode->write(copy, off).semi();
+      [copy = data.str(), off, &context](FileInodePtr&& inode) {
+        return inode->write(copy, off, context).semi();
       });
 }
 
@@ -271,10 +275,11 @@ ImmediateFuture<Unit> FuseDispatcherImpl::flush(
 ImmediateFuture<folly::Unit> FuseDispatcherImpl::fallocate(
     InodeNumber ino,
     uint64_t offset,
-    uint64_t length) {
+    uint64_t length,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [offset, length](FileInodePtr inode) {
-        return inode->fallocate(offset, length).semi();
+      [offset, length, &context](FileInodePtr inode) {
+        return inode->fallocate(offset, length, context).semi();
       });
 }
 

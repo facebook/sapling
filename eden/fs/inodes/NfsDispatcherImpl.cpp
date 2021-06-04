@@ -33,12 +33,13 @@ ImmediateFuture<struct stat> NfsDispatcherImpl::getattr(
 ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
     InodeNumber ino,
     DesiredMetadata desired,
-    ObjectFetchContext& /*context*/) {
+    ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino)
-      .thenValue([desired = std::move(desired)](const InodePtr& inode) {
-        // TODO(xavierd): Modify setattr to obtain pre stat of the file.
-        return inode->setattr(desired).semi();
-      })
+      .thenValue(
+          [desired = std::move(desired), &context](const InodePtr& inode) {
+            // TODO(xavierd): Modify setattr to obtain pre stat of the file.
+            return inode->setattr(desired, context).semi();
+          })
       .thenValue([](struct stat st) {
         return NfsDispatcher::SetattrRes{std::nullopt, st};
       });
@@ -106,12 +107,13 @@ ImmediateFuture<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
     InodeNumber ino,
     std::unique_ptr<folly::IOBuf> data,
     off_t offset,
-    ObjectFetchContext& /*context*/) {
+    ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [data = std::move(data), offset](const FileInodePtr& inode) mutable {
+      [data = std::move(data), offset, &context](
+          const FileInodePtr& inode) mutable {
         // TODO(xavierd): Modify write to obtain pre and post stat of the
         // file.
-        return inode->write(std::move(data), offset)
+        return inode->write(std::move(data), offset, context)
             .thenValue([](size_t written) {
               return WriteRes{written, std::nullopt, std::nullopt};
             })

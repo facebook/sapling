@@ -83,7 +83,8 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::getattr(
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::setattr(
     InodeNumber /*ino*/,
-    const fuse_setattr_in& /*attr*/
+    const fuse_setattr_in& /*attr*/,
+    ObjectFetchContext& /*context*/
 ) {
   FUSELL_NOT_IMPL();
 }
@@ -179,7 +180,8 @@ ImmediateFuture<BufVec> FuseDispatcher::read(
 ImmediateFuture<size_t> FuseDispatcher::write(
     InodeNumber /*ino*/,
     StringPiece /*data*/,
-    off_t /*off*/) {
+    off_t /*off*/,
+    ObjectFetchContext& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -187,8 +189,11 @@ ImmediateFuture<folly::Unit> FuseDispatcher::flush(InodeNumber, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<folly::Unit>
-FuseDispatcher::fallocate(InodeNumber, uint64_t, uint64_t) {
+ImmediateFuture<folly::Unit> FuseDispatcher::fallocate(
+    InodeNumber,
+    uint64_t,
+    uint64_t,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

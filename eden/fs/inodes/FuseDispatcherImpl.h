@@ -27,8 +27,10 @@ class FuseDispatcherImpl : public FuseDispatcher {
   ImmediateFuture<struct fuse_kstatfs> statfs(InodeNumber ino) override;
   ImmediateFuture<Attr> getattr(InodeNumber ino, ObjectFetchContext& context)
       override;
-  ImmediateFuture<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
-      override;
+  ImmediateFuture<Attr> setattr(
+      InodeNumber ino,
+      const fuse_setattr_in& attr,
+      ObjectFetchContext& context) override;
   ImmediateFuture<uint64_t> opendir(InodeNumber ino, int flags) override;
   ImmediateFuture<folly::Unit> releasedir(InodeNumber ino, uint64_t fh)
       override;
@@ -92,13 +94,19 @@ class FuseDispatcherImpl : public FuseDispatcher {
       size_t size,
       off_t off,
       ObjectFetchContext& context) override;
-  ImmediateFuture<size_t>
-  write(InodeNumber ino, folly::StringPiece data, off_t off) override;
+  ImmediateFuture<size_t> write(
+      InodeNumber ino,
+      folly::StringPiece data,
+      off_t off,
+      ObjectFetchContext& context) override;
 
   ImmediateFuture<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
       override;
-  ImmediateFuture<folly::Unit>
-  fallocate(InodeNumber ino, uint64_t offset, uint64_t length) override;
+  ImmediateFuture<folly::Unit> fallocate(
+      InodeNumber ino,
+      uint64_t offset,
+      uint64_t length,
+      ObjectFetchContext& context) override;
   ImmediateFuture<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
   ImmediateFuture<folly::Unit> fsyncdir(InodeNumber ino, bool datasync)
       override;

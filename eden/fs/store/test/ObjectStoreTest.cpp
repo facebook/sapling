@@ -10,6 +10,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -214,4 +215,36 @@ TEST_F(ObjectStoreTest, get_size_and_sha1_only_imports_blob_once) {
   objectStore->getBlobSha1(readyBlobId, context).get(0ms);
 
   EXPECT_EQ(1, backingStore->getAccessCount(readyBlobId));
+}
+
+class PidFetchContext : public ObjectFetchContext {
+ public:
+  PidFetchContext(pid_t pid) : ObjectFetchContext{}, pid_{pid} {}
+
+  std::optional<pid_t> getClientPid() const override {
+    return pid_;
+  }
+
+ private:
+  pid_t pid_;
+};
+
+TEST_F(ObjectStoreTest, test_process_access_counts) {
+  pid_t pid0{10000};
+  PidFetchContext pidContext0{pid0};
+  pid_t pid1{10001};
+  PidFetchContext pidContext1{pid1};
+
+  // first fetch increments fetch count for pid0
+  objectStore->getBlob(readyBlobId, pidContext0).get(0ms);
+  EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid0));
+
+  // local fetch also increments fetch count for pid0
+  objectStore->getBlob(readyBlobId, pidContext0).get(0ms);
+  EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
+
+  // increments fetch count for pid1
+  objectStore->getBlob(readyBlobId, pidContext1).get(0ms);
+  EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
+  EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid1));
 }

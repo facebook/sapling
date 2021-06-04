@@ -88,7 +88,8 @@ struct stat getFileAttr(const FileInodePtr& inode) {
 struct stat setFileAttr(
     const FileInodePtr& inode,
     const DesiredMetadata& desired) {
-  auto attrFuture = inode->setattr(desired);
+  auto attrFuture =
+      inode->setattr(desired, ObjectFetchContext::getNullContext());
   if (!attrFuture.isReady()) {
     ADD_FAILURE() << "setattr() future is not ready";
     throw std::runtime_error("setattr future is not ready");
@@ -219,7 +220,7 @@ TEST_F(FileInodeTest, setattrTruncateAllMaterialized) {
   // Modify the inode before running the test, so that
   // it will be materialized in the overlay.
   auto inode = mount_.getFileInode("dir/a.txt");
-  inode->write("THIS IS A.TXT.\n", 0);
+  inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext());
   inode.reset();
 
   testSetattrTruncateAll(mount_);
@@ -351,7 +352,7 @@ TEST_F(FileInodeTest, setattrMtimeMaterialized) {
   // Modify the inode before running the test, so that
   // it will be materialized in the overlay.
   auto inode = mount_.getFileInode("dir/a.txt");
-  inode->write("THIS IS A.TXT.\n", 0);
+  inode->write("THIS IS A.TXT.\n", 0, ObjectFetchContext::getNullContext());
   inode.reset();
 
   testSetattrMtime(mount_);
@@ -371,7 +372,8 @@ TEST_F(FileInodeTest, writingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  auto written = inode->write("abcd", 0).get();
+  auto written =
+      inode->write("abcd", 0, ObjectFetchContext::getNullContext()).get();
   EXPECT_EQ(4, written);
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
@@ -388,7 +390,7 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
 
   DesiredMetadata desired;
   desired.size = 0;
-  (void)inode->setattr(desired).get(0ms);
+  (void)inode->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
   EXPECT_EQ(true, isInodeMaterialized(parent));
@@ -413,7 +415,8 @@ TEST(FileInode, truncatingDuringLoad) {
     // Synchronously truncate the file while the load is in progress.
     DesiredMetadata desired;
     desired.size = 0;
-    (void)inode->setattr(desired).get(0ms);
+    (void)inode->setattr(desired, ObjectFetchContext::getNullContext())
+        .get(0ms);
     // Deallocate the handle here, closing the open file.
   }
 
@@ -459,7 +462,8 @@ TEST(FileInode, writeDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
 
   auto newContents = "TENTS"_sp;
-  auto writeFuture = inode->write(newContents, 3);
+  auto writeFuture =
+      inode->write(newContents, 3, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(writeFuture.isReady());
 
   // Make the backing store data ready now.
@@ -491,14 +495,14 @@ TEST(FileInode, truncateDuringLoad) {
   // from the object store.
   DesiredMetadata desired;
   desired.size = 0;
-  (void)inode->setattr(desired).get(0ms);
+  (void)inode->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());
   EXPECT_EQ("", std::move(dataFuture).get()->moveToFbString());
 
   // For good measure, test reading and writing some more.
-  inode->write("foobar\n"_sp, 5).get(0ms);
+  inode->write("foobar\n"_sp, 5, ObjectFetchContext::getNullContext()).get(0ms);
 
   dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(dataFuture.isReady());
@@ -568,7 +572,7 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
   inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
-  inode->write("data"_sp, 0).get(0ms);
+  inode->write("data"_sp, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_FALSE(blobCache->contains(hash));
 }
 
