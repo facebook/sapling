@@ -32,7 +32,8 @@ TEST(InodeLoader, load) {
                 rootInode,
                 std::vector<std::string>{
                     "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-                [](InodePtr inode) { return inode->getPath(); }))
+                [](InodePtr inode) { return inode->getPath(); },
+                ObjectFetchContext::getNullContext()))
             .get();
 
     EXPECT_EQ("dir/a.txt"_relpath, results[0].value());
@@ -51,7 +52,8 @@ TEST(InodeLoader, load) {
                            "not/exist/a",
                            "not/exist/b",
                            "dir/sub/b.txt"},
-                       [](InodePtr inode) { return inode->getPath(); }))
+                       [](InodePtr inode) { return inode->getPath(); },
+                       ObjectFetchContext::getNullContext()))
             .get();
 
     EXPECT_EQ("dir/sub/b.txt"_relpath, results[0].value());
@@ -68,7 +70,8 @@ TEST(InodeLoader, load) {
             applyToInodes(
                 rootInode,
                 std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
-                [](InodePtr inode) { return inode->getPath(); }))
+                [](InodePtr inode) { return inode->getPath(); },
+                ObjectFetchContext::getNullContext()))
             .get();
 
     EXPECT_EQ("dir/a.txt"_relpath, results[0].value());
@@ -88,7 +91,8 @@ TEST(InodeLoader, notReady) {
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [](InodePtr inode) { return inode->getPath(); }));
+        [](InodePtr inode) { return inode->getPath(); },
+        ObjectFetchContext::getNullContext()));
 
     builder.setReady("dir");
     builder.setReady("dir/sub");

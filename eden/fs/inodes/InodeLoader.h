@@ -62,7 +62,7 @@ class InodeLoader {
   // this inode to be loaded.
   // In the failure case this will propagate the failure to
   // any children of this node, too.
-  void loaded(folly::Try<InodePtr> inodeTry) {
+  void loaded(folly::Try<InodePtr> inodeTry, ObjectFetchContext& fetchContext) {
     for (auto& promise : promises_) {
       promise.setValue(inodeTry);
     }
@@ -72,7 +72,7 @@ class InodeLoader {
     for (auto& entry : children_) {
       if (inodeTry.hasException()) {
         // The attempt failed, so propagate the failure to our children
-        entry.second->loaded(inodeTry);
+        entry.second->loaded(inodeTry, fetchContext);
       } else {
         // otherwise schedule the next level of lookup
         auto& childName = entry.first;
@@ -81,19 +81,20 @@ class InodeLoader {
         if (!tree) {
           // This inode is not a tree but we're trying to load
           // children; generate failures for these
-          childLoader->loaded(folly::Try<InodePtr>(
-              folly::make_exception_wrapper<std::system_error>(
-                  ENOENT, std::generic_category())));
+          childLoader->loaded(
+              folly::Try<InodePtr>(
+                  folly::make_exception_wrapper<std::system_error>(
+                      ENOENT, std::generic_category())),
+              fetchContext);
           continue;
         }
 
-        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-            "InodeLoader::loaded");
         folly::makeFutureWith(
-            [&] { return tree->getOrLoadChild(childName, *context); })
-            .thenTry(
-                [loader = std::move(childLoader)](
-                    folly::Try<InodePtr>&& inode) { loader->loaded(inode); });
+            [&] { return tree->getOrLoadChild(childName, fetchContext); })
+            .thenTry([loader = std::move(childLoader),
+                      &fetchContext](folly::Try<InodePtr>&& inode) {
+              loader->loaded(inode, fetchContext);
+            });
       }
     }
   }
@@ -136,7 +137,8 @@ template <typename Func>
 auto applyToInodes(
     InodePtr rootInode,
     const std::vector<std::string>& paths,
-    Func func) {
+    Func func,
+    ObjectFetchContext& fetchContext) {
   using FuncRet = folly::invoke_result_t<Func&, InodePtr&>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
@@ -149,7 +151,7 @@ auto applyToInodes(
         [func](InodePtr&& inode) { return func(inode); }));
   }
 
-  loader.loaded(folly::Try<InodePtr>(rootInode));
+  loader.loaded(folly::Try<InodePtr>(rootInode), fetchContext);
 
   return results;
 }

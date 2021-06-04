@@ -1044,32 +1044,36 @@ EdenServiceHandler::semifuture_getEntryInformation(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
+  auto& fetchContext = helper->getFetchContext();
 
   // TODO: applyToInodes currently forces allocation of inodes for all specified
   // paths. It's possible to resolve this request directly from source control
   // data. In the future, this should be changed to avoid allocating inodes when
   // possible.
 
-  return collectAll(applyToInodes(
-                        rootInode,
-                        *paths,
-                        [](InodePtr inode) { return inode->getType(); }))
-      .deferValue([](vector<Try<dtype_t>> done) {
-        auto out = std::make_unique<vector<EntryInformationOrError>>();
-        out->reserve(done.size());
-        for (auto& item : done) {
-          EntryInformationOrError result;
-          if (item.hasException()) {
-            result.set_error(newEdenError(item.exception()));
-          } else {
-            EntryInformation info;
-            info.dtype_ref() = static_cast<Dtype>(item.value());
-            result.set_info(info);
-          }
-          out->emplace_back(std::move(result));
-        }
-        return out;
-      });
+  return wrapSemiFuture(
+      std::move(helper),
+      collectAll(applyToInodes(
+                     rootInode,
+                     *paths,
+                     [](InodePtr inode) { return inode->getType(); },
+                     fetchContext))
+          .deferValue([](vector<Try<dtype_t>> done) {
+            auto out = std::make_unique<vector<EntryInformationOrError>>();
+            out->reserve(done.size());
+            for (auto& item : done) {
+              EntryInformationOrError result;
+              if (item.hasException()) {
+                result.set_error(newEdenError(item.exception()));
+              } else {
+                EntryInformation info;
+                info.dtype_ref() = static_cast<Dtype>(item.value());
+                result.set_info(info);
+              }
+              out->emplace_back(std::move(result));
+            }
+            return out;
+          }));
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
@@ -1105,7 +1109,8 @@ EdenServiceHandler::semifuture_getFileInformation(
                              return result;
                            })
                            .semi();
-                     }))
+                     },
+                     fetchContext))
           .deferValue([](vector<Try<FileInformationOrError>>&& done) {
             auto out = std::make_unique<vector<FileInformationOrError>>();
             out->reserve(done.size());
