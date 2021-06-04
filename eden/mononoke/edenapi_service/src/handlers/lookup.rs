@@ -17,7 +17,7 @@ use edenapi_types::{
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use load_limiter::Metric;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 
@@ -61,10 +61,13 @@ async fn check_request_item(
             }
         },
         AnyId::HgFilenodeId(id) => {
-            let _file_node_id = HgFileNodeId::from_node_hash(HgNodeHash::from(id));
-            unimplemented!()
+            repo.filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+                .await?
         }
-        AnyId::HgTreeId(_id) => unimplemented!(),
+        AnyId::HgTreeId(id) => {
+            repo.tree_exists(HgManifestId::new(HgNodeHash::from(id)))
+                .await?
+        }
         AnyId::HgChangesetId(id) => {
             repo.changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
                 .await?

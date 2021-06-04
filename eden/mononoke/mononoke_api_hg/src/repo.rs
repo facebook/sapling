@@ -61,36 +61,32 @@ impl HgRepoContext {
         self.repo.config()
     }
 
-    /// Look up in blobstore by `ContentId`
-    pub async fn is_present(&self, content_id: ContentId) -> Result<bool, MononokeError> {
+    async fn is_key_present_in_blobstore(&self, key: &str) -> Result<bool, MononokeError> {
         // TODO (liubovd): check in all multiplexes blobstores
         self.blob_repo()
             .blobstore()
-            .is_present(self.ctx(), &content_id.blobstore_key())
+            .is_present(self.ctx(), &key)
             .await
             .map_err(MononokeError::from)
+    }
+
+    /// Look up in blobstore by `ContentId`
+    pub async fn is_present(&self, content_id: ContentId) -> Result<bool, MononokeError> {
+        self.is_key_present_in_blobstore(&content_id.blobstore_key())
+            .await
     }
 
     /// Look up in blobstore by `Sha1 alias`
     pub async fn is_present_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
-        // TODO (liubovd): check in all multiplexes blobstores
-        self.blob_repo()
-            .blobstore()
-            .is_present(self.ctx(), &Alias::Sha1(sha1).blobstore_key())
+        self.is_key_present_in_blobstore(&Alias::Sha1(sha1).blobstore_key())
             .await
-            .map_err(MononokeError::from)
     }
 
     /// Look up in blobstore by `Sha256 alias`
     pub async fn is_present_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
-        // TODO (liubovd): check in all multiplexes blobstores
-        self.blob_repo()
-            .blobstore()
-            .is_present(self.ctx(), &Alias::Sha256(sha256).blobstore_key())
+        self.is_key_present_in_blobstore(&Alias::Sha256(sha256).blobstore_key())
             .await
-            .map_err(MononokeError::from)
     }
-
 
     /// Look up changeset
     pub async fn changeset_exists(
@@ -101,6 +97,18 @@ impl HgRepoContext {
             .changeset_exists(self.ctx().clone(), hg_changeset_id)
             .await
             .map_err(MononokeError::from)
+    }
+
+    /// Look up in blobstore by `HgFileNodeId`
+    pub async fn filenode_exists(&self, filenode_id: HgFileNodeId) -> Result<bool, MononokeError> {
+        self.is_key_present_in_blobstore(&filenode_id.blobstore_key())
+            .await
+    }
+
+    /// Look up in blobstore by `HgManifestId`
+    pub async fn tree_exists(&self, manifest_id: HgManifestId) -> Result<bool, MononokeError> {
+        self.is_key_present_in_blobstore(&manifest_id.blobstore_key())
+            .await
     }
 
     /// Look up a file in the repo by `HgFileNodeId`.
