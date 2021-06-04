@@ -1460,11 +1460,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                   std::chrono::duration<double>{mountStopWatch.elapsed()}
                       .count();
               event.success = !t.hasException();
-#ifndef _WIN32
               event.clean = edenMount->getOverlay()->hadCleanStartup();
-#else
-              event.clean = true;
-#endif
               serverState_->getStructuredLogger()->logEvent(event);
               return makeFuture(std::move(t));
             });

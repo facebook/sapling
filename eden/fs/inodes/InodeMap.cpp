@@ -134,7 +134,6 @@ void InodeMap::initialize(TreeInodePtr root) {
 void InodeMap::initializeFromTakeover(
     FOLLY_MAYBE_UNUSED TreeInodePtr root,
     FOLLY_MAYBE_UNUSED const SerializedInodeMap& takeover) {
-#ifndef _WIN32
   auto data = data_.wlock();
 
   XCHECK_EQ(data->loadedInodes_.size(), 0ul)
@@ -183,9 +182,6 @@ void InodeMap::initializeFromTakeover(
   XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
              << " from takeover, " << data->unloadedInodes_.size()
              << " inodes registered";
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
