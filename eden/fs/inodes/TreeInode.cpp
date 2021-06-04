@@ -1121,9 +1121,10 @@ folly::Future<folly::Unit> TreeInode::unlink(
   return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
-                  invalidate](const InodePtr& child) mutable {
+                  invalidate,
+                  &context](const InodePtr& child) mutable {
         return self->removeImpl<FileInodePtr>(
-            std::move(childName), child, invalidate, 1);
+            std::move(childName), child, invalidate, 1, context);
       });
 }
 
@@ -1134,9 +1135,10 @@ folly::Future<folly::Unit> TreeInode::rmdir(
   return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
-                  invalidate](const InodePtr& child) mutable {
+                  invalidate,
+                  &context](const InodePtr& child) mutable {
         return self->removeImpl<TreeInodePtr>(
-            std::move(childName), child, invalidate, 1);
+            std::move(childName), child, invalidate, 1, context);
       });
 }
 
@@ -1145,7 +1147,8 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     PathComponent name,
     InodePtr childBasePtr,
     InvalidationRequired invalidate,
-    unsigned int attemptNum) {
+    unsigned int attemptNum,
+    ObjectFetchContext& context) {
   // Make sure the child is of the desired type
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
   if (!child) {
@@ -1216,16 +1219,15 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
   // the left side of "." will always get evaluated before the right
   // side.
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "TreeInode::removeImpl");
-  auto childFuture = getOrLoadChild(name, *context);
+  auto childFuture = getOrLoadChild(name, context);
   return std::move(childFuture)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
                   invalidate,
-                  attemptNum](const InodePtr& loadedChild) {
+                  attemptNum,
+                  &context](const InodePtr& loadedChild) {
         return self->removeImpl<InodePtrType>(
-            childName, loadedChild, invalidate, attemptNum + 1);
+            childName, loadedChild, invalidate, attemptNum + 1, context);
       });
 }
 

@@ -546,7 +546,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponent name,
       InodePtr child,
       InvalidationRequired invalidate,
-      unsigned int attemptNum);
+      unsigned int attemptNum,
+      ObjectFetchContext& fetchContext);
 
   /**
    * tryRemoveChild() actually unlinks a child from our entry list.
