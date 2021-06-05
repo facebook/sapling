@@ -123,6 +123,11 @@ TreeOverlayStore::TreeOverlayStore(AbsolutePathPiece path) {
   ensureDirectoryExists(path);
 
   db_ = std::make_unique<SqliteDatabase>(path + kTreeStorePath);
+
+  // Enable WAL for faster writes to the database. See also:
+  // https://www.sqlite.org/wal.html
+  auto dbLock = db_->lock();
+  SqliteStatement(dbLock, "PRAGMA journal_mode=WAL").step();
 }
 
 TreeOverlayStore::TreeOverlayStore(std::unique_ptr<SqliteDatabase> db)
