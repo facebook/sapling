@@ -419,6 +419,13 @@ impl Request {
         self
     }
 
+    pub fn set_client_info(&mut self, client_info: &Option<String>) -> &mut Self {
+        if let Some(info) = client_info {
+            self.set_header("X-Client-Info", info);
+        }
+        self
+    }
+
     /// Turn on libcurl's verbose output. This will cause libcurl to print lots
     /// of verbose debug messages to stderr. This can be useful when trying to
     /// understand exactly what libcurl is doing under the hood, which can help

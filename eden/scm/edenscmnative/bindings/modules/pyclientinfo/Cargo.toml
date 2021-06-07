@@ -1,0 +1,10 @@
+[package]
+name = "pyclientinfo"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+clientinfo = { path = "../../../../lib/clientinfo" }
+cpython = { version = "0.5", default-features = false }
+pyconfigparser = { path = "../pyconfigparser" }

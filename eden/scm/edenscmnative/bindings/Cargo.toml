@@ -58,4 +58,5 @@ pyvlq = { path = "modules/pyvlq" }
 pyworker = { path = "modules/pyworker" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }
+pyclientinfo = { path = "modules/pyclientinfo" }
 pyzstore = { path = "modules/pyzstore" }

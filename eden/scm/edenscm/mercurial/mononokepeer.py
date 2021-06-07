@@ -37,7 +37,7 @@ import ssl
 from enum import Enum
 from struct import pack, unpack
 
-from bindings import zstd
+from bindings import clientinfo, zstd
 
 from . import error, progress, httpconnection, sslutil, util, stdiopeer
 from .i18n import _
@@ -208,6 +208,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         if u.passwd is not None:
             self._abort(error.RepoError(_("password in URL not supported")))
 
+        self._clientinfo = clientinfo.clientinfo(ui._uiconfig._rcfg._rcfg)
         self._user = u.user
         self._host = u.host
         self._port = u.port or 443
@@ -303,6 +304,14 @@ class mononokepeer(stdiopeer.stdiopeer):
                     b"Connection: Upgrade",
                     b"Upgrade: websocket",
                 ]
+
+                headers.append(
+                    encodeutf8(
+                        "X-Client-Info: {}".format(
+                            self._clientinfo.into_json().decode()
+                        )
+                    )
+                )
 
                 if self._compression:
                     headers.append(b"X-Client-Compression: zstd=stdin")

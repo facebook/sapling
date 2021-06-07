@@ -64,6 +64,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     m.add(py, "workingcopy", pyworkingcopy::init_module(py, &name)?)?;
     m.add(py, "worker", pyworker::init_module(py, &name)?)?;
     m.add(py, "zstd", pyzstd::init_module(py, &name)?)?;
+    m.add(py, "clientinfo", pyclientinfo::init_module(py, &name)?)?;
     m.add(py, "zstore", pyzstore::init_module(py, &name)?)?;
 
     Ok(PyNone)

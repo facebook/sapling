@@ -12,6 +12,7 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
+use clientinfo::ClientInfo;
 use configparser::config::ConfigSet;
 use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
@@ -551,6 +552,7 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
         convert_cert: config
             .get_or_default("http", "convert-cert")
             .unwrap_or_default(),
+        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
     };
     hg_http::set_global_config(http_config);
 }
