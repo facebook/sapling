@@ -24,7 +24,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type
 import thrift.transport
 from eden.fs.cli.buck import run_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
-from eden.fs.cli.util import check_health_using_lockfile, wait_for_instance_healthy
+from eden.fs.cli.util import (
+    check_health_using_lockfile,
+    wait_for_instance_healthy,
+    is_apple_silicon,
+)
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
@@ -717,6 +721,7 @@ class CloneCmd(Subcmd):
             "--nfs",
             dest="nfs",
             action="store_true",
+            default=is_apple_silicon(),
             help=argparse.SUPPRESS,
         )
 

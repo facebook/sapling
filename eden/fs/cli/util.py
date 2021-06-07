@@ -674,3 +674,10 @@ def get_environment_suitable_for_subprocess() -> Dict[str, str]:
 
 def is_sandcastle() -> bool:
     return "SANDCASTLE" in os.environ
+
+
+def is_apple_silicon() -> bool:
+    if sys.platform == "darwin":
+        return "ARM64" in os.uname().version
+    else:
+        return False
