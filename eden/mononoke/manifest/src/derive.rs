@@ -195,57 +195,60 @@ where
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
-                    match merge_result {
-                        MergeResult::Reuse { name, entry } => {
-                            Ok(Some((name, None, convert_to_intermediate_entry(entry))))
-                        }
-                        MergeResult::Delete => Ok(None),
-                        MergeResult::CreateTree {
-                            name,
-                            path,
-                            parents,
-                        } => {
-                            let subentries: BTreeMap<_, _> = subentries
-                                .flatten()
-                                .filter_map(
-                                    |
-                                        (name, context, entry): (
-                                            Option<MPathElement>,
-                                            Option<Ctx>,
-                                            _,
-                                        ),
-                                    | {
-                                        name.map(move |name| (name, (context, entry)))
-                                    },
-                                )
-                                .collect();
-                            if subentries.is_empty() {
-                                Ok(None)
-                            } else {
-                                let (context, tree_id) = create_tree(TreeInfo {
+                    tokio::spawn(async move {
+                        match merge_result {
+                            MergeResult::Reuse { name, entry } => {
+                                Ok(Some((name, None, convert_to_intermediate_entry(entry))))
+                            }
+                            MergeResult::Delete => Ok(None),
+                            MergeResult::CreateTree {
+                                name,
+                                path,
+                                parents,
+                            } => {
+                                let subentries: BTreeMap<_, _> = subentries
+                                    .flatten()
+                                    .filter_map(
+                                        |
+                                            (name, context, entry): (
+                                                Option<MPathElement>,
+                                                Option<Ctx>,
+                                                _,
+                                            ),
+                                        | {
+                                            name.map(move |name| (name, (context, entry)))
+                                        },
+                                    )
+                                    .collect();
+                                if subentries.is_empty() {
+                                    Ok(None)
+                                } else {
+                                    let (context, tree_id) = create_tree(TreeInfo {
+                                        path: path.clone(),
+                                        parents,
+                                        subentries,
+                                    })
+                                    .await?;
+                                    Ok(Some((name, Some(context), Entry::Tree(tree_id))))
+                                }
+                            }
+                            MergeResult::CreateLeaf {
+                                leaf,
+                                name,
+                                path,
+                                parents,
+                            } => {
+                                let (context, leaf_id) = create_leaf(LeafInfo {
+                                    leaf,
                                     path: path.clone(),
                                     parents,
-                                    subentries,
                                 })
                                 .await?;
-                                Ok(Some((name, Some(context), Entry::Tree(tree_id))))
+                                Ok(Some((name, Some(context), Entry::Leaf(leaf_id))))
                             }
                         }
-                        MergeResult::CreateLeaf {
-                            leaf,
-                            name,
-                            path,
-                            parents,
-                        } => {
-                            let (context, leaf_id) = create_leaf(LeafInfo {
-                                leaf,
-                                path: path.clone(),
-                                parents,
-                            })
-                            .await?;
-                            Ok(Some((name, Some(context), Entry::Leaf(leaf_id))))
-                        }
-                    }
+                    })
+                    .await?
                 }
                 .boxed()
             }

@@ -238,14 +238,13 @@ pub async fn get_manifest_from_bonsai(
                     let p1 = p1s.get(&path).cloned();
                     let p2 = p2s.get(&path).cloned();
                     cloned!(ctx, repo);
-                    async move {
+                    let spawned = tokio::spawn(async move {
                         let entry =
                             store_file_change(&repo, ctx, p1, p2, &path, &file_change, copy_from)
                                 .await?;
                         Ok((path, Some(entry)))
-                    }
-                    .boxed()
-                    .right_future()
+                    });
+                    async move { spawned.await? }.boxed().right_future()
                 }
             }
         })
