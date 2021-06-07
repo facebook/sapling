@@ -559,6 +559,13 @@ def clone(
                     raise error.Abort(_("destination '%s' already exists") % dest)
                 raise
 
+            # Drop the existing destrepo so Windows releases the files.
+            # Manually gc to ensure the objects are dropped.
+            destpeer = destrepo = None
+            import gc
+
+            gc.collect()
+
             destlock = copystore(ui, srcrepo, destpath)
             # repo initialization might also take a lock. Keeping destlock
             # outside the repo object can cause deadlock. To avoid deadlock,
