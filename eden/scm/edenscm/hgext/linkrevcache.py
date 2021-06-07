@@ -92,6 +92,15 @@ def _choosedbm():
                 ("ndbm", "dbm.ndbm"),
                 ("dumb", "dbm.dumb"),
             ]
+            import importlib
+            for name, modname in candidates:
+                try:
+                    mod = importlib.import_module(modname)
+                    mod.open  # sanity check with demandimport enabled
+                    _chosendbm = (name, mod)
+                    break
+                except ImportError:
+                    pass
         else:
             candidates = [
                 ("gdbm", "gdbm"),
@@ -99,14 +108,14 @@ def _choosedbm():
                 ("ndbm", "dbm"),
                 ("dumb", "dumbdbm"),
             ]
-        for name, modname in candidates:
-            try:
-                mod = __import__(modname)
-                mod.open  # sanity check with demandimport enabled
-                _chosendbm = (name, __import__(modname))
-                break
-            except ImportError:
-                pass
+            for name, modname in candidates:
+                try:
+                    mod = __import__(modname)
+                    mod.open  # sanity check with demandimport enabled
+                    _chosendbm = (name, __import__(modname))
+                    break
+                except ImportError:
+                    pass
     return _chosendbm
 
 

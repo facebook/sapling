@@ -490,9 +490,15 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ed93aeac6b3c "source"
   abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
+  (current process runs with uid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo/file: mode 0o52, uid 42, gid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo: mode 0o52, uid 42, gid 42) (?)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
   [abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
+  (current process runs with uid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo/file: mode 0o52, uid 42, gid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo: mode 0o52, uid 42, gid 42) (?)
   [255]
 Test case 8: Source is a file, dest is a directory (base is still a file)
   $ cd ..
@@ -522,6 +528,9 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
+  (current process runs with uid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo/file: mode 0o52, uid 42, gid 42) (?)
+  ($TESTTMP/cornercases/foo/foo/foo/foo: mode 0o52, uid 42, gid 42) (?)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
   [

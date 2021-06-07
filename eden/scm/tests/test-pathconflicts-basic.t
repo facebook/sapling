@@ -88,6 +88,9 @@ Basic clean update - local directory conflicts with changed remote file
   $ echo 4 > a/b
   $ hg up file2
   abort: *: $TESTTMP/repo/a (glob)
+  (current process runs with uid 42) (?)
+  ($TESTTMP/repo/a: mode 0o52, uid 42, gid 42) (?)
+  ($TESTTMP/repo: mode 0o52, uid 42, gid 42) (?)
   [255]
   $ hg up --clean file2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

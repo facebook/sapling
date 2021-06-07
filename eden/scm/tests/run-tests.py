@@ -343,7 +343,7 @@ def parselistfiles(files, listtype, warn=True):
     for filename in files:
         try:
             path = os.path.expanduser(os.path.expandvars(filename))
-            f = open(path, "r")
+            f = open(path, "r", encoding="utf8")
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -367,7 +367,7 @@ def parsettestcases(path):
     """
     cases = set()
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf8") as f:
             for l in f:
                 if l.startswith("#testcases "):
                     cases.update(l[11:].split())
@@ -1176,7 +1176,7 @@ class Test(unittest.TestCase):
             pidfile = os.path.join(self._watchmandir, "pid")
             statefile = os.path.join(self._watchmandir, "state")
 
-            with open(cfgfile, "w") as f:
+            with open(cfgfile, "w", encoding="utf8") as f:
                 f.write(json.dumps({}))
 
             env = os.environ.copy()
@@ -1425,7 +1425,7 @@ class Test(unittest.TestCase):
             self._portmap(0),
             self._portmap(1),
             self._portmap(2),
-            (br"([^0-9])%s" % re.escape(self._localip()), br"\1$LOCALIP"),
+            (br"([^0-9])%s" % re.escape(_bytespath(self._localip())), br"\1$LOCALIP"),
             (br"\bHG_TXNID=TXN:[a-f0-9]{40}\b", br"HG_TXNID=TXN:$ID$"),
         ]
         r.append((_bytespath(self._escapepath(self._testtmp)), b"$TESTTMP"))
@@ -1444,14 +1444,14 @@ class Test(unittest.TestCase):
 
     def _escapepath(self, p):
         if os.name == "nt":
-            return br"(?:[/\\]{2,4}\?[/\\]{1,2})?" + b"".join(
+            return r"(?:[/\\]{2,4}\?[/\\]{1,2})?" + "".join(
                 c.isalpha()
-                and b"[%s%s]" % (c.lower(), c.upper())
-                or c in b"/\\"
-                and br"[/\\]{1,2}"
+                and "[%s%s]" % (c.lower(), c.upper())
+                or c in "/\\"
+                and r"[/\\]{1,2}"
                 or c.isdigit()
                 and c
-                or b"\\" + c
+                or "\\" + c
                 for c in p
             )
         else:
@@ -1459,9 +1459,9 @@ class Test(unittest.TestCase):
 
     def _localip(self):
         if self._useipv6:
-            return b"::1"
+            return "::1"
         else:
-            return b"127.0.0.1"
+            return "127.0.0.1"
 
     def _genrestoreenv(self, testenv):
         """Generate a script that can be used by tests to restore the original
@@ -1514,7 +1514,8 @@ class Test(unittest.TestCase):
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["TESTFILE"] = self.path
-        env["HOME"] = self._testtmp
+        env["HOME"] = self._testtmp # Unix
+        env["USERPROFILE"] = self._testtmp # Windows
         if self._usechg:
             env["CHGDISABLE"] = "0"
         else:
@@ -1695,7 +1696,7 @@ class Test(unittest.TestCase):
             output = re.sub(s, r, output)
 
         if normalizenewlines:
-            output = output.replace("\r\n", "\n")
+            output = output.replace(b"\r\n", b"\n")
 
         return ret, output.splitlines(True)
 
@@ -1766,7 +1767,7 @@ class PythonTest(Test):
             cmd += " --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
-        with open(self.path, "r") as f:
+        with open(self.path, "r", encoding="utf8") as f:
             code = f.read()
         for level in ("trace", "debug", "info", "warn", "error"):
             comment = "# tracing-level: %s" % level
@@ -2053,7 +2054,9 @@ class TTest(Test):
                             % (
                                 b"hg debugpython --",
                                 self._stringescape(
-                                    os.path.join(self._testdir, "heredoctest.py")
+                                    _bytespath(
+                                        os.path.join(self._testdir, "heredoctest.py")
+                                    )
                                 ),
                             )
                         )
