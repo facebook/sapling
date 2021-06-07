@@ -67,21 +67,6 @@ help:
 
 all: build
 
-local:
-	$(shell $(PYTHON) contrib/pick_python.py $(PYTHON)) setup.py $(PURE) \
-	  build_py -c -d . \
-	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i \
-	  build_rust_ext -i -l $(RFLAG)\
-	  build_pyzip -i \
-	  build_mo
-ifeq ($(OS),Windows_NT)
-	cp build/scripts-2.7/$(HGNAME).exe $(HGNAME).exe
-else
-	$(RM) $(HGNAME)
-	cp build/scripts-2.7/$(HGNAME) $(HGNAME)
-endif
-
 local3:
 	HGNAME=$(HGNAME3) $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup3.py $(PURE) \
 	  build_py -c -d . \
