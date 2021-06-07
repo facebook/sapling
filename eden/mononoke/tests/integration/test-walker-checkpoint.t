@@ -62,7 +62,7 @@ test restoring from checkpoint, scrub should have no chunks to do as checkpoint 
   Completed in 2 chunks of size 2
 
 run to a new checkpoint name, with checkpoint sampling set so that last chunk not included in checkpoint
-  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Repo bounds: (1, 4)
   Starting chunk 1 with bounds (3, 4)
   Seen,Loaded: 2,2
@@ -77,14 +77,20 @@ run to a new checkpoint name, with checkpoint sampling set so that last chunk no
   Completed in 3 chunks of size 1
 
 run again, should have no catchup, but main bounds will continue from checkpoint
-  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  $ sleep 1
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-name=bonsai_deep2 --checkpoint-path=bonsai_deep2 -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 4)
   Repo bounds: (1, 4)
   Continuing from checkpoint run 1 chunk 2 with catchup None and main Some((1, 2)) bounds
   Starting chunk 3 with bounds (1, 2)
   Seen,Loaded: 2,2
   Deferred: 0
+  Chunk 3 updating checkpoint to (1, 4)
   Completed in 3 chunks of size 1
+
+inspect the checkpoint table, check the update time is at least one second after creation
+  $ sqlite3 "$TESTTMP/bonsai_deep2" "SELECT repo_id, checkpoint_name, lower_bound, upper_bound FROM walker_checkpoints WHERE update_timestamp >= create_timestamp + 1000000000;"
+  0|bonsai_deep2|1|4
 
 additional commit
   $ cd repo-hg

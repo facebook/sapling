@@ -118,15 +118,16 @@ impl CheckpointsByName {
         lower_bound: u64,
         upper_bound: u64,
     ) -> Result<Checkpoint, Error> {
+        let now = Timestamp::now();
         let new_cp = if let Some(mut checkpoint) = checkpoint {
             checkpoint.lower_bound = lower_bound;
             checkpoint.upper_bound = upper_bound;
             checkpoint.update_chunk_number = chunk_num;
+            checkpoint.update_timestamp = now;
             info!(logger, #log::CHUNKING, "Chunk {} updating checkpoint to ({}, {})", chunk_num, lower_bound, upper_bound);
             self.update(repo_id, &checkpoint).await?;
             checkpoint
         } else {
-            let now = Timestamp::now();
             let new_cp = Checkpoint {
                 lower_bound,
                 upper_bound,
