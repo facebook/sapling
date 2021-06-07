@@ -68,7 +68,10 @@ use crate::{
     remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
-    util::{get_lfs_blobs_path, get_lfs_objects_path, get_lfs_pointers_path, get_str_config},
+    util::{
+        get_auth_proxy_socket_path, get_lfs_blobs_path, get_lfs_objects_path,
+        get_lfs_pointers_path, get_str_config,
+    },
 };
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
@@ -110,6 +113,7 @@ struct HttpOptions {
     backoff_times: Vec<f32>,
     throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
+    proxy_unix_socket: Option<String>,
 }
 
 pub(crate) enum LfsRemoteInner {
@@ -1034,11 +1038,14 @@ impl LfsRemoteInner {
     async fn send_with_retry(
         client: &HttpClient,
         method: Method,
-        url: Url,
+        mut url: Url,
         add_extra: impl Fn(Request) -> Request,
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
     ) -> Result<Bytes, FetchError> {
+        if http_options.proxy_unix_socket.is_some() {
+            url.set_scheme("http").expect("Couldn't set url scheme");
+        }
         let span = trace_span!("LfsRemoteInner::send_with_retry", url = %url);
 
         async move {
@@ -1049,7 +1056,6 @@ impl LfsRemoteInner {
 
             loop {
                 attempt += 1;
-
                 let mut req = Request::new(url.clone(), method)
                     .header("Accept", "application/vnd.git-lfs+json")
                     .header("Content-Type", "application/vnd.git-lfs+json")
@@ -1074,7 +1080,13 @@ impl LfsRemoteInner {
                     req.set_min_transfer_speed(mts);
                 }
 
-                if let Some(auth) = &http_options.auth {
+                if http_options.proxy_unix_socket.is_some() {
+                    req.set_auth_proxy_socket_path(http_options.proxy_unix_socket.clone());
+                    req.set_verify_tls_cert(false)
+                        .set_verify_tls_host(false)
+                        .set_verbose(true)
+                        .set_convert_cert(false);
+                } else if let Some(auth) = &http_options.auth {
                     if let Some(cert) = &auth.cert {
                         req.set_cert(cert);
                     }
@@ -1479,7 +1491,7 @@ impl LfsRemote {
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
         // present at the end of the config.
         url.push('/');
-        let url = Url::parse(&url)?;
+        let mut url = Url::parse(&url)?;
 
         let move_after_upload = config.get_or("lfs", "moveafterupload", || false)?;
         let ignore_prefetch_errors = config.get_or("lfs", "ignore-prefetch-errors", || false)?;
@@ -1499,8 +1511,12 @@ impl LfsRemote {
             if !["http", "https"].contains(&url.scheme()) {
                 bail!("Unsupported url: {}", url);
             }
+            let proxy_unix_socket = get_auth_proxy_socket_path(config)?;
 
-            let auth = if config.get_or("lfs", "use-client-certs", || true)? {
+            let auth = if proxy_unix_socket.is_some() {
+                url.set_scheme("http").expect("Couldn't change url scheme");
+                None
+            } else if config.get_or("lfs", "use-client-certs", || true)? {
                 AuthSection::from_config(config).best_match_for(&url)?
             } else {
                 None
@@ -1571,10 +1587,11 @@ impl LfsRemote {
                         min_transfer_speed,
                         correlator,
                         user_agent,
+                        auth,
                         backoff_times,
                         throttle_backoff_times,
                         request_timeout,
-                        auth,
+                        proxy_unix_socket,
                     },
                 }),
             })

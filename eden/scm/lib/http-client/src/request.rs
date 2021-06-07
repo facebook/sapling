@@ -99,6 +99,7 @@ pub struct Request {
     verify_tls_cert: bool,
     verbose: bool,
     convert_cert: bool,
+    auth_proxy_socket_path: Option<String>,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -173,6 +174,7 @@ impl Request {
             verify_tls_cert: true,
             verbose: false,
             convert_cert: false,
+            auth_proxy_socket_path: None,
         }
     }
 
@@ -426,6 +428,13 @@ impl Request {
         self
     }
 
+    pub fn set_auth_proxy_socket_path(
+        &mut self,
+        auth_proxy_socket_path: Option<String>,
+    ) -> &mut Self {
+        self.auth_proxy_socket_path = auth_proxy_socket_path;
+        self
+    }
 
     /// Convert the client's X.509 certificate from a PEM file into an in-memory
     /// PKCS#12 archive before passing it to libcurl. This is necessary on some
@@ -508,6 +517,7 @@ impl Request {
         let mut easy = Easy2::new(handler);
         easy.url(url.as_str())?;
         easy.verbose(self.verbose)?;
+        easy.unix_socket_path(self.auth_proxy_socket_path)?;
 
         // Configure the handle for the desired HTTP method.
         match easy.get_ref().request_context().method {
