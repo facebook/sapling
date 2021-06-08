@@ -28,6 +28,9 @@ class TreeOverlay : public IOverlay {
  public:
   explicit TreeOverlay(AbsolutePathPiece path);
 
+  explicit TreeOverlay(std::unique_ptr<SqliteDatabase> store)
+      : store_(std::move(store)) {}
+
   ~TreeOverlay() override {}
 
   TreeOverlay(const TreeOverlay&) = delete;

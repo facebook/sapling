@@ -210,8 +210,7 @@ EdenMount::EdenMount(
       overlay_{Overlay::create(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
-          static_cast<Overlay::OverlayType>(
-              checkoutConfig_->getEnableTreeOverlay()),
+          getOverlayType(),
           serverState_->getStructuredLogger())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
@@ -223,6 +222,17 @@ EdenMount::EdenMount(
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
       clock_{serverState_->getClock()} {
+}
+
+Overlay::OverlayType EdenMount::getOverlayType() {
+  if (checkoutConfig_->getEnableTreeOverlay()) {
+    if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
+      return Overlay::OverlayType::TreeInMemory;
+    }
+    return Overlay::OverlayType::Tree;
+  } else {
+    return Overlay::OverlayType::Legacy;
+  }
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(

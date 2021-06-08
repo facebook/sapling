@@ -23,6 +23,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -43,6 +44,10 @@ std::unique_ptr<IOverlay> makeOverlay(
     Overlay::OverlayType overlayType) {
   if (overlayType == Overlay::OverlayType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
+  } else if (overlayType == Overlay::OverlayType::TreeInMemory) {
+    XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
+    return std::make_unique<TreeOverlay>(
+        std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
   }
 #ifdef _WIN32
   return std::make_unique<SqliteOverlay>(localDir);

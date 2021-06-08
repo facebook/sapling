@@ -616,6 +616,16 @@ class EdenConfig : private ConfigSettingManager {
       "overlay:enable_tree_overlay",
       false,
       this};
+
+  /**
+   * DANGER: this option is to help investigating performances issues with
+   * EdenFS. Turning this option on in non-debugging environment will result
+   * data loss.
+   */
+  ConfigSetting<bool> unsafeInMemoryOverlay{
+      "overlay:unsafe-in-memory-overlay",
+      false,
+      this};
 };
 } // namespace eden
 } // namespace facebook

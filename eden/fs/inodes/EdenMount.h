@@ -697,6 +697,11 @@ class EdenMount {
    */
   void transitionToFuseInitializationErrorState();
 
+  /**
+   * Returns overlay type based on settings.
+   */
+  Overlay::OverlayType getOverlayType();
+
   EdenMount(
       std::unique_ptr<CheckoutConfig> checkoutConfig,
       std::shared_ptr<ObjectStore> objectStore,

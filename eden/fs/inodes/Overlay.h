@@ -70,7 +70,11 @@ class OverlayFile;
  */
 class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
-  enum class OverlayType : bool { Legacy = false, Tree = true };
+  enum class OverlayType : uint8_t {
+    Legacy = 0,
+    Tree = 1,
+    TreeInMemory = 2,
+  };
 
   /**
    * Create a new Overlay object.
