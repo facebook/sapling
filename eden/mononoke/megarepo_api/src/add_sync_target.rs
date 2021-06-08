@@ -5,18 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{find_bookmark_and_value, MegarepoOp, SourceName};
+use crate::common::{find_bookmark_and_value, MegarepoOp, SourceAndMovedChangesets, SourceName};
 use anyhow::{anyhow, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use commit_transformation::{create_source_to_target_multi_mover, MultiMover};
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use derived_data_utils::derived_data_utils;
-use fsnodes::RootFsnodeId;
 use futures::{future, stream, stream::FuturesUnordered, StreamExt, TryStreamExt};
-use manifest::ManifestOps;
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig,
 };
@@ -24,9 +21,7 @@ use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
-use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
-};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath};
 use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
 use std::{
@@ -389,67 +384,6 @@ impl<'a> AddSyncTarget<'a> {
         Ok(bcs)
     }
 
-    async fn create_single_move_commit<'b>(
-        &'b self,
-        ctx: &'b CoreContext,
-        repo: &'b BlobRepo,
-        cs_id: ChangesetId,
-        mover: &MultiMover,
-        linkfiles: BTreeMap<MPath, Option<FileChange>>,
-        source_name: &SourceName,
-    ) -> Result<SourceAndMovedChangesets, MegarepoError> {
-        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
-            .await
-            .map_err(Error::from)?;
-        let fsnode_id = root_fsnode_id.fsnode_id();
-        let entries = fsnode_id
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-            .try_collect::<Vec<_>>()
-            .await?;
-
-        let mut file_changes = vec![];
-        for (path, fsnode) in entries {
-            let moved = mover(&path)?;
-
-            // Check that path doesn't move to itself - in that case we don't need to
-            // delete file
-            if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
-                file_changes.push((path.clone(), None));
-            }
-
-            file_changes.extend(moved.into_iter().map(|target| {
-                let fc = FileChange::new(
-                    *fsnode.content_id(),
-                    *fsnode.file_type(),
-                    fsnode.size(),
-                    Some((path.clone(), cs_id)),
-                );
-
-                (target, Some(fc))
-            }));
-        }
-        file_changes.extend(linkfiles.into_iter());
-
-        // TODO(stash): we need to figure out what parameters to set here
-        let moved_bcs = BonsaiChangesetMut {
-            parents: vec![cs_id],
-            author: "svcscm".to_string(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: format!("move commit for source {}", source_name.0),
-            extra: SortedVectorMap::new(),
-            file_changes: file_changes.into_iter().collect(),
-        }
-        .freeze()?;
-
-        let source_and_moved_changeset = SourceAndMovedChangesets {
-            source: cs_id,
-            moved: moved_bcs,
-        };
-        Ok(source_and_moved_changeset)
-    }
-
     fn prepare_linkfiles(
         &self,
         source_config: &Source,
@@ -542,11 +476,6 @@ impl<'a> AddSyncTarget<'a> {
         }
         Ok(())
     }
-}
-
-struct SourceAndMovedChangesets {
-    source: ChangesetId,
-    moved: BonsaiChangeset,
 }
 
 // Verifies that no two sources create the same path in the target
