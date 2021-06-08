@@ -11,7 +11,6 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/LocalStore.h"
 
 namespace facebook::eden {
@@ -21,27 +20,27 @@ ReCasBackingStore::ReCasBackingStore(
 
 ReCasBackingStore::~ReCasBackingStore() = default;
 
-Hash ReCasBackingStore::parseRootId(folly::StringPiece rootId) {
-  return hashFromThrift(rootId);
+RootId ReCasBackingStore::parseRootId(folly::StringPiece rootId) {
+  return RootId{rootId.str()};
 }
 
-std::string ReCasBackingStore::renderRootId(const Hash& rootId) {
-  return thriftHash(rootId);
+std::string ReCasBackingStore::renderRootId(const RootId& rootId) {
+  return rootId.value();
+}
+
+folly::SemiFuture<std::unique_ptr<Tree>> ReCasBackingStore::getRootTree(
+    const RootId& /** id **/,
+    ObjectFetchContext& /** context **/) {
+  throw std::domain_error("unimplemented:");
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> ReCasBackingStore::getTree(
     const Hash& /** id **/,
     ObjectFetchContext& /** context **/) {
-  throw std::domain_error("unimplemented:");
-}
-
-folly::SemiFuture<std::unique_ptr<Blob>> ReCasBackingStore::getBlob(
-    const Hash& /** id **/,
-    ObjectFetchContext& /** context **/) {
   throw std::domain_error("unimplemented");
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>> ReCasBackingStore::getTreeForCommit(
+folly::SemiFuture<std::unique_ptr<Blob>> ReCasBackingStore::getBlob(
     const Hash& /** id **/,
     ObjectFetchContext& /** context **/) {
   throw std::domain_error("unimplemented");

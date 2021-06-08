@@ -48,7 +48,7 @@ class GlobNode {
     // This should never become a dangling reference because the caller
     // of Globresult::evaluate ensures that the hashes have a lifetime that
     // exceeds that of the GlobResults returned.
-    const Hash* originHash;
+    const RootId* originHash;
 
     // Comparison operator for testing purposes
     bool operator==(const GlobResult& other) const noexcept {
@@ -68,13 +68,13 @@ class GlobNode {
     // originHash should never become a dangling refernece because the caller
     // of Globresult::evaluate ensures that the hashes have a lifetime that
     // exceeds that of the GlobResults returned.
-    GlobResult(RelativePathPiece name, dtype_t dtype, const Hash& originHash)
+    GlobResult(RelativePathPiece name, dtype_t dtype, const RootId& originHash)
         : name(name.copy()), dtype(dtype), originHash(&originHash) {}
 
     GlobResult(
         RelativePath&& name,
         dtype_t dtype,
-        const Hash& originHash) noexcept
+        const RootId& originHash) noexcept
         : name(std::move(name)), dtype(dtype), originHash(&originHash) {}
   };
 
@@ -101,7 +101,7 @@ class GlobNode {
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList fileBlobsToPrefetch,
-      const Hash& originHash);
+      const RootId& originRootId);
 
   // This is the Tree version of the method above
   folly::Future<std::vector<GlobResult>> evaluate(
@@ -110,7 +110,7 @@ class GlobNode {
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,
       PrefetchList fileBlobsToPrefetch,
-      const Hash& originHash);
+      const RootId& originRootId);
 
   /**
    * Print a human-readable description of this GlobNode to stderr.
@@ -150,7 +150,7 @@ class GlobNode {
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch,
-      const Hash& originHash);
+      const RootId& originRootId);
 
   template <typename ROOT>
   folly::Future<std::vector<GlobResult>> evaluateImpl(
@@ -159,7 +159,7 @@ class GlobNode {
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch,
-      const Hash& originHash);
+      const RootId& originRootId);
 
   void debugDump(int currentDepth) const;
 

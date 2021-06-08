@@ -14,13 +14,10 @@
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::AbsolutePath;
-using facebook::eden::CheckoutConfig;
-using facebook::eden::Hash;
-using facebook::eden::writeFile;
-using folly::StringPiece;
-
+using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
+
+using folly::StringPiece;
 
 namespace {
 
@@ -70,7 +67,7 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(Hash{"1234567812345678123456781234567812345678"}, parent);
+  EXPECT_EQ(RootId{"1234567812345678123456781234567812345678"}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -89,7 +86,7 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(Hash{"1234567812345678123456781234567812345678"}, parent);
+  EXPECT_EQ(RootId{"1234567812345678123456781234567812345678"}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -109,7 +106,7 @@ TEST_F(CheckoutConfigTest, testVersion1MultipleParents) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+  EXPECT_EQ(RootId{"99887766554433221100aabbccddeeffabcdef99"}, parent);
 }
 
 TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
@@ -127,7 +124,9 @@ TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+  EXPECT_EQ(
+      RootId{Hash{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()},
+      parent);
 }
 
 TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
@@ -144,15 +143,15 @@ TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(Hash{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+  EXPECT_EQ(RootId{"99887766554433221100aabbccddeeffabcdef99"}, parent);
 }
 
 TEST_F(CheckoutConfigTest, testWriteSnapshot) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
-  Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
-  Hash hash2{"abcdef98765432100123456789abcdef00112233"};
+  RootId hash1{"99887766554433221100aabbccddeeffabcdef99"};
+  RootId hash2{"abcdef98765432100123456789abcdef00112233"};
 
   // Write out a single parent and read it back
   config->setParentCommit(hash1);

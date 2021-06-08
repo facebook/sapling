@@ -26,6 +26,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
@@ -91,6 +92,10 @@ Importer& getThreadLocalImporter() {
         "Attempting to get HgImporter from non-HgImporter thread");
   }
   return *threadLocalImporter;
+}
+
+Hash hashFromRootId(const RootId& root) {
+  return hashFromThrift(root.value());
 }
 
 /**
@@ -213,7 +218,29 @@ HgBackingStore::HgBackingStore(
   metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
 
-HgBackingStore::~HgBackingStore() {}
+HgBackingStore::~HgBackingStore() = default;
+
+SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
+    const RootId& rootId,
+    bool prefetchMetadata) {
+  Hash commitId = hashFromRootId(rootId);
+
+  return localStore_
+      ->getFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
+      .thenValue(
+          [this, commitId, prefetchMetadata](
+              StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
+            if (!result.isValid()) {
+              return importTreeForCommit(commitId, prefetchMetadata);
+            }
+
+            auto rootTreeHash = Hash{result.bytes()};
+            XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
+                       << " for mercurial commit " << commitId.toString();
+            return getTreeForRootTreeImpl(
+                commitId, rootTreeHash, prefetchMetadata);
+          });
+}
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
@@ -667,26 +694,6 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
                return getThreadLocalImporter().prefetchFiles(proxyHashes);
              })
       .via(serverThreadPool_);
-}
-
-SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
-    const Hash& commitID,
-    bool prefetchMetadata) {
-  return localStore_
-      ->getFuture(KeySpace::HgCommitToTreeFamily, commitID.getBytes())
-      .thenValue(
-          [this, commitID, prefetchMetadata](
-              StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
-            if (!result.isValid()) {
-              return importTreeForCommit(commitID, prefetchMetadata);
-            }
-
-            auto rootTreeHash = Hash{result.bytes()};
-            XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
-                       << " for mercurial commit " << commitID.toString();
-            return getTreeForRootTreeImpl(
-                commitID, rootTreeHash, prefetchMetadata);
-          });
 }
 
 folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(

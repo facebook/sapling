@@ -92,7 +92,7 @@ void Journal::DeltaState::appendDelta(FileChangeJournalDelta&& delta) {
   fileChangeDeltas.emplace_back(std::move(delta));
 }
 
-void Journal::DeltaState::appendDelta(HashUpdateJournalDelta&& delta) {
+void Journal::DeltaState::appendDelta(RootUpdateJournalDelta&& delta) {
   hashUpdateDeltas.emplace_back(std::move(delta));
 }
 
@@ -128,30 +128,30 @@ void Journal::recordReplaced(
       oldName, newName, FileChangeJournalDelta::REPLACED));
 }
 
-void Journal::recordHashUpdate(Hash toHash) {
-  addDelta(HashUpdateJournalDelta{}, toHash);
+void Journal::recordHashUpdate(RootId toHash) {
+  addDelta(RootUpdateJournalDelta{}, std::move(toHash));
 }
 
-void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
+void Journal::recordHashUpdate(RootId fromHash, RootId toHash) {
   if (fromHash == toHash) {
     return;
   }
-  HashUpdateJournalDelta delta;
-  delta.fromHash = fromHash;
+  RootUpdateJournalDelta delta;
+  delta.fromHash = std::move(fromHash);
   addDelta(std::move(delta), toHash);
 }
 
 void Journal::recordUncleanPaths(
-    Hash fromHash,
-    Hash toHash,
+    RootId fromHash,
+    RootId toHash,
     std::unordered_set<RelativePath> uncleanPaths) {
   if (fromHash == toHash && uncleanPaths.empty()) {
     return;
   }
-  HashUpdateJournalDelta delta;
-  delta.fromHash = fromHash;
+  RootUpdateJournalDelta delta;
+  delta.fromHash = std::move(fromHash);
   delta.uncleanPaths = std::move(uncleanPaths);
-  addDelta(std::move(delta), toHash);
+  addDelta(std::move(delta), std::move(toHash));
 }
 
 void Journal::truncateIfNecessary(DeltaState& deltaState) {
@@ -179,7 +179,7 @@ bool Journal::compact(FileChangeJournalDelta& delta, DeltaState& deltaState) {
 }
 
 bool Journal::compact(
-    HashUpdateJournalDelta& /* unused */,
+    RootUpdateJournalDelta& /* unused */,
     DeltaState& /* unused */) {
   return false;
 }
@@ -240,18 +240,18 @@ void Journal::addDelta(FileChangeJournalDelta&& delta) {
   }
 }
 
-void Journal::addDelta(HashUpdateJournalDelta&& delta, const Hash& newHash) {
+void Journal::addDelta(RootUpdateJournalDelta&& delta, RootId newRootId) {
   bool shouldNotify;
   {
     auto deltaState = deltaState_.lock();
 
     // If the hashes were not set to anything, default to copying
     // the value from the prior journal entry
-    if (delta.fromHash == kZeroHash) {
+    if (delta.fromHash == RootId{}) {
       delta.fromHash = deltaState->currentHash;
     }
     shouldNotify = addDeltaBeforeNotifying(std::move(delta), *deltaState);
-    deltaState->currentHash = newHash;
+    deltaState->currentHash = std::move(newRootId);
   }
   if (shouldNotify) {
     notifySubscribers();
@@ -272,7 +272,7 @@ std::optional<JournalDeltaInfo> Journal::getLatest() {
           back.sequenceID,
           back.time};
     } else {
-      const HashUpdateJournalDelta& back = deltaState->hashUpdateDeltas.back();
+      const RootUpdateJournalDelta& back = deltaState->hashUpdateDeltas.back();
       return JournalDeltaInfo{
           back.fromHash, deltaState->currentHash, back.sequenceID, back.time};
     }
@@ -378,7 +378,7 @@ void Journal::flush() {
     deltaState->fileChangeDeltas.clear();
     deltaState->hashUpdateDeltas.clear();
     deltaState->stats = std::nullopt;
-    auto delta = HashUpdateJournalDelta();
+    auto delta = RootUpdateJournalDelta();
     /* Tracking the hash correctly when the journal is flushed is important
      * since Watchman uses the hash to correctly determine what additional files
      * were changed when a checkout happens, journals have at least one entry
@@ -441,7 +441,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             }
           }
         },
-        [&](const HashUpdateJournalDelta& current) -> void {
+        [&](const RootUpdateJournalDelta& current) -> void {
           if (!result) {
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
@@ -488,7 +488,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     RootIdCodec& rootIdCodec) const {
   auto result = std::vector<DebugJournalDelta>();
   auto deltaState = deltaState_.lock();
-  Hash currentHash = deltaState->currentHash;
+  RootId currentHash = deltaState->currentHash;
   forEachDelta(
       *deltaState,
       from,
@@ -520,7 +520,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
 
         result.push_back(delta);
       },
-      [&](const HashUpdateJournalDelta& current) -> void {
+      [&](const RootUpdateJournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
         fromPosition.mountGeneration_ref() = mountGeneration;
@@ -547,7 +547,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
 
 /**
  * FileChangeFunc: void(const FileChangeJournalDelta&)
- * HashUpdateFunc: void(const HashUpdateJournalDelta&)
+ * HashUpdateFunc: void(const RootUpdateJournalDelta&)
  */
 template <class FileChangeFunc, class HashUpdateFunc>
 void Journal::forEachDelta(

@@ -32,7 +32,7 @@ void FakeObjectStore::addBlob(Blob&& blob) {
   blobs_.emplace(blobHash, std::move(blob));
 }
 
-void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
+void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {
   auto ret = commits_.emplace(commitID, std::move(tree));
   if (!ret.second) {
     // Warn the caller that a Tree has already been specified for this commit,
@@ -41,6 +41,19 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
     throw std::runtime_error(folly::to<std::string>(
         "tree already added for commit with id ", commitID));
   }
+}
+
+Future<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
+    const RootId& commitID,
+    ObjectFetchContext&) const {
+  ++commitAccessCounts_[commitID];
+  auto iter = commits_.find(commitID);
+  if (iter == commits_.end()) {
+    return makeFuture<shared_ptr<const Tree>>(
+        std::domain_error(folly::to<std::string>(
+            "tree data for commit ", commitID, " not found")));
+  }
+  return makeFuture(make_shared<Tree>(iter->second));
 }
 
 Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
@@ -65,18 +78,6 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
         std::domain_error("blob " + id.toString() + " not found"));
   }
   return makeFuture(make_shared<Blob>(iter->second));
-}
-
-Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
-    const Hash& commitID,
-    ObjectFetchContext&) const {
-  ++accessCounts_[commitID];
-  auto iter = commits_.find(commitID);
-  if (iter == commits_.end()) {
-    return makeFuture<shared_ptr<const Tree>>(std::domain_error(
-        "tree data for commit " + commitID.toString() + " not found"));
-  }
-  return makeFuture(make_shared<Tree>(iter->second));
 }
 
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(

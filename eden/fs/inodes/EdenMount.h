@@ -289,7 +289,7 @@ class EdenMount {
   /**
    * Get the commit ID of the working directory's parent commit.
    */
-  Hash getParentCommit() const {
+  RootId getParentCommit() const {
     return *parentCommit_.rlock();
   }
 
@@ -453,7 +453,7 @@ class EdenMount {
    * Check out the specified commit.
    */
   folly::Future<CheckoutResult> checkout(
-      Hash snapshotHash,
+      const RootId& snapshotHash,
       std::optional<pid_t> clientPid,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
@@ -484,7 +484,7 @@ class EdenMount {
    *     make sure callers do not forget to wait for the operation to complete.
    */
   FOLLY_NODISCARD folly::Future<std::unique_ptr<ScmStatus>> diff(
-      Hash commitHash,
+      const RootId& commitHash,
       bool listIgnored = false,
       bool enforceCurrentParent = true,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
@@ -497,13 +497,13 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       DiffContext* ctxPtr,
-      Hash commitHash) const;
+      const RootId& commitHash) const;
 
   /**
    * Reset the state to point to the specified parent commit, without
    * modifying the working directory contents at all.
    */
-  void resetParent(const Hash& parent);
+  void resetParent(const RootId& parent);
 
   /**
    * Acquire the rename lock in exclusive mode.
@@ -708,7 +708,7 @@ class EdenMount {
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
 
-  folly::Future<TreeInodePtr> createRootInode(const Hash& parentCommit);
+  folly::Future<TreeInodePtr> createRootInode(const RootId& parentCommit);
 
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
 
@@ -736,7 +736,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       DiffCallback* callback,
-      Hash commitHash,
+      const RootId& commitHash,
       bool listIgnored,
       bool enforceCurrentParent,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
@@ -839,8 +839,7 @@ class EdenMount {
   /**
    * The IDs of the parent commit of the working directory.
    */
-
-  folly::Synchronized<Hash> parentCommit_;
+  folly::Synchronized<RootId> parentCommit_;
 
   std::unique_ptr<Journal> journal_;
 

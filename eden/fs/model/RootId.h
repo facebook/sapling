@@ -7,12 +7,55 @@
 
 #pragma once
 
+#include <string>
 #include "eden/fs/model/Hash.h"
 
 namespace facebook::eden {
 
-// TODO: This will be expanded to a variable-width type soon.
-using RootId = Hash;
+/**
+ * Each BackingStore implementation defines the meaning of its root. For
+ * example, for Mercurial, that's a 20-byte commit hash. Roots may have a
+ * different representation than tree IDs, so allow the BackingStore to define
+ * the semantics.
+ *
+ * RootId should generally be human-readable (e.g. hex strings) because it is
+ * printed to logs with C escaping rules.
+ */
+class RootId {
+ public:
+  RootId() = default;
+
+  explicit RootId(std::string id) : id_{std::move(id)} {}
+  RootId(const RootId&) = default;
+  RootId(RootId&&) = default;
+
+  RootId& operator=(const RootId&) = default;
+  RootId& operator=(RootId&&) = default;
+
+  const std::string& value() const {
+    return id_;
+  }
+
+  friend bool operator==(const RootId& lhs, const RootId& rhs) {
+    return lhs.id_ == rhs.id_;
+  }
+
+  friend bool operator!=(const RootId& lhs, const RootId& rhs) {
+    return lhs.id_ != rhs.id_;
+  }
+
+  friend bool operator<(const RootId& lhs, const RootId& rhs) {
+    return lhs.id_ < rhs.id_;
+  }
+
+ private:
+  std::string id_;
+};
+
+std::ostream& operator<<(std::ostream& os, const RootId& rootId);
+
+// Make folly::to<string>(RootId) work.
+void toAppend(const RootId&, std::string* result);
 
 /**
  * The meaning of a RootId is defined by the BackingStore implementation. Allow
@@ -27,3 +70,14 @@ class RootIdCodec {
 };
 
 } // namespace facebook::eden
+
+namespace std {
+
+template <>
+struct hash<facebook::eden::RootId> {
+  std::size_t operator()(const facebook::eden::RootId& rootId) const {
+    return std::hash<std::string>{}(rootId.value());
+  }
+};
+
+} // namespace std

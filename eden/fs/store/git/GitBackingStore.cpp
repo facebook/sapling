@@ -21,6 +21,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "folly/String.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -75,12 +76,48 @@ const char* GitBackingStore::getPath() const {
   return git_repository_path(repo_);
 }
 
-Hash GitBackingStore::parseRootId(folly::StringPiece rootId) {
-  return hashFromThrift(rootId);
+RootId GitBackingStore::parseRootId(folly::StringPiece rootId) {
+  return RootId{hashFromThrift(rootId).toString()};
 }
 
-std::string GitBackingStore::renderRootId(const Hash& rootId) {
-  return thriftHash(rootId);
+std::string GitBackingStore::renderRootId(const RootId& rootId) {
+  // In memory, root IDs are stored as 40-byte hex. Thrift clients generally
+  // expect 20-byte binary for Mercurial commit hashes, so re-encode that way.
+  return folly::unhexlify(rootId.value());
+}
+
+SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
+    const RootId& rootId,
+    ObjectFetchContext& /*context*/) {
+  // TODO: Use a separate thread pool to do the git I/O
+  XLOG(DBG4) << "resolving tree for commit " << rootId;
+
+  // Look up the commit info
+  git_oid commitOID = root2Oid(rootId);
+  git_commit* commit = nullptr;
+  auto error = git_commit_lookup(&commit, repo_, &commitOID);
+  gitCheckError(
+      error,
+      "unable to find git commit ",
+      rootId,
+      " in repository ",
+      getPath());
+  SCOPE_EXIT {
+    git_commit_free(commit);
+  };
+
+  // Get the tree ID for this commit.
+  Hash treeID = oid2Hash(git_commit_tree_id(commit));
+
+  // Now get the specified tree.
+  return localStore_->getTree(treeID).thenValue(
+      [this, treeID](unique_ptr<Tree> tree) {
+        if (tree) {
+          return tree;
+        } else {
+          return getTreeImpl(treeID);
+        }
+      });
 }
 
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(
@@ -167,38 +204,15 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
   return make_unique<Blob>(id, std::move(buf));
 }
 
-SemiFuture<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
-    const Hash& commitID,
-    ObjectFetchContext& /*context*/) {
-  // TODO: Use a separate thread pool to do the git I/O
-  XLOG(DBG4) << "resolving tree for commit " << commitID;
+git_oid GitBackingStore::root2Oid(const RootId& rootId) {
+  auto& value = rootId.value();
+  CHECK_EQ(40, value.size());
+  auto binary = folly::unhexlify(rootId.value());
+  CHECK_EQ(GIT_OID_RAWSZ, binary.size());
 
-  // Look up the commit info
-  git_oid commitOID = hash2Oid(commitID);
-  git_commit* commit = nullptr;
-  auto error = git_commit_lookup(&commit, repo_, &commitOID);
-  gitCheckError(
-      error,
-      "unable to find git commit ",
-      commitID,
-      " in repository ",
-      getPath());
-  SCOPE_EXIT {
-    git_commit_free(commit);
-  };
-
-  // Get the tree ID for this commit.
-  Hash treeID = oid2Hash(git_commit_tree_id(commit));
-
-  // Now get the specified tree.
-  return localStore_->getTree(treeID).thenValue(
-      [this, treeID](unique_ptr<Tree> tree) {
-        if (tree) {
-          return tree;
-        } else {
-          return getTreeImpl(treeID);
-        }
-      });
+  git_oid oid;
+  memcpy(oid.id, binary.data(), GIT_OID_RAWSZ);
+  return oid;
 }
 
 git_oid GitBackingStore::hash2Oid(const Hash& hash) {

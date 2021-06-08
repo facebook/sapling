@@ -71,8 +71,8 @@ size_t FileChangeJournalDelta::estimateMemoryUsage() const {
   return mem;
 }
 
-size_t HashUpdateJournalDelta::estimateMemoryUsage() const {
-  size_t mem = sizeof(HashUpdateJournalDelta);
+size_t RootUpdateJournalDelta::estimateMemoryUsage() const {
+  size_t mem = sizeof(RootUpdateJournalDelta);
 
   /* NOTE: The following code assumes an unordered_set is separated into an
    * array of buckets, each one being a chain of nodes containing a next
@@ -128,7 +128,7 @@ JournalDeltaPtr::JournalDeltaPtr(FileChangeJournalDelta* p) : data_{p} {
   XCHECK(p);
 }
 
-JournalDeltaPtr::JournalDeltaPtr(HashUpdateJournalDelta* p) : data_{p} {
+JournalDeltaPtr::JournalDeltaPtr(RootUpdateJournalDelta* p) : data_{p} {
   XCHECK(p);
 }
 

@@ -249,7 +249,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         return overlay_->initialize(getPath(), std::move(progressCallback))
             .deferValue([parent](auto&&) { return parent; });
       })
-      .thenValue([this](Hash&& parent) { return createRootInode(parent); })
+      .thenValue(
+          [this](RootId parent) { return createRootInode(std::move(parent)); })
       .thenValue([this, takeover](TreeInodePtr initTreeNode) {
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
@@ -273,7 +274,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 }
 
 folly::Future<TreeInodePtr> EdenMount::createRootInode(
-    const Hash& parentCommit) {
+    const RootId& parentCommit) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (!rootOverlayDir.empty()) {
@@ -283,7 +284,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::createRootInode");
-  return objectStore_->getTreeForCommit(parentCommit, *context)
+  return objectStore_->getRootTree(parentCommit, *context)
       .thenValue([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
@@ -735,8 +736,8 @@ TreeInodePtr EdenMount::getRootInode() const {
 folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::getRootTree");
-  Hash commitHash = *parentCommit_.rlock();
-  return objectStore_->getTreeForCommit(commitHash, *context);
+  RootId commitHash = *parentCommit_.rlock();
+  return objectStore_->getRootTree(commitHash, *context);
 }
 
 #ifndef _WIN32
@@ -860,7 +861,7 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
 #endif
 
 folly::Future<CheckoutResult> EdenMount::checkout(
-    Hash snapshotHash,
+    const RootId& snapshotHash,
     std::optional<pid_t> clientPid,
     folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
@@ -908,9 +909,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .via(serverState_->getThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         auto fromTreeFuture =
-            objectStore_->getTreeForCommit(parent1Hash, ctx->getFetchContext());
-        auto toTreeFuture = objectStore_->getTreeForCommit(
-            snapshotHash, ctx->getFetchContext());
+            objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
+        auto toTreeFuture =
+            objectStore_->getRootTree(snapshotHash, ctx->getFetchContext());
         return collectSafe(fromTreeFuture, toTreeFuture);
       })
       .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
@@ -1119,9 +1120,10 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       request);
 }
 
-Future<Unit> EdenMount::diff(DiffContext* ctxPtr, Hash commitHash) const {
+Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
+    const {
   auto rootInode = getRootInode();
-  return objectStore_->getTreeForCommit(commitHash, ctxPtr->getFetchContext())
+  return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
                      std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
@@ -1135,7 +1137,7 @@ Future<Unit> EdenMount::diff(DiffContext* ctxPtr, Hash commitHash) const {
 
 Future<Unit> EdenMount::diff(
     DiffCallback* callback,
-    Hash commitHash,
+    const RootId& commitHash,
     bool listIgnored,
     bool enforceCurrentParent,
     ResponseChannelRequest* request) const {
@@ -1153,7 +1155,7 @@ Future<Unit> EdenMount::diff(
     if (*parentInfo != commitHash) {
       // Log this occurrence to Scuba
       getServerState()->getStructuredLogger()->logEvent(
-          ParentMismatch{commitHash.toString(), parentInfo->toString()});
+          ParentMismatch{commitHash.value(), parentInfo->value()});
       return makeFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
@@ -1180,7 +1182,7 @@ Future<Unit> EdenMount::diff(
 }
 
 folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
-    Hash commitHash,
+    const RootId& commitHash,
     bool listIgnored,
     bool enforceCurrentParent,
     ResponseChannelRequest* request) {
@@ -1194,7 +1196,7 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-void EdenMount::resetParent(const Hash& parent) {
+void EdenMount::resetParent(const RootId& parent) {
   // Hold the snapshot lock around the entire operation.
   auto parentLock = parentCommit_.wlock();
   auto oldParent = *parentLock;

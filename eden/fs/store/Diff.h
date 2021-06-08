@@ -23,6 +23,7 @@ class ObjectStore;
 class Tree;
 class DiffContext;
 class GitIgnoreStack;
+class RootId;
 
 /**
  * Compute the diff between two commits.
@@ -32,8 +33,10 @@ class GitIgnoreStack;
  *
  * The differences will be returned to the caller.
  */
-folly::Future<std::unique_ptr<ScmStatus>>
-diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2);
+folly::Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
+    const ObjectStore* store,
+    const RootId& root1,
+    const RootId& root2);
 
 /**
  * Compute the diff between a source control Tree and the current directory

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -97,8 +98,8 @@ class HgRepo {
   void appendToHgrc(folly::StringPiece data);
   void appendToHgrc(const std::vector<std::string>& lines);
 
-  Hash commit(folly::StringPiece message);
-  Hash getManifestForCommit(Hash commit);
+  RootId commit(folly::StringPiece message);
+  Hash getManifestForCommit(const RootId& commit);
 
   void mkdir(RelativePathPiece path, mode_t permissions = 0755);
   void mkdir(folly::StringPiece path, mode_t permissions = 0755) {

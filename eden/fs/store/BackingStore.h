@@ -40,6 +40,9 @@ class BackingStore : public RootIdCodec {
   BackingStore() {}
   virtual ~BackingStore() {}
 
+  virtual folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+      const RootId& rootId,
+      ObjectFetchContext& context) = 0;
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) = 0;
@@ -47,9 +50,6 @@ class BackingStore : public RootIdCodec {
       const Hash& id,
       ObjectFetchContext& context) = 0;
 
-  virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID,
-      ObjectFetchContext& context) = 0;
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& /*ids*/,
       ObjectFetchContext& /*context*/) {

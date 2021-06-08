@@ -89,7 +89,7 @@ class DiffTest : public ::testing::Test {
       StringPiece commit1,
       StringPiece commit2) {
     return diffCommitsForStatus(
-        store_.get(), makeTestHash(commit1), makeTestHash(commit2));
+        store_.get(), RootId{commit1.str()}, RootId{commit2.str()});
   }
 
   ScmStatus diffCommitsWithGitIgnore(

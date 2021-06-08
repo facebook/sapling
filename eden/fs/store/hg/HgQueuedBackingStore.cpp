@@ -36,6 +36,7 @@
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/ScopeGuard.h"
+#include "folly/String.h"
 
 namespace facebook {
 namespace eden {
@@ -262,11 +263,23 @@ void HgQueuedBackingStore::processRequest() {
   }
 }
 
-Hash HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
-  return hashFromThrift(rootId);
+RootId HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
+  // rootId can be 20-byte binary or 40-byte hex. Canonicalize, unconditionally
+  // returning 40-byte hex.
+  return RootId{hashFromThrift(rootId).toString()};
 }
-std::string HgQueuedBackingStore::renderRootId(const Hash& rootId) {
-  return thriftHash(rootId);
+
+std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
+  // In memory, root IDs are stored as 40-byte hex. Thrift clients generally
+  // expect 20-byte binary for Mercurial commit hashes, so re-encode that way.
+  auto& value = rootId.value();
+  if (value.size() == 40) {
+    return folly::unhexlify(value);
+  } else {
+    XCHECK_EQ(0u, value.size());
+    // Default-constructed RootId is the Mercurial null hash.
+    return folly::unhexlify(kZeroHash.toString());
+  }
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
@@ -378,10 +391,10 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
       });
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeForCommit(
-    const Hash& commitID,
+folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
+    const RootId& rootId,
     ObjectFetchContext& context) {
-  return backingStore_->getTreeForCommit(commitID, context.prefetchMetadata());
+  return backingStore_->getRootTree(rootId, context.prefetchMetadata());
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(

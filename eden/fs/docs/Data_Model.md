@@ -33,6 +33,11 @@ information.
 
 ![Example Commit Object](img/commit_object.svg)
 
+Commit objects are referenced by variable-width identifiers whose meaning is
+defined by the concrete BackingStore implementation. For example, in Mercurial
+and Git, they're 20-byte binary (40-byte hex) strings. Each mount remembers
+its parent root ID across EdenFS restarts.
+
 Tree objects represent a directory, and contain a list of the directory
 contents.  Each entry in the directory has the name of the child entry as well
 as the object ID, which refers either to another tree object for a subdirectory

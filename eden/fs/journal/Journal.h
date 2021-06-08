@@ -36,8 +36,8 @@ struct JournalStats {
 };
 
 struct JournalDeltaInfo {
-  Hash fromHash;
-  Hash toHash;
+  RootId fromHash;
+  RootId toHash;
   JournalDelta::SequenceNumber sequenceID;
   std::chrono::steady_clock::time_point time;
 };
@@ -87,22 +87,22 @@ class Journal {
   void recordReplaced(RelativePathPiece oldName, RelativePathPiece newName);
 
   /**
-   * Creates a journal delta that updates the hash to this new hash
+   * Creates a journal delta that updates the root to this new hash
    */
-  void recordHashUpdate(Hash toHash);
+  void recordHashUpdate(RootId toHash);
 
   /**
-   * Creates a journal delta that updates the hash from fromHash to toHash
+   * Creates a journal delta that updates the root from fromHash to toHash
    */
-  void recordHashUpdate(Hash fromHash, Hash toHash);
+  void recordHashUpdate(RootId fromHash, RootId toHash);
 
   /**
-   * Creates a journal delta that updates the hash from fromHash to toHash and
+   * Creates a journal delta that updates the root from fromHash to toHash and
    * also sets uncleanPaths
    */
   void recordUncleanPaths(
-      Hash fromHash,
-      Hash toHash,
+      RootId fromHash,
+      RootId toHash,
       std::unordered_set<RelativePath> uncleanPaths);
 
   // Functions for reading the current state of the journal:
@@ -185,7 +185,7 @@ class Journal {
    * applied.
    */
   void addDelta(FileChangeJournalDelta&& delta);
-  void addDelta(HashUpdateJournalDelta&& delta, const Hash& newHash);
+  void addDelta(RootUpdateJournalDelta&& delta, RootId newRootId);
 
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
@@ -200,8 +200,8 @@ class Journal {
      * the appropriate deque.
      */
     std::deque<FileChangeJournalDelta> fileChangeDeltas;
-    std::deque<HashUpdateJournalDelta> hashUpdateDeltas;
-    Hash currentHash = kZeroHash;
+    std::deque<RootUpdateJournalDelta> hashUpdateDeltas;
+    RootId currentHash;
     /// The stats about this Journal up to the latest delta.
     std::optional<JournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
@@ -224,7 +224,7 @@ class Journal {
     bool isFileChangeInBack() const;
 
     void appendDelta(FileChangeJournalDelta&& delta);
-    void appendDelta(HashUpdateJournalDelta&& delta);
+    void appendDelta(RootUpdateJournalDelta&& delta);
 
     JournalDelta::SequenceNumber getFrontSequenceID() const {
       if (isFileChangeInFront()) {
@@ -247,7 +247,7 @@ class Journal {
    * returning true if it did compact it and false if not
    */
   bool compact(FileChangeJournalDelta& delta, DeltaState& deltaState);
-  bool compact(HashUpdateJournalDelta& delta, DeltaState& deltaState);
+  bool compact(RootUpdateJournalDelta& delta, DeltaState& deltaState);
 
   struct SubscriberState {
     SubscriberId nextSubscriberId{1};

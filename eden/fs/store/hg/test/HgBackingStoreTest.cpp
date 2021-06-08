@@ -40,7 +40,7 @@ struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_hg_backing_store_test"};
   AbsolutePath testPath{testDir.path().string()};
   HgRepo repo{testPath + "repo"_pc};
-  Hash commit1;
+  RootId commit1;
   Hash manifest1;
 
   TestRepo() {
@@ -134,8 +134,7 @@ TEST_F(
     HgBackingStoreTest,
     getTreeForCommit_reimports_tree_if_it_was_deleted_after_import) {
   auto tree1 =
-      objectStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+      objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(0ms);
   EXPECT_TRUE(tree1);
   ASSERT_THAT(
@@ -144,8 +143,7 @@ TEST_F(
 
   localStore->clearKeySpace(KeySpace::TreeFamily);
   auto tree2 =
-      objectStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+      objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(0ms);
   EXPECT_TRUE(tree2);
   ASSERT_THAT(
@@ -161,8 +159,7 @@ TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
   EXPECT_TRUE(metadataImporter);
 
   auto tree =
-      objectStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+      objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(0ms);
   auto context = SkipMetadatPrefetchFetchContext{};
 

@@ -138,7 +138,7 @@ TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
 }
 
 TestMount::TestMount(
-    Hash initialCommitHash,
+    const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady)
     : TestMount() {
@@ -164,7 +164,7 @@ TestMount::~TestMount() {
 }
 
 void TestMount::initialize(
-    Hash initialCommitHash,
+    const RootId& initialCommitHash,
     std::chrono::system_clock::time_point lastCheckoutTime) {
   // Set the initial commit ID
   setInitialCommit(initialCommitHash);
@@ -177,7 +177,7 @@ void TestMount::initialize(
       EdenTimestamp{folly::to<struct timespec>(lastCheckoutTime)});
 }
 
-void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
+void TestMount::initialize(const RootId& commitHash, Hash rootTreeHash) {
   // Set the initial commit ID
   setInitialCommit(commitHash, rootTreeHash);
 
@@ -187,7 +187,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
 }
 
 void TestMount::initialize(
-    Hash initialCommitHash,
+    const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady) {
   createMountWithoutInitializing(
@@ -200,7 +200,7 @@ void TestMount::initializeEdenMount() {
 }
 
 void TestMount::createMountWithoutInitializing(
-    Hash initialCommitHash,
+    const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady) {
   // Finalize rootBuilder and get the root Tree
@@ -245,9 +245,9 @@ void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {
 }
 #endif
 
-Hash TestMount::nextCommitHash() {
+RootId TestMount::nextCommitHash() {
   auto number = commitNumber_.fetch_add(1);
-  return makeTestHash(folly::to<string>(number));
+  return RootId{folly::to<string>(number)};
 }
 
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
@@ -389,7 +389,7 @@ void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {
 }
 
 void TestMount::resetCommit(
-    Hash commitHash,
+    const RootId& commitHash,
     FakeTreeBuilder& builder,
     bool setReady) {
   auto* rootTree = builder.finalize(backingStore_, setReady);
@@ -422,12 +422,12 @@ size_t TestMount::drainServerExecutor() {
   return serverExecutor_->drain();
 }
 
-void TestMount::setInitialCommit(Hash commitHash) {
+void TestMount::setInitialCommit(const RootId& commitHash) {
   // Write the commit hash to the snapshot file
   config_->setParentCommit(commitHash);
 }
 
-void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
+void TestMount::setInitialCommit(const RootId& commitHash, Hash rootTreeHash) {
   // Record the commit hash to root tree hash mapping in the BackingStore
   auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
   storedCommit->setReady();

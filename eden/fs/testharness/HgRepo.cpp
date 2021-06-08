@@ -169,7 +169,7 @@ void HgRepo::appendToHgrc(const std::vector<std::string>& lines) {
   appendToHgrc(folly::join("\n", lines) + "\n");
 }
 
-Hash HgRepo::commit(StringPiece message) {
+RootId HgRepo::commit(StringPiece message) {
   hg("commit",
      "-u",
      "Test User <user@example.com>",
@@ -178,11 +178,11 @@ Hash HgRepo::commit(StringPiece message) {
      "-m",
      message.str());
   auto output = hg("log", "-r.", "-T{node}\\n");
-  return Hash{folly::rtrimWhitespace(output)};
+  return RootId{Hash{folly::rtrimWhitespace(output)}.toString()};
 }
 
-Hash HgRepo::getManifestForCommit(Hash commit) {
-  auto output = hg("log", "-r", commit.toString(), "-T{manifest}\\n");
+Hash HgRepo::getManifestForCommit(const RootId& commit) {
+  auto output = hg("log", "-r", commit.value(), "-T{manifest}\\n");
   return Hash{folly::rtrimWhitespace(output)};
 }
 

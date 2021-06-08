@@ -17,8 +17,7 @@ namespace folly {
 class IOBuf;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Immutable 160-bit hash.
@@ -145,8 +144,8 @@ std::ostream& operator<<(std::ostream& os, const Hash& hash);
 
 /* Define toAppend() so folly::to<string>(Hash) will work */
 void toAppend(const Hash& hash, std::string* result);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden
 
 namespace std {
 template <>

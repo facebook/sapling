@@ -31,6 +31,10 @@ using std::unique_ptr;
 namespace facebook {
 namespace eden {
 
+namespace {
+constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
+}
+
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
@@ -99,17 +103,40 @@ void ObjectStore::deprioritizeWhenFetchHeavy(
     auto fetch_count = pidFetchCounts_->getCountByPid(pid.value());
     auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
     if (threshold && fetch_count >= threshold) {
-      context.deprioritize(importPriorityDeprioritizeAmount);
+      context.deprioritize(kImportPriorityDeprioritizeAmount);
     }
   }
 }
 
-Hash ObjectStore::parseRootId(folly::StringPiece rootId) {
+RootId ObjectStore::parseRootId(folly::StringPiece rootId) {
   return backingStore_->parseRootId(rootId);
 }
 
-std::string ObjectStore::renderRootId(const Hash& rootId) {
+std::string ObjectStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(rootId);
+}
+
+Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
+    const RootId& rootId,
+    ObjectFetchContext& context) const {
+  XLOG(DBG3) << "getRootTree(" << rootId << ")";
+
+  return backingStore_->getRootTree(rootId, context)
+      .via(executor_)
+      .thenValue([treeCache = treeCache_,
+                  rootId,
+                  localStore = localStore_,
+                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
+        if (!tree) {
+          throw std::domain_error(
+              folly::to<string>("unable to import root ", rootId));
+        }
+
+        localStore->putTree(tree.get());
+        treeCache->insert(tree);
+
+        return tree;
+      });
 }
 
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
@@ -180,29 +207,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
           return shared_ptr<const Tree>(std::move(loadedTree));
         });
   });
-}
-
-Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
-    const Hash& commitID,
-    ObjectFetchContext& context) const {
-  XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
-
-  return backingStore_->getTreeForCommit(commitID, context)
-      .via(executor_)
-      .thenValue([treeCache = treeCache_,
-                  commitID,
-                  localStore = localStore_,
-                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
-        if (!tree) {
-          throw std::domain_error(folly::to<string>(
-              "unable to import commit ", commitID.toString()));
-        }
-
-        localStore->putTree(tree.get());
-        treeCache->insert(tree);
-
-        return tree;
-      });
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(

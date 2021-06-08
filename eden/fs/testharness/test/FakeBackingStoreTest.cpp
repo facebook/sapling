@@ -47,8 +47,12 @@ std::string blobContents(const Blob& blob) {
 } // namespace
 
 TEST_F(FakeBackingStoreTest, getNonExistent) {
-  // getTree()/getBlob()/getTreeForCommit() should throw immediately
+  // getRootTree()/getTree()/getBlob() should throw immediately
   // when called on non-existent objects.
+  EXPECT_THROW_RE(
+      store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext()),
+      std::domain_error,
+      "commit 1 not found");
   auto hash = makeTestHash("1");
   EXPECT_THROW_RE(
       store_->getBlob(hash, ObjectFetchContext::getNullContext()),
@@ -58,10 +62,6 @@ TEST_F(FakeBackingStoreTest, getNonExistent) {
       store_->getTree(hash, ObjectFetchContext::getNullContext()),
       std::domain_error,
       "tree 0+1 not found");
-  EXPECT_THROW_RE(
-      store_->getTreeForCommit(hash, ObjectFetchContext::getNullContext()),
-      std::domain_error,
-      "commit 0+1 not found");
 }
 
 TEST_F(FakeBackingStoreTest, getBlob) {
@@ -206,21 +206,19 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(rootHash, std::move(future5).get()->getHash());
 }
 
-TEST_F(FakeBackingStoreTest, getTreeForCommit) {
+TEST_F(FakeBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Hash = makeTestHash("abc");
   auto* dir1 = store_->putTree(dir1Hash, {{"foo", store_->putBlob("foo\n")}});
-  auto hash1 = makeTestHash("1");
-  auto* commit1 = store_->putCommit(hash1, dir1);
+  auto* commit1 = store_->putCommit(RootId{"1"}, dir1);
   // Set up a second commit, but don't actually add the tree object for this one
-  auto hash2 = makeTestHash("2");
-  auto* commit2 = store_->putCommit(hash2, makeTestHash("3"));
+  auto* commit2 = store_->putCommit(RootId{"2"}, makeTestHash("3"));
 
   auto future1 =
-      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
+      store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
   auto future2 =
-      store_->getTreeForCommit(hash2, ObjectFetchContext::getNullContext());
+      store_->getRootTree(RootId{"2"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
 
   // Trigger commit1, then dir1 to make future1 ready.
@@ -235,7 +233,7 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
 
   // Get another future for commit1
   auto future3 =
-      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
+      store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
   // Triggering the directory now should have no effect,
   // since there should be no futures for it yet.
@@ -249,14 +247,14 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
 
   // Try triggering errors
   auto future4 =
-      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
+      store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
   ASSERT_TRUE(future4.isReady());
   EXPECT_THROW_RE(std::move(future4).get(), std::runtime_error, "bad luck");
 
   auto future5 =
-      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
+      store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
   commit1->trigger();
   EXPECT_FALSE(future5.isReady());

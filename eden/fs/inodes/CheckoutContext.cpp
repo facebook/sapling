@@ -22,7 +22,7 @@ namespace eden {
 
 CheckoutContext::CheckoutContext(
     EdenMount* mount,
-    folly::Synchronized<Hash>::LockedPtr&& parentLock,
+    folly::Synchronized<RootId>::LockedPtr&& parentLock,
     CheckoutMode checkoutMode,
     std::optional<pid_t> clientPid,
     folly::StringPiece thriftMethodName)
@@ -40,7 +40,7 @@ void CheckoutContext::start(RenameLock&& renameLock) {
   renameLock_ = std::move(renameLock);
 }
 
-Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
+Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   // Only update the parent if it is not a dry run.
   if (!isDryRun()) {
     auto oldParent = *parentLock_;
@@ -49,7 +49,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
 
     auto config = mount_->getCheckoutConfig();
     // Save the new snapshot hash to the config
-    config->setParentCommit(newSnapshot);
+    config->setParentCommit(std::move(newSnapshot));
     XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
                << oldParent << " to " << newSnapshot;
   }

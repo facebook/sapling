@@ -1573,7 +1573,7 @@ class DiffTestNonMateralized : public ::testing::Test {
     });
   }
 
-  std::unique_ptr<ScmStatus> diff(Hash& hash) {
+  std::unique_ptr<ScmStatus> diff(const RootId& hash) {
     return testMount_.getEdenMount()
         ->diff(
             hash,

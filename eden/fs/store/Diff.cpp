@@ -604,11 +604,9 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
  * will be extracted and returned to the caller.
  */
 FOLLY_NODISCARD Future<Unit>
-diffCommits(DiffContext* context, Hash hash1, Hash hash2) {
-  auto future1 =
-      context->store->getTreeForCommit(hash1, context->getFetchContext());
-  auto future2 =
-      context->store->getTreeForCommit(hash2, context->getFetchContext());
+diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
+  auto future1 = context->store->getRootTree(root1, context->getFetchContext());
+  auto future2 = context->store->getRootTree(root2, context->getFetchContext());
   return collectSafe(future1, future2)
       .thenValue([context](std::tuple<
                            std::shared_ptr<const Tree>,
@@ -628,13 +626,15 @@ diffCommits(DiffContext* context, Hash hash1, Hash hash2) {
 }
 } // namespace
 
-Future<std::unique_ptr<ScmStatus>>
-diffCommitsForStatus(const ObjectStore* store, Hash hash1, Hash hash2) {
+Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
+    const ObjectStore* store,
+    const RootId& root1,
+    const RootId& root2) {
   return folly::makeFutureWith([&] {
     auto state = std::make_unique<DiffState>(store);
     auto statePtr = state.get();
     auto contextPtr = &(statePtr->context);
-    return diffCommits(contextPtr, hash1, hash2)
+    return diffRoots(contextPtr, root1, root2)
         .thenValue([state = std::move(state)](auto&&) {
           return std::make_unique<ScmStatus>(state->callback.extractStatus());
         });

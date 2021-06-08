@@ -24,12 +24,19 @@ EmptyBackingStore::EmptyBackingStore() {}
 
 EmptyBackingStore::~EmptyBackingStore() {}
 
-Hash EmptyBackingStore::parseRootId(folly::StringPiece /*rootId*/) {
+RootId EmptyBackingStore::parseRootId(folly::StringPiece /*rootId*/) {
   throw std::domain_error("empty backing store");
 }
 
-std::string EmptyBackingStore::renderRootId(const Hash& /*rootId*/) {
+std::string EmptyBackingStore::renderRootId(const RootId& /*rootId*/) {
   throw std::domain_error("empty backing store");
+}
+
+SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
+    const RootId& /* rootId */,
+    ObjectFetchContext& /* context */) {
+  return makeSemiFuture<unique_ptr<Tree>>(
+      std::domain_error("empty backing store"));
 }
 
 SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(
@@ -43,13 +50,6 @@ SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(
     const Hash& /* id */,
     ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Blob>>(
-      std::domain_error("empty backing store"));
-}
-
-SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
-    const Hash& /* commitID */,
-    ObjectFetchContext& /* context */) {
-  return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }
 

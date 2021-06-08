@@ -36,12 +36,47 @@ FakeBackingStore::FakeBackingStore() = default;
 
 FakeBackingStore::~FakeBackingStore() = default;
 
-Hash FakeBackingStore::parseRootId(folly::StringPiece rootId) {
-  return hashFromThrift(rootId);
+RootId FakeBackingStore::parseRootId(folly::StringPiece rootId) {
+  return RootId{rootId.str()};
 }
 
-std::string FakeBackingStore::renderRootId(const Hash& rootId) {
-  return thriftHash(rootId);
+std::string FakeBackingStore::renderRootId(const RootId& rootId) {
+  return rootId.value();
+}
+
+SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
+    const RootId& commitID,
+    ObjectFetchContext& /*context*/) {
+  StoredHash* storedTreeHash;
+  {
+    auto data = data_.wlock();
+    ++data->commitAccessCounts[commitID];
+    auto commitIter = data->commits.find(commitID);
+    if (commitIter == data->commits.end()) {
+      // Throw immediately, for the same reasons mentioned in getTree()
+      throw std::domain_error(
+          folly::to<std::string>("commit ", commitID, " not found"));
+    }
+
+    storedTreeHash = commitIter->second.get();
+  }
+
+  return storedTreeHash->getFuture().thenValue(
+      [this, commitID](const std::unique_ptr<Hash>& hash) {
+        auto data = data_.rlock();
+        auto treeIter = data->trees.find(*hash);
+        if (treeIter == data->trees.end()) {
+          return makeFuture<unique_ptr<Tree>>(
+              std::domain_error(folly::to<std::string>(
+                  "tree ",
+                  hash->toString(),
+                  " for commit ",
+                  commitID,
+                  " not found")));
+        }
+
+        return treeIter->second->getFuture();
+      });
 }
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
@@ -75,36 +110,6 @@ SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
   }
 
   return it->second->getFuture();
-}
-
-SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
-    const Hash& commitID,
-    ObjectFetchContext& /*context*/) {
-  StoredHash* storedTreeHash;
-  {
-    auto data = data_.wlock();
-    ++data->accessCounts[commitID];
-    auto commitIter = data->commits.find(commitID);
-    if (commitIter == data->commits.end()) {
-      // Throw immediately, for the same reasons mentioned in getTree()
-      throw std::domain_error("commit " + commitID.toString() + " not found");
-    }
-
-    storedTreeHash = commitIter->second.get();
-  }
-
-  return storedTreeHash->getFuture().thenValue(
-      [this, commitID](const std::unique_ptr<Hash>& hash) {
-        auto data = data_.rlock();
-        auto treeIter = data->trees.find(*hash);
-        if (treeIter == data->trees.end()) {
-          return makeFuture<unique_ptr<Tree>>(std::domain_error(
-              "tree " + hash->toString() + " for commit " +
-              commitID.toString() + " not found"));
-        }
-
-        return treeIter->second->getFuture();
-      });
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
@@ -291,26 +296,28 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
 }
 
 StoredHash* FakeBackingStore::putCommit(
-    Hash commitHash,
+    const RootId& commitHash,
     const StoredTree* tree) {
   return putCommit(commitHash, tree->get().getHash());
 }
 
-StoredHash* FakeBackingStore::putCommit(Hash commitHash, Hash treeHash) {
+StoredHash* FakeBackingStore::putCommit(
+    const RootId& commitHash,
+    Hash treeHash) {
   auto storedHash = make_unique<StoredHash>(treeHash);
   {
     auto data = data_.wlock();
     auto ret = data->commits.emplace(commitHash, std::move(storedHash));
     if (!ret.second) {
-      throw std::domain_error(folly::sformat(
-          "commit with hash {} already exists", commitHash.toString()));
+      throw std::domain_error(folly::to<std::string>(
+          "commit with hash ", commitHash, " already exists"));
     }
     return ret.first->second.get();
   }
 }
 
 StoredHash* FakeBackingStore::putCommit(
-    Hash commitHash,
+    const RootId& commitHash,
     const FakeTreeBuilder& builder) {
   return putCommit(commitHash, builder.getRoot()->get().getHash());
 }
@@ -318,7 +325,7 @@ StoredHash* FakeBackingStore::putCommit(
 StoredHash* FakeBackingStore::putCommit(
     folly::StringPiece commitStr,
     const FakeTreeBuilder& builder) {
-  return putCommit(makeTestHash(commitStr), builder);
+  return putCommit(RootId(commitStr.str()), builder);
 }
 
 StoredTree* FakeBackingStore::getStoredTree(Hash hash) {

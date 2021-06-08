@@ -24,12 +24,22 @@ struct ReCasBackingStoreTest : public ::testing::Test {
   ReCasBackingStoreTest() {}
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>()};
+  RootId rootId{"root"};
   Hash id = Hash::sha1("test");
   Hash manifest = Hash::sha1("manifest");
   std::unique_ptr<ReCasBackingStore> makeReCasBackingStore() {
     return std::make_unique<ReCasBackingStore>(localStore);
   }
 };
+
+TEST_F(ReCasBackingStoreTest, getRootTree) {
+  auto reCasStore = makeReCasBackingStore();
+  EXPECT_THROW(
+      reCasStore->getRootTree(rootId, ObjectFetchContext::getNullContext())
+          .via(&folly::QueuedImmediateExecutor::instance())
+          .get(kTestTimeout),
+      std::domain_error);
+}
 
 TEST_F(ReCasBackingStoreTest, getTree) {
   auto reCasStore = makeReCasBackingStore();
@@ -44,15 +54,6 @@ TEST_F(ReCasBackingStoreTest, getBlob) {
   auto reCasStore = makeReCasBackingStore();
   EXPECT_THROW(
       reCasStore->getBlob(id, ObjectFetchContext::getNullContext())
-          .via(&folly::QueuedImmediateExecutor::instance())
-          .get(kTestTimeout),
-      std::domain_error);
-}
-
-TEST_F(ReCasBackingStoreTest, getTreeForCommit) {
-  auto reCasStore = makeReCasBackingStore();
-  EXPECT_THROW(
-      reCasStore->getTreeForCommit(id, ObjectFetchContext::getNullContext())
           .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout),
       std::domain_error);

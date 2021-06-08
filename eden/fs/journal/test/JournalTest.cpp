@@ -16,10 +16,19 @@ using namespace facebook::eden;
 
 namespace {
 
+struct IdentityCodec : RootIdCodec {
+  RootId parseRootId(folly::StringPiece piece) override {
+    return RootId{piece.toString()};
+  }
+  std::string renderRootId(const RootId& rootId) override {
+    return rootId.value();
+  }
+};
+
 struct JournalTest : ::testing::Test {
   std::shared_ptr<EdenStats> edenStats{std::make_shared<EdenStats>()};
   Journal journal{edenStats};
-  HashRootIdCodec codec;
+  IdentityCodec codec;
 };
 
 } // namespace
@@ -137,7 +146,9 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
 
 namespace {
 
-void checkHashMatches(const std::vector<Hash>& transitions, Journal& journal) {
+void checkHashMatches(
+    const std::vector<RootId>& transitions,
+    Journal& journal) {
   auto latest = journal.getLatest();
   ASSERT_TRUE(latest);
   EXPECT_EQ(transitions.front(), latest->fromHash);
@@ -149,16 +160,16 @@ void checkHashMatches(const std::vector<Hash>& transitions, Journal& journal) {
 
   range = journal.accumulateRange();
   ASSERT_TRUE(range);
-  EXPECT_EQ(kZeroHash, range->snapshotTransitions.front());
+  EXPECT_EQ(RootId{}, range->snapshotTransitions.front());
   EXPECT_EQ(transitions.back(), range->snapshotTransitions.back());
 }
 
 } // namespace
 
 TEST_F(JournalTest, accumulate_range_with_hash_updates) {
-  auto hash0 = kZeroHash;
-  auto hash1 = Hash("1111111111111111111111111111111111111111");
-  auto hash2 = Hash("2222222222222222222222222222222222222222");
+  RootId hash0;
+  RootId hash1{"1111111111111111111111111111111111111111"};
+  RootId hash2{"2222222222222222222222222222222222222222"};
   // Empty journals have no range to accumulate over
   EXPECT_FALSE(journal.getLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
@@ -241,9 +252,9 @@ TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
 }
 
 TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
-  auto hash0 = kZeroHash;
-  auto hash1 = Hash("1111111111111111111111111111111111111111");
-  auto hash2 = Hash("2222222222222222222222222222222222222222");
+  auto hash0 = RootId{};
+  auto hash1 = RootId{"1111111111111111111111111111111111111111"};
+  auto hash2 = RootId{"2222222222222222222222222222222222222222"};
 
   // Go from hash0 to hash1
   journal.recordHashUpdate(hash0, hash1);
@@ -263,10 +274,9 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
       *debugDeltas[0].fromPosition_ref()->mountGeneration_ref(), mountGen);
   EXPECT_EQ(*debugDeltas[0].fromPosition_ref()->sequenceNumber_ref(), 3);
   EXPECT_EQ(
-      *debugDeltas[0].fromPosition_ref()->snapshotHash_ref(),
-      thriftHash(hash1));
+      *debugDeltas[0].fromPosition_ref()->snapshotHash_ref(), hash1.value());
   EXPECT_EQ(
-      *debugDeltas[0].toPosition_ref()->snapshotHash_ref(), thriftHash(hash2));
+      *debugDeltas[0].toPosition_ref()->snapshotHash_ref(), hash2.value());
   EXPECT_FALSE(
       *debugDeltas[1].changedPaths_ref()["test.txt"].existedBefore_ref());
   EXPECT_TRUE(
@@ -275,19 +285,17 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
       *debugDeltas[1].fromPosition_ref()->mountGeneration_ref(), mountGen);
   EXPECT_EQ(*debugDeltas[1].fromPosition_ref()->sequenceNumber_ref(), 2);
   EXPECT_EQ(
-      *debugDeltas[1].fromPosition_ref()->snapshotHash_ref(),
-      thriftHash(hash1));
+      *debugDeltas[1].fromPosition_ref()->snapshotHash_ref(), hash1.value());
   EXPECT_EQ(
-      *debugDeltas[1].toPosition_ref()->snapshotHash_ref(), thriftHash(hash1));
+      *debugDeltas[1].toPosition_ref()->snapshotHash_ref(), hash1.value());
   EXPECT_TRUE(debugDeltas[2].changedPaths_ref()->empty());
   EXPECT_EQ(
       *debugDeltas[2].fromPosition_ref()->mountGeneration_ref(), mountGen);
   EXPECT_EQ(*debugDeltas[2].fromPosition_ref()->sequenceNumber_ref(), 1);
   EXPECT_EQ(
-      *debugDeltas[2].fromPosition_ref()->snapshotHash_ref(),
-      thriftHash(hash0));
+      *debugDeltas[2].fromPosition_ref()->snapshotHash_ref(), hash0.value());
   EXPECT_EQ(
-      *debugDeltas[2].toPosition_ref()->snapshotHash_ref(), thriftHash(hash1));
+      *debugDeltas[2].toPosition_ref()->snapshotHash_ref(), hash1.value());
 }
 
 TEST_F(JournalTest, destruction_does_not_overflow_stack_on_long_chain) {
@@ -544,9 +552,9 @@ TEST_F(JournalTest, compaction) {
 }
 
 TEST_F(JournalTest, update_transitions_are_all_recorded) {
-  Hash hash1{"0000000000000000000000000000000000000001"};
-  Hash hash2{"0000000000000000000000000000000000000002"};
-  Hash hash3{"0000000000000000000000000000000000000003"};
+  RootId hash1{"0000000000000000000000000000000000000001"};
+  RootId hash2{"0000000000000000000000000000000000000002"};
+  RootId hash3{"0000000000000000000000000000000000000003"};
   journal.recordHashUpdate(hash1, hash2);
   journal.recordHashUpdate(hash2, hash3);
 
@@ -558,9 +566,9 @@ TEST_F(JournalTest, update_transitions_are_all_recorded) {
 }
 
 TEST_F(JournalTest, update_transitions_are_coalesced) {
-  Hash hash1{"0000000000000000000000000000000000000001"};
-  Hash hash2{"0000000000000000000000000000000000000002"};
-  Hash hash3{"0000000000000000000000000000000000000003"};
+  RootId hash1{"0000000000000000000000000000000000000001"};
+  RootId hash2{"0000000000000000000000000000000000000002"};
+  RootId hash3{"0000000000000000000000000000000000000003"};
   journal.recordHashUpdate(hash1, hash2);
   journal.recordHashUpdate(hash2, hash2);
   journal.recordHashUpdate(hash2, hash3);
@@ -573,9 +581,9 @@ TEST_F(JournalTest, update_transitions_are_coalesced) {
 }
 
 TEST_F(JournalTest, update_transitions_with_unclean_files_are_not_coalesced) {
-  Hash hash1{"0000000000000000000000000000000000000001"};
-  Hash hash2{"0000000000000000000000000000000000000002"};
-  Hash hash3{"0000000000000000000000000000000000000003"};
+  RootId hash1{"0000000000000000000000000000000000000001"};
+  RootId hash2{"0000000000000000000000000000000000000002"};
+  RootId hash3{"0000000000000000000000000000000000000003"};
   journal.recordHashUpdate(hash1, hash2);
   journal.recordUncleanPaths(hash2, hash2, {RelativePath{"foo"}});
   journal.recordHashUpdate(hash2, hash3);

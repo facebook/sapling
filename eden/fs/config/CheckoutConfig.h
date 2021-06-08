@@ -9,7 +9,7 @@
 
 #include <folly/dynamic.h>
 #include <optional>
-#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -63,12 +63,12 @@ class CheckoutConfig {
   /**
    * Get the parent commit of the working directory.
    */
-  Hash getParentCommit() const;
+  RootId getParentCommit() const;
 
   /**
    * Set the parent commit of the working directory.
    */
-  void setParentCommit(Hash parent) const;
+  void setParentCommit(const RootId& parent) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

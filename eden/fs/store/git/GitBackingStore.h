@@ -44,17 +44,17 @@ class GitBackingStore final : public BackingStore {
    */
   const char* getPath() const;
 
-  Hash parseRootId(folly::StringPiece rootId) override;
-  std::string renderRootId(const Hash& rootId) override;
+  RootId parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const RootId& rootId) override;
 
+  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+      const RootId& rootId,
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID,
       ObjectFetchContext& context) override;
 
  private:
@@ -63,6 +63,8 @@ class GitBackingStore final : public BackingStore {
 
   std::unique_ptr<Tree> getTreeImpl(const Hash& id);
   std::unique_ptr<Blob> getBlobImpl(const Hash& id);
+
+  static git_oid root2Oid(const RootId& rootId);
 
   static git_oid hash2Oid(const Hash& hash);
   static Hash oid2Hash(const git_oid* oid);

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <folly/portability/SysTypes.h>
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 
 namespace folly {
@@ -40,14 +41,14 @@ class IObjectStore {
    * resulting future is complete.
    */
 
+  virtual folly::Future<std::shared_ptr<const Tree>> getRootTree(
+      const RootId& rootId,
+      ObjectFetchContext& context) const = 0;
   virtual folly::Future<std::shared_ptr<const Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) const = 0;
   virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) const = 0;
-  virtual folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
-      const Hash& commitID,
       ObjectFetchContext& context) const = 0;
   virtual folly::Future<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,

@@ -15,6 +15,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
+#include "folly/String.h"
 
 namespace facebook::eden {
 
@@ -63,11 +64,11 @@ inline Hash hashFromThrift(folly::StringPiece commitID) {
 
 class HashRootIdCodec : public RootIdCodec {
  public:
-  Hash parseRootId(folly::StringPiece piece) override {
-    return hashFromThrift(piece);
+  RootId parseRootId(folly::StringPiece piece) override {
+    return RootId{hashFromThrift(piece).toString()};
   }
-  std::string renderRootId(const Hash& rootId) override {
-    return thriftHash(rootId);
+  std::string renderRootId(const RootId& rootId) override {
+    return folly::unhexlify(rootId.value());
   }
 };
 

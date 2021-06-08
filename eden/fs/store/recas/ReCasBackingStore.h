@@ -20,17 +20,17 @@ class ReCasBackingStore final : public BackingStore {
   explicit ReCasBackingStore(std::shared_ptr<LocalStore> localStore);
   ~ReCasBackingStore() override;
 
-  Hash parseRootId(folly::StringPiece rootId) override;
-  std::string renderRootId(const Hash& rootId) override;
+  RootId parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const RootId& rootId) override;
 
+  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+      const RootId& rootId,
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID,
       ObjectFetchContext& context) override;
 
  private:

@@ -84,7 +84,8 @@ TEST_F(HgImportTest, importTest) {
       "no match found");
 
   EXPECT_THROW_RE(
-      importer.importFileContents(RelativePathPiece{"hello"}, commit1),
+      importer.importFileContents(
+          RelativePathPiece{"hello"}, Hash{commit1.value()}),
       std::exception,
       "no match found");
 }

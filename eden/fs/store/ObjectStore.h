@@ -58,8 +58,6 @@ struct PidFetchCounts {
   }
 };
 
-constexpr uint64_t importPriorityDeprioritizeAmount{1};
-
 /**
  * ObjectStore is a content-addressed store for eden object data.
  *
@@ -115,13 +113,24 @@ class ObjectStore : public IObjectStore,
    * This function gives the BackingStore a chance to parse and canonicalize the
    * root ID at API boundaries such as Thrift.
    */
-  Hash parseRootId(folly::StringPiece rootId) override;
+  RootId parseRootId(folly::StringPiece rootId) override;
 
   /**
    * Each BackingStore defines the meaning and encoding of its root ID. Give it
    * the chance to render a root ID to Thrift.
    */
-  std::string renderRootId(const Hash& rootId) override;
+  std::string renderRootId(const RootId& rootId) override;
+
+  /**
+   * Get a root Tree.
+   *
+   * This returns a Future object that will produce the root Tree when it is
+   * ready.  It may result in a std::domain_error if the specified commit ID
+   * does not exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::shared_ptr<const Tree>> getRootTree(
+      const RootId& rootId,
+      ObjectFetchContext& context) const override;
 
   /**
    * Get a Tree by ID.
@@ -132,17 +141,6 @@ class ObjectStore : public IObjectStore,
    */
   folly::Future<std::shared_ptr<const Tree>> getTree(
       const Hash& id,
-      ObjectFetchContext& context) const override;
-
-  /**
-   * Get a commit's root Tree.
-   *
-   * This returns a Future object that will produce the root Tree when it is
-   * ready.  It may result in a std::domain_error if the specified commit ID
-   * does not exist, or possibly other exceptions on error.
-   */
-  folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
-      const Hash& commitID,
       ObjectFetchContext& context) const override;
 
   folly::Future<folly::Unit> prefetchBlobs(

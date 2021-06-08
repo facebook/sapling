@@ -21,7 +21,7 @@ namespace {
 Hash fileHash("0000000000000000000000000000000000000000");
 Hash tree1Hash("1111111111111111111111111111111111111111");
 Hash tree2Hash("2222222222222222222222222222222222222222");
-Hash commHash("4444444444444444444444444444444444444444");
+RootId commHash("4444444444444444444444444444444444444444");
 Hash blobHash("5555555555555555555555555555555555555555");
 } // namespace
 
@@ -52,7 +52,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
       fileHash, PathComponent{"a_file"}, TreeEntryType::REGULAR_FILE);
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
-  auto foundTreeForCommit = store.getTreeForCommit(commHash).get();
+  auto foundTreeForCommit = store.getRootTree(commHash).get();
   ASSERT_NE(nullptr, foundTreeForCommit.get());
   EXPECT_EQ(tree2Hash, foundTreeForCommit->getHash());
 }
@@ -62,5 +62,6 @@ TEST(FakeObjectStore, getMissingObjectThrows) {
   Hash hash("4242424242424242424242424242424242424242");
   EXPECT_THROW(store.getTree(hash).get(), std::domain_error);
   EXPECT_THROW(store.getBlob(hash).get(), std::domain_error);
-  EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
+  RootId rootId{"missing"};
+  EXPECT_THROW(store.getRootTree(rootId).get(), std::domain_error);
 }

@@ -38,17 +38,17 @@ class FakeBackingStore final : public BackingStore {
    * BackingStore APIs
    */
 
-  Hash parseRootId(folly::StringPiece rootId) override;
-  std::string renderRootId(const Hash& rootId) override;
+  RootId parseRootId(folly::StringPiece rootId) override;
+  std::string renderRootId(const RootId& rootId) override;
 
+  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+      const RootId& commitID,
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID,
       ObjectFetchContext& context) override;
 
   /**
@@ -109,9 +109,11 @@ class FakeBackingStore final : public BackingStore {
   /**
    * Add a mapping from a commit ID to a root tree hash.
    */
-  StoredHash* putCommit(Hash commitHash, const StoredTree* tree);
-  StoredHash* putCommit(Hash commitHash, Hash treeHash);
-  StoredHash* putCommit(Hash commitHash, const FakeTreeBuilder& builder);
+  StoredHash* putCommit(const RootId& commitHash, const StoredTree* tree);
+  StoredHash* putCommit(const RootId& commitHash, Hash treeHash);
+  StoredHash* putCommit(
+      const RootId& commitHash,
+      const FakeTreeBuilder& builder);
   StoredHash* putCommit(
       folly::StringPiece commitStr,
       const FakeTreeBuilder& builder);
@@ -144,9 +146,11 @@ class FakeBackingStore final : public BackingStore {
 
  private:
   struct Data {
+    std::unordered_map<RootId, std::unique_ptr<StoredHash>> commits;
     std::unordered_map<Hash, std::unique_ptr<StoredTree>> trees;
     std::unordered_map<Hash, std::unique_ptr<StoredBlob>> blobs;
-    std::unordered_map<Hash, std::unique_ptr<StoredHash>> commits;
+
+    std::unordered_map<RootId, size_t> commitAccessCounts;
     std::unordered_map<Hash, size_t> accessCounts;
   };
 

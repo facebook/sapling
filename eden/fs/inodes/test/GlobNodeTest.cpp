@@ -37,7 +37,7 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
     TestMount& mount,
     GlobNode& globRoot,
     GlobNode::PrefetchList prefetchHashes,
-    const Hash& commitHash) {
+    const RootId& commitHash) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
   return globRoot.evaluate(
@@ -48,6 +48,9 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
       prefetchHashes,
       commitHash);
 }
+
+const RootId kZeroRootId{};
+
 } // namespace
 
 enum StartReady : bool {
@@ -76,13 +79,13 @@ class GlobNodeTest : public ::testing::TestWithParam<
   std::vector<GlobResult> doGlob(
       folly::StringPiece pattern,
       bool includeDotfiles,
-      const Hash& commitHash) {
+      const RootId& commitHash) {
     GlobNode globRoot(/*includeDotfiles=*/includeDotfiles);
     globRoot.parse(pattern);
     return doGlob(globRoot, commitHash);
   }
 
-  std::vector<GlobResult> doGlob(GlobNode& globRoot, const Hash& commitHash) {
+  std::vector<GlobResult> doGlob(GlobNode& globRoot, const RootId& commitHash) {
     globRoot.debugDump();
 
     if (shouldPrefetch()) {
@@ -100,13 +103,13 @@ class GlobNodeTest : public ::testing::TestWithParam<
 
   std::vector<GlobResult> doGlobIncludeDotFiles(
       folly::StringPiece pattern,
-      const Hash& commitHash) {
+      const RootId& commitHash) {
     return doGlob(pattern, true, commitHash);
   }
 
   std::vector<GlobResult> doGlobExcludeDotFiles(
       folly::StringPiece pattern,
-      const Hash& commitHash) {
+      const RootId& commitHash) {
     return doGlob(pattern, false, commitHash);
   }
 
@@ -124,7 +127,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
 };
 
 TEST_P(GlobNodeTest, starTxt) {
-  auto matches = doGlobIncludeDotFiles("*.txt", kZeroHash);
+  auto matches = doGlobIncludeDotFiles("*.txt", kZeroRootId);
   EXPECT_TRUE(matches.empty());
   if (shouldPrefetch()) {
     EXPECT_TRUE(getPrefetchHashes().empty());
@@ -139,11 +142,11 @@ const Hash BHash{"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98"};
 const Hash WatHash{"a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2"};
 
 TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
-  auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroHash);
+  auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroRootId);
 
   std::vector<GlobResult> expect{
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 
@@ -154,12 +157,12 @@ TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
 }
 
 TEST_P(GlobNodeTest, star) {
-  auto matches = doGlobIncludeDotFiles("*", kZeroHash);
+  auto matches = doGlobIncludeDotFiles("*", kZeroRootId);
 
   std::vector<GlobResult> expect{
-      GlobResult(".eden"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult(".watchmanconfig"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir"_relpath, dtype_t::Dir, kZeroHash)};
+      GlobResult(".eden"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult(".watchmanconfig"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir"_relpath, dtype_t::Dir, kZeroRootId)};
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
@@ -169,10 +172,10 @@ TEST_P(GlobNodeTest, star) {
 }
 
 TEST_P(GlobNodeTest, starExcludeDot) {
-  auto matches = doGlobExcludeDotFiles("*", kZeroHash);
+  auto matches = doGlobExcludeDotFiles("*", kZeroRootId);
 
   std::vector<GlobResult> expect{
-      GlobResult("dir"_relpath, dtype_t::Dir, kZeroHash)};
+      GlobResult("dir"_relpath, dtype_t::Dir, kZeroRootId)};
   EXPECT_EQ(expect, matches);
 }
 
@@ -188,13 +191,13 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   builder_.setReady("dir/a.txt");
   mount_.chmod("dir/a.txt", 0777);
 
-  auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroHash);
+  auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroRootId);
 
   std::vector<GlobResult> expect{
-      GlobResult("root.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("sym.txt"_relpath, dtype_t::Symlink, kZeroHash),
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("root.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("sym.txt"_relpath, dtype_t::Symlink, kZeroRootId),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 
@@ -214,11 +217,11 @@ TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryChild) {
   globRoot.parse("dir/*");
   globRoot.parse("dir/*/*");
 
-  auto matches = doGlob(globRoot, kZeroHash);
+  auto matches = doGlob(globRoot, kZeroRootId);
   std::vector<GlobResult> expect{
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 }
@@ -228,11 +231,11 @@ TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryRecursiveChildren) {
   globRoot.parse("dir/*");
   globRoot.parse("dir/*/**");
 
-  auto matches = doGlob(globRoot, kZeroHash);
+  auto matches = doGlob(globRoot, kZeroRootId);
   std::vector<GlobResult> expect{
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 }
@@ -242,10 +245,10 @@ TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryChild) {
   globRoot.parse("dir");
   globRoot.parse("dir/a.txt");
 
-  auto matches = doGlob(globRoot, kZeroHash);
+  auto matches = doGlob(globRoot, kZeroRootId);
   std::vector<GlobResult> expect{
-      GlobResult("dir"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("dir"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 }
@@ -255,12 +258,12 @@ TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryRecursiveChildren) {
   globRoot.parse("dir");
   globRoot.parse("dir/**");
 
-  auto matches = doGlob(globRoot, kZeroHash);
+  auto matches = doGlob(globRoot, kZeroRootId);
   std::vector<GlobResult> expect{
-      GlobResult("dir"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroHash),
-      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroHash),
-      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroHash),
+      GlobResult("dir"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/a.txt"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("dir/sub"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 }
@@ -298,7 +301,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
     auto matches = std::vector<GlobResult>{};
     try {
       matches =
-          evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroHash)
+          evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId)
               .get(kSmallTimeout);
     } catch (const folly::FutureTimeout&) {
       FAIL() << "Matching dir/subdir should not load dir/subdir";
@@ -312,7 +315,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
         << "dir/subdir should still be unloaded after evaluating glob";
     EXPECT_EQ(
         (std::vector<GlobResult>{
-            GlobResult("dir/subdir"_relpath, dtype_t::Dir, kZeroHash),
+            GlobResult("dir/subdir"_relpath, dtype_t::Dir, kZeroRootId),
         }),
         matches);
   }
@@ -340,7 +343,7 @@ TEST(GlobNodeTest, treeLoadError) {
     globRoot.parse("dir/**/a.txt");
 
     auto globFuture =
-        evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroHash);
+        evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
     EXPECT_FALSE(globFuture.isReady())
         << "glob should not finish when some subtrees are not read";
 
@@ -374,9 +377,9 @@ TEST(GlobNodeTest, treeLoadError) {
   }
 }
 
-const Hash randomHash{"37ce5515c1b313ce722366c31c10db0883fff7e0"};
-
 TEST_P(GlobNodeTest, testCommitHashSet) {
+  const RootId randomHash{"37ce5515c1b313ce722366c31c10db0883fff7e0"};
+
   auto matches = doGlobIncludeDotFiles("**/*.txt", randomHash);
 
   std::vector<GlobResult> expect{

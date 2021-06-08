@@ -40,7 +40,7 @@ class CheckoutContext {
  public:
   CheckoutContext(
       EdenMount* mount,
-      folly::Synchronized<Hash>::LockedPtr&& parentLock,
+      folly::Synchronized<RootId>::LockedPtr&& parentLock,
       CheckoutMode checkoutMode,
       std::optional<pid_t> clientPid,
       folly::StringPiece thriftMethodName);
@@ -82,7 +82,7 @@ class CheckoutContext {
    * Returns the list of conflicts and errors that were encountered during the
    * operation.
    */
-  folly::Future<std::vector<CheckoutConflict>> finish(Hash newSnapshot);
+  folly::Future<std::vector<CheckoutConflict>> finish(RootId newSnapshot);
 
   void addConflict(ConflictType type, RelativePathPiece path);
   void
@@ -114,7 +114,7 @@ class CheckoutContext {
  private:
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
-  folly::Synchronized<Hash>::LockedPtr parentLock_;
+  folly::Synchronized<RootId>::LockedPtr parentLock_;
   RenameLock renameLock_;
   StatsFetchContext fetchContext_;
 

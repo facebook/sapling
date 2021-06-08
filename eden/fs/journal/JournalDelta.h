@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
-#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -119,18 +119,20 @@ class FileChangeJournalDelta : public JournalDelta {
 };
 
 /** A delta that stores information about changing commits */
-class HashUpdateJournalDelta : public JournalDelta {
+class RootUpdateJournalDelta : public JournalDelta {
  public:
-  HashUpdateJournalDelta() = default;
-  HashUpdateJournalDelta(HashUpdateJournalDelta&&) = default;
-  HashUpdateJournalDelta& operator=(HashUpdateJournalDelta&&) = default;
-  HashUpdateJournalDelta(const HashUpdateJournalDelta&) = delete;
-  HashUpdateJournalDelta& operator=(const HashUpdateJournalDelta&) = delete;
+  RootUpdateJournalDelta() = default;
+  RootUpdateJournalDelta(RootUpdateJournalDelta&&) = default;
+  RootUpdateJournalDelta& operator=(RootUpdateJournalDelta&&) = default;
+  RootUpdateJournalDelta(const RootUpdateJournalDelta&) = delete;
+  RootUpdateJournalDelta& operator=(const RootUpdateJournalDelta&) = delete;
 
-  /** The snapshot hash that we started and ended up on.
+  /**
+   * The snapshot hash that we started and ended up on.
    * This will often be the same unless we perform a checkout or make
-   * a new snapshot from the snapshotable files in the overlay. */
-  Hash fromHash;
+   * a new snapshot from the snapshotable files in the overlay.
+   */
+  RootId fromHash;
 
   /** The set of files that had differing status across a checkout or
    * some other operation that changes the snapshot hash */
@@ -146,7 +148,7 @@ class JournalDeltaPtr {
 
   /* implicit */ JournalDeltaPtr(FileChangeJournalDelta* p);
 
-  /* implicit */ JournalDeltaPtr(HashUpdateJournalDelta* p);
+  /* implicit */ JournalDeltaPtr(RootUpdateJournalDelta* p);
 
   size_t estimateMemoryUsage() const;
 
@@ -162,7 +164,7 @@ class JournalDeltaPtr {
   const JournalDelta* operator->() const noexcept;
 
  private:
-  std::variant<std::monostate, FileChangeJournalDelta*, HashUpdateJournalDelta*>
+  std::variant<std::monostate, FileChangeJournalDelta*, RootUpdateJournalDelta*>
       data_;
 };
 
@@ -191,7 +193,7 @@ struct JournalDeltaRange {
    * This entries in this list are not unique. [A, B, C] is different than [A,
    * C, B], and [A, B, A] is common too.
    */
-  std::vector<Hash> snapshotTransitions;
+  std::vector<RootId> snapshotTransitions;
 
   /**
    * The set of files that changed in the overlay in this update, including

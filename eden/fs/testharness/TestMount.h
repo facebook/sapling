@@ -91,7 +91,7 @@ class TestMount {
   explicit TestMount(FakeTreeBuilder& rootBuilder, bool startReady = true);
   explicit TestMount(FakeTreeBuilder&& rootBuilder);
   TestMount(
-      Hash initialCommitHash,
+      const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
 
@@ -104,7 +104,7 @@ class TestMount {
    * The caller must have already defined the root commit.  The lastCheckoutTime
    * is read from the FakeClock.
    */
-  void initialize(Hash initialCommitHash) {
+  void initialize(const RootId& initialCommitHash) {
     initialize(initialCommitHash, getClock().getTimePoint());
   }
 
@@ -115,7 +115,7 @@ class TestMount {
    * The caller must have already defined the root commit.
    */
   void initialize(
-      Hash initialCommitHash,
+      const RootId& initialCommitHash,
       std::chrono::system_clock::time_point lastCheckoutTime);
 
   /**
@@ -124,7 +124,7 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    * The caller must have already defined the root Tree in the object store.
    */
-  void initialize(Hash initialCommitHash, Hash rootTreeHash);
+  void initialize(const RootId& initialCommitHash, Hash rootTreeHash);
 
   /**
    * Initialize the mount from the given root tree.
@@ -135,7 +135,7 @@ class TestMount {
    * will be used.
    */
   void initialize(
-      Hash initialCommitHash,
+      const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
@@ -146,7 +146,7 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    */
   void createMountWithoutInitializing(
-      Hash initialCommitHash,
+      const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
   void createMountWithoutInitializing(
@@ -314,14 +314,17 @@ class TestMount {
    * This returns "0000000000000000000000000000000000000001" on the first call,
    * "0000000000000000000000000000000000000002" on the second, etc.
    */
-  Hash nextCommitHash();
+  RootId nextCommitHash();
 
   /**
    * Helper function to create a commit from a FakeTreeBuilder and call
    * EdenMount::resetCommit() with the result.
    */
   void resetCommit(FakeTreeBuilder& builder, bool setReady);
-  void resetCommit(Hash commitHash, FakeTreeBuilder& builder, bool setReady);
+  void resetCommit(
+      const RootId& commitHash,
+      FakeTreeBuilder& builder,
+      bool setReady);
 
   /**
    * Returns true if the overlay contains a file for this inode.
@@ -345,8 +348,8 @@ class TestMount {
  private:
   void createMount();
   void initTestDirectory();
-  void setInitialCommit(Hash commitHash);
-  void setInitialCommit(Hash commitHash, Hash rootTreeHash);
+  void setInitialCommit(const RootId& commitHash);
+  void setInitialCommit(const RootId& commitHash, Hash rootTreeHash);
 
   /**
    * Initialize the Eden mount. This is an internal function to initialize and

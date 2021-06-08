@@ -30,7 +30,7 @@ struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_queued_hg_backing_store_test"};
   AbsolutePath testPath{testDir.path().string()};
   HgRepo repo{testPath + "repo"_pc};
-  Hash commit1;
+  RootId commit1;
   Hash manifest1;
 
   TestRepo() {
@@ -80,8 +80,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
 TEST_F(HgQueuedBackingStoreTest, getTree) {
   auto queuedStore = makeQueuedStore();
   auto tree1 =
-      queuedStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+      queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 
@@ -97,8 +96,7 @@ TEST_F(HgQueuedBackingStoreTest, getTree) {
 TEST_F(HgQueuedBackingStoreTest, getBlob) {
   auto queuedStore = makeQueuedStore();
   auto tree =
-      queuedStore
-          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+      queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 

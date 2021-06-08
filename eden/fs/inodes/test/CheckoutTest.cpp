@@ -245,16 +245,15 @@ void testAddFile(
   builder2.setFile(
       newFilePath, "this is the new file contents\n", isExecutable(perms));
   builder2.finalize(testMount.getBackingStore(), true);
-  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
   commit2->setReady();
 
   loadInodes(testMount, newFilePath, loadType);
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId{"2"}, std::nullopt, __func__)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -300,16 +299,15 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   auto builder2 = builder1.clone();
   builder2.removeFile(filePath);
   builder2.finalize(testMount.getBackingStore(), true);
-  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  auto commit2 = testMount.getBackingStore()->putCommit(RootId{"2"}, builder2);
   commit2->setReady();
 
   loadInodes(testMount, filePath, loadType, "this file will be removed\n");
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId{"2"}, std::nullopt, __func__)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -378,10 +376,9 @@ void testModifyFile(
   testMount.getClock().advance(10min);
   auto checkoutStart = testMount.getClock().getTimePoint();
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId{"2"}, std::nullopt, __func__)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -474,15 +471,13 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   StringPiece contents2 = "updated contents\n";
   builder2.replaceFile("a/test.txt", contents2);
   builder2.finalize(backingStore, /*setReady=*/true);
-  auto commit2Hash = makeTestHash("2");
-  auto commit2 = backingStore->putCommit(commit2Hash, builder2);
+  auto commit2 = backingStore->putCommit("2", builder2);
   commit2->setReady();
 
   auto builder3 = builder1.clone();
   builder3.replaceFile("a/test.txt", "original conflicting contents\n");
   builder3.finalize(backingStore, /*setReady=*/true);
-  auto commit3Hash = makeTestHash("3");
-  auto commit3 = backingStore->putCommit(commit3Hash, builder3);
+  auto commit3 = backingStore->putCommit("3", builder3);
   commit3->setReady();
 
   // Initialize the mount with the tree data from builder1
@@ -499,11 +494,11 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   // Call resetParent() to make the mount point at commit3, even though
   // the file state is from commit1.  This will cause a conflict in a
   // non-materialized file.
-  mount.getEdenMount()->resetParent(commit3Hash);
+  mount.getEdenMount()->resetParent(RootId{"3"});
 
   // Perform the checkout.
   auto checkoutFuture =
-      mount.getEdenMount()->checkout(commit2Hash, std::nullopt, __func__);
+      mount.getEdenMount()->checkout(RootId{"2"}, std::nullopt, __func__);
 
   // Trigger blob1 several times to allow the checkout to make forward progress
   // if it needs to access this blob, without necessarily completing all at
@@ -561,7 +556,7 @@ void testModifyConflict(
   // resetCommit(), as the files will be materialized this way.
   auto commit1 = testMount.getBackingStore()->putCommit("a", builder1);
   commit1->setReady();
-  testMount.getEdenMount()->resetParent(makeTestHash("a"));
+  testMount.getEdenMount()->resetParent(RootId{"a"});
 
   // Prepare the destination tree
   auto builder2 = builder1.clone();
@@ -576,7 +571,7 @@ void testModifyConflict(
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()
-          ->checkout(makeTestHash("b"), std::nullopt, __func__, checkoutMode)
+          ->checkout(RootId{"b"}, std::nullopt, __func__, checkoutMode)
           .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -598,17 +593,17 @@ void testModifyConflict(
       // Make sure the path is updated as expected
       EXPECT_FILE_INODE(postInode, contents2, perms2);
       // Make sure the parent information has been updated
-      EXPECT_EQ(currentParent, makeTestHash("b"));
+      EXPECT_EQ(currentParent, RootId{"b"});
       break;
     case CheckoutMode::DRY_RUN:
       // make sure the currentParent is still commit1
-      EXPECT_EQ(currentParent, makeTestHash("a"));
+      EXPECT_EQ(currentParent, RootId{"a"});
       break;
     case CheckoutMode::NORMAL:
       // Make sure the path has not been changed
       EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
       // Make sure the parent information has been updated
-      EXPECT_EQ(currentParent, makeTestHash("b"));
+      EXPECT_EQ(currentParent, RootId{"b"});
       break;
   }
 
@@ -716,7 +711,7 @@ TEST(Checkout, modifyThenRevert) {
 TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
-  TestMount testMount{makeTestHash("1"), builder1};
+  TestMount testMount{RootId{"1"}, builder1};
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test.c", "// Unit test.\n");
@@ -726,13 +721,13 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
 
   auto executor = testMount.getServerExecutor().get();
   auto checkoutTo2 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("2"), std::nullopt, __func__)
+                         ->checkout(RootId("2"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
   testMount.overwriteFile("src/test.c", "temporary edit\n");
   auto checkoutTo1 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("1"), std::nullopt, __func__)
+                         ->checkout(RootId("1"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
@@ -745,7 +740,7 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
 TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
-  TestMount testMount{makeTestHash("1"), builder1};
+  TestMount testMount{RootId{"1"}, builder1};
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test.c", "// Unit test.\n");
@@ -755,13 +750,13 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
 
   auto executor = testMount.getServerExecutor().get();
   auto checkoutTo1 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("1"), std::nullopt, __func__)
+                         ->checkout(RootId("1"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
   testMount.addFile("src/test.c", "temporary edit\n");
   auto checkoutTo2 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("2"), std::nullopt, __func__)
+                         ->checkout(RootId("2"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
@@ -781,7 +776,7 @@ TEST(
     createUntrackedFileAsOnlyDirectoryEntryAndCheckoutAsTrackedFile) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
-  TestMount testMount{makeTestHash("1"), builder1};
+  TestMount testMount{RootId("1"), builder1};
 
   auto builder2 = builder1.clone();
   builder2.setFile("src/test/test.c", "// Unit test.\n");
@@ -791,14 +786,14 @@ TEST(
 
   auto executor = testMount.getServerExecutor().get();
   auto checkoutTo1 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("1"), std::nullopt, __func__)
+                         ->checkout(RootId("1"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
   testMount.mkdir("src/test");
   testMount.addFile("src/test/test.c", "temporary edit\n");
   auto checkoutTo2 = testMount.getEdenMount()
-                         ->checkout(makeTestHash("2"), std::nullopt, __func__)
+                         ->checkout(RootId("2"), std::nullopt, __func__)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
@@ -828,10 +823,9 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   loadInodes(testMount, newDirPath, loadType);
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId("2"), std::nullopt, __func__)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -880,10 +874,9 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
   loadInodes(testMount, path, loadType);
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId("2"), std::nullopt, __func__)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.conflicts.size());
@@ -927,8 +920,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Checkout to a revision where the contents of "dir/sub" have changed.
-  auto checkoutResult = testMount.getEdenMount()->checkout(
-      makeTestHash("2"), std::nullopt, __func__);
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(RootId{"2"}, std::nullopt, __func__);
 
   // The checkout ought to wait until the load completes.
   EXPECT_FALSE(checkoutResult.isReady());
@@ -986,10 +979,9 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
 
   // Checkout to a revision without "dir/sub".
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId("2"), std::nullopt, __func__)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // The checkout kicked off an async deletion of a subtree - wait for it to
@@ -1033,10 +1025,9 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // Checkout to a revision without "dir/sub" even though it's still referenced
   // by FUSE.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId("2"), std::nullopt, __func__)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Try to load the same tree by its inode number. This will fail if the
@@ -1087,10 +1078,9 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   // Checkout to a revision with a new dir/sub tree.  The old data should be
   // removed from the overlay.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId("2"), std::nullopt, __func__)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   testMount.remountGracefully();
@@ -1203,10 +1193,9 @@ TYPED_TEST(
   // Check out to a commit that changes all of these files.
   // Inode numbers for unreferenced files should be forgotten.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(makeTestHash("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(RootId{"2"}, std::nullopt, __func__)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Verify inode numbers for referenced inodes are the same.
@@ -1281,17 +1270,17 @@ TYPED_TEST(
 TEST(Checkout, diffFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
-  TestMount testMount{makeTestHash("1"), builder1};
+  TestMount testMount{RootId{"1"}, builder1};
   testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
 
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutTo1 = testMount.getEdenMount()->checkout(
-      makeTestHash("1"), std::nullopt, __func__);
+  auto checkoutTo1 =
+      testMount.getEdenMount()->checkout(RootId{"1"}, std::nullopt, __func__);
   EXPECT_FALSE(checkoutTo1.isReady());
 
   // Call getStatus and make sure it fails.
-  auto commitHash = makeTestHash("1");
+  auto commitHash = RootId{"1"};
 
   try {
     testMount.getEdenMount()->diff(commitHash).get();
@@ -1330,8 +1319,7 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult =
       testMount.getEdenMount()
-          ->checkout(
-              makeTestHash("2"), std::nullopt, __func__, CheckoutMode::DRY_RUN)
+          ->checkout(RootId{"2"}, std::nullopt, __func__, CheckoutMode::DRY_RUN)
           .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -1362,7 +1350,7 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
 TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "// Some code.\n");
-  TestMount testMount{makeTestHash("1"), builder1};
+  TestMount testMount{RootId("1"), builder1};
   testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
 
   auto builder2 = builder1.clone();
@@ -1373,15 +1361,14 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
 
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
-  auto checkout1 = testMount.getEdenMount()->checkout(
-      makeTestHash("2"), std::nullopt, __func__);
+  auto checkout1 =
+      testMount.getEdenMount()->checkout(RootId{"2"}, std::nullopt, __func__);
   EXPECT_FALSE(checkout1.isReady());
 
   // Run another checkout and make sure it fails
   try {
     testMount.getEdenMount()
-        ->checkout(
-            makeTestHash("2"), std::nullopt, __func__, CheckoutMode::NORMAL)
+        ->checkout(RootId{"2"}, std::nullopt, __func__, CheckoutMode::NORMAL)
         .waitVia(executor)
         .get();
     FAIL() << "checkout should have failed with "
@@ -1398,7 +1385,7 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   // Try to checkout again just to make sure we don't block again.
   testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
   auto checkout2 = testMount.getEdenMount()
-                       ->checkout(makeTestHash("1"), std::nullopt, __func__)
+                       ->checkout(RootId("1"), std::nullopt, __func__)
                        .waitVia(executor);
   EXPECT_TRUE(checkout2.isReady());
   EXPECT_NO_THROW(std::move(checkout2).get());

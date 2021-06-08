@@ -578,7 +578,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
   } else {
     out.sequenceNumber_ref() = 0;
     out.snapshotHash_ref() =
-        edenMount->getObjectStore()->renderRootId(kZeroHash);
+        edenMount->getObjectStore()->renderRootId(RootId{});
   }
 }
 
@@ -1164,7 +1164,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 
   // These hashes must outlive the GlobResult created by evaluate as the
   // GlobResults will hold on to references to these hashes
-  auto originHashes = std::make_unique<std::vector<Hash>>();
+  auto originRootIds = std::make_unique<std::vector<RootId>>();
 
   // Globs will be evaluated against the specified commits or the current commit
   // if none are specified. The results will be collected here.
@@ -1177,14 +1177,14 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     // Note that we MUST reserve here, otherwise while emplacing we might
     // invalidate the earlier commitHash refrences
     globResults.reserve(rootHashes->size());
-    originHashes->reserve(rootHashes->size());
+    originRootIds->reserve(rootHashes->size());
     for (auto& rootHash : *rootHashes) {
-      const Hash& originHash = originHashes->emplace_back(
+      const RootId& originRootId = originRootIds->emplace_back(
           edenMount->getObjectStore()->parseRootId(rootHash));
 
       globResults.emplace_back(
           edenMount->getObjectStore()
-              ->getTreeForCommit(originHash, fetchContext)
+              ->getRootTree(originRootId, fetchContext)
               .thenValue([edenMount,
                           globRoot,
                           &fetchContext,
@@ -1200,33 +1200,33 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                           globRoot,
                           &fetchContext,
                           fileBlobsToPrefetch,
-                          &originHash](std::shared_ptr<const Tree>&& tree) {
+                          &originRootId](std::shared_ptr<const Tree>&& tree) {
                 return globRoot->evaluate(
                     edenMount->getObjectStore(),
                     fetchContext,
                     RelativePathPiece(),
                     std::move(tree),
                     fileBlobsToPrefetch,
-                    originHash);
+                    originRootId);
               }));
     }
   } else {
-    const Hash& originHash =
-        originHashes->emplace_back(edenMount->getParentCommit());
+    const RootId& originRootId =
+        originRootIds->emplace_back(edenMount->getParentCommit());
     globResults.emplace_back(
         edenMount->getInode(searchRoot, helper->getFetchContext())
             .thenValue([helper = helper.get(),
                         globRoot,
                         edenMount,
                         fileBlobsToPrefetch,
-                        &originHash](InodePtr inode) {
+                        &originRootId](InodePtr inode) {
               return globRoot->evaluate(
                   edenMount->getObjectStore(),
                   helper->getFetchContext(),
                   RelativePathPiece(),
                   inode.asTreePtr(),
                   fileBlobsToPrefetch,
-                  originHash);
+                  originRootId);
             }));
   }
 
@@ -1237,9 +1237,9 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
             folly::collectAll(std::move(globResults))
                 .toUnsafeFuture()
                 .ensure([globRoot,
-                         originHashes = std::move(originHashes),
+                         originRootIds = std::move(originRootIds),
                          helper = std::move(helper)]() {
-                  // keep globRoot, originHashes, and helper alive until the
+                  // keep globRoot, originRootIds, and helper alive until the
                   // end. the helper contains the fetchContext, which is needed
                   // while fetching.
                 })));
@@ -1321,7 +1321,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                 }
 
                 out->originHashes_ref()->emplace_back(
-                    entry.originHash->getBytes());
+                    edenMount->getObjectStore()->renderRootId(
+                        *entry.originHash));
               }
             }
             if (fileBlobsToPrefetch) {
@@ -1352,8 +1353,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
             }
             return makeFuture(std::move(out));
           })
-          .ensure([globRoot, originHashes = std::move(originHashes)]() {
-            // keep globRoot and originHashes alive until the end
+          .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
+            // keep globRoot and originRootIds alive until the end
           }));
 }
 
@@ -1461,7 +1462,7 @@ void EdenServiceHandler::debugGetScmTree(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmTree");
@@ -1498,7 +1499,7 @@ void EdenServiceHandler::debugGetScmBlob(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlob");
@@ -1529,7 +1530,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
-  auto id = edenMount->getObjectStore()->parseRootId(*idStr);
+  auto id = hashFromThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlobMetadata");

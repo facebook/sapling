@@ -138,9 +138,9 @@ TEST(EdenMount, initFailure) {
   // This should fail with an exception, and not crash.
   TestMount testMount;
   EXPECT_THROW_RE(
-      testMount.initialize(makeTestHash("1")),
+      testMount.initialize(RootId("1")),
       std::domain_error,
-      "commit 0{39}1 not found");
+      "commit 1 not found");
 }
 
 TEST(EdenMount, loadFileContents) {
@@ -391,28 +391,26 @@ TEST(EdenMount, resetParents) {
   commit2->setReady();
 
   // Initialize the TestMount pointing at commit1
-  testMount.initialize(makeTestHash("1"));
+  testMount.initialize(RootId("1"));
   const auto& edenMount = testMount.getEdenMount();
-  EXPECT_EQ(makeTestHash("1"), edenMount->getParentCommit());
-  EXPECT_EQ(
-      makeTestHash("1"), edenMount->getCheckoutConfig()->getParentCommit());
+  EXPECT_EQ(RootId("1"), edenMount->getParentCommit());
+  EXPECT_EQ(RootId("1"), edenMount->getCheckoutConfig()->getParentCommit());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
-  EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
-  EXPECT_EQ(makeTestHash("1"), latestJournalEntry->toHash);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->toHash);
   EXPECT_FILE_INODE(testMount.getFileInode("src/test.c"), "testy tests", 0644);
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
   // Reset the TestMount to pointing to commit2
-  edenMount->resetParent(makeTestHash("2"));
+  edenMount->resetParent(RootId("2"));
   // The snapshot ID should be updated, both in memory and on disk
-  EXPECT_EQ(makeTestHash("2"), edenMount->getParentCommit());
-  EXPECT_EQ(
-      makeTestHash("2"), edenMount->getCheckoutConfig()->getParentCommit());
+  EXPECT_EQ(RootId("2"), edenMount->getParentCommit());
+  EXPECT_EQ(RootId("2"), edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
-  EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
-  EXPECT_EQ(makeTestHash("2"), latestJournalEntry->toHash);
+  EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);
+  EXPECT_EQ(RootId("2"), latestJournalEntry->toHash);
   // The file contents should not have changed.
   // Even though we are pointing at commit2, the working directory contents
   // still look like commit1.
@@ -437,7 +435,7 @@ TEST(EdenMount, testLastCheckoutTime) {
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           duration));
 
-  testMount.initialize(makeTestHash("1"), currentTime);
+  testMount.initialize(RootId("1"), currentTime);
   const auto& edenMount = testMount.getEdenMount();
   struct timespec lastCheckoutTime =
       edenMount->getLastCheckoutTime().toTimespec();
@@ -480,7 +478,7 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
 
   auto lastCheckoutTime = clock.getTimePoint();
 
-  testMount.initialize(makeTestHash("1"), lastCheckoutTime);
+  testMount.initialize(RootId("1"), lastCheckoutTime);
 
   clock.advance(10min);
 

@@ -85,7 +85,7 @@ CheckoutConfig::CheckoutConfig(
     AbsolutePathPiece clientDirectory)
     : clientDirectory_(clientDirectory), mountPath_(mountPath) {}
 
-Hash CheckoutConfig::getParentCommit() const {
+RootId CheckoutConfig::getParentCommit() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
   auto snapshotFileContents = readFile(snapshotFile).value();
@@ -127,7 +127,9 @@ Hash CheckoutConfig::getParentCommit() const {
         cursor.pull(secondParent.mutableBytes().data(), Hash::RAW_SIZE);
       }
 
-      return parent1;
+      // SNAPSHOT v1 stored hashes as binary, but RootId prefers them inflated
+      // to human-readable ASCII, so hexlify here.
+      return RootId{parent1.toString()};
     }
 
     case kSnapshotFormatVersion2: {
@@ -136,20 +138,7 @@ Hash CheckoutConfig::getParentCommit() const {
       // The remainder of the file is the root ID.
       std::string rootId = cursor.readFixedString(bodyLength);
 
-      // For now, we only support Hash root IDs, but soon this will become
-      // variable-width.
-      if (rootId.size() == Hash::RAW_SIZE) {
-        // The plan is for 20-byte root IDs to always be written as 40-byte
-        // ASCII hex, but just in case, for backward and forward compatibility,
-        // handle the case that it was written as 20 byte binary.
-        return Hash{folly::ByteRange{folly::StringPiece{rootId}}};
-      } else if (rootId.size() == Hash::RAW_SIZE * 2) {
-        return Hash{folly::StringPiece{rootId}};
-      } else {
-        throw std::runtime_error(folly::sformat(
-            "SNAPSHOT file parent ID must be 20 or 40 bytes: was {} bytes",
-            rootId.size()));
-      }
+      return RootId{std::move(rootId)};
     }
 
     default:
@@ -160,25 +149,24 @@ Hash CheckoutConfig::getParentCommit() const {
   }
 }
 
-void CheckoutConfig::setParentCommit(Hash parent) const {
-  std::array<
-      uint8_t,
-      kSnapshotHeaderSize + sizeof(uint32_t) + (2 * Hash::RAW_SIZE)>
-      buffer;
-  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
-  folly::io::RWPrivateCursor cursor{&buf};
+void CheckoutConfig::setParentCommit(const RootId& parent) const {
+  auto& parentString = parent.value();
+  XCHECK_LE(parentString.size(), std::numeric_limits<uint32_t>::max());
+
+  auto buf = IOBuf::create(
+      kSnapshotHeaderSize + sizeof(uint32_t) + parentString.size());
+  folly::io::Appender cursor{buf.get(), 0};
 
   // Snapshot file format:
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
   cursor.writeBE<uint32_t>(kSnapshotFormatVersion2);
-  cursor.writeBE<uint32_t>(2 * Hash::RAW_SIZE);
-  // 40-byte hex commit ID: parent1
-  cursor.push(folly::StringPiece{parent.toString()});
-  size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
-  XCHECK_EQ(buffer.size(), writtenSize);
-  writeFileAtomic(getSnapshotPath(), ByteRange{buffer.data(), buffer.size()})
+  cursor.writeBE<uint32_t>(parentString.size());
+  // (Depends on the backing store, but usually this is:) 40-byte hex commit ID:
+  // parent1
+  cursor.push(folly::StringPiece{parentString});
+  writeFileAtomic(getSnapshotPath(), ByteRange{buf->data(), buf->length()})
       .value();
 }
 
