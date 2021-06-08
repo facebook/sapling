@@ -42,7 +42,9 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
     # If we encounter an EPERM or EACCESS error removing a file try making its parent
     # directory writable and then retry the removal.
     def _remove_readonly(
+        # pyre-fixme[24]: Generic type `os.PathLike` expects 1 type parameter.
         func: Callable[[Union[os.PathLike, str]], Any],  # pyre-fixme[2]
+        # pyre-fixme[24]: Generic type `os.PathLike` expects 1 type parameter.
         path: Union[os.PathLike, str],
         exc_info: Tuple[Type[BaseException], BaseException, types.TracebackType],
     ) -> None:
@@ -62,8 +64,6 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             if func not in (os.unlink, os.rmdir):
                 raise ex
 
-            # pyre-fixme[6]: Expected `_PathLike[AnyStr]` for 1st param but got
-            #  `Union[_PathLike[Any], str]`.
             parent_dir = os.path.dirname(path)
             os.chmod(parent_dir, 0o755)
             func(path)
