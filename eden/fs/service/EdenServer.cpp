@@ -80,7 +80,7 @@
 #endif // _WIN32
 
 #ifdef EDEN_HAVE_RECAS
-#include "eden/fs/store/recas/ReCasBackingStore.h" //@manual
+#include "eden/fs/store/facebook/recas/ReCasBackingStore.h" //@manual
 #endif
 
 #ifdef EDEN_HAVE_GIT
