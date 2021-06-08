@@ -243,30 +243,18 @@ async fn validate_can_sync_changeset(
         }
     };
 
-    let maybe_latest_synced_cs_id =
-        commit_remapping_state.get_latest_synced_changeset(&source.source_name);
+    let latest_synced_cs_id =
+        find_latest_synced_cs_id(&commit_remapping_state, &source.source_name, target)?;
 
-    match maybe_latest_synced_cs_id {
-        Some(latest_synced_cs_id) => {
-            let found = source_cs.parents().find(|p| p == latest_synced_cs_id);
-            if found.is_none() {
-                return Err(MegarepoError::request(anyhow!(
-                    "Can't sync {}, because latest synced commit is not a parent of this commit. \
-                            Latest synced source changeset is {}",
-                    source_cs.get_changeset_id(),
-                    latest_synced_cs_id,
-                )));
-            }
-        }
-        None => {
-            return Err(MegarepoError::internal(anyhow!(
-                "Source {:?} was not synced into target {:?}",
-                source.source_name,
-                target
-            )));
-        }
-    };
-
+    let found = source_cs.parents().find(|p| *p == latest_synced_cs_id);
+    if found.is_none() {
+        return Err(MegarepoError::request(anyhow!(
+            "Can't sync {}, because latest synced commit is not a parent of this commit. \
+                    Latest synced source changeset is {}",
+            source_cs.get_changeset_id(),
+            latest_synced_cs_id,
+        )));
+    }
     Ok(())
 }
 
@@ -357,6 +345,24 @@ async fn update_target_bookmark(
         .map_err(MegarepoError::internal)?;
 
     Ok(res)
+}
+
+fn find_latest_synced_cs_id(
+    commit_remapping_state: &CommitRemappingState,
+    source_name: &str,
+    target: &Target,
+) -> Result<ChangesetId, MegarepoError> {
+    let maybe_latest_synced_cs_id =
+        commit_remapping_state.get_latest_synced_changeset(&source_name);
+    if let Some(latest_synced_cs_id) = maybe_latest_synced_cs_id {
+        Ok(latest_synced_cs_id.clone())
+    } else {
+        Err(MegarepoError::internal(anyhow!(
+            "Source {:?} was not synced into target {:?}",
+            source_name,
+            target
+        )))
+    }
 }
 
 #[cfg(test)]
