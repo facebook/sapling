@@ -93,6 +93,7 @@ def _choosedbm():
                 ("dumb", "dbm.dumb"),
             ]
             import importlib
+
             for name, modname in candidates:
                 try:
                     mod = importlib.import_module(modname)

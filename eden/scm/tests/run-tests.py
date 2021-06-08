@@ -1514,8 +1514,8 @@ class Test(unittest.TestCase):
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
         env["TESTFILE"] = self.path
-        env["HOME"] = self._testtmp # Unix
-        env["USERPROFILE"] = self._testtmp # Windows
+        env["HOME"] = self._testtmp  # Unix
+        env["USERPROFILE"] = self._testtmp  # Windows
         if self._usechg:
             env["CHGDISABLE"] = "0"
         else:
