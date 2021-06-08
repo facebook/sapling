@@ -18,6 +18,7 @@ use megarepo_mapping::{
 };
 use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
+use std::path::Path;
 use std::{collections::BTreeMap, sync::Arc};
 use test_repo_factory::TestRepoFactory;
 use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
@@ -162,6 +163,7 @@ pub struct SourceVersionBuilder {
     repo_id: RepositoryId,
     config_builder: SyncTargetConfigBuilder,
     linkfiles: BTreeMap<String, String>,
+    copyfiles: BTreeMap<String, String>,
 }
 
 impl SourceVersionBuilder {
@@ -181,6 +183,7 @@ impl SourceVersionBuilder {
             repo_id,
             config_builder,
             linkfiles: BTreeMap::new(),
+            copyfiles: BTreeMap::new(),
         }
     }
 
@@ -212,6 +215,12 @@ impl SourceVersionBuilder {
         self
     }
 
+    #[allow(dead_code)]
+    pub fn copyfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
+        self.copyfiles.insert(src.to_string(), dst.to_string());
+        self
+    }
+
     pub fn build_source(mut self) -> Result<SyncTargetConfigBuilder, Error> {
         let source_revision = match (self.source_bookmark, self.source_changeset) {
             (Some(_), Some(_)) => {
@@ -232,6 +241,14 @@ impl SourceVersionBuilder {
             .default_prefix
             .ok_or_else(|| anyhow!("default prefix is not set"))?;
 
+        let mut overrides = BTreeMap::new();
+        for (src, dest) in self.copyfiles.into_iter() {
+            let src_root_relative = Path::new(&default_prefix).join(&src);
+            overrides.insert(
+                src.clone(),
+                vec![src_root_relative.to_str().unwrap().to_string(), dest],
+            );
+        }
         let source = Source {
             source_name: self.source_name,
             repo_id: self.repo_id.id() as i64,
@@ -240,7 +257,7 @@ impl SourceVersionBuilder {
             mapping: SourceMappingRules {
                 default_prefix,
                 linkfiles: self.linkfiles,
-                overrides: BTreeMap::new(),
+                overrides,
             },
         };
         self.config_builder.add_source(source);
