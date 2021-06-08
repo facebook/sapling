@@ -24,7 +24,7 @@ use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join_all, FutureExt as PreviewFutureExt},
-    TryStreamExt,
+    stream, StreamExt, TryStreamExt,
 };
 use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -41,6 +41,7 @@ use crate::error::SubcommandError;
 
 pub const DERIVED_DATA: &str = "derived-data";
 const SUBCOMMAND_EXISTS: &str = "exists";
+const SUBCOMMAND_COUNT_UNDERIVED: &str = "count-underived";
 const SUBCOMMAND_VERIFY_MANIFESTS: &str = "verify-manifests";
 
 const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
@@ -61,6 +62,29 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_EXISTS)
                 .about("check if derived data has been generated")
+                .arg(
+                    Arg::with_name(ARG_BACKFILL)
+                        .long("backfill")
+                        .help("use backfilling config rather than enabled config"),
+                )
+                .arg(
+                    Arg::with_name(ARG_TYPE)
+                        .help("type of derived data")
+                        .takes_value(true)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_HASH_OR_BOOKMARK)
+                        .help("(hg|bonsai) commit hash or bookmark")
+                        .takes_value(true)
+                        .multiple(true)
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_COUNT_UNDERIVED)
+                .about("count how many ancestors of a given commit weren't derived")
                 .arg(
                     Arg::with_name(ARG_BACKFILL)
                         .long("backfill")
@@ -132,6 +156,21 @@ pub async fn subcommand_derived_data<'a>(
             check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks, backfill)
                 .await
         }
+        (SUBCOMMAND_COUNT_UNDERIVED, Some(arg_matches)) => {
+            let hashes_or_bookmarks: Vec<_> = arg_matches
+                .values_of(ARG_HASH_OR_BOOKMARK)
+                .map(|matches| matches.map(|cs| cs.to_string()).collect())
+                .unwrap();
+
+            let derived_data_type = arg_matches
+                .value_of(ARG_TYPE)
+                .map(|m| m.to_string())
+                .unwrap();
+
+            let backfill = arg_matches.is_present(ARG_BACKFILL);
+
+            count_underived(ctx, repo, derived_data_type, hashes_or_bookmarks, backfill).await
+        }
         (SUBCOMMAND_VERIFY_MANIFESTS, Some(arg_matches)) => {
             let hash_or_bookmark = arg_matches
                 .value_of(ARG_HASH_OR_BOOKMARK)
@@ -193,6 +232,45 @@ async fn check_derived_data_exists(
         } else {
             println!("Derived: {}", cs_id);
         }
+    }
+
+    Ok(())
+}
+
+async fn count_underived(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    derived_data_type: String,
+    hashes_or_bookmarks: Vec<String>,
+    backfill: bool,
+) -> Result<(), SubcommandError> {
+    let derived_utils = if backfill {
+        derived_data_utils_for_backfill(&repo, derived_data_type)?
+    } else {
+        derived_data_utils(&repo, derived_data_type)?
+    };
+
+    let cs_id_futs: Vec<_> = hashes_or_bookmarks
+        .into_iter()
+        .map(|hash_or_bm| csid_resolve(ctx.clone(), repo.clone(), hash_or_bm).compat())
+        .collect();
+
+    let cs_ids = try_join_all(cs_id_futs).await?;
+
+    let ctx = &ctx;
+    let repo = &repo;
+    let derived_utils = &derived_utils;
+    let res = stream::iter(cs_ids)
+        .map(|cs_id| async move {
+            let underived = derived_utils.count_underived(&ctx, &repo, cs_id).await?;
+            Result::<_, Error>::Ok((cs_id, underived))
+        })
+        .buffer_unordered(10)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    for (cs_id, underived) in res {
+        println!("{}: {}", cs_id, underived);
     }
 
     Ok(())

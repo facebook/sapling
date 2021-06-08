@@ -158,6 +158,14 @@ pub trait DerivedUtils: Send + Sync + 'static {
         csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, Error>;
 
+    /// Count how many ancestors are not derived
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<u64, Error>;
+
     /// Regenerate derived data for specified set of commits
     fn regenerate(&self, csids: &Vec<ChangesetId>);
 
@@ -293,6 +301,23 @@ where
         let derived = self.mapping.get(ctx, csids.clone()).await?;
         csids.retain(|csid| !derived.contains_key(&csid));
         Ok(csids)
+    }
+
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<u64, Error> {
+        let underived = derive_impl::find_topo_sorted_underived::<M::Value, _, _>(
+            ctx,
+            repo,
+            &self.mapping,
+            Some(csid),
+            None, // No limit
+        )
+        .await?;
+        Ok(underived.len() as u64)
     }
 
     async fn find_oldest_underived<'a>(
@@ -1103,6 +1128,15 @@ mod tests {
         ) -> Result<Vec<ChangesetId>, Error> {
             self.count.fetch_add(1, Ordering::SeqCst);
             self.deriver.pending(ctx, repo, csids).await
+        }
+
+        async fn count_underived(
+            &self,
+            _ctx: &CoreContext,
+            _repo: &BlobRepo,
+            _csid: ChangesetId,
+        ) -> Result<u64, Error> {
+            unimplemented!()
         }
 
         fn regenerate(&self, _csids: &Vec<ChangesetId>) {
