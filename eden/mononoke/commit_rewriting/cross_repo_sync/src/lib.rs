@@ -127,6 +127,7 @@ pub async fn rewrite_commit<'a>(
         remapped_parents,
         mover_to_multi_mover(mover),
         source_repo,
+        None,
     )
     .await
 }

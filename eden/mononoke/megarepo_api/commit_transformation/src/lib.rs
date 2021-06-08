@@ -31,6 +31,10 @@ pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + S
 pub enum ErrorKind {
     #[error("Remapped commit {0} expected in target repo, but not present")]
     MissingRemappedCommit(ChangesetId),
+    #[error(
+        "Can't reoder changesets parents to put {0} first because it's not a changeset's parent."
+    )]
+    MissingForcedParent(ChangesetId),
 }
 
 pub fn create_source_to_target_multi_mover(
@@ -163,12 +167,16 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
 ///
 /// Precondition: this function expects all `cs` parents to be present
 /// in `remapped_parents` as keys, and their remapped versions as values.
+///
+/// If `force_first_parent` is set commit parents are reordered to ensure that
+/// the specified changeset comes first.
 pub async fn rewrite_commit<'a>(
     ctx: &'a CoreContext,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
     source_repo: BlobRepo,
+    force_first_parent: Option<ChangesetId>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
         let implicit_delete_file_changes = get_implicit_delete_file_changes(
@@ -276,6 +284,14 @@ pub async fn rewrite_commit<'a>(
             .ok_or_else(|| Error::from(ErrorKind::MissingRemappedCommit(*commit)))?;
 
         *commit = *remapped;
+    }
+    if let Some(first_parent) = force_first_parent {
+        if !cs.parents.contains(&first_parent) {
+            return Err(Error::from(ErrorKind::MissingForcedParent(first_parent)));
+        }
+        let mut new_parents = vec![first_parent];
+        new_parents.extend(cs.parents.into_iter().filter(|cs| *cs != first_parent));
+        cs.parents = new_parents
     }
 
     Ok(Some(cs))
@@ -471,6 +487,10 @@ mod test {
             .add_file_with_copy_info("pathsecondcommit", "pathsecondcommit", (first, "path"))
             .commit()
             .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![first, second])
+            .add_file("path", "pathmodified")
+            .commit()
+            .await?;
 
         let mapping_rules = SourceMappingRules {
             default_prefix: "prefix".to_string(),
@@ -484,9 +504,15 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
 
-        let first_rewritten_bcs_id =
-            test_rewrite_commit_cs_id(&ctx, &repo, first, HashMap::new(), multi_mover.clone())
-                .await?;
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            multi_mover.clone(),
+            None,
+        )
+        .await?;
 
         let first_rewritten_wc =
             list_working_copy_utf8(&ctx, &repo, first_rewritten_bcs_id).await?;
@@ -505,7 +531,8 @@ mod test {
             hashmap! {
                 first => first_rewritten_bcs_id
             },
-            multi_mover,
+            multi_mover.clone(),
+            None,
         )
         .await?;
 
@@ -537,6 +564,47 @@ mod test {
             }
         );
 
+        // Diamond merge test with error during parent reordering
+        assert!(
+            test_rewrite_commit_cs_id(
+                &ctx,
+                &repo,
+                third,
+                hashmap! {
+                    first => first_rewritten_bcs_id,
+                    second => second_rewritten_bcs_id
+                },
+                multi_mover.clone(),
+                Some(second), // wrong, should be after-rewrite id
+            )
+            .await
+            .is_err()
+        );
+
+
+        // Diamond merge test with success
+        let third_rewritten_bcs_id = test_rewrite_commit_cs_id(
+            &ctx,
+            &repo,
+            third,
+            hashmap! {
+                first => first_rewritten_bcs_id,
+                second => second_rewritten_bcs_id
+            },
+            multi_mover,
+            Some(second_rewritten_bcs_id),
+        )
+        .await?;
+
+        let third_bcs = third_rewritten_bcs_id
+            .load(&ctx, &repo.get_blobstore())
+            .await?;
+
+        assert_eq!(
+            third_bcs.parents().collect::<Vec<_>>(),
+            vec![second_rewritten_bcs_id, first_rewritten_bcs_id],
+        );
+
         Ok(())
     }
 
@@ -546,12 +614,20 @@ mod test {
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
         multi_mover: MultiMover,
+        force_first_parent: Option<ChangesetId>,
     ) -> Result<ChangesetId, Error> {
         let bcs = bcs_id.load(&ctx, &repo.get_blobstore()).await?;
         let bcs = bcs.into_mut();
 
-        let maybe_rewritten =
-            rewrite_commit(&ctx, bcs, &parents, multi_mover, repo.clone()).await?;
+        let maybe_rewritten = rewrite_commit(
+            &ctx,
+            bcs,
+            &parents,
+            multi_mover,
+            repo.clone(),
+            force_first_parent,
+        )
+        .await?;
         let rewritten =
             maybe_rewritten.ok_or_else(|| anyhow!("can't rewrite commit {}", bcs_id))?;
         let rewritten = rewritten.freeze()?;
