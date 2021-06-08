@@ -58,13 +58,16 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // This test helps ensure that new edenfs versions can still successfully load
   // this overlay format even if we change how the overlay is saved in the
   // future.
+  std::string overlayPath("eden/test-data/overlay-v2.tgz");
+
+  // Support receiving the resource from Buck.
+  if (auto overlayPathFromEnv = getenv("RESOURCE_OVERLAY_V2")) {
+    overlayPath = overlayPathFromEnv;
+  }
+
   auto tmpdir = makeTempDir("eden_test");
   SpawnedProcess tarProcess(
-      {"/usr/bin/tar",
-       "-xzf",
-       "eden/test-data/overlay-v2.tgz",
-       "-C",
-       tmpdir.path().string()});
+      {"/usr/bin/tar", "-xzf", overlayPath, "-C", tmpdir.path().string()});
   EXPECT_EQ(tarProcess.wait().str(), "exited with status 0");
 
   auto overlay = Overlay::create(
