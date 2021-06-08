@@ -16,6 +16,7 @@
 
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -133,6 +134,18 @@ class InodeMap {
   void initializeFromTakeover(
       TreeInodePtr root,
       const SerializedInodeMap& takeover);
+
+  /**
+   * Initialize the InodeMap from the content of the overlay.
+   *
+   * This should be called on platforms where the working copy is persistent in
+   * between restarts so that the InodeMap is populated with all the inodes
+   * that are already present on disk. This needs to be called before the
+   * FsChannel is initialized for the mount.
+   *
+   * The only platform where this applies is Windows.
+   */
+  void initializeFromOverlay(TreeInodePtr root, Overlay& overlay);
 
   /**
    * Get the root inode.
@@ -607,6 +620,29 @@ class InodeMap {
   void insertLoadedInode(
       const folly::Synchronized<Members>::LockedPtr& data,
       InodeBase* inode);
+
+  /**
+   * Verify the InodeMap precondition and initialize the root_ member.
+   */
+  void initializeRoot(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      TreeInodePtr root);
+
+  /**
+   * Construct an UnloadedInode and insert it onto the unloadedInodes_ map.
+   *
+   * Will throw a std::runtime_error if the passed in InodeNumber is already
+   * known by the the InodeMap.
+   *
+   * The argument list will be directly passed in to the UnloadedInode
+   * constructor.
+   */
+  template <class... Args>
+  void initializeUnloadedInode(
+      const folly::Synchronized<Members>::LockedPtr& data,
+      InodeNumber parentIno,
+      InodeNumber ino,
+      Args&&... args);
 
   /**
    * The EdenMount that owns this InodeMap.

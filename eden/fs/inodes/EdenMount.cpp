@@ -264,6 +264,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .thenValue([this, takeover](TreeInodePtr initTreeNode) {
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
+        } else if (isWorkingCopyPersistent()) {
+          inodeMap_->initializeFromOverlay(std::move(initTreeNode), *overlay_);
         } else {
           inodeMap_->initialize(std::move(initTreeNode));
         }

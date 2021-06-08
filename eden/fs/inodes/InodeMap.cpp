@@ -122,20 +122,9 @@ inline void InodeMap::insertLoadedInode(
   }
 }
 
-void InodeMap::initialize(TreeInodePtr root) {
-  auto data = data_.wlock();
-  XCHECK(!root_);
-  root_ = std::move(root);
-  insertLoadedInode(data, root_.get());
-  XDCHECK_EQ(1u, data->numTreeInodes_);
-  XDCHECK_EQ(0u, data->numFileInodes_);
-}
-
-void InodeMap::initializeFromTakeover(
-    FOLLY_MAYBE_UNUSED TreeInodePtr root,
-    FOLLY_MAYBE_UNUSED const SerializedInodeMap& takeover) {
-  auto data = data_.wlock();
-
+void InodeMap::initializeRoot(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    TreeInodePtr root) {
   XCHECK_EQ(data->loadedInodes_.size(), 0ul)
       << "cannot load InodeMap data over a populated instance";
   XCHECK_EQ(data->unloadedInodes_.size(), 0ul)
@@ -146,6 +135,35 @@ void InodeMap::initializeFromTakeover(
   insertLoadedInode(data, root_.get());
   XDCHECK_EQ(1ul, data->numTreeInodes_);
   XDCHECK_EQ(0ul, data->numFileInodes_);
+}
+
+void InodeMap::initialize(TreeInodePtr root) {
+  initializeRoot(data_.wlock(), std::move(root));
+}
+
+template <class... Args>
+void InodeMap::initializeUnloadedInode(
+    const folly::Synchronized<Members>::LockedPtr& data,
+    InodeNumber parentIno,
+    InodeNumber ino,
+    Args&&... args) {
+  auto unloadedEntry = UnloadedInode(parentIno, std::forward<Args>(args)...);
+  auto result = data->unloadedInodes_.emplace(ino, std::move(unloadedEntry));
+  if (!result.second) {
+    auto message = fmt::format(
+        "failed to emplace inode number {}; is it already present in the InodeMap?",
+        ino);
+    XLOG(ERR) << message;
+    throw std::runtime_error(message);
+  }
+}
+
+void InodeMap::initializeFromTakeover(
+    TreeInodePtr root,
+    const SerializedInodeMap& takeover) {
+  auto data = data_.wlock();
+  initializeRoot(data, std::move(root));
+
   for (const auto& entry : *takeover.unloadedInodes_ref()) {
     if (*entry.numFsReferences_ref() < 0) {
       auto message = folly::to<std::string>(
@@ -156,8 +174,10 @@ void InodeMap::initializeFromTakeover(
       throw std::runtime_error(message);
     }
 
-    auto unloadedEntry = UnloadedInode(
+    initializeUnloadedInode(
+        data,
         InodeNumber::fromThrift(*entry.parentInode_ref()),
+        InodeNumber::fromThrift(*entry.inodeNumber_ref()),
         PathComponentPiece{*entry.name_ref()},
         *entry.isUnlinked_ref(),
         *entry.mode_ref(),
@@ -165,22 +185,85 @@ void InodeMap::initializeFromTakeover(
             ? std::nullopt
             : std::optional<Hash>{hashFromThrift(*entry.hash_ref())},
         folly::to<uint32_t>(*entry.numFsReferences_ref()));
-
-    auto result = data->unloadedInodes_.emplace(
-        InodeNumber::fromThrift(*entry.inodeNumber_ref()),
-        std::move(unloadedEntry));
-    if (!result.second) {
-      auto message = folly::to<std::string>(
-          "failed to emplace inode number ",
-          *entry.inodeNumber_ref(),
-          "; is it already present in the InodeMap?");
-      XLOG(ERR) << message;
-      throw std::runtime_error(message);
-    }
   }
 
   XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
              << " from takeover, " << data->unloadedInodes_.size()
+             << " inodes registered";
+}
+
+namespace {
+#ifdef _WIN32
+/**
+ * Test if a file is present in the working copy.
+ *
+ * This needs to be called before the working copy is fully initialized to
+ * avoid the risk of recursively calling into EdenFS. Thus this will only true
+ * if the file is a placeholder/full file.
+ *
+ * See eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h for a description of
+ * placeholder/full file.
+ */
+bool isFileInWorkingCopy(AbsolutePathPiece path) {
+  PRJ_FILE_STATE state;
+  auto widePath = path.wide();
+  auto result = PrjGetOnDiskFileState(widePath.c_str(), &state);
+  return !FAILED(result);
+}
+#else
+/**
+ * Test if a file is present in the backing overlay.
+ *
+ * On Linux and macOS, the working copy doesn't exist prior to mounting it, thus
+ * this always returns false.
+ */
+bool isFileInWorkingCopy(AbsolutePathPiece /*path*/) {
+  EDEN_BUG()
+      << "Linux and macOS do not have a persistent working copy across mounts";
+}
+#endif
+} // namespace
+
+void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
+  XCHECK(mount_->isWorkingCopyPersistent());
+
+  auto data = data_.wlock();
+  initializeRoot(data, std::move(root));
+
+  std::vector<std::tuple<AbsolutePath, InodeNumber>> pending;
+  pending.emplace_back(mount_->getPath(), root_->getNodeId());
+
+  while (!pending.empty()) {
+    auto [path, dirInode] = std::move(pending.back());
+    pending.pop_back();
+
+    auto dirEntries = overlay.loadOverlayDir(dirInode);
+    for (const auto& [name, dirent] : dirEntries) {
+      auto entryPath = path + name;
+
+      if (!isFileInWorkingCopy(entryPath)) {
+        continue;
+      }
+
+      auto ino = dirent.getInodeNumber();
+      if (dirent.isDirectory()) {
+        pending.emplace_back(std::move(entryPath), dirent.getInodeNumber());
+      }
+
+      initializeUnloadedInode(
+          data,
+          dirInode,
+          ino,
+          name,
+          false,
+          dirent.getInitialMode(),
+          dirent.getOptionalHash(),
+          1);
+    }
+  }
+
+  XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
+             << " from overlay, " << data->unloadedInodes_.size()
              << " inodes registered";
 }
 

@@ -279,6 +279,17 @@ class EdenMount {
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 #endif
 
+  /**
+   * Test if the working copy persist on disk after this mount will be
+   * destroyed.
+   *
+   * This is only true on Windows when using ProjectedFS as files are left
+   * around in the working copy after the mount is unmounted.
+   */
+  constexpr bool isWorkingCopyPersistent() const {
+    return folly::kIsWindows;
+  }
+
   ProcessAccessLog& getProcessAccessLog() const;
 
   /**
