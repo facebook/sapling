@@ -1205,7 +1205,6 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
 
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-#ifndef _WIN32
   counters->registerCallback(
       edenMount->getCounterName(CounterName::INODEMAP_LOADED), [edenMount] {
         auto counts = edenMount->getInodeMap()->getInodeCounts();
@@ -1215,7 +1214,6 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED), [edenMount] {
         return edenMount->getInodeMap()->getInodeCounts().unloadedInodeCount;
       });
-#endif
   counters->registerCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY),
       [edenMount] { return edenMount->getJournal().estimateMemoryUsage(); });
@@ -1269,12 +1267,10 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
 
 void EdenServer::unregisterStats(EdenMount* edenMount) {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
-#ifndef _WIN32
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::INODEMAP_LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED));
-#endif
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY));
   counters->unregisterCallback(
