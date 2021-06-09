@@ -300,7 +300,7 @@ impl Repo {
         };
 
         let inner = InnerRepo {
-            blob_repo: Arc::new(blob_repo),
+            blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
         };
 

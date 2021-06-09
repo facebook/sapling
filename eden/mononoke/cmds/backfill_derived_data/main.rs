@@ -773,7 +773,7 @@ async fn subcommand_backfill(
                 .await?;
             let chunk_size = chunk.len();
 
-            warmup::warmup(ctx, repo, derived_data_type.as_ref(), &chunk).await?;
+            warmup::warmup(ctx, repo, derived_data_type, &chunk).await?;
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils

@@ -16,7 +16,6 @@ use mononoke_types::{ChangesetId, Generation};
 use revset_test_helper::{single_changeset_id, string_to_bonsai};
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 pub struct TestChangesetFetcher {
     repo: BlobRepo,
@@ -55,7 +54,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
 
 pub async fn get_single_bonsai_streams(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     hashes: &[&str],
 ) -> Vec<BonsaiNodeStream> {
     let mut ret = vec![];

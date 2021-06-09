@@ -133,10 +133,10 @@ mod test {
             output.pop().expect("No revisions").into_iter().collect()
         }
 
-        pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> BonsaiNodeStream {
+        pub fn as_revset(&self, ctx: CoreContext, repo: BlobRepo) -> BonsaiNodeStream {
             let mut output: Vec<BonsaiNodeStream> = Vec::with_capacity(self.rp_entries.len());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new((*repo).clone()));
+                Arc::new(TestChangesetFetcher::new(repo.clone()));
             for entry in self.rp_entries.iter() {
                 let next_node = ValidateNodeStream::new(
                     ctx.clone(),
@@ -145,7 +145,7 @@ mod test {
                         &RevsetEntry::SingleNode(Some(hash)) => single_changeset_id(
                             ctx.clone(),
                             Some(hash).expect(&format!("unknown {}", hash)),
-                            &*repo.clone(),
+                            &repo,
                         )
                         .boxify(),
                         &RevsetEntry::SetDifference => {
@@ -294,10 +294,10 @@ mod test {
 
     async fn match_hashset_to_revset(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         mut set: RevsetSpec,
     ) -> bool {
-        set.add_hashes(ctx.clone(), &*repo, &mut thread_rng()).await;
+        set.add_hashes(ctx.clone(), &repo, &mut thread_rng()).await;
         let mut hashes = set.as_hashes();
         let mut nodestream = set.as_revset(ctx, repo).compat();
 
@@ -323,7 +323,7 @@ mod test {
                 #[tokio::main(flavor = "current_thread")]
                 async fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
                     let ctx = CoreContext::test_mock(fb);
-                    let repo = Arc::new($repo::getrepo(fb).await);
+                    let repo = $repo::getrepo(fb).await;
                     match_hashset_to_revset(ctx, repo, set).await
                 }
 
@@ -475,7 +475,7 @@ mod test {
 
         fn create_skiplist(
             _ctxt: CoreContext,
-            _repo: &Arc<BlobRepo>,
+            _repo: &BlobRepo,
         ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
             ok(Arc::new(SkiplistIndex::new())).boxify()
         }
@@ -499,7 +499,7 @@ mod test {
 
         fn create_skiplist(
             ctx: CoreContext,
-            repo: &Arc<BlobRepo>,
+            repo: &BlobRepo,
         ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
             let changeset_fetcher = repo.get_changeset_fetcher();
             let skiplist_index = Arc::new(SkiplistIndex::new());

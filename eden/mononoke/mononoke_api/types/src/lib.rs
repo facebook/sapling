@@ -7,7 +7,6 @@
 
 use blobrepo::BlobRepo;
 use skiplist::SkiplistIndex;
-use std::sync::Arc;
 
 // Eventually everything inside Repo should really be here
 // The fields of BlobRepo that are not used in e.g. LFS server should also be moved here
@@ -16,7 +15,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct InnerRepo {
     #[delegate()]
-    pub blob_repo: Arc<BlobRepo>,
+    pub blob_repo: BlobRepo,
 
     #[facet]
     pub skiplist_index: SkiplistIndex,

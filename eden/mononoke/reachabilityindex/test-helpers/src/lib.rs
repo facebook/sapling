@@ -25,11 +25,7 @@ pub fn string_to_nodehash(hash: &'static str) -> HgNodeHash {
     HgNodeHash::from_static_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
-pub async fn string_to_bonsai(
-    ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
-    s: &'static str,
-) -> ChangesetId {
+pub async fn string_to_bonsai(ctx: CoreContext, repo: &BlobRepo, s: &'static str) -> ChangesetId {
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
         .await

@@ -304,7 +304,7 @@ pub mod linear {
     }
 
     pub async fn getrepo(fb: FacebookInit) -> BlobRepo {
-        (*get_inner_repo(fb).await.blob_repo).clone()
+        get_inner_repo(fb).await.blob_repo
     }
 
     pub async fn get_inner_repo(fb: FacebookInit) -> InnerRepo {
@@ -312,7 +312,7 @@ pub mod linear {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        (*get_inner_repo_with_id(fb, id).await.blob_repo).clone()
+        get_inner_repo_with_id(fb, id).await.blob_repo
     }
 
     pub async fn get_inner_repo_with_id(fb: FacebookInit, id: RepositoryId) -> InnerRepo {

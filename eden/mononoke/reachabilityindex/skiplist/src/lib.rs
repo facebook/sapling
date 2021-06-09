@@ -1821,7 +1821,7 @@ mod test {
 
     async fn query_reachability_hint_on_self_is_true(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         let mut ordered_hashes_oldest_to_newest = vec![
@@ -1893,7 +1893,7 @@ mod test {
                 #[fbinit::test]
                 async fn no_index(fb: FacebookInit) {
                     let ctx = CoreContext::test_mock(fb);
-                    let repo = Arc::new($repo::getrepo(fb).await);
+                    let repo = $repo::getrepo(fb).await;
                     let sli = SkiplistIndex::new();
                     $test_name(ctx, repo, sli).await
                 }
@@ -1901,7 +1901,7 @@ mod test {
                 #[fbinit::test]
                 async fn all_indexed(fb: FacebookInit) {
                     let ctx = CoreContext::test_mock(fb);
-                    let repo = Arc::new($repo::getrepo(fb).await);
+                    let repo = $repo::getrepo(fb).await;
                     let sli = SkiplistIndex::new();
                     {
                         let heads = repo
@@ -1923,7 +1923,7 @@ mod test {
 
     async fn query_reachability_to_higher_gen_is_false(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         let mut ordered_hashes_oldest_to_newest = vec![
@@ -2099,11 +2099,7 @@ mod test {
         );
     }
 
-    async fn query_from_indexed_merge_node(
-        ctx: CoreContext,
-        repo: Arc<BlobRepo>,
-        sli: SkiplistIndex,
-    ) {
+    async fn query_from_indexed_merge_node(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
@@ -2171,7 +2167,7 @@ mod test {
         .boxify()
     }
 
-    async fn advance_node_linear(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn advance_node_linear(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let mut ordered_hashes_oldest_to_newest = vec![
             string_to_bonsai(
                 ctx.clone(),
@@ -2279,7 +2275,7 @@ mod test {
         }
     }
 
-    async fn advance_node_uneven_merge(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn advance_node_uneven_merge(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let root_node = string_to_bonsai(
             ctx.clone(),
             &repo,
@@ -2447,11 +2443,7 @@ mod test {
         );
     }
 
-    async fn advance_node_on_partial_index(
-        ctx: CoreContext,
-        repo: Arc<BlobRepo>,
-        sli: SkiplistIndex,
-    ) {
+    async fn advance_node_on_partial_index(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let root_node = string_to_bonsai(
             ctx.clone(),
             &repo,
@@ -2628,7 +2620,7 @@ mod test {
 
     async fn simul_node_advance_on_wide_branch(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         let root_node = string_to_bonsai(
@@ -2699,11 +2691,7 @@ mod test {
         }
     }
 
-    async fn process_frontier_on_wide_branch(
-        ctx: CoreContext,
-        repo: Arc<BlobRepo>,
-        sli: SkiplistIndex,
-    ) {
+    async fn process_frontier_on_wide_branch(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let root_node = string_to_bonsai(
             ctx.clone(),
             &repo,
@@ -2801,7 +2789,7 @@ mod test {
 
     async fn test_lca(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
         b1: &'static str,
         b2: &'static str,
@@ -2824,7 +2812,7 @@ mod test {
 
     async fn test_find_merge(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
         ancestor: &'static str,
         descendant: &'static str,
@@ -2845,7 +2833,7 @@ mod test {
         assert_eq!(merges, expected.into_iter().collect::<Vec<_>>());
     }
 
-    async fn test_is_ancestor(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_is_ancestor(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let f = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
             .compat()
@@ -2917,23 +2905,19 @@ mod test {
         assert!(f.compat().await.unwrap());
     }
 
-    async fn test_is_ancestor_merge_uneven(
-        ctx: CoreContext,
-        repo: Arc<BlobRepo>,
-        sli: SkiplistIndex,
-    ) {
+    async fn test_is_ancestor_merge_uneven(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_is_ancestor(ctx, repo, sli).await;
     }
 
     async fn test_is_ancestor_unshared_merge_even(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         test_is_ancestor(ctx, repo, sli).await;
     }
 
-    async fn test_lca_branch_even(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_lca_branch_even(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_lca(
             ctx,
             repo,
@@ -2945,7 +2929,7 @@ mod test {
         .await;
     }
 
-    async fn test_lca_branch_uneven(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_lca_branch_uneven(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_lca(
             ctx,
             repo,
@@ -2959,7 +2943,7 @@ mod test {
 
     async fn test_lca_branch_uneven_with_ancestor(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         test_lca(
@@ -2975,7 +2959,7 @@ mod test {
 
     async fn test_lca_branch_wide_common_parent(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         test_lca(
@@ -2989,7 +2973,7 @@ mod test {
         .await;
     }
 
-    async fn test_lca_branch_wide(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_lca_branch_wide(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_lca(
             ctx,
             repo,
@@ -3003,7 +2987,7 @@ mod test {
 
     async fn test_lca_unshared_merge_even_some_result(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         test_lca(
@@ -3019,7 +3003,7 @@ mod test {
 
     async fn test_lca_unshared_merge_even_empty_result(
         ctx: CoreContext,
-        repo: Arc<BlobRepo>,
+        repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
         test_lca(
@@ -3033,7 +3017,7 @@ mod test {
         .await;
     }
 
-    async fn test_lca_first_generation(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_lca_first_generation(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_lca(
             ctx,
             repo,
@@ -3045,7 +3029,7 @@ mod test {
         .await;
     }
 
-    async fn test_find_merges_negative(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_find_merges_negative(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_find_merge(
             ctx,
             repo,
@@ -3057,7 +3041,7 @@ mod test {
         .await;
     }
 
-    async fn test_find_merges_positive(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+    async fn test_find_merges_positive(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         test_find_merge(
             ctx,
             repo,

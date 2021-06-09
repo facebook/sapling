@@ -268,11 +268,7 @@ mod test {
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_nodehash;
 
-    async fn string_to_bonsai(
-        ctx: CoreContext,
-        repo: &Arc<BlobRepo>,
-        s: &'static str,
-    ) -> ChangesetId {
+    async fn string_to_bonsai(ctx: CoreContext, repo: &BlobRepo, s: &'static str) -> ChangesetId {
         let node = string_to_nodehash(s);
         repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
             .await

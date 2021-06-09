@@ -324,7 +324,7 @@ mod test {
         // Let's try without WarmBookmarkCache first
         println!("No warm bookmark cache");
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
-            repo: (*repo.blob_repo).clone(),
+            repo: repo.blob_repo.clone(),
             wbc: None,
         });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
@@ -335,7 +335,7 @@ mod test {
         builder.add_hg_warmers()?;
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
-            repo: (*repo.blob_repo).clone(),
+            repo: repo.blob_repo.clone(),
             wbc: Some(wbc),
         });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;

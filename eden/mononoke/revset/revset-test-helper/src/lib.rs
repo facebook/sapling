@@ -20,7 +20,6 @@ use mononoke_types::ChangesetId;
 
 use std::collections::HashSet;
 use std::str::FromStr;
-use std::sync::Arc;
 
 pub fn single_changeset_id(
     ctx: CoreContext,
@@ -40,7 +39,7 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
-pub async fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
+pub async fn string_to_bonsai(fb: FacebookInit, repo: &BlobRepo, s: &str) -> ChangesetId {
     let ctx = CoreContext::test_mock(fb);
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
@@ -51,7 +50,7 @@ pub async fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -
 
 pub async fn assert_changesets_sequence<I>(
     ctx: CoreContext,
-    repo: &Arc<BlobRepo>,
+    repo: &BlobRepo,
     hashes: I,
     stream: BoxStream<ChangesetId, Error>,
 ) where
@@ -128,7 +127,6 @@ mod test {
     async fn valid_changeset(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let repo = Arc::new(repo);
         let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
         let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
@@ -145,7 +143,6 @@ mod test {
     async fn invalid_changeset(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let repo = Arc::new(repo);
         let cs_id = ONES_CSID;
         let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 
