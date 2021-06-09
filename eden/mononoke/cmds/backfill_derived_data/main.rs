@@ -38,10 +38,10 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
-use metaconfig_types::RepoConfig;
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, DateTime};
 use scuba_ext::MononokeScubaSampleBuilder;
-use skiplist::{fetch_skiplist_index, SkiplistIndex};
+use skiplist::SkiplistIndex;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
@@ -113,7 +113,7 @@ async fn open_repo_maybe_unredacted(
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     data_type: &str,
-) -> Result<BlobRepo> {
+) -> Result<InnerRepo> {
     if UNREDACTED_TYPES.contains(&data_type) {
         args::open_repo_unredacted(fb, logger, matches).await
     } else {
@@ -366,12 +366,10 @@ async fn run_subcmd<'a>(
 ) -> Result<()> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
-            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
-            let config_store = matches.config_store();
-            let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
+            let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
-                    let config = repo.get_derived_data_config();
+                    let config = repo.blob_repo.get_derived_data_config();
                     &config.enabled.types | &config.backfilling.types
                 },
                 |names| names.map(ToString::to_string).collect(),
@@ -399,7 +397,6 @@ async fn run_subcmd<'a>(
             subcommand_backfill_all(
                 &ctx,
                 &repo,
-                &config,
                 derived_data_types,
                 slice_size,
                 batch_size,
@@ -440,7 +437,7 @@ async fn run_subcmd<'a>(
             info!(
                 ctx.logger(),
                 "reading all changesets for: {:?}",
-                repo.get_repoid()
+                repo.blob_repo.get_repoid()
             );
             let mut changesets = parse_serialized_commits(prefetched_commits_path)?;
             changesets.sort_by_key(|cs_entry| cs_entry.gen);
@@ -466,11 +463,11 @@ async fn run_subcmd<'a>(
                 if derived_data_type == "fsnodes" {
                     let (new_cleaner, wrapped_repo) = dry_run::FsnodeCleaner::new(
                         ctx.clone(),
-                        repo.clone(),
+                        repo.blob_repo.clone(),
                         children_count,
                         10000,
                     );
-                    repo = wrapped_repo;
+                    repo.blob_repo = wrapped_repo;
                     cleaner = Some(new_cleaner);
                 }
             }
@@ -540,12 +537,21 @@ async fn run_subcmd<'a>(
 
             let mut tailers = Vec::new();
             for resolved_repo in repos {
-                let repo = args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?;
+                let (repo, skiplist) = if backfill {
+                    let inner: InnerRepo =
+                        args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?;
+                    (inner.blob_repo.clone(), Some(inner.skiplist_index))
+                } else {
+                    (
+                        args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?,
+                        None,
+                    )
+                };
 
                 let future = subcommand_tail(
                     &ctx,
                     repo,
-                    resolved_repo.config,
+                    skiplist,
                     use_shared_leases,
                     stop_on_idle,
                     batch_size,
@@ -564,10 +570,12 @@ async fn run_subcmd<'a>(
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
                 .to_string();
 
-            let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+            let repo: InnerRepo = args::open_repo(fb, &logger, &matches).await?;
 
-            let fetcher =
-                PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
+            let fetcher = PublicChangesetBulkFetch::new(
+                repo.blob_repo.get_changesets_object(),
+                repo.blob_repo.get_phases(),
+            );
 
             let css = fetcher
                 .fetch(&ctx, Direction::OldestFirst)
@@ -586,8 +594,9 @@ async fn run_subcmd<'a>(
             let derived_data_type = sub_m.value_of(ARG_DERIVED_DATA_TYPE);
             let (repo, types): (_, Vec<String>) = match (all, derived_data_type) {
                 (true, None) => {
-                    let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+                    let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
+                        .blob_repo
                         .get_derived_data_config()
                         .enabled
                         .types
@@ -617,7 +626,7 @@ async fn run_subcmd<'a>(
                     ));
                 }
             };
-            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+            let csid = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), hash_or_bookmark)
                 .compat()
                 .await?;
             subcommand_single(&ctx, &repo, csid, types).await
@@ -633,8 +642,7 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
 
 async fn subcommand_backfill_all(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    config: &RepoConfig,
+    repo: &InnerRepo,
     derived_data_types: HashSet<String>,
     slice_size: Option<u64>,
     batch_size: usize,
@@ -644,20 +652,14 @@ async fn subcommand_backfill_all(
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
-        .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
+        .map(|name| derived_data_utils_for_backfill(&repo.blob_repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
-    let skiplist_index = fetch_skiplist_index(
-        ctx,
-        &config.skiplist_index_blobstore_key,
-        &repo.blobstore().boxed(),
-    )
-    .await?;
 
-    let heads = get_most_recent_heads(ctx, repo).await?;
+    let heads = get_most_recent_heads(ctx, &repo.blob_repo).await?;
     backfill_heads(
         ctx,
-        repo,
-        Some(&skiplist_index),
+        &repo.blob_repo,
+        Some(&repo.skiplist_index),
         derivers.as_ref(),
         heads,
         slice_size,
@@ -681,7 +683,8 @@ async fn backfill_heads(
 ) -> Result<()> {
     if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
         let (count, slices) =
-            slice::slice_repository(ctx, repo, skiplist_index, derivers, heads, slice_size).await?;
+            slice::slice_repository(ctx, &repo, skiplist_index, derivers, heads, slice_size)
+                .await?;
         for (index, (id, slice_heads)) in slices.enumerate() {
             info!(
                 ctx.logger(),
@@ -734,7 +737,7 @@ async fn get_batch_ctx(ctx: &CoreContext, limit_qps: bool) -> CoreContext {
 
 async fn subcommand_backfill(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &InnerRepo,
     derived_data_type: &str,
     regenerate: bool,
     parallel: bool,
@@ -743,7 +746,7 @@ async fn subcommand_backfill(
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
-    let derived_utils = &derived_data_utils_for_backfill(repo, derived_data_type)?;
+    let derived_utils = &derived_data_utils_for_backfill(&repo.blob_repo, derived_data_type)?;
 
     info!(
         ctx.logger(),
@@ -769,17 +772,17 @@ async fn subcommand_backfill(
         );
         let (stats, chunk_size) = async {
             let chunk = derived_utils
-                .pending(ctx.clone(), repo.clone(), chunk.to_vec())
+                .pending(ctx.clone(), repo.blob_repo.clone(), chunk.to_vec())
                 .await?;
             let chunk_size = chunk.len();
 
-            warmup::warmup(ctx, repo, derived_data_type, &chunk).await?;
+            warmup::warmup(ctx, &repo.blob_repo, derived_data_type, &chunk).await?;
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
                 .backfill_batch_dangerous(
                     get_batch_ctx(ctx, parallel || gap_size.is_some()).await,
-                    repo.clone(),
+                    repo.blob_repo.clone(),
                     chunk,
                     parallel,
                     gap_size,
@@ -830,7 +833,7 @@ async fn subcommand_backfill(
 async fn subcommand_tail(
     ctx: &CoreContext,
     repo: BlobRepo,
-    config: RepoConfig,
+    skiplist_index: Option<Arc<SkiplistIndex>>,
     use_shared_leases: bool,
     stop_on_idle: bool,
     batch_size: Option<usize>,
@@ -887,7 +890,7 @@ async fn subcommand_tail(
                 .enabled
                 .types
                 .union(&derived_data_config.backfilling.types)
-                .map(|name| derived_data_utils_for_backfill(repo, name))
+                .map(|name| derived_data_utils_for_backfill(&repo, name))
                 .collect::<Result<_>>()?
         } else {
             backfill = false;
@@ -904,18 +907,6 @@ async fn subcommand_tail(
                 .collect::<BTreeSet<_>>(),
         );
     }
-    let skiplist_index = if backfill {
-        Some(
-            fetch_skiplist_index(
-                ctx,
-                &config.skiplist_index_blobstore_key,
-                &repo.blobstore().boxed(),
-            )
-            .await?,
-        )
-    } else {
-        None
-    };
 
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
@@ -992,7 +983,7 @@ async fn subcommand_tail(
     } else {
         info!(ctx.logger(), "using simple deriver");
         loop {
-            tail_one_iteration(ctx, repo, &tail_derivers).await?;
+            tail_one_iteration(ctx, &repo, &tail_derivers).await?;
         }
     }
     Ok(())
@@ -1024,7 +1015,7 @@ async fn tail_batch_iteration(
 ) -> Result<()> {
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
-        repo,
+        &repo,
         heads,
         derive_utils.to_vec(),
         batch_size,
@@ -1061,7 +1052,7 @@ async fn tail_batch_iteration(
                         deriver
                             .backfill_batch_dangerous(
                                 get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
-                                repo,
+                                repo.clone(),
                                 node.csids.clone(),
                                 parallel,
                                 gap_size,
@@ -1098,7 +1089,7 @@ async fn tail_one_iteration(
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
 ) -> Result<()> {
-    let heads = get_most_recent_heads(ctx, repo).await?;
+    let heads = get_most_recent_heads(ctx, &repo).await?;
 
     // Find heads that needs derivation and find their oldest underived ancestor
     let find_pending_futs: Vec<_> = derive_utils
@@ -1109,7 +1100,7 @@ async fn tail_one_iteration(
                 async move {
                     // create new context so each derivation would have its own trace
                     let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                    let pending = derive.pending(ctx.clone(), repo.clone(), heads).await?;
+                    let pending = derive.pending(ctx.clone(), (*repo).clone(), heads).await?;
 
                     let oldest_underived =
                         derive.find_oldest_underived(&ctx, &repo, &pending).await?;
@@ -1136,7 +1127,7 @@ async fn tail_one_iteration(
     let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
         pending
             .into_iter()
-            .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid))
+            .map(|csid| derive.derive(ctx.clone(), (*repo).clone(), csid))
             .collect::<Vec<_>>()
     });
 
@@ -1170,11 +1161,13 @@ async fn tail_one_iteration(
 
 async fn subcommand_single(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &InnerRepo,
     csid: ChangesetId,
     derived_data_types: Vec<String>,
 ) -> Result<()> {
-    let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
+    let repo = repo
+        .blob_repo
+        .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let mut derived_utils = vec![];
     for ty in derived_data_types {
         let utils = derived_data_utils(&repo, ty)?;
@@ -1235,17 +1228,19 @@ mod tests {
     #[fbinit::test]
     async fn test_single(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let mut repo = linear::get_inner_repo(fb).await;
 
         let mut counting_blobstore = None;
-        let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-            let blobstore = Arc::new(CountingBlobstore::new(blobstore));
-            counting_blobstore = Some(blobstore.clone());
-            blobstore
-        });
+        repo.blob_repo = repo
+            .blob_repo
+            .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                let blobstore = Arc::new(CountingBlobstore::new(blobstore));
+                counting_blobstore = Some(blobstore.clone());
+                blobstore
+            });
         let counting_blobstore = counting_blobstore.unwrap();
 
-        let master = resolve_cs_id(&ctx, &repo, "master").await?;
+        let master = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
         subcommand_single(
             &ctx,
             &repo,

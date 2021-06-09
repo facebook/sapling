@@ -36,7 +36,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 humantime = "1.3"
 manifest = { version = "0.1.0", path = "../manifest" }
-metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
