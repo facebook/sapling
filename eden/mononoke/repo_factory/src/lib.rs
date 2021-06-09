@@ -57,7 +57,7 @@ use pushrebase_mutation_mapping::{
 };
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
@@ -180,22 +180,61 @@ impl RepoFactory {
             .await
     }
 
+    async fn blobstore_no_cache(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
+        make_blobstore(
+            self.env.fb,
+            config.clone(),
+            &self.env.mysql_options,
+            self.env.readonly_storage,
+            &self.env.blobstore_options,
+            &self.env.logger,
+            &self.env.config_store,
+            &self.scrub_handler,
+            self.blobstore_component_sampler.as_ref(),
+        )
+        .watched(&self.env.logger)
+        .await
+    }
+
+    async fn repo_blobstore_from_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<Arc<RepoBlobstore>> {
+        let mut blobstore = blobstore.clone();
+        if self.env.readonly_storage.0 {
+            blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
+        }
+
+        let redacted_blobs = match repo_config.redaction {
+            Redaction::Enabled => {
+                let redacted_blobs = self
+                    .redacted_blobs(&repo_config.storage_config.metadata)
+                    .await?;
+                // TODO: Make RepoBlobstore take Arc<...> so it can share the hashmap.
+                Some(redacted_blobs.as_ref().clone())
+            }
+            Redaction::Disabled => None,
+        };
+
+        let censored_scuba_builder = self.censored_scuba_builder()?;
+
+        let repo_blobstore_args = RepoBlobstoreArgs::new(
+            blobstore,
+            redacted_blobs,
+            repo_identity.id(),
+            censored_scuba_builder,
+        );
+        let (repo_blobstore, _repo_id) = repo_blobstore_args.into_blobrepo_parts();
+
+        Ok(Arc::new(repo_blobstore))
+    }
+
     async fn blobstore(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
         self.blobstores
             .get_or_try_init(config, || async move {
-                let mut blobstore = make_blobstore(
-                    self.env.fb,
-                    config.clone(),
-                    &self.env.mysql_options,
-                    self.env.readonly_storage,
-                    &self.env.blobstore_options,
-                    &self.env.logger,
-                    &self.env.config_store,
-                    &self.scrub_handler,
-                    self.blobstore_component_sampler.as_ref(),
-                )
-                .watched(&self.env.logger)
-                .await?;
+                let mut blobstore = self.blobstore_no_cache(config).await?;
 
                 match self.env.caching {
                     Caching::Enabled(cache_shards) => {
@@ -675,36 +714,11 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoBlobstore> {
-        let mut blobstore = self
+        let blobstore = self
             .blobstore(&repo_config.storage_config.blobstore)
             .await?;
-
-        if self.env.readonly_storage.0 {
-            blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
-        }
-
-        let redacted_blobs = match repo_config.redaction {
-            Redaction::Enabled => {
-                let redacted_blobs = self
-                    .redacted_blobs(&repo_config.storage_config.metadata)
-                    .await?;
-                // TODO: Make RepoBlobstore take Arc<...> so it can share the hashmap.
-                Some(redacted_blobs.as_ref().clone())
-            }
-            Redaction::Disabled => None,
-        };
-
-        let censored_scuba_builder = self.censored_scuba_builder()?;
-
-        let repo_blobstore_args = RepoBlobstoreArgs::new(
-            blobstore,
-            redacted_blobs,
-            repo_identity.id(),
-            censored_scuba_builder,
-        );
-        let (repo_blobstore, _repo_id) = repo_blobstore_args.into_blobrepo_parts();
-
-        Ok(Arc::new(repo_blobstore))
+        self.repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
+            .await
     }
 
     pub fn filestore_config(&self, repo_config: &ArcRepoConfig) -> ArcFilestoreConfig {
