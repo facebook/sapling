@@ -439,16 +439,16 @@ async fn lazy_index_node(
 struct SkiplistLoader {
     ctx: CoreContext,
     blobstore_key: String,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore_without_cache: Arc<dyn Blobstore>,
 }
 
 impl SkiplistLoader {
     async fn load(&self) -> Result<SkiplistEdgeMapping> {
         info!(self.ctx.logger(), "Fetching skiplist");
         let mapping_fut = task::spawn({
-            cloned!(self.ctx, self.blobstore, self.blobstore_key);
+            cloned!(self.ctx, self.blobstore_without_cache, self.blobstore_key);
             async move {
-                let maybebytes = blobstore.get(&ctx, &blobstore_key).await?;
+                let maybebytes = blobstore_without_cache.get(&ctx, &blobstore_key).await?;
                 match maybebytes {
                     Some(bytes) => {
                         let bytes = bytes.into_raw_bytes();
@@ -487,15 +487,15 @@ impl SkiplistIndex {
     pub async fn from_blobstore(
         ctx: &CoreContext,
         maybe_blobstore_key: &Option<String>,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore_without_cache: &Arc<dyn Blobstore>,
     ) -> Result<Arc<Self>> {
         match maybe_blobstore_key {
             Some(blobstore_key) => {
-                cloned!(ctx, blobstore_key, blobstore);
+                cloned!(ctx, blobstore_key, blobstore_without_cache);
                 let loader = SkiplistLoader {
                     ctx: ctx.clone(),
                     blobstore_key,
-                    blobstore,
+                    blobstore_without_cache,
                 };
                 let skip_list_edges = Arc::new(ArcSwap::from_pointee(loader.load().await?));
                 let maybe_handle = Some(spawn_controlled({

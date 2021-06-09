@@ -695,8 +695,16 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
-        repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcSkiplistIndex> {
+        let blobstore_without_cache = self
+            .repo_blobstore_from_blobstore(
+                repo_identity,
+                repo_config,
+                &self
+                    .blobstore_no_cache(&repo_config.storage_config.blobstore)
+                    .await?,
+            )
+            .await?;
         let repo_name = String::from(repo_identity.name());
         let logger = self.env.logger.new(o!("repo" => repo_name));
         let session = SessionContainer::new_with_defaults(self.env.fb);
@@ -704,7 +712,7 @@ impl RepoFactory {
         SkiplistIndex::from_blobstore(
             &ctx,
             &repo_config.skiplist_index_blobstore_key,
-            &repo_blobstore.boxed(),
+            &blobstore_without_cache.boxed(),
         )
         .await
     }
