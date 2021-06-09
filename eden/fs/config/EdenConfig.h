@@ -539,7 +539,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableNfsServer{
       "experimental:enable-nfs-server",
-      false,
+      folly::kIsApple,
       this};
 
   // [treecache]
