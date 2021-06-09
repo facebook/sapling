@@ -29,7 +29,7 @@ use cross_repo_sync::{
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join3, try_join_all},
+    future::{try_join, try_join_all},
     Stream, StreamExt, TryStreamExt,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
@@ -39,7 +39,6 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
 use regex::Regex;
-use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
@@ -396,7 +395,7 @@ async fn run_gradual_merge<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+    let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -410,18 +409,15 @@ async fn run_gradual_merge<'a>(
     let dry_run = sub_m.is_present(DRY_RUN);
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
-    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
+    let (_, repo_config) =
+        args::get_config_by_repoid(config_store, &matches, repo.blob_repo.get_repoid())?;
     let last_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
+        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), last_deletion_commit).compat();
     let pre_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.clone(), pre_deletion_commit).compat();
+        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), pre_deletion_commit).compat();
 
-    let blobstore = repo.get_blobstore().boxed();
-    let skiplist =
-        fetch_skiplist_index(&ctx, &repo_config.skiplist_index_blobstore_key, &blobstore);
-
-    let (last_deletion_commit, pre_deletion_commit, skiplist) =
-        try_join3(last_deletion_commit, pre_deletion_commit, skiplist).await?;
+    let (last_deletion_commit, pre_deletion_commit) =
+        try_join(last_deletion_commit, pre_deletion_commit).await?;
 
     let merge_changeset_args_factory = get_gradual_merge_commits_cs_args_factory(&sub_m)?;
     let params = gradual_merge::GradualMergeParams {
@@ -432,14 +428,7 @@ async fn run_gradual_merge<'a>(
         limit,
         dry_run,
     };
-    gradual_merge::gradual_merge(
-        &ctx,
-        &repo,
-        &skiplist,
-        &params,
-        &repo_config.pushrebase.flags,
-    )
-    .await?;
+    gradual_merge::gradual_merge(&ctx, &repo, &params, &repo_config.pushrebase.flags).await?;
 
     Ok(())
 }
@@ -449,8 +438,7 @@ async fn run_gradual_merge_progress<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+    let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -462,23 +450,17 @@ async fn run_gradual_merge_progress<'a>(
         .value_of(COMMIT_BOOKMARK)
         .ok_or(format_err!("bookmark where to merge is not specified"))?;
 
-    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
     let last_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
+        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), last_deletion_commit).compat();
     let pre_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.clone(), pre_deletion_commit).compat();
+        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), pre_deletion_commit).compat();
 
-    let blobstore = repo.get_blobstore().boxed();
-    let skiplist =
-        fetch_skiplist_index(&ctx, &repo_config.skiplist_index_blobstore_key, &blobstore);
-
-    let (last_deletion_commit, pre_deletion_commit, skiplist) =
-        try_join3(last_deletion_commit, pre_deletion_commit, skiplist).await?;
+    let (last_deletion_commit, pre_deletion_commit) =
+        try_join(last_deletion_commit, pre_deletion_commit).await?;
 
     let (done, total) = gradual_merge::gradual_merge_progress(
         &ctx,
         &repo,
-        &skiplist,
         &pre_deletion_commit,
         &last_deletion_commit,
         &BookmarkName::new(bookmark)?,

@@ -133,14 +133,6 @@ impl SkiplistNodeType {
     }
 }
 
-pub async fn fetch_skiplist_index(
-    ctx: &CoreContext,
-    maybe_blobstore_key: &Option<String>,
-    blobstore: &Arc<dyn Blobstore>,
-) -> Result<Arc<SkiplistIndex>, Error> {
-    SkiplistIndex::from_blobstore(ctx, maybe_blobstore_key, blobstore).await
-}
-
 pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<SkiplistIndex> {
     deserialize_skiplist_mapping(logger, bytes).map(SkiplistIndex::from_edges)
 }

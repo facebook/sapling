@@ -21,11 +21,11 @@ use megarepolib::common::{
     create_and_save_bonsai, ChangesetArgs, ChangesetArgsFactory, StackPosition,
 };
 use metaconfig_types::PushrebaseFlags;
+use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
-use skiplist::SkiplistIndex;
 use slog::info;
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -42,14 +42,18 @@ pub struct GradualMergeParams {
 /// of commits that haven't been merged yet
 async fn get_unmerged_commits_with_total_count(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    skiplist: &SkiplistIndex,
+    repo: &InnerRepo,
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
     bookmark_to_merge_into: &BookmarkName,
 ) -> Result<(usize, Vec<(ChangesetId, StackPosition)>), Error> {
-    let commits_to_merge =
-        find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
+    let commits_to_merge = find_all_commits_to_merge(
+        ctx,
+        &repo.blob_repo,
+        *pre_deletion_commit,
+        *last_deletion_commit,
+    )
+    .await?;
 
     info!(
         ctx.logger(),
@@ -65,14 +69,8 @@ async fn get_unmerged_commits_with_total_count(
 
     let total_count = commits_to_merge.len();
 
-    let unmerged_commits = find_unmerged_commits(
-        ctx,
-        repo,
-        commits_to_merge,
-        &bookmark_to_merge_into,
-        skiplist,
-    )
-    .await?;
+    let unmerged_commits =
+        find_unmerged_commits(ctx, repo, commits_to_merge, &bookmark_to_merge_into).await?;
 
     Ok((total_count, unmerged_commits))
 }
@@ -80,8 +78,7 @@ async fn get_unmerged_commits_with_total_count(
 /// Get how many merges has been done and how many merges are there in total
 pub async fn gradual_merge_progress(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    skiplist: &SkiplistIndex,
+    repo: &InnerRepo,
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
     bookmark_to_merge_into: &BookmarkName,
@@ -89,7 +86,6 @@ pub async fn gradual_merge_progress(
     let (to_merge_count, unmerged_commits) = get_unmerged_commits_with_total_count(
         ctx,
         repo,
-        skiplist,
         pre_deletion_commit,
         last_deletion_commit,
         bookmark_to_merge_into,
@@ -125,8 +121,7 @@ pub async fn gradual_merge_progress(
 // is merged first, and deletion commit B is merged next.
 pub async fn gradual_merge(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    skiplist: &SkiplistIndex,
+    repo: &InnerRepo,
     params: &GradualMergeParams,
     pushrebase_flags: &PushrebaseFlags,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
@@ -142,7 +137,6 @@ pub async fn gradual_merge(
     let (_, unmerged_commits) = get_unmerged_commits_with_total_count(
         ctx,
         repo,
-        skiplist,
         pre_deletion_commit,
         last_deletion_commit,
         bookmark_to_merge_into,
@@ -162,7 +156,7 @@ pub async fn gradual_merge(
             let merge_changeset_args = merge_changeset_args_factory(stack_pos);
             let res_cs_id = push_merge_commit(
                 ctx,
-                repo,
+                &repo.blob_repo,
                 cs_id,
                 &bookmark_to_merge_into,
                 merge_changeset_args,
@@ -209,10 +203,9 @@ async fn find_all_commits_to_merge(
 // Out of all commits that need to be merged find commits that haven't been merged yet
 async fn find_unmerged_commits(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &InnerRepo,
     mut commits_to_merge: Vec<(ChangesetId, StackPosition)>,
     bookmark_to_merge_into: &BookmarkName,
-    skiplist: &SkiplistIndex,
 ) -> Result<Vec<(ChangesetId, StackPosition)>, Error> {
     info!(
         ctx.logger(),
@@ -225,15 +218,22 @@ async fn find_unmerged_commits(
         return Ok(vec![]);
     };
 
-    let bookmark_value = helpers::csid_resolve(ctx.clone(), repo.clone(), bookmark_to_merge_into)
-        .compat()
-        .await?;
+    let bookmark_value =
+        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), bookmark_to_merge_into)
+            .compat()
+            .await?;
 
     // Let's check if any commits has been merged already - to do that it's enough
     // to check if the first commit has been merged or not i.e. check if this commit
     // is ancestor of bookmark_to_merge_into or not.
-    let has_merged_any = skiplist
-        .is_ancestor(&ctx, &repo.get_changeset_fetcher(), first.0, bookmark_value)
+    let has_merged_any = repo
+        .skiplist_index
+        .is_ancestor(
+            &ctx,
+            &repo.blob_repo.get_changeset_fetcher(),
+            first.0,
+            bookmark_value,
+        )
         .await?;
     if !has_merged_any {
         return Ok(commits_to_merge);
@@ -279,6 +279,7 @@ async fn find_unmerged_commits(
         }
 
         let parents = repo
+            .blob_repo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
             .await?;
         for p in parents {
@@ -357,7 +358,7 @@ mod test {
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
         let commits_to_merge = find_all_commits_to_merge(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             pre_deletion_commit,
             *deletion_commits.last().unwrap(),
         )
@@ -375,7 +376,7 @@ mod test {
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
         let commits_to_merge = find_all_commits_to_merge(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             pre_deletion_commit,
             *deletion_commits.last().unwrap(),
         )
@@ -387,65 +388,51 @@ mod test {
             .map(|(idx, cs_id)| (cs_id, StackPosition(idx)))
             .collect::<Vec<_>>();
         let head = BookmarkName::new("head")?;
-        let unmerged_commits = find_unmerged_commits(
-            &ctx,
-            &repo,
-            commits_to_merge.clone(),
-            &head,
-            &SkiplistIndex::new(),
-        )
-        .await?;
+        let unmerged_commits =
+            find_unmerged_commits(&ctx, &repo, commits_to_merge.clone(), &head).await?;
 
         assert_eq!(commits_to_merge, unmerged_commits);
 
         // Now merge a single commit into "head"
-        let head_value = helpers::csid_resolve(ctx.clone(), repo.clone(), head.clone())
+        let head_value = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), head.clone())
             .compat()
             .await?;
 
         let merge = CreateCommitContext::new(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             vec![head_value, unmerged_commits.first().unwrap().0],
         )
         .commit()
         .await?;
-        bookmark(&ctx, &repo, "head").set_to(merge).await?;
+        bookmark(&ctx, &repo.blob_repo, "head")
+            .set_to(merge)
+            .await?;
 
-        let unmerged_commits = find_unmerged_commits(
-            &ctx,
-            &repo,
-            commits_to_merge.clone(),
-            &head,
-            &SkiplistIndex::new(),
-        )
-        .await?;
+        let unmerged_commits =
+            find_unmerged_commits(&ctx, &repo, commits_to_merge.clone(), &head).await?;
         let mut expected = commits_to_merge.clone();
         expected.remove(0);
         assert_eq!(expected, unmerged_commits);
 
         // Merge next commit into head
-        let head_value = helpers::csid_resolve(ctx.clone(), repo.clone(), head.clone())
+        let head_value = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), head.clone())
             .compat()
             .await?;
 
         let merge = CreateCommitContext::new(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             vec![head_value, unmerged_commits.first().unwrap().0],
         )
         .commit()
         .await?;
-        bookmark(&ctx, &repo, "head").set_to(merge).await?;
+        bookmark(&ctx, &repo.blob_repo, "head")
+            .set_to(merge)
+            .await?;
 
-        let unmerged_commits = find_unmerged_commits(
-            &ctx,
-            &repo,
-            commits_to_merge.clone(),
-            &head,
-            &SkiplistIndex::new(),
-        )
-        .await?;
+        let unmerged_commits =
+            find_unmerged_commits(&ctx, &repo, commits_to_merge.clone(), &head).await?;
         let mut expected = commits_to_merge.clone();
         expected.remove(0);
         expected.remove(0);
@@ -480,26 +467,19 @@ mod test {
 
         // Test dry-run mode
         params.dry_run = true;
-        let merged = gradual_merge(
-            &ctx,
-            &repo,
-            &SkiplistIndex::new(),
-            &params,
-            &pushrebase_flags,
-        )
-        .await?;
+        let merged = gradual_merge(&ctx, &repo, &params, &pushrebase_flags).await?;
         assert!(merged.is_empty());
 
         params.dry_run = false;
-        let merged = gradual_merge(
+        let merged = gradual_merge(&ctx, &repo, &params, &pushrebase_flags).await?;
+        verify_gradual_merges(
             &ctx,
-            &repo,
-            &SkiplistIndex::new(),
-            &params,
-            &pushrebase_flags,
+            &repo.blob_repo,
+            merged,
+            pre_deletion_commit,
+            &deletion_commits,
         )
         .await?;
-        verify_gradual_merges(&ctx, &repo, merged, pre_deletion_commit, &deletion_commits).await?;
 
         Ok(())
     }
@@ -530,18 +510,18 @@ mod test {
 
         let mut result = HashMap::new();
         for _ in 0..3 {
-            let merged = gradual_merge(
-                &ctx,
-                &repo,
-                &SkiplistIndex::new(),
-                &params,
-                &pushrebase_flags,
-            )
-            .await?;
+            let merged = gradual_merge(&ctx, &repo, &params, &pushrebase_flags).await?;
             assert_eq!(merged.len(), 1);
             result.extend(merged)
         }
-        verify_gradual_merges(&ctx, &repo, result, pre_deletion_commit, &deletion_commits).await?;
+        verify_gradual_merges(
+            &ctx,
+            &repo.blob_repo,
+            result,
+            pre_deletion_commit,
+            &deletion_commits,
+        )
+        .await?;
 
         Ok(())
     }
@@ -578,33 +558,35 @@ mod test {
 
         let mut result = HashMap::new();
         for i in 0..3 {
-            let merged = gradual_merge(
-                &ctx,
-                &repo,
-                &SkiplistIndex::new(),
-                &params,
-                &pushrebase_flags,
-            )
-            .await?;
+            let merged = gradual_merge(&ctx, &repo, &params, &pushrebase_flags).await?;
             assert_eq!(merged.len(), 1);
             let pushrebased_cs_id = merged.values().next().unwrap();
-            let bcs_id = pushrebased_cs_id.load(&ctx, repo.blobstore()).await?;
+            let bcs_id = pushrebased_cs_id
+                .load(&ctx, repo.blob_repo.blobstore())
+                .await?;
             assert_eq!(bcs_id.message(), format!("{}", i));
             result.extend(merged)
         }
-        verify_gradual_merges(&ctx, &repo, result, pre_deletion_commit, &deletion_commits).await?;
+        verify_gradual_merges(
+            &ctx,
+            &repo.blob_repo,
+            result,
+            pre_deletion_commit,
+            &deletion_commits,
+        )
+        .await?;
 
         Ok(())
     }
 
     async fn create_repo(
         ctx: &CoreContext,
-    ) -> Result<(BlobRepo, ChangesetId, Vec<ChangesetId>), Error> {
-        let repo = test_repo_factory::build_empty()?;
+    ) -> Result<(InnerRepo, ChangesetId, Vec<ChangesetId>), Error> {
+        let repo: InnerRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             r##"
                A-B-C
 
@@ -615,18 +597,19 @@ mod test {
         let pre_deletion_commit = *dag.get("F").unwrap();
 
         // Create deletion commits
-        let first_deletion_commit = CreateCommitContext::new(ctx, &repo, vec![pre_deletion_commit])
-            .delete_file("F")
-            .commit()
-            .await?;
+        let first_deletion_commit =
+            CreateCommitContext::new(ctx, &repo.blob_repo, vec![pre_deletion_commit])
+                .delete_file("F")
+                .commit()
+                .await?;
 
         let second_deletion_commit =
-            CreateCommitContext::new(ctx, &repo, vec![first_deletion_commit])
+            CreateCommitContext::new(ctx, &repo.blob_repo, vec![first_deletion_commit])
                 .delete_file("E")
                 .commit()
                 .await?;
 
-        bookmark(&ctx, &repo, "head")
+        bookmark(&ctx, &repo.blob_repo, "head")
             .set_to(*dag.get("C").unwrap())
             .await?;
 
