@@ -28,8 +28,7 @@ using folly::StringPiece;
 using std::optional;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -480,5 +479,4 @@ void EdenConfig::parseAndApplyConfigFile(
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

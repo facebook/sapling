@@ -16,8 +16,7 @@ namespace folly {
 class IOBuf;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class HgNativeBackingStore {
  public:
@@ -57,5 +56,5 @@ class HgNativeBackingStore {
   std::unique_ptr<RustBackingStore, std::function<void(RustBackingStore*)>>
       store_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

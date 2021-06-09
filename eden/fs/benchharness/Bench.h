@@ -13,8 +13,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Accumulates data points, tracking their average and minimum.
@@ -63,8 +62,7 @@ uint64_t getTime() noexcept;
  */
 StatAccumulator measureClockOverhead() noexcept;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #define EDEN_BENCHMARK_MAIN()                                 \
   int main(int argc, char** argv) {                           \

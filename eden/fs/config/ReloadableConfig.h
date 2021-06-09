@@ -14,8 +14,7 @@
 
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
 
@@ -56,5 +55,4 @@ class ReloadableConfig {
   std::optional<ConfigReloadBehavior> reloadBehavior_{std::nullopt};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

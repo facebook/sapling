@@ -19,8 +19,7 @@ namespace {
 constexpr std::chrono::seconds kEdenConfigMinimumPollDuration{5};
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ReloadableConfig::ReloadableConfig(std::shared_ptr<const EdenConfig> config)
     : state_{ConfigState{config}} {}
@@ -88,5 +87,4 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
   return state->config;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

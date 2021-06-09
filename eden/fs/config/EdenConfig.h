@@ -22,8 +22,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 extern const facebook::eden::AbsolutePath kUnspecifiedDefault;
 
@@ -627,5 +626,5 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

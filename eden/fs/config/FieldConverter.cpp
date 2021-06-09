@@ -39,8 +39,7 @@ bool isValidAbsolutePath(folly::StringPiece path) {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
     folly::StringPiece value,
@@ -117,5 +116,4 @@ std::string FieldConverter<std::shared_ptr<re2::RE2>>::toDebugString(
   return "";
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

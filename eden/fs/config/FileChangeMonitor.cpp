@@ -12,8 +12,7 @@
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/TimeUtil.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FileChangeReason hasFileChanged(
     const struct stat& stat1,
@@ -176,5 +175,4 @@ bool FileChangeMonitor::isChanged() {
   return hasFileChanged(currentStat, fileStat_) ? true : false;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

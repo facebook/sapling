@@ -19,8 +19,7 @@
 #include "eden/fs/config/FieldConverter.h"
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ConfigSettingBase;
 
@@ -249,5 +248,4 @@ class ConfigSetting final : private ConfigSettingBase {
   std::array<std::optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

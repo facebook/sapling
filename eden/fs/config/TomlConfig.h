@@ -12,8 +12,7 @@
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class TomlPath {
  public:
@@ -94,5 +93,4 @@ setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
   return std::make_pair(defaultValue, true);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

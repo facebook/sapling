@@ -14,8 +14,7 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * CachedParsedFileMonitor provides cached access to an object of type T,
@@ -135,5 +134,5 @@ class CachedParsedFileMonitor {
   FileChangeMonitor fileChangeMonitor_;
   size_t updateCount_{0};
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

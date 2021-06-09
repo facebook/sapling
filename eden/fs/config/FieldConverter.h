@@ -23,8 +23,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Converters are used to convert strings into ConfigSettings. For example,
@@ -195,5 +194,4 @@ class FieldConverter<std::shared_ptr<re2::RE2>> {
   std::string toDebugString(std::shared_ptr<re2::RE2> value) const;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

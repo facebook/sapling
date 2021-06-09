@@ -17,8 +17,7 @@
 #include "eden/fs/utils/Guid.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum class MountProtocol {
   FUSE,
@@ -143,5 +142,5 @@ class CheckoutConfig {
   Guid repoGuid_;
 #endif
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -15,8 +15,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Why a file is considered to have changed. Evaluates as true in
@@ -178,5 +177,5 @@ class FileChangeMonitor {
   std::chrono::milliseconds throttleDuration_;
   std::chrono::steady_clock::time_point lastCheck_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

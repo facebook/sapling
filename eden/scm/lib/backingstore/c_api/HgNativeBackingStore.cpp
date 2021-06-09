@@ -15,8 +15,8 @@
 #include <memory>
 #include <stdexcept>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 namespace {
 /**
  * Convert a `RustCBytes` into `folly::IOBuf` without copying the underlying
@@ -274,5 +274,5 @@ void HgNativeBackingStore::refresh() {
 
   rust_backingstore_refresh(store_.get());
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

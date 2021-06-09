@@ -77,8 +77,7 @@ enum : uint32_t {
 };
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 CheckoutConfig::CheckoutConfig(
     AbsolutePathPiece mountPath,
@@ -242,5 +241,5 @@ folly::dynamic CheckoutConfig::loadClientDirectoryMap(
   options.allow_trailing_comma = true;
   return folly::parseJson(jsonWithoutComments, options);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden
