@@ -28,13 +28,13 @@ use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::LfsParams;
+use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::{
     retry, save_bundle_to_temp_file, save_bytes_to_temp_file, write_to_named_temp_file,
 };
 use mononoke_types::{datetime::Timestamp, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
-use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -100,24 +100,18 @@ impl BundlePreparer {
     }
 
     pub async fn new_generate_bundles(
-        ctx: CoreContext,
-        repo: BlobRepo,
+        repo: InnerRepo,
         base_retry_delay_ms: u64,
         retry_num: usize,
-        maybe_skiplist_blobstore_key: Option<String>,
         lfs_params: LfsParams,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
         use_hg_server_bookmark_value_if_mismatch: bool,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<BundlePreparer, Error> {
-        let blobstore = repo.get_blobstore().boxed();
-        let skiplist =
-            fetch_skiplist_index(&ctx, &maybe_skiplist_blobstore_key, &blobstore).await?;
-
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index;
         Ok(BundlePreparer {
-            repo,
+            repo: repo.blob_repo,
             base_retry_delay_ms,
             retry_num,
             ty: BundleType::GenerateNew {

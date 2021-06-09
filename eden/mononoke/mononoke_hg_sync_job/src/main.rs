@@ -46,6 +46,7 @@ use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
+use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::{retry, RetryAttemptsCount};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -752,74 +753,88 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .value_of(HGSQL_GLOBALREVS_DB_ADDR)
         .map(|a| a.to_string());
 
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
-    let repo_parts = {
+    let (repo, repo_parts) = {
         let fb = ctx.fb;
-        let maybe_skiplist_blobstore_key = repo_config.skiplist_index_blobstore_key.clone();
         let hgsql_globalrevs_name = repo_config.hgsql_globalrevs_name.clone();
-        let filenode_verifier = match verify_lfs_blob_presence {
-            Some(uri) => {
-                let uri = uri.parse::<Uri>()?;
-                let verifier = LfsVerifier::new(uri, Arc::new(repo.get_blobstore()))?;
-                FilenodeVerifier::LfsVerifier(verifier)
-            }
-            None => match maybe_darkstorm_backup_repo {
-                Some(ref backup_repo) => {
-                    let verifier = DarkstormVerifier::new(
-                        Arc::new(repo.get_blobstore()),
-                        Arc::new(backup_repo.get_blobstore()),
-                        backup_repo.filestore_config(),
-                    );
-                    FilenodeVerifier::DarkstormVerifier(verifier)
-                }
-                None => FilenodeVerifier::NoopVerifier,
-            },
-        };
 
-        borrowed!(ctx, repo);
+        borrowed!(ctx);
         // FIXME: this cloned! will go away once HgRepo is asyncified
         cloned!(hg_repo_path);
-        let overlay = async move {
-            let bookmarks = list_hg_server_bookmarks(hg_repo_path).await?;
 
-            let bookmarks = stream::iter(bookmarks.into_iter())
-                .map(move |(book, hg_cs_id)| async move {
-                    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
-                    Result::<_, Error>::Ok(maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
-                })
-                .buffered(100)
-                .try_filter_map(|x| future::ready(Ok(x)))
-                .try_collect::<HashMap<_, _>>()
-                .await?;
-
-            Ok(BookmarkOverlay::new(Arc::new(bookmarks)))
+        let (repo, preparer): (BlobRepo, BoxFuture<Result<Arc<BundlePreparer>, Error>>) = {
+            if generate_bundles {
+                let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+                let filenode_verifier = match verify_lfs_blob_presence {
+                    Some(uri) => {
+                        let uri = uri.parse::<Uri>()?;
+                        let verifier =
+                            LfsVerifier::new(uri, Arc::new(repo.blob_repo.get_blobstore()))?;
+                        FilenodeVerifier::LfsVerifier(verifier)
+                    }
+                    None => match maybe_darkstorm_backup_repo {
+                        Some(ref backup_repo) => {
+                            let verifier = DarkstormVerifier::new(
+                                Arc::new(repo.blob_repo.get_blobstore()),
+                                Arc::new(backup_repo.get_blobstore()),
+                                backup_repo.filestore_config(),
+                            );
+                            FilenodeVerifier::DarkstormVerifier(verifier)
+                        }
+                        None => FilenodeVerifier::NoopVerifier,
+                    },
+                };
+                (
+                    repo.blob_repo.clone(),
+                    BundlePreparer::new_generate_bundles(
+                        repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        lfs_params,
+                        filenode_verifier,
+                        bookmark_regex_force_lfs,
+                        use_hg_server_bookmark_value_if_mismatch,
+                        push_vars,
+                    )
+                    .map_ok(Arc::new)
+                    .boxed(),
+                )
+            } else {
+                let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+                (
+                    repo.clone(),
+                    BundlePreparer::new_use_existing(
+                        repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        push_vars,
+                    )
+                    .map_ok(Arc::new)
+                    .boxed(),
+                )
+            }
         };
 
-        let preparer = async move {
-            if generate_bundles {
-                BundlePreparer::new_generate_bundles(
-                    ctx.clone(),
-                    repo.clone(),
-                    base_retry_delay_ms,
-                    retry_num,
-                    maybe_skiplist_blobstore_key,
-                    lfs_params,
-                    filenode_verifier,
-                    bookmark_regex_force_lfs,
-                    use_hg_server_bookmark_value_if_mismatch,
-                    push_vars,
-                )
-                .map_ok(Arc::new)
-                .await
-            } else {
-                BundlePreparer::new_use_existing(
-                    repo.clone(),
-                    base_retry_delay_ms,
-                    retry_num,
-                    push_vars,
-                )
-                .map_ok(Arc::new)
-                .await
+
+        let overlay = {
+            cloned!(repo);
+            async move {
+                let bookmarks = list_hg_server_bookmarks(hg_repo_path).await?;
+
+                let bookmarks = stream::iter(bookmarks.into_iter())
+                    .map(|(book, hg_cs_id)| {
+                        cloned!(repo);
+                        async move {
+                            let maybe_bcs_id =
+                                repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
+                            Result::<_, Error>::Ok(maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
+                        }
+                    })
+                    .buffered(100)
+                    .try_filter_map(|x| future::ready(Ok(x)))
+                    .try_collect::<HashMap<_, _>>()
+                    .await?;
+
+                Ok(BookmarkOverlay::new(Arc::new(bookmarks)))
             }
         };
 
@@ -828,54 +843,57 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             .globalrevs_publishing_bookmark
             .as_ref();
         borrowed!(mysql_options, maybe_darkstorm_backup_repo);
-        let globalrev_syncer = async move {
-            let globalrev_syncer = match globalrevs_publishing_bookmark {
-                Some(bookmark) => {
-                    if !generate_bundles {
-                        return Err(format_err!(
-                            "Syncing globalrevs ({}) requires generating bundles ({})",
-                            HGSQL_GLOBALREVS_DB_ADDR,
-                            GENERATE_BUNDLES
-                        ));
-                    }
-
-                    match (hgsql_db_addr.as_ref(), maybe_darkstorm_backup_repo) {
-                        (Some(addr), None) => {
-                            GlobalrevSyncer::new(
-                                fb,
-                                // FIXME: this clone should go away once GlobalrevSyncer is asyncified
-                                repo.clone(),
-                                hgsql_use_sqlite,
-                                Some((addr.as_str(), bookmark.clone())),
-                                &mysql_options,
-                                readonly_storage.0,
-                                hgsql_globalrevs_name,
-                            )
-                            .await
-                        }
-                        (None, Some(darkstorm_backup_repo)) => {
-                            Ok(GlobalrevSyncer::darkstorm(&repo, &darkstorm_backup_repo))
-                        }
-                        (Some(_), Some(_)) => {
+        let globalrev_syncer = {
+            cloned!(repo);
+            async move {
+                let globalrev_syncer = match globalrevs_publishing_bookmark {
+                    Some(bookmark) => {
+                        if !generate_bundles {
                             return Err(format_err!(
-                                "This repository has both hgsql and darkstorm repo specified - this is unsupported",
-                            ));
-                        }
-                        (None, None) => {
-                            return Err(format_err!(
-                                "This repository has Globalrevs enabled but syncing ({}) is not enabled",
+                                "Syncing globalrevs ({}) requires generating bundles ({})",
                                 HGSQL_GLOBALREVS_DB_ADDR,
+                                GENERATE_BUNDLES
                             ));
                         }
-                    }
-                }
-                None => Ok(GlobalrevSyncer::Noop),
-            };
 
-            globalrev_syncer
+                        match (hgsql_db_addr.as_ref(), maybe_darkstorm_backup_repo) {
+                            (Some(addr), None) => {
+                                GlobalrevSyncer::new(
+                                    fb,
+                                    // FIXME: this clone should go away once GlobalrevSyncer is asyncified
+                                    repo.clone(),
+                                    hgsql_use_sqlite,
+                                    Some((addr.as_str(), bookmark.clone())),
+                                    &mysql_options,
+                                    readonly_storage.0,
+                                    hgsql_globalrevs_name,
+                                )
+                                .await
+                            }
+                            (None, Some(darkstorm_backup_repo)) => {
+                                Ok(GlobalrevSyncer::darkstorm(&repo, &darkstorm_backup_repo))
+                            }
+                            (Some(_), Some(_)) => {
+                                return Err(format_err!(
+                                    "This repository has both hgsql and darkstorm repo specified - this is unsupported",
+                                ));
+                            }
+                            (None, None) => {
+                                return Err(format_err!(
+                                    "This repository has Globalrevs enabled but syncing ({}) is not enabled",
+                                    HGSQL_GLOBALREVS_DB_ADDR,
+                                ));
+                            }
+                        }
+                    }
+                    None => Ok(GlobalrevSyncer::Noop),
+                };
+
+                globalrev_syncer
+            }
         };
 
-        try_join3(preparer, overlay, globalrev_syncer)
+        (repo, try_join3(preparer, overlay, globalrev_syncer))
     };
 
     let batch_size = args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE);
