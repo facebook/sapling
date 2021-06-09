@@ -12,8 +12,7 @@
 #include "eden/fs/model/git/GitIgnore.h"
 #include "eden/fs/model/git/GlobMatcher.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A single pattern loaded from a .gitignore file.
@@ -96,5 +95,5 @@ class GitIgnorePattern {
    */
   GlobMatcher matcher_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

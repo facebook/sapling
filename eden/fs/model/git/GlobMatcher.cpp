@@ -73,8 +73,7 @@ enum : uint8_t {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 GlobOptions operator|(GlobOptions a, GlobOptions b) {
   return static_cast<GlobOptions>(
@@ -738,5 +737,5 @@ bool GlobMatcher::charClassMatch(uint8_t ch, size_t* patternIdx) const {
     }
   }
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

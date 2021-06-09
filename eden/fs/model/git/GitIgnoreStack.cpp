@@ -7,8 +7,7 @@
 
 #include "eden/fs/model/git/GitIgnoreStack.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 constexpr static PathComponentPiece kHgName{".hg"};
@@ -66,5 +65,5 @@ GitIgnore::MatchResult GitIgnoreStack::match(
   }
   return GitIgnore::NO_MATCH;
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

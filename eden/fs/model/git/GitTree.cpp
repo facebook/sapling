@@ -22,8 +22,7 @@ using std::invalid_argument;
 using std::string;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum GitModeMask {
   DIRECTORY = 040000,
@@ -199,5 +198,5 @@ folly::IOBuf GitTreeSerializer::finalize() {
 
   return std::move(buf_);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

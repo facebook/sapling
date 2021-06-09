@@ -11,8 +11,7 @@
 #include "eden/fs/model/git/GitIgnore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * GitIgnoreStack represents a stack of GitIgnore files, one per directory
@@ -91,5 +90,5 @@ class GitIgnoreStack {
    */
   const GitIgnoreStack* parent_{nullptr};
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

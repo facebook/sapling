@@ -10,8 +10,7 @@
 #include "eden/fs/model/git/GitIgnore.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Encapsulate the system and user ignore files loaded from configuration files.
@@ -54,5 +53,5 @@ class TopLevelIgnores {
   GitIgnoreStack systemIgnoreStack_;
   GitIgnoreStack userIgnoreStack_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

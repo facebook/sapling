@@ -11,8 +11,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class Tree;
@@ -67,5 +66,5 @@ class GitTreeSerializer {
   folly::IOBuf buf_;
   folly::io::Appender appender_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

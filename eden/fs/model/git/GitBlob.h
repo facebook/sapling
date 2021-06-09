@@ -13,8 +13,7 @@ namespace folly {
 class IOBuf;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class Blob;
@@ -26,5 +25,5 @@ class Blob;
 std::unique_ptr<Blob> deserializeGitBlob(
     const Hash& hash,
     const folly::IOBuf* data);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

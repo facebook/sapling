@@ -11,8 +11,7 @@
 #include <string>
 #include "Hash.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob {
  public:
@@ -56,5 +55,5 @@ class Blob {
   const folly::IOBuf contents_;
   const size_t size_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

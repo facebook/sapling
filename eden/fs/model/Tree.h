@@ -12,8 +12,7 @@
 #include "Hash.h"
 #include "TreeEntry.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Tree {
  public:
@@ -90,5 +89,5 @@ class Tree {
 
 bool operator==(const Tree& tree1, const Tree& tree2);
 bool operator!=(const Tree& tree1, const Tree& tree2);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

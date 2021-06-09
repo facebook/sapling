@@ -19,8 +19,7 @@ using folly::ByteRange;
 using folly::range;
 using folly::ssl::OpenSSLHash;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 const Hash kZeroHash;
 
@@ -81,5 +80,5 @@ std::ostream& operator<<(std::ostream& os, const Hash& hash) {
 void toAppend(const Hash& hash, std::string* result) {
   folly::toAppend(hash.toString(), result);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

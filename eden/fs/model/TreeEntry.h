@@ -15,8 +15,7 @@
 #include <iosfwd>
 #include <optional>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 
@@ -132,5 +131,5 @@ class TreeEntry {
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2);
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

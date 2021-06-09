@@ -16,8 +16,7 @@
 using folly::IOBuf;
 using std::invalid_argument;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::unique_ptr<Blob> deserializeGitBlob(const Hash& hash, const IOBuf* data) {
   folly::io::Cursor cursor(data);
@@ -58,5 +57,5 @@ std::unique_ptr<Blob> deserializeGitBlob(const Hash& hash, const IOBuf* data) {
 
   return std::make_unique<Blob>(hash, std::move(contents));
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

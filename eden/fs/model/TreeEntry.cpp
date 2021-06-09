@@ -17,8 +17,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {
@@ -111,5 +110,5 @@ size_t TreeEntry::getIndirectSizeBytes() const {
   // eden for this type of thing. D17174143 is one such idea.
   return estimateIndirectMemoryUsage(name_.value());
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -11,8 +11,7 @@
 #include <vector>
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class GitIgnorePattern;
 
@@ -181,5 +180,5 @@ class GitIgnore {
    */
   std::vector<GitIgnorePattern> rules_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

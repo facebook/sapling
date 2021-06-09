@@ -12,8 +12,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Options type for GlobMatcher::create(). Multiple values can be OR'd together.
@@ -118,5 +117,5 @@ class GlobMatcher {
    */
   std::vector<uint8_t> pattern_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

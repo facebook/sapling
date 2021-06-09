@@ -10,8 +10,7 @@
 #include <folly/Expected.h>
 #include "eden/fs/model/git/GitIgnore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * GitIgnoreFileParser will parse a file and construct a GitIgnore from its
@@ -29,5 +28,5 @@ class GitIgnoreFileParser {
       int fileDescriptor,
       AbsolutePathPiece filePath) const;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

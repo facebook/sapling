@@ -7,8 +7,8 @@
 
 #include "Tree.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 bool operator==(const Tree& tree1, const Tree& tree2) {
   return (tree1.getHash() == tree2.getHash()) &&
       (tree1.getTreeEntries() == tree2.getTreeEntries());
@@ -31,5 +31,5 @@ size_t Tree::getSizeBytes() const {
   }
   return internal_size + indirect_size;
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

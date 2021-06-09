@@ -13,8 +13,7 @@
 using folly::StringPiece;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 GitIgnore::GitIgnore() {}
 
@@ -97,5 +96,5 @@ string GitIgnore::matchString(MatchResult result) {
   }
   return folly::to<string>("unexpected result", int(result));
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

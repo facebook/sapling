@@ -12,8 +12,7 @@
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/utils/SystemError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
     int fileDescriptor,
@@ -44,5 +43,5 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
   }
   return gitIgnore;
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -10,8 +10,7 @@
 using folly::StringPiece;
 using std::optional;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 optional<GitIgnorePattern> GitIgnorePattern::parseLine(StringPiece line) {
   uint32_t flags = 0;
@@ -169,5 +168,5 @@ GitIgnore::MatchResult GitIgnorePattern::match(
 
   return GitIgnore::NO_MATCH;
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden
