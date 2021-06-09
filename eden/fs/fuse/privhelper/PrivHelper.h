@@ -22,8 +22,7 @@ class Future;
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 
@@ -196,5 +195,4 @@ class PrivHelper {
 
 #endif // _WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -14,8 +14,8 @@
 #else
 #error need a fuse kernel header to be included for your OS!
 #endif
-namespace facebook {
-namespace eden {
+
+namespace facebook::eden {
 
 using FuseOpcode = decltype(std::declval<fuse_in_header>().opcode);
 
@@ -28,5 +28,4 @@ struct FuseChannelData {
   fuse_init_out connInfo;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

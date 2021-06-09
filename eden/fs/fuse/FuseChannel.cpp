@@ -29,8 +29,7 @@
 using namespace folly;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -2423,7 +2422,6 @@ size_t FuseChannel::getRequestMetric(
   return RequestMetricsScope::aggregateMetricCounters(metric, counters);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -11,8 +11,7 @@
 #include <memory>
 #include "eden/fs/utils/DirType.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Helper for populating directory listings.
@@ -52,5 +51,4 @@ class FuseDirList {
   std::vector<ExtractedEntry> extract() const;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

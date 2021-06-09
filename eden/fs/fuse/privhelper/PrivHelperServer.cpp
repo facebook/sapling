@@ -57,8 +57,7 @@ using folly::io::Cursor;
 using folly::io::RWPrivateCursor;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 PrivHelperServer::PrivHelperServer() {}
 
@@ -1191,7 +1190,6 @@ void PrivHelperServer::cleanupMountPoints() {
   mountPoints_.clear();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

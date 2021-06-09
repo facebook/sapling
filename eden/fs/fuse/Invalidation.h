@@ -7,8 +7,7 @@
 
 #pragma once
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * If a return value, whether the caller is responsible for invalidating the
@@ -22,5 +21,4 @@ enum class InvalidationRequired : bool {
   Yes,
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

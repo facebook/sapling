@@ -17,8 +17,7 @@ namespace folly {
 class File;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class PrivHelperServer;
 class UserInfo;
@@ -56,5 +55,4 @@ std::unique_ptr<PrivHelper> createTestPrivHelper(folly::File&& conn);
 
 #endif // !_WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

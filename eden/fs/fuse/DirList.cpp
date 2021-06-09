@@ -14,8 +14,7 @@
 
 using folly::StringPiece;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FuseDirList::FuseDirList(size_t maxSize)
     : buf_(new char[maxSize]), end_(buf_.get() + maxSize), cur_(buf_.get()) {}
@@ -65,7 +64,6 @@ std::vector<FuseDirList::ExtractedEntry> FuseDirList::extract() const {
   return result;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -19,8 +19,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Each FUSE request has a corresponding FuseRequestContext object that is
@@ -138,5 +137,4 @@ class FuseRequestContext : public RequestContext {
   std::optional<int64_t> result_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

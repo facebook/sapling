@@ -9,8 +9,7 @@
 
 #include "eden/fs/fuse/PollHandle.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void PollHandle::Deleter::operator()(fuse_pollhandle* /*h*/) {
 #if FUSE_MAJOR_VERSION >= 8
@@ -26,7 +25,6 @@ void PollHandle::notify() {
 #endif
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -17,8 +17,7 @@
 
 using namespace folly;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FuseRequestContext::FuseRequestContext(
     FuseChannel* channel,
@@ -95,7 +94,6 @@ void FuseRequestContext::replyNone() {
   stealReq();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

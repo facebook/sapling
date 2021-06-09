@@ -20,8 +20,7 @@ class Cursor;
 } // namespace io
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * This class contains static methods for serializing and deserializing
@@ -198,5 +197,4 @@ class PrivHelperError : public std::exception {
   std::string message_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

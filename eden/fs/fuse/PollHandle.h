@@ -9,8 +9,7 @@
 #include <memory>
 #include "eden/fs/fuse/FuseTypes.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // Some compatibility cruft for working with OSX Fuse
 #if FUSE_MINOR_VERSION < 8
@@ -35,5 +34,4 @@ class PollHandle {
   void notify();
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

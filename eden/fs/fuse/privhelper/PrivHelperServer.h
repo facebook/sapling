@@ -24,8 +24,7 @@ class Cursor;
 }
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*
  * PrivHelperServer runs the main loop for the privhelper server process.
@@ -126,5 +125,4 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   std::set<std::string> mountPoints_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

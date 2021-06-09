@@ -11,8 +11,7 @@
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 
@@ -70,5 +69,4 @@ void PrivHelper::setUseEdenFsBlocking(bool) {}
 
 #endif // _WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

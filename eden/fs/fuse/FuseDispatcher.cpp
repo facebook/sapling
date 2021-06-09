@@ -20,8 +20,7 @@
 
 using namespace folly;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FuseDispatcher::Attr::Attr(const struct stat& st, uint64_t timeout)
     : st(st), timeout_seconds(timeout) {}
@@ -307,7 +306,6 @@ EdenStats* FuseDispatcher::getStats() const {
   return stats_;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

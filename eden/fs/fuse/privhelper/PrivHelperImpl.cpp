@@ -52,8 +52,7 @@ using std::vector;
 
 DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 
@@ -663,5 +662,4 @@ startOrConnectToPrivHelper(const UserInfo&, int, char**) {
 
 #endif // _WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

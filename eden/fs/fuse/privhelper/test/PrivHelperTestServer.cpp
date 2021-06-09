@@ -19,8 +19,7 @@ using folly::File;
 using folly::StringPiece;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 PrivHelperTestServer::PrivHelperTestServer() {}
 
@@ -116,5 +115,4 @@ bool PrivHelperTestServer::checkIfMarkerFileHasContents(
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

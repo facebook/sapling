@@ -35,8 +35,7 @@ using folly::io::Appender;
 using folly::io::Cursor;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -439,7 +438,6 @@ void PrivHelperConn::checkAtEnd(const Cursor& cursor, StringPiece messageType) {
 PrivHelperError::PrivHelperError(StringPiece remoteExType, StringPiece msg)
     : message_(folly::to<string>(remoteExType, ": ", msg)) {}
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

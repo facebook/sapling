@@ -11,8 +11,7 @@
 
 #include <folly/Range.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*
  * A subclass of PrivHelperServer that doesn't actually perform
@@ -57,5 +56,4 @@ class PrivHelperTestServer : public PrivHelperServer {
       const std::string contents) const;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
