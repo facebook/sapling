@@ -12,29 +12,13 @@ use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use futures_old::{Future, IntoFuture};
 use mononoke_types::ChangesetId;
-use std::sync::Arc;
 
-use metaconfig_types::RepoConfig;
 use scuba_ext::MononokeScubaSampleBuilder;
-use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
 use crate::cli::{ARG_COMMIT, ARG_LOG_TO_SCUBA, ARG_SLEEP_SECS};
 use crate::reporting::SCUBA_TABLE;
 
 const DEFAULT_SLEEP_SECS: u64 = 10;
-
-pub async fn get_skiplist_index(
-    ctx: &CoreContext,
-    config: &RepoConfig,
-    repo: &BlobRepo,
-) -> Result<Arc<SkiplistIndex>, Error> {
-    fetch_skiplist_index(
-        &ctx,
-        &config.skiplist_index_blobstore_key,
-        &Arc::new(repo.get_blobstore().boxed()),
-    )
-    .await
-}
 
 pub fn get_starting_commit<'a>(
     ctx: CoreContext,

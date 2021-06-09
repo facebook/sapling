@@ -38,13 +38,13 @@ use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::TryFutureExt,
-    future::{self, try_join, try_join3},
+    future::{self, try_join},
     stream::{self, TryStreamExt},
     StreamExt,
 };
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -65,7 +65,7 @@ use crate::cli::{
     ARG_DERIVED_DATA_TYPES, ARG_HG_SYNC_BACKPRESSURE, ARG_ONCE, ARG_TAIL, ARG_TARGET_BOOKMARK,
 };
 use crate::reporting::{add_common_fields, log_bookmark_update_result, log_noop_iteration};
-use crate::setup::{get_scuba_sample, get_skiplist_index, get_sleep_secs, get_starting_commit};
+use crate::setup::{get_scuba_sample, get_sleep_secs, get_starting_commit};
 use crate::sync::{sync_commit_and_ancestors, sync_single_bookmark_update_log};
 
 fn print_error(ctx: CoreContext, error: &Error) {
@@ -397,23 +397,19 @@ async fn run<'a>(
 
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
-    let (_, source_repo_config) =
-        args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
-    let (_, target_repo_config) =
-        args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
 
     let logger = ctx.logger();
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches);
 
-    let (source_repo, target_repo): (BlobRepo, BlobRepo) =
+    let (source_repo, target_repo): (InnerRepo, InnerRepo) =
         try_join(source_repo, target_repo).await?;
 
     let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config = live_commit_sync_config
-        .get_current_commit_sync_config(&ctx, source_repo.get_repoid())
+        .get_current_commit_sync_config(&ctx, source_repo.blob_repo.get_repoid())
         .await?;
 
     let common_bookmarks: HashSet<_> = commit_sync_config
@@ -422,10 +418,8 @@ async fn run<'a>(
         .into_iter()
         .collect();
 
-    let source_skiplist =
-        get_skiplist_index(&ctx, &source_repo_config, &source_repo).map_ok(Source);
-    let target_skiplist =
-        get_skiplist_index(&ctx, &target_repo_config, &target_repo).map_ok(Target);
+    let source_skiplist_index = Source(source_repo.skiplist_index.clone());
+    let target_skiplist_index = Target(target_repo.skiplist_index.clone());
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
             add_common_fields(&mut scuba_sample, &commit_syncer);
@@ -433,12 +427,9 @@ async fn run<'a>(
                 .value_of(ARG_TARGET_BOOKMARK)
                 .map(BookmarkName::new)
                 .transpose()?;
-            let (bcs, source_skiplist_index, target_skiplist_index) = try_join3(
-                get_starting_commit(ctx.clone(), &sub_m, source_repo.clone()).compat(),
-                source_skiplist,
-                target_skiplist,
-            )
-            .await?;
+            let bcs = get_starting_commit(ctx.clone(), &sub_m, source_repo.blob_repo.clone())
+                .compat()
+                .await?;
 
             run_in_single_commit_mode(
                 &ctx,
@@ -453,8 +444,6 @@ async fn run<'a>(
             .await
         }
         (ARG_TAIL, Some(sub_m)) => {
-            let (source_skiplist_index, target_skiplist_index) =
-                try_join(source_skiplist, target_skiplist).await?;
             add_common_fields(&mut scuba_sample, &commit_syncer);
 
             let sleep_secs = get_sleep_secs(sub_m)?;
