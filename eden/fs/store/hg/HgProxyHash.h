@@ -18,8 +18,7 @@ template <typename T>
 class Future;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * HgProxyHash is a derived index allowing us to map EdenFS's fixed-size hashes
@@ -159,8 +158,7 @@ class HgProxyHash {
   std::string value_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 namespace std {
 template <>

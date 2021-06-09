@@ -9,8 +9,7 @@
 
 #include <cstdint>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum class ImportPriorityKind : int16_t { Low = 0, Normal = 1, High = 2 };
 
@@ -61,5 +60,4 @@ struct ImportPriority {
   }
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

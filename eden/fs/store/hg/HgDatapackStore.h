@@ -15,8 +15,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class HgProxyHash;
@@ -63,5 +62,5 @@ class HgDatapackStore {
  private:
   HgNativeBackingStore store_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

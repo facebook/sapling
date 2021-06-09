@@ -21,8 +21,7 @@ class Future;
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class BlobMetadata;
@@ -54,5 +53,5 @@ class IObjectStore {
       const std::vector<Hash>& ids,
       ObjectFetchContext& context) const = 0;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -14,8 +14,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class LocalStore;
@@ -76,5 +75,4 @@ class DefaultMetadataImporter : public MetadataImporter {
   bool metadataFetchingAvailable() override;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -11,8 +11,7 @@
 #include <algorithm>
 #include <complex>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void HgImportRequestQueue::stop() {
   auto state = state_.lock();
@@ -147,5 +146,5 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
 
   return result;
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

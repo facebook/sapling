@@ -7,8 +7,7 @@
 
 #include "eden/fs/store/KeySpace.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // Older versions of MSVC++ ICE on the following code.
 #if !defined(_MSC_FULL_VER) || _MSC_FULL_VER >= 192027508
@@ -30,5 +29,4 @@ static_assert(assertKeySpaceInvariants());
 
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -11,8 +11,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * All exceptions received from `hg debugedenimporthelper` are thrown in C++ as
@@ -62,5 +61,4 @@ class HgImportPyError : public std::exception {
   const folly::StringPiece message_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

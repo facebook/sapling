@@ -10,8 +10,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/TreeMetadata.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 folly::SemiFuture<std::unique_ptr<TreeMetadata>>
 DefaultMetadataImporter::getTreeMetadata(
@@ -24,5 +23,4 @@ bool DefaultMetadataImporter::metadataFetchingAvailable() {
   return false;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -11,8 +11,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectCache.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 
@@ -67,5 +66,4 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
   explicit TreeCache(std::shared_ptr<ReloadableConfig> config);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

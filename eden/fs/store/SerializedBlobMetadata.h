@@ -11,8 +11,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class TreeMetadata;
 
@@ -39,5 +38,5 @@ class SerializedBlobMetadata {
 
   friend class TreeMetadata;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

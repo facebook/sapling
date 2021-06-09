@@ -268,8 +268,7 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
@@ -738,5 +737,4 @@ void RocksDbLocalStore::throwStoreClosedError() const {
   throw std::runtime_error("the RocksDB local store is already closed");
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

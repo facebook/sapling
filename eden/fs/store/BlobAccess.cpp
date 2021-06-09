@@ -11,8 +11,7 @@
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 BlobAccess::BlobAccess(
     std::shared_ptr<IObjectStore> objectStore,
@@ -38,5 +37,4 @@ folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
       });
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

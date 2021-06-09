@@ -22,8 +22,7 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/TraceBus.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class BackingStoreLogger;
 class ReloadableConfig;
@@ -260,5 +259,4 @@ class HgQueuedBackingStore final : public BackingStore {
   std::shared_ptr<TraceBus<HgImportTraceEvent>> traceBus_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

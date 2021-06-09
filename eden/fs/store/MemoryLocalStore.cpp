@@ -8,8 +8,8 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include <folly/String.h>
 #include "eden/fs/store/StoreResult.h"
-namespace facebook {
-namespace eden {
+
+namespace facebook::eden {
 
 using folly::StringPiece;
 
@@ -91,5 +91,4 @@ std::unique_ptr<LocalStore::WriteBatch> MemoryLocalStore::beginWrite(size_t) {
   return std::make_unique<MemoryWriteBatch>(this);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

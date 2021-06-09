@@ -10,8 +10,7 @@
 #include <cstdint>
 #include "eden/fs/model/Hash.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A small struct containing both the size and the SHA-1 hash of
@@ -25,5 +24,5 @@ class BlobMetadata {
   Hash sha1;
   uint64_t size;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -76,8 +76,7 @@ DEFINE_bool(
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 // Thread local HgImporter. This is only initialized on HgImporter threads.
@@ -775,5 +774,4 @@ void HgBackingStore::periodicManagementTask() {
   datapackStore_.refresh();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

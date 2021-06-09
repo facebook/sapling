@@ -13,8 +13,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ImportPriority.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * ObjectStore calls methods on this context when fetching objects.
@@ -109,5 +108,5 @@ class ObjectFetchContext {
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

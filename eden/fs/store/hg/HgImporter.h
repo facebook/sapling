@@ -20,8 +20,7 @@ namespace folly {
 class IOBuf;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class Hash;
@@ -325,5 +324,4 @@ class HgImporterManager : public Importer {
   const std::optional<AbsolutePath> importHelperScript_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

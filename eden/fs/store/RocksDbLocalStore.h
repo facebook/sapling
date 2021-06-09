@@ -15,8 +15,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FaultInjector;
 class StructuredLogger;
@@ -123,5 +122,4 @@ class RocksDbLocalStore : public LocalStore {
   folly::Synchronized<RocksHandles> dbHandles_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

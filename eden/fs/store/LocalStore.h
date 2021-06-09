@@ -20,8 +20,7 @@ template <typename T>
 class Future;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class EdenConfig;
@@ -281,5 +280,5 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
       const Hash& hash,
       const TreeMetadata& treeMetadata);
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

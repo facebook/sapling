@@ -25,8 +25,7 @@ class NullObjectFetchContext : public ObjectFetchContext {
 };
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ObjectFetchContext& ObjectFetchContext::getNullContext() {
   static auto* p = new NullObjectFetchContext;
@@ -38,5 +37,4 @@ ObjectFetchContext* ObjectFetchContext::getNullContextWithCauseDetail(
   return new NullObjectFetchContext(folly::StringPiece{causeDetail});
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

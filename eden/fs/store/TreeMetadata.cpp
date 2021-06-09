@@ -15,8 +15,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -93,5 +92,5 @@ TreeMetadata TreeMetadata::deserialize(const StoreResult& result) {
 
   return TreeMetadata(entryMetadata);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

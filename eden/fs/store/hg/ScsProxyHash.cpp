@@ -22,8 +22,7 @@ using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Appender;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ScsProxyHash::ScsProxyHash(std::string value) : value_(std::move(value)) {}
 
@@ -90,5 +89,4 @@ RelativePathPiece ScsProxyHash::path() const {
   return RelativePathPiece{data};
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

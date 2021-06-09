@@ -14,8 +14,7 @@
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 using folly::ByteRange;
 using folly::StringPiece;
@@ -188,5 +187,4 @@ std::unique_ptr<LocalStore::WriteBatch> SqliteLocalStore::beginWrite(size_t) {
   return std::make_unique<SqliteWriteBatch>(db_);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -66,8 +66,7 @@ DEFINE_string(
     "this value is non-empty, the existing PYTHONPATH from the environment is "
     "replaced with this value.");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class HgImporterEofError : public HgImporterError {
  public:
@@ -740,5 +739,4 @@ void HgImporterManager::resetHgImporter(const std::exception& ex) {
   XLOG(WARN) << "error communicating with debugedenimporthelper: " << ex.what();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

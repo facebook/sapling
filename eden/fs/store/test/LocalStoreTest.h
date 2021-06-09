@@ -16,8 +16,7 @@
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/FaultInjector.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 using LocalStoreImplResult = std::pair<
     std::optional<folly::test::TemporaryDirectory>,
@@ -44,5 +43,4 @@ class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
   using StringPiece = folly::StringPiece;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

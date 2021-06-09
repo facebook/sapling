@@ -23,8 +23,7 @@ class Future;
 class IOBuf;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 // An empty ProxyHash. It contains an all zeros hash and zero length path.
@@ -94,5 +93,5 @@ class ScsProxyHash {
    */
   std::string value_ = kDefaultProxyHash;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

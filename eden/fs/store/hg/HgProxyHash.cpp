@@ -18,8 +18,7 @@ using folly::Endian;
 using folly::StringPiece;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash& hgRevHash) {
   auto [hash, buf] = prepareToStore(path, hgRevHash);
@@ -197,5 +196,5 @@ void HgProxyHash::validate(Hash edenBlobHash) {
     throw std::length_error(msg);
   }
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

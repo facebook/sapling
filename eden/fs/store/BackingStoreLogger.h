@@ -13,8 +13,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class UnboundedQueueExecutor;
 class StructuredLogger;
@@ -42,5 +41,4 @@ class BackingStoreLogger {
   bool loggingAvailable_ = false;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

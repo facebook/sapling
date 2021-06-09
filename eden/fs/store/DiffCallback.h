@@ -13,8 +13,7 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class TreeEntry;
 
@@ -39,5 +38,5 @@ class DiffCallback {
       RelativePathPiece path,
       const folly::exception_wrapper& ew) = 0;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

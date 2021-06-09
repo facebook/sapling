@@ -31,8 +31,7 @@ using folly::io::Cursor;
 using std::optional;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void LocalStore::clearDeprecatedKeySpaces() {
   for (auto& ks : KeySpace::kAll) {
@@ -302,5 +301,4 @@ void LocalStore::periodicManagementTask(const EdenConfig& /* config */) {
   // periodic management.
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

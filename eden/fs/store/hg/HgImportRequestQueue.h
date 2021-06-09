@@ -17,8 +17,7 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "folly/futures/Future.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class HgImportRequestQueue {
  public:
@@ -179,5 +178,4 @@ class HgImportRequestQueue {
   std::condition_variable queueCV_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -12,8 +12,7 @@
 using folly::StringPiece;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 constexpr folly::StringPiece HgImportPyError::kSeparator;
 
@@ -24,5 +23,4 @@ HgImportPyError::HgImportPyError(StringPiece errorType, StringPiece message)
           fullMessage_.data() + errorType.size() + kSeparator.size(),
           fullMessage_.data() + fullMessage_.size()} {}
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

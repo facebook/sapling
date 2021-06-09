@@ -24,8 +24,7 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class HgImporter;
 struct ImporterOptions;
@@ -213,5 +212,5 @@ class HgBackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -15,8 +15,7 @@ template <typename T>
 class Future;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class ObjectStore;
@@ -99,5 +98,5 @@ folly::Future<folly::Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     Hash scmHash);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

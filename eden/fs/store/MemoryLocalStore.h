@@ -10,8 +10,7 @@
 #include <folly/experimental/StringKeyedUnorderedMap.h>
 #include "eden/fs/store/LocalStore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** An implementation of LocalStore that stores values in memory.
  * Stored values remain in memory for the lifetime of the
@@ -37,5 +36,4 @@ class MemoryLocalStore : public LocalStore {
       storage_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

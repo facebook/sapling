@@ -38,8 +38,7 @@
 #include "folly/ScopeGuard.h"
 #include "folly/String.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 // 100,000 hg object fetches in a short term is plausible.
@@ -546,5 +545,4 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
   return paths;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

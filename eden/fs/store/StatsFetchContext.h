@@ -12,8 +12,7 @@
 
 #include "eden/fs/store/ObjectFetchContext.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct FetchStatistics {
   struct Access {
@@ -74,5 +73,4 @@ class StatsFetchContext : public ObjectFetchContext {
   folly::StringPiece causeDetail_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

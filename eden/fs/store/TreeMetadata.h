@@ -16,8 +16,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class BlobMetadata;
 class StoreResult;
@@ -77,5 +76,4 @@ class TreeMetadata {
   EntryMetadata entryMetadata_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

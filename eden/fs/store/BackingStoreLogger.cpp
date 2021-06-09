@@ -15,8 +15,7 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 BackingStoreLogger::BackingStoreLogger(
     std::shared_ptr<StructuredLogger> logger,
@@ -81,5 +80,4 @@ void BackingStoreLogger::logImport(
       std::move(typeString)});
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

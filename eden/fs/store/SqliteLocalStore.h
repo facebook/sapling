@@ -10,8 +10,7 @@
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/store/LocalStore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** An implementation of LocalStore that stores values in Sqlite.
  * SqliteLocalStore is thread safe, allowing reads and writes from
@@ -34,5 +33,4 @@ class SqliteLocalStore : public LocalStore {
   mutable SqliteDatabase db_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

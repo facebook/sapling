@@ -11,8 +11,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*
  * A dummy BackingStore implementation, that always throws std::domain_error
@@ -36,5 +35,5 @@ class EmptyBackingStore final : public BackingStore {
       const Hash& id,
       ObjectFetchContext& context) override;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

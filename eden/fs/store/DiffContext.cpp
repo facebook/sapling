@@ -15,8 +15,7 @@
 
 using apache::thrift::ResponseChannelRequest;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 DiffContext::DiffContext(
     DiffCallback* cb,
@@ -59,5 +58,4 @@ bool DiffContext::isCancelled() const {
   return false;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -34,8 +34,8 @@ using std::make_shared;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 inline void PrintTo(ScmFileStatus status, ::std::ostream* os) {
   switch (status) {
     case ScmFileStatus::ADDED:
@@ -57,8 +57,7 @@ inline void PrintTo(ScmFileStatus status, ::std::ostream* os) {
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 class DiffTest : public ::testing::Test {
  protected:

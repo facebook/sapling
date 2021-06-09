@@ -20,8 +20,7 @@ template <typename T>
 class Future;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ScmStatusDiffCallback : public DiffCallback {
  public:
@@ -53,5 +52,5 @@ class ScmStatusDiffCallback : public DiffCallback {
 char scmStatusCodeChar(ScmFileStatus code);
 
 std::ostream& operator<<(std::ostream& os, const ScmStatus& status);
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

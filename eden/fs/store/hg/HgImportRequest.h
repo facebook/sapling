@@ -20,8 +20,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents an Hg import request. This class contains all the necessary
@@ -168,5 +167,4 @@ class HgImportRequest {
   }
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -21,8 +21,8 @@
 #include "eden/fs/store/hg/ScsProxyHash.h"
 #include "eden/fs/utils/Bug.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 namespace {
 TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
   switch (type) {
@@ -232,5 +232,5 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
 void HgDatapackStore::refresh() {
   store_.refresh();
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

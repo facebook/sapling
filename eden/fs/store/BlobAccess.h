@@ -11,8 +11,7 @@
 #include <memory>
 #include "eden/fs/store/BlobCache.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class Hash;
@@ -68,5 +67,4 @@ class BlobAccess {
   const std::shared_ptr<BlobCache> blobCache_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

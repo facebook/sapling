@@ -24,8 +24,7 @@ class ResponseChannelRequest;
 }
 } // namespace apache
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class DiffCallback;
 class GitIgnoreStack;
@@ -87,5 +86,5 @@ class DiffContext {
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
   StatsFetchContext fetchContext_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

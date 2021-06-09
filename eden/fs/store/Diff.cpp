@@ -30,8 +30,7 @@ using folly::Unit;
 using std::make_unique;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*
  * In practice, while the functions in this file are comparing two source
@@ -714,5 +713,4 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
       });
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

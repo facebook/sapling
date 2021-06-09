@@ -13,8 +13,7 @@
 
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 template <typename Request, typename... Input>
@@ -65,5 +64,5 @@ HgImportRequest::makePrefetchRequest(
   return makeRequest<Prefetch>(
       priority, std::move(metricsScope), std::move(hashes));
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

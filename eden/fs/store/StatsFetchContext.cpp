@@ -8,8 +8,7 @@
 #include "eden/fs/store/StatsFetchContext.h"
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 StatsFetchContext::StatsFetchContext(
     std::optional<pid_t> pid,
@@ -103,5 +102,4 @@ std::optional<folly::StringPiece> StatsFetchContext::getCauseDetail() const {
   return causeDetail_;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

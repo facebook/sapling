@@ -17,8 +17,7 @@ using folly::makeSemiFuture;
 using folly::SemiFuture;
 using std::unique_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 EmptyBackingStore::EmptyBackingStore() {}
 
@@ -53,5 +52,4 @@ SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(
       std::domain_error("empty backing store"));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -15,8 +15,7 @@
 
 #include "eden/fs/model/Hash.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum class ObjectCacheFlavor { Simple, InterestHandle };
 
@@ -341,7 +340,6 @@ class ObjectCache
   friend class ObjectInterestHandle<ObjectType>;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #include "eden/fs/store/ObjectCache-inl.h"

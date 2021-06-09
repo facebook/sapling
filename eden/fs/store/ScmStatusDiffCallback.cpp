@@ -14,8 +14,8 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 void ScmStatusDiffCallback::ignoredFile(RelativePathPiece path) {
   data_.wlock()->entries_ref()->emplace(
       path.stringPiece().str(), ScmFileStatus::IGNORED);
@@ -82,5 +82,4 @@ std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {
   return os;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

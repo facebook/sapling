@@ -16,8 +16,7 @@
 struct git_oid;
 struct git_repository;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 class LocalStore;
@@ -72,5 +71,5 @@ class GitBackingStore final : public BackingStore {
   LocalStore* localStore_{nullptr};
   git_repository* repo_{nullptr};
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -50,8 +50,7 @@ void freeBlobIOBufData(void* /*blobData*/, void* blobObject) {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 GitBackingStore::GitBackingStore(
     AbsolutePathPiece repository,
@@ -228,5 +227,5 @@ Hash GitBackingStore::oid2Hash(const git_oid* oid) {
   ByteRange oidBytes(oid->id, GIT_OID_RAWSZ);
   return Hash(oidBytes);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

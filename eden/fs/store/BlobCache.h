@@ -9,8 +9,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/ObjectCache.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash;
 
@@ -79,5 +78,4 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
             minimumEntryCount} {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

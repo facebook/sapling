@@ -14,8 +14,7 @@
 #include <eden/fs/model/Hash.h>
 #include <eden/fs/store/BlobMetadata.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 SerializedBlobMetadata::SerializedBlobMetadata(const BlobMetadata& metadata) {
   serialize(metadata.sha1, metadata.size);
@@ -64,5 +63,4 @@ void SerializedBlobMetadata::serialize(
       Hash::RAW_SIZE);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

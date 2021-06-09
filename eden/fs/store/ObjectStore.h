@@ -26,8 +26,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class BackingStore;
 class Blob;
@@ -285,5 +284,4 @@ class ObjectStore : public IObjectStore,
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

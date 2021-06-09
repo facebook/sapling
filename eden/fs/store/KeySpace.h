@@ -11,8 +11,7 @@
 #include <variant>
 #include "eden/fs/config/EdenConfig.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Indicates the key space is safe to clear at any moment. The key space's disk
@@ -120,5 +119,4 @@ class KeySpace {
   const KeySpaceRecord* record_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

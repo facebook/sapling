@@ -28,8 +28,7 @@ using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
@@ -380,5 +379,5 @@ Future<uint64_t> ObjectStore::getBlobSize(
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden
