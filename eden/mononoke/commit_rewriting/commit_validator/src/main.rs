@@ -25,6 +25,7 @@ use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures::future;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -158,7 +159,7 @@ async fn run<'a>(
     let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
     let logger = ctx.logger();
-    let blobrepo: BlobRepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
+    let repo: InnerRepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
         .await
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
     let mysql_options = matches.mysql_options();
@@ -168,7 +169,7 @@ async fn run<'a>(
     let validation_helpers = get_validation_helpers(
         fb,
         ctx.clone(),
-        blobrepo.clone(),
+        repo.clone(),
         repo_config,
         matches,
         mysql_options.clone(),
@@ -177,6 +178,8 @@ async fn run<'a>(
     )
     .await
     .context("While instantiating commit syncers")?;
+
+    let blobrepo = repo.blob_repo.clone();
 
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {

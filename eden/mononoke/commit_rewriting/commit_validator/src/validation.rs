@@ -30,6 +30,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
+use mononoke_api_types::InnerRepo;
 use mononoke_types::MPath;
 use mononoke_types::{ChangesetId, RepositoryId};
 use movers::{get_movers, Mover};
@@ -433,9 +434,8 @@ impl ValidationHelper {
 /// validation a large repo and potentially multiple small repos
 #[derive(Clone)]
 pub struct ValidationHelpers {
-    large_repo: Large<BlobRepo>,
+    large_repo: Large<InnerRepo>,
     helpers: HashMap<Small<RepositoryId>, ValidationHelper>,
-    large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     /// The "master" bookmark in the large repo. This is needed when
     /// we are unfolding an entry, which creates a new bookmark. Such entry
     /// does not have `from_changeset_id`, so instead we using the `to_changeset_id % master`
@@ -447,12 +447,11 @@ pub struct ValidationHelpers {
 
 impl ValidationHelpers {
     pub fn new(
-        large_repo: BlobRepo,
+        large_repo: InnerRepo,
         helpers: HashMap<
             RepositoryId,
             (Large<BlobRepo>, Small<BlobRepo>, MononokeScubaSampleBuilder),
         >,
-        large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         large_repo_master_bookmark: BookmarkName,
         mapping: SqlSyncedCommitMapping,
         live_commit_sync_config: CfgrLiveCommitSyncConfig,
@@ -468,7 +467,6 @@ impl ValidationHelpers {
                     )
                 })
                 .collect(),
-            large_repo_lca_hint,
             large_repo_master_bookmark,
             live_commit_sync_config,
             mapping,
@@ -578,7 +576,7 @@ impl ValidationHelpers {
         ctx: CoreContext,
         cs_id: &Large<ChangesetId>,
     ) -> Result<Large<FullManifestDiff>, Error> {
-        Self::get_full_manifest_diff(ctx, &self.large_repo.0, &cs_id.0)
+        Self::get_full_manifest_diff(ctx, &self.large_repo.0.blob_repo, &cs_id.0)
             .await
             .map(Large)
     }
@@ -631,6 +629,7 @@ impl ValidationHelpers {
         let maybe_cs_id = self
             .large_repo
             .0
+            .blob_repo
             .get_bonsai_bookmark(ctx, &self.large_repo_master_bookmark)
             .await?;
         maybe_cs_id.ok_or(format_err!("No master in the large repo"))
@@ -644,7 +643,10 @@ impl ValidationHelpers {
     ) -> Result<(Mover, Mover), Error> {
         let commit_sync_config = self
             .live_commit_sync_config
-            .get_commit_sync_config_by_version(self.large_repo.0.get_repoid(), version_name)
+            .get_commit_sync_config_by_version(
+                self.large_repo.0.blob_repo.get_repoid(),
+                version_name,
+            )
             .await?;
 
         let movers = get_movers(
@@ -676,8 +678,12 @@ pub async fn unfold_bookmarks_update_log_entry(
     validation_helpers: &ValidationHelpers,
 ) -> Result<impl Stream<Item = Result<CommitEntry, Error>>, Error> {
     let bookmarks_update_log_entry_id = entry.id;
-    let changeset_fetcher = validation_helpers.large_repo.0.get_changeset_fetcher();
-    let lca_hint = validation_helpers.large_repo_lca_hint.clone();
+    let changeset_fetcher = validation_helpers
+        .large_repo
+        .0
+        .blob_repo
+        .get_changeset_fetcher();
+    let lca_hint = validation_helpers.large_repo.0.skiplist_index.clone();
     let is_master_entry = entry.bookmark_name == validation_helpers.large_repo_master_bookmark;
     let master_cs_id = validation_helpers
         .get_large_repo_master(ctx.clone())
@@ -1320,7 +1326,7 @@ pub async fn validate_entry(
         preparation_duration,
     } = prepared_entry;
 
-    let large_repo_lca_hint = &validation_helpers.large_repo_lca_hint;
+    let large_repo_lca_hint = &validation_helpers.large_repo.0.skiplist_index;
     let small_repo_validation_futs = small_repo_full_manifest_diffs.into_iter().map(
         |(repo_id, (small_cs_id, small_repo_full_manifest_diff, version_name))| {
             cloned!(large_repo_full_manifest_diff, large_repo_lca_hint);
@@ -1348,7 +1354,7 @@ pub async fn validate_entry(
                             validate_in_a_single_repo(
                                 ctx,
                                 validation_helper,
-                                large_repo,
+                                Large(large_repo.blob_repo.clone()),
                                 large_cs_id,
                                 small_cs_id,
                                 large_repo_full_manifest_diff,
