@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::verification::verify_config;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -61,9 +62,10 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
 
     async fn add_target_with_config_version(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         config: SyncTargetConfig,
     ) -> Result<(), MegarepoError> {
+        verify_config(&ctx, &config).map_err(MegarepoError::request)?;
         let mut config_versions = self.config_versions.lock().unwrap();
         let key = (config.target.clone(), config.version.clone());
         config_versions.insert(key, config);

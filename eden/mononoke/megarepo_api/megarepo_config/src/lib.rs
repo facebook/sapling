@@ -19,6 +19,7 @@ mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
 mod test_impl;
+mod verification;
 
 #[cfg(fbcode_build)]
 pub use facebook::CfgrMononokeMegarepoConfigs;
