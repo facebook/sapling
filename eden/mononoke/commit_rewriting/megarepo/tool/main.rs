@@ -35,6 +35,7 @@ use futures::{
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
 use regex::Regex;
@@ -192,17 +193,17 @@ async fn run_sync_diamond_merge<'a>(
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
     let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
 
-    let (_, source_repo_config) =
-        args::get_config_by_repoid(config_store, matches, source_repo_id)?;
-
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-    let (source_repo, target_repo): (BlobRepo, BlobRepo) =
+    let (source_repo, target_repo): (InnerRepo, BlobRepo) =
         try_join(source_repo, target_repo).await?;
 
-    let source_merge_cs_id =
-        helpers::csid_resolve(ctx.clone(), source_repo.clone(), merge_commit_hash)
-            .compat()
-            .await?;
+    let source_merge_cs_id = helpers::csid_resolve(
+        ctx.clone(),
+        source_repo.blob_repo.clone(),
+        merge_commit_hash,
+    )
+    .compat()
+    .await?;
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
@@ -216,7 +217,6 @@ async fn run_sync_diamond_merge<'a>(
         target_repo,
         source_merge_cs_id,
         mapping,
-        source_repo_config,
         bookmark,
         Arc::new(live_commit_sync_config),
         x_repo_syncer_lease,

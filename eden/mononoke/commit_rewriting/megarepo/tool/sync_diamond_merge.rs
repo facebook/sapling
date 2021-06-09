@@ -35,10 +35,10 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use maplit::hashmap;
 use mercurial_types::{HgFileNodeId, HgManifestId};
-use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
+use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
 use sorted_vector_map::SortedVectorMap;
 use std::collections::HashMap;
@@ -90,11 +90,10 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 /// 4) Update the bookmark
 pub async fn do_sync_diamond_merge(
     ctx: CoreContext,
-    small_repo: BlobRepo,
+    small_repo: InnerRepo,
     large_repo: BlobRepo,
     small_merge_cs_id: ChangesetId,
     mapping: SqlSyncedCommitMapping,
-    small_repo_config: RepoConfig,
     onto_bookmark: BookmarkName,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     lease: Arc<dyn LeaseOps>,
@@ -105,17 +104,17 @@ pub async fn do_sync_diamond_merge(
     );
 
     let parents = small_repo
+        .blob_repo
         .get_changeset_parents_by_bonsai(ctx.clone(), small_merge_cs_id)
         .await?;
 
     let (p1, p2) = validate_parents(parents)?;
 
-    let new_branch =
-        find_new_branch_oldest_first(ctx.clone(), &small_repo, p1, p2, &small_repo_config).await?;
+    let new_branch = find_new_branch_oldest_first(ctx.clone(), &small_repo, p1, p2).await?;
 
     let syncers = create_commit_syncers(
         &ctx,
-        small_repo.clone(),
+        small_repo.blob_repo.clone(),
         large_repo.clone(),
         mapping,
         live_commit_sync_config,
@@ -164,7 +163,7 @@ pub async fn do_sync_diamond_merge(
     let rewritten = create_rewritten_merge_commit(
         ctx.clone(),
         small_merge_cs_id,
-        &small_repo,
+        &small_repo.blob_repo,
         &large_repo,
         &syncers,
         small_root,
@@ -174,7 +173,7 @@ pub async fn do_sync_diamond_merge(
 
     let new_merge_cs_id = rewritten.get_changeset_id();
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
-    upload_commits(&ctx, vec![rewritten], &small_repo, &large_repo).await?;
+    upload_commits(&ctx, vec![rewritten], &small_repo.blob_repo, &large_repo).await?;
 
     update_mapping_with_version(
         &ctx,
@@ -363,23 +362,16 @@ fn find_root(new_branch: &Vec<BonsaiChangeset>) -> Result<ChangesetId, Error> {
 
 async fn find_new_branch_oldest_first(
     ctx: CoreContext,
-    small_repo: &BlobRepo,
+    small_repo: &InnerRepo,
     p1: ChangesetId,
     p2: ChangesetId,
-    small_repo_config: &RepoConfig,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
-    let fetcher = small_repo.get_changeset_fetcher();
-    let skiplist_index = fetch_skiplist_index(
-        &ctx,
-        &small_repo_config.skiplist_index_blobstore_key,
-        &small_repo.get_blobstore().boxed(),
-    )
-    .await?;
+    let fetcher = small_repo.blob_repo.get_changeset_fetcher();
 
     let new_branch = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
         &fetcher,
-        skiplist_index,
+        small_repo.skiplist_index.clone(),
         vec![p2],
         vec![p1],
     )
@@ -387,7 +379,7 @@ async fn find_new_branch_oldest_first(
         cloned!(ctx, small_repo);
         move |cs| {
             cloned!(ctx, small_repo);
-            async move { cs.load(&ctx, small_repo.blobstore()).await }
+            async move { cs.load(&ctx, small_repo.blob_repo.blobstore()).await }
                 .boxed()
                 .compat()
                 .from_err()
