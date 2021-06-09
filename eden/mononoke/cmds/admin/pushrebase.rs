@@ -6,6 +6,7 @@
  */
 
 use anyhow::{anyhow, Error};
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -53,7 +54,7 @@ pub async fn subcommand_pushrebase<'a>(
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
 
     let cs_id = sub_matches
         .value_of(ARG_CSID)

@@ -10,6 +10,7 @@ use fbinit::FacebookInit;
 use std::str::FromStr;
 
 use anyhow::anyhow;
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -63,7 +64,7 @@ pub async fn subcommand_hash_convert<'a>(
         "source and target should be different"
     );
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     if source == "hg" {
         let maybebonsai = repo
             .get_bonsai_from_hg(

@@ -6,6 +6,7 @@
  */
 
 use anyhow::{anyhow, format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -95,7 +96,7 @@ pub async fn execute_command<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let blobrepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {

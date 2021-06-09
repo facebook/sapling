@@ -734,7 +734,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             ARG_DARKSTORM_BACKUP_REPO_ID,
             ARG_DARKSTORM_BACKUP_REPO_NAME,
         )?;
-        let backup_repo =
+        let backup_repo: BlobRepo =
             args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
 
         scuba_sample.add("repo", backup_repo.get_repoid().id());
@@ -752,7 +752,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .value_of(HGSQL_GLOBALREVS_DB_ADDR)
         .map(|a| a.to_string());
 
-    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
     let repo_parts = {
         let fb = ctx.fb;
         let maybe_skiplist_blobstore_key = repo_config.skiplist_index_blobstore_key.clone();

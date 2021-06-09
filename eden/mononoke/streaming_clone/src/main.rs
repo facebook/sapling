@@ -41,7 +41,7 @@ pub async fn streaming_clone<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
 
     let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches)?;
     match matches.subcommand() {

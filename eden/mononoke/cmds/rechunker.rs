@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
+use blobrepo::BlobRepo;
 use blobstore::{Loadable, PutBehaviour};
 use clap::Arg;
 use cloned::cloned;
@@ -69,7 +70,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let blobrepo = args::open_repo(fb, logger, &matches);
     let rechunk = async move {
-        let blobrepo = blobrepo.await?;
+        let blobrepo: BlobRepo = blobrepo.await?;
         stream::iter(filenode_ids)
             .try_for_each_concurrent(jobs, |fid| {
                 cloned!(blobrepo, ctx);

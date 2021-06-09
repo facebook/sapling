@@ -6,6 +6,7 @@
  */
 
 use anyhow::{Error, Result};
+use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use bytes::Bytes;
 use clap::Arg;
@@ -78,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let import = {
         let matches = &matches;
         async move {
-            let blobrepo = if matches.is_present(ARG_NO_CREATE) {
+            let blobrepo: BlobRepo = if matches.is_present(ARG_NO_CREATE) {
                 args::open_repo(fb, logger, &matches).await?
             } else {
                 args::create_repo(fb, logger, &matches).await?

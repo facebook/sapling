@@ -11,6 +11,7 @@ mod mem_writes_bonsai_hg_mapping;
 mod mem_writes_changesets;
 
 use anyhow::Error;
+use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
@@ -155,7 +156,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repo = args::create_repo(fb, logger, &matches);
     block_execute(
         async {
-            let repo = repo.await?;
+            let repo: BlobRepo = repo.await?;
 
             let repo = if dry_run {
                 repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {

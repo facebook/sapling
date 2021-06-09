@@ -371,7 +371,7 @@ async fn run_blobimport<'a>(
         args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, matches)?;
 
-    let blobrepo = if matches.is_present("no-create") {
+    let blobrepo: BlobRepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(fb, &ctx.logger(), matches).await?
     } else {
         args::create_repo_unredacted(fb, &ctx.logger(), matches).await?

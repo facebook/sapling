@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};
+use blobrepo::BlobRepo;
 use clap::Arg;
 use futures::future::join_all;
 use slog::{error, info};
@@ -143,7 +144,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any
         // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
         // BlobRepo is probably prone to more problems from the maintenance perspective.
-        let blobrepo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
+        let blobrepo: BlobRepo =
+            args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
         let segmented_changelog_tailer = SegmentedChangelogTailer::new(
             repo_id,
             segmented_changelog_sql_connections,

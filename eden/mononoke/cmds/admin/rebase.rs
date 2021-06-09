@@ -11,7 +11,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future::try_join};
 
-use blobrepo::save_bonsai_changesets;
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -75,7 +75,7 @@ pub async fn subcommand_rebase<'a>(
     }
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
 
     let cs_id = sub_matches
         .value_of(ARG_CSID)

@@ -10,6 +10,7 @@ name = "benchmark_bulkops"
 path = "main.rs"
 
 [dependencies]
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bulkops = { version = "0.1.0", path = ".." }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }

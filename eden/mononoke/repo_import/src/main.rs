@@ -844,7 +844,7 @@ async fn get_pushredirected_vars(
 
     let config_store = matches.config_store();
     let large_repo_id = large_repo_config.repoid;
-    let large_repo =
+    let large_repo: BlobRepo =
         args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
     let commit_sync_config = match large_repo_config.commit_sync_config.clone() {
         Some(config) => config,

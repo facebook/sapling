@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
+use blobrepo::BlobRepo;
 use clap::Arg;
 use futures::compat::Future01CompatExt;
 use slog::info;
@@ -72,7 +73,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any way.
     // On the other hand reconstructing the dependencies for SegmentedChangelog without BlobRepo is
     // probably prone to more problems from the maintenance perspective.
-    let repo = args::open_repo(ctx.fb, ctx.logger(), &matches)
+    let repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), &matches)
         .await
         .context("opening repo")?;
 

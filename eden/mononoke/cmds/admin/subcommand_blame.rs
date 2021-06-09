@@ -143,7 +143,7 @@ pub async fn subcommand_blame<'a>(
         (COMMAND_FIND_REJECTED, Some(matches)) => {
             let print_errors = matches.is_present(ARG_PRINT_ERRORS);
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
+            let repo: BlobRepo = args::open_repo(fb, &logger, toplevel_matches).await?;
             let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                 .compat()
                 .await?;

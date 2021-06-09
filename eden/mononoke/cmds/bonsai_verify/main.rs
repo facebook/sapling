@@ -10,6 +10,7 @@
 mod config;
 
 use anyhow::{format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
@@ -309,7 +310,7 @@ fn subcommmand_hg_manifest_verify(
                 "required parameter `hg-changeset-id` is not set",
             ))
             .and_then(HgChangesetId::from_str)?;
-        let repo = &args::open_repo(ctx.fb, &logger, matches).await?;
+        let repo: &BlobRepo = &args::open_repo(ctx.fb, &logger, matches).await?;
         let csid = repo
             .get_bonsai_from_hg(ctx.clone(), hg_csid)
             .await?

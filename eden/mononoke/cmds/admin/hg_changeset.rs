@@ -85,7 +85,7 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
             let (start_cs_opt, stop_cs_opt) = futures::try_join!(
                 repo.get_bonsai_from_hg(ctx.clone(), start_cs),
                 repo.get_bonsai_from_hg(ctx.clone(), stop_cs),

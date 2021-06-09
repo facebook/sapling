@@ -406,7 +406,8 @@ async fn run<'a>(
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches);
 
-    let (source_repo, target_repo) = try_join(source_repo, target_repo).await?;
+    let (source_repo, target_repo): (BlobRepo, BlobRepo) =
+        try_join(source_repo, target_repo).await?;
 
     let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 

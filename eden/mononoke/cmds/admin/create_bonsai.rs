@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 
 use anyhow::{anyhow, format_err, Error};
+use blobrepo::BlobRepo;
 use clap::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -66,7 +67,7 @@ pub async fn subcommand_create_bonsai<'a>(
         Err(e) => return Err(SubcommandError::Error(anyhow!(e))),
     };
 
-    let blobrepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     for (_, change) in bcs.file_changes() {
         if let Some(change) = change {
             if filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &change.content_id().into())

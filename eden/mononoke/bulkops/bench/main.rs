@@ -9,6 +9,7 @@
 
 use std::time::Duration;
 
+use blobrepo::BlobRepo;
 use clap::Arg;
 use criterion::{BenchmarkId, Criterion, Throughput};
 use futures::{
@@ -115,7 +116,7 @@ fn main(fb: fbinit::FacebookInit) {
     let logger = matches.logger();
     let runtime = matches.runtime();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let blobrepo = args::open_repo::<BlobRepo>(fb, &logger, &matches);
 
     let setup = {
         |runtime: &Handle| {

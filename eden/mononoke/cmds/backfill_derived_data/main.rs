@@ -366,7 +366,7 @@ async fn run_subcmd<'a>(
 ) -> Result<()> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
-            let repo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
             let config_store = matches.config_store();
             let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
@@ -564,7 +564,7 @@ async fn run_subcmd<'a>(
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
                 .to_string();
 
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
 
             let fetcher =
                 PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
@@ -586,7 +586,7 @@ async fn run_subcmd<'a>(
             let derived_data_type = sub_m.value_of(ARG_DERIVED_DATA_TYPE);
             let (repo, types): (_, Vec<String>) = match (all, derived_data_type) {
                 (true, None) => {
-                    let repo = args::open_repo_unredacted(fb, logger, matches).await?;
+                    let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
                         .get_derived_data_config()
                         .enabled

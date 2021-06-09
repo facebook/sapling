@@ -28,11 +28,10 @@ use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use slog::{info, warn, Logger};
 
-use blobrepo::BlobRepo;
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
-use repo_factory::RepoFactory;
+use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
 use crate::helpers::{setup_repo_dir, CreateStorage};
@@ -257,57 +256,72 @@ where
     )
 }
 
-/// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
+/// Create a new repo object -- for local instances, expect its contents to be empty.
 #[inline]
-pub fn create_repo<'a>(
+pub fn create_repo<'a, R: 'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal(fb, logger, matches, true, None)
 }
 
-/// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
+/// Create a new repo object -- for local instances, expect its contents to be empty.
 /// Make sure that the opened repo has redaction disabled
 #[inline]
-pub fn create_repo_unredacted<'a>(
+pub fn create_repo_unredacted<'a, R: 'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled))
 }
 
-/// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
+/// Open an existing repo object -- for local instances, expect contents to already be there.
 #[inline]
-pub fn open_repo<'a>(
+pub fn open_repo<'a, R: 'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal(fb, logger, matches, false, None)
 }
 
-/// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
+/// Open an existing repo object -- for local instances, expect contents to already be there.
 /// Make sure that the opened repo has redaction disabled
 #[inline]
-pub fn open_repo_unredacted<'a>(
+pub fn open_repo_unredacted<'a, R: 'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled))
 }
 
-/// Open an existing `BlobRepo` by ID -- for local instances, expect contents to already be there.
+/// Open an existing repo object by ID -- for local instances, expect contents to already be there.
 /// It useful when we need to open more than 1 mononoke repo based on command line arguments
 #[inline]
-pub fn open_repo_by_id<'a>(
+pub fn open_repo_by_id<'a, R: 'a>(
     _: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal_with_repo_id(
         logger, repo_id, matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
@@ -387,25 +401,31 @@ pub fn get_config_by_repoid<'a>(
         .map(|(name, config)| (name.clone(), config.clone()))
 }
 
-async fn open_repo_internal(
+async fn open_repo_internal<R>(
     _: FacebookInit,
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     create: bool,
     redaction_override: Option<Redaction>,
-) -> Result<BlobRepo, Error> {
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     let config_store = matches.config_store();
     let repo_id = get_repo_id(config_store, matches)?;
     open_repo_internal_with_repo_id(logger, repo_id, matches, create, redaction_override).await
 }
 
-async fn open_repo_internal_with_repo_id(
+async fn open_repo_internal_with_repo_id<R>(
     logger: &Logger,
     repo_id: RepositoryId,
     matches: &MononokeMatches<'_>,
     create: bool,
     redaction_override: Option<Redaction>,
-) -> Result<BlobRepo, Error> {
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     let config_store = matches.config_store();
     let common_config = load_common_config(config_store, &matches)?;
     let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
@@ -437,12 +457,15 @@ async fn open_repo_internal_with_repo_id(
     Ok(repo)
 }
 
-pub async fn open_repo_with_repo_id<'a>(
+pub async fn open_repo_with_repo_id<'a, R: 'a>(
     _: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
     matches: &'a MononokeMatches<'a>,
-) -> Result<BlobRepo, Error> {
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     open_repo_internal_with_repo_id(logger, repo_id, matches, false, None).await
 }
 

@@ -158,7 +158,7 @@ async fn run<'a>(
     let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
     let logger = ctx.logger();
-    let blobrepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
+    let blobrepo: BlobRepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
         .await
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
     let mysql_options = matches.mysql_options();

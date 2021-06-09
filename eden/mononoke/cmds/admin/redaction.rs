@@ -235,7 +235,7 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
 
     let config_store = matches.config_store();
 
-    let blobrepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
         .context("While opening SqlRedactedContentStore")?;
 
