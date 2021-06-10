@@ -29,11 +29,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-1
   searching for changes
@@ -41,11 +37,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-2
   searching for changes
@@ -53,11 +45,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-3
   searching for changes
@@ -65,11 +53,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 4 changesets, 4 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-4
   searching for changes
@@ -77,11 +61,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-5
   searching for changes
@@ -89,11 +69,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-6
   searching for changes
@@ -101,11 +77,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 2 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 4 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-7
   searching for changes
@@ -113,11 +85,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 3 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  3 files, 5 changesets, 6 total revisions
+  warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-8
   searching for changes
@@ -125,11 +93,7 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 5 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd test-revflag-8
 
@@ -142,11 +106,7 @@ Testing of the '--rev' flag
   added 4 changesets with 2 changes to 3 files
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..
 

@@ -39,11 +39,7 @@ https://bz.mercurial-scm.org/1175
   committed 83a687e8a97c80992ba385bbfd766be181bfb1d1
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 6 changesets, 4 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ hg export --git tip
   # HG changeset patch

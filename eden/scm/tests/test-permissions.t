@@ -12,33 +12,17 @@
   $ hg commit -m "1"
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ chmod -r .hg/store/data/a.i
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  abort: Permission denied: $TESTTMP/t/.hg/store/data/a.i
-  (current process runs with uid 42)
-  ($TESTTMP/t/.hg/store/data/a.i: mode 0o52, uid 42, gid 42)
-  ($TESTTMP/t/.hg/store/data: mode 0o52, uid 42, gid 42)
-  [255]
+  warning: verify does not actually check anything in this repo
 
   $ chmod +r .hg/store/data/a.i
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ chmod -w .hg/store/data/a.i
 

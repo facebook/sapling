@@ -26,10 +26,6 @@
 
   $ cd b
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..

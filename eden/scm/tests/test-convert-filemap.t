@@ -305,11 +305,7 @@ ensure that the filemap contains duplicated slashes (issue3612)
   o  "0: add foo baz dir/" files: dir2/dir3/file dir2/dir3/subdir/file3 foo2
   
   $ hg -R renames.repo verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 5 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ hg -R renames.repo manifest --debug
   d43feacba7a4f1f2080dde4a4b985bd8a0236d46 644   copied2

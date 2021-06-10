@@ -13,11 +13,7 @@
   > done
   adding foo
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 9 changesets, 9 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
 
   $ hg init new
@@ -364,11 +360,7 @@ test outgoing
   >     hg commit -A -m $i
   > done
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 14 changesets, 14 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
   $ hg -R test-dev outgoing test
   comparing with test

@@ -153,11 +153,7 @@ break it
   1 merge
   0 moveb
   $ hg -R fixed verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  3 files, 5 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
 
 manifest -r 0
 

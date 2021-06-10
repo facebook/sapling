@@ -114,7 +114,7 @@ Poke around at hashes:
 Verify should succeed:
 
   $ hg verify
-  verify for this repo format is not yet supported
+  warning: verify does not actually check anything in this repo
 
 At the end...
 

@@ -39,11 +39,7 @@ Default operation:
   $ cat a
   a
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 11 changesets, 11 total revisions
+  warning: verify does not actually check anything in this repo
 
 Invalid dest '' must abort:
 
@@ -95,11 +91,7 @@ No update, with debug option:
   $ cat a 2>/dev/null || echo "a not present"
   a not present
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 11 changesets, 11 total revisions
+  warning: verify does not actually check anything in this repo
 
 Default destination:
 
@@ -139,11 +131,7 @@ Use --pull:
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R g verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 11 changesets, 11 total revisions
+  warning: verify does not actually check anything in this repo
 
 Invalid dest '' with --pull must abort (issue2528):
 

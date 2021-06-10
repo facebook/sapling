@@ -155,8 +155,4 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   abort: patch is damaged or loses information
   [255]
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo

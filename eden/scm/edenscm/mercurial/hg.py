@@ -47,7 +47,6 @@ from . import (
     uiconfig,
     url,
     util,
-    verify as verifymod,
     vfs as vfsmod,
     visibility,
 )
@@ -1058,17 +1057,6 @@ def outgoing(ui, repo, dest, opts):
     cmdutil.outgoinghooks(ui, repo, other, opts, o)
     recurse()
     return 0  # exit code is zero since we found outgoing changes
-
-
-def verify(repo, revs=None):
-    """verify the consistency of a repository
-    If revs is None, verify everything in the repository.
-    Otherwise, revs is a smartset that specifies revisions to verify
-    and some checks requiring knowledge about the entire repo will be skipped.
-    """
-    ret = verifymod.verify(repo, revs)
-
-    return ret
 
 
 def remoteui(src, opts):

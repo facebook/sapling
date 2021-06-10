@@ -62,11 +62,7 @@ Load commonly used test logic
   adding file changes
   added 1 changesets with 1 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev 34c2bf6b0626 to destination test-1 bookmark master
   searching for changes
   adding changesets
@@ -74,11 +70,7 @@ Load commonly used test logic
   adding file changes
   added 2 changesets with 2 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev e38ba6f5b7e0 to destination test-2 bookmark master
   searching for changes
   adding changesets
@@ -86,11 +78,7 @@ Load commonly used test logic
   adding file changes
   added 3 changesets with 3 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev eebf5a27f8ca to destination test-3 bookmark master
   searching for changes
   adding changesets
@@ -98,11 +86,7 @@ Load commonly used test logic
   adding file changes
   added 4 changesets with 4 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 4 changesets, 4 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev 095197eb4973 to destination test-4 bookmark master
   searching for changes
   adding changesets
@@ -110,11 +94,7 @@ Load commonly used test logic
   adding file changes
   added 2 changesets with 2 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev 1bb50a9436a7 to destination test-5 bookmark master
   searching for changes
   adding changesets
@@ -122,11 +102,7 @@ Load commonly used test logic
   adding file changes
   added 3 changesets with 3 changes to 1 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev 7373c1169842 to destination test-6 bookmark master
   searching for changes
   adding changesets
@@ -134,11 +110,7 @@ Load commonly used test logic
   adding file changes
   added 4 changesets with 5 changes to 2 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 4 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev a6a34bfa0076 to destination test-7 bookmark master
   searching for changes
   adding changesets
@@ -146,11 +118,7 @@ Load commonly used test logic
   adding file changes
   added 5 changesets with 6 changes to 3 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  3 files, 5 changesets, 6 total revisions
+  warning: verify does not actually check anything in this repo
   pushing rev aa35859c02ea to destination test-8 bookmark master
   searching for changes
   adding changesets
@@ -158,11 +126,7 @@ Load commonly used test logic
   adding file changes
   added 5 changesets with 5 changes to 2 files
   exporting bookmark master
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 5 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd test-8
   $ hg pull ../test-7
   pulling from ../test-7
@@ -172,8 +136,4 @@ Load commonly used test logic
   adding file changes
   added 4 changesets with 2 changes to 3 files
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo

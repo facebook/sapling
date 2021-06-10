@@ -33,11 +33,7 @@ Setting up test
   $ hg mv afile anotherfile
   $ hg commit -m "0.3m"
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
   $ hg init empty
 
@@ -65,11 +61,7 @@ Verify empty
   $ hg -R empty heads
   [1]
   $ hg -R empty verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  0 files, 0 changesets, 0 total revisions
+  warning: verify does not actually check anything in this repo
 
 Pull full.hg into test (using --cwd)
 
@@ -631,17 +623,12 @@ partial history bundle, fails w/ unknown parent
 full history bundle, refuses to verify non-local repo
 
   $ hg -R all.hg verify
-  abort: cannot verify bundle or remote repos
-  [255]
+  warning: verify does not actually check anything in this repo
 
 but, regular verify must continue to work
 
   $ hg -R orig verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
 diff against bundle
 
@@ -722,11 +709,7 @@ bundle single branch
   $ hg clone -q -r0 . part2
   $ hg -q -R part2 pull bundle.hg
   $ hg -R part2 verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 3 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
 
 == Test bundling no commits
 

@@ -13,11 +13,7 @@
   $ hg commit -m 1
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..
 
@@ -32,11 +28,7 @@
 
   $ cd copy
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ hg co
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

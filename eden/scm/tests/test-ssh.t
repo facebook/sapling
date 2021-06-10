@@ -53,11 +53,7 @@ clone remote via stream
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local-stream
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 1 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
 
 clone bookmarks via stream
@@ -92,11 +88,7 @@ verify
 
   $ cd local
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 1 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
   > changegroup = sh -c "printenv.py changegroup-in-local 0 ../dummylog"
@@ -183,11 +175,7 @@ check remote tip
   summary:     add
   
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 2 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   $ hg cat -r tip foo
   bleah
   $ echo z > z

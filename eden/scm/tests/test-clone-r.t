@@ -69,11 +69,7 @@
        6       3..      54  .....       8 1fde233dfb0f f54c32f13478 000000000000 (re)
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..
 
@@ -93,11 +89,7 @@
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 1 test test-1
   adding changesets
@@ -106,11 +98,7 @@
   added 2 changesets with 2 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 2 test test-2
   adding changesets
@@ -119,11 +107,7 @@
   added 3 changesets with 3 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 3 test test-3
   adding changesets
@@ -132,11 +116,7 @@
   added 4 changesets with 4 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 4 changesets, 4 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 4 test test-4
   adding changesets
@@ -145,11 +125,7 @@
   added 2 changesets with 2 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 5 test test-5
   adding changesets
@@ -158,11 +134,7 @@
   added 3 changesets with 3 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 6 test test-6
   adding changesets
@@ -171,11 +143,7 @@
   added 4 changesets with 5 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 4 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 7 test test-7
   adding changesets
@@ -184,11 +152,7 @@
   added 5 changesets with 6 changes to 3 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  3 files, 5 changesets, 6 total revisions
+  warning: verify does not actually check anything in this repo
   
   ---- hg clone -r 8 test test-8
   adding changesets
@@ -197,11 +161,7 @@
   added 5 changesets with 5 changes to 2 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 5 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd test-8
   $ hg pull ../test-7
@@ -212,11 +172,7 @@
   adding file changes
   added 4 changesets with 2 changes to 3 files
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
 
   $ hg clone test test-9

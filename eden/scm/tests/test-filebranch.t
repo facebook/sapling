@@ -135,10 +135,6 @@ Everything should be clean now:
   $ hg status
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 4 changesets, 10 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..

@@ -480,8 +480,6 @@ def reposetup(ui, repo):
 def clientreposetup(repo):
     repo.name = repo.ui.config("remotefilelog", "reponame", "unknown")
 
-    repo.ui.setconfig("verify", "skipmanifests", "True")
-
 
 def wraprepo(repo):
     class treerepository(repo.__class__):

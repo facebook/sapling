@@ -28,11 +28,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
   bfaf4b5cbf01
   searching for changes
   2 changesets found
@@ -40,11 +36,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   21f32785131f
   searching for changes
   3 changesets found
@@ -52,11 +44,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   4ce51a113780
   searching for changes
   4 changesets found
@@ -64,11 +52,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 4 changesets, 4 total revisions
+  warning: verify does not actually check anything in this repo
   93ee6ab32777
   searching for changes
   2 changesets found
@@ -76,11 +60,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
   c70afb1ee985
   searching for changes
   3 changesets found
@@ -88,11 +68,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 3 changesets, 3 total revisions
+  warning: verify does not actually check anything in this repo
   f03ae5a9b979
   searching for changes
   4 changesets found
@@ -100,11 +76,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 2 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 4 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   095cb14b1b4d
   searching for changes
   5 changesets found
@@ -112,11 +84,7 @@
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 3 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  3 files, 5 changesets, 6 total revisions
+  warning: verify does not actually check anything in this repo
   faa2e4234c7a
   searching for changes
   5 changesets found
@@ -124,11 +92,7 @@
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 5 changesets, 5 total revisions
+  warning: verify does not actually check anything in this repo
   916f1afdef90
   $ cd test-8
   $ hg pull ../test-7
@@ -139,11 +103,7 @@
   adding file changes
   added 4 changesets with 2 changes to 3 files
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
   $ cd ..
 
 should fail
@@ -217,11 +177,7 @@ revision 8
   $ hg tip -q
   916f1afdef90
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
 revision 2
 
@@ -234,11 +190,7 @@ revision 2
 revision 4
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
   $ hg unbundle ../test-bundle-branch2.hg
   adding changesets
   adding manifests
@@ -248,11 +200,7 @@ revision 4
 revision 6
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
   $ hg unbundle ../test-bundle-cset-7.hg
   adding changesets
   adding manifests
@@ -264,11 +212,7 @@ revision 4
   $ hg tip -q
   916f1afdef90
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 9 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ../test
   $ hg merge 7
@@ -296,10 +240,6 @@ revision 9
   $ hg tip -q
   03fc0b0e347c
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  4 files, 10 changesets, 7 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..

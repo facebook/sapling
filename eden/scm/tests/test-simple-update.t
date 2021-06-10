@@ -9,11 +9,7 @@
   $ hg commit -m "1"
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ hg clone . ../branch
   updating to branch default
@@ -35,11 +31,7 @@
   added 1 changesets with 1 changes to 1 files
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ hg co
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

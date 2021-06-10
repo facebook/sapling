@@ -97,11 +97,7 @@ this should show the rename information in the metadata
   $ md5sum.py asum
   60b725f10c9c85c70d97880dfe8191b3  asum
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 2 changesets, 2 total revisions
+  warning: verify does not actually check anything in this repo
 
   $ cd ..
 
