@@ -322,7 +322,15 @@ def _makerage(ui, repo, **opts):
     ]
 
     detailed = [
-        ("df -h", lambda: shcmd("df -h", check=False)),
+        (
+            "disk space usage",
+            lambda: shcmd(
+                "wmic LogicalDisk Where DriveType=3 Get DeviceId,FileSystem,FreeSpace,Size"
+                if pycompat.iswindows
+                else "df -h",
+                check=False,
+            ),
+        ),
         # smartlog as the user sees it
         ("hg sl", lambda: hgcmd("smartlog", template="{sl_debug}")),
         (
