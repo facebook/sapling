@@ -38,6 +38,8 @@ pub const REDACTION: &str = "redaction";
 const REDACTION_ADD: &str = "add";
 const REDACTION_REMOVE: &str = "remove";
 const REDACTION_LIST: &str = "list";
+const ARG_HASH: &str = "hash";
+const ARG_TASK: &str = "task";
 const ARG_LOG_ONLY: &str = "log-only";
 const ARG_FORCE: &str = "force";
 const ARG_INPUT_FILE: &str = "input-file";
@@ -51,13 +53,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(REDACTION_ADD)
                 .about("add a new redacted file at a given commit")
                 .arg(
-                    Arg::with_name("task")
+                    Arg::with_name(ARG_TASK)
                         .help("Task tracking the redaction request")
                         .takes_value(true)
                         .required(true),
                 )
                 .arg(
-                    Arg::with_name("hash")
+                    Arg::with_name(ARG_HASH)
                         .help("hg commit hash")
                         .takes_value(true)
                         .required(true),
@@ -87,7 +89,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(REDACTION_REMOVE)
                 .about("remove a file from the redaction")
                 .arg(
-                    Arg::with_name("hash")
+                    Arg::with_name(ARG_HASH)
                         .help("hg commit hash")
                         .takes_value(true)
                         .required(true),
@@ -97,7 +99,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(REDACTION_LIST)
                 .about("list all redacted file for a given commit")
                 .arg(
-                    Arg::with_name("hash")
+                    Arg::with_name(ARG_HASH)
                         .help("hg commit hash or a bookmark")
                         .takes_value(true)
                         .required(true),
@@ -201,7 +203,7 @@ fn paths_parser(sub_m: &ArgMatches<'_>) -> Result<Vec<MPath>, Error> {
 
 /// Fetch the task id and the file list from the subcommand cli matches
 fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>), Error> {
-    let task = match sub_m.value_of("task") {
+    let task = match sub_m.value_of(ARG_TASK) {
         Some(task) => task.to_string(),
         None => return Err(format_err!("Task is needed")),
     };
@@ -228,7 +230,7 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
     ),
     SubcommandError,
 > {
-    let rev = match sub_m.value_of("hash") {
+    let rev = match sub_m.value_of(ARG_HASH) {
         Some(rev) => rev.to_string(),
         None => return Err(SubcommandError::InvalidArgs),
     };
