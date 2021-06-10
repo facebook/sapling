@@ -749,7 +749,6 @@ ignorerevnumincompatiblelist = """
     test-sparse-verbose-json-t.py
     test-ssh-clone-r.t
     test-status-rev.t
-    test-strip-cross.t
     test-template-revf64.t
     test-update-empty-t.py
     test-url-rev.t
