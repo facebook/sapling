@@ -15,7 +15,15 @@ from .commands import command
 
 @command(
     "debughiddencommit",
-    cmdutil.walkopts,
+    [
+        (
+            "",
+            "ignored-files",
+            True,
+            _("include ignored files"),
+        ),
+    ]
+    + cmdutil.walkopts,
 )
 def debughiddencommit(ui, repo, *pats, **opts):
     """
@@ -38,8 +46,9 @@ def debughiddencommit(ui, repo, *pats, **opts):
         wctx = repo[None]
 
         matcher = scmutil.match(wctx, pats, opts, emptyalways=False)
+        ignored = bool(opts.get("ignored_files"))
         includefiles = [
-            x for ff in repo.dirstate.status(matcher, True, False, True) for x in ff
+            x for ff in repo.dirstate.status(matcher, ignored, False, True) for x in ff
         ]
         files = list(set(files).union(set(includefiles)))
 
