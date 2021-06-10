@@ -1075,18 +1075,22 @@ def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
             wctx.copy(origsrc, dst)
 
 
-def readrequires(opener, supported):
+def readrequires(opener, supported=None):
     """Reads and parses .hg/requires or .hg/store/requires and checks if all
-    entries found are in the list of supported features."""
+    entries found are in the list of supported features.
+
+    If supported is None, read all features without checking.
+    """
     requirements = set(opener.readutf8("requires").splitlines())
     missings = []
-    for r in requirements:
-        if r not in supported:
-            if not r or not r[0].isalnum():
-                raise error.RequirementError(
-                    _("%s file is corrupt") % opener.join("requires")
-                )
-            missings.append(r)
+    if supported:
+        for r in requirements:
+            if r not in supported:
+                if not r or not r[0].isalnum():
+                    raise error.RequirementError(
+                        _("%s file is corrupt") % opener.join("requires")
+                    )
+                missings.append(r)
     missings.sort()
     if missings:
         raise error.RequirementError(

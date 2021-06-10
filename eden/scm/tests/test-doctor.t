@@ -54,7 +54,6 @@ Break the repo in various ways:
 #else
   $ echo foo > .hg/store/metalog/roots/meta
 #endif
-  $ rm .hg/store/hgcommits/v1/index2-id
   $ rm .hg/store/allheads/meta
 
 Check the repo is broken (exit code is non-zero):
@@ -67,9 +66,7 @@ Test that 'hg doctor' can fix them:
   $ hg doctor
   checking internal storage
   mutation: repaired
-  hgcommits/v1: repaired
   metalog: repaired
-  allheads: repaired
   revisionstore: repaired
   revisionstore: repaired
   checking commit references
@@ -291,14 +288,12 @@ Test fixing broken segmented changelog (broken mutimeta)
   $ hg doctor
   checking internal storage
   segments/v1: repaired
-  visibleheads: removed 1 heads, added tip
   checking commit references
 
   $ hg log -r tip -T '{desc}\n'
   B
 
 doctor should not remove draft for a segmented changelog repo
-BUG: it removes draft commits
 
   $ newrepo
   $ hg debugchangelog --migrate fullsegments
@@ -307,6 +302,6 @@ BUG: it removes draft commits
   > EOS
   $ hg doctor
   checking internal storage
-  visibleheads: removed 2 heads, added tip
   checking commit references
   $ hg log -r 'all()' -T '{desc}'
+  AB (no-eol)

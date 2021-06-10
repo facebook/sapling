@@ -30,6 +30,8 @@ from .. import (
     treestate,
     util,
     vfs as vfsmod,
+    scmutil,
+    localrepo,
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, short
@@ -72,14 +74,16 @@ def doctor(ui, **opts):
 
     if svfs.exists("segments/v1"):
         repairsvfs(ui, svfs, "segments/v1", dag)
+    if svfs.exists("hgcommits/v1"):
+        repairsvfs(ui, svfs, "hgcommits/v1", zstore.zstore)
 
-    cl = repairchangelog(ui, svfs)
+    repairrevlogchangelog(ui, svfs)
+    cl = openchangelog(ui, svfs)
     if cl is None:
         # Lots of fixes depend on changelog.
         ui.write_err(_("changelog: cannot fix automatically (consider reclone)\n"))
         return 1
 
-    repairsvfs(ui, svfs, "hgcommits/v1", zstore.zstore)
     ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
     repairvisibleheads(ui, ml, cl)
     repairtreestate(ui, vfs, repopath, cl)
@@ -233,7 +237,7 @@ def truncate(ui, svfs, path, size, dryrun=True, backupprefix=""):
         f.truncate(size)
 
 
-def repairchangelog(ui, svfs):
+def repairrevlogchangelog(ui, svfs):
     """Attempt to fix revlog-based chagnelog
 
     This function only fixes the common corruption issues where bad data is at
@@ -260,7 +264,14 @@ def repairchangelog(ui, svfs):
     truncate(ui, svfs, clname, rev * 64, dryrun)
     truncate(ui, svfs, clname.replace(".i", ".d"), datastart, dryrun)
     ui.write_err(_("changelog: repaired\n"))
-    cl = revlog.revlog(svfs, clname)
+
+
+def openchangelog(ui, svfs):
+    repo = ChangelogRepo(ui, svfs)
+    try:
+        cl = localrepo._openchangelog(repo)
+    except Exception:
+        return None
     return cl
 
 
@@ -578,3 +589,12 @@ def runglobalindexedlogdoctor(ui):
                 suffix,
                 ui._uiconfig._rcfg._rcfg,
             )
+
+
+class ChangelogRepo(object):
+    """Minimal repo object to construct the changelog object"""
+
+    def __init__(self, ui, svfs):
+        self.ui = ui
+        self.svfs = svfs
+        self.storerequirements = scmutil.readrequires(svfs)
