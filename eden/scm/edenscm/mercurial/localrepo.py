@@ -3094,23 +3094,5 @@ def _openchangelog(repo):
         repo.ui.log("changelog_info", changelog_backend="segments")
         return changelog2.changelog.opensegments(repo, repo.ui.uiconfig())
 
-    if (
-        (
-            (
-                repo.ui.configbool("experimental", "rust-commits")
-                and getattr(repo.svfs, "options", {}).get("bypass-revlog-transaction")
-            )
-            or "rustrevlogchangelog" in repo.storerequirements
-        )
-        and "hgsql" not in repo.requirements
-        and "pythonrevlogchangelog" not in repo.storerequirements
-    ):
-        repo.ui.log("changelog_info", changelog_backend="rustrevlog")
-        return changelog2.changelog.openrevlog(repo, repo.ui.uiconfig())
-
-    repo.ui.log("changelog_info", changelog_backend="pythonrevlog")
-    return changelog.changelog(
-        repo.svfs,
-        uiconfig=repo.ui.uiconfig(),
-        trypending=txnutil.mayhavesharedpending(repo.root, repo.sharedroot),
-    )
+    repo.ui.log("changelog_info", changelog_backend="rustrevlog")
+    return changelog2.changelog.openrevlog(repo, repo.ui.uiconfig())

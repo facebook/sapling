@@ -172,39 +172,39 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   │ │ │  date:        Tue Sep 03 13:58:02 2013 -0400
   │ │ │  summary:     changed f2 on f2
   │ │ │
+  │ │ o  commit:      12e8ec6bb010
+  │ │ │  branch:      f2
+  │ │ │  user:        szhang
+  │ │ │  date:        Tue Sep 03 13:57:18 2013 -0400
+  │ │ │  summary:     created f2 branch
+  │ │ │
   o │ │  commit:      4c9fbe56a16f
   ├─╯ │  branch:      f1
   │   │  user:        szhang
   │   │  date:        Thu Sep 05 12:54:00 2013 -0400
   │   │  summary:     changed f1
   │   │
+  o   │  commit:      4bc80088dc6b
+  │   │  branch:      f1
+  │   │  user:        szhang
+  │   │  date:        Tue Sep 03 13:56:20 2013 -0400
+  │   │  summary:     added f1.txt
+  │   │
+  o   │  commit:      ef53c9e6b608
+  │   │  branch:      f1
+  │   │  user:        szhang
+  │   │  date:        Tue Sep 03 13:55:26 2013 -0400
+  │   │  summary:     created f1 branch
+  │   │
   │ @ │  commit:      d79e2059b5c0
-  │ │ │  user:        szhang
-  │ │ │  date:        Tue Sep 03 13:57:39 2013 -0400
-  │ │ │  summary:     changed f2 on default
-  │ │ │
-  │ │ o  commit:      12e8ec6bb010
-  │ ├─╯  branch:      f2
-  │ │    user:        szhang
-  │ │    date:        Tue Sep 03 13:57:18 2013 -0400
-  │ │    summary:     created f2 branch
+  │ ├─╯  user:        szhang
+  │ │    date:        Tue Sep 03 13:57:39 2013 -0400
+  │ │    summary:     changed f2 on default
   │ │
   │ o  commit:      8a951942e016
-  │ │  user:        szhang
-  │ │  date:        Tue Sep 03 13:57:11 2013 -0400
-  │ │  summary:     added f2.txt
-  │ │
-  o │  commit:      4bc80088dc6b
-  │ │  branch:      f1
-  │ │  user:        szhang
-  │ │  date:        Tue Sep 03 13:56:20 2013 -0400
-  │ │  summary:     added f1.txt
-  │ │
-  o │  commit:      ef53c9e6b608
-  ├─╯  branch:      f1
-  │    user:        szhang
-  │    date:        Tue Sep 03 13:55:26 2013 -0400
-  │    summary:     created f1 branch
+  ├─╯  user:        szhang
+  │    date:        Tue Sep 03 13:57:11 2013 -0400
+  │    summary:     added f2.txt
   │
   o  commit:      24797d4f68de
      user:        szhang

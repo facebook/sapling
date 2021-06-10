@@ -210,7 +210,7 @@ the server supports our custom getfiles method.
                         write : { bytes : 511}}}}
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 543},
+                        read : { bytes : 502},
                         write : { bytes : 511}}}}
   $ cd multimf-shallow
   $ echo a > a

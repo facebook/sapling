@@ -682,12 +682,8 @@ def migrateto(repo, name):
         else:
             # No need to migrate.
             return
-    if name == "revlog":
+    if name == "revlog" or name == "rustrevlog":
         migratetorevlog(repo)
-    elif name == "rustrevlog":
-        migratetorevlog(repo, rust=True)
-    elif name == "pythonrevlog":
-        migratetorevlog(repo, python=True)
     elif name == "doublewrite":
         migratetodoublewrite(repo)
     elif name == "hybrid":
@@ -871,14 +867,8 @@ def migratetosegments(repo):
         repo.invalidatechangelog()
 
 
-def migratetorevlog(repo, python=False, rust=False):
-    """Migrate to revlog backend.
-
-    If python is True, set repo requirement to use Python + C revlog backend.
-    If rust is True, set repo requirement to use Rust revlog backend.
-    If neither is True, the backed is dynamically decided by the
-    experimental.rust-commits config.
-    """
+def migratetorevlog(repo):
+    """Migrate to revlog backend."""
     svfs = repo.svfs
     with repo.lock():
         # Migrate from segmentedchangelog
@@ -910,10 +900,6 @@ def migratetorevlog(repo, python=False, rust=False):
                     # next time.
                     dstcl.inner.flush([])
         _removechangelogrequirements(repo)
-        if python:
-            repo.storerequirements.add("pythonrevlogchangelog")
-        if rust:
-            repo.storerequirements.add("rustrevlogchangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
 

@@ -207,39 +207,6 @@ class bundlerevlog(revlog.revlog):
         raise NotImplementedError
 
 
-class bundlechangelog(bundlerevlog, changelog.changelog):
-    def __init__(self, opener, cgunpacker, uiconfig):
-        changelog.changelog.__init__(self, opener, uiconfig)
-        linkmapper = lambda x: x
-        bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker, linkmapper)
-        self._visibleheads.addbundleheads([self.node(r) for r in self.bundleheads])
-
-    def baserevision(self, nodeorrev):
-        # Although changelog doesn't override 'revision' method, some extensions
-        # may replace this class with another that does. Same story with
-        # manifest and filelog classes.
-
-        return changelog.changelog.revision(self, nodeorrev, raw=True)
-
-    def revision(self, nodeorrev, raw=False):
-        if self.userust("revision"):
-            if nodeorrev in {nullid, nullrev}:
-                return b""
-            if isint(nodeorrev):
-                node = self.node(nodeorrev)
-            else:
-                node = nodeorrev
-            text = self.inner.getcommitrawtext(node)
-            if text is None:
-                raise error.LookupError(node, self.indexfile, _("no node"))
-            return text
-        else:
-            return super(bundlechangelog, self).revision(nodeorrev, raw)
-
-    def _loadvisibleheads(self, opener):
-        return visibility.bundlevisibleheads(opener)
-
-
 class bundlechangelog2(changelog2.changelog):
     def importbundle(self, cgunpacker):
         """import commits from a bundle"""
@@ -428,13 +395,14 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the changegroup.
         self._cgfilespos = {}
 
-        if util.safehasattr(self.changelog, "repotiprev"):
-            self.firstnewrev = self.changelog.repotiprev + 1
+        if not self._phasecache._headbased:
+            cl = self.changelog
+            rootdraftnodes = cl.dag.roots(cl.bundlenodes)
             phases.retractboundary(
                 self,
                 None,
                 phases.draft,
-                [ctx.node() for ctx in self[self.firstnewrev :]],
+                rootdraftnodes,
             )
 
     def _handlebundle2part(self, bundle, part):
@@ -479,15 +447,8 @@ class bundlerepository(localrepo.localrepository):
         # consume the header if it exists
         self._cgunpacker.changelogheader()
         cl = localrepo._openchangelog(self)
-        if (
-            isinstance(cl, changelog2.changelog)
-            and "revlog" not in cl.algorithmbackend
-            and len(cl) > 0
-        ):
-            cl.__class__ = bundlechangelog2
-            cl.importbundle(self._cgunpacker)
-        else:
-            cl = bundlechangelog(self.svfs, self._cgunpacker, self.ui.uiconfig())
+        cl.__class__ = bundlechangelog2
+        cl.importbundle(self._cgunpacker)
 
         self.manstart = self._cgunpacker.tell()
         return cl
@@ -586,10 +547,6 @@ class bundlerepository(localrepo.localrepository):
         p1rev = self.changelog.rev(p1)
         p2rev = self.changelog.rev(p2)
         msg = _("setting parent to node %s that only exists in the bundle\n")
-        if self.changelog.repotiprev < p1rev:
-            self.ui.warn(msg % nodemod.hex(p1))
-        if self.changelog.repotiprev < p2rev:
-            self.ui.warn(msg % nodemod.hex(p2))
         return super(bundlerepository, self).setparents(p1, p2)
 
 
@@ -718,7 +675,8 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None, force=Fal
     csets = localrepo.changelog.findmissing(common, rheads)
 
     if bundlerepo:
-        reponodes = [ctx.node() for ctx in bundlerepo[bundlerepo.firstnewrev :]]
+        cl = bundlerepo.changelog
+        reponodes = cl.bundlenodes
         remotephases = other.listkeys("phases")
 
         pullop = exchange.pulloperation(bundlerepo, other, heads=reponodes)

@@ -135,7 +135,6 @@ from edenscm.mercurial import (
     archival,
     bundle2,
     changegroup,
-    changelog,
     changelog2,
     cmdutil,
     commands,
@@ -624,7 +623,6 @@ def onetimeclientsetup(ui):
         del pendingfilecommits[:]
         return node
 
-    wrapfunction(changelog.changelog, "add", changelogadd)
     wrapfunction(changelog2.changelog, "add", changelogadd)
 
     # changectx wrappers

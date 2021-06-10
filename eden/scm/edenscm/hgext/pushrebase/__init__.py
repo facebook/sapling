@@ -361,7 +361,10 @@ def validaterevset(repo, revset, onto):
     # 'onto' is not always present in the client-repo. If it is missing, then
     # rely on the server-side check for "already rebased" commits.
     if onto != donotrebasemarker and onto in repo:
-        rebased = list(repo.set("(successors(%r) & ::%s) - %r", revset, onto, revset))
+        ontohex = repo[onto].hex()
+        rebased = list(
+            repo.set("(successors(%r) & ::%s) - %r", revset, ontohex, revset)
+        )
         if rebased:
             raise error.Abort(
                 _("commits already rebased to destination as %s")

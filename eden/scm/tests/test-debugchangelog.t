@@ -28,13 +28,6 @@
     Commit Data (user, message):
       Revlog
 
-  $ hg debugchangelog --config experimental.rust-commits=0
-  The changelog is backed by Python + C revlog.
-
-  $ hg debugchangelog --config experimental.rust-commits=0 --config extensions.clindex=
-  The changelog is backed by Python + C revlog.
-  The clindex extension is used for commit hash lookups.
-
   $ hg log -Gr 'all()' -T '{desc}'
   o    C
   ├─╮
@@ -60,12 +53,6 @@ Migration
   $ hg debugchangelog --migrate foobar
   abort: invalid changelog format: foobar
   [255]
-
-To Python revlog:
-
-  $ hg debugchangelog --migrate pythonrevlog
-  $ hg debugchangelog
-  The changelog is backed by Python + C revlog.
 
 To Rust revlog:
 

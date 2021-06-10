@@ -601,10 +601,11 @@ Test that the prepushrebase hook can run against the bundle repo
   pushing rev 0e067c57feba to destination ssh://user@dummy/prepushrebaseserver bookmark master
   searching for changes
   remote: prepushrebase hook exited with status * (glob)
-  remote: commit:      0e067c57feba
+  remote: commit:      3903775176ed
+  remote: bookmark:    master
   remote: user:        test
   remote: date:        Thu Jan 01 00:00:00 1970 +0000
-  remote: summary:     b
+  remote: summary:     a
   remote: 
   remote: Checking if lock exists (it should not):
   remote: ls: *.hg/store/lock*: $ENOENT$ (glob)

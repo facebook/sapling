@@ -770,7 +770,6 @@ directory does not exist
   1 changesets found
   $ hg debugstrip -r 'desc(3)'
   $ hg merge -R ../update2bundled.hg -r 'desc(3)'
-  setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -778,7 +777,6 @@ When user updates to the revision existing only in the bundle,
 it should show warning
 
   $ hg update -R ../update2bundled.hg --clean -r 'desc(3)'
-  setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 When user updates to the revision existing in the local repository

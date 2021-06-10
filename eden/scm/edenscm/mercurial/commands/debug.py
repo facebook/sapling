@@ -477,11 +477,7 @@ def debugchangelog(ui, repo, migrate=None, unless=[]):
     If --migrate is set, migrate to a specified format. Supported choices
     are:
 
-    - pythonrevlog
-
-      - The original revlog backend provided by C and Python code.
-
-    - rustrevlog
+    - rustrevlog or revlog
 
       - The revlog backend provided by Rust code.
 
@@ -532,15 +528,10 @@ def debugchangelog(ui, repo, migrate=None, unless=[]):
             return
         changelog2.migrateto(repo, migrate)
         return
-    if isinstance(cl, changelog2.changelog):
-        ui.write(_("The changelog is backed by Rust. More backend information:\n"))
-        ui.write(_("%s") % cl.inner.describebackend())
-        if ui.debugflag:
-            cl.inner.explaininternals(ui.fout)
-    else:
-        ui.write(_("The changelog is backed by Python + C revlog.\n"))
-        if type(cl.nodemap).__module__ == "edenscmnative.clindex":
-            ui.write(_("The clindex extension is used for commit hash lookups.\n"))
+    ui.write(_("The changelog is backed by Rust. More backend information:\n"))
+    ui.write(_("%s") % cl.inner.describebackend())
+    if ui.debugflag:
+        cl.inner.explaininternals(ui.fout)
 
 
 @command("debugcheckstate", [], "")

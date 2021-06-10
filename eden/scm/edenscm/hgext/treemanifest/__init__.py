@@ -417,7 +417,6 @@ def uisetup(ui):
         del pendingadd[:]
         return node
 
-    extensions.wrapfunction(changelog.changelog, "add", changelogadd)
     extensions.wrapfunction(changelog2.changelog, "add", changelogadd)
 
 

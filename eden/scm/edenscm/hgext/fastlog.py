@@ -26,7 +26,6 @@ from collections import deque
 from threading import Event, Thread
 
 from edenscm.mercurial import (
-    changelog,
     error,
     extensions,
     match as matchmod,
@@ -328,15 +327,8 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
 
 class readonlythreadsafechangelog(object):
     def __init__(self, repo):
-        if repo.changelog.userust():
-            # Rust changelog backend is thread-safe
-            self._changelog = repo.changelog
-        else:
-            # Python revlog changelog is not thread-safe - `self._cache` is
-            # mutably shared without protection.
-            self._changelog = changelog.changelog(
-                repo.svfs, uiconfig=repo.ui.uiconfig()
-            )
+        # Rust changelog backend is thread-safe
+        self._changelog = repo.changelog
 
     def parentrevs(self, rev):
         return self._changelog.parentrevs(rev)
