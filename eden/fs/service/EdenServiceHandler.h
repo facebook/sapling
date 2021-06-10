@@ -251,12 +251,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
  private:
   folly::Future<Hash> getSHA1ForPath(
-      folly::StringPiece mountPoint,
+      AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);
 
   folly::Future<Hash> getSHA1ForPathDefensively(
-      folly::StringPiece mountPoint,
+      AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
 

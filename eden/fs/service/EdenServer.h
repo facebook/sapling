@@ -23,7 +23,6 @@
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
-#include <folly/experimental/StringKeyedMap.h>
 #include <folly/futures/SharedPromise.h>
 #include <condition_variable>
 
@@ -40,6 +39,7 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/PathMap.h"
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
 DECLARE_bool(takeover);
@@ -106,7 +106,6 @@ class EdenServer : private TakeoverHandler {
   };
 
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
-  using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
       std::vector<std::string> originalCommandLine,
@@ -232,7 +231,7 @@ class EdenServer : private TakeoverHandler {
    * Unmount an EdenMount.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmount(
-      folly::StringPiece mountPath);
+      AbsolutePathPiece mountPath);
 
   /**
    * Unmount all mount points maintained by this server, and wait for them to
@@ -278,17 +277,7 @@ class EdenServer : private TakeoverHandler {
    * Throws an EdenError if no mount exists with the specified path, or if the
    * mount is still initializing and is not ready for inode operations yet.
    */
-  std::shared_ptr<EdenMount> getMount(folly::StringPiece mountPath) const;
-
-  /**
-   * Look up an EdenMount by the path where it is mounted.
-   *
-   * This is similar to getMount(), but will also return mounts that are still
-   * initializing.  It is the caller's responsibility to ensure they do not
-   * perform any inode operations on the returned mount without first verifying
-   * it is ready for access.
-   */
-  std::shared_ptr<EdenMount> getMountUnsafe(folly::StringPiece mountPath) const;
+  std::shared_ptr<EdenMount> getMount(AbsolutePathPiece mountPath) const;
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
@@ -427,7 +416,7 @@ class EdenServer : private TakeoverHandler {
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
-  using MountMap = folly::StringKeyedMap<struct EdenMountInfo>;
+  using MountMap = PathMap<struct EdenMountInfo, AbsolutePath>;
   class ThriftServerEventHandler;
 
   // Forbidden copy constructor and assignment operator
@@ -520,6 +509,16 @@ class EdenServer : private TakeoverHandler {
   // This also makes sure we don't have this path mounted already.
   void addToMountPoints(std::shared_ptr<EdenMount> edenMount);
 
+  /**
+   * Look up an EdenMount by the path where it is mounted.
+   *
+   * This is similar to getMount(), but will also return mounts that are still
+   * initializing.  It is the caller's responsibility to ensure they do not
+   * perform any inode operations on the returned mount without first verifying
+   * it is ready for access.
+   */
+  std::shared_ptr<EdenMount> getMountUnsafe(AbsolutePathPiece mountPath) const;
+
   // Registers (or removes) stats callbacks for edenMount.
   // These are here rather than in EdenMount because we need to
   // hold an owning reference to the mount to safely sample stats.
@@ -572,7 +571,7 @@ class EdenServer : private TakeoverHandler {
   const std::shared_ptr<BlobCache> blobCache_;
   std::shared_ptr<TreeCache> treeCache_;
 
-  folly::Synchronized<MountMap> mountPoints_;
+  folly::Synchronized<MountMap> mountPoints_{kPathMapDefaultCaseSensitive};
 
 #ifndef _WIN32
   /**

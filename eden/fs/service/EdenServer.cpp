@@ -218,22 +218,6 @@ std::string getCounterNameForFuseRequests(
 }
 #endif
 
-std::string normalizeMountPoint(StringPiece mountPath) {
-#ifdef _WIN32
-  auto normalized = mountPath.str();
-  for (auto& c : normalized) {
-    if (c == '/') {
-      c = '\\';
-    } else {
-      c = tolower(c);
-    }
-  }
-  return normalized;
-#else
-  return mountPath.str();
-#endif
-}
-
 #ifdef __linux__
 // **not safe to call this function from a fuse thread**
 // this gets the kernels view of the number of pending requests, to do this, it
@@ -672,15 +656,15 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
 #ifndef _WIN32
 void EdenServer::unloadInodes() {
   struct Root {
-    std::string mountName;
+    AbsolutePath mountName;
     TreeInodePtr rootInode;
   };
   std::vector<Root> roots;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
-      roots.emplace_back(Root{
-          std::string{entry.first}, entry.second.edenMount->getRootInode()});
+      roots.emplace_back(
+          Root{entry.first, entry.second.edenMount->getRootInode()});
     }
   }
 
@@ -1188,7 +1172,7 @@ void EdenServer::shutdownPrivhelper() {
 }
 
 void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
-  auto mountPath = normalizeMountPoint(edenMount->getPath().stringPiece());
+  auto& mountPath = edenMount->getPath();
 
   {
     const auto mountPoints = mountPoints_.wlock();
@@ -1463,18 +1447,16 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       });
 }
 
-Future<Unit> EdenServer::unmount(StringPiece mountPath) {
-  const auto normalizedPath = normalizeMountPoint(mountPath);
-
+Future<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
   return makeFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
            {
              const auto mountPoints = mountPoints_.wlock();
-             const auto it = mountPoints->find(normalizedPath);
+             const auto it = mountPoints->find(mountPath);
              if (it == mountPoints->end()) {
-               return makeFuture<Unit>(
-                   std::out_of_range("no such mount point " + normalizedPath));
+               return makeFuture<Unit>(std::out_of_range(
+                   fmt::format("no such mount point {}", mountPath)));
              }
              future = it->second.unmountPromise.getFuture();
              mount = it->second.edenMount;
@@ -1487,7 +1469,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
                  return std::move(f);
                });
          })
-      .thenError([path = normalizedPath](folly::exception_wrapper&& ew) {
+      .thenError([path = mountPath.copy()](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Failed to perform unmount for \"" << path
                   << "\": " << folly::exceptionStr(ew);
         return makeFuture<Unit>(std::move(ew));
@@ -1497,8 +1479,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(
     EdenMount* edenMount,
     std::optional<TakeoverData::MountInfo> takeover) {
-  const auto mountPath =
-      normalizeMountPoint(edenMount->getPath().stringPiece());
+  const auto& mountPath = edenMount->getPath();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
 
   // Save the unmount and takover Promises
@@ -1572,7 +1553,7 @@ EdenServer::MountList EdenServer::getAllMountPoints() const {
   return results;
 }
 
-shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
+shared_ptr<EdenMount> EdenServer::getMount(AbsolutePathPiece mountPath) const {
   const auto mount = getMountUnsafe(mountPath);
   if (!mount->isSafeForInodeAccess()) {
     throw newEdenError(
@@ -1584,18 +1565,17 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
   return mount;
 }
 
-shared_ptr<EdenMount> EdenServer::getMountUnsafe(StringPiece mountPath) const {
-  const auto normalizedPath = normalizeMountPoint(mountPath);
-
+shared_ptr<EdenMount> EdenServer::getMountUnsafe(
+    AbsolutePathPiece mountPath) const {
   const auto mountPoints = mountPoints_.rlock();
-  const auto it = mountPoints->find(normalizedPath);
+  const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
     throw newEdenError(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
         folly::to<string>(
             "mount point \"",
-            normalizedPath,
+            mountPath,
             "\" is not known to this eden instance"));
   }
   return it->second.edenMount;

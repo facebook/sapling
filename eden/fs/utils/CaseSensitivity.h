@@ -16,5 +16,5 @@ enum class CaseSensitivity : bool {
 };
 
 constexpr CaseSensitivity kPathMapDefaultCaseSensitive =
-    static_cast<CaseSensitivity>(!folly::kIsWindows);
+    static_cast<CaseSensitivity>(folly::kIsLinux);
 } // namespace facebook::eden
