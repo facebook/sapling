@@ -209,7 +209,7 @@ fn list_output(
                         let id = faster_hex::hex_string(&info.id)?;
                         let content_sha1 = faster_hex::hex_string(&info.content_sha1)?;
                         let content_sha256 = faster_hex::hex_string(&info.content_sha256)?;
-                        let link_target = if long && entry.type_ == thrift::EntryType::LINK {
+                        let link_target = if long && entry.r#type == thrift::EntryType::LINK {
                             fetch_link_target(connection.clone(), repo.clone(), info.id.clone())
                                 .await
                         } else {
@@ -229,7 +229,7 @@ fn list_output(
                 };
                 let output = Box::new(LsOutput {
                     name: entry.name,
-                    r#type: entry.type_.to_string().to_lowercase(),
+                    r#type: entry.r#type.to_string().to_lowercase(),
                     entry: entry_output,
                 });
                 Ok(output as Box<dyn Render>)

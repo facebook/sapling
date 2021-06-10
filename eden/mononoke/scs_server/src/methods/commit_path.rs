@@ -39,7 +39,7 @@ impl SourceControlServiceImpl {
         let response = match path.entry().await? {
             PathEntry::NotPresent => thrift::CommitPathInfoResponse {
                 exists: false,
-                type_: None,
+                r#type: None,
                 info: None,
             },
             PathEntry::Tree(tree) => {
@@ -56,7 +56,7 @@ impl SourceControlServiceImpl {
                 };
                 thrift::CommitPathInfoResponse {
                     exists: true,
-                    type_: Some(thrift::EntryType::TREE),
+                    r#type: Some(thrift::EntryType::TREE),
                     info: Some(thrift::EntryInfo::tree(tree_info)),
                 }
             }
@@ -70,7 +70,7 @@ impl SourceControlServiceImpl {
                 };
                 thrift::CommitPathInfoResponse {
                     exists: true,
-                    type_: Some(file_type.into_response()),
+                    r#type: Some(file_type.into_response()),
                     info: Some(thrift::EntryInfo::file(file_info)),
                 }
             }
@@ -102,7 +102,7 @@ impl SourceControlServiceImpl {
                     PathEntry::NotPresent => {
                         let not_present_elem = thrift::CommitPathInfoResponse {
                             exists: false,
-                            type_: None,
+                            r#type: None,
                             info: None,
                         };
                         return Result::<_, errors::ServiceError>::Ok((
@@ -114,7 +114,7 @@ impl SourceControlServiceImpl {
                         let summary = tree.summary().await?;
                         let tree_elem = thrift::CommitPathInfoResponse {
                             exists: true,
-                            type_: Some(thrift::EntryType::TREE),
+                            r#type: Some(thrift::EntryType::TREE),
                             info: Some(thrift::EntryInfo::tree(
                                 (*tree.id(), summary).into_response(),
                             )),
@@ -125,7 +125,7 @@ impl SourceControlServiceImpl {
                         let metadata = file.metadata().await?;
                         let file_elem = thrift::CommitPathInfoResponse {
                             exists: true,
-                            type_: Some(file_type.into_response()),
+                            r#type: Some(file_type.into_response()),
                             info: Some(thrift::EntryInfo::file(metadata.into_response())),
                         };
                         return Result::<_, errors::ServiceError>::Ok((context_path, file_elem));

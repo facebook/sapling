@@ -63,7 +63,7 @@ impl IntoResponse<thrift::EntryType> for FileType {
 impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
     fn into_response(self) -> thrift::TreeEntry {
         let (name, entry) = self;
-        let (type_, info) = match entry {
+        let (r#type, info) = match entry {
             TreeEntry::Directory(dir) => {
                 let summary = dir.summary();
                 let info = thrift::TreeInfo {
@@ -91,7 +91,7 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
                 )
             }
         };
-        thrift::TreeEntry { name, type_, info }
+        thrift::TreeEntry { name, r#type, info }
     }
 }
 
@@ -156,7 +156,7 @@ impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContentCon
         if let (Some(meta), Some(type_)) = (meta, type_) {
             Ok(Some(thrift::FilePathInfo {
                 path: self.path().to_string(),
-                type_: type_.into_response(),
+                r#type: type_.into_response(),
                 info: meta.into_response(),
             }))
         } else {

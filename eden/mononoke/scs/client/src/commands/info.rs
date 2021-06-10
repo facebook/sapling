@@ -167,7 +167,7 @@ async fn path_info(
     let params = thrift::CommitPathInfoParams {};
     let response = connection.commit_path_info(&commit_path, &params).await?;
     if response.exists {
-        match (response.type_, response.info) {
+        match (response.r#type, response.info) {
             (Some(entry_type), Some(thrift::EntryInfo::tree(info))) => {
                 Ok(stream::once(async move { tree_info(path, entry_type, info) }).boxed())
             }
@@ -200,7 +200,7 @@ async fn multiple_path_info(
     let output = stream::iter(response.path_info)
         .map(move |entry| {
             let (path, commit_info) = entry;
-            match (commit_info.type_, commit_info.info) {
+            match (commit_info.r#type, commit_info.info) {
                 (Some(entry_type), Some(thrift::EntryInfo::tree(info))) => {
                     tree_info(path, entry_type, info)
                 }

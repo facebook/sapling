@@ -227,7 +227,7 @@ impl SourceControlServiceImpl {
                     })?;
                     let change = match change {
                         thrift::RepoCreateCommitParamsChange::changed(c) => {
-                            let file_type = FileType::from_request(&c.type_)?;
+                            let file_type = FileType::from_request(&c.r#type)?;
                             let copy_info = c
                                 .copy_info
                                 .as_ref()
@@ -608,7 +608,7 @@ impl SourceControlServiceImpl {
 
                             thrift::HgManifestEntry {
                                 name,
-                                type_: file_type.into_response(),
+                                r#type: file_type.into_response(),
                                 info: thrift::HgManifestEntryInfo::file(
                                     thrift::HgManifestFileInfo {
                                         hg_filenode_id: child_id.as_bytes().to_vec(),
@@ -621,7 +621,7 @@ impl SourceControlServiceImpl {
                         }
                         Entry::Tree(child_id) => thrift::HgManifestEntry {
                             name,
-                            type_: thrift::EntryType::TREE,
+                            r#type: thrift::EntryType::TREE,
                             info: thrift::HgManifestEntryInfo::tree(thrift::HgManifestTreeInfo {
                                 hg_manifest_id: child_id.as_bytes().to_vec(),
                             }),

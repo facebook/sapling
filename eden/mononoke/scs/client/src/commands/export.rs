@@ -91,7 +91,7 @@ fn export_tree_chunk(
                 id: info.id,
                 destination: destination.join(&entry.name),
                 size: info.file_size as u64,
-                type_: entry.type_,
+                type_: entry.r#type,
             }),
             _ => {
                 bail!("malformed response format for '{}'", entry.name);
@@ -315,7 +315,7 @@ pub(super) async fn run(
     let files_written = Arc::new(AtomicU64::new(0));
     let bytes_written = Arc::new(AtomicU64::new(0));
 
-    let item = match (response.type_, response.info) {
+    let item = match (response.r#type, response.info) {
         (Some(_type), Some(thrift::EntryInfo::tree(info))) => {
             file_count = info.descendant_files_count as u64;
             total_size = info.descendant_files_total_size as u64;
