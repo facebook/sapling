@@ -685,7 +685,6 @@ ignorerevnumincompatiblelist = """
     test-fb-hgext-tweakdefaults-update-t.py
     test-fb-hgext-whereami-t.py
     test-fileset.t
-    test-generaldelta.t
     test-git-export.t
     test-glog-topological-t.py
     test-glog-t.py
