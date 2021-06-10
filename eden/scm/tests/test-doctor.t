@@ -296,3 +296,17 @@ Test fixing broken segmented changelog (broken mutimeta)
 
   $ hg log -r tip -T '{desc}\n'
   B
+
+doctor should not remove draft for a segmented changelog repo
+BUG: it removes draft commits
+
+  $ newrepo
+  $ hg debugchangelog --migrate fullsegments
+  $ drawdag << 'EOS'
+  > A B
+  > EOS
+  $ hg doctor
+  checking internal storage
+  visibleheads: removed 2 heads, added tip
+  checking commit references
+  $ hg log -r 'all()' -T '{desc}'
