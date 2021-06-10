@@ -302,7 +302,6 @@ segmentedchangelogcompatiblelist = """
     test-lfs-pointer.py
     test-linelog-edits.py
     test-linerange.py
-    test-linkrevcache-linkrevdb.py
     test-lock.py
     test-log-dir-t.py
     test-log-exthook.t
@@ -702,7 +701,6 @@ ignorerevnumincompatiblelist = """
     test-issue1438-t.py
     test-issue612-t.py
     test-issue660-t.py
-    test-linkrevcache-t.py
     test-locate-t.py
     test-log-t.py
     test-manifest-merging-t.py

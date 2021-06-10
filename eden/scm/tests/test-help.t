@@ -340,7 +340,6 @@ Test extension help:
                      back up draft commits in the cloud
        interactiveui
                      (no help text available)
-       linkrevcache  a simple caching layer to speed up _adjustlinkrev
        logginghelper
                      this extension logs different pieces of information that
                      will be used
