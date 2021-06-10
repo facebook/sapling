@@ -622,7 +622,6 @@ ignorerevnumincompatiblelist = """
     test-bisect-t.py
     test-bookmarks.t
     test-bookmark-strip-t.py
-    test-bundle2-remote-changegroup.t
     test-bundle-r.t
     test-bundle.t
     test-bundle-vs-outgoing.t
