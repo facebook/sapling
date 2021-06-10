@@ -389,7 +389,7 @@ converting empty dir should fail "nicely
 #if normal-layout
 override $PATH to ensure p4 not visible
 
-  $ PATH="$TMPBINDIR" "$TMPBINDIR"/hg convert emptydir
+  $ PATH="$TMPBINDIR:$BINDIR" hg convert emptydir
   assuming destination emptydir-hg
   initializing destination emptydir-hg repository
   $TESTTMP/emptydir does not look like a Git repository
