@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import errno
 import filecmp
+import hashlib
 import os
 import re
 import stat
@@ -22,6 +23,7 @@ import sys
 from . import (
     encoding,
     error,
+    extensions,
     fileset,
     match as matchmod,
     mdiff,
@@ -173,11 +175,21 @@ class basectx(object):
                 removed.append(fn)
             elif flag1 != flag2:
                 modified.append(fn)
-            elif node2 not in wdirnodes:
+            elif (
+                not self._repo.ui.configbool("scmstore", "status")
+                and node2 not in wdirnodes
+            ):
                 # When comparing files between two commits, we save time by
                 # not comparing the file contents when the nodeids differ.
                 # Note that this means we incorrectly report a reverted change
                 # to a file as a modification.
+                # TODO(meyer): Update this comment when remote aux data fetching
+                # is implemented.
+                # When scmstore is enabled for status we skip this shortcut
+                # and instead report accurately, which (once remote aux data
+                # fetching is implemented) will no longer require downloading
+                # the full file contents just to determine if it's really a
+                # modification.
                 modified.append(fn)
             elif self[fn].cmp(other[fn]):
                 modified.append(fn)
@@ -864,6 +876,15 @@ class basefilectx(object):
     def path(self):
         return self._path
 
+    def content_sha256(self):
+        if extensions.isenabled(
+            self._repo.ui, "remotefilelog"
+        ) and self._repo.ui.configbool("scmstore", "status"):
+            return self._repo.fileslog.filescmstore.fetch_contentsha256(
+                [(self.path(), self.filenode())]
+            )[0][1]
+        return hashlib.sha256(self.data()).digest()
+
     def isbinary(self):
         try:
             return util.binary(self.data())
@@ -907,6 +928,8 @@ class basefilectx(object):
                 # Both self and fctx are in-memory. Do a content check.
                 # PERF: This might be improved for LFS cases.
                 return self.data() != fctx.data()
+            if self._repo.ui.configbool("scmstore", "status"):
+                return self.content_sha256() != fctx.content_sha256()
             return self._filelog.cmp(self._filenode, fctx.data())
 
         return True
@@ -1959,6 +1982,9 @@ class workingfilectx(committablefilectx):
     def data(self):
         return self._repo.wread(self._path)
 
+    def content_sha256(self):
+        return hashlib.sha256(self.data()).digest()
+
     def renamed(self):
         rp = self._repo.dirstate.copied(self._path)
         if not rp:
@@ -2010,6 +2036,8 @@ class workingfilectx(committablefilectx):
                 return True
             if self.flags() != fctx.flags():
                 return True
+            if self._repo.ui.configbool("scmstore", "status"):
+                return self.content_sha256() != fctx.content_sha256()
             if self.data() != fctx.data():
                 return True
             return False
@@ -2362,6 +2390,8 @@ class overlayworkingfilectx(committablefilectx):
         self._path = path
 
     def cmp(self, fctx):
+        if self._repo.ui.configbool("scmstore", "status"):
+            return self.content_sha256() != fctx.content_sha256()
         return self.data() != fctx.data()
 
     def changectx(self):
@@ -3021,6 +3051,8 @@ class arbitraryfilectx(object):
             # Note that filecmp uses the opposite return values (True if same)
             # from our cmp functions (True if different).
             return not filecmp.cmp(self.path(), self._repo.wjoin(fctx.path()))
+        if self._repo.ui.configbool("scmstore", "status"):
+            return self.content_sha256() != fctx.content_sha256()
         return self.data() != fctx.data()
 
     def path(self):
@@ -3031,6 +3063,9 @@ class arbitraryfilectx(object):
 
     def data(self):
         return util.readfile(self._path)
+
+    def content_sha256(self):
+        return hashlib.sha256(self.data()).digest()
 
     def decodeddata(self):
         with open(self._path, "rb") as f:
