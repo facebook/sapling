@@ -61,6 +61,7 @@ pub type TunableString = ArcSwap<String>;
 
 pub type TunableBoolByRepo = ArcSwap<HashMap<String, bool>>;
 pub type TunableStringByRepo = ArcSwap<HashMap<String, String>>;
+pub type TunableVecOfStringsByRepo = ArcSwap<HashMap<String, Vec<String>>>;
 pub type TunableI64ByRepo = ArcSwap<HashMap<String, i64>>;
 
 #[derive(Tunables, Default, Debug)]
@@ -281,6 +282,9 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
         tunables.update_by_repo_bools(killswitches_by_repo);
     }
 
+    if let Some(vec_of_strings_by_repo) = &new_tunables.vec_of_strings_by_repo {
+        tunables.update_by_repo_vec_of_strings(vec_of_strings_by_repo);
+    }
     Ok(())
 }
 
@@ -333,6 +337,8 @@ mod test {
 
         repostr: TunableStringByRepo,
         repostr2: TunableStringByRepo,
+
+        repovecofstrings: TunableVecOfStringsByRepo,
     }
 
     #[derive(Tunables, Default)]
@@ -577,6 +583,30 @@ mod test {
 
         assert_eq!(test.get_by_repo_repoint("repo"), Some(3));
         assert_eq!(test.get_by_repo_repoint2("repo"), None);
+    }
+
+    #[test]
+    fn update_by_repo_vec_of_strings() {
+        let test = TestTunables::default();
+        assert_eq!(test.get_by_repo_repovecofstrings("repo"), None);
+
+        test.update_by_repo_vec_of_strings(&hashmap! {
+            s("repo") => hashmap! {
+                s("unrelated") => vec![s("val1"), s("val2")],
+            }
+        });
+        assert_eq!(test.get_by_repo_repovecofstrings("repo"), None);
+
+        test.update_by_repo_vec_of_strings(&hashmap! {
+            s("repo") => hashmap! {
+                s("repovecofstrings") => vec![s("val1"), s("val2")],
+            }
+        });
+
+        assert_eq!(
+            test.get_by_repo_repovecofstrings("repo"),
+            Some(vec![s("val1"), s("val2")])
+        );
     }
 
     #[fbinit::test]

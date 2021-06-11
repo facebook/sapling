@@ -22,6 +22,7 @@ enum TunableType {
     ByRepoBool,
     ByRepoString,
     ByRepoI64,
+    ByRepoVecOfStrings,
 }
 
 #[proc_macro_derive(Tunables)]
@@ -57,6 +58,7 @@ impl TunableType {
             Self::ByRepoBool => quote! { Option<bool> },
             Self::ByRepoString => quote! { Option<String> },
             Self::ByRepoI64 => quote! { Option<i64> },
+            Self::ByRepoVecOfStrings => quote! { Option<Vec<String>> },
         }
     }
 
@@ -66,6 +68,7 @@ impl TunableType {
             Self::ByRepoBool => quote! { bool },
             Self::ByRepoI64 => quote! { i64 },
             Self::ByRepoString => quote! { String },
+            Self::ByRepoVecOfStrings => quote! { Vec<String> },
         }
     }
 
@@ -77,6 +80,7 @@ impl TunableType {
             Self::ByRepoBool => quote! { HashMap<String, HashMap<String, bool>> },
             Self::ByRepoString => quote! { HashMap<String, HashMap<String, String>> },
             Self::ByRepoI64 => quote! { HashMap<String, HashMap<String, i64>> },
+            Self::ByRepoVecOfStrings => quote! { HashMap<String, HashMap<String, Vec<String>>> },
         }
     }
 
@@ -101,7 +105,7 @@ impl TunableType {
                     }
                 }
             }
-            Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString => {
+            Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString | Self::ByRepoVecOfStrings => {
                 quote! {
                     pub fn #by_repo_method(&self, repo: &str) -> #external_type {
                         self.#name.load_full().get(repo).map(|val| (*val).clone())
@@ -162,9 +166,15 @@ where
     ));
 
     methods.extend(generate_updater_method(
-        names_and_types,
+        names_and_types.clone(),
         TunableType::ByRepoI64,
         quote::format_ident!("update_by_repo_ints"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types,
+        TunableType::ByRepoVecOfStrings,
+        quote::format_ident!("update_by_repo_vec_of_strings"),
     ));
 
     methods
@@ -209,7 +219,10 @@ where
                     }
                 });
             }
-            TunableType::ByRepoBool | TunableType::ByRepoString | TunableType::ByRepoI64 => {
+            TunableType::ByRepoBool
+            | TunableType::ByRepoString
+            | TunableType::ByRepoI64
+            | TunableType::ByRepoVecOfStrings => {
                 let by_repo_value_type = ty.by_repo_value_type();
                 body.extend(quote! {
                     #(
@@ -269,6 +282,7 @@ fn resolve_type(ty: Type) -> TunableType {
                 "TunableBoolByRepo" => return TunableType::ByRepoBool,
                 "TunableI64ByRepo" => return TunableType::ByRepoI64,
                 "TunableStringByRepo" => return TunableType::ByRepoString,
+                "TunableVecOfStringsByRepo" => return TunableType::ByRepoVecOfStrings,
                 _ => unimplemented!("{}, found: {}", UNIMPLEMENTED_MSG, &ident.to_string()[..]),
             }
         }

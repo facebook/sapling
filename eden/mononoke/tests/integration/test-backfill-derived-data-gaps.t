@@ -47,7 +47,7 @@ normally the tailer runs forever, but for this test we will make it
 stop when it becomes idle.
   $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 2>&1 | grep -v count:8
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: {"killswitches":{},"ints":{},"strings":{},"killswitches_by_repo":null,"ints_by_repo":null,"strings_by_repo":null} (glob)
+  *] Initializing tunables: * (glob)
   *] using repo "repo" repoid RepositoryId(0) (glob)
   *] derived data types: {*} (glob)
   *] Deriving 1 heads (glob)
