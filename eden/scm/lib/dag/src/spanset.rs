@@ -11,6 +11,7 @@
 
 use crate::bsearch::BinarySearchBy;
 use crate::id::Id;
+use dag_types::FlatSegment;
 use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
     PartialOrd,
@@ -199,6 +200,30 @@ impl Subspan for Span {
         assert!(self.low <= span.low);
         assert!(self.high >= span.high);
         span
+    }
+}
+
+impl Subspan for FlatSegment {
+    fn span(&self) -> Span {
+        Span::new(self.low, self.high)
+    }
+
+    fn subspan(&self, span: Span) -> Self {
+        assert!(self.low <= span.low);
+        assert!(self.high >= span.high);
+        if span.low == self.low {
+            FlatSegment {
+                low: span.low,
+                high: span.high,
+                parents: self.parents.clone(),
+            }
+        } else {
+            FlatSegment {
+                low: span.low,
+                high: span.high,
+                parents: vec![span.low - 1],
+            }
+        }
     }
 }
 
