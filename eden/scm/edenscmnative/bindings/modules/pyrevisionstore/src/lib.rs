@@ -1258,16 +1258,17 @@ py_class!(pub class filescmstore |py| {
     }
 
     def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
-        let keys = block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?;
-        let store = self.oldscmstore(py).clone();
+        let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true } );
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
-        for item in block_on_stream(store.fetch_stream(Box::pin(keys))) {
-            match item {
-                Ok(file) => write!(stdout, "Successfully fetched file: {:#?}\n", file),
-                Err(err) => write!(stdout, "Received fetch error: {:#?}\n", err),
-            }.map_pyerr(py)?
+
+        for (_, file) in fetch_result.complete.into_iter() {
+            write!(stdout, "Successfully fetched file: {:#?}\n", file).map_pyerr(py)?;
+        }
+        for (key, _) in fetch_result.incomplete.into_iter() {
+            write!(stdout, "Failed to fetch file: {:#?}\n", key).map_pyerr(py)?;
         }
 
         Ok(PyNone)
@@ -1416,16 +1417,17 @@ py_class!(pub class treescmstore |py| {
     }
 
     def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
-        let keys = block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?;
-        let store = self.oldscmstore(py).clone();
+        let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
+        let fetch_result = self.store(py).fetch_batch(keys.into_iter()).map_pyerr(py)?;
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
-        for item in block_on_stream(store.fetch_stream(Box::pin(keys))) {
-            match item {
-                Ok(file) => write!(stdout, "Successfully fetched tree: {:#?}\n", file),
-                Err(err) => write!(stdout, "Received fetch error: {:#?}\n", err),
-            }.map_pyerr(py)?
+
+        for complete in fetch_result.complete.into_iter() {
+            write!(stdout, "Successfully fetched tree: {:#?}\n", complete).map_pyerr(py)?;
+        }
+        for incomplete in fetch_result.incomplete.into_iter() {
+            write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete).map_pyerr(py)?;
         }
 
         Ok(PyNone)

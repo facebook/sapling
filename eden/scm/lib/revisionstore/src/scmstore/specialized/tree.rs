@@ -73,7 +73,7 @@ pub struct TreeStoreFetch {
 }
 
 impl TreeStore {
-    fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<TreeStoreFetch> {
+    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<TreeStoreFetch> {
         let mut complete = HashMap::<Key, Entry>::new();
         let mut write_to_local_cache = HashSet::new();
         let mut write_to_memcache = HashSet::new();
