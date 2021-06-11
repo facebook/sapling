@@ -20,7 +20,7 @@ sh % "cd a"
 sh % "hg log"
 sh % "hg histgrep wah" == "[1]"
 sh % "hg manifest"
-sh % "hg verify" == 'warning: verify does not actually check anything in this repo'
+sh % "hg verify" == "warning: verify does not actually check anything in this repo"
 
 # Check the basic files created:
 
@@ -47,7 +47,7 @@ sh % "hg clone a b" == r"""
     updating to branch default
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd b"
-sh % "hg verify" == 'warning: verify does not actually check anything in this repo'
+sh % "hg verify" == "warning: verify does not actually check anything in this repo"
 sh % "ls .hg" == r"""
     00changelog.i
     blackbox
