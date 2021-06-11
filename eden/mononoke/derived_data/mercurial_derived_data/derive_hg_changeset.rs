@@ -78,6 +78,20 @@ async fn store_file_change(
         assert!(change.copy_from().is_some());
     }
 
+    // Mercurial has complicated logic of finding file parents, especially
+    // if a file was also copied/moved.
+    // See mercurial/localrepo.py:_filecommit().
+    // Mononoke uses simpler rules, which still produce a usable result
+
+    // Simplify parents. This aims to reduce the amount of work done in reuse, and avoids
+    // semantically unhelpful duplicate parents.
+    let (p1, p2) = match (p1, p2) {
+        (Some(p1), None) => (Some(p1), None),
+        (None, Some(p2)) => (Some(p2), None),
+        (p1, p2) if p1 == p2 => (p1, None),
+        (p1, p2) => (p1, p2),
+    };
+
     // we can reuse same HgFileNodeId if we have a filenode that has
     // same content and copyfrom information
     let maybe_filenode = match (p1, p2) {
@@ -85,72 +99,57 @@ async fn store_file_change(
             can_reuse_filenode(repo, &ctx, parent, change).await?
         }
         (Some(p1), Some(p2)) => {
-            if p1 == p2 {
-                can_reuse_filenode(repo, &ctx, p1, change).await?
-            } else {
-                let (reuse_p1, reuse_p2) = try_join(
-                    can_reuse_filenode(repo, &ctx, p1, change),
-                    can_reuse_filenode(repo, &ctx, p2, change),
-                )
-                .await?;
-                reuse_p1.or(reuse_p2)
-            }
+            let (reuse_p1, reuse_p2) = try_join(
+                can_reuse_filenode(repo, &ctx, p1, change),
+                can_reuse_filenode(repo, &ctx, p2, change),
+            )
+            .await?;
+            reuse_p1.or(reuse_p2)
         }
         // No filenode to reuse
         (None, None) => None,
     };
 
-    if let Some(filenode_id) = maybe_filenode {
-        return Ok((change.file_type(), filenode_id));
-    }
+    let filenode_id = match maybe_filenode {
+        Some(filenode) => filenode,
+        None => {
+            let p1 = if p1.is_some()
+                && p2.is_none()
+                && copy_from.is_some()
+                && copy_from.as_ref().map(|c| &c.0) != Some(path)
+            {
+                // Mercurial special-cases the "file copied over existing file" case, and does not
+                // put in a parent in that situation - `hg log` then looks down the copyfrom
+                // information instead. This is not the best decision, but we should keep it
+                // For example:
+                // ```
+                // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
+                // hg cp 2 1 --force && hg ci -m second
+                // # File '1' has both p1 and copy from.
+                // ```
+                // In this case, Mercurial and Mononoke both drop the p1 information in the filenode,
+                // instead relying on the copyfrom for history.
+                None
+            } else {
+                p1
+            };
 
-    // Mercurial has complicated logic of finding file parents, especially
-    // if a file was also copied/moved.
-    // See mercurial/localrepo.py:_filecommit(). We have to replicate this
-    // logic in Mononoke.
-    // TODO(stash): T45618931 replicate all the cases from _filecommit()
+            let upload_entry = UploadHgFileEntry {
+                upload_node_id: UploadHgNodeHash::Generate,
+                contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
+                    id: change.content_id(),
+                    size: change.size(),
+                    copy_from: copy_from.clone(),
+                }),
+                p1,
+                p2,
+            };
 
-    let (p1, p2) = if let Some((ref copy_from_path, _)) = copy_from {
-        if copy_from_path != path && p1.is_some() && p2.is_none() {
-            // This case can happen if a file existed in it's parent
-            // but it was copied over:
-            // ```
-            // echo 1 > 1 && echo 2 > 2 && hg ci -A -m first
-            // hg cp 2 1 --force && hg ci -m second
-            // # File '1' has both p1 and copy from.
-            // ```
-            // In that case Mercurial discards p1 i.e. `hg log` will
-            // use copy from revision as a parent. Arguably not the best
-            // decision, but we have to keep it.
-            (None, None)
-        } else {
-            (p1, p2)
-        }
-    } else if p1.is_none() {
-        (p2, None)
-    } else {
-        if p1 == p2 {
-            // Both actually the same, so pick one, and ignore the other
-            (p1, None)
-        } else {
-            (p1, p2)
+            upload_entry
+                .upload(ctx, repo.get_blobstore().boxed(), Some(&path))
+                .await?
         }
     };
-
-    let upload_entry = UploadHgFileEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents: UploadHgFileContents::ContentUploaded(ContentBlobMeta {
-            id: change.content_id(),
-            size: change.size(),
-            copy_from: copy_from.clone(),
-        }),
-        p1,
-        p2,
-    };
-
-    let filenode_id = upload_entry
-        .upload(ctx, repo.get_blobstore().boxed(), Some(&path))
-        .await?;
 
     Ok((change.file_type(), filenode_id))
 }
