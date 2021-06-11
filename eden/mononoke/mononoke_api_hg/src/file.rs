@@ -15,7 +15,7 @@ use mercurial_types::{
     envelope::HgFileEnvelope, FileType, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
 };
 use mononoke_api::errors::MononokeError;
-use mononoke_types::{fsnode::FsnodeFile, MPath};
+use mononoke_types::{fsnode::FsnodeFile, ContentMetadata, MPath};
 use remotefilelog::create_getpack_v2_blob;
 use revisionstore_types::Metadata;
 
@@ -89,6 +89,22 @@ impl HgFileContext {
         .map_err(MononokeError::from)
     }
 
+    pub async fn content_metadata(&self) -> Result<ContentMetadata, MononokeError> {
+        let content_id = self.envelope.content_id();
+        let fetch_key = filestore::FetchKey::Canonical(content_id);
+        let blobstore = self.repo.blob_repo().blobstore();
+        Ok(
+            filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
+                .await?
+                .ok_or_else(|| {
+                    MononokeError::NotAvailable(format!(
+                        "metadata not found for content id {}",
+                        content_id
+                    ))
+                })?,
+        )
+    }
+
     /// Fetches the metadata that would be present in this file's corresponding FsNode, returning
     /// it with the FsNode type, but without actually fetching the FsNode.
     ///
@@ -99,19 +115,9 @@ impl HgFileContext {
         &self,
         file_type: FileType,
     ) -> Result<FsnodeFile, MononokeError> {
-        let content_id = self.envelope.content_id();
-        let fetch_key = filestore::FetchKey::Canonical(content_id);
-        let blobstore = self.repo.blob_repo().blobstore();
-        let metadata = filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
-            .await?
-            .ok_or_else(|| {
-                MononokeError::NotAvailable(format!(
-                    "metadata not found for content id {}",
-                    content_id
-                ))
-            })?;
+        let metadata = self.content_metadata().await?;
         Ok(FsnodeFile::new(
-            content_id,
+            metadata.content_id,
             file_type,
             metadata.total_size,
             metadata.sha1,
