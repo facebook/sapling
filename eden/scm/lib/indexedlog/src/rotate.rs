@@ -19,7 +19,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
-use tracing::{debug_span, trace};
+use tracing::{debug, debug_span, trace};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -557,6 +557,7 @@ impl RotateLog {
             for entry in read_dir {
                 if let Ok(entry) = entry {
                     let name = entry.file_name();
+                    debug!("Inspecting {:?} for rotate log removal", name);
                     if let Some(name) = name.to_str() {
                         if let Ok(id) = name.parse::<u8>() {
                             if (latest >= earliest && (id > latest || id < earliest))
@@ -570,8 +571,19 @@ impl RotateLog {
                                 // Newly opened or flushed RotateLog will unmap files.
                                 // New rotation would trigger remove_dir_all to try
                                 // remove old logs again.
-                                let _ = fs::remove_file(entry.path().join(log::META_FILE))
+                                let res = fs::remove_file(entry.path().join(log::META_FILE))
                                     .and_then(|_| fs::remove_dir_all(entry.path()));
+                                match res {
+                                    Ok(_) => debug!("Removed rotate log: {:?}", name),
+                                    Err(err) => {
+                                        debug!("Error removing rotate log directory: {:?}", err)
+                                    }
+                                };
+                            } else {
+                                debug!(
+                                    "Not removing rotate log: {:?} (latest: {:?}, earliest: {:?})",
+                                    name, latest, earliest
+                                );
                             }
                         }
                     }

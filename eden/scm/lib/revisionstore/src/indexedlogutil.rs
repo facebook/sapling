@@ -15,6 +15,7 @@ use indexedlog::{
     Result as IndexedlogResult,
 };
 use minibytes::Bytes;
+use tracing::debug;
 
 /// Simple wrapper around either an `IndexedLog` or a `RotateLog`. This abstracts whether a store
 /// is local (`IndexedLog`) or shared (`RotateLog`) so that higher level stores don't have to deal
@@ -192,7 +193,10 @@ impl StoreOpenOptions {
         let mut rotate_log = opts.open(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
         // Mercurial processes that have the store opened might prevent their removal.
-        let _ = rotate_log.remove_old_logs();
+        let res = rotate_log.remove_old_logs();
+        if let Err(err) = res {
+            debug!("Unable to remove old indexedlogutil logs: {:?}", err);
+        }
         Ok(Store::Shared(rotate_log))
     }
 
