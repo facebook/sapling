@@ -13,6 +13,7 @@ use std::iter::FromIterator;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
+use futures::StreamExt;
 use http::StatusCode;
 use itertools::Itertools;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
@@ -34,7 +35,7 @@ use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
     CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
     EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, LookupRequest,
-    LookupResponse, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -621,10 +622,88 @@ impl EdenApi for Client {
 
     async fn commit_known(
         &self,
-        _repo: String,
-        _hgids: Vec<HgId>,
+        repo: String,
+        hgids: Vec<HgId>,
     ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
-        raise_not_implemented()
+        let response = self
+            .lookup_batch(
+                repo,
+                hgids
+                    .clone()
+                    .into_iter()
+                    .map(|hgid| AnyId::HgChangesetId(hgid))
+                    .collect(),
+                None,
+            )
+            .await?;
+
+        let (mut entries, stats) = (response.entries, response.stats);
+
+        let mut knowns: Vec<Option<bool>> = vec![None; hgids.len()];
+
+        // Convert `lookup_batch` to vec<Option<bool> with token validation (check `HgChangesetId` in the token is correct for the index).
+        // `Some(true)`: The server verified that `hgid` is known.
+        // `Some(false)`: The server does not known `hgid`.
+        // `None`: The server failed to check `hgid` due to some error.
+        //         The existing API doesn't provide information for what id was the error,
+        //         so log the original error and convert it to a generic "the server cannot check `HgChangesetId`"
+
+        while let Some(entry) = entries.next().await {
+            match entry {
+                Ok(entry) => {
+                    if entry.index >= hgids.len() {
+                        return Err(EdenApiError::Other(format_err!(
+                            "`lookup_batch` returned an invalid index"
+                        )));
+                    }
+                    match entry.token {
+                        Some(token) => {
+                            if let AnyId::HgChangesetId(token_id) = token.data.id {
+                                if token_id != hgids[entry.index] {
+                                    return Err(EdenApiError::Other(format_err!(
+                                        "`lookup_batch` returned an invalid token or an invalid index"
+                                    )));
+                                }
+                                knowns[entry.index] = Some(true)
+                            } else {
+                                return Err(EdenApiError::Other(format_err!(
+                                    "`lookup_batch` returned an invalid token"
+                                )));
+                            }
+                        }
+                        None => knowns[entry.index] = Some(false),
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!("`lookup_batch` error: {:?}", &err);
+                }
+            }
+        }
+
+        Ok(Fetch {
+            meta: Default::default(),
+            stats,
+            entries: Box::pin(futures::stream::iter(
+                knowns
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, res)| match res {
+                        Some(value) => CommitKnownResponse {
+                            hgid: hgids[index],
+                            known: Ok(value),
+                        },
+                        None => CommitKnownResponse {
+                            hgid: hgids[index],
+                            known: Err(ServerError::generic(
+                                "the server cannot check `HgChangesetId`",
+                            )),
+                        },
+                    })
+                    .collect::<Vec<CommitKnownResponse>>()
+                    .into_iter()
+                    .map(Ok),
+            )),
+        })
     }
 
     async fn commit_graph(
