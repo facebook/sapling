@@ -37,6 +37,7 @@ _ignoreextensions = {
     "bundle2hooks",
     "censor",
     "children",
+    "clindex",
     "cleanobsstore",
     "color",
     "configwarn",

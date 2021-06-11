@@ -258,7 +258,6 @@ def _preimportmodules():
         "checkmessagehook",
         "chistedit",
         "clienttelemetry",
-        "clindex",
         "commitcloud",
         "conflictinfo",
         "convert",

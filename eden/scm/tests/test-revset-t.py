@@ -211,7 +211,8 @@ sh % "try '0:1'" == r"""
       (symbol '0')
       (symbol '1'))
     * set:
-    <idset+ [0 1]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     0
     1"""
 sh % "try --optimize ':'" == r"""
@@ -221,7 +222,8 @@ sh % "try --optimize ':'" == r"""
     (rangeall
       None)
     * set:
-    <idset+ [0..=9]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>
     0
     1
     2
@@ -237,7 +239,8 @@ sh % "try '3::6'" == r"""
       (symbol '3')
       (symbol '6'))
     * set:
-    <baseset+ [3, 5, 6]>
+    <nameset+
+      <spans [904fa392b9415cad2ad08ac82d39bed6cfbcaa1c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+5:6, 8528aa5637f252b36e034c373e36890ace37524c+3]>>
     3
     5
     6"""
@@ -318,7 +321,8 @@ sh % "try '+a+b+c+:'" == r"""
     (rangepost
       (symbol '+a+b+c+'))
     * set:
-    <idset+ [3..=9]>
+    <nameset+
+      <spans [8528aa5637f252b36e034c373e36890ace37524c:6a4f54cc779b5949146617ba046459baab4a496f+3:9]>>
     3
     4
     5
@@ -330,7 +334,8 @@ sh % "try ':+a+b+c+'" == r"""
     (rangepre
       (symbol '+a+b+c+'))
     * set:
-    <idset+ [0..=3]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:8528aa5637f252b36e034c373e36890ace37524c+0:3]>>
     0
     1
     2
@@ -340,7 +345,8 @@ sh % "try -- '-a-b-c-:+a+b+c+'" == r"""
       (symbol '-a-b-c-')
       (symbol '+a+b+c+'))
     * set:
-    <idset- [3 4]>
+    <nameset-
+      <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
     4
     3"""
 sh % "log '-a-b-c-:+a+b+c+'" == r"""
@@ -821,7 +827,8 @@ sh % "try -p parsed -p analyzed ':'" == r"""
     (rangeall
       None)
     * set:
-    <idset+ [0..=9]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>
     0
     1
     2
@@ -837,7 +844,8 @@ sh % "try -p analyzed ':1'" == r"""
     (rangepre
       (symbol '1'))
     * set:
-    <idset+ [0 1]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     0
     1"""
 sh % "try -p analyzed ':(1|2)'" == r"""
@@ -848,7 +856,8 @@ sh % "try -p analyzed ':(1|2)'" == r"""
           (symbol '1')
           (symbol '2'))))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -871,7 +880,8 @@ sh % "try '1^:2'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -882,7 +892,8 @@ sh % "try '1^::2'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <baseset+ [0, 1, 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -892,7 +903,8 @@ sh % "try '9^:'" == r"""
       (parentpost
         (symbol '9')))
     * set:
-    <idset+ [8 9]>
+    <nameset+
+      <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
     8
     9"""
 
@@ -917,7 +929,8 @@ sh % "try 'sort(1^:2)'" == r"""
           (symbol '1'))
         (symbol '2')))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -932,7 +945,8 @@ sh % "try '(3^:4)^:2'" == r"""
             (symbol '4'))))
       (symbol '2'))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -947,7 +961,8 @@ sh % "try '(3^::4)^::2'" == r"""
             (symbol '4'))))
       (symbol '2'))
     * set:
-    <baseset+ [0, 1, 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -960,7 +975,8 @@ sh % "try '(9^:)^:'" == r"""
             (parentpost
               (symbol '9'))))))
     * set:
-    <idset+ [4..=9]>
+    <nameset+
+      <spans [2326846efdab34abffaf5ad2e7831f64a8ebb017:6a4f54cc779b5949146617ba046459baab4a496f+4:9]>>
     4
     5
     6
@@ -978,7 +994,8 @@ sh % "try A --config 'revsetalias.A=1^:2'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -993,7 +1010,8 @@ sh % "try 'A:2' --config 'revsetalias.A=1^'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -1079,11 +1097,11 @@ sh % "log 'reverse(ancestors(7+8, depth=2))'" == r"""
 
 sh % "log 'reverse(ancestors(8, depth=2)) + reverse(ancestors(7, depth=2))'" == r"""
     8
-    4
-    2
     7
     6
-    5"""
+    5
+    4
+    2"""
 
 #  (walk 2nd and 3rd ancestors)
 
@@ -1136,7 +1154,6 @@ sh % "hg log -G -T '{rev}\\n' --config 'experimental.graphshorten=True'" == r"""
 #  (null is ultimate root and has optimized path)
 
 sh % "log 'null:4 & descendants(null)'" == r"""
-    -1
     0
     1
     2
@@ -1167,14 +1184,11 @@ sh % "log ':8 & descendants(2+5)'" == r"""
 #  (depth=0 selects the node itself)
 
 sh % "log 'descendants(0, depth=0)'" == "0"
-sh % "log 'null: & descendants(null, depth=0)'" == "-1"
+sh % "log 'null: & descendants(null, depth=0)'" == ""
 
 #  (p2 = null should be ignored)
 
-sh % "log 'null: & descendants(null, depth=2)'" == r"""
-    -1
-    0
-    1"""
+sh % "log 'null: & descendants(null, depth=2)'" == ""
 
 #  (multiple paths: depth(6) = (2, 3))
 
@@ -1264,7 +1278,7 @@ sh % "log 'children(ancestor(4,5))'" == r"""
 sh % "log 'children(4)'" == r"""
     6
     8"""
-sh % "log 'children(null)'" == "0"
+sh % "log 'children(null)'" == ""
 
 sh % "log 'closed()'"
 sh % "log 'contains(a)'" == r"""
@@ -1374,7 +1388,8 @@ sh % "log 'last(all(), 2)'" == r"""
 
 sh % "hg debugrevspec --no-show-revs -s '0:7 & all()'" == r"""
     * set:
-    <idset+ [0..=7]>"""
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>"""
 sh % "log 'limit(0:7 & all(), 3, 4)'" == r"""
     4
     5
@@ -1394,7 +1409,8 @@ sh % "hg debugrevspec --no-show-revs -s 0+1+2+3+4+5+6+7" == r"""
     <baseset [0, 1, 2, 3, 4, 5, 6, 7]>"""
 sh % "hg debugrevspec --no-show-revs -s '0::7'" == r"""
     * set:
-    <baseset+ [0, 1, 2, 3, 4, 5, 6, 7]>"""
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>"""
 sh % "log 'limit(0+1+2+3+4+5+6+7, 3, 4)'" == r"""
     4
     5
@@ -1412,29 +1428,33 @@ sh % "log 'last(sort(0::7, rev), 2)'" == r"""
     7"""
 sh % "hg debugrevspec -s 'limit(sort(0::7, rev), 3, 6)'" == r"""
     * set:
-    <baseset+ [6, 7]>
+    <nameset+
+      <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
     6
     7"""
 sh % "hg debugrevspec -s 'limit(sort(0::7, rev), 3, 9)'" == r"""
     * set:
-    <baseset+ []>"""
+    <baseset []>"""
 sh % "hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 6)'" == r"""
     * set:
-    <baseset- [0, 1]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     1
     0"""
 sh % "hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 9)'" == r"""
     * set:
-    <baseset- []>"""
+    <nameset-
+      <spans []>>"""
 sh % "hg debugrevspec -s 'limit(0::7, 0)'" == r"""
     * set:
-    <baseset+ []>"""
+    <baseset []>"""
 
 #  (using spanset)
 
 sh % "hg debugrevspec --no-show-revs -s '0:7'" == r"""
     * set:
-    <idset+ [0..=7]>"""
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:013af1973af4a1932911a575960a876af6c02aaa+0:7]>>"""
 sh % "log 'limit(0:7, 3, 4)'" == r"""
     4
     5
@@ -1454,58 +1474,54 @@ sh % "log 'last(0:7, 2)'" == r"""
     7"""
 sh % "hg debugrevspec -s 'limit(0:7, 3, 6)'" == r"""
     * set:
-    <baseset slice=6:9
-      <idset+ [0..=7]>>
+    <nameset+
+      <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
     6
     7"""
 sh % "hg debugrevspec -s 'limit(0:7, 3, 9)'" == r"""
     * set:
-    <baseset slice=9:12
-      <idset+ [0..=7]>>"""
+    <baseset []>"""
 sh % "hg debugrevspec -s 'limit(7:0, 3, 6)'" == r"""
     * set:
-    <baseset slice=6:9
-      <idset- [0..=7]>>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     1
     0"""
 sh % "hg debugrevspec -s 'limit(7:0, 3, 9)'" == r"""
     * set:
-    <baseset slice=9:12
-      <idset- [0..=7]>>"""
+    <nameset-
+      <spans []>>"""
 sh % "hg debugrevspec -s 'limit(0:7, 0)'" == r"""
     * set:
-    <baseset slice=0:0
-      <idset+ [0..=7]>>"""
+    <baseset []>"""
 
 # Test order of first/last revisions
 
 sh % "hg debugrevspec -s 'first(4:0, 3) & 3:'" == r"""
     * set:
-    <filteredset
-      <baseset slice=0:3
-        <idset- [0..=4]>>,
-      <idset+ [3..=9]>>
+    <nameset-
+      <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
     4
     3"""
 
 sh % "hg debugrevspec -s '3: & first(4:0, 3)'" == r"""
     * set:
-    <idset+ [3 4]>
+    <nameset+
+      <spans [8528aa5637f252b36e034c373e36890ace37524c:2326846efdab34abffaf5ad2e7831f64a8ebb017+3:4]>>
     3
     4"""
 
 sh % "hg debugrevspec -s 'last(4:0, 3) & :1'" == r"""
     * set:
-    <filteredset
-      <baseset slice=0:3
-        <idset+ [0..=4]>>,
-      <idset+ [0 1]>>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     1
     0"""
 
 sh % "hg debugrevspec -s ':1 & last(4:0, 3)'" == r"""
     * set:
-    <idset+ [0 1]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:d75937da8da0322d18c3771fb029ffd88b996c89+0:1]>>
     0
     1"""
 
@@ -1513,8 +1529,8 @@ sh % "hg debugrevspec -s ':1 & last(4:0, 3)'" == r"""
 
 sh % "hg debugrevspec -s 'last(0::)'" == r"""
     * set:
-    <baseset slice=0:1
-      <generatorset->>
+    <nameset+
+      <spans [6a4f54cc779b5949146617ba046459baab4a496f+9]>>
     9"""
 sh % "hg identify -r '0::' --num" == "9"
 
@@ -1629,7 +1645,8 @@ sh % "try --optimize '8:9-8%'" == r"""
           (symbol '9'))
         (symbol '8')))
     * set:
-    <baseset+ [8, 9]>
+    <nameset+
+      <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9]>>
     8
     9"""
 sh % "try --optimize '(9)%(5)'" == r"""
@@ -1645,7 +1662,8 @@ sh % "try --optimize '(9)%(5)'" == r"""
         (symbol '9')
         (symbol '5')))
     * set:
-    <baseset+ [2, 4, 8, 9]>
+    <nameset+
+      <spans [d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c:6a4f54cc779b5949146617ba046459baab4a496f+8:9, 2326846efdab34abffaf5ad2e7831f64a8ebb017+4, 5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
     2
     4
     8
@@ -1689,14 +1707,10 @@ sh % "log '(null)'" == "-1"
 sh % "log '(null:0)'" == r"""
     -1
     0"""
-sh % "log '(0:null)'" == r"""
-    0
-    -1"""
-sh % "log 'null::0'" == r"""
-    -1
-    0"""
+sh % "log '(0:null)'" == "0"
+sh % "log 'null::0'" == "0"
 sh % "log 'null:tip - 0:'" == "-1"
-sh % "log 'null: and null::'" | "head -1" == "-1"
+sh % "log 'null: and null::'" | "head -1" == "0"
 sh % "log 'null: or 0:'" | "head -2" == r"""
     -1
     0"""
@@ -1717,21 +1731,20 @@ sh % "hg debugrevspec 'wdir()^'" == "9"
 sh % "hg up 7" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg debugrevspec 'wdir()^'" == "7"
 sh % "hg debugrevspec 'wdir()^0'" == "2147483647"
-sh % "hg debugrevspec 'wdir()~3'" == "5"
+sh % "hg debugrevspec 'wdir()~3'" == r"""
+    abort: working directory revision cannot be specified
+    [255]"""
 sh % "hg debugrevspec 'ancestors(wdir())'" == r"""
-    0
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    2147483647"""
-sh % "hg debugrevspec 'wdir()~0'" == "2147483647"
+    abort: 2147483647 cannot be found!
+    [255]"""
+sh % "hg debugrevspec 'wdir()~0'" == r"""
+    abort: working directory revision cannot be specified
+    [255]"""
 sh % "hg debugrevspec 'p1(wdir())'" == "7"
 sh % "hg debugrevspec 'p2(wdir())'"
-sh % "hg debugrevspec 'parents(wdir())'" == "7"
+sh % "hg debugrevspec 'parents(wdir())'" == r"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "hg debugrevspec 'wdir()^1'" == "7"
 sh % "hg debugrevspec 'wdir()^2'"
 sh % "hg debugrevspec 'wdir()^3'" == r"""
@@ -1740,26 +1753,21 @@ sh % "hg debugrevspec 'wdir()^3'" == r"""
 
 # DAG ranges with wdir()
 sh % "hg debugrevspec 'wdir()::1'"
-sh % "hg debugrevspec 'wdir()::wdir()'" == "2147483647"
-sh % "hg debugrevspec 'wdir()::(1+wdir())'" == "2147483647"
+sh % "hg debugrevspec 'wdir()::wdir()'" == r"""
+    abort: 2147483647 cannot be found!
+    [255]"""
+sh % "hg debugrevspec 'wdir()::(1+wdir())'" == r"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "hg debugrevspec '6::wdir()'" == r"""
-    6
-    7
-    2147483647"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "hg debugrevspec '5::(wdir()+7)'" == r"""
-    5
-    6
-    7
-    2147483647"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "hg debugrevspec '(1+wdir())::(2+wdir())'" == r"""
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    2147483647"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 
 # For tests consistency
 sh % "hg up 9" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
@@ -1768,28 +1776,33 @@ sh % "hg debugrevspec 'tip or wdir()'" == r"""
     2147483647"""
 sh % "hg debugrevspec '0:tip and wdir()'"
 sh % "log '0:wdir()'" | "tail -3" == r"""
-    8
-    9
-    2147483647"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "log 'wdir():0'" | "head -3" == r"""
     2147483647
     9
     8"""
 sh % "log 'wdir():wdir()'" == "2147483647"
 sh % "log '(all() + wdir()) & min(. + wdir())'" == "9"
-sh % "log '(all() + wdir()) & max(. + wdir())'" == "2147483647"
+sh % "log '(all() + wdir()) & max(. + wdir())'" == ""
 sh % "log 'first(wdir() + .)'" == "2147483647"
 sh % "log 'last(. + wdir())'" == "2147483647"
 
 # Test working-directory integer revision and node id
 # (BUG: '0:wdir()' is still needed to populate wdir revision)
 
-sh % "hg debugrevspec '0:wdir() & 2147483647'" == "2147483647"
-sh % "hg debugrevspec '0:wdir() & rev(2147483647)'" == "2147483647"
-sh % "hg debugrevspec '0:wdir() & ffffffffffffffffffffffffffffffffffffffff'" == "2147483647"
-sh % "hg debugrevspec '0:wdir() & ffffffffffff'" == "2147483647"
-sh % "hg debugrevspec '0:wdir() & id(ffffffffffffffffffffffffffffffffffffffff)'" == "2147483647"
-sh % "hg debugrevspec '0:wdir() & id(ffffffffffff)'" == "2147483647"
+sh % "hg debugrevspec '0:wdir() & 2147483647'" == ""
+sh % "hg debugrevspec '0:wdir() & rev(2147483647)'" == r"""
+    abort: 2147483647 cannot be found!
+    [255]"""
+sh % "hg debugrevspec '0:wdir() & ffffffffffffffffffffffffffffffffffffffff'" == ""
+sh % "hg debugrevspec '0:wdir() & ffffffffffff'" == r"""
+    abort: unknown revision 'ffffffffffff'!
+    [255]"""
+sh % "hg debugrevspec '0:wdir() & id(ffffffffffffffffffffffffffffffffffffffff)'" == r"""
+    abort: 2147483647 cannot be found!
+    [255]"""
+sh % "hg debugrevspec '0:wdir() & id(ffffffffffff)'" == ""
 
 sh % "cd .."
 
@@ -1816,20 +1829,14 @@ for i in [2463, 2961, 6726, 78127]:
     sh.hg("ci", "-qm", "%s" % i)
 sh % "hg up -q null"
 sh % "hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\\n'" == r"""
-    0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a b4e
-    1:fffbae3886c8fbb2114296380d276fd37715d571 fffba
-    2:fffb6093b00943f91034b9bdad069402c834e572 fffb6
-    3:fff48a9b9de34a4d64120c29548214c67980ade3 fff4
-    4:ffff85cff0ff78504fcdc3c0bc10de0c65379249 ffff8
-    2147483647:ffffffffffffffffffffffffffffffffffffffff fffff"""
+    abort: 2147483647 cannot be found!
+    [255]"""
 sh % "hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571" == ""
 
 sh % "hg debugrevspec '0:wdir() & fff'" == r"""
     abort: 00changelog.i@fff: ambiguous identifier!
     [255]"""
-sh % "hg debugrevspec '0:wdir() & ffff'" == r"""
-    abort: 00changelog.i@ffff: ambiguous identifier!
-    [255]"""
+sh % "hg debugrevspec '0:wdir() & ffff'" == "4"
 sh % "hg debugrevspec '0:wdir() & fffb'" == r"""
     abort: 00changelog.i@fffb: ambiguous identifier!
     [255]"""
@@ -1838,7 +1845,9 @@ sh % "hg debugrevspec '0:wdir() & id(fffb)'" == r"""
     abort: 00changelog.i@fffb: ambiguous identifier!
     [255]"""
 sh % "hg debugrevspec '0:wdir() & ffff8'" == "4"
-sh % "hg debugrevspec '0:wdir() & fffff'" == "2147483647"
+sh % "hg debugrevspec '0:wdir() & fffff'" == r"""
+    abort: unknown revision 'fffff'!
+    [255]"""
 
 sh % "cd .."
 
@@ -1931,7 +1940,8 @@ sh % "try -p optimized '3:0 & 0:3 & not 2:1'" == r"""
         (symbol '2')
         (symbol '1')))
     * set:
-    <idset- [0 3]>
+    <nameset-
+      <spans [8528aa5637f252b36e034c373e36890ace37524c+3, 2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
     3
     0"""
 
@@ -1958,7 +1968,8 @@ sh % "try --optimize '2:0 & (0 + 1 + 2)'" == r"""
         (symbol '_list')
         (string '0\x001\x002')))
     * set:
-    <idset- [0 1 2]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     2
     1
     0"""
@@ -1989,7 +2000,8 @@ sh % "try --optimize '2:0 & (0:1 + 2)'" == r"""
             (symbol '1'))
           (symbol '2'))))
     * set:
-    <idset- [0 1 2]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     2
     1
     0"""
@@ -2013,7 +2025,8 @@ sh % "trylist --optimize '2:0 & %ld' 0 1 2" == r"""
         (symbol '_intlist')
         (string '0\x001\x002')))
     * set:
-    <idset- [0 1 2]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     2
     1
     0"""
@@ -2035,12 +2048,11 @@ sh % "trylist --optimize '%ld & 2:0' 0 2 1" == r"""
         (symbol '2')
         (symbol '0')))
     * set:
-    <filteredset
-      <baseset [0, 2, 1]>,
-      <idset- [0 1 2]>>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
-    2
-    1"""
+    1
+    2"""
 
 #  '_hexlist(a b)' should behave like 'a + b':
 
@@ -2054,7 +2066,7 @@ sh % (
         (symbol '0'))
       (func
         (symbol '_hexlist')
-        (string '*'))) (glob)
+        (string '2785f51eece5a23075c6f1d74702d8d9cb8bf0d4\x00d75937da8da0322d18c3771fb029ffd88b996c89\x005ed5505e9f1c21de2345daabdd7913fe53e4acd2')))
     * optimized:
     (and
       (range
@@ -2062,9 +2074,10 @@ sh % (
         (symbol '0'))
       (func
         (symbol '_hexlist')
-        (string '*'))) (glob)
+        (string '2785f51eece5a23075c6f1d74702d8d9cb8bf0d4\x00d75937da8da0322d18c3771fb029ffd88b996c89\x005ed5505e9f1c21de2345daabdd7913fe53e4acd2')))
     * set:
-    <idset- [0 1 2]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     2
     1
     0"""
@@ -2107,7 +2120,8 @@ sh % "try -p optimized '2:0 & not (0 + 1)'" == r"""
         (symbol '_list')
         (string '0\x001')))
     * set:
-    <idset- [2]>
+    <nameset-
+      <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
     2"""
 
 sh % "try -p optimized '2:0 & not (0:2 & (0 + 1))'" == r"""
@@ -2124,7 +2138,8 @@ sh % "try -p optimized '2:0 & not (0:2 & (0 + 1))'" == r"""
           (symbol '_list')
           (string '0\x001'))))
     * set:
-    <idset- [2]>
+    <nameset-
+      <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2]>>
     2"""
 
 #  because 'present()' does nothing other than suppressing an error, the
@@ -2166,7 +2181,8 @@ sh % "try --optimize '2:0 & present(0 + 1 + 2)'" == r"""
           (symbol '_list')
           (string '0\x001\x002'))))
     * set:
-    <idset- [0 1 2]>
+    <nameset-
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     2
     1
     0"""
@@ -2194,7 +2210,8 @@ sh % "try --optimize '0:2 & reverse(all())'" == r"""
           (symbol 'all')
           None)))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -2227,7 +2244,8 @@ sh % "try --optimize '0:2 & sort(all(), -rev)'" == r"""
             None)
           (string '-rev'))))
     * set:
-    <idset+ [0 1 2]>
+    <nameset+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:5ed5505e9f1c21de2345daabdd7913fe53e4acd2+0:2]>>
     0
     1
     2"""
@@ -2266,9 +2284,8 @@ sh % "try --optimize '2:0 & first(1 + 0 + 2)'" == r"""
           (symbol '_list')
           (string '1\x000\x002'))))
     * set:
-    <filteredset
-      <baseset [1]>,
-      <idset- [0 1 2]>>
+    <nameset-
+      <spans [d75937da8da0322d18c3771fb029ffd88b996c89+1]>>
     1"""
 
 sh % "try --optimize '2:0 & not last(0 + 2 + 1)'" == r"""
@@ -2295,7 +2312,8 @@ sh % "try --optimize '2:0 & not last(0 + 2 + 1)'" == r"""
           (symbol '_list')
           (string '0\x002\x001'))))
     * set:
-    <idset- [0 2]>
+    <nameset-
+      <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2+2, 2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
     2
     0"""
 
@@ -2332,7 +2350,8 @@ sh % "try --optimize '2:0 & (1 + 0 + 2):(0 + 2 + 1)'" == r"""
           (symbol '_list')
           (string '0\x002\x001'))))
     * set:
-    <idset- [1]>
+    <nameset-
+      <spans [d75937da8da0322d18c3771fb029ffd88b996c89+1]>>
     1"""
 
 #  'A & B' can be rewritten as 'flipand(B, A)' by weight.

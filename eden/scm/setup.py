@@ -1627,12 +1627,6 @@ cythonopts = {"unraisable_tracebacks": False, "c_string_type": "bytes"}
 extmodules += cythonize(
     [
         Extension(
-            "edenscmnative.clindex",
-            sources=["edenscmnative/clindex.pyx"],
-            include_dirs=include_dirs,
-            extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS]),
-        ),
-        Extension(
             "edenscmnative.patchrmdir",
             sources=["edenscmnative/patchrmdir.pyx"],
             include_dirs=include_dirs,
