@@ -571,8 +571,21 @@ impl RotateLog {
                                 // Newly opened or flushed RotateLog will unmap files.
                                 // New rotation would trigger remove_dir_all to try
                                 // remove old logs again.
-                                let res = fs::remove_file(entry.path().join(log::META_FILE))
-                                    .and_then(|_| fs::remove_dir_all(entry.path()));
+                                match fs::remove_file(entry.path().join(log::META_FILE)) {
+                                    Ok(()) => {}
+                                    Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                                        // Meta file is already deleted.
+                                    }
+                                    Err(e) => {
+                                        // Don't delete the log if we were unable to delete the
+                                        // meta file.
+                                        debug!("Error removing rotate log meta: {:?}", name);
+                                        continue;
+                                    }
+                                }
+
+                                // Delete the rest of the directory.
+                                let res = fs::remove_dir_all(entry.path());
                                 match res {
                                     Ok(_) => debug!("Removed rotate log: {:?}", name),
                                     Err(err) => {
