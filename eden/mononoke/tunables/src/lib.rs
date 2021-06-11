@@ -181,7 +181,12 @@ pub struct MononokeTunables {
     derived_data_disable_parallel_derivation: AtomicBool,
     derived_data_parallel_derivation_buffer: AtomicI64,
 
+    // Tunables to disable derived data derivation either for the full repo
+    // or for specific derived data types inside a repo
     all_derived_data_disabled: TunableBoolByRepo,
+    derived_data_types_disabled: TunableVecOfStringsByRepo,
+    // How often to check if derived data is disabled or not
+    derived_data_disabled_watcher_delay_secs: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

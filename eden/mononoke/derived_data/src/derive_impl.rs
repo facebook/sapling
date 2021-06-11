@@ -57,7 +57,7 @@ pub fn enabled_type_config<'repo>(
         enabled = false;
     }
 
-    if emergency_disabled(repo) {
+    if emergency_disabled(repo, name) {
         enabled = false;
     }
 
@@ -74,12 +74,29 @@ pub fn enabled_type_config<'repo>(
     }
 }
 
-fn emergency_disabled(repo: &BlobRepo) -> bool {
+fn emergency_disabled(repo: &BlobRepo, name: &str) -> bool {
     let disabled_for_repo = tunables::tunables()
         .get_by_repo_all_derived_data_disabled(repo.name())
         .unwrap_or(false);
 
-    disabled_for_repo
+    if disabled_for_repo {
+        return true;
+    }
+
+    let disabled_for_type = tunables::tunables()
+        .get_by_repo_derived_data_types_disabled(repo.name())
+        .unwrap_or(vec![]);
+
+    if disabled_for_type
+        .iter()
+        .find(|ty| ty.as_str() == name)
+        .is_some()
+    {
+        return true;
+    }
+
+    // Not disabled
+    false
 }
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
@@ -191,12 +208,18 @@ pub async fn derive_impl<
     let watcher = {
         let repo = repo.clone();
         async move {
+            let mut delay_secs =
+                tunables::tunables().get_derived_data_disabled_watcher_delay_secs();
+            if delay_secs <= 0 {
+                delay_secs = 10;
+            }
+            let delay_secs: u64 = delay_secs.try_into().unwrap();
             loop {
-                if emergency_disabled(&repo) {
+                if emergency_disabled(&repo, Derivable::NAME) {
                     derivation_abort_handle.abort();
                     break;
                 }
-                tokio::time::sleep(Duration::from_secs(10)).await;
+                tokio::time::sleep(Duration::from_secs(delay_secs)).await;
             }
         }
     };
@@ -1203,10 +1226,53 @@ mod test {
         let session = ctx.metadata().session_id().clone();
         DELAY.with(|m| m.insert(session, Duration::from_secs(20)));
 
+        let create_tunables = || {
+            let tunables = MononokeTunables::default();
+            // Make delay smaller so that the test runs faster
+            tunables.update_ints(&hashmap! {
+                "derived_data_disabled_watcher_delay_secs".to_string() => 1,
+            });
+            tunables
+        };
+
         let commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(MPath::new("file")?, "content")
             .commit()
             .await?;
+
+        let tunables = create_tunables();
+        override_tunables(Some(Arc::new(tunables)));
+
+        let tunables = create_tunables();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().to_string() => hashmap! {
+                "all_derived_data_disabled".to_string() => true,
+            },
+        });
+        ensure_disabled(&ctx, &repo, commit, tunables).await?;
+
+        // Remove previous override
+        let tunables = create_tunables();
+        override_tunables(Some(Arc::new(tunables)));
+
+        dbg!("Disable derive data for a single type");
+        let tunables = create_tunables();
+        tunables.update_by_repo_vec_of_strings(&hashmap! {
+            repo.name().to_string() => hashmap! {
+                "derived_data_types_disabled".to_string() => vec![TestGenNum::NAME.to_string()],
+            },
+        });
+        ensure_disabled(&ctx, &repo, commit, tunables).await?;
+
+        Ok(())
+    }
+
+    async fn ensure_disabled(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        commit: ChangesetId,
+        tunables: MononokeTunables,
+    ) -> Result<(), Error> {
         let spawned_derivation = tokio::spawn({
             let ctx = ctx.clone();
             let repo = repo.clone();
@@ -1214,12 +1280,6 @@ mod test {
         });
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.name().to_string() => hashmap! {
-                "all_derived_data_disabled".to_string() => true,
-            },
-        });
         override_tunables(Some(Arc::new(tunables)));
 
         let (stats, res) = spawned_derivation.await?;
