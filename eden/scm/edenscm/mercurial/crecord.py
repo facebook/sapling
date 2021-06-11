@@ -949,7 +949,7 @@ class curseschunkselector(object):
         width = self.xscreensize
         # turn tabs into spaces
         instr = instr.expandtabs(4)
-        strwidth = encoding.colwidth(pycompat.decodeutf8(instr))
+        strwidth = encoding.colwidth(pycompat.decodeutf8(instr, errors="replace"))
         numspaces = width - ((strwidth + xstart) % width) - 1
         return instr + b" " * numspaces + b"\n"
 
