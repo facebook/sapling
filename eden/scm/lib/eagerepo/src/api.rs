@@ -219,6 +219,15 @@ impl EdenApi for EagerRepo {
         Ok(clone_data)
     }
 
+    async fn pull_fast_forward_master(
+        &self,
+        _repo: String,
+        _old_master: HgId,
+        _new_master: HgId,
+    ) -> Result<dag::CloneData<HgId>, EdenApiError> {
+        unimplemented!()
+    }
+
     async fn full_idmap_clone_data(
         &self,
         _repo: String,

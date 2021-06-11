@@ -354,6 +354,15 @@ impl EdenApi for FakeEdenApi {
         unimplemented!()
     }
 
+    async fn pull_fast_forward_master(
+        &self,
+        _repo: String,
+        _old_master: HgId,
+        _new_master: HgId,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        unimplemented!()
+    }
+
     async fn full_idmap_clone_data(
         &self,
         _repo: String,
