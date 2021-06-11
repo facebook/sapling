@@ -114,6 +114,94 @@ impl Span {
     }
 }
 
+/// Subspan is a trait for an object that
+/// (a) Can be mapped into Span
+/// (b) Can return 'subspan' for any given non-empty subset of it's span
+pub trait Subspan {
+    fn span(&self) -> Span;
+
+    /// Provided span should be subset of T::span(), otherwise this method behavior is undefined
+    fn subspan(&self, span: Span) -> Self;
+
+    /// Overlaps two objects and returns result of overlap and remainders for left and right object
+    /// This method is generally defined for any two types that implement Subspan
+    /// Type of an overlap if the same as type of Self
+    ///
+    /// Returns:
+    ///  - overlap: overlap between two objects
+    ///  - rem_left: remaining non-overlapping part of left object
+    ///  - rem_right: remaining non-overlapping part of right object
+    ///
+    /// L: [123456]
+    /// R:    [456789]
+    /// overlap(L, R) = ([456], [123], None)
+    fn intersect<R: Subspan>(&self, r: &R) -> (Option<Self>, Option<Self>, Option<R>)
+    where
+        Self: Sized,
+    {
+        let left = self.span();
+        let right = r.span();
+        let span_low = left.low.max(right.low);
+        let span_high = left.high.min(right.high);
+        let overlap = Span::try_from_bounds(span_low..=span_high);
+
+        let rem_left = Span::try_from_bounds(left.low..(left.high + 1).min(span_low));
+        let rem_right = Span::try_from_bounds(right.low..(right.high + 1).min(span_low));
+
+        let overlap = overlap.map(|s| self.subspan(s));
+        let rem_left = rem_left.map(|s| self.subspan(s));
+        let rem_right = rem_right.map(|s| r.subspan(s));
+        (overlap, rem_left, rem_right)
+    }
+}
+
+/// Calculates the intersection of two ordered iterators of span-like objects.
+pub fn intersect_iter<
+    L: Subspan,
+    R: Subspan,
+    LI: Iterator<Item = L>,
+    RI: Iterator<Item = R>,
+    P: FnMut(L),
+>(
+    mut lhs: LI,
+    mut rhs: RI,
+    mut push: P,
+) {
+    let mut next_left = lhs.next();
+    let mut next_right = rhs.next();
+
+    while let (Some(left), Some(right)) = (next_left, next_right) {
+        // current:
+        //   |------- A --------|
+        //         |------- B ------|
+        //         |--- span ---|
+        // next:
+        //   |- A -| (remaining part of A)
+        //           (next B)
+        // note: (A, B) can be either (left, right) or (right, left)
+        let (span, rem_left, rem_right) = left.intersect(&right);
+
+        if let Some(span) = span {
+            push(span);
+        }
+
+        next_right = rem_right.or_else(|| rhs.next());
+        next_left = rem_left.or_else(|| lhs.next());
+    }
+}
+
+impl Subspan for Span {
+    fn span(&self) -> Span {
+        *self
+    }
+
+    fn subspan(&self, span: Span) -> Self {
+        assert!(self.low <= span.low);
+        assert!(self.high >= span.high);
+        span
+    }
+}
+
 // This is for users who want shorter code than [`Span::new`].
 // Internal logic here should use [`Span::new`], or [`Span::try_from_bounds`],
 // or construct [`Span`] directly.
@@ -333,42 +421,13 @@ impl SpanSet {
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, rhs: &SpanSet) -> SpanSet {
         let mut spans = VecDeque::with_capacity(self.spans.len().max(rhs.spans.len()).min(32));
-        let mut iter_left = self.spans.iter().cloned();
-        let mut iter_right = rhs.spans.iter().cloned();
-        let mut next_left = iter_left.next();
-        let mut next_right = iter_right.next();
-        let mut push = |span: Span| push_with_union(&mut spans, span);
+        let push = |span: Span| push_with_union(&mut spans, span);
+        intersect_iter(self.spans.iter().cloned(), rhs.spans.iter().cloned(), push);
 
-        loop {
-            match (next_left, next_right) {
-                (Some(left), Some(right)) => {
-                    // current:
-                    //   |------- A --------|
-                    //         |------- B ------|
-                    //         |--- span ---|
-                    // next:
-                    //   |- A -| (remaining part of A)
-                    //           (next B)
-                    // note: (A, B) can be either (left, right) or (right, left)
-                    let span_low = left.low.max(right.low);
-                    let span_high = left.high.min(right.high);
-                    if let Some(span) = Span::try_from_bounds(span_low..=span_high) {
-                        push(span);
-                    }
-
-                    next_right = Span::try_from_bounds(right.low..(right.high + 1).min(span_low))
-                        .or_else(|| iter_right.next());
-                    next_left = Span::try_from_bounds(left.low..(left.high + 1).min(span_low))
-                        .or_else(|| iter_left.next());
-                }
-                (_, None) | (None, _) => {
-                    let result = SpanSet { spans };
-                    #[cfg(debug_assertions)]
-                    result.validate();
-                    return result;
-                }
-            }
-        }
+        let result = SpanSet { spans };
+        #[cfg(debug_assertions)]
+        result.validate();
+        result
     }
 
     /// Calculates spans that are included only by this set, not `rhs`.
