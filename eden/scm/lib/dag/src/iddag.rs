@@ -15,6 +15,7 @@ use crate::ops::Persist;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::TryClone;
 use crate::segment::{FlatSegment, PreparedFlatSegments, Segment, SegmentFlags};
+use crate::spanset;
 use crate::Error::Programming;
 use crate::IdSet;
 use crate::IdSpan;
@@ -540,12 +541,18 @@ impl<Store: IdDagStore> IdDag<Store> {
 impl<Store: IdDagStore> IdDag<Store> {
     /// Returns the [`FlatSegment`] entries that are used by this [`IdDag`].
     pub fn flat_segments(&self, group: Group) -> Result<PreparedFlatSegments> {
+        let segments = self.flat_segments_range(group.min_id(), group.max_id())?;
+        Ok(PreparedFlatSegments { segments })
+    }
+
+    /// return all flat segments that overlaps with range (and potentially cover larger range then supplied)
+    fn flat_segments_range(&self, min: Id, max_incl: Id) -> Result<Vec<FlatSegment>> {
         let level = 0;
         let mut segments = Vec::new();
-        for sr in self.iter_segments_ascending(group.min_id(), level)? {
+        for sr in self.iter_segments_ascending(min, level)? {
             let segment = sr?;
             let span = segment.span()?;
-            if span.high > group.max_id() {
+            if span.low > max_incl {
                 break;
             }
             let fs = FlatSegment {
@@ -555,6 +562,26 @@ impl<Store: IdDagStore> IdDag<Store> {
             };
             segments.push(fs);
         }
+        Ok(segments)
+    }
+
+    pub fn idset_to_flat_segments(&self, set: IdSet) -> Result<PreparedFlatSegments> {
+        let mut segments = Vec::new();
+
+        let (min, max) = if let (Some(min), Some(max)) = (set.min(), set.max()) {
+            (min, max)
+        } else {
+            return Ok(PreparedFlatSegments { segments });
+        };
+        let segs = self.flat_segments_range(min, max)?;
+        let seg_iter = segs.into_iter().rev();
+
+        let push = |seg: FlatSegment| segments.push(seg);
+        let span_iter = set.as_spans().iter().cloned();
+        spanset::intersect_iter(seg_iter, span_iter, push);
+
+        segments.reverse();
+
         Ok(PreparedFlatSegments { segments })
     }
 }
@@ -689,7 +716,6 @@ pub trait IdDagAlgorithm: IdDagStore {
         }
         Ok(result)
     }
-
 
     /// Calculate merges within the given set.
     fn merges(&self, set: IdSet) -> Result<IdSet> {
@@ -1685,5 +1711,10 @@ mod tests {
         assert_eq!(test_dag.max_level().unwrap(), 3);
         assert_eq!(test_dag.all().unwrap().count(), 1002);
         assert_eq!(test_dag.dirty().unwrap().count(), 1002);
+
+        let subset_flat_segments = dag
+            .idset_to_flat_segments(IdSet::from_spans(vec![2..=4]))
+            .unwrap();
+        assert_eq!(subset_flat_segments.segments.len(), 3);
     }
 }
