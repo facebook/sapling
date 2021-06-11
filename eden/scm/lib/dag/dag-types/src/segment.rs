@@ -22,6 +22,7 @@ pub struct FlatSegment {
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
+use std::collections::BTreeSet;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FlatSegment {
@@ -65,6 +66,21 @@ impl PreparedFlatSegments {
 
         // NOTE: Consider merging segments for slightly better perf.
         self.segments.extend(rhs.segments);
+    }
+
+    /// Return list of all (unique) parents + head of this flat segments list
+    pub fn parents_and_head(&self) -> BTreeSet<Id> {
+        let mut s: BTreeSet<Id> = self
+            .segments
+            .iter()
+            .map(|seg| &seg.parents)
+            .flatten()
+            .copied()
+            .collect();
+        if let Some(h) = self.head_id() {
+            s.insert(h);
+        }
+        s
     }
 
     /// Add graph edges: id -> parent_ids. Used by `assign_head`.
