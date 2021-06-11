@@ -180,6 +180,8 @@ pub struct MononokeTunables {
     // how many commits will be derived at once.
     derived_data_disable_parallel_derivation: AtomicBool,
     derived_data_parallel_derivation_buffer: AtomicI64,
+
+    all_derived_data_disabled: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
@@ -314,6 +316,10 @@ pub fn with_tunables_async<Out, Fut: Future<Output = Out> + Unpin>(
 
         res
     })
+}
+
+pub fn override_tunables(new_tunables: Option<Arc<MononokeTunables>>) {
+    TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = new_tunables);
 }
 
 #[cfg(test)]

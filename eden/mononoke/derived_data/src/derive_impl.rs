@@ -14,7 +14,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     channel::oneshot,
-    future::{try_join, try_join_all, FutureExt, TryFutureExt},
+    future::{abortable, try_join, try_join_all, Aborted, FutureExt, TryFutureExt},
     stream::FuturesUnordered,
     TryStreamExt,
 };
@@ -52,7 +52,17 @@ pub fn enabled_type_config<'repo>(
     name: &'static str,
 ) -> Result<&'repo DerivedDataTypesConfig, DeriveError> {
     let config = repo.get_derived_data_config();
-    if config.enabled.types.contains(name) {
+    let mut enabled = true;
+    if !config.enabled.types.contains(name) {
+        enabled = false;
+    }
+
+    if emergency_disabled(repo) {
+        enabled = false;
+    }
+
+    if enabled {
+        let config = repo.get_derived_data_config();
         Ok(&config.enabled)
     } else {
         STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), name));
@@ -62,6 +72,14 @@ pub fn enabled_type_config<'repo>(
             repo.name().clone(),
         ))
     }
+}
+
+fn emergency_disabled(repo: &BlobRepo) -> bool {
+    let disabled_for_repo = tunables::tunables()
+        .get_by_repo_all_derived_data_disabled(repo.name())
+        .unwrap_or(false);
+
+    disabled_for_repo
 }
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
@@ -166,7 +184,37 @@ pub async fn derive_impl<
         }
     };
 
+    let (derivation, derivation_abort_handle) = abortable(derivation);
+
+    // Watcher checks if derived data was disabled for a given type,
+    // and if yes it cancells derivation.
+    let watcher = {
+        let repo = repo.clone();
+        async move {
+            loop {
+                if emergency_disabled(&repo) {
+                    derivation_abort_handle.abort();
+                    break;
+                }
+                tokio::time::sleep(Duration::from_secs(10)).await;
+            }
+        }
+    };
+
+    let (watcher, watcher_abort_handle) = abortable(watcher);
+    tokio::spawn(watcher);
+
+
     let (stats, res) = derivation.timed().await;
+    let res = match res {
+        Ok(res) => res.map_err(DeriveError::Error),
+        Err(Aborted) => Err(DeriveError::Disabled(
+            Derivable::NAME,
+            repo.get_repoid(),
+            repo.name().clone(),
+        )),
+    };
+    watcher_abort_handle.abort();
 
     let count = match res {
         Ok(ref count) => *count,
@@ -629,7 +677,7 @@ mod test {
     };
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{resolve_cs_id, CreateCommitContext};
-    use tunables::{with_tunables, MononokeTunables};
+    use tunables::{override_tunables, with_tunables, MononokeTunables};
 
     use crate::BonsaiDerived;
 
@@ -1135,6 +1183,51 @@ mod test {
 
         println!("duration {:?}", stats.completion_time);
         assert!(stats.completion_time < Duration::from_secs(10));
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = TestRepoFactory::new()?
+            .with_config_override(|repo_config| {
+                repo_config
+                    .derived_data_config
+                    .enabled
+                    .types
+                    .insert(TestGenNum::NAME.to_string());
+            })
+            .build()?;
+
+        let session = ctx.metadata().session_id().clone();
+        DELAY.with(|m| m.insert(session, Duration::from_secs(20)));
+
+        let commit = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(MPath::new("file")?, "content")
+            .commit()
+            .await?;
+        let spawned_derivation = tokio::spawn({
+            let ctx = ctx.clone();
+            let repo = repo.clone();
+            async move { TestGenNum::derive(&ctx, &repo, commit).timed().await }
+        });
+        tokio::time::sleep(Duration::from_millis(1000)).await;
+
+        let tunables = MononokeTunables::default();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().to_string() => hashmap! {
+                "all_derived_data_disabled".to_string() => true,
+            },
+        });
+        override_tunables(Some(Arc::new(tunables)));
+
+        let (stats, res) = spawned_derivation.await?;
+
+        assert!(matches!(res, Err(DeriveError::Disabled(..))));
+
+        println!("duration {:?}", stats.completion_time);
+        assert!(stats.completion_time < Duration::from_secs(15));
 
         Ok(())
     }
