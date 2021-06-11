@@ -814,7 +814,7 @@ pub mod merge_even {
             "author"=> "Simon Farnsworth <simonfar@fb.com>",
             "author_date"=> "1506435224 25200",
             "message"=> "Merge",
-            "expected_hg_changeset"=> "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69",
+            "expected_hg_changeset"=> "80274ca17119952e89d706b3d9e9f30dc831c92d",
             "changed_files"=> "branch",
         };
         create_bonsai_changeset_from_test_data(fb, blobrepo.clone(), files, commit_metadata).await;
@@ -822,7 +822,7 @@ pub mod merge_even {
         set_bookmark(
             fb,
             blobrepo.clone(),
-            "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69",
+            "80274ca17119952e89d706b3d9e9f30dc831c92d",
             BookmarkName::new("master").unwrap(),
         )
         .await;
@@ -1099,14 +1099,14 @@ pub mod merge_uneven {
             "author"=> "Simon Farnsworth <simonfar@fb.com>",
             "author_date"=> "1506435672 25200",
             "message"=> "Merge two branches",
-            "expected_hg_changeset"=> "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
+            "expected_hg_changeset"=> "416b719c25bc1e5c071ed9929072647d72ca10c3",
         };
         create_bonsai_changeset_from_test_data(fb, blobrepo.clone(), files, commit_metadata).await;
 
         set_bookmark(
             fb,
             blobrepo.clone(),
-            "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
+            "416b719c25bc1e5c071ed9929072647d72ca10c3",
             BookmarkName::new("master").unwrap(),
         )
         .await;

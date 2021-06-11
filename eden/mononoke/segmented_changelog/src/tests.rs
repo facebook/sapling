@@ -242,13 +242,13 @@ async fn test_build_idmap(fb: FacebookInit) -> Result<()> {
     validate_build_idmap(
         ctx.clone(),
         merge_even::getrepo(fb).await,
-        "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69",
+        "80274ca17119952e89d706b3d9e9f30dc831c92d",
     )
     .await?;
     validate_build_idmap(
         ctx.clone(),
         merge_uneven::getrepo(fb).await,
-        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
+        "416b719c25bc1e5c071ed9929072647d72ca10c3",
     )
     .await?;
     Ok(())
@@ -421,8 +421,8 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     validate_changeset_id_to_location(
         ctx.clone(),
         merge_uneven::getrepo(fb).await,
-        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b", // master, message: Merge two branches
-        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b", // client head == master
+        "416b719c25bc1e5c071ed9929072647d72ca10c3", // master, message: Merge two branches
+        "416b719c25bc1e5c071ed9929072647d72ca10c3", // client head == master
         "fc2cef43395ff3a7b28159007f63d6529d2f41ca", // message: Add 4
         Some(Location::new("264f01429683b3dd8042cb3979e8bf37007118bc", 2)), // message: add 5
     )

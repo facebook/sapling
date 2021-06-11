@@ -44,7 +44,7 @@ use mononoke_types::{
 };
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     sync::Arc,
 };
 use test_repo_factory::TestRepoFactory;
@@ -721,20 +721,14 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         assert!(entries.get("5").is_some());
         assert!(entries.get("base").is_none());
 
-        // check trivial merge parents
-        let (ms1_entries, ms2_entries) =
-            futures::try_join!(get_entries(ms1), get_entries(ms2)).unwrap();
-        let mut br_expected_parents = HashSet::new();
-        br_expected_parents.insert(entry_nodehash(ms1_entries.get("branch").unwrap()));
-        br_expected_parents.insert(entry_nodehash(ms2_entries.get("branch").unwrap()));
+        // check trivial merge reuse of p1. This is different to Mercurial, but still OK.
+        // It biases us towards looking at p1 history for a file whose content is identical
+        // in p1 and p2.
+        let ms1_entries = get_entries(ms1).await.unwrap();
+        let br_expected = entry_nodehash(ms1_entries.get("branch").unwrap());
 
-        let br = entries.get("branch").expect("trivial merge should succeed");
-        let br_parents = entry_parents(&ctx, &repo, br)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect::<HashSet<_>>();
-        assert_eq!(br_parents, br_expected_parents);
+        let br = entry_nodehash(entries.get("branch").expect("trivial merge should succeed"));
+        assert_eq!(br, br_expected);
     }
 
     // add file
@@ -1538,11 +1532,8 @@ mod octopus_merges {
         let foo = helper.lookup_filenode(commit, "foo").await?;
 
         assert_eq!(
-            foo.parents(),
-            (
-                Some(helper.lookup_filenode(p2, "foo").await?.node_id()),
-                None
-            )
+            foo.node_id(),
+            helper.lookup_filenode(p2, "foo").await?.node_id()
         );
 
         Ok(())

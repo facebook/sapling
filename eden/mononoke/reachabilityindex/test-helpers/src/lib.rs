@@ -198,7 +198,7 @@ pub async fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(
     let _merge_node = string_to_bonsai(
         ctx.clone(),
         &repo,
-        "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
+        "416b719c25bc1e5c071ed9929072647d72ca10c3",
     )
     .await;
 

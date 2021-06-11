@@ -203,28 +203,31 @@ async fn resolve_conflict(
             .ok_or_else(make_err)?;
 
     // If we got here, then that means the file type and content is the same everywhere. In this
-    // case, let's produce a new filenode, and upload the entry. In doing so, exclude any parents
-    // beyond p1 and p2.
-    let (p1, p2) = hg_parents(&parents);
-    let p1 = p1.map(|(_ft, id)| id);
-    let p2 = p2.map(|(_ft, id)| id);
-
-    let contents = ContentBlobMeta {
-        id: content_id,
-        size: content_size,
-        copy_from: None,
-    };
-
-    let (filenode_id, _) = UploadHgFileEntry {
-        upload_node_id: UploadHgNodeHash::Generate,
-        contents: UploadHgFileContents::ContentUploaded(contents),
-        p1,
-        p2,
+    // case, let's reuse a filenode.
+    let (maybe_reuse_filenode, _) = hg_parents(&parents);
+    match maybe_reuse_filenode {
+        Some((_ft, id)) => Ok((file_type, id)),
+        None => {
+            // This can only happen in the case of an octopus merge where neither p1 nor p2
+            // contained this content. It would be nice if we could reuse p3 or later,
+            // but Mercurial could be confused by a filenode whose linknode is not a Mercurial
+            // ancestor of the commit. So don't risk it.
+            let contents = ContentBlobMeta {
+                id: content_id,
+                size: content_size,
+                copy_from: None,
+            };
+            let (filenode_id, _) = UploadHgFileEntry {
+                upload_node_id: UploadHgNodeHash::Generate,
+                contents: UploadHgFileContents::ContentUploaded(contents),
+                p1: None,
+                p2: None,
+            }
+            .upload_with_path(ctx, blobstore, path)
+            .await?;
+            Ok((file_type, filenode_id))
+        }
     }
-    .upload_with_path(ctx, blobstore, path)
-    .await?;
-
-    Ok((file_type, filenode_id))
 }
 
 /// Extract hg-relevant parents from a set of Traced entries. This means we ignore any parents
