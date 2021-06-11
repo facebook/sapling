@@ -1158,6 +1158,10 @@ fn make_filescmstore<'a>(
     let mut scmstore_builder = FileScmStoreBuilder::new(&config);
     let mut filestore_builder = FileStoreBuilder::new(&config);
 
+    if config.get_or_default::<bool>("scmstore", "auxindexedlog")? {
+        filestore_builder = filestore_builder.store_aux_data();
+    }
+
     if let Some(correlator) = correlator {
         filestore_builder = filestore_builder.correlator(correlator);
     }
