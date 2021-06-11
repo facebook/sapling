@@ -55,12 +55,11 @@ def run_buck_command(
     # version of buck just to kill off buck.  This is specific to Facebook's
     # deployment of buck, and has no impact on the behavior of the opensource
     # buck executable.
-    # On Windows, "last" doesn't work, fallback to reading the .buckversion file.
+    # On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
     if sys.platform != "win32":
         buckversion = "last"
     else:
-        with open(os.path.join(path, ".buckversion"), "r") as f:
-            buckversion = f.read().strip()
+        buckversion = subprocess.run(["buck", "--version-fast"])
 
     env = get_environment_suitable_for_subprocess()
 
