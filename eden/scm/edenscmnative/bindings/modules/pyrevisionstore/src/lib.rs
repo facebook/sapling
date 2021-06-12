@@ -1305,6 +1305,76 @@ py_class!(pub class filescmstore |py| {
         }
         Ok(results)
     }
+
+    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.get_py(py, &name, node)
+    }
+
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.get_delta_py(py, &name, node)
+    }
+
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_delta_chain_py(py, &name, node)
+    }
+
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.get_meta_py(py, &name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.add_py(py, &name, node, deltabasenode, delta, metadata)
+    }
+
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
+        let store = self.store(py);
+        store.flush_py(py)
+    }
+
+    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.prefetch_py(py, keys)
+    }
+
+    def markforrefresh(&self) -> PyResult<PyNone> {
+        let store = self.store(py);
+        store.refresh_py(py)
+    }
+
+    def upload(&self, keys: PyList) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.upload_py(py, keys)
+    }
+
+    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.blob_py(py, name, node)
+    }
+
+    def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.metadata_py(py, name, node)
+    }
+
+    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
+        let store = self.store(py);
+        Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
+    }
+
+    def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
+        let store = self.store(py);
+        mutabledeltastore::create_instance(py, store.get_shared_mutable().map_pyerr(py)?)
+    }
 });
 
 impl ExtractInnerRef for filescmstore {
@@ -1431,6 +1501,76 @@ py_class!(pub class treescmstore |py| {
         }
 
         Ok(PyNone)
+    }
+
+    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.get_py(py, &name, node)
+    }
+
+    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.get_delta_py(py, &name, node)
+    }
+
+    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_delta_chain_py(py, &name, node)
+    }
+
+    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.get_meta_py(py, &name, node)
+    }
+
+    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.get_missing_py(py, &mut keys.iter(py)?)
+    }
+
+    def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.add_py(py, &name, node, deltabasenode, delta, metadata)
+    }
+
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
+        let store = self.store(py);
+        store.flush_py(py)
+    }
+
+    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+        let store = self.store(py);
+        store.prefetch_py(py, keys)
+    }
+
+    def markforrefresh(&self) -> PyResult<PyNone> {
+        let store = self.store(py);
+        store.refresh_py(py)
+    }
+
+    def upload(&self, keys: PyList) -> PyResult<PyList> {
+        let store = self.store(py);
+        store.upload_py(py, keys)
+    }
+
+    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.blob_py(py, name, node)
+    }
+
+    def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.metadata_py(py, name, node)
+    }
+
+    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
+        // TODO(meyer): Make sure we're only supposed to be tracking fetches for files, not trees.
+        Ok(Vec::new())
+    }
+
+    def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
+        let store = self.store(py);
+        mutabledeltastore::create_instance(py, store.get_shared_mutable().map_pyerr(py)?)
     }
 });
 
