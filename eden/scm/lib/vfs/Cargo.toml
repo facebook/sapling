@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 chashmap = "2.2"
-crossbeam = "0.7"
+crossbeam = "0.8"
 fsinfo = { path = "../fsinfo" }
 libc = "0.2.86"
 minibytes = { path = "../minibytes" }

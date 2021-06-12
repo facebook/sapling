@@ -31,5 +31,5 @@ tracing = "0.1"
 url = "2.1.0"
 
 [dev-dependencies]
-crossbeam = "0.7"
+crossbeam = "0.8"
 mockito = "0.25"
