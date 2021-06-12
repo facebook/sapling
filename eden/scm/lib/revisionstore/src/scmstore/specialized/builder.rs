@@ -9,12 +9,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Result;
+use regex::Regex;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi::Builder;
 
 use crate::{
     contentstore::check_cache_buster,
+    fetch_logger::FetchLogger,
     indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
     lfs::{LfsRemote, LfsStore},
     scmstore::{FileStore, TreeStore},
@@ -305,6 +307,13 @@ impl<'a> FileStoreBuilder<'a> {
 
         let contentstore = self.contentstore;
 
+        let logging_regex = self
+            .config
+            .get_opt::<String>("remotefilelog", "undesiredfileregex")?
+            .map(|s| Regex::new(&s))
+            .transpose()?;
+        let fetch_logger = Arc::new(FetchLogger::new(logging_regex));
+
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
@@ -323,6 +332,7 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_remote,
 
             contentstore,
+            fetch_logger,
 
             aux_local,
             aux_cache,

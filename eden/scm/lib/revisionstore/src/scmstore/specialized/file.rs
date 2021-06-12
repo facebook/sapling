@@ -20,10 +20,11 @@ use tracing::instrument;
 
 use edenapi_types::FileEntry;
 use minibytes::Bytes;
-use types::{HgId, Key, Sha256};
+use types::{HgId, Key, RepoPathBuf, Sha256};
 
 use crate::{
     datastore::{strip_metadata, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
+    fetch_logger::FetchLogger,
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     lfs::{
         lfs_from_hg_file_blob, rebuild_metadata, LfsPointersEntry, LfsRemoteInner, LfsStore,
@@ -40,6 +41,9 @@ pub struct FileStore {
     pub(crate) lfs_threshold_bytes: Option<u64>,
     pub(crate) cache_to_local_cache: bool,
     pub(crate) cache_to_memcache: bool,
+
+    // Record remote fetches
+    pub(crate) fetch_logger: Arc<FetchLogger>,
 
     // Local-only stores
     pub(crate) indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -83,7 +87,7 @@ pub struct FileStoreFetch {
 impl FileStore {
     #[instrument(skip(self, keys))]
     pub fn fetch(&self, keys: impl Iterator<Item = Key>, attrs: FileAttributes) -> FileStoreFetch {
-        let mut state = FetchState::new(keys, self.extstored_policy, attrs);
+        let mut state = FetchState::new(keys, attrs, &self);
 
         if let Some(ref aux_cache) = self.aux_cache {
             // TODO(meyer): Update tracing crate so we can do `span!("fetch_aux_cache").entered()`.
@@ -209,6 +213,7 @@ impl FileStore {
             lfs_remote: None,
 
             contentstore: None,
+            fetch_logger: self.fetch_logger.clone(),
 
             aux_local: self.aux_local.clone(),
             aux_cache: self.aux_cache.clone(),
@@ -261,6 +266,10 @@ impl FileStore {
         }
 
         result
+    }
+
+    pub fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+        self.fetch_logger.take_seen()
     }
 }
 
@@ -657,17 +666,16 @@ pub struct FetchState {
     /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
     computed_aux_data: HashMap<Key, LocalStoreType>,
 
+    /// Tracks remote fetches which match a specific regex
+    fetch_logger: Arc<FetchLogger>,
+
     // Config
     extstored_policy: ExtStoredPolicy,
     compute_aux_data: bool,
 }
 
 impl FetchState {
-    fn new(
-        keys: impl Iterator<Item = Key>,
-        extstored_policy: ExtStoredPolicy,
-        attrs: FileAttributes,
-    ) -> Self {
+    fn new(keys: impl Iterator<Item = Key>, attrs: FileAttributes, file_store: &FileStore) -> Self {
         FetchState {
             pending: keys.collect(),
             request_attrs: attrs,
@@ -684,7 +692,8 @@ impl FetchState {
             found_in_edenapi: HashSet::new(),
             computed_aux_data: HashMap::new(),
 
-            extstored_policy,
+            fetch_logger: file_store.fetch_logger.clone(),
+            extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
         }
     }
@@ -915,6 +924,8 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+        self.fetch_logger.report_keys(pending.iter());
+
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
                 Ok(mcdata) => self.found_memcache(mcdata),
@@ -951,6 +962,8 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+        self.fetch_logger.report_keys(pending.iter());
+
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
         }
@@ -978,6 +991,8 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+        self.fetch_logger.report_keys(self.lfs_pointers.keys());
+
         // Fetch & write to local LFS stores
         store.batch_fetch(&pending, {
             let lfs_local = local.clone();
