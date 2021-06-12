@@ -279,13 +279,14 @@ impl<'a> FileStoreBuilder<'a> {
 
         let lfs_remote = if self.use_lfs()? {
             if let Some(ref lfs_cache) = lfs_cache {
-                // Use LfsRemote to do the construction logic then extract the actual
-                // underlying remote store, without needing to have it own a reference to the
-                // lfs_cache / shared store
-                Some(Arc::new(
-                    LfsRemote::new(lfs_cache.clone(), None, self.config, self.correlator.take())?
-                        .into_inner(),
-                ))
+                // TODO(meyer): Refactor upload functionality so we don't need to use LfsRemote with it's own references to the
+                // underlying stores.
+                Some(Arc::new(LfsRemote::new(
+                    lfs_cache.clone(),
+                    lfs_local.clone(),
+                    self.config,
+                    self.correlator.take(),
+                )?))
             } else {
                 None
             }

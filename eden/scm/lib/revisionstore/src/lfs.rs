@@ -124,7 +124,7 @@ pub(crate) enum LfsRemoteInner {
 pub struct LfsRemote {
     local: Option<Arc<LfsStore>>,
     shared: Arc<LfsStore>,
-    remote: LfsRemoteInner,
+    pub(crate) remote: LfsRemoteInner,
     move_after_upload: bool,
     ignore_prefetch_errors: bool,
 }
@@ -1612,10 +1612,6 @@ impl LfsRemote {
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         self.remote.batch_upload(objs, read_from_store)
-    }
-
-    pub(crate) fn into_inner(self) -> LfsRemoteInner {
-        self.remote
     }
 }
 

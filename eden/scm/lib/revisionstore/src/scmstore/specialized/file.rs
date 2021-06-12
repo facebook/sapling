@@ -27,12 +27,14 @@ use crate::{
     fetch_logger::FetchLogger,
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     lfs::{
-        lfs_from_hg_file_blob, rebuild_metadata, LfsPointersEntry, LfsRemoteInner, LfsStore,
-        LfsStoreEntry,
+        lfs_from_hg_file_blob, rebuild_metadata, LfsPointersEntry, LfsRemote, LfsRemoteInner,
+        LfsStore, LfsStoreEntry,
     },
     memcache::McData,
+    remotestore::HgIdRemoteStore,
     ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
-    ExtStoredPolicy, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
+    ExtStoredPolicy, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore, StoreKey,
+    StoreResult,
 };
 
 pub struct FileStore {
@@ -59,7 +61,7 @@ pub struct FileStore {
     pub(crate) memcache: Option<Arc<MemcacheStore>>,
 
     // Remote stores
-    pub(crate) lfs_remote: Option<Arc<LfsRemoteInner>>,
+    pub(crate) lfs_remote: Option<Arc<LfsRemote>>,
     pub(crate) edenapi: Option<Arc<EdenApiFileStore>>,
 
     // Legacy ContentStore fallback
@@ -127,7 +129,11 @@ impl FileStore {
         }
 
         if let Some(ref lfs_remote) = self.lfs_remote {
-            state.fetch_lfs_remote(lfs_remote, self.lfs_local.clone(), self.lfs_cache.clone());
+            state.fetch_lfs_remote(
+                &lfs_remote.remote,
+                self.lfs_local.clone(),
+                self.lfs_cache.clone(),
+            );
         }
 
         if let Some(ref contentstore) = self.contentstore {
@@ -1331,9 +1337,21 @@ impl RemoteDataStore for FileStore {
             .collect())
     }
 
-    fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        unimplemented!()
-        //Ok(keys.to_vec())
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need memcache + multiplex, etc)
+        if let Some(ref lfs_remote) = self.lfs_remote {
+            let mut multiplex = MultiplexDeltaStore::new();
+            multiplex.add_store(self.get_shared_mutable()?);
+            if let Some(ref memcache) = self.memcache {
+                multiplex.add_store(memcache.clone());
+            }
+            lfs_remote
+                .clone()
+                .datastore(Arc::new(multiplex))
+                .upload(keys)
+        } else {
+            Ok(keys.to_vec())
+        }
     }
 }
 
