@@ -220,6 +220,38 @@ impl FileStore {
         }
     }
 
+    /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
+    /// For compatibility with ContentStore::get_shared_mutable
+    #[instrument(skip(self))]
+    pub fn get_shared_mutable(&self) -> Result<Arc<dyn HgIdMutableDeltaStore>> {
+        if self.indexedlog_cache.is_none() && self.lfs_cache.is_none() {
+            bail!("cannot get shared_mutable, no local cache stores")
+        }
+        Ok(Arc::new(FileStore {
+            extstored_policy: self.extstored_policy.clone(),
+            lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
+
+            indexedlog_local: self.indexedlog_cache.clone(),
+            lfs_local: self.lfs_cache.clone(),
+
+            indexedlog_cache: None,
+            lfs_cache: None,
+            cache_to_local_cache: false,
+
+            memcache: None,
+            cache_to_memcache: false,
+
+            edenapi: None,
+            lfs_remote: None,
+
+            contentstore: None,
+            fetch_logger: self.fetch_logger.clone(),
+
+            aux_local: None,
+            aux_cache: None,
+        }))
+    }
+
     #[allow(unused_must_use)]
     #[instrument(skip(self))]
     pub fn flush(&self) -> Result<()> {
