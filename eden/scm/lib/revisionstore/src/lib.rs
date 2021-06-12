@@ -127,6 +127,7 @@ mod dataindex;
 #[cfg(all(fbcode_build, target_os = "linux"))]
 mod facebook;
 mod fanouttable;
+mod fetch_logger;
 mod historyindex;
 mod indexedloghistorystore;
 mod indexedlogutil;

@@ -14,7 +14,6 @@ use std::{
 
 use anyhow::{bail, Result};
 use minibytes::Bytes;
-use parking_lot::Mutex;
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
 
@@ -23,6 +22,7 @@ use types::{HgId, Key, RepoPath, RepoPathBuf};
 
 pub use crate::Metadata;
 use crate::{
+    fetch_logger::FetchLogger,
     localstore::LocalStore,
     types::{ContentHash, StoreKey},
 };
@@ -229,45 +229,23 @@ pub fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
 
 pub struct ReportingRemoteDataStore {
     store: Box<dyn RemoteDataStore>,
-    filter: Option<Regex>,
-    seen: Mutex<HashSet<RepoPathBuf>>,
+    logger: FetchLogger,
 }
 
 impl ReportingRemoteDataStore {
     pub fn new(store: Box<dyn RemoteDataStore>, filter: Option<Regex>) -> Self {
         Self {
             store,
-            filter,
-            seen: Mutex::new(HashSet::new()),
+            logger: FetchLogger::new(filter),
         }
     }
 
     pub fn take_seen(&self) -> HashSet<RepoPathBuf> {
-        let mut seen = self.seen.lock();
-        std::mem::take(&mut *seen)
+        self.logger.take_seen()
     }
 
     fn report_keys(&self, keys: &[StoreKey]) {
-        if let Some(filter) = &self.filter {
-            let mut matches = Vec::new();
-            use crate::StoreKey::*;
-            for path in keys
-                .iter()
-                .filter_map(|k| match k {
-                    HgId(k) => Some(&k.path),
-                    Content(_, Some(k)) => Some(&k.path),
-                    _ => None,
-                })
-                .filter(|p| filter.is_match(p.as_str()))
-            {
-                matches.push(path.clone());
-            }
-
-            if !matches.is_empty() {
-                let mut seen = self.seen.lock();
-                seen.extend(matches.into_iter());
-            }
-        }
+        self.logger.report_store_keys(keys.iter())
     }
 }
 
