@@ -1377,11 +1377,17 @@ py_class!(pub class filescmstore |py| {
     }
 });
 
+impl filescmstore {
+    pub fn get_oldscmstore<'a>(&'a self, py: Python<'a>) -> &'a BoxedReadStore<Key, StoreFile> {
+        self.oldscmstore(py)
+    }
+}
+
 impl ExtractInnerRef for filescmstore {
-    type Inner = BoxedReadStore<Key, StoreFile>;
+    type Inner = Arc<FileStore>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.oldscmstore(py)
+        self.store(py)
     }
 }
 
@@ -1575,9 +1581,9 @@ py_class!(pub class treescmstore |py| {
 });
 
 impl ExtractInnerRef for treescmstore {
-    type Inner = BoxedReadStore<Key, StoreTree>;
+    type Inner = Arc<TreeStore>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.oldscmstore(py)
+        self.store(py)
     }
 }

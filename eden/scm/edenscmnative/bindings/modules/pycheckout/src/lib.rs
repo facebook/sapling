@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
 use checkout::{Action, ActionMap, Checkout, CheckoutPlan, Conflict, Merge, MergeResult};
 use cpython::*;
-use cpython_ext::{ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher};
@@ -79,7 +79,7 @@ py_class!(class checkoutplan |py| {
         let plan = self.plan(py);
         let state = state.get_state(py);
         let manifest = manifest.borrow_underlying(py).clone();
-        let store = scmstore.extract_inner_ref(py).clone();
+        let store = scmstore.get_oldscmstore(py).clone();
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             try_block_unless_interrupted(
@@ -114,7 +114,7 @@ py_class!(class checkoutplan |py| {
     }
 
     def apply_scmstore_dry_run(&self, scmstore: &filescmstore) -> PyResult<(usize, u64)> {
-        let store = scmstore.extract_inner_ref(py).clone();
+        let store = scmstore.get_oldscmstore(py).clone();
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
             plan.apply_read_store_dry_run(store)
@@ -122,7 +122,7 @@ py_class!(class checkoutplan |py| {
     }
 
     def apply_scmstore(&self, scmstore: &filescmstore) -> PyResult<PyNone> {
-        let store = scmstore.extract_inner_ref(py).clone();
+        let store = scmstore.get_oldscmstore(py).clone();
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
             plan.apply_read_store(store)
