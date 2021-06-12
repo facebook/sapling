@@ -198,6 +198,20 @@ impl TreeStore {
         }
         Ok(())
     }
+
+    /// Returns only the local cache / shared store, in place of the local-only store, such that writes will go directly to the local cache.
+    /// For compatibility with ContentStore::get_shared_mutable
+    pub fn get_shared_mutable(&self) -> Result<Arc<dyn HgIdMutableDeltaStore>> {
+        Ok(Arc::new(TreeStore {
+            indexedlog_local: self.indexedlog_cache.clone(),
+            indexedlog_cache: None,
+            cache_to_local_cache: false,
+            memcache: None,
+            cache_to_memcache: false,
+            edenapi: None,
+            contentstore: None,
+        }))
+    }
 }
 
 impl HgIdDataStore for TreeStore {
