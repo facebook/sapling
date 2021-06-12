@@ -168,10 +168,24 @@ impl FileStore {
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
-            ensure!(
-                !meta.is_lfs(),
-                "writing LFS pointers directly via ScmStore is not supported"
-            );
+            if meta.is_lfs() {
+                ensure!(
+                    std::env::var("TESTTMP").is_ok(),
+                    "writing LFS pointers directly is not allowed outside of tests"
+                );
+                // TODO(meyer): We should try to eliminate directly writing LFS pointers, so we're only supporting it
+                // via ContentStore for now.
+                let contentstore = self.contentstore.as_ref().ok_or_else(|| {
+                    anyhow!("trying to write LFS pointer but no ContentStore is available")
+                })?;
+                let delta = Delta {
+                    data: bytes,
+                    base: None,
+                    key,
+                };
+                contentstore.add(&delta, &meta);
+                continue;
+            }
             let hg_blob_len = bytes.len() as u64;
             // Default to non-LFS if no LFS threshold is set
             if self
