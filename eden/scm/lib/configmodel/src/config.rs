@@ -8,6 +8,7 @@
 use crate::convert::FromConfigValue;
 use crate::Result;
 use minibytes::Text;
+use std::collections::BTreeMap;
 use std::str;
 
 /// Readable config. This can be used as a trait object.
@@ -58,5 +59,43 @@ impl Config for &dyn Config {
 
     fn get(&self, section: &str, name: &str) -> Option<Text> {
         (*self).get(section, name)
+    }
+}
+
+impl Config for BTreeMap<String, String> {
+    fn keys(&self, section: &str) -> Vec<Text> {
+        let prefix = format!("{}.", section);
+        BTreeMap::keys(&self)
+            .filter_map(|k| {
+                if k.starts_with(&prefix) {
+                    Some(k[prefix.len()..].to_string().into())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn get(&self, section: &str, name: &str) -> Option<Text> {
+        let name = format!("{}.{}", section, name);
+        BTreeMap::get(self, &name).map(|v| v.to_string().into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_btreemap_config() {
+        let map: BTreeMap<String, String> = vec![("foo.bar".to_string(), "baz".to_string())]
+            .into_iter()
+            .collect();
+        assert_eq!(format!("{:?}", Config::keys(&map, "foo")), "[\"bar\"]");
+        assert_eq!(
+            format!("{:?}", Config::get(&map, "foo", "bar")),
+            "Some(\"baz\")"
+        );
+        assert_eq!(format!("{:?}", Config::get(&map, "foo", "baz")), "None");
     }
 }

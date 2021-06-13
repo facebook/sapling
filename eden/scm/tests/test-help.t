@@ -296,7 +296,6 @@ Test extension help:
        chistedit
        clienttelemetry
                      provide information about the client in server telemetry
-       clindex       (no help text available)
        clonebundles  advertise pre-generated bundles to seed clones
        commitcloud   back up and sync changesets via the cloud
        convert       import revisions from foreign VCS repositories into
