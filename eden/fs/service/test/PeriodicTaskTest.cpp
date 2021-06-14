@@ -155,51 +155,6 @@ class PeriodicTaskTest : public ::testing::Test {
 
 } // namespace
 
-TEST_F(PeriodicTaskTest, testInterval) {
-  // Schedule a periodic task to run every 100ms and shut down the server after
-  // 15 invocations
-  constexpr auto kInterval = 100ms;
-  constexpr auto kTolerance = 20ms;
-  constexpr size_t kNumInvocations = 15;
-  std::vector<TimePoint> taskInvocations;
-  TestTask task(&getServer(), "test_task", [&] {
-    XLOG(INFO) << "iteration " << taskInvocations.size();
-    taskInvocations.emplace_back();
-    if (taskInvocations.size() == kNumInvocations) {
-      getServer().stop();
-    }
-  });
-
-  // Call updateInterval() to start the task inside the EventBase
-  // thread once we have started the server.
-  std::optional<TimePoint> start;
-  runOnServerStart([&] {
-    start = TimePoint();
-    task.updateInterval(kInterval, /*splay=*/true);
-  });
-
-  // Run the server.
-  runServer();
-
-  ASSERT_EQ(kNumInvocations, taskInvocations.size());
-
-  // Due to splay added for the first invocation, the first time the task runs
-  // should be somewhere between kInterval and 2*kInterval milliseconds after we
-  // started it.
-  T_CHECK_TIMEOUT(
-      start.value(),
-      taskInvocations[0],
-      kInterval,
-      /*tolerance=*/kInterval + kTolerance);
-
-  // The task should have been run roughly every kInterval ms after that.
-  for (size_t n = 1; n < taskInvocations.size(); ++n) {
-    SCOPED_TRACE(folly::to<string>("iteration  ", n));
-    T_CHECK_TIMEOUT(
-        taskInvocations[n - 1], taskInvocations[n], kInterval, kTolerance);
-  }
-}
-
 PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
     size_t numTasks,
     size_t runsPerTask,
@@ -243,80 +198,6 @@ PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
   runServer();
 
   return MultiTaskResult{start.value(), taskInvocations};
-}
-
-TEST_F(PeriodicTaskTest, testSplayOn) {
-  constexpr size_t kNumTasks = 64;
-  constexpr size_t kRunsPerTask = 3;
-  constexpr auto kInterval = 400ms;
-  constexpr auto kTolerance = 40ms;
-  auto result =
-      runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/true);
-
-  ASSERT_EQ(kNumTasks, result.taskInvocations.size());
-  TimePoint maxFirstRun = result.taskInvocations[0][0];
-  for (size_t taskIdx = 0; taskIdx < result.taskInvocations.size(); ++taskIdx) {
-    const auto& taskRuns = result.taskInvocations[taskIdx];
-    ASSERT_EQ(kRunsPerTask, taskRuns.size());
-
-    // The first task invocation should occur with splay.
-    {
-      SCOPED_TRACE(folly::to<string>("task ", taskIdx, " run 0"));
-      T_CHECK_TIMEOUT(
-          result.start,
-          taskRuns[0],
-          kInterval,
-          /*tolerance=*/kInterval + kTolerance);
-    }
-
-    // Remember the task whose first invocation ran last.
-    // This is to check that the tasks actually were delayed by a splay amount,
-    // and didn't all run at the start of the interval.
-    if (taskRuns[0].getTime() > maxFirstRun.getTime()) {
-      maxFirstRun = taskRuns[0];
-    }
-
-    // The remaining runs should have run exactly on the requested interval
-    for (size_t n = 1; n < kRunsPerTask; ++n) {
-      SCOPED_TRACE(folly::to<string>("task ", taskIdx, " run ", n));
-      T_CHECK_TIMEOUT(taskRuns[n - 1], taskRuns[n], kInterval, kTolerance);
-    }
-  }
-
-  // Check that the splay was used.
-  // Verify that at least 1 task ran with a splay value of at least 50ms.
-  // (The chance of a false positive and all tasks randomly falling into the
-  // first half of the interval is 1 in 2^kNumTasks.)
-  EXPECT_GT(maxFirstRun.getTime() - result.start.getTime(), kInterval * 0.5);
-}
-
-TEST_F(PeriodicTaskTest, testSplayOff) {
-  constexpr size_t kNumTasks = 20;
-  constexpr size_t kRunsPerTask = 3;
-  constexpr auto kInterval = 400ms;
-  constexpr auto kTolerance = 40ms;
-  auto result =
-      runMultipleTasks(kNumTasks, kRunsPerTask, kInterval, /*splay=*/false);
-
-  ASSERT_EQ(kNumTasks, result.taskInvocations.size());
-  for (size_t taskIdx = 0; taskIdx < result.taskInvocations.size(); ++taskIdx) {
-    const auto& taskRuns = result.taskInvocations[taskIdx];
-    ASSERT_EQ(kRunsPerTask, taskRuns.size());
-
-    // Check that each task ran at the specified interval, including the very
-    // first invocation.
-    //
-    // Since we run with no splay, all the tasks bunch together.
-    // This causes them to not really run on the precise interval: some tasks
-    // are delayed because we are busy running other tasks scheduled for the
-    // same time.  Our kTolerance value provides some leeway to allow for this.
-    // (This is also why we run with fewer tasks than the test with splay on.)
-    for (size_t n = 0; n < kRunsPerTask; ++n) {
-      SCOPED_TRACE(folly::to<string>("task ", taskIdx, " run ", n));
-      const auto& prev = (n == 0) ? result.start : taskRuns[n - 1];
-      T_CHECK_TIMEOUT(prev, taskRuns[n], kInterval, kTolerance);
-    }
-  }
 }
 
 TEST_F(PeriodicTaskTest, taskException) {
