@@ -192,6 +192,7 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
     nextlevel = set()
     seen = {nullid}
     ispublic = getispublicfunc(repo)
+    islocal = getislocal(repo)
     while thislevel and (stopdepth is None or depth < stopdepth):
         for current in thislevel:
             if current in seen:
@@ -205,7 +206,9 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
                 pred = entry.preds()
             if pred is not None:
                 for nextnode in pred:
-                    if nextnode not in seen and not ispublic(nextnode):
+                    if nextnode not in seen and (
+                        not islocal(nextnode) or not ispublic(nextnode)
+                    ):
                         nextlevel.add(nextnode)
         depth += 1
         thislevel = nextlevel
@@ -221,6 +224,7 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
     nextlevel = set()
     seen = set()
     ispublic = getispublicfunc(repo)
+    islocal = getislocal(repo)
     while thislevel and (stopdepth is None or depth < stopdepth):
         for current in thislevel:
             if current in seen:
@@ -228,7 +232,7 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
             seen.add(current)
             if startdepth is None or depth >= startdepth:
                 yield current
-            if ispublic(current):
+            if islocal(current) and ispublic(current):
                 continue
             succsets = lookupsuccessors(repo, current)
             if succsets:
@@ -508,6 +512,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
     """
     seen = {startnode}
     ispublic = getispublicfunc(repo)
+    islocal = getislocal(repo)
 
     def getsets(node):
         """Get immediate successors sets
@@ -518,7 +523,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
         If the node has no successors, returns a list containing a single
         successors set which contains the node itself.
         """
-        if ispublic(node):
+        if islocal(node) and ispublic(node):
             return [[node]]
         succsets = [
             succset
@@ -840,6 +845,19 @@ def automigrate(repo):
         convertfromobsmarkers(repo)
 
 
+def getislocal(repo):
+    """get a (node) -> bool function to test if node is known locally"""
+    filternodes = repo.changelog.filternodes
+
+    def islocal(
+        node,
+        filternodes=filternodes,
+    ):
+        return bool(filternodes([node], local=True))
+
+    return islocal
+
+
 def getisvisiblefunc(repo):
     """get a (node) -> bool function to test visibility
 
@@ -852,11 +870,21 @@ def getisvisiblefunc(repo):
         # secret phase means "not reachable from public or draft heads", aka. "hidden"
         nodemap = repo.changelog.nodemap
         getphase = repo._phasecache.phase
+        islocal = getislocal(repo)
 
         def isvisible(
-            node, nodemap=nodemap, getphase=getphase, repo=repo, secret=phases.secret
+            node,
+            nodemap=nodemap,
+            islocal=islocal,
+            getphase=getphase,
+            repo=repo,
+            secret=phases.secret,
         ):
+            if not islocal(node):
+                # Does not exist in the local graph (local=True avoids asking the server)
+                return False
             try:
+                # This might trigger remote lookup.
                 rev = nodemap[node]
             except error.RevlogError:
                 return False
