@@ -73,16 +73,29 @@ py_class!(pub class idmap |py| {
     }
 
     /// Filter out nodes not in the IdMap.
-    /// (nodes, inverse=False) -> nodes.
+    /// (nodes, inverse=False, local=False) -> nodes.
     ///
     /// Use batching internally. Faster than checking `__contains__`
     /// one by one.
     ///
     /// If inverse is set to True, return missing nodes instead of
     /// present nodes.
-    def filternodes(&self, nodes: Vec<PyBytes>, inverse: bool = false) -> PyResult<Vec<PyBytes>> {
+    ///
+    /// If local is set to True, avoid contacting the remote server.
+    def filternodes(&self, nodes: Vec<PyBytes>, inverse: bool = false, local: bool = false) -> PyResult<Vec<PyBytes>> {
         let map = self.map(py);
-        let vertexes: Vec<_> = nodes.iter().map(|n| Vertex::copy_from(n.data(py))).collect();
+        let mut vertexes: Vec<_> = nodes.iter().map(|n| Vertex::copy_from(n.data(py))).collect();
+        if local {
+            if inverse {
+                return Err(PyErr::new::<exc::ValueError, _>(py, "inverse and local cannot be both True"));
+            }
+            let contains = block_on(map.contains_vertex_name_locally(&vertexes)).map_pyerr(py)?;
+            vertexes = vertexes
+                .into_iter()
+                .zip(contains)
+                .filter_map(|(v, c)| if c { Some(v) } else { None }).collect();
+        };
+
         let ids = block_on(map.vertex_id_batch(&vertexes)).map_pyerr(py)?;
         let mut result = Vec::with_capacity(nodes.len());
         for (node, id) in nodes.into_iter().zip(ids) {

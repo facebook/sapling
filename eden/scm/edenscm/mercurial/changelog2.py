@@ -205,14 +205,15 @@ class changelog(object):
         """
         return self.idmap.__contains__
 
-    def filternodes(self, nodes, inverse=False):
+    def filternodes(self, nodes, inverse=False, local=False):
         """Take a list of nodes, return a list of nodes present in the graph.
         This will only send one remote request. Therefore more efficient than
         "hasnode".
 
         If inverse is True, return nodes not present in the graph instead.
+        If local is True, avoid asking remote servers (for a lazy changelog).
         """
-        return self.idmap.filternodes(nodes, inverse=inverse)
+        return self.idmap.filternodes(nodes, inverse=inverse, local=local)
 
     @property
     def torevs(self):
