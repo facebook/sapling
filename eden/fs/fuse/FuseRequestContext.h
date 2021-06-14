@@ -43,6 +43,11 @@ class FuseRequestContext : public RequestContext {
     return static_cast<pid_t>(fuseHeader_.pid);
   }
 
+  // Override of `ObjectFetchContext`
+  std::optional<folly::StringPiece> getCauseDetail() const override {
+    return fuseOpcodeName(fuseHeader_.opcode);
+  }
+
   /**
    * After sendReply or replyError, this returns the error code we returned to
    * the kernel, negated.
