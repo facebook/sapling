@@ -181,7 +181,9 @@ impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
     async fn on_put<'out>(
         &'out self,
         _ctx: &'out CoreContext,
+        mut _scuba: MononokeScubaSampleBuilder,
         blobstore_id: BlobstoreId,
+        _blobstore_type: String,
         _multiplex_id: MultiplexId,
         _operation_key: &'out OperationKey,
         key: &'out str,
@@ -217,7 +219,9 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
     async fn on_put<'out>(
         &'out self,
         _ctx: &'out CoreContext,
+        mut _scuba: MononokeScubaSampleBuilder,
         blobstore_id: BlobstoreId,
+        _blobstore_type: String,
         _multiplex_id: MultiplexId,
         _operation_key: &'out OperationKey,
         key: &'out str,

@@ -78,7 +78,9 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
     async fn on_put<'out>(
         &'out self,
         ctx: &'out CoreContext,
+        mut scuba: MononokeScubaSampleBuilder,
         blobstore_id: BlobstoreId,
+        blobstore_type: String,
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
@@ -556,8 +558,8 @@ impl MultiplexedBlobstoreBase {
                     cloned!(
                         self.handler,
                         self.multiplex_id,
-                        self.scuba,
-                        ctx,
+                        mut self.scuba,
+                        mut ctx,
                         write_order,
                         key,
                         value,
@@ -567,7 +569,7 @@ impl MultiplexedBlobstoreBase {
                         let blob_size = value.len() as u64;
                         let (blobstore_id, res) = inner_put(
                             &ctx,
-                            scuba,
+                            scuba.clone(),
                             write_order.as_ref(),
                             blobstore_id,
                             blobstore.as_ref(),
@@ -582,13 +584,16 @@ impl MultiplexedBlobstoreBase {
                             let res = handler
                                 .on_put(
                                     &ctx,
+                                    scuba,
                                     blobstore_id,
+                                    blobstore.to_string(),
                                     multiplex_id,
                                     &operation_key,
                                     &key,
                                     Some(blob_size),
                                 )
                                 .await;
+
                             res.map_err(|err| (blobstore_id, err))
                         })
                     }

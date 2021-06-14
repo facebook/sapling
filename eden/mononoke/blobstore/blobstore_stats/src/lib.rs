@@ -27,6 +27,7 @@ const COMPLETION_TIME: &str = "completion_time";
 const ERROR: &str = "error";
 const KEY: &str = "key";
 const OPERATION: &str = "operation";
+const QUEUE: &str = "queue";
 const SESSION: &str = "session";
 const SIZE: &str = "size";
 const WRITE_ORDER: &str = "write_order";
@@ -166,6 +167,38 @@ pub fn record_put_stats(
             scuba.add(ERROR, format!("{:#}", error));
         }
     };
+
+    scuba.log();
+}
+
+pub fn record_queue_stats(
+    scuba: &mut MononokeScubaSampleBuilder,
+    pc: &PerfCounters,
+    stats: FutureStats,
+    result: Result<&(), &Error>,
+    key: &str,
+    session: &str,
+    operation: OperationType,
+    blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
+    queue: &str,
+) {
+    add_common_values(
+        scuba,
+        pc,
+        key,
+        session,
+        stats,
+        operation,
+        blobstore_id,
+        blobstore_type,
+    );
+
+    scuba.add(QUEUE, queue);
+
+    if let Err(error) = result {
+        scuba.add(ERROR, format!("{:#}", error));
+    }
 
     scuba.log();
 }

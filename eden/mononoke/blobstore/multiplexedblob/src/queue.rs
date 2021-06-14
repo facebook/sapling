@@ -9,14 +9,18 @@ use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHa
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore_stats::{record_queue_stats, OperationType};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use context::CoreContext;
+use futures_stats::TimedFutureExt;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
+
+const SYNC_QUEUE: &str = "mysql_sync_queue";
 
 #[derive(Clone)]
 pub struct MultiplexedBlobstore {
@@ -75,13 +79,16 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
     async fn on_put<'out>(
         &'out self,
         ctx: &'out CoreContext,
+        mut scuba: MononokeScubaSampleBuilder,
         blobstore_id: BlobstoreId,
+        blobstore_type: String,
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
         blob_size: Option<u64>,
     ) -> Result<()> {
-        self.queue
+        let (stats, result) = self
+            .queue
             .add(
                 ctx,
                 BlobstoreSyncQueueEntry::new(
@@ -93,7 +100,24 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
                     blob_size,
                 ),
             )
-            .await
+            .timed()
+            .await;
+
+        let mut ctx = ctx.clone();
+        let pc = ctx.fork_perf_counters();
+        record_queue_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            &key,
+            ctx.metadata().session_id().as_str(),
+            OperationType::Put,
+            Some(blobstore_id),
+            blobstore_type,
+            SYNC_QUEUE,
+        );
+        result
     }
 }
 
