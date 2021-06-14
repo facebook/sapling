@@ -39,6 +39,7 @@ use dag::DagAlgorithm;
 use dag::Set;
 use dag::VertexName;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},
     DefaultOpenOptions,
@@ -267,7 +268,31 @@ impl MutationStore {
                 .map_err(|e| dag::errors::BackendError::Other(e))?;
 
             // Filter out invisible successors.
-            let obsvisible = obsdag.ancestors(obsdag.all().await? & visible).await?;
+            let obsvisible = {
+                let mut obsall = obsdag.all().await?;
+                // In a non-lazy graph the following code is good enough to calculate
+                // obsvisible: obsdag.ancestors(obsall & visible).await?
+                //
+                // However, in a lazy graph obsdag.all() might have too many names
+                // outside the main graph and cause excessive server-side lookups.
+                // So we manually ignore names not in the local graph to avoid the
+                // slow path.
+                if let Some(visible_id_convert) = visible.id_convert() {
+                    let obsnames: Vec<VertexName> = { obsall.iter().await?.try_collect().await? };
+                    let obsnames: Vec<VertexName> = {
+                        let contains = visible_id_convert
+                            .contains_vertex_name_locally(&obsnames)
+                            .await?;
+                        obsnames
+                            .into_iter()
+                            .zip(contains)
+                            .filter_map(|(v, c)| if c { Some(v) } else { None })
+                            .collect()
+                    };
+                    obsall = Set::from_static_names(obsnames);
+                }
+                obsdag.ancestors(obsall & visible).await?
+            };
 
             // Heads of `obsvisible` are not obsoleted. Other part (parent) of
             // `obsvisible` are obsoleted.
