@@ -39,7 +39,7 @@ class NonEdenOperationTest(EdenHgTestCase):
         # Run `hg clone` from the Eden repo.
         clone_of_non_eden_hg_repo = os.path.join(self.tmp_dir, "clone-target")
         self.hg(
-            "clone", non_eden_hg_repo, clone_of_non_eden_hg_repo, cwd=self.repo.path
+            "clone", "--pull", non_eden_hg_repo, clone_of_non_eden_hg_repo, cwd=self.repo.path
         )
 
         dest_first_file = os.path.join(clone_of_non_eden_hg_repo, "first.txt")
