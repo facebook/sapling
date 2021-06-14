@@ -507,7 +507,7 @@ void Overlay::gcThread() noexcept {
         if (lock->stop) {
           return;
         }
-        gcCondVar_.wait(lock.getUniqueLock());
+        gcCondVar_.wait(lock.as_lock());
         continue;
       }
 

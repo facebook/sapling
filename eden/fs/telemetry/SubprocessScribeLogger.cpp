@@ -72,7 +72,7 @@ SubprocessScribeLogger::~SubprocessScribeLogger() {
     auto until = std::chrono::steady_clock::now() + kFlushTimeout;
     auto state = state_.lock();
     allMessagesWritten_.wait_until(
-        state.getUniqueLock(), until, [&] { return state->didStop; });
+        state.as_lock(), until, [&] { return state->didStop; });
   }
 
   closeProcess();
@@ -118,7 +118,7 @@ void SubprocessScribeLogger::writerThread() {
 
     {
       auto state = state_.lock();
-      newMessageOrStop_.wait(state.getUniqueLock(), [&] {
+      newMessageOrStop_.wait(state.as_lock(), [&] {
         return state->shouldStop || !state->messages.empty();
       });
       if (!state->messages.empty()) {

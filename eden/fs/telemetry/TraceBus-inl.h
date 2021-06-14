@@ -77,7 +77,7 @@ void TraceBus<TraceEvent>::publish(TraceEvent&& event) noexcept {
       // an appropriate warning and then block until we have room to append the
       // current event.
       logFullOnce();
-      fullCV_.wait(state.getUniqueLock(), [&] {
+      fullCV_.wait(state.as_lock(), [&] {
         return state->writeBuffer.size() < bufferCapacity_;
       });
     }
@@ -183,7 +183,7 @@ void TraceBus<TraceEvent>::threadLoop(
 
       // If no events are buffered, sleep until events are delivered or we are
       // signaled to terminate.
-      emptyCV_.wait(state.getUniqueLock(), [&] {
+      emptyCV_.wait(state.as_lock(), [&] {
         return state->done || !state->writeBuffer.empty();
       });
       std::swap(state->writeBuffer, readBuffer);

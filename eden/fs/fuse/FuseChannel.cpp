@@ -1264,7 +1264,7 @@ void FuseChannel::invalidationThread() noexcept {
         if (lockedQueue->stop) {
           return;
         }
-        invalidationCV_.wait(lockedQueue.getUniqueLock());
+        invalidationCV_.wait(lockedQueue.as_lock());
       }
       lockedQueue->queue.swap(entries);
     }

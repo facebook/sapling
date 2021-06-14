@@ -145,7 +145,7 @@ void LogFile::runRotateThread() {
     AbsolutePath path;
     {
       auto queue = rotationQueue_.lock();
-      rotationCV_.wait(queue.getUniqueLock(), [&] { return !queue->empty(); });
+      rotationCV_.wait(queue.as_lock(), [&] { return !queue->empty(); });
       if (!queue->front().has_value()) {
         // This is the request to terminate.
         break;

@@ -91,7 +91,7 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
   auto state = state_.lock();
 
   while (state->running && state->queue.empty()) {
-    queueCV_.wait(state.getUniqueLock());
+    queueCV_.wait(state.as_lock());
   }
 
   if (!state->running) {
