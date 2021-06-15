@@ -229,6 +229,14 @@ py_class!(pub class client |py| {
         self.inner(py).clone().clone_data_py(py, repo)
     }
 
+    /// pullfastforwardmaster(repo: str, old_master: Bytes, new_master: Bytes) -> bytes
+    /// mincode-serialized CloneData.
+    def pullfastforwardmaster(&self, repo: String, old_master: PyBytes, new_master: PyBytes)
+        -> PyResult<PyBytes>
+    {
+        self.inner(py).clone().pull_fast_forward_master_py(py, repo, old_master, new_master)
+    }
+
 
     /// lookup_file_contents(repo: str, content_ids: [bytes])
     def lookup_file_contents(&self, repo: String, content_ids: Vec<PyBytes>)

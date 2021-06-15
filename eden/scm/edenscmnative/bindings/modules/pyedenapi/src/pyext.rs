@@ -380,6 +380,34 @@ pub trait EdenApiPyExt: EdenApi {
         Ok(PyBytes::new(py, &bytes))
     }
 
+    /// Get pll data for master pull fast path
+    fn pull_fast_forward_master_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        old_master: PyBytes,
+        new_master: PyBytes,
+    ) -> PyResult<PyBytes> {
+        let old_master = to_hgid(py, &old_master);
+        let new_master = to_hgid(py, &new_master);
+        let bytes = {
+            py.allow_threads(|| {
+                block_on_future(async move {
+                    match self
+                        .pull_fast_forward_master(repo, old_master, new_master)
+                        .await
+                    {
+                        Err(e) => Err(e),
+                        Ok(data) => Ok(mincode::serialize(&data)),
+                    }
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+        };
+        Ok(PyBytes::new(py, &bytes))
+    }
+
     fn lookup_file_contents(
         self: Arc<Self>,
         py: Python,
