@@ -124,7 +124,7 @@ py_class!(pub class idmap |py| {
             return Ok(Vec::new())
         }
         let map = self.map(py).clone();
-        let vertexes = async_runtime::block_on_future(async move {
+        let vertexes = async_runtime::block_on(async move {
             map.vertexes_by_hex_prefix(&prefix, limit).await
         });
         let nodes = vertexes

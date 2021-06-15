@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
-use async_runtime::block_on_exclusive as block_on_future;
+use async_runtime::block_on;
 use progress::Unit;
 
 use crate::{
@@ -62,7 +62,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             self.store.get_missing(keys)
         };
 
-        block_on_future(fetch)
+        block_on(fetch)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -93,7 +93,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             self.store.get_missing(keys)
         };
 
-        block_on_future(fetch)
+        block_on(fetch)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {

@@ -59,24 +59,8 @@ where
     RUNTIME.spawn_blocking(func)
 }
 
-/// Blocks the current thread while waiting for the computation defined by the Future `f` to
-/// complete.
-///
-/// Unlike `block_on_exclusive`, this can be nested without panic.
-pub fn block_on_future<F>(f: F) -> F::Output
-where
-    F::Output: Send,
-    F: Future + Send + 'static,
-{
-    block_on_exclusive(f)
-}
-
 /// Blocks the current thread while waiting for the computation defined by the Future `f`.
-/// Also blocks other `block_on_future` calls.
-///
-/// This is intended to be used when `f` is not `'static` and cannot be used in
-/// `block_on_future`.
-pub fn block_on_exclusive<F>(f: F) -> F::Output
+pub fn block_on<F>(f: F) -> F::Output
 where
     F: Future,
 {
@@ -98,7 +82,7 @@ where
 /// Unless the stream `s` is buffered, the items in the stream will be processed one after the
 /// other.
 /// When you want to process items strictly one after the other without any sort of buffering, you
-/// should use `block_on_future(my_stream.next())`.
+/// should use `block_on(my_stream.next())`.
 /// Example.
 ///  1. unbuffered stream, stream_to_iter buffer size = 2.
 ///     - the stream has the first item polled and the result is added to the buffer
@@ -193,7 +177,7 @@ impl<T: Send + 'static> Iterator for RunStream<T> {
     /// See `stream_to_iter`.
     fn next(&mut self) -> Option<Self::Item> {
         let mut rx = self.rx.take().unwrap();
-        let (next, rx) = block_on_future(async {
+        let (next, rx) = block_on(async {
             let next = rx.recv().await;
             (next, rx)
         });
@@ -226,7 +210,7 @@ pub fn iter_to_stream<I: Send + 'static>(
 ///
 /// Send on this future only needed to prevent including `py` into this future
 pub fn block_unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
-    block_on_exclusive(unless_interrupted(f))
+    block_on(unless_interrupted(f))
 }
 
 /// Same as block_unless_interrupted but for futures that returns Result
@@ -235,7 +219,7 @@ where
     E: Send,
     E: From<Error>,
 {
-    block_on_exclusive(async move { Ok(unless_interrupted(f).await??) })
+    block_on(async move { unless_interrupted(f).await? })
 }
 
 async fn unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
@@ -258,14 +242,14 @@ mod tests {
     use futures::stream;
 
     #[test]
-    fn test_block_on_future() {
-        assert_eq!(block_on_future(async { 2 + 2 }), 4);
+    fn test_block_on() {
+        assert_eq!(block_on(async { 2 + 2 }), 4);
     }
 
     #[test]
     #[should_panic]
-    fn test_block_on_future_will_panic() {
-        block_on_future(async {
+    fn test_block_on_panic() {
+        block_on(async {
             panic!("hello future");
         });
     }
@@ -273,19 +257,19 @@ mod tests {
     #[test]
     fn test_panic_in_future_does_not_poisons_runtime() {
         let th = thread::spawn(|| {
-            block_on_future(async {
+            block_on(async {
                 panic!("no poison");
             })
         });
         assert!(th.join().is_err());
-        assert_eq!(block_on_future(async { 2 + 2 }), 4);
+        assert_eq!(block_on(async { 2 + 2 }), 4);
     }
 
     #[test]
-    fn test_block_on_future_block_on_other_thread() {
+    fn test_block_on_block_on_other_thread() {
         let (tx, rx) = std::sync::mpsc::sync_channel(1);
         thread::spawn(|| {
-            block_on_future(async move {
+            block_on(async move {
                 for i in 12.. {
                     tx.send(i).unwrap();
                 }
@@ -298,12 +282,12 @@ mod tests {
     }
 
     #[test]
-    fn test_block_on_future_pseudo_parallelism() {
+    fn test_block_pseudo_parallelism() {
         // This test will deadlock if threads can't schedule tasks while another thread
         // is waiting for a result
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-        let th1 = thread::spawn(|| block_on_future(async move { rx.recv().await }));
-        let _th2 = thread::spawn(|| block_on_future(async move { tx.send(5).await }));
+        let th1 = thread::spawn(|| block_on(async move { rx.recv().await }));
+        let _th2 = thread::spawn(|| block_on(async move { tx.send(5).await }));
         assert_eq!(th1.join().unwrap(), Some(5));
     }
 

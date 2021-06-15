@@ -21,7 +21,7 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+use async_runtime::{block_on, stream_to_iter as block_on_stream};
 use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,

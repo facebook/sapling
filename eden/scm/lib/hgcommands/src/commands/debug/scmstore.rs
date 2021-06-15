@@ -7,7 +7,7 @@
 
 use std::io::Write;
 
-use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+use async_runtime::{block_on, stream_to_iter as block_on_stream};
 use clidispatch::errors;
 use configparser::config::ConfigSet;
 use revisionstore::scmstore::{

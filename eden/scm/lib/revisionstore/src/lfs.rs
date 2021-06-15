@@ -41,7 +41,7 @@ use tokio::{
 use tracing::{info_span, trace_span, Instrument};
 use url::Url;
 
-use async_runtime::block_on_exclusive as block_on_future;
+use async_runtime::block_on;
 use auth::{AuthGroup, AuthSection};
 use configparser::{config::ConfigSet, convert::ByteCount};
 use hg_http::http_client;
@@ -1258,7 +1258,7 @@ impl LfsRemoteInner {
             .await
         };
 
-        let response = block_on_future(response_fut)?;
+        let response = block_on(response_fut)?;
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }
 
@@ -1447,7 +1447,7 @@ impl LfsRemoteInner {
         }
 
         // Request a couple of blobs concurrently.
-        block_on_future(iter(futures).try_for_each_concurrent(http.concurrent_fetches, |fut| fut))
+        block_on(iter(futures).try_for_each_concurrent(http.concurrent_fetches, |fut| fut))
     }
 
     /// Fetch files from the filesystem.

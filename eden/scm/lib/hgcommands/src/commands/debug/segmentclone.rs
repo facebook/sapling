@@ -9,7 +9,7 @@ use super::ConfigSet;
 use super::Result;
 use super::IO;
 use anyhow::Context;
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::block_on;
 use clidispatch::errors;
 use cliparser::define_flags;
 use dag::namedag::IndexedLogNameDagPath;

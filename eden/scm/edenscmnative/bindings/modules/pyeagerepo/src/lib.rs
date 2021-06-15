@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::block_on;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;

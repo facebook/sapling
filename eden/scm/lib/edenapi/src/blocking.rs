@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use async_runtime::block_on_exclusive as block_on_future;
+use async_runtime::block_on;
 use edenapi_types::{
     BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
@@ -19,7 +19,7 @@ use crate::response::{BlockingFetch, ResponseMeta};
 
 pub trait EdenApiBlocking: EdenApi {
     fn health_blocking(&self) -> Result<ResponseMeta, EdenApiError> {
-        block_on_future(self.health())
+        block_on(self.health())
     }
 
     fn files_blocking(
@@ -84,7 +84,7 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        block_on_future(self.clone_data(repo, progress))
+        block_on(self.clone_data(repo, progress))
     }
 
     fn full_idmap_clone_data_blocking(
@@ -92,7 +92,7 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        block_on_future(self.full_idmap_clone_data(repo, progress))
+        block_on(self.full_idmap_clone_data(repo, progress))
     }
 
     fn commit_location_to_hash_blocking(

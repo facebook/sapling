@@ -10,7 +10,7 @@
 use std::{cell::RefCell, io::Cursor};
 
 use anyhow::Error;
-use async_runtime::block_on_exclusive as block_on;
+use async_runtime::block_on;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};

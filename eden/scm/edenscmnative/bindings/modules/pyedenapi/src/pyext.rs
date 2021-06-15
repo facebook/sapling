@@ -11,7 +11,7 @@ use cpython::*;
 use futures::prelude::*;
 
 use anyhow::format_err;
-use async_runtime::block_on_future;
+use async_runtime::block_on;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
@@ -62,7 +62,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let prog = progress.bar(
                         "Downloading files over HTTP",
                         Some(keys.len() as u64),
@@ -93,7 +93,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let prog = progress.bar(
                         "Downloading file history over HTTP",
                         Some(keys.len() as u64),
@@ -128,7 +128,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let prog = progress.bar(
                         "Downloading trees over HTTP",
                         Some(keys.len() as u64),
@@ -158,7 +158,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let (trees, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.trees(repo, keys, attributes, None).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
@@ -194,7 +194,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let prog = progress.bar(
                         "Downloading complete trees over HTTP",
                         None,
@@ -223,7 +223,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let (commits, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.commit_revlog_data(repo, nodes, callback).await?;
                     let commits = response.entries;
                     let stats = response.stats;
@@ -276,7 +276,7 @@ pub trait EdenApiPyExt: EdenApi {
             .collect();
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self
                         .commit_location_to_hash(repo, requests, callback)
                         .await?;
@@ -306,7 +306,7 @@ pub trait EdenApiPyExt: EdenApi {
         let hgids = to_hgids(py, hgids);
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self
                         .commit_hash_to_location(repo, master_heads, hgids, callback)
                         .await?;
@@ -332,7 +332,7 @@ pub trait EdenApiPyExt: EdenApi {
         let hgids = to_hgids(py, hgids);
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.commit_known(repo, hgids).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
@@ -354,7 +354,7 @@ pub trait EdenApiPyExt: EdenApi {
         let common = to_hgids(py, common);
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.commit_graph(repo, heads, common).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
@@ -369,7 +369,7 @@ pub trait EdenApiPyExt: EdenApi {
     fn clone_data_py(self: Arc<Self>, py: Python, repo: String) -> PyResult<PyBytes> {
         let bytes = {
             py.allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     match self.clone_data(repo, None).await {
                         Err(e) => Err(e),
                         Ok(data) => Ok(mincode::serialize(&data)),
@@ -394,7 +394,7 @@ pub trait EdenApiPyExt: EdenApi {
         let new_master = to_hgid(py, &new_master);
         let bytes = {
             py.allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     match self
                         .pull_fast_forward_master(repo, old_master, new_master)
                         .await
@@ -481,7 +481,7 @@ pub trait EdenApiPyExt: EdenApi {
     ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.lookup_batch(repo, ids, None).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
@@ -528,7 +528,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let (responses, stats) = py
             .allow_threads(|| {
-                block_on_future(async move {
+                block_on(async move {
                     let response = self.process_files_upload(repo, data, callback).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })

@@ -7,7 +7,7 @@
 
 use futures::prelude::*;
 
-use async_runtime::block_on_exclusive as block_on_future;
+use async_runtime::block_on;
 use http_client::Stats;
 
 use crate::errors::EdenApiError;
@@ -31,10 +31,10 @@ impl<T> BlockingFetch<T> {
             meta,
             entries,
             stats,
-        } = block_on_future(fetch)?;
+        } = block_on(fetch)?;
 
-        let entries = block_on_future(entries.try_collect())?;
-        let stats = block_on_future(stats)?;
+        let entries = block_on(entries.try_collect())?;
+        let stats = block_on(stats)?;
 
         Ok(Self {
             meta,

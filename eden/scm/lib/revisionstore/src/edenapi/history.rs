@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
-use async_runtime::block_on_exclusive as block_on_future;
+use async_runtime::block_on;
 use progress::Unit;
 use types::{Key, NodeInfo};
 
@@ -68,7 +68,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
             Ok(())
         };
 
-        block_on_future(fetch)
+        block_on(fetch)
     }
 }
 
