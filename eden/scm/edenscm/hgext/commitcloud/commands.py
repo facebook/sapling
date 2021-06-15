@@ -861,6 +861,8 @@ def cloudbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
     """
+    repo.ignoreautobackup = True
+
     force = opts.get("force")
     inbackground = opts.get("background")
     revs = revs + tuple(opts.get("rev", ()))
