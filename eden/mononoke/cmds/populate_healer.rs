@@ -281,7 +281,7 @@ async fn get_resume_state(
             config.repo_id.id(),
             config.end_key.clone().unwrap_or_else(|| "\x7f".to_string()),
         );
-        State::from_init(Arc::new(BlobstoreKeyParam::from(start..end)))
+        State::from_init(Arc::new(BlobstoreKeyParam::from(start..=end)))
     };
 
     resume_state.map(move |resume_state| {

@@ -22,7 +22,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use std::io::Cursor;
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+use std::ops::{Bound, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeToInclusive};
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString, IntoStaticStr};
 use thiserror::Error;
 
@@ -430,9 +430,11 @@ pub trait BlobstoreKeySource: Blobstore {
     ) -> Result<BlobstoreEnumerationData>;
 }
 
+/// Range of keys.  The range is inclusive (both start and end key are
+/// included in the range), which matches Manifold behaviour.  If the key is
+/// empty then the range is unbounded on that end.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct BlobstoreKeyRange {
-    // Should match manifold inclusiveness rules, please check and document.
     pub begin_key: String,
     pub end_key: String,
 }
@@ -450,17 +452,18 @@ pub enum BlobstoreKeyParam {
     Continuation(BlobstoreKeyToken),
 }
 
-impl From<Range<String>> for BlobstoreKeyParam {
-    fn from(range: Range<String>) -> Self {
+impl From<RangeInclusive<String>> for BlobstoreKeyParam {
+    fn from(range: RangeInclusive<String>) -> Self {
+        let (start, end) = range.into_inner();
         BlobstoreKeyParam::Start(BlobstoreKeyRange {
-            begin_key: range.start,
-            end_key: range.end,
+            begin_key: start,
+            end_key: end,
         })
     }
 }
 
-impl From<RangeTo<String>> for BlobstoreKeyParam {
-    fn from(range: RangeTo<String>) -> Self {
+impl From<RangeToInclusive<String>> for BlobstoreKeyParam {
+    fn from(range: RangeToInclusive<String>) -> Self {
         BlobstoreKeyParam::Start(BlobstoreKeyRange {
             begin_key: String::from(""),
             end_key: range.end,
@@ -483,6 +486,24 @@ impl From<RangeFull> for BlobstoreKeyParam {
             begin_key: String::from(""),
             end_key: String::from(""),
         })
+    }
+}
+
+impl RangeBounds<String> for &BlobstoreKeyRange {
+    fn start_bound(&self) -> Bound<&String> {
+        if self.begin_key.is_empty() {
+            Bound::Unbounded
+        } else {
+            Bound::Included(&self.begin_key)
+        }
+    }
+
+    fn end_bound(&self) -> Bound<&String> {
+        if self.end_key.is_empty() {
+            Bound::Unbounded
+        } else {
+            Bound::Included(&self.end_key)
+        }
     }
 }
 

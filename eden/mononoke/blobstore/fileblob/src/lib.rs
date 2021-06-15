@@ -10,6 +10,7 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fs::create_dir_all;
+use std::ops::RangeBounds;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -233,7 +234,7 @@ impl BlobstoreKeySource for Fileblob {
                         let entry = entry.path().to_str();
                         if let Some(data) = entry {
                             let key = data.to_string();
-                            if key < range.end_key && key > range.begin_key {
+                            if range.contains(&key) {
                                 enum_data.keys.insert(key);
                             }
                         }
