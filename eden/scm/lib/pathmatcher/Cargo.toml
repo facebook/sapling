@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 bitflags = "1.2"
-globset = "0.4"
+globset = "0.4.7"
 ignore = "0.4"
 types = { path = "../types" }
 

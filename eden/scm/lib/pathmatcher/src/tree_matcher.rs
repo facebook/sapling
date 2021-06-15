@@ -253,16 +253,32 @@ impl Matcher for TreeMatcher {
 fn build_globs(pat: &str) -> Result<Vec<Glob>, globset::Error> {
     // Fast path (maybe).
     if pat.ends_with("/**") {
-        // Rewrite "foo/**" (literal_separator=true) to "foo" (literal_separator=false) and "foo/*"
-        // (literal_separator=false) so MatchStrategy::Literal and MatchStrategy::Prefix (instead
-        // of MatchStrategy::Regex) might be used.  See globset::glob::Glob::{literal,prefix}.
         let prefix = &pat[..pat.len() - 3];
         if !prefix.contains("?") && !prefix.contains("*") {
+            // Rewrite "foo/**" (literal_separator=true) to
+            // "foo" (literal_separator=false) and
+            // "foo/*" (literal_separator=false) so
+            // MatchStrategy::Literal and MatchStrategy::Prefix
+            // instead of MatchStrategy::Regex) might be used.
+            // See globset::glob::Glob::{literal,prefix}.
             let rules = [prefix, &pat[..pat.len() - 1]];
             return rules
                 .iter()
                 .map(|r| GlobBuilder::new(r).backslash_escape(true).build())
                 .collect();
+        } else {
+            // Still append a rule without "/**".
+            // We want pre-#1756 (https://github.com/BurntSushi/ripgrep/pull/1756) behavior.
+            return Ok(vec![
+                GlobBuilder::new(prefix)
+                    .backslash_escape(true)
+                    .literal_separator(true)
+                    .build()?,
+                GlobBuilder::new(pat)
+                    .backslash_escape(true)
+                    .literal_separator(true)
+                    .build()?,
+            ]);
         }
     }
 
