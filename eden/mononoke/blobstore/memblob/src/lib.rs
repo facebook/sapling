@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -14,8 +14,8 @@ use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
-    DEFAULT_PUT_BEHAVIOUR,
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
+    BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
@@ -25,7 +25,7 @@ use mononoke_types::BlobstoreBytes;
 struct MemState {
     next_id: usize,
     data: HashMap<usize, BlobstoreBytes>,
-    links: HashMap<String, usize>,
+    links: BTreeMap<String, usize>,
 }
 
 impl MemState {
@@ -191,6 +191,28 @@ impl BlobstoreWithLink for Memblob {
             Ok(())
         } else {
             Err(format_err!("Unknown key {} to Memblob::unlink()", key))
+        }
+    }
+}
+
+#[async_trait]
+impl BlobstoreKeySource for Memblob {
+    async fn enumerate<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
+    ) -> Result<BlobstoreEnumerationData> {
+        match range {
+            BlobstoreKeyParam::Start(range) => {
+                let state = self.state.lock().expect("lock poison");
+                Ok(BlobstoreEnumerationData {
+                    keys: state.links.range(range).map(|(k, _)| k.clone()).collect(),
+                    next_token: None,
+                })
+            }
+            BlobstoreKeyParam::Continuation(_) => {
+                Err(format_err!("Continuation not supported for memblob"))
+            }
         }
     }
 }
