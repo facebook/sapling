@@ -10,34 +10,41 @@
 
 # This is the mercurial setup script.
 #
-# 'python setup.py install', or
-# 'python setup.py --help' for more options
+# 'python3 setup.py install', or
+# 'python3 setup.py --help' for more options
 
 # isort:skip_file
+import os
+import sys
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+# If we're executing inside an embedded Python instance, it won't load
+# modules outside the embedded python. So let's add our directory manually,
+# before we import things.
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import contextlib
 import ctypes
 import ctypes.util
 import errno
 import glob
+import hashlib
 import imp
-import os
-import py_compile
 import re
 import shutil
 import socket
 import stat
 import struct
 import subprocess
-import sys
 import tarfile
 import tempfile
 import time
 import zipfile
+
+if sys.version_info.major == 2:
+    raise RuntimeError("This setup.py is Python 3 only!")
+
+
+PY_VERSION = "38"
 
 
 def ensureenv():
@@ -58,105 +65,20 @@ def ensureenv():
     newenv.update(env)
     # Pick the right Python interpreter
     python = env.get("PYTHON_SYS_EXECUTABLE", sys.executable)
+    print("Relaunching with %s and build/env environment" % python, file=sys.stderr)
     p = subprocess.Popen([python] + sys.argv, env=newenv)
     sys.exit(p.wait())
 
 
 ensureenv()
 
-
-import platform
-
-if sys.version_info[0] >= 3:
-    printf = eval("print")
-    libdir_escape = "unicode_escape"
-
-    def sysstr(s):
-        return s.decode("latin-1")
+# rust-cpython uses this to collect Python information
+os.environ["PYTHON_SYS_EXECUTABLE"] = sys.executable
 
 
-else:
-    libdir_escape = "string_escape"
+def filter(f, it):
+    return list(__builtins__.filter(f, it))
 
-    def printf(*args, **kwargs):
-        f = kwargs.get("file", sys.stdout)
-        end = kwargs.get("end", "\n")
-        f.write(b" ".join(args) + end)
-
-    def sysstr(s):
-        return s
-
-
-# Attempt to guide users to a modern pip - this means that 2.6 users
-# should have a chance of getting a 4.2 release, and when we ratchet
-# the version requirement forward again hopefully everyone will get
-# something that works for them.
-if sys.version_info < (2, 7, 0, "final"):
-    pip_message = (
-        "This may be due to an out of date pip. " "Make sure you have pip >= 9.0.1."
-    )
-    try:
-        import pip
-
-        pip_version = tuple([int(x) for x in pip.__version__.split(".")[:3]])
-        if pip_version < (9, 0, 1):
-            pip_message = (
-                "Your pip version is out of date, please install "
-                "pip >= 9.0.1. pip {} detected.".format(pip.__version__)
-            )
-        else:
-            # pip is new enough - it must be something else
-            pip_message = ""
-    except Exception:
-        pass
-    error = """
-Mercurial does not support Python older than 2.7.
-Python {py} detected.
-{pip}
-""".format(
-        py=sys.version_info, pip=pip_message
-    )
-    printf(error, file=sys.stderr)
-    sys.exit(1)
-
-# Solaris Python packaging brain damage
-try:
-    import hashlib
-
-    sha = hashlib.sha1()
-except ImportError:
-    try:
-        import sha
-
-        sha.sha  # silence unused import warning
-    except ImportError:
-        raise SystemExit(
-            "Couldn't import standard hashlib (incomplete Python install)."
-        )
-
-try:
-    import zlib
-
-    zlib.compressobj  # silence unused import warning
-except ImportError:
-    raise SystemExit("Couldn't import standard zlib (incomplete Python install).")
-
-# The base IronPython distribution (as of 2.7.1) doesn't support bz2
-isironpython = False
-try:
-    isironpython = platform.python_implementation().lower().find("ironpython") != -1
-except AttributeError:
-    pass
-
-if isironpython:
-    sys.stderr.write("warning: IronPython detected (no bz2 support)\n")
-else:
-    try:
-        import bz2
-
-        bz2.BZ2Compressor  # silence unused import warning
-    except ImportError:
-        raise SystemExit("Couldn't import standard bz2 (incomplete Python install).")
 
 ispypy = "PyPy" in sys.version
 
@@ -176,7 +98,7 @@ from distutils.core import Command, Extension
 from distutils.core import setup
 from distutils.dir_util import copy_tree
 from distutils.dist import Distribution
-from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
+from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.spawn import spawn, find_executable
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
@@ -347,9 +269,9 @@ class hgcommand(object):
         returncode, out, err = runcmd(cmd, self.env)
         err = filterhgerr(err)
         if err or returncode != 0:
-            printf("stderr from '%s':" % (" ".join(cmd)), file=sys.stderr)
-            printf(err, file=sys.stderr)
-            return ""
+            print("stderr from '%s':" % (" ".join(cmd)), file=sys.stderr)
+            print(err, file=sys.stderr)
+            return b""
         return out
 
 
@@ -440,7 +362,7 @@ hg = findhg()
 def hgtemplate(template, cast=None):
     if not hg:
         return None
-    result = sysstr(hg.run(["log", "-r.", "-T", template]))
+    result = hg.run(["log", "-r.", "-T", template]).decode("utf-8")
     if result and cast:
         result = cast(result)
     return result
@@ -471,7 +393,7 @@ if not os.path.isdir(builddir):
         else:
             # Prefer a symlink to a "scratch path" path if the "mkscratch" tool exists
             scratchpath = subprocess.check_output(
-                ["mkscratch", "path", "--subdir", "hgbuild"]
+                ["mkscratch", "path", "--subdir", "hgbuild3"]
             ).strip()
         assert os.path.isdir(scratchpath)
         os.symlink(scratchpath, builddir)
@@ -486,11 +408,13 @@ if not isinstance(versionb, bytes):
 
 # calculate a versionhash, which is used by chg to make sure the client
 # connects to a compatible server.
-versionhash = struct.unpack(">Q", hashlib.sha1(versionb).digest()[:8])[0]
+versionhash = str(struct.unpack(">Q", hashlib.sha1(versionb).digest()[:8])[0]).encode(
+    "ascii"
+)
 
 chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHAVE_VERSIONHASH", "-I%s" % builddir]
 versionhashpath = pjoin(builddir, "versionhash.h")
-write_if_changed(versionhashpath, "#define HGVERSIONHASH %sULL\n" % versionhash)
+write_if_changed(versionhashpath, b"#define HGVERSIONHASH %sULL\n" % versionhash)
 
 write_if_changed(
     "edenscm/mercurial/__version__.py",
@@ -574,7 +498,7 @@ void print_buildinfo() {
 """
 
     path = pjoin(builddir, "buildinfo.c")
-    write_if_changed(path, buildinfosrc.encode("utf-8"))
+    write_if_changed(path, buildinfosrc)
     return path
 
 
@@ -677,7 +601,7 @@ class asset(object):
             raise RuntimeError("don't know how to extract %s" % self.name)
 
     def __hash__(self):
-        return hash((self.name, self.url, self.version))
+        return hash((self.name.encode("utf-8"), self.url, self.version))
 
     def _isready(self):
         try:
@@ -797,7 +721,7 @@ class thriftasset(asset):
         for thriftdest in sorted(self.sourcemap.values()):
             thriftfile = pjoin(thriftdir, thriftdest)
             if os.path.exists(thriftfile):
-                with open(thriftfile) as f:
+                with open(thriftfile, "rb") as f:
                     hasher.update(f.read())
         return int(hasher.hexdigest(), 16)
 
@@ -806,66 +730,44 @@ class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
 
-    # To add a python package to this list, run "pip2 download PKG" and
-    # add the URL here.  URLs are added to LFS by running eg:
-    # ../../tools/lfs/lfs.py upload LOCAL-FILE
-    # where LOCAL-FILE is the file downloaded by "pip2 download PKG"
     pyassets = [
         asset(url=url)
         for url in [
-            "https://files.pythonhosted.org/packages/b0/88/d996ab8be22cea1eaa18baee3678a11265e18cf09974728d683c51102148/ipython-5.8.0-py2-none-any.whl",
-            "https://files.pythonhosted.org/packages/bc/bb/a24838832ba35baf52f32ab1a49b906b5f82fb7c76b2f6a7e35e140bac30/decorator-4.3.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/e7/16/da8cb8046149d50940c6110310983abb359bbb8cbc3539e6bef95c29428a/setuptools-40.6.2-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/7d/cd/1750d6c35fe86d35f8562091737907f234b78fdffab42b29c72b1dd861f4/backports.shutil_get_terminal_size-1.0.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/89/e6/b5a1de8b0cc4e07ca1b305a4fcc3f9806025c1b651ea302646341222f88b/pexpect-4.6.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/2a/46/c696dcf1c7aad917b39b875acdc5451975e3a9b4890dca8329983201c97a/pathlib2-2.3.3-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/fc/41/4f900a7852e25bb9350b4e3ee8c4aba0ee32abefd401456962b25f954823/Pygments-2.3.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/93/d6/abcb22de61d78e2fc3959c964628a5771e47e7cc60d53e9342e21ed6cc9a/traitlets-4.3.2-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/3d/57/4d9c9e3ae9a255cd4e1106bb57e24056d3d0709fc01b2e3e345898e49d5b/simplegeneric-0.8.1.zip",
-            "https://files.pythonhosted.org/packages/9a/41/220f49aaea88bc6fa6cba8d05ecf24676326156c23b991e80b3f2fc24c77/pickleshare-0.7.5-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/7e/9f/526a6947247599b084ee5232e4f9190a38f398d7300d866af3ab571a5bfe/wcwidth-0.1.7-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/23/6a/210816c943c9aeeb29e4e18a298f14bf0e118fe222a23e13bfcc2d41b0a4/ipython-7.16.1-py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/39/7b/88dbb785881c28a102619d46423cb853b46dbccc70d3ac362d99773a78ce/pexpect-4.8.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/4c/1c/ff6546b6c12603d8dd1070aa3c3d273ad4c07f5771689a7b69a550e8c951/backcall-0.2.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/4e/78/56aa1b5f4d8ac548755ae767d84f0be54fdd9d404197a3d9e4659d272348/setuptools-57.0.0-py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/59/7c/e39aca596badaf1b78e8f547c807b04dae603a433d3e7a7e04d67f2ef3e5/wcwidth-0.2.5-py2.py3-none-any.whl",
             "https://files.pythonhosted.org/packages/67/4b/141a581104b1f6397bfa78ac9d43d8ad29a7ca43ea90a2d863fe3056e86a/six-1.11.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/d1/29/605c2cc68a9992d18dada28206eeada56ea4bd07a239669da41674648b6f/ptyprocess-0.6.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/16/2a/557af1181e6b4e30254d5a6163b18f5053791ca66e251e77ab08887e8fe3/scandir-1.9.0.tar.gz",
-            "https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/c5/db/e56e6b4bbac7c4a06de1c50de6fe1ef3810018ae11732a50f15f62c7d050/enum34-1.1.6-py2-none-any.whl",
-            "https://files.pythonhosted.org/packages/89/8d/7aad74930380c8972ab282304a2ff45f3d4927108bb6693cabcc9fc6a099/win_unicode_console-0.5.zip",
-            "https://files.pythonhosted.org/packages/4f/a6/728666f39bfff1719fc94c481890b2106837da9318031f71a8424b662e12/colorama-0.4.1-py2.py3-none-any.whl",
-            "https://files.pythonhosted.org/packages/90/52/e20466b85000a181e1e144fd8305caf2cf475e2f9674e797b222f8105f5f/future-0.17.1.tar.gz",
-            "https://files.pythonhosted.org/packages/cc/3e/29f92b7aeda5b078c86d14f550bf85cff809042e3429ace7af6193c3bc9f/typing-3.6.6-py2-none-any.whl",
-            "https://files.pythonhosted.org/packages/2d/99/b2c4e9d5a30f6471e410a146232b4118e697fa3ffc06d6a65efde84debd0/futures-3.2.0-py2-none-any.whl",
-            "https://files.pythonhosted.org/packages/df/78/3d0d7253dc85549db182cbe4b43b30c506c84008fcd39898122c9b6306a9/ipdb-0.12.2.tar.gz",
+            "https://files.pythonhosted.org/packages/6a/36/b1b9bfdf28690ae01d9ca0aa5b0d07cb4448ac65fb91dc7e2d094e3d992f/decorator-5.0.9-py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/9a/41/220f49aaea88bc6fa6cba8d05ecf24676326156c23b991e80b3f2fc24c77/pickleshare-0.7.5-py2.py3-none-any.whl",
             "https://files.pythonhosted.org/packages/a2/12/ced7105d2de62fa7c8fb5fce92cc4ce66b57c95fb875e9318dba7f8c5db0/toml-0.10.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/a6/c9/be11fce9810793676017f79ffab3c6cb18575844a6c7b8d4ed92f95de604/Pygments-2.9.0-py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/a9/c4/d5476373088c120ffed82f34c74b266ccae31a68d665b837354d4d8dc8be/parso-0.8.2-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/ca/ab/872a23e29cec3cf2594af7e857f18b687ad21039c1f9b922fac5b9b142d5/traitlets-4.3.3-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/d9/5a/e7c31adbe875f2abbb91bd84cf2dc52d792b5a01506781dbcf25c91daf11/six-1.16.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/eb/e6/4b4ca4fa94462d4560ba2f4e62e62108ab07be2e16a92e594e43b12d3300/prompt_toolkit-3.0.18-py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/f9/36/7aa67ae2663025b49e8426ead0bad983fee1b73f472536e9790655da0277/jedi-0.18.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/fc/56/9f67dcd4a4b9960373173a31be1b8c47fe351a1c9385677a7bdd82810e57/ipdb-0.13.9.tar.gz",
         ]
     ]
-    pyassets += [
-        asset(
-            name="python-prompt-toolkit-01523894d6e9abfbd4f65bad015052cc7bd7f4ca.zip",
-            url="https://github.com/prompt-toolkit/python-prompt-toolkit/archive/01523894d6e9abfbd4f65bad015052cc7bd7f4ca.zip",
-        )
-    ]
+
     pyassets += [
         fbsourcepylibrary(
             "thrift",
             "../../thrift/lib/py",
             excludes=[
-                "thrift/async_common.py",
-                "thrift/util/async_common.py",
                 "thrift/util/asyncio.py",
-                "thrift/util/converter.py",
-                "thrift/util/handler.py",
                 "thrift/util/inspect.py",
                 "thrift/server/TAsyncioServer.py",
                 "thrift/server/test/TAsyncioServerTest.py",
-                "thrift/server/test/handler.py",
                 "thrift/util/tests/__init__.py",
             ],
         ),
-        fbsourcepylibrary(
-            "eden",
-            "../../eden/fs/py/eden",
-            excludes=["eden/thrift/client.py", "eden/thrift/test/client_test.py"],
-        ),
+        fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
     ]
     pyassets += (
         [
@@ -1015,19 +917,17 @@ class buildembedded(Command):
     def _process_hg_exts(self, dirforexts):
         """Prepare Mercurail native Python extensions
 
-        This copies edenscmnative/ and edenscm/ to the destination."""
+        This just copies edenscmnative/ to the destination."""
         parentdir = scriptdir
         if not self.local_bins:
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
         copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
-        copy_to(pjoin(parentdir, "edenscm"), pjoin(dirforexts, "edenscm"))
 
-    def _zip_pyc_files(self, embdir, zipname):
+    def _zip_pyc_files(self, zipname):
         """Modify a zip archive to include edenscm .pyc files"""
-        sourcedir = pjoin(embdir, "edenscm")
+        sourcedir = pjoin(scriptdir, "edenscm")
         with zipfile.PyZipFile(zipname, "a") as z:
-            z.debug = 1
             # Write .py files for better traceback.
             for root, _dirs, files in os.walk(sourcedir):
                 for basename in files:
@@ -1036,31 +936,32 @@ class buildembedded(Command):
                         # relative to scriptdir
                         inzippath = sourcepath[len(scriptdir) + 1 :]
                         z.write(sourcepath, inzippath)
-
-                        # Remove the pyc to force recompiling them
-                        tryunlink(sourcepath + "c")
             # Compile and write .pyc files.
             z.writepy(sourcedir)
-        # Finally, remove the edenscm directory so that the package loads the
-        # pyc from the zip.
-        rmtree(sourcedir)
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
-        pylib = "python27" if iswindows else "python2.7"
+        pyroot = os.path.realpath(pjoin(sys.executable, ".."))
+        pylib = f"python{PY_VERSION}"
         pylibext = pylib + (".dll" if iswindows else ".so")
         # First priority is the python lib that lives alongside the executable
-        pylibpath = os.path.realpath(pjoin(sys.executable, "..", pylibext))
+        pylibpath = pjoin(pyroot, pylibext)
         if not os.path.exists(pylibpath):
             # a fallback option
             pylibpath = ctypes.util.find_library(pylib)
         log.debug("Python dynamic library is copied from: %s" % pylibpath)
         copy_to(pylibpath, pjoin(dirtocopy, os.path.basename(pylibpath)))
-        # Copy python27.zip
+        # Copy pythonXX.zip
         pyzipname = pylib + ".zip"
-        pyzippath = os.path.realpath(pjoin(sys.executable, "..", pyzipname))
+        pyzippath = pjoin(pyroot, pyzipname)
         if os.path.exists(pyzippath):
             copy_to(pyzippath, pjoin(dirtocopy, pyzipname))
+
+        # Copy native python modules
+        for pylibpath in glob.glob(os.path.join(pyroot, "*.pyd")):
+            copy_to(pylibpath, dirtocopy)
+        for pylibpath in glob.glob(os.path.join(pyroot, "*.dll")):
+            copy_to(pylibpath, dirtocopy)
 
     def _copy_hg_exe(self, dirtocopy):
         """Copy main mercurial executable which would load the embedded Python"""
@@ -1102,10 +1003,10 @@ class buildembedded(Command):
         # has the first priority in dynamic linker search path.
         self._copy_py_lib(embdir)
 
-        # Build everything into python27.zip, which is in the default sys.path.
-        zippath = pjoin(embdir, "python27.zip")
+        # Build everything into pythonXX.zip, which is in the default sys.path.
+        zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
         buildpyzip(self.distribution).run(appendzippath=zippath)
-        self._zip_pyc_files(embdir, zippath)
+        self._zip_pyc_files(zippath)
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
 
@@ -1135,15 +1036,6 @@ class hgbuildpy(build_py):
         self.mkpath(basepath)
 
         build_py.run(self)
-
-        # Find and delete stale pyc files
-        for package in packages:
-            path = pjoin(self.build_lib, package.replace(".", "/"))
-            for pycpath in glob.glob(pjoin(path, "*.pyc")):
-                pypath = pycpath[:-1]
-                if not os.path.exists(pypath):
-                    self.warn("removing stale %s" % pycpath)
-                    tryunlink(pycpath)
 
         buildpyzip(self.distribution).run()
 
@@ -1179,9 +1071,11 @@ class buildpyzip(Command):
 
         # Directories of IPython dependencies
         depdirs = [pjoin(builddir, a.destdir) for a in fetchbuilddeps.pyassets]
+        if not depdirs:
+            return
 
         if appendzippath is None:
-            zippath = pjoin(builddir, "edenscmdeps.zip")
+            zippath = pjoin(builddir, "edenscmdeps3.zip")
         else:
             zippath = appendzippath
         # Perform a mtime check so we can skip building if possible
@@ -1212,7 +1106,7 @@ class buildpyzip(Command):
 
                 def process_top_level(top):
                     for name in os.listdir(top):
-                        if name == "setup.py":
+                        if name == "setup.py" or name == "__pycache__":
                             continue
                         path = pjoin(top, name)
                         if name == "src" and os.path.isdir(path):
@@ -1317,7 +1211,7 @@ class hginstalllib(install_lib):
             file_util.copy_file = realcopyfile
 
     def _installpyzip(self):
-        for src, dst in [("edenscmdeps.zip", "edenscmdeps.zip")]:
+        for src, dst in [("edenscmdeps3.zip", "edenscmdeps3.zip")]:
             srcpath = pjoin(builddir, src)
             dstpath = pjoin(self.install_dir, dst)
             file_util.copy_file(srcpath, dstpath)
@@ -1393,7 +1287,7 @@ class hginstallscripts(install_scripts):
                 )
                 continue
 
-            data = data.replace(b"@LIBDIR@", libdir.encode(libdir_escape))
+            data = data.replace(b"@LIBDIR@", libdir.encode("unicode_escape"))
             with open(outfile, "wb") as fp:
                 fp.write(data)
 
@@ -1768,8 +1662,7 @@ for root in ("mercurial/templates",):
 # unicode on Python 2 still works because it won't contain any
 # non-ascii bytes and will be implicitly converted back to bytes
 # when operated on.
-assert isinstance(version, bytes)
-setupversion = version.decode("ascii")
+setupversion = version
 
 if os.name == "nt":
     # Windows binary file versions for exe/dll files must have the
@@ -1780,8 +1673,7 @@ if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
     version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
     if version:
         version = version[0]
-        if sys.version_info[0] == 3:
-            version = version.decode("utf-8")
+        version = version.decode("utf-8")
         xcode4 = version.startswith("Xcode") and StrictVersion(
             version.split()[1]
         ) >= StrictVersion("4.0")
@@ -1867,7 +1759,7 @@ hgmainfeatures = (
         filter(
             None,
             [
-                "python2",
+                "python3",
                 "buildinfo" if needbuildinfo else None,
                 "with_chg" if not iswindows else None,
                 "fb" if havefb else None,
@@ -1877,7 +1769,6 @@ hgmainfeatures = (
     or None
 )
 rustextbinaries = [
-    RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
     RustBinary(
         "hgmain",
         manifest="exec/hgmain/Cargo.toml",
@@ -1885,6 +1776,7 @@ rustextbinaries = [
         features=hgmainfeatures,
     ),
     RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
+    RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
 ]
 
 if havefb and iswindows:

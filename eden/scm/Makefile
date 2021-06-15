@@ -34,7 +34,6 @@ TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 HGNAME ?= hg
-HGNAME3 ?= hg3
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -67,8 +66,8 @@ help:
 
 all: build
 
-local3:
-	HGNAME=$(HGNAME3) $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup3.py $(PURE) \
+local:
+	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
@@ -76,10 +75,10 @@ local3:
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(HGNAME3).exe $(HGNAME3).exe
+	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
 else
-	$(RM) $(HGNAME3)
-	cp build/scripts-3*/$(HGNAME3) $(HGNAME3)
+	$(RM) $(HGNAME)
+	cp build/scripts-3*/$(HGNAME) $(HGNAME)
 endif
 
 build:
@@ -98,12 +97,11 @@ getdepsbuild:
 	GETDEPS_BUILD=1 \
 		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup3.py \
+		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py \
 		$(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
-	-$(PYTHON) setup.py clean --all # ignore errors from this command
-	-$(PYTHON3) setup3.py clean --all # ignore errors from this command
+	-$(PYTHON3) setup.py clean --all # ignore errors from this command
 	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/hgext/__index__.py tests/*.err
@@ -129,7 +127,7 @@ install-home: build
 install-getdeps: getdepsbuild
 	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-		setup3.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
+		setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
 
 test-getdeps: install-getdeps
 	# Run one test to check the binary is minimally good as will be used later in Mononoke getdeps tests
@@ -176,4 +174,4 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
-.PHONY: help all local local3 build cleanbutpackages clean install install-home install-getdeps getdepsbuild
+.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild
