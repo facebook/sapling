@@ -104,7 +104,7 @@ class InfraTests(unittest.TestCase):
 
 def register_tests() -> None:
     # Create one test function for each snapshot
-    snapshot_dir = Path("eden/test-data/snapshots").resolve()
+    snapshot_dir = snapshot_mod.get_snapshots_root()
     for snapshot in snapshot_dir.iterdir():
         # We don't use Path.stem here since it only strips off the very last suffix,
         # so foo.tar.bz2 becomes foo.tar rather than foo.

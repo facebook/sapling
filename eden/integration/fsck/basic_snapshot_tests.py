@@ -337,7 +337,7 @@ class SnapshotTestBase(
 
 class Basic20181121Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
-        return Path("eden/test-data/snapshots/basic-20181121.tar.xz")
+        return snapshot_mod.get_snapshots_root() / "basic-20181121.tar.xz"
 
     def test_untracked_file_removed(self) -> None:
         self._test_file_corrupted(None)
@@ -594,7 +594,7 @@ class Basic20181121Test(SnapshotTestBase):
 
 class Basic20190313Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
-        return Path("eden/test-data/snapshots/basic-20190313.tar.xz")
+        return snapshot_mod.get_snapshots_root() / "basic-20190313.tar.xz"
 
     def test_corrupt_rocks_db(self) -> None:
         # Remove the RocksDB manifest.  This will cause RocksDB to fail to open

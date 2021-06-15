@@ -543,5 +543,13 @@ def _import_snapshot_modules() -> None:
             __import__(module)
 
 
+def get_snapshots_root() -> Path:
+    """
+    Return the path where snapshots are stored.
+    """
+    root = os.environ.get("EDENFS_SNAPSHOTS", "eden/test-data")
+    return Path(root).resolve() / "snapshots"
+
+
 # Automatically import all snapshot modules to register their snapshot classes
 _import_snapshot_modules()
