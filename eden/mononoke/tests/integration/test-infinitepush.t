@@ -8,11 +8,23 @@
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
+  $ merge_tunables <<EOF
+  > {
+  >   "killswitches": {
+  >     "mutation_accept_for_infinitepush": true,
+  >     "mutation_advertise_for_infinitepush": true,
+  >     "mutation_generate_for_draft": true
+  >   },
+  >   "ints": {
+  >     "zstd_compression_level": 3
+  >   }
+  > }
+  > EOF
   $ cd $TESTTMP
 
 setup common configuration for these tests
 
-  $ enable amend infinitepush commitcloud remotenames
+  $ enable amend infinitepush commitcloud remotenames undo
 
 setup repo
 
@@ -48,6 +60,7 @@ Do infinitepush (aka commit cloud) push
   > [extensions]
   > remotenames=
   > [infinitepush]
+  > httpbookmarks=True
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
@@ -291,6 +304,19 @@ Pushbackup also works
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   commitcloud: backed up 1 commit
 
+Pushbackup to mononoke peer with compression enabled
+(a larger file is needed to repro problems with zstd compression)
+  $ dd if=/dev/zero of=aa bs=4048 count=1024 2> /dev/null
+  $ hg amend -m "xxx"
+  $ MONONOKE_DIRECT_PEER=1 hgmn cloud backup --config paths.infinitepush-write=mononoke://$(mononoke_address)/repo  --dest mononoke://$(mononoke_address)/repo --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
+  backing up stack rooted at 47da8b81097c
+  commitcloud: backed up 1 commit
+
+  $ grep "Root cause: unconsumed data" "$TESTTMP/mononoke.out"
+  [1]
+
+  $ hg undo
+  undone to * before amend -m xxx (glob)
   $ tglogp
   @  2cfeca6399fd draft 'newrepo'
   │
