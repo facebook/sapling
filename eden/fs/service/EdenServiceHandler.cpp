@@ -261,17 +261,20 @@ folly::SemiFuture<ReturnType> wrapSemiFuture(
 
 #undef EDEN_MICRO
 
+RelativePath relpathFromUserPath(StringPiece userPath) {
+  if (userPath.empty() || userPath == ".") {
+    return RelativePath{};
+  } else {
+    return RelativePath{userPath};
+  }
+}
+
 facebook::eden::InodePtr inodeFromUserPath(
     facebook::eden::EdenMount& mount,
     StringPiece rootRelativePath,
     ObjectFetchContext& context) {
-  if (rootRelativePath.empty() || rootRelativePath == ".") {
-    return mount.getRootInode();
-  } else {
-    return mount
-        .getInode(facebook::eden::RelativePathPiece{rootRelativePath}, context)
-        .get();
-  }
+  auto relPath = relpathFromUserPath(rootRelativePath);
+  return mount.getInode(relPath, context).get();
 }
 } // namespace
 
@@ -1182,7 +1185,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   // if none are specified. The results will be collected here.
   std::vector<folly::Future<std::vector<GlobNode::GlobResult>>> globResults{};
 
-  RelativePath searchRoot{*params->searchRoot_ref()};
+  auto searchRoot = relpathFromUserPath(*params->searchRoot_ref());
 
   auto rootHashes = params->revisions_ref();
   if (!rootHashes->empty()) {
