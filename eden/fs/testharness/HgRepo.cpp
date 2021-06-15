@@ -28,38 +28,8 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
-namespace {
-AbsolutePath findHgBinary() {
-  auto hgPath = getenv("EDEN_HG_BINARY");
-  if (hgPath) {
-    return realpath(hgPath);
-  }
-
-  // Search through $PATH if $EDEN_HG_BINARY was not explicitly specified
-  auto pathPtr = getenv("PATH");
-  if (!pathPtr) {
-    throw std::runtime_error("unable to find hg command: no PATH");
-  }
-  StringPiece pathEnv{pathPtr};
-  vector<string> pathEnvParts;
-  folly::split(":", pathEnv, pathEnvParts);
-
-  for (const auto& dir : pathEnvParts) {
-    for (const auto& name : {"hg.real", "hg"}) {
-      auto exePath = folly::to<string>(dir, "/", name);
-      XLOG(DBG5) << "Checking for hg at " << exePath;
-      if (access(exePath.c_str(), X_OK) == 0) {
-        return realpath(exePath);
-      }
-    }
-  }
-
-  throw std::runtime_error("unable to find hg in PATH");
-}
-} // namespace
-
-HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
-  hgCmd_ = findHgBinary();
+HgRepo::HgRepo(AbsolutePathPiece path, AbsolutePath hgCmd)
+    : hgCmd_(hgCmd), path_(path) {
   XLOG(DBG1) << "Using hg command: " << hgCmd_;
 
   // Set up hgEnv_
@@ -83,6 +53,9 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   // prod configs.
   hgEnv_.set("TESTTMP", "");
 }
+
+HgRepo::HgRepo(AbsolutePathPiece path)
+    : HgRepo(path, findAndConfigureHgBinary()) {}
 
 string HgRepo::hg(vector<string> args) {
   auto process = invokeHg(std::move(args));

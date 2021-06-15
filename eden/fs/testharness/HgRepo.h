@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/testharness/HgBinary.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -24,6 +25,7 @@ class Hash;
  */
 class HgRepo {
  public:
+  explicit HgRepo(AbsolutePathPiece path, AbsolutePath hgPath);
   explicit HgRepo(AbsolutePathPiece path);
 
   const AbsolutePath& path() const {
