@@ -10,6 +10,7 @@ use std::sync::Arc;
 use cpython::*;
 use futures::prelude::*;
 
+use anyhow::format_err;
 use async_runtime::block_on_future;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -22,16 +23,17 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    LookupResponse, TreeEntry,
+    LookupResponse, TreeEntry, UploadToken,
 };
+use minibytes::Bytes;
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_hgid, to_hgids, to_keys,
-    to_path, to_tree_attrs, wrap_callback,
+    as_contentstore, as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid,
+    to_hgid, to_hgids, to_keys, to_path, to_tree_attrs, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -481,6 +483,53 @@ pub trait EdenApiPyExt: EdenApi {
             .allow_threads(|| {
                 block_on_future(async move {
                     let response = self.lookup_batch(repo, ids, None).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn uploadfiles_py(
+        self: Arc<Self>,
+        py: Python,
+        store: PyObject,
+        repo: String,
+        keys: Vec<(PyPathBuf, PyBytes)>,
+        callback: Option<PyObject>,
+        _progress: Arc<dyn ProgressFactory>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
+        let keys = to_keys(py, &keys)?;
+        let store = as_contentstore(py, store)?;
+        let callback = callback.map(wrap_callback);
+
+        let data = keys
+            .into_iter()
+            .map(|key| {
+                let content = store.get_file_content(&key).map_pyerr(py)?;
+                match content {
+                    Some(v) => {
+                        // TODO: store the hashes that have been already calculated (key -> content_id mapping)
+                        let content_id = calc_contentid(&v);
+                        Ok((AnyFileContentId::ContentId(content_id), v))
+                    }
+                    None => Err(format_err!(
+                        "failed to fetch file content for the key '{}'",
+                        key
+                    ))
+                    .map_pyerr(py),
+                }
+            })
+            // fail the entire operation if content is missing for some key because this is unexpected
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self.process_files_upload(repo, data, callback).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

@@ -75,21 +75,16 @@ pub struct Sha1(pub [u8; SHA1_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for Sha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha1(\"")?;
         for d in &self.0 {
             write!(fmt, "{:02x}", d)?;
         }
-        write!(fmt, "\")")
+        Ok(())
     }
 }
 
 impl fmt::Debug for Sha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha1(\"")?;
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        write!(fmt, "\")")
+        write!(fmt, "Sha1(\"{}\")", self)
     }
 }
 
@@ -118,21 +113,16 @@ pub struct Sha256(pub [u8; SHA256_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for Sha256 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha256(\"")?;
         for d in &self.0 {
             write!(fmt, "{:02x}", d)?;
         }
-        write!(fmt, "\")")
+        Ok(())
     }
 }
 
 impl fmt::Debug for Sha256 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha256(\"")?;
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        write!(fmt, "\")")
+        write!(fmt, "Sha256(\"{}\")", self)
     }
 }
 
@@ -161,21 +151,16 @@ pub struct ContentId(pub [u8; CONTENT_ID_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for ContentId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "ContentId(\"")?;
         for d in &self.0 {
             write!(fmt, "{:02x}", d)?;
         }
-        write!(fmt, "\")")
+        Ok(())
     }
 }
 
 impl fmt::Debug for ContentId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "ContentId(\"")?;
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        write!(fmt, "\")")
+        write!(fmt, "ContentId(\"{}\")", self)
     }
 }
 
@@ -211,21 +196,16 @@ pub struct FsnodeId(pub [u8; 32]);
 
 impl fmt::Display for FsnodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "FsnodeId(\"")?;
         for d in &self.0 {
             write!(fmt, "{:02x}", d)?;
         }
-        write!(fmt, "\")")
+        Ok(())
     }
 }
 
 impl fmt::Debug for FsnodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "FsnodeId(\"")?;
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        write!(fmt, "\")")
+        write!(fmt, "FsnodeId(\"{}\")", self)
     }
 }
 
@@ -265,6 +245,16 @@ impl FromStr for AnyFileContentId {
             }
         };
         Ok(any_file_content_id)
+    }
+}
+
+impl fmt::Display for AnyFileContentId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            AnyFileContentId::ContentId(id) => write!(f, "{}", id),
+            AnyFileContentId::Sha1(id) => write!(f, "{}", id),
+            AnyFileContentId::Sha256(id) => write!(f, "{}", id),
+        }
     }
 }
 

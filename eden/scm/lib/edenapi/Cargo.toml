@@ -28,6 +28,7 @@ http-client = { path = "../http-client" }
 indicatif = { version = "0.15", features = ["with_rayon"] }
 itertools = "0.8"
 log = { version = "0.4.8", features = ["kv_unstable"] }
+minibytes = { path = "../minibytes" }
 once_cell = "1.4"
 parking_lot = "0.10.2"
 percent-encoding = "2.1"

@@ -15,32 +15,54 @@ def lookupcommits(repo, nodes):
     """Returns list of missing commits"""
     try:
         stream, _stats = repo.edenapi.lookup_commits(ccutil.getreponame(repo), nodes)
+        founditems = set()
+        for item in stream:
+            if item["token"]:
+                founditems.add(item["index"])
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
-
-    founditems = set()
-    for item in stream:
-        if item["token"]:
-            founditems.add(item["index"])
 
     return [node for index, node in enumerate(nodes) if index not in founditems]
 
 
-def lookupfilenodes(repo, filenodes):
+def lookupfilenodes(repo, keys):
     """Returns list of missing filenodes"""
     try:
         stream, _stats = repo.edenapi.lookup_filenodes(
-            ccutil.getreponame(repo), filenodes
+            ccutil.getreponame(repo), [key[1] for key in keys]
         )
+        founditems = set()
+        for item in stream:
+            if item["token"]:
+                founditems.add(item["index"])
+
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
-    founditems = set()
-    for item in stream:
-        if item["token"]:
-            founditems.add(item["index"])
+    return [fnode for index, fnode in enumerate(keys) if index not in founditems]
 
-    return [fnode for index, fnode in enumerate(filenodes) if index not in founditems]
+
+def uploadfiles(repo, keys):
+    dpack, _hpack = repo.fileslog.getmutablelocalpacks()
+    try:
+        stream, _stats = repo.edenapi.uploadfiles(dpack, ccutil.getreponame(repo), keys)
+        counter = 0
+        for item in stream:
+            if item["data"]:
+                counter = counter + 1
+
+        repo.ui.status(
+            _n(
+                "uploaded %d file\n",
+                "uploaded %d files\n",
+                counter,
+            )
+            % counter,
+            component="commitcloud",
+        )
+
+    except (error.RustError, error.HttpError) as e:
+        raise error.Abort(e)
 
 
 def uploadblobs(repo, nodes):
@@ -51,7 +73,7 @@ def uploadblobs(repo, nodes):
             if f not in ctx:
                 continue
             fctx = ctx[f]
-            toupload.add(fctx.filenode())
+            toupload.add((fctx.path(), fctx.filenode()))
     return toupload
 
 
@@ -139,4 +161,11 @@ def upload(repo, revs):
         component="commitcloud",
     )
 
-    # TODO (liubovd): implement upload
+    # Upload missing files for the selected set of filenodes
+    uploadfiles(repo, uploadblobqueue)
+
+    # TODO (liubovd): next: implement upload of filenodes
+
+    # TODO (liubovd): next: implement upload of trees
+
+    # TODO (liubovd): finally: implement upload of hg changesets

@@ -12,9 +12,10 @@ use async_trait::async_trait;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
-    AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    LookupResponse, TreeAttributes, TreeEntry,
+    AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadToken,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -422,6 +423,15 @@ impl EdenApi for FakeEdenApi {
         _items: Vec<AnyId>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+        unimplemented!();
+    }
+
+    async fn process_files_upload(
+        &self,
+        _repo: String,
+        _data: Vec<(AnyFileContentId, Bytes)>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError> {
         unimplemented!();
     }
 }

@@ -13,11 +13,13 @@ use async_trait::async_trait;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    LookupResponse, TreeAttributes, TreeEntry,
+    AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadToken,
 };
 use http_client::Progress;
+use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::errors::EdenApiError;
@@ -141,6 +143,14 @@ pub trait EdenApi: Send + Sync + 'static {
         items: Vec<AnyId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError>;
+
+    /// Upload files content
+    async fn process_files_upload(
+        &self,
+        repo: String,
+        data: Vec<(AnyFileContentId, Bytes)>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError>;
 }
 
 #[async_trait]
@@ -305,6 +315,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .lookup_batch(repo, items, progress)
+            .await
+    }
+
+    async fn process_files_upload(
+        &self,
+        repo: String,
+        data: Vec<(AnyFileContentId, Bytes)>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .process_files_upload(repo, data, progress)
             .await
     }
 }

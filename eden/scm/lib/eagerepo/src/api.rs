@@ -15,6 +15,7 @@ use dag::protocol::RemoteIdConvertProtocol;
 use dag::Vertex;
 use dag::{Location, VertexName};
 use edenapi::configmodel;
+use edenapi::types::AnyFileContentId;
 use edenapi::types::AnyId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
@@ -33,6 +34,7 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadToken;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Fetch;
@@ -44,6 +46,7 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use minibytes::Bytes;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::debug;
@@ -414,6 +417,17 @@ impl EdenApi for EagerRepo {
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support lookup_batch endpoint".to_string(),
+        ))
+    }
+
+    async fn process_files_upload(
+        &self,
+        _repo: String,
+        _data: Vec<(AnyFileContentId, Bytes)>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support process_file_upload endpoint".to_string(),
         ))
     }
 }

@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 async-runtime = { path = "../../../../lib/async-runtime" }
+blake2 = "0.8"
 cpython_async = { path = "../../../../lib/cpython-async", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
@@ -14,6 +15,7 @@ edenapi = { path = "../../../../lib/edenapi" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 mincode = { path = "../../../../lib/mincode" }
+minibytes = { path = "../../../../lib/minibytes" }
 progress = { path = "../../../../lib/progress" }
 pyconfigparser = { path = "../pyconfigparser" }
 pyprogress = { path = "../pyprogress" }

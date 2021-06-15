@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
 use std::iter::FromIterator;
@@ -13,9 +13,9 @@ use std::iter::FromIterator;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
-use futures::StreamExt;
 use http::StatusCode;
 use itertools::Itertools;
+use minibytes::Bytes;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_cbor::Deserializer;
@@ -29,13 +29,14 @@ use edenapi_types::{
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireLookupResponse, WireToApiConversionError, WireTreeEntry,
+        WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadToken,
     },
-    AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData, CommitHashToLocationRequestBatch,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
-    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, LookupRequest,
-    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
+    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
+    HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError, ToApi, ToWire,
+    TreeAttributes, TreeEntry, TreeRequest, UploadToken,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -51,6 +52,7 @@ use crate::response::{Fetch, ResponseMeta};
 const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').remove(b'.');
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
+const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -65,6 +67,7 @@ mod paths {
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
+    pub const UPLOAD: &str = "upload/";
 }
 
 pub struct Client {
@@ -260,6 +263,44 @@ impl Client {
                 tracing::warn!("Failed to log request: {:?}", &e);
             }
         });
+    }
+
+    /// Upload a single file
+    async fn process_single_file_upload(
+        &self,
+        repo: String,
+        item: AnyFileContentId,
+        raw_content: Bytes,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        let mut url = self.url(paths::UPLOAD, Some(&repo))?;
+        url = url.join("file/")?;
+        match item {
+            AnyFileContentId::ContentId(id) => {
+                url = url.join("content_id/")?.join(&format!("{}", id))?;
+            }
+            AnyFileContentId::Sha1(id) => {
+                url = url.join("sha1/")?.join(&format!("{}", id))?;
+            }
+            AnyFileContentId::Sha256(id) => {
+                url = url.join("sha256/")?.join(&format!("{}", id))?;
+            }
+        }
+
+        let msg = format!("Requesting upload for {}", url);
+        tracing::info!("{}", &msg);
+
+        Ok(self
+            .fetch::<WireUploadToken>(
+                vec![{
+                    let request = self
+                        .configure(Request::put(url.clone()))?
+                        .body(raw_content.to_vec());
+                    request
+                }],
+                progress,
+            )
+            .await?)
     }
 }
 
@@ -745,6 +786,84 @@ impl EdenApi for Client {
         )?;
 
         Ok(self.fetch::<WireLookupResponse>(requests, progress).await?)
+    }
+
+    async fn process_files_upload(
+        &self,
+        repo: String,
+        data: Vec<(AnyFileContentId, Bytes)>,
+        // currently unused
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        // Filter already uploaded file contents first
+
+        let mut uploaded_indices = HashSet::<usize>::new();
+        let mut uploaded_tokens: Vec<UploadToken> = vec![];
+
+        let anyids = data
+            .iter()
+            .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
+            .collect();
+
+        let mut entries = self.lookup_batch(repo.clone(), anyids, None).await?.entries;
+        while let Some(entry) = entries.next().await {
+            if let Ok(entry) = entry {
+                if let Some(token) = entry.token {
+                    uploaded_indices.insert(entry.index);
+                    uploaded_tokens.push(token)
+                }
+            }
+        }
+
+        let msg = format!(
+            "Received {} token(s) from the lookup_batch request",
+            uploaded_tokens.len()
+        );
+        tracing::info!("{}", &msg);
+
+        // Upload the rest of the contents in parallel
+        let new_tokens = stream::iter(
+            data.into_iter()
+                .enumerate()
+                .filter(|(index, _)| !uploaded_indices.contains(index))
+                .map(|(_, (id, content))| {
+                    let repo = repo.clone();
+                    async move {
+                        self.process_single_file_upload(repo, id, content, None)
+                            .await?
+                            .entries
+                            .next()
+                            .await
+                            .ok_or_else(|| {
+                                EdenApiError::Other(format_err!(
+                                    "token data is missing from the reponse body for {}",
+                                    id
+                                ))
+                            })?
+                    }
+                }),
+        )
+        .buffer_unordered(MAX_CONCURRENT_FILE_UPLOADS)
+        .collect::<Vec<_>>()
+        .await;
+
+        let msg = format!(
+            "Received {} new token(s) from upload requests",
+            new_tokens.iter().filter(|x| x.is_ok()).count()
+        );
+        tracing::info!("{}", &msg);
+
+        // Merge all the tokens together
+        let all_tokens = new_tokens
+            .into_iter()
+            .chain(uploaded_tokens.into_iter().map(|token| Ok(token)))
+            .collect::<Vec<Result<_, _>>>();
+
+        Ok(Fetch {
+            meta: Default::default(),
+            stats: Box::pin(async { Ok(Default::default()) }),
+            entries: Box::pin(futures::stream::iter(all_tokens)),
+        })
     }
 }
 
