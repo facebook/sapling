@@ -19,11 +19,12 @@ use crate::errors::ErrorKind;
 
 const REPO_ID_PREFIX: &str = "repo";
 const REPO_ID_SUFFIX: &str = ".";
+const REPO_ID_SUFFIX_PATTERN: &str = r"\.";
 
 lazy_static! {
     /// Used to strip of repo prefixes when embedding keys inside blobs
     pub static ref REPO_PREFIX_REGEX: Regex = Regex::new(
-        format!(r"^{}(\d{{3}}\d+)\{}", REPO_ID_PREFIX, REPO_ID_SUFFIX
+        format!(r"^{}(\d{{3}}\d+){}", REPO_ID_PREFIX, REPO_ID_SUFFIX_PATTERN
     ).as_str()).unwrap();
 }
 
