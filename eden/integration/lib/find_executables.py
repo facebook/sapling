@@ -115,6 +115,18 @@ class FindExeClass(object):
 
     @cached_property
     def SYSTEMD_FB_EDENFS_SERVICE(self) -> str:
+        env = "EDENFS_SYSTEMD_UNIT"
+        path = os.environ.get(env)
+        if path:
+            path = os.path.join(path, "fb-edenfs@.service")
+
+            if not os.access(path, os.R_OK):
+                raise Exception(
+                    f"unable to find sytemd unit specified as {path!r} "
+                    f"by ${env}, but not available there"
+                )
+                return path
+
         return os.path.join(self.EDEN_SRC_ROOT, "eden/fs/service/fb-edenfs@.service")
 
     @cached_property
