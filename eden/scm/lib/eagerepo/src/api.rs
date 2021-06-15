@@ -8,12 +8,12 @@
 use crate::EagerRepo;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use dag::ops::DagAlgorithm;
 use dag::ops::DagExportCloneData;
+use dag::ops::{DagAlgorithm, DagPullFastForwardMasterData};
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
-use dag::Location;
 use dag::Vertex;
+use dag::{Location, VertexName};
 use edenapi::configmodel;
 use edenapi::types::AnyId;
 use edenapi::types::BookmarkEntry;
@@ -207,25 +207,24 @@ impl EdenApi for EagerRepo {
     ) -> edenapi::Result<dag::CloneData<HgId>> {
         debug!("clone_data");
         let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
-        check_convert_to_hgid(clone_data.idmap.values())?;
-        let clone_data = dag::CloneData {
-            flat_segments: clone_data.flat_segments,
-            idmap: clone_data
-                .idmap
-                .into_iter()
-                .map(|(k, v)| (k, HgId::from_slice(v.as_ref()).unwrap())) // unwrap: checked above
-                .collect(),
-        };
-        Ok(clone_data)
+        convert_clone_data(clone_data)
     }
 
     async fn pull_fast_forward_master(
         &self,
         _repo: String,
-        _old_master: HgId,
-        _new_master: HgId,
+        old_master: HgId,
+        new_master: HgId,
     ) -> Result<dag::CloneData<HgId>, EdenApiError> {
-        unimplemented!()
+        debug!("pull_fast_forward_master");
+        let old_master = VertexName(old_master.into_byte_array().to_vec().into());
+        let new_master = VertexName(new_master.into_byte_array().to_vec().into());
+        let clone_data = self
+            .dag()
+            .pull_fast_forward_master(old_master, new_master)
+            .await
+            .map_err(map_dag_err)?;
+        convert_clone_data(clone_data)
     }
 
     async fn full_idmap_clone_data(
@@ -531,6 +530,21 @@ fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> eden
         let _ = HgId::from_slice(v.as_ref()).map_err(|e| EdenApiError::Other(e.into()))?;
     }
     Ok(())
+}
+
+fn convert_clone_data(
+    clone_data: dag::CloneData<VertexName>,
+) -> edenapi::Result<dag::CloneData<HgId>> {
+    check_convert_to_hgid(clone_data.idmap.values())?;
+    let clone_data = dag::CloneData {
+        flat_segments: clone_data.flat_segments,
+        idmap: clone_data
+            .idmap
+            .into_iter()
+            .map(|(k, v)| (k, HgId::from_slice(v.as_ref()).unwrap())) // unwrap: checked above
+            .collect(),
+    };
+    Ok(clone_data)
 }
 
 fn map_dag_err(e: dag::Error) -> EdenApiError {
