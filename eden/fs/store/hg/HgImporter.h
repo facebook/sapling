@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/portability/GFlags.h>
 #include <folly/portability/IOVec.h>
 #include <optional>
 #include "eden/fs/utils/SpawnedProcess.h"
@@ -15,6 +16,9 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+DECLARE_string(hgPath);
+DECLARE_string(hgPythonPath);
 
 namespace folly {
 class IOBuf;
