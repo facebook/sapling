@@ -964,6 +964,8 @@ Test list of internal help commands
    debugdrawdag  read an ASCII graph from stdin and create changesets
    debugdryup    Execute native checkout (update) without actually writing to
                  working copy
+   debugdumpdynamicconfig
+                 print the dynamic configuration
    debugdumpindexedlog
                  dump indexedlog data
    debugdumptrace

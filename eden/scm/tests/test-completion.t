@@ -120,6 +120,7 @@ Show debug commands if there are no other candidates
   debugdiscovery
   debugdrawdag
   debugdryup
+  debugdumpdynamicconfig
   debugdumpindexedlog
   debugdumptrace
   debugdynamicconfig
@@ -430,6 +431,7 @@ Show all commands + options
   debugdiscovery: rev, ssh, remotecmd
   debugdrawdag: print
   debugdryup: 
+  debugdumpdynamicconfig: reponame, username, canary
   debugdumpindexedlog: 
   debugdumptrace: time-range, session-id, output-path
   debugdynamicconfig: canary

@@ -8,6 +8,17 @@
   > key=value
   > EOF
 
+debugdumpdynamicconfig works without a repo
+
+  $ hg debugdumpdynamicconfig
+  [section]
+  key=value
+  
+  $ hg debugdumpdynamicconfig section.key
+  value
+
+Create a repo
+
   $ hg init client
   $ cd client
 
