@@ -29,6 +29,7 @@ use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagPersistent;
+use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Open;
@@ -446,6 +447,60 @@ where
                 });
             }
             PreparedFlatSegments { segments: prepared }
+        };
+
+        let data = CloneData {
+            flat_segments,
+            idmap,
+        };
+        Ok(data)
+    }
+}
+
+#[async_trait::async_trait]
+impl<IS, M, P, S> DagPullFastForwardMasterData for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: IdConvert + TryClone + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    async fn pull_fast_forward_master(
+        &self,
+        old_master: VertexName,
+        new_master: VertexName,
+    ) -> Result<CloneData<VertexName>> {
+        let old = self.map.vertex_id(old_master).await?;
+        let new = self.map.vertex_id(new_master).await?;
+        let master_group = self.dag.master_group()?;
+
+        if !master_group.contains(old) {
+            return programming(format!("old vertex {} is not in master group", old));
+        }
+
+        if !master_group.contains(new) {
+            return programming(format!("new vertex {} is not in master group", new));
+        }
+
+        let old_ancestors = self.dag.ancestors(old.into())?;
+        let new_ancestors = self.dag.ancestors(new.into())?;
+
+        let result_span = new_ancestors.difference(&old_ancestors);
+        let flat_segments = self.dag.idset_to_flat_segments(result_span)?;
+        let ids: Vec<_> = flat_segments.parents_and_head().into_iter().collect();
+
+        let idmap: HashMap<Id, VertexName> = {
+            tracing::debug!("pull: {} vertexes in idmap", ids.len());
+            let names = {
+                let fallible_names = self.vertex_name_batch(&ids).await?;
+                let mut names = Vec::with_capacity(fallible_names.len());
+                for name in fallible_names {
+                    names.push(name?);
+                }
+                names
+            };
+            ids.into_iter().zip(names).collect()
         };
 
         let data = CloneData {

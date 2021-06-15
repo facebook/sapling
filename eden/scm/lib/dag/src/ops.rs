@@ -281,6 +281,16 @@ pub trait DagExportCloneData {
     async fn export_clone_data(&self) -> Result<CloneData<VertexName>>;
 }
 
+#[async_trait::async_trait]
+pub trait DagPullFastForwardMasterData {
+    /// Pull fast forward master and return CloneData
+    async fn pull_fast_forward_master(
+        &self,
+        old_master: VertexName,
+        new_master: VertexName,
+    ) -> Result<CloneData<VertexName>>;
+}
+
 /// Persistent the DAG on disk.
 #[async_trait::async_trait]
 pub trait DagPersistent {
