@@ -275,6 +275,14 @@ pub trait DagImportCloneData {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()>;
 }
 
+/// Import a generated incremental `CloneData` object into an existing DAG.
+/// Ids in the passed CloneData might not match ids in existing DAG.
+#[async_trait::async_trait]
+pub trait DagImportPullData {
+    /// Updates the DAG using a `CloneData` object.
+    async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()>;
+}
+
 #[async_trait::async_trait]
 pub trait DagExportCloneData {
     /// Export `CloneData` for vertexes in the master group.

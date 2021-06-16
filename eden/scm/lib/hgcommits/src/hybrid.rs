@@ -19,6 +19,7 @@ use async_trait::async_trait;
 use dag::delegate;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagImportCloneData;
+use dag::ops::DagImportPullData;
 use dag::ops::DagPersistent;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
@@ -248,7 +249,7 @@ impl AppendCommits for HybridCommits {
         Ok(())
     }
 
-    async fn import_pull_data(&mut self, _clone_data: CloneData<Vertex>) -> Result<()> {
+    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
         if self.revlog.is_some() {
             return Err(crate::Error::Unsupported(
                 "import_pull_data is not supported for revlog backend",
@@ -259,7 +260,8 @@ impl AppendCommits for HybridCommits {
                 "import_pull_data can only be used in commit graph with lazy vertexes",
             ));
         }
-        unimplemented!()
+        self.commits.dag.import_pull_data(clone_data).await?;
+        Ok(())
     }
 }
 

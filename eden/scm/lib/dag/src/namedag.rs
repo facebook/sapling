@@ -28,6 +28,7 @@ use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
 use crate::ops::DagImportCloneData;
+use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
 use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
@@ -407,6 +408,20 @@ where
         self.invalidate_overlay_map()?;
 
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl<IS, M, P, S> DagImportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore + Persist,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Persist + Send + Sync,
+{
+    async fn import_pull_data(&mut self, _clone_data: CloneData<VertexName>) -> Result<()> {
+        unimplemented!()
     }
 }
 
