@@ -12,6 +12,7 @@ Stdout: Full path to a system python, or the first argument of the input.
 This script does not need to be executed using a system Python.
 """
 
+import ast
 import os
 import subprocess
 import sys
@@ -31,6 +32,7 @@ def main(args):
                 return
 
     # Fallback
+    sys.stderr.write("warning: cannot find a proper Python\n")
     sys.stdout.write(names[0])
 
 
@@ -38,11 +40,20 @@ def does_python_look_good(path):
     if not os.path.isfile(path):
         return False
     try:
-        cflags = subprocess.check_output(
-            [path, "-c", "import sysconfig;print(sysconfig.get_config_var('CFLAGS'))"]
+        cfg = ast.literal_eval(
+            subprocess.check_output(
+                [path, "-c", "import sysconfig;print(sysconfig.get_config_vars())"]
+            ).decode("utf-8")
         )
-        if b"-nostdinc" in cflags.split():
+        cflags = cfg["CFLAGS"]
+        if "-nostdinc" in cflags.split():
             sys.stderr.write("%s: ignored, lack of C stdlib\n" % path)
+            return False
+        includepy = cfg["INCLUDEPY"]
+        if not os.path.exists(os.path.join(includepy, "Python.h")):
+            sys.stderr.write(
+                "%s: ignored, missing Python.h in %s\n" % (path, includepy)
+            )
             return False
         realpath = subprocess.check_output(
             [path, "-c", "import sys;print(sys.executable)"]
