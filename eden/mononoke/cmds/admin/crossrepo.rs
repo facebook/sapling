@@ -51,6 +51,7 @@ use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
 const AUTHOR_ARG: &str = "author";
+const ONCALL_ARG: &str = "oncall";
 const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
 const MAP_SUBCOMMAND: &str = "map";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
@@ -713,11 +714,15 @@ async fn create_commit_for_mapping_change(
         .value_of(AUTHOR_ARG)
         .ok_or_else(|| format_err!("{} is not specified", AUTHOR_ARG))?;
 
+    let oncall = sub_m.value_of(ONCALL_ARG);
+    let oncall_msg_part = oncall.map(|o| format!("\n\nOncall Short Name: {}\n", o));
+
     let commit_msg = format!(
-        "Changing synced mapping version to {} for {}->{} sync",
+        "Changing synced mapping version to {} for {}->{} sync{}",
         mapping_version,
         large_repo.name(),
         small_repo.name(),
+        oncall_msg_part.as_deref().unwrap_or("")
     );
 
     let mut extras = sorted_vector_map! {
@@ -1282,6 +1287,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .takes_value(true)
                 .help("Author of the commit that will change the mapping"),
+        )
+        .arg(
+            Arg::with_name(ONCALL_ARG)
+                .long(ONCALL_ARG)
+                .required(false)
+                .takes_value(true)
+                .help("Oncall for the commit that will change the mapping"),
         )
         .arg(
             Arg::with_name(LARGE_REPO_BOOKMARK_ARG)
