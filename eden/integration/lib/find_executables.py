@@ -9,26 +9,32 @@ These utilities are only expected to work if `sys.argv[0]` is an executable
 being run in buck-out.
 """
 
+# pyre-strict
+
 import distutils.spawn
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import Callable, Dict, Optional, Tuple, Type
+from typing import Callable, Dict, Optional, Tuple, Type, Generic, TypeVar, Any
 
 import eden.config
 
+T = TypeVar("T")
 
-class cached_property(object):
-    def __init__(self, find: Callable[["FindExeClass"], str]) -> None:
+SENTINEL = object()
+
+
+class cached_property(Generic[T], object):
+    def __init__(self, find: Callable[["FindExeClass"], T]) -> None:
         self.name: Optional[str] = None
         self.find = find
 
-    def __get__(self, instance: "FindExeClass", owner: Type["FindExeClass"]) -> str:
+    def __get__(self, instance: "FindExeClass", owner: Type["FindExeClass"]) -> T:
         name = self.name
         assert name is not None
-        result = instance._cache.get(name, None)
-        if result is None:
+        result = instance._cache.get(name, SENTINEL)
+        if result is SENTINEL:
             result = self.find(instance)
             instance._cache[name] = result
         return result
@@ -43,7 +49,7 @@ class FindExeClass(object):
     _TEST_ROOT: str = os.getcwd()
 
     def __init__(self) -> None:
-        self._cache: Dict[str, str] = {}
+        self._cache: Dict[str, Any] = {}
 
     def is_buck_build(self) -> bool:
         return eden.config.BUILD_FLAVOR == "Buck"
