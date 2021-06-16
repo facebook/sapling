@@ -11,7 +11,7 @@ include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries
 const i32 MC_CODEVER = 3
-const i32 MC_SITEVER = 0
+const i32 MC_SITEVER = 1
 
 union FilenodeInfoList {
   1: list<FilenodeInfo> Data,
