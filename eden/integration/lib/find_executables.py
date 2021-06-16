@@ -131,19 +131,9 @@ class FindExeClass(object):
 
     @cached_property
     def SYSTEMD_FB_EDENFS_SERVICE(self) -> str:
-        env = "EDENFS_SYSTEMD_UNIT"
-        path = os.environ.get(env)
-        if path:
-            path = os.path.join(path, "fb-edenfs@.service")
-
-            if not os.access(path, os.R_OK):
-                raise Exception(
-                    f"unable to find sytemd unit specified as {path!r} "
-                    f"by ${env}, but not available there"
-                )
-                return path
-
-        return os.path.join(self.EDEN_SRC_ROOT, "eden/fs/service/fb-edenfs@.service")
+        return self._find_src_asset(
+            "EDENFS_SYSTEMD_UNIT", "eden/fs/service", "fb-edenfs@.service"
+        )
 
     @cached_property
     def SYSTEMD(self) -> str:
@@ -200,6 +190,12 @@ class FindExeClass(object):
         hg = self._find_hg_real()
         logging.info("Found hg.real binary: %r", hg)
         return hg
+
+    @cached_property
+    def HG_RC_DIR(self) -> str:
+        return self._find_src_asset(
+            "HG_ETC_MERCURIAL", "eden/scm", "fb/staticfiles/etc/mercurial"
+        )
 
     def _find_hg(self) -> str:
         hg_bin = self._find_exe_optional(
@@ -346,6 +342,21 @@ class FindExeClass(object):
             "unable to find source directory: "
             "CMAKE_SOURCE_DIR environment variable is not set"
         )
+
+    def _find_src_asset(self, env: str, src_dir: str, src_name: str) -> str:
+        path = os.environ.get(env)
+        print(f"{env} = {path}")
+
+        if path:
+            path = os.path.join(path, src_name)
+            if not os.access(path, os.R_OK):
+                raise Exception(
+                    f"unable to find source asset specified as {path!r} "
+                    f"by ${env}, but not available there"
+                )
+            return path
+
+        return os.path.join(self.EDEN_SRC_ROOT, src_dir, src_name)
 
 
 # The main FindExe singleton

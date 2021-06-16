@@ -105,7 +105,7 @@ class HgRepository(repobase.Repository):
 
     @classmethod
     def find_hgrc_dir_from_repo(cls) -> Optional[Path]:
-        hgrc_dir = Path(FindExe.EDEN_SRC_ROOT) / "eden/scm/fb/staticfiles/etc/mercurial"
+        hgrc_dir = Path(FindExe.HG_RC_DIR)
         facebook_rc = hgrc_dir / "facebook.rc"
         if os.path.exists(facebook_rc):
             return hgrc_dir
@@ -113,7 +113,11 @@ class HgRepository(repobase.Repository):
         if FindExe.is_buck_build():
             # Buck-based builds should always find the hgrc files above.
             # Only external CMake-based builds won't find the above config files.
-            raise Exception("unable to find Mercurial config files in the repository")
+            raise Exception(
+                "unable to find Mercurial config files in the repository (looked at {})".format(
+                    hgrc_dir
+                )
+            )
 
         return None
 
