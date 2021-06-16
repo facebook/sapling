@@ -216,22 +216,8 @@ def _findcommonheadsnew(
     but the Rust DAG will make it possible to be efficient.
     """
     cl = local.changelog
+    dag = cl.dag
     start = util.timer()
-
-    # PERF: Converting to list or set hurts performance but is compatible
-    # with the other backend.
-
-    def tonodes(revs):
-        return list(cl.tonodes(revs))
-
-    def only(other, common):
-        return set(cl.dageval(lambda dag: dag.only(other, common)))
-
-    def dagrange(roots, heads):
-        return set(cl.dageval(lambda: range(roots, heads)))
-
-    def headsancestors(nodes):
-        return set(cl.dageval(lambda dag: dag.headsancestors(nodes)))
 
     isselectivepull = local.ui.configbool(
         "remotenames", "selectivepull"
@@ -241,9 +227,9 @@ def _findcommonheadsnew(
         if isselectivepull:
             # With selectivepull, limit heads for discovery for both local and
             # remote repo - no invisible heads for the local repo.
-            localheads = tonodes(local.headrevs())
+            localheads = local.heads()
         else:
-            localheads = tonodes(local.changelog.rawheadrevs())
+            localheads = list(dag.headsancestors(dag.all()))
     else:
         localheads = ancestorsof
 
@@ -394,22 +380,22 @@ def _findcommonheadsnew(
     # slow path: full blown discovery
 
     # unknown = localheads % commonheads
-    commonheads = set(commonremoteheads + commonsample)
-    unknown = only(localheads, commonheads)
-    missing = set()
+    commonheads = dag.sort(commonremoteheads + commonsample)
+    unknown = dag.only(localheads, commonheads)
+    missing = dag.sort([])
 
     roundtrips = 1
     with progress.bar(ui, _("searching"), _("queries")) as prog:
-        while unknown:
+        while len(unknown) > 0:
             # Quote from module doc: For each node that remote doesn't know,
             # move it and all its descendants to `missing`.
             missingsample = [
                 n for n, known in zip(sample, remotehassample) if not known
             ]
             if missingsample:
-                descendants = dagrange(missingsample, localheads)
-                missing.update(descendants)
-                unknown.difference_update(missing)
+                descendants = dag.range(missingsample, localheads)
+                missing += descendants
+                unknown -= missing
 
             if not unknown:
                 break
@@ -438,11 +424,11 @@ def _findcommonheadsnew(
             # revlog backend. Maintain 'commonheads' and 'unknown' instead.
             newcommonheads = [n for n, known in zip(sample, remotehassample) if known]
             if newcommonheads:
-                newcommon = only(newcommonheads, commonheads)
-                commonheads.update(newcommonheads)
-                unknown.difference_update(newcommon)
+                newcommon = dag.only(newcommonheads, commonheads)
+                commonheads += dag.sort(newcommonheads)
+                unknown -= newcommon
 
-    commonheads = set(headsancestors(commonheads))
+    commonheads = set(dag.headsancestors(commonheads))
 
     elapsed = util.timer() - start
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
