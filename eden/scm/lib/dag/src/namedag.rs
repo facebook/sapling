@@ -363,12 +363,7 @@ where
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         // Write directly to disk. Bypassing "flush()" that re-assigns Ids
         // using parent functions.
-        let lock = self.state.lock()?;
-        let map_lock = self.map.lock()?;
-        let dag_lock = self.dag.lock()?;
-        self.state.reload(&lock)?;
-        self.map.reload(&map_lock)?;
-        self.dag.reload(&dag_lock)?;
+        let (lock, map_lock, dag_lock) = self.reload()?;
 
         if !self.dag.all()?.is_empty() {
             return programming("Cannot import clone data for non-empty graph");
@@ -379,7 +374,22 @@ where
         self.dag
             .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
 
-        // Verify that universally known vertexes and heads are present in IdMap.
+        self.verify_missing().await?;
+
+        self.persist(lock, map_lock, dag_lock)
+    }
+}
+
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore + Persist,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Persist + Send + Sync,
+{
+    /// Verify that universally known vertexes and heads are present in IdMap.
+    async fn verify_missing(&self) -> Result<()> {
         let missing: Vec<Id> = {
             let universal_ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
             tracing::debug!("clone: {} universally known vertexes", universal_ids.len());
@@ -401,6 +411,21 @@ where
             return programming(msg);
         }
 
+        Ok(())
+    }
+
+    fn reload(&mut self) -> Result<(S::Lock, M::Lock, IS::Lock)> {
+        let lock = self.state.lock()?;
+        let map_lock = self.map.lock()?;
+        let dag_lock = self.dag.lock()?;
+        self.state.reload(&lock)?;
+        self.map.reload(&map_lock)?;
+        self.dag.reload(&dag_lock)?;
+
+        Ok((lock, map_lock, dag_lock))
+    }
+
+    fn persist(&mut self, lock: S::Lock, map_lock: M::Lock, dag_lock: IS::Lock) -> Result<()> {
         self.map.persist(&map_lock)?;
         self.dag.persist(&dag_lock)?;
         self.state.persist(&lock)?;
