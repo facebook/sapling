@@ -125,6 +125,12 @@ impl AppendCommits for GitSegmentedCommits {
             "import_clone_data is not supported for git backend",
         ))
     }
+
+    async fn import_pull_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
+        Err(crate::Error::Unsupported(
+            "import_pull_data is not supported for git backend",
+        ))
+    }
 }
 
 #[async_trait::async_trait]

@@ -247,6 +247,20 @@ impl AppendCommits for HybridCommits {
         self.commits.dag.import_clone_data(clone_data).await?;
         Ok(())
     }
+
+    async fn import_pull_data(&mut self, _clone_data: CloneData<Vertex>) -> Result<()> {
+        if self.revlog.is_some() {
+            return Err(crate::Error::Unsupported(
+                "import_pull_data is not supported for revlog backend",
+            ));
+        }
+        if !self.commits.dag.is_vertex_lazy() {
+            return Err(crate::Error::Unsupported(
+                "import_pull_data can only be used in commit graph with lazy vertexes",
+            ));
+        }
+        unimplemented!()
+    }
 }
 
 #[async_trait::async_trait]

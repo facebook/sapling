@@ -104,6 +104,12 @@ impl AppendCommits for MemHgCommits {
             "import_clone_data is not supported for memory backend",
         ))
     }
+
+    async fn import_pull_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
+        Err(crate::Error::Unsupported(
+            "import_pull_data is not supported for memory backend",
+        ))
+    }
 }
 
 #[async_trait::async_trait]

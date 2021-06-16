@@ -71,6 +71,10 @@ pub trait AppendCommits {
     /// Import clone data and flush.
     /// This is only supported by lazy backends and can only be used in an empty repo.
     async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()>;
+
+    /// Import data from master fast forward pull.
+    /// This is only supported by lazy backends. Can be used on non-empty repo.
+    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()>;
 }
 
 pub trait DescribeBackend {
