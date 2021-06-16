@@ -740,7 +740,6 @@ class nameset(abstractsmartset):
 
     def __init__(self, changelog, nameset, reverse=False, repo=None):
         assert isinstance(nameset, bindings.dag.nameset)
-        assert changelog.userust("dag")
         self._changelog = changelog
         self._set = nameset
         self._torev = changelog.idmap.node2id

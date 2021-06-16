@@ -218,40 +218,20 @@ def _findcommonheadsnew(
     cl = local.changelog
     start = util.timer()
 
-    if cl.userust("dageval"):
-        # PERF: Converting to list or set hurts performance but is compatible
-        # with the other backend.
+    # PERF: Converting to list or set hurts performance but is compatible
+    # with the other backend.
 
-        def tonodes(revs):
-            return list(cl.tonodes(revs))
+    def tonodes(revs):
+        return list(cl.tonodes(revs))
 
-        def only(other, common):
-            return set(cl.dageval(lambda dag: dag.only(other, common)))
+    def only(other, common):
+        return set(cl.dageval(lambda dag: dag.only(other, common)))
 
-        def dagrange(roots, heads):
-            return set(cl.dageval(lambda: range(roots, heads)))
+    def dagrange(roots, heads):
+        return set(cl.dageval(lambda: range(roots, heads)))
 
-        def headsancestors(nodes):
-            return set(cl.dageval(lambda dag: dag.headsancestors(nodes)))
-
-    else:
-
-        def tonodes(revs, node=cl.node):
-            return [node(r) for r in revs]
-
-        def only(other, common, findmissing=cl.findmissing):
-            """The 'other % common' revset"""
-            return set(findmissing(common, other))
-
-        def dagrange(roots, heads, nodes=local.nodes):
-            """The 'roots::heads' revset, aka. ((roots::) & (::heads))"""
-            return set(nodes("%ln::%ln", roots, heads))
-
-        def headsancestors(nodes):
-            """head(ancestors(nodes))"""
-            heads = set(local.nodes("heads(ancestors(%ln))", commonheads))
-            heads.discard(nullid)
-            return heads
+    def headsancestors(nodes):
+        return set(cl.dageval(lambda dag: dag.headsancestors(nodes)))
 
     isselectivepull = local.ui.configbool(
         "remotenames", "selectivepull"

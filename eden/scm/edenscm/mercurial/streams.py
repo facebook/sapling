@@ -17,11 +17,7 @@ def prefetchtextstream(repo, ctxstream):
     # type: (edenscm.mercurial.localrepo.localrepository, Iterable[edenscm.mercurial.context.basectx]) -> Iterable[edenscm.mercurial.context.basectx]
     """Prefetch commit text for a stream of ctx"""
 
-    if not repo.changelog.userust():
-        # Non-Rust changelog is not lazy and does not need prefetch.
-        return ctxstream
-    else:
-        return _prefetchtextstream(repo, ctxstream)
+    return _prefetchtextstream(repo, ctxstream)
 
 
 def _prefetchtextstream(repo, ctxstream):

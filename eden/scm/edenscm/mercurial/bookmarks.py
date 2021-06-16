@@ -1393,8 +1393,6 @@ def cleanupremotenames(repo):
 
     Return a list of removed names.
     """
-    if not repo.changelog.userust():
-        raise error.Abort(_("legacy changelog backend is not supported"))
     metalog = repo.metalog()
 
     essentialnames = selectivepullinitbookmarkfullnames(repo)

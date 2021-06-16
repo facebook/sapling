@@ -142,21 +142,11 @@ class visibleheads(object):
         if len(newheads) > 1:
             cl = unfi.changelog
             hasnode = cl.hasnode
-            if cl.userust("index2"):
-                realnewheads = list(
-                    cl.dag.headsancestors(
-                        [h for h in newheads if hasnode(h) and h != node.nullid]
-                    )
+            realnewheads = list(
+                cl.dag.headsancestors(
+                    [h for h in newheads if hasnode(h) and h != node.nullid]
                 )
-            else:
-                realnewheads = list(
-                    unfi.nodes(
-                        "%ld",
-                        unfi.changelog.index2.headsancestors(
-                            list(unfi.revs("%ln", [h for h in newheads if hasnode(h)]))
-                        ),
-                    )
-                )
+            )
         else:
             realnewheads = list(newheads)
         realnewheadsset = set(realnewheads)

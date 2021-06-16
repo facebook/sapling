@@ -59,11 +59,6 @@ class changelog(object):
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
 
-    def userust(self, name=None):
-        if name == "revset":
-            return self._uiconfig.configbool("experimental", "changelog2-revset")
-        return True
-
     @property
     def algorithmbackend(self):
         return self.inner.algorithmbackend()

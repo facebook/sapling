@@ -1552,10 +1552,9 @@ class localrepository(object):
             # Remove visible heads that become public, since we now have
             # up-to-date remotenames.
             cl = repo.changelog
-            if cl.userust():
-                heads = cl._visibleheads.heads
-                draftheads = list(repo.dageval(lambda: heads - public()))
-                cl._visibleheads.heads = draftheads
+            heads = cl._visibleheads.heads
+            draftheads = list(repo.dageval(lambda: heads - public()))
+            cl._visibleheads.heads = draftheads
 
             # Flush changelog before flushing metalog.
             _flushchangelog(repo)
@@ -1565,14 +1564,13 @@ class localrepository(object):
             # Flush changelog. At this time remotenames should be up-to-date.
             # We need to write out changelog before remotenames so remotenames
             # do not have dangling pointers.
-            if cl.userust("addrevision"):
-                main = bookmarks.mainbookmark(repo)
-                mainnodes = []
-                if main in repo:
-                    node = repo[main].node()
-                    if node != nullid:
-                        mainnodes.append(node)
-                cl.inner.flush(mainnodes)
+            main = bookmarks.mainbookmark(repo)
+            mainnodes = []
+            if main in repo:
+                node = repo[main].node()
+                if node != nullid:
+                    mainnodes.append(node)
+            cl.inner.flush(mainnodes)
 
         def writependingchangelog(tr):
             repo = reporef()
@@ -1911,11 +1909,7 @@ class localrepository(object):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == "dirstate":
                 continue
-            if (
-                k == "changelog"
-                and self.currenttransaction()
-                and (self.changelog._delayed or self.changelog.userust("addrevision"))
-            ):
+            if k == "changelog" and self.currenttransaction():
                 # The changelog object may store unwritten revisions. We don't
                 # want to lose them.
                 # TODO: Solve the problem instead of working around it.
@@ -2737,24 +2731,16 @@ class localrepository(object):
                 visibleheads = cl._visibleheads.heads
             nodes += visibleheads
         # Do not report nullid. index2.headsancestors does not support it.
-        if cl.userust("index2"):
-            hasnode = cl.hasnode
-            nodes = [n for n in set(nodes) if n != nullid and hasnode(n)]
-            headnodes = cl.dag.headsancestors(nodes)
-        else:
-            revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
-            headrevs = cl.index2.headsancestors(revs)
-            headnodes = list(map(cl.node, headrevs))
+        hasnode = cl.hasnode
+        nodes = [n for n in set(nodes) if n != nullid and hasnode(n)]
+        headnodes = cl.dag.headsancestors(nodes)
         self._headcache[key] = headnodes
         return headnodes
 
     def _cachedheadrevs(self, includepublic=True, includedraft=True):
         nodes = self._cachedheadnodes(includepublic, includedraft)
         cl = self.changelog
-        if cl.userust("index2"):
-            return list(cl.torevs(nodes))
-        else:
-            return list(map(cl.rev, nodes))
+        return list(cl.torevs(nodes))
 
     def headrevs(self, start=None, includepublic=True, includedraft=True, reverse=True):
         cl = self.changelog
