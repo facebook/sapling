@@ -264,6 +264,10 @@ class EdenFS(object):
             FindExe.HG_REAL,
         ]
 
+        privhelper = FindExe.EDEN_PRIVHELPER
+        if privhelper is not None:
+            extra_daemon_args.extend(["--privhelper_path", privhelper])
+
         if "SANDCASTLE" in os.environ:
             extra_daemon_args.append("--allowRoot")
 

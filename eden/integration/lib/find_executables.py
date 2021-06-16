@@ -96,6 +96,16 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def EDEN_PRIVHELPER(self) -> Optional[str]:
+        return self._find_exe_optional(
+            "edenfs privhelper",
+            env="EDENFS_PRIVHELPER_PATH",
+            buck_path="eden/fs/service/edenfs_privhelper",
+            cmake_path="eden/fs/edenfs_privhelper",
+            require_found=False,
+        )
+
+    @cached_property
     def FSATTR(self) -> str:
         return self._find_exe(
             "fsattr",

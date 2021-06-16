@@ -51,6 +51,10 @@ using std::unique_ptr;
 using std::vector;
 
 DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");
+DEFINE_string(
+    privhelper_path,
+    "",
+    "The path to the privhelper binary (only works if not running setuid)");
 
 namespace facebook::eden {
 
@@ -508,24 +512,37 @@ int PrivHelperClientImpl::stop() {
 
 unique_ptr<PrivHelper>
 startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
-  // If we were passed the --privhelper_fd option (eg: by daemonizeIfRequested)
-  // then we have a channel through which we can communicate with a previously
-  // spawned privhelper process.
-  // Return a client constructed from that channel.
-  // We can't use FLAGS_privhelper_fd here because we are called
-  // before folly::init() and the args haven't been parsed.
-  // We do a very simple iteration here to parse out this option.
+  std::string helperPathFromArgs;
+
+  // We can't use FLAGS_ here because we are called before folly::init() and
+  // the args haven't been parsed. We do a very simple iteration here to parse
+  // out the options.
   for (int i = 1; i < argc - 1; ++i) {
-    if (StringPiece(argv[i]) == "--privhelper_fd") {
+    StringPiece arg{argv[i]};
+    if (arg == "--privhelper_fd") {
+      // If we were passed the --privhelper_fd option (eg: by
+      // daemonizeIfRequested) then we have a channel through which we can
+      // communicate with a previously spawned privhelper process. Return a
+      // client constructed from that channel.
+      if ((i + 1) >= argc) {
+        throw std::runtime_error(folly::to<std::string>("Too few arguments"));
+      }
       auto fdNum = folly::to<int>(argv[i + 1]);
       return make_unique<PrivHelperClientImpl>(
           folly::File(fdNum, true), std::nullopt);
+    }
+
+    if (arg == "--privhelper_path") {
+      if ((i + 1) >= argc) {
+        throw std::runtime_error(std::string("Too few arguments"));
+      }
+      helperPathFromArgs = std::string(argv[i + 1]);
     }
   }
 
   SpawnedProcess::Options opts;
 
-  // As we are running as root, we need to be cautious about the privhelper
+  // If are as running as setuid, we need to be cautious about the privhelper
   // process that we are about start.
   // We require that `edenfs_privhelper` be a sibling of our executable file,
   // and that both of these paths are not symlinks, and that both are owned
@@ -543,7 +560,19 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
         "symlink attack or similar attempt to escalate privileges"));
   }
 
-  auto helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
+  bool isSetuid = getuid() != geteuid();
+
+  AbsolutePath helperPath;
+
+  if (helperPathFromArgs.empty()) {
+    helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
+  } else {
+    if (isSetuid) {
+      throw std::invalid_argument(folly::to<std::string>(
+          "Cannot provide privhelper_path when executing a setuid binary"));
+    }
+    helperPath = canonicalPath(helperPathFromArgs);
+  }
 
   struct stat helperStat {};
   struct stat selfStat {};
@@ -551,7 +580,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   checkUnixError(lstat(exePath.c_str(), &selfStat), "lstat ", exePath);
   checkUnixError(lstat(helperPath.c_str(), &helperStat), "lstat ", helperPath);
 
-  if (getuid() != geteuid()) {
+  if (isSetuid) {
     // We are a setuid binary.  Require that our executable be owned by
     // root, otherwise refuse to continue on the basis that something is
     // very fishy.
