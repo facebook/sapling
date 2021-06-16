@@ -20,8 +20,11 @@ import sys
 def main(args):
     dirs = os.environ.get("PATH").split(os.pathsep)
     names = args or ["python3"]
-    for dir in dirs:
-        for name in names:
+    if names == ["python3"]:
+        # Try different pythons
+        names += ["python3.8", "python3.7", "python3.6"]
+    for name in names:
+        for dir in dirs:
             path = os.path.join(dir, name)
             if does_python_look_good(path):
                 print(path)
