@@ -8,13 +8,33 @@
 #[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::token::{UploadToken, UploadTokenData, UploadTokenSignature};
+use crate::token::{
+    FileContentTokenMetadata, UploadToken, UploadTokenData, UploadTokenMetadata,
+    UploadTokenSignature,
+};
 use crate::wire::{is_default, ToApi, ToWire, WireAnyId, WireToApiConversionError};
+
+/// Token metadata for file content token type.
+#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireFileContentTokenMetadata {
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub content_size: u64,
+}
+
+/// Token metadata. Could be different for different token types.
+/// A signed token guarantee the metadata has been verified.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WireUploadTokenMetadata {
+    #[serde(rename = "1")]
+    WireFileContentTokenMetadata(WireFileContentTokenMetadata),
+}
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireUploadTokenData {
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
     pub id: WireAnyId,
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    pub metadata: Option<WireUploadTokenMetadata>,
     // other data to be added ...
 }
 
@@ -83,6 +103,7 @@ impl ToWire for UploadTokenData {
     fn to_wire(self) -> Self::Wire {
         WireUploadTokenData {
             id: self.id.to_wire(),
+            metadata: self.metadata.to_wire(),
         }
     }
 }
@@ -94,6 +115,55 @@ impl ToApi for WireUploadTokenData {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(UploadTokenData {
             id: self.id.to_api()?,
+            metadata: self.metadata.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadTokenMetadata {
+    type Wire = WireUploadTokenMetadata;
+
+    fn to_wire(self) -> Self::Wire {
+        use UploadTokenMetadata::*;
+        match self {
+            FileContentTokenMetadata(meta) => {
+                WireUploadTokenMetadata::WireFileContentTokenMetadata(meta.to_wire())
+            }
+        }
+    }
+}
+
+impl ToApi for WireUploadTokenMetadata {
+    type Api = UploadTokenMetadata;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        use WireUploadTokenMetadata::*;
+        Ok(match self {
+            WireFileContentTokenMetadata(meta) => {
+                UploadTokenMetadata::FileContentTokenMetadata(meta.to_api()?)
+            }
+        })
+    }
+}
+
+impl ToWire for FileContentTokenMetadata {
+    type Wire = WireFileContentTokenMetadata;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFileContentTokenMetadata {
+            content_size: self.content_size,
+        }
+    }
+}
+
+impl ToApi for WireFileContentTokenMetadata {
+    type Api = FileContentTokenMetadata;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FileContentTokenMetadata {
+            content_size: self.content_size,
         })
     }
 }

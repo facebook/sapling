@@ -15,7 +15,8 @@ use std::str::FromStr;
 
 use edenapi_types::{
     wire::{ToWire, WireFileRequest},
-    AnyFileContentId, AnyId, FileEntry, FileRequest, UploadToken,
+    AnyFileContentId, AnyId, FileContentTokenMetadata, FileEntry, FileRequest, UploadToken,
+    UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use load_limiter::Metric;
@@ -106,9 +107,15 @@ async fn fetch_file(repo: HgRepoContext, key: Key) -> Result<FileEntry, Error> {
 async fn generate_upload_token(
     _repo: HgRepoContext,
     id: AnyFileContentId,
+    content_size: usize,
 ) -> Result<UploadToken, Error> {
     // At first, returns a fake token
-    Ok(UploadToken::new_fake_token(AnyId::AnyFileContentId(id)))
+    Ok(UploadToken::new_fake_token_with_metadata(
+        AnyId::AnyFileContentId(id),
+        UploadTokenMetadata::FileContentTokenMetadata(FileContentTokenMetadata {
+            content_size: content_size as u64,
+        }),
+    ))
 }
 
 /// Upload content of a file
@@ -157,12 +164,15 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map_err(HttpError::e400)?;
 
     let body = get_request_body(state).await?;
+    let content_size = body.len();
 
     store_file(repo.clone(), id.clone(), body)
         .await
         .map_err(HttpError::e500)?;
 
-    let token = generate_upload_token(repo, id).await.map(|v| v.to_wire());
+    let token = generate_upload_token(repo, id, content_size)
+        .await
+        .map(|v| v.to_wire());
 
     Ok(cbor_stream(stream::iter(vec![token])))
 }

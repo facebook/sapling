@@ -8,9 +8,23 @@
 use crate::AnyId;
 use serde_derive::{Deserialize, Serialize};
 
+/// Token metadata for file content token type.
+#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct FileContentTokenMetadata {
+    pub content_size: u64,
+}
+
+/// Token metadata. Could be different for different token types.
+/// A signed token guarantee the metadata has been verified.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UploadTokenMetadata {
+    FileContentTokenMetadata(FileContentTokenMetadata),
+}
+
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadTokenData {
     pub id: AnyId,
+    pub metadata: Option<UploadTokenMetadata>,
     // TODO: add other data (like expiration time).
 }
 
@@ -28,7 +42,18 @@ pub struct UploadToken {
 impl UploadToken {
     pub fn new_fake_token(id: AnyId) -> Self {
         Self {
-            data: UploadTokenData { id },
+            data: UploadTokenData { id, metadata: None },
+            signature: UploadTokenSignature {
+                signature: "faketokensignature".into(),
+            },
+        }
+    }
+    pub fn new_fake_token_with_metadata(id: AnyId, metadata: UploadTokenMetadata) -> Self {
+        Self {
+            data: UploadTokenData {
+                id,
+                metadata: Some(metadata),
+            },
             signature: UploadTokenSignature {
                 signature: "faketokensignature".into(),
             },
