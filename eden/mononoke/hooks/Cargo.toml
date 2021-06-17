@@ -38,14 +38,14 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 regex = "1.4.2"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tempdir = "0.3"
 thiserror = "1.0"
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

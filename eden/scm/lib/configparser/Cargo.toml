@@ -21,7 +21,7 @@ hostcaps = { path = "../hostcaps" }
 hostname = "0.3"
 indexmap = { version = "1.6", features = ["rayon", "serde-1"] }
 minibytes = { path = "../minibytes" }
-os_info = "=2.0.1"
+os_info = "=3.0.6"
 pest = "2.1"
 regex = "1.4.2"
 reqwest = { version = "0.10", features = ["blocking"], optional = true }
@@ -33,7 +33,7 @@ tracing = "0.1"
 types = { path = "../types", optional = true }
 util = { path = "../util" }
 version = { path = "../version" }
-zstd = { version = "=0.7.0+zstd.1.4.9", optional = true }
+zstd = { version = "=0.8.0+zstd.1.4.9", optional = true }
 
 [dev-dependencies]
 lazy_static = "1.0"

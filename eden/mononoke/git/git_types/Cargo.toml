@@ -29,7 +29,7 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-util = "0.3.7"
 git2 = "0.13"
 tempdir = "0.3"
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

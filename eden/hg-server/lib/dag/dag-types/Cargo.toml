@@ -9,7 +9,7 @@ abomonation = "0.7"
 abomonation_derive = "0.5"
 minibytes = { path = "../../minibytes" }
 quickcheck = { version = "0.9", optional = true }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 
 [dev-dependencies]
 quickcheck = "0.9"

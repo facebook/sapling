@@ -64,7 +64,7 @@ redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore"
 regex = "1.4.2"
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
@@ -74,7 +74,7 @@ sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexper
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0"
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 tokio-util = { version = "0.6", features = ["full"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }

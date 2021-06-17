@@ -45,7 +45,7 @@ segmented_changelog_types = { version = "0.1.0", path = "../segmented_changelog/
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 thiserror = "1.0"
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
 
 [patch.crates-io]

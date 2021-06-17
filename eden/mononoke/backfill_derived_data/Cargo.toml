@@ -43,7 +43,7 @@ skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }

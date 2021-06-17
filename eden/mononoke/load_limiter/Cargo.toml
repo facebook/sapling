@@ -13,7 +13,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 limits = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/loadshedding" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 session_id = { version = "0.1.0", path = "../server/session_id" }
 thiserror = "1.0"
 

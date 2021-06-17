@@ -11,7 +11,7 @@ indexedlog = { path = "../indexedlog" }
 lazy_static = "1.0"
 mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 types = { path = "../types" }
 zstore = { path = "../zstore" }
 

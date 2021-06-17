@@ -25,7 +25,7 @@ log = { version = "0.4.8", features = ["kv_unstable"] }
 regex = "1.4.2"
 reqwest = { version = "0.10", features = ["json", "rustls-tls", "stream"] }
 rust-ini = { version = "0.17", features = ["inline-comment"] }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 thiserror = "1.0"
 

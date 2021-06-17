@@ -35,7 +35,7 @@ percent-encoding = "2.1"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"
 slog = { version = "2.5", features = ["max_level_trace"] }
@@ -47,7 +47,7 @@ time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }

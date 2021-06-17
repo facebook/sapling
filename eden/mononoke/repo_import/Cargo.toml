@@ -33,11 +33,11 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 movers = { version = "0.1.0", path = "../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
-serde = { version = "=1.0.118", features = ["derive", "rc"] }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_trace"] }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]

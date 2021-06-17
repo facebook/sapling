@@ -34,10 +34,10 @@ session_id = { version = "0.1.0", path = "../server/session_id" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 slog-term = "2.4.2"
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
-tokio = { version = "1.5", features = ["full", "test-util"] }
+tokio = { version = "1.6.1", features = ["full", "test-util"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }
-users = "0.9"
+users = "0.11"
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
