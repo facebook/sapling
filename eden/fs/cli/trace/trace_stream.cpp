@@ -13,19 +13,57 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
+#include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using namespace std::string_view_literals;
 
 DEFINE_string(mountRoot, "", "Root of the EdenFS mount");
 DEFINE_string(trace, "", "Trace mode");
+DEFINE_bool(writes, false, "Limit trace to write operations");
+DEFINE_bool(reads, false, "Limit trace to write operations");
 
 namespace {
+constexpr auto kTimeout = std::chrono::seconds{1};
+
 std::string formatTime(uint64_t ns) {
   // Convert to microseconds before converting to double in case we have a
   // duration longer than 3 months.
   double d = double(ns / 1000);
   return fmt::format("{:.3f} ms", d / 1000.0);
+}
+
+std::string formatFuseOpcode(const FuseCall& call) {
+  std::string name = call.get_opcodeName();
+  auto mutableName = folly::MutableStringPiece(name.data(), name.size());
+  (void)mutableName.removePrefix("FUSE_");
+  folly::toLowerAscii(mutableName);
+  return mutableName.str();
+}
+
+std::string formatFuseCall(
+    const FuseCall& call,
+    const std::string& arguments = "",
+    const std::string& result = "") {
+  auto* processNamePtr = call.get_processName();
+  std::string processNameString = processNamePtr
+      ? fmt::format("{}({})", processNamePtr->c_str(), call.get_pid())
+      : std::to_string(call.get_pid());
+
+  std::string argString = arguments.empty()
+      ? fmt::format("{}", call.get_nodeid())
+      : fmt::format("{}, {}", call.get_nodeid(), arguments);
+  std::string resultString =
+      result.empty() ? result : fmt::format(" = {}", result);
+
+  return fmt::format(
+      "{} from {}: {}({}){}",
+      call.get_unique(),
+      processNameString,
+      formatFuseOpcode(call),
+      argString,
+      resultString);
 }
 
 int trace_hg(
@@ -141,6 +179,91 @@ int trace_hg(
   fmt::print("{} was unmounted\n", FLAGS_mountRoot);
   return 0;
 }
+
+int trace_fs(
+    folly::ScopedEventBaseThread& evbThread,
+    const AbsolutePath& mountRoot,
+    apache::thrift::RocketClientChannel::Ptr channel,
+    bool reads,
+    bool writes) {
+  int64_t mask = 0;
+  if (reads) {
+    mask |= streamingeden_constants::FS_EVENT_READ_;
+  }
+  if (writes) {
+    mask |= streamingeden_constants::FS_EVENT_WRITE_;
+  }
+
+  StreamingEdenServiceAsyncClient client{std::move(channel)};
+  apache::thrift::ClientBufferedStream<FsEvent> traceFsStream =
+      client.semifuture_traceFsEvents(mountRoot.stringPiece().str(), mask)
+          .via(evbThread.getEventBase())
+          .get();
+
+  client.semifuture_debugOutstandingFuseCalls(mountRoot.stringPiece().str())
+      .via(evbThread.getEventBase())
+      .thenValue([](std::vector<FuseCall> outstandingCalls) {
+        if (outstandingCalls.empty()) {
+          return;
+        }
+        std::string_view header = "Outstanding FUSE calls"sv;
+        fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+        for (const auto& call : outstandingCalls) {
+          fmt::print("+ {}\n", formatFuseCall(call));
+        }
+        fmt::print("{}\n", std::string(header.size(), '-'));
+      })
+      .wait(kTimeout);
+
+  std::unordered_map<uint64_t, FsEvent> activeRequests;
+
+  std::move(traceFsStream).subscribeInline([&](folly::Try<FsEvent>&& event) {
+    if (event.hasException()) {
+      fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+      return;
+    }
+
+    FsEvent& evt = event.value();
+
+    const FsEventType eventType = evt.get_type();
+    const uint64_t unique = evt.get_fuseRequest().get_unique();
+
+    switch (eventType) {
+      case FsEventType::UNKNOWN:
+        break;
+      case FsEventType::START: {
+        activeRequests[unique] = evt;
+        fmt::print(
+            "+ {}\n",
+            formatFuseCall(evt.get_fuseRequest(), evt.get_arguments()));
+        break;
+      }
+      case FsEventType::FINISH: {
+        const std::string formatted_call = formatFuseCall(
+            evt.get_fuseRequest(),
+            "" /* arguments */,
+            evt.get_result() ? std::to_string(*evt.get_result()) : "");
+        const auto it = activeRequests.find(unique);
+        if (it != activeRequests.end()) {
+          auto& record = it->second;
+          uint64_t elapsedTime =
+              evt.get_monotonic_time_ns() - record.get_monotonic_time_ns();
+          fmt::print(
+              "- {} in {}\n",
+              formatted_call,
+              fmt::format("{:.3f} \u03BCs", double(elapsedTime) / 1000.0));
+          activeRequests.erase(unique);
+        } else {
+          fmt::print("- {}\n", formatted_call);
+        }
+        break;
+      }
+    }
+  });
+
+  fmt::print("{} was unmounted\n", FLAGS_mountRoot);
+  return 0;
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -168,6 +291,9 @@ int main(int argc, char** argv) {
 
   if (FLAGS_trace == "hg") {
     return trace_hg(evbThread, mountRoot, std::move(channel));
+  } else if (FLAGS_trace == "fs") {
+    return trace_fs(
+        evbThread, mountRoot, std::move(channel), FLAGS_reads, FLAGS_writes);
   } else if (FLAGS_trace.empty()) {
     fmt::print(stderr, "Must specify trace mode\n");
     return 1;
