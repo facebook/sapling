@@ -32,7 +32,7 @@ just in case somebody has a strange $TMPDIR
   >     if 'blackbox' in name or 'metalog' in name:
   >         continue
   >     suffix = name in isdir and '/' or ''
-  >     print('%05o %s%s' % (os.lstat(name).st_mode & 0o7777, name, suffix))
+  >     print('%05o %s%s' % (os.lstat(name).st_mode & 0o0777, name, suffix))
   > EOF
 
   $ cat >mode.py <<EOF
@@ -85,7 +85,7 @@ new directories are setgid
   006?0 ./.hg/store/00changelog.i (glob)
   00664 ./.hg/store/00changelog.len
   00660 ./.hg/store/00manifest.i
-  02775 ./.hg/store/allheads/
+  00775 ./.hg/store/allheads/
   00664 ./.hg/store/allheads/index2-node
   00664 ./.hg/store/allheads/log
   00664 ./.hg/store/allheads/meta
@@ -144,7 +144,7 @@ XXX: treestate and allheads do not really respect this rule
   006?0 ../push/.hg/store/00changelog.i (glob)
   00664 ../push/.hg/store/00changelog.len
   00660 ../push/.hg/store/00manifest.i
-  02775 ../push/.hg/store/allheads/
+  00775 ../push/.hg/store/allheads/
   00664 ../push/.hg/store/allheads/index2-node
   00664 ../push/.hg/store/allheads/log
   00664 ../push/.hg/store/allheads/meta
