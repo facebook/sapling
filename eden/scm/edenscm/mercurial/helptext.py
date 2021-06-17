@@ -3971,13 +3971,6 @@ environment variable $PAGER. If $PAGER is not set, pager.pager from the default
 or system configuration is used. If none of these are set, a default pager will
 be used, typically `less` on Unix and `more` on Windows.
 
-.. container:: windows
-
-  On Windows, `more` is not color aware, so using it effectively disables color.
-  MSYS and Cygwin shells provide `less` as a pager, which can be configured to
-  support ANSI color codes.  See :hg:`help config.color.pagermode` to configure
-  the color mode when invoking a pager.
-
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::
 
