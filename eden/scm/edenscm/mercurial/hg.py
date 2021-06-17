@@ -604,15 +604,20 @@ def clone(
             # client?
             if (
                 getattr(destrepo, "edenapi", None)
-                and ui.configbool("clone", "force-edenapi-clonedata")
+                and (
+                    ui.configbool("clone", "force-edenapi-clonedata")
+                    or destrepo.ui.configbool("clone", "force-edenapi-clonedata")
+                )
                 and destrepo.name
             ):
+                clonecodepath = "segments"
                 ui.status(_("fetching lazy changelog\n"))
                 reponame = destrepo.name
                 data = destrepo.edenapi.clonedata(reponame)
                 clonemod.segmentsclone(srcpeer.url(), data, destrepo)
             # Can we use EdenAPI CloneData provided by the peer interface?
             elif srcpeer.capable("clonedata") and shallow and not update:
+                clonecodepath = "segments"
                 data = srcpeer.clonedata()
                 clonemod.segmentsclone(srcpeer.url(), data, destrepo)
             # Can we use the new code path (stream clone + shallow + no
@@ -626,10 +631,11 @@ def clone(
                 and stream is not False
                 and ui.configbool("remotenames", "selectivepull")
             ):
-                clonecodepath = "modern"
                 if ui.configbool("unsafe", "emergency-clone"):
+                    clonecodepath = "emergency"
                     clonemod.emergencyclone(srcpeer.url(), destrepo)
                 else:
+                    clonecodepath = "revlog"
                     clonemod.revlogclone(srcpeer.url(), destrepo)
             elif destrepo:
                 reasons = []
