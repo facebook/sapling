@@ -6,6 +6,7 @@
  */
 
 use anyhow::{Context, Error};
+use bytes::Bytes;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -25,7 +26,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream, get_repo, get_request_body, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -110,6 +111,37 @@ async fn generate_upload_token(
     Ok(UploadToken::new_fake_token(AnyId::AnyFileContentId(id)))
 }
 
+/// Upload content of a file
+async fn store_file(repo: HgRepoContext, id: AnyFileContentId, bytes: Bytes) -> Result<(), Error> {
+    match id {
+        AnyFileContentId::ContentId(id) => {
+            repo.store_file_by_contentid(
+                mononoke_types::ContentId::from(id),
+                bytes.len() as u64,
+                bytes,
+            )
+            .await?
+        }
+        AnyFileContentId::Sha1(id) => {
+            repo.store_file_by_sha1(
+                mononoke_types::hash::Sha1::from(id),
+                bytes.len() as u64,
+                bytes,
+            )
+            .await?
+        }
+        AnyFileContentId::Sha256(id) => {
+            repo.store_file_by_sha256(
+                mononoke_types::hash::Sha256::from(id),
+                bytes.len() as u64,
+                bytes,
+            )
+            .await?
+        }
+    };
+    Ok(())
+}
+
 /// Upload content of a file requested by the client.
 pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let params = UploadFileParams::take_from(state);
@@ -124,8 +156,11 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;
 
-    // TODO: implement uploading logic itself
-    // await for upload here
+    let body = get_request_body(state).await?;
+
+    store_file(repo.clone(), id.clone(), body)
+        .await
+        .map_err(HttpError::e500)?;
 
     let token = generate_upload_token(repo, id).await.map(|v| v.to_wire());
 

@@ -49,14 +49,15 @@ async fn check_request_item(
     let is_present = match item.id {
         AnyId::AnyFileContentId(id) => match id {
             AnyFileContentId::ContentId(id) => {
-                repo.is_present(mononoke_types::ContentId::from(id)).await?
+                repo.is_file_present_by_contentid(mononoke_types::ContentId::from(id))
+                    .await?
             }
             AnyFileContentId::Sha1(id) => {
-                repo.is_present_sha1(mononoke_types::hash::Sha1::from(id))
+                repo.is_file_present_by_sha1(mononoke_types::hash::Sha1::from(id))
                     .await?
             }
             AnyFileContentId::Sha256(id) => {
-                repo.is_present_sha256(mononoke_types::hash::Sha256::from(id))
+                repo.is_file_present_by_sha256(mononoke_types::hash::Sha256::from(id))
                     .await?
             }
         },

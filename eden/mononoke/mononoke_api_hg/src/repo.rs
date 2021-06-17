@@ -14,7 +14,7 @@ use blobstore::Blobstore;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
-use filestore::Alias;
+use filestore::{self, Alias, StoreRequest};
 use futures::compat::Stream01CompatExt;
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
@@ -71,21 +71,81 @@ impl HgRepoContext {
     }
 
     /// Look up in blobstore by `ContentId`
-    pub async fn is_present(&self, content_id: ContentId) -> Result<bool, MononokeError> {
+    pub async fn is_file_present_by_contentid(
+        &self,
+        content_id: ContentId,
+    ) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&content_id.blobstore_key())
             .await
     }
 
+    /// Store file into blobstore by `ContentId`
+    pub async fn store_file_by_contentid(
+        &self,
+        content_id: ContentId,
+        size: u64,
+        bytes: Bytes,
+    ) -> Result<(), MononokeError> {
+        filestore::store(
+            self.blob_repo().blobstore(),
+            self.blob_repo().filestore_config(),
+            self.ctx(),
+            &StoreRequest::with_canonical(size, content_id),
+            stream::once(future::ok(bytes)),
+        )
+        .await
+        .map_err(MononokeError::from)?;
+        Ok(())
+    }
+
     /// Look up in blobstore by `Sha1 alias`
-    pub async fn is_present_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
+    pub async fn is_file_present_by_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&Alias::Sha1(sha1).blobstore_key())
             .await
     }
 
+    /// Store file into blobstore by `Sha1 alias`
+    pub async fn store_file_by_sha1(
+        &self,
+        sha1: Sha1,
+        size: u64,
+        bytes: Bytes,
+    ) -> Result<(), MononokeError> {
+        filestore::store(
+            self.blob_repo().blobstore(),
+            self.blob_repo().filestore_config(),
+            self.ctx(),
+            &StoreRequest::with_sha1(size, sha1),
+            stream::once(future::ok(bytes)),
+        )
+        .await
+        .map_err(MononokeError::from)?;
+        Ok(())
+    }
+
     /// Look up in blobstore by `Sha256 alias`
-    pub async fn is_present_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
+    pub async fn is_file_present_by_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&Alias::Sha256(sha256).blobstore_key())
             .await
+    }
+
+    /// Store file into blobstore by `Sha256 alias`
+    pub async fn store_file_by_sha256(
+        &self,
+        sha256: Sha256,
+        size: u64,
+        bytes: Bytes,
+    ) -> Result<(), MononokeError> {
+        filestore::store(
+            self.blob_repo().blobstore(),
+            self.blob_repo().filestore_config(),
+            self.ctx(),
+            &StoreRequest::with_sha256(size, sha256),
+            stream::once(future::ok(bytes)),
+        )
+        .await
+        .map_err(MononokeError::from)?;
+        Ok(())
     }
 
     /// Look up changeset
