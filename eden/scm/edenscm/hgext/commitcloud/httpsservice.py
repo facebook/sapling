@@ -229,7 +229,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 % workspace,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None, None, None)
+            return self._makeemptyreferences(version)
 
         if version == baseversion:
             self.ui.debug(
@@ -237,7 +237,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 % version,
                 component="commitcloud",
             )
-            return baseservice.References(version, None, None, None, None, None, None)
+            return self._makeemptyreferences(version)
 
         self.ui.debug(
             "'get_references' returns version %s, current version %s\n"
@@ -256,7 +256,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newheads=None,
         oldbookmarks=None,
         newbookmarks=None,
-        newobsmarkers=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
         oldsnapshots=None,
@@ -268,7 +267,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newheads = newheads or []
         oldbookmarks = oldbookmarks or []
         newbookmarks = newbookmarks or {}
-        newobsmarkers = newobsmarkers or []
         oldremotebookmarks = oldremotebookmarks or []
         newremotebookmarks = newremotebookmarks or {}
         oldsnapshots = oldsnapshots or []
@@ -304,7 +302,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "new_heads": newheads,
             "removed_bookmarks": oldbookmarks,
             "updated_bookmarks": newbookmarks,
-            "new_obsmarkers_data": self._encodedmarkers(newobsmarkers),
             "removed_remote_bookmarks": self._makeremotebookmarks(oldremotebookmarks),
             "updated_remote_bookmarks": self._makeremotebookmarks(newremotebookmarks),
             "removed_snapshots": oldsnapshots,
@@ -332,7 +329,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         return (
             True,
-            baseservice.References(newversion, None, None, None, None, None, None),
+            self._makeemptyreferences(newversion),
         )
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")

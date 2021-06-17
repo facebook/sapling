@@ -35,7 +35,6 @@ from . import (
     backuplock,
     backupstate,
     error as ccerror,
-    obsmarkers as obsmarkersmod,
     service,
     subscription,
     syncstate,
@@ -554,8 +553,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
                 tr, addnodes=addedsnapshots, removenodes=removedsnapshots
             )
 
-    _mergeobsmarkers(repo, tr, cloudrefs.obsmarkers)
-
     if newvisibleheads is not None:
         visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
 
@@ -598,11 +595,9 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             )
             repo.ui.log("commitcloud_sync", msg)
             repo.ui.warn(msg)
-            repo._commitcloudskippendingobsmarkers = True
             with repo.lock():
                 obsolete.createmarkers(repo, [(ctx, ()) for ctx in cloudhiddenonly])
                 obsolete.revive(cloudvisibleonly)
-            repo._commitcloudskippendingobsmarkers = False
 
     # We have now synced the repo to the cloud version.  Store this.
     logsyncop(
@@ -994,12 +989,6 @@ def _forkname(ui, name, othernames):
             return candidate
 
 
-def _mergeobsmarkers(repo, tr, obsmarkers):
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        tr._commitcloudskippendingobsmarkers = True
-        repo.obsstore.add(tr, obsmarkers)
-
-
 @perftrace.tracefunc("Check Omissions")
 def _checkomissions(repo, remotepath, lastsyncstate, tr, maxage):
     """check omissions are still not available locally
@@ -1069,7 +1058,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     localbookmarks = _getbookmarks(repo)
     localremotebookmarks = _getremotebookmarks(repo)
     localsnapshots = _getsnapshots(repo, lastsyncstate)
-    obsmarkers = obsmarkersmod.getsyncingobsmarkers(repo)
 
     # If any commits failed to back up, exclude them.  Revert any bookmark changes
     # that point to failed commits.
@@ -1117,7 +1105,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         and localbookmarks == localsyncedbookmarks
         and not remotebookmarkschanged
         and lastsyncstate.version != 0
-        and not obsmarkers
         and localsnapshotsset == set(lastsyncstate.snapshots)
     ):
         # Nothing to send.
@@ -1172,7 +1159,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newcloudheads,
         lastsyncstate.bookmarks.keys(),
         newcloudbookmarks,
-        obsmarkers,
         oldremotebookmarks,
         newremotebookmarks,
         lastsyncstate.snapshots,
@@ -1204,6 +1190,5 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newomittedremotebookmarks=newomittedremotebookmarks,
             newsnapshots=localsnapshots,
         )
-        obsmarkersmod.clearsyncingobsmarkers(repo)
 
     return synced, cloudrefs

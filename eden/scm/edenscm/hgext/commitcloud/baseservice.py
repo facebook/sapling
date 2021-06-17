@@ -10,9 +10,9 @@ import abc
 import collections
 
 import bindings
-from edenscm.mercurial import dagop, json, node as nodemod, pycompat
-from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, ensurestr
+from edenscm.mercurial import pycompat
+from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, PARENT
+from edenscm.mercurial.pycompat import encodeutf8, ensurestr
 
 
 def _joinremotename(remote, name):
@@ -29,7 +29,7 @@ def _splitremotename(remotename):
 abstractmethod = abc.abstractmethod
 References = collections.namedtuple(
     "References",
-    "version heads bookmarks obsmarkers headdates remotebookmarks snapshots",
+    "version heads bookmarks headdates remotebookmarks snapshots",
 )
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
@@ -135,7 +135,12 @@ class SingletonDecorator(object):
 
 
 class BaseService(pycompat.ABC):
-    def _makereferences(self, data):
+    @staticmethod
+    def _makeemptyreferences(version):
+        return References(version, None, None, None, None, None)
+
+    @classmethod
+    def _makereferences(cls, data):
         """Makes a References object from JSON data
 
         JSON data must represent json serialization of
@@ -147,19 +152,8 @@ class BaseService(pycompat.ABC):
         version = data["version"]
         newheads = [h for h in data.get("heads", [])]
         newbookmarks = {n: v for n, v in data.get("bookmarks", {}).items()}
-        newobsmarkers = [
-            (
-                nodemod.bin(m["pred"]),
-                tuple(nodemod.bin(s) for s in m["succs"]),
-                m["flags"],
-                tuple((k, v) for k, v in json.loads(m["meta"])),
-                (m["date"], m["tz"]),
-                tuple(nodemod.bin(p) for p in m["predparents"]),
-            )
-            for m in data.get("new_obsmarkers_data", [])
-        ]
         headdates = {h: d for h, d in data.get("head_dates", {}).items()}
-        newremotebookmarks = self._decoderemotebookmarks(
+        newremotebookmarks = cls._decoderemotebookmarks(
             data.get("remote_bookmarks", [])
         )
         newsnapshots = [s for s in data.get("snapshots", [])]
@@ -168,28 +162,13 @@ class BaseService(pycompat.ABC):
             version,
             newheads,
             newbookmarks,
-            newobsmarkers,
             headdates,
             newremotebookmarks,
             newsnapshots,
         )
 
-    def _encodedmarkers(self, obsmarkers):
-        # pred, succs, flags, metadata, date, parents = marker
-        return [
-            {
-                "pred": nodemod.hex(m[0]),
-                "succs": [nodemod.hex(s) for s in m[1]],
-                "predparents": [nodemod.hex(p) for p in m[5]] if m[5] else [],
-                "flags": m[2],
-                "date": float(repr(m[4][0])),
-                "tz": m[4][1],
-                "meta": json.dumps(m[3]),
-            }
-            for m in obsmarkers
-        ]
-
-    def _makeremotebookmarks(self, remotebookmarks):
+    @staticmethod
+    def _makeremotebookmarks(remotebookmarks):
         """Makes a RemoteBookmark object from dictionary '{remotename: node}'
         or list '[remotename, ...]'.
 
@@ -213,7 +192,8 @@ class BaseService(pycompat.ABC):
                 appendremotebook(remotename)
         return remotebookslist
 
-    def _decoderemotebookmarks(self, remotebookmarks):
+    @staticmethod
+    def _decoderemotebookmarks(remotebookmarks):
         """Turns a list of thrift remotebookmarks into a dictionary of remote bookmarks"""
         return {
             _joinremotename(book["remote"], book["name"]): book["node"]
@@ -238,7 +218,6 @@ class BaseService(pycompat.ABC):
         newheads,
         oldbookmarks,
         newbookmarks,
-        newobsmarkers,
         oldremotebookmarks,
         newremotebookmarks,
         oldsnapshots,

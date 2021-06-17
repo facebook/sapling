@@ -46,7 +46,6 @@ class _LocalService(baseservice.BaseService):
                 "version": 0,
                 "heads": [],
                 "bookmarks": {},
-                "obsmarkers": {},
                 "remotebookmarks": {},
             }
 
@@ -56,18 +55,6 @@ class _LocalService(baseservice.BaseService):
         )
         with open(filename, "wb") as f:
             f.write(pycompat.encodeutf8(json.dumps(data)))
-
-    def _filteredobsmarkers(self, data, baseversion):
-        """filter the obmarkers since the baseversion
-
-        This includes (baseversion, data[version]] obsmarkers
-        """
-        versions = range(baseversion, data["version"])
-        data["new_obsmarkers_data"] = sum(
-            (data["obsmarkers"][str(n + 1)] for n in versions), []
-        )
-        del data["obsmarkers"]
-        return data
 
     def _injectheaddates(self, data, workspace):
         """inject a head_dates field into the data"""
@@ -98,7 +85,7 @@ class _LocalService(baseservice.BaseService):
                 "commitcloud local service: "
                 "get_references for current version %s\n" % version
             )
-            return baseservice.References(version, None, None, None, None, None, None)
+            return self._makeemptyreferences(version)
         else:
             if baseversion > version:
                 raise error.Abort(
@@ -110,7 +97,6 @@ class _LocalService(baseservice.BaseService):
                 "commitcloud local service: "
                 "get_references for versions from %s to %s\n" % (baseversion, version)
             )
-            data = self._filteredobsmarkers(data, baseversion)
             data = self._injectheaddates(data, workspace)
             return self._makereferences(data)
 
@@ -123,7 +109,6 @@ class _LocalService(baseservice.BaseService):
         newheads=None,
         oldbookmarks=None,
         newbookmarks=None,
-        newobsmarkers=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
         oldsnapshots=None,
@@ -132,13 +117,12 @@ class _LocalService(baseservice.BaseService):
     ):
         data = self._load(workspace)
         if version != data["version"]:
-            return False, self._makereferences(self._filteredobsmarkers(data, version))
+            return False, self._makereferences(data)
 
         oldheads = set(oldheads or [])
         newheads = newheads or []
         oldbookmarks = set(oldbookmarks or [])
         newbookmarks = newbookmarks or {}
-        newobsmarkers = newobsmarkers or []
         oldremotebookmarks = set(oldremotebookmarks or [])
         newremotebookmarks = newremotebookmarks or {}
         oldsnapshots = set(oldsnapshots or [])
@@ -171,7 +155,6 @@ class _LocalService(baseservice.BaseService):
         data["version"] = newversion
         data["heads"] = heads
         data["bookmarks"] = bookmarks
-        data["obsmarkers"][str(newversion)] = self._encodedmarkers(newobsmarkers)
         data["remote_bookmarks"] = self._makeremotebookmarks(remotebookmarks)
         data["snapshots"] = snapshots
         self._ui.debug(
@@ -198,7 +181,7 @@ class _LocalService(baseservice.BaseService):
         self._saveworkspaces(allworkspaces)
         return (
             True,
-            baseservice.References(newversion, None, None, None, None, None, None),
+            self._makeemptyreferences(newversion),
         )
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):

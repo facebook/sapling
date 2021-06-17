@@ -167,7 +167,6 @@ from . import (
     checkoutlocations,
     commands as cccommands,
     dependencies,
-    obsmarkers,
     status,
     sync,
     syncstate,
@@ -214,7 +213,6 @@ def extsetup(ui):
     background.extsetup(ui)
     dependencies.extsetup(ui)
 
-    localrepo.localrepository._wlockfreeprefix.add(obsmarkers._obsmarkerssyncing)
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.directory)
@@ -246,23 +244,6 @@ def reposetup(ui, repo):
         extensions.wrapfunction(localrepo.dirstate.dirstate, "loginfo", _sendlocation)
 
     class commitcloudrepo(repo.__class__):
-        def transaction(self, *args, **kwargs):
-            def finalize(tr):
-                for obj in tr, self:
-                    if (
-                        hgutil.safehasattr(obj, "_commitcloudskippendingobsmarkers")
-                        and obj._commitcloudskippendingobsmarkers
-                    ):
-                        return
-
-                markers = tr.changes["obsmarkers"]
-                if markers:
-                    obsmarkers.addpendingobsmarkers(self, markers)
-
-            tr = super(commitcloudrepo, self).transaction(*args, **kwargs)
-            tr.addfinalize("commitcloudobsmarkers", finalize)
-            return tr
-
         def automigratefinish(self):
             super(commitcloudrepo, self).automigratefinish()
             # Do not auto rejoin if the repo has "broken" (incomplete) commit

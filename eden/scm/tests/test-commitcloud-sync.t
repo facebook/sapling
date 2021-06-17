@@ -360,8 +360,6 @@ Sync the amended commit to the other client
   │
   o  d20a80d4def3 'base'
   
-  $ test ! -f .hg/store/commitcloudpendingobsmarkers
-
   $ cd ..
 
 Test recovery from broken state (example: invalid json)
@@ -686,7 +684,7 @@ Clean up by hiding some commits, and create a new stack
   │
   @  d20a80d4def3 'base'
   
-Test race between syncing obsmarkers and a transaction creating new ones
+Test race between cloud sync and another transaction
 
   $ hg next -q
   [74473a] stack commit 1
