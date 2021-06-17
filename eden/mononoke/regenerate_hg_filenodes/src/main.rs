@@ -21,6 +21,7 @@ use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures::future::{join_all, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash};
+use slog::info;
 use std::fs::File;
 use std::str::FromStr;
 use std::{
@@ -66,9 +67,9 @@ async fn regenerate_all_manifests(
     ctx: CoreContext,
     repo: BlobRepo,
     hg_css: Vec<HgChangesetId>,
+    chunk_size: usize,
 ) -> Result<(), Error> {
     let mut i = 0;
-    let chunk_size = 100;
     for chunk in hg_css.chunks(chunk_size) {
         let mut futs = vec![];
         for hg_cs in chunk {
@@ -77,11 +78,11 @@ async fn regenerate_all_manifests(
                 repo.clone(),
                 *hg_cs,
             ));
+            i += 1;
         }
         let res: Result<Vec<_>, Error> = join_all(futs).await.into_iter().collect();
         res?;
-        i += chunk_size;
-        println!("processed {}", i);
+        info!(ctx.logger(), "processed {}", i);
     }
     Ok(())
 }
@@ -94,6 +95,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             r#"
                --i-know-what-i-am-doing
                --file [FILE]                        'contains list of commit hashes for which we want to regenerate filenodes'
+               --chunk-size [SIZE]                  'how many commits to process at once (default: 100)'
             "#,
         )
         .get_matches(fb)?;
@@ -112,6 +114,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let inputfile = matches.value_of("file").expect("input file is not set");
     let inputfile = File::open(inputfile).expect("cannot open input file");
+
+    let chunk_size = args::get_usize(&matches, "chunk-size", 100);
     let file = BufReader::new(&inputfile);
     rt.block_on(
         regenerate_all_manifests(
@@ -120,6 +124,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             file.lines()
                 .map(|line| convert_to_cs(&line.unwrap()).unwrap())
                 .collect(),
+            chunk_size,
         )
         .boxed(),
     )

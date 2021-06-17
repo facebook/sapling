@@ -113,7 +113,7 @@
   $ hg log -r 'all()' -T '{node}\n' > hashes
   $ regenerate_hg_filenodes --file 'hashes'
   * using repo "repo" repoid RepositoryId(0) (glob)
-  processed 100
+  * processed 5 (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"
   DDAE7A95B6B0FB27DFACC4051C41AA9CFF30C1E2|389710B7D0BE8C40323D3D96F717219F1CCE9601
