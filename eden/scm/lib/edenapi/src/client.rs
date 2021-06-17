@@ -762,7 +762,7 @@ impl EdenApi for Client {
         items: Vec<AnyId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
-        let msg = format!("Requesting lookup for {} items(s)", items.len());
+        let msg = format!("Requesting lookup for {} item(s)", items.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
             eprintln!("{}", &msg);

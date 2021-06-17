@@ -14,15 +14,10 @@ from . import util as ccutil
 def lookupcommits(repo, nodes):
     """Returns list of missing commits"""
     try:
-        stream, _stats = repo.edenapi.lookup_commits(ccutil.getreponame(repo), nodes)
-        founditems = set()
-        for item in stream:
-            if item["token"]:
-                founditems.add(item["index"])
+        stream, _stats = repo.edenapi.commitknown(ccutil.getreponame(repo), nodes)
+        return [item["hgid"] for item in stream if item["known"]["Ok"] is not True]
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
-
-    return [node for index, node in enumerate(nodes) if index not in founditems]
 
 
 def lookupfilenodes(repo, keys):
@@ -31,15 +26,11 @@ def lookupfilenodes(repo, keys):
         stream, _stats = repo.edenapi.lookup_filenodes(
             ccutil.getreponame(repo), [key[1] for key in keys]
         )
-        founditems = set()
-        for item in stream:
-            if item["token"]:
-                founditems.add(item["index"])
-
+        foundindices = {item["index"] for item in stream if item["token"]}
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
-    return [fnode for index, fnode in enumerate(keys) if index not in founditems]
+    return [fnode for index, fnode in enumerate(keys) if index not in foundindices]
 
 
 def uploadfiles(repo, keys):
