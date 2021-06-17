@@ -23,9 +23,6 @@ try:
 except ImportError:
     import winreg
 
-# MS-DOS 'more' is the only pager available by default on Windows.
-fallbackpager = "more"
-
 
 def systemrcpath():
     """return default os-specific hgrc search path"""
