@@ -653,20 +653,6 @@ effect and style see :hg:`help color`.
     default (or win32 mode prior to Windows 10) if it detects a terminal. Any
     invalid value will disable color.
 
-``pagermode``
-    String: optional override of ``color.mode`` used with pager.
-
-    On some systems, terminfo mode may cause problems when using
-    color with ``less -R`` as a pager program. less with the -R option
-    will only display ECMA-48 color codes, and terminfo mode may sometimes
-    emit codes that less doesn't understand. You can work around this by
-    either using ansi mode (or auto mode), or by using less -r (which will
-    pass through all terminal control codes, not just color control
-    codes).
-
-    On some systems (such as MSYS in Windows), the terminal may support
-    a different color mode than the pager program.
-
 ``commands``
 ------------
 
@@ -1786,14 +1772,10 @@ Setting used to control when to paginate and with what external tool. See
 :hg:`help pager` for details.
 
 ``pager``
-    Define the external tool used as pager.
+    If specified as ``internal:streampager`` (the default), the builtin
+    streampager is used, which supports showing progress bars and stderr.
 
-    If no pager is set, Mercurial uses the environment variable $PAGER.
-    If neither pager.pager, nor $PAGER is set, a default pager will be
-    used, typically `less` on Unix and `more` on Windows. Example::
-
-      [pager]
-      pager = less -FRX
+    Otherwise, the config specifies the external tool used as pager.
 
 ``ignore``
     List of commands to disable the pager for. Example::
@@ -1808,6 +1790,8 @@ Setting used to control when to paginate and with what external tool. See
     progress bars to stderr while the pager is running.  Depending on the
     pager, this may overlay the pager display.
 
+    Has no effect if streampager is used.
+
 ``encoding``
     Encoding to use to output to ther pager.
 
@@ -1815,6 +1799,8 @@ Setting used to control when to paginate and with what external tool. See
 
       [pager]
       encoding = utf-8
+
+    Has no effect if streampager is used.
 
 ``patch``
 ---------
