@@ -89,7 +89,7 @@ fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc
     config_store.get_config_handle(GC_GENERATION_PATH.to_string())
 }
 
-const DEFAULT_ALLOW_INLINE_PUT: bool = false;
+const DEFAULT_ALLOW_INLINE_PUT: bool = true;
 
 // base64 encoding for inline hash has an overhead
 pub const MAX_INLINE_LEN: usize = 255 * 3 / 4;
