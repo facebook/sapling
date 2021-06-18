@@ -2870,8 +2870,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // On Windows, we need to invalidate ProjectedFS on-disk state.
   if (entry.isMaterialized() ||
       getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
-      ((kPreciseInodeNumberMemory || folly::kIsWindows) &&
-       entry.isDirectory() &&
+      (kPreciseInodeNumberMemory && entry.isDirectory() &&
        getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified (or has saved state that must be
