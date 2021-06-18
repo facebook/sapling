@@ -13,7 +13,6 @@ use std::iter::FromIterator;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
-use futures::stream::FuturesUnordered;
 use http::StatusCode;
 use itertools::Itertools;
 use minibytes::Bytes;
@@ -174,20 +173,21 @@ impl Client {
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<T>, EdenApiError> {
         let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
-        let n_requests = requests.len();
-
         let (responses, stats) = self.client.send_async_with_progress(requests, progress)?;
 
-        let mut responses = responses.into_iter().collect::<FuturesUnordered<_>>();
-        let mut streams = Vec::with_capacity(n_requests);
-
-        while let Some(res) = responses.try_next().await? {
-            let res = raise_for_status(res).await?;
-            tracing::debug!("{:?}", ResponseMeta::from(&res));
-
-            let entries = res.into_cbor_stream::<T>().err_into().boxed();
-            streams.push(entries);
-        }
+        // Transform each response `Future` (which resolves when all of the HTTP
+        // headers for that response have been received) into a `Stream` that
+        // waits until all headers have been received and then starts yielding
+        // entries. This allows multiplexing the streams using `select_all`.
+        let streams = responses.into_iter().map(|fut| {
+            stream::once(async move {
+                let res = raise_for_status(fut.await?).await?;
+                tracing::debug!("{:?}", ResponseMeta::from(&res));
+                Ok::<_, EdenApiError>(res.into_cbor_stream::<T>().err_into())
+            })
+            .try_flatten()
+            .boxed()
+        });
 
         let entries = stream::select_all(streams).boxed();
         let stats = stats.err_into().boxed();
