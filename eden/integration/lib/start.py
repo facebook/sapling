@@ -41,8 +41,20 @@ def run_eden_start_with_real_daemon(
         "--daemon-binary",
         FindExe.EDEN_DAEMON,
     ]
+
+    extra_daemon_args = []
+
+    privhelper = FindExe.EDEN_PRIVHELPER
+    if privhelper is not None:
+        extra_daemon_args.extend(["--privhelper_path", privhelper])
+
     if eden_start_needs_allow_root_option(systemd=systemd):
-        start_cmd.extend(["--", "--allowRoot"])
+        extra_daemon_args.append("--allowRoot")
+
+    if extra_daemon_args:
+        start_cmd.append("--")
+        start_cmd.extend(extra_daemon_args)
+
     subprocess.check_call(start_cmd, env=env)
 
     yield
