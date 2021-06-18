@@ -173,10 +173,6 @@ const AbsolutePath& CheckoutConfig::getClientDirectory() const {
   return clientDirectory_;
 }
 
-CaseSensitivity CheckoutConfig::getCaseSensitive() const {
-  return caseSensitive_;
-}
-
 AbsolutePath CheckoutConfig::getSnapshotPath() const {
   return clientDirectory_ + kSnapshotFile;
 }

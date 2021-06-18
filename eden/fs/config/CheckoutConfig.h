@@ -110,7 +110,9 @@ class CheckoutConfig {
   const AbsolutePath& getClientDirectory() const;
 
   /** Whether this repository is mounted in case-sensitive mode */
-  CaseSensitivity getCaseSensitive() const;
+  CaseSensitivity getCaseSensitive() const {
+    return caseSensitive_;
+  }
 
   /** Whether this repository should allow non-utf8 path */
   bool getRequireUtf8Path() const {

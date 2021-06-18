@@ -942,6 +942,56 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
       1, inode->getContents().rlock()->entries.count("differentfile.txt"_pc));
 }
 
+TEST(Checkout, checkoutCaseChanged) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("root", "root");
+  TestMount testMount{builder1};
+
+  auto lowerBuilder = builder1.clone();
+  lowerBuilder.setFile("dir/file1", "lower one");
+  lowerBuilder.setFile("dir/file2", "lower two");
+  lowerBuilder.finalize(testMount.getBackingStore(), true);
+  auto lowerCommit = testMount.getBackingStore()->putCommit("2", lowerBuilder);
+  lowerCommit->setReady();
+
+  auto upperBuilder = builder1.clone();
+  upperBuilder.setFile("DIR/FILE1", "upper one");
+  upperBuilder.setFile("DIR/FILE2", "upper two");
+  upperBuilder.finalize(testMount.getBackingStore(), true);
+  auto upperCommit = testMount.getBackingStore()->putCommit("3", upperBuilder);
+  upperCommit->setReady();
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutToLowerResult =
+      testMount.getEdenMount()
+          ->checkout(RootId{"2"}, std::nullopt, __func__)
+          .getVia(executor);
+  EXPECT_EQ(checkoutToLowerResult.conflicts.size(), 0);
+
+  auto checkoutToUpperResult =
+      testMount.getEdenMount()
+          ->checkout(RootId{"3"}, std::nullopt, __func__)
+          .getVia(executor);
+  EXPECT_EQ(checkoutToUpperResult.conflicts.size(), 0);
+
+  auto file1 = testMount.getFileInode("DIR/FILE1"_relpath);
+  auto file2 = testMount.getFileInode("DIR/FILE2"_relpath);
+
+  EXPECT_FILE_INODE(file1, "upper one", 0644);
+  EXPECT_FILE_INODE(file2, "upper two", 0644);
+
+  EXPECT_EQ(*file1->getPath(), "DIR/FILE1"_relpath);
+  EXPECT_EQ(*file2->getPath(), "DIR/FILE2"_relpath);
+
+  if (testMount.getEdenMount()->getCheckoutConfig()->getCaseSensitive() ==
+      CaseSensitivity::Insensitive) {
+    EXPECT_FILE_INODE(
+        testMount.getFileInode("dir/file1"_relpath), "upper one", 0644);
+    EXPECT_FILE_INODE(
+        testMount.getFileInode("dir/file2"_relpath), "upper two", 0644);
+  }
+}
+
 #ifndef _WIN32
 TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto builder1 = FakeTreeBuilder{};

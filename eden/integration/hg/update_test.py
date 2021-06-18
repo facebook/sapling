@@ -546,6 +546,46 @@ class UpdateTest(EdenHgTestCase):
             {f"foo/_{thread_id}.log": "I" for thread_id in range(num_rename_threads)}
         )
 
+    def test_change_casing_of_populated(self) -> None:
+        self.repo.update(self.commit1)
+
+        self.repo.write_file("DIR2/FILE1", "one upper")
+        self.repo.write_file("DIR2/FILE2", "two upper")
+        upper = self.repo.commit("Upper")
+
+        self.repo.update(self.commit1)
+
+        self.repo.write_file("dir2/file1", "one lower")
+        self.repo.write_file("dir2/file2", "two lower")
+        self.repo.commit("Lower")
+
+        # Make sure that everything was committed
+        self.assert_status_empty()
+
+        # Now update to the first commit...
+        self.repo.update(upper)
+
+        # And verify that status is clean
+        self.assert_status_empty()
+
+        self.assertEqual(self.read_file("DIR2/FILE1"), "one upper")
+        self.assertEqual(self.read_file("DIR2/FILE2"), "two upper")
+
+        if sys.platform == "win32":
+            # Double check that the the old names could still be read thanks to
+            # the insensitivity of the FS
+            self.assertEqual(self.read_file("dir2/file1"), "one upper")
+            self.assertEqual(self.read_file("dir2/file2"), "two upper")
+
+        # Finally, make sure that the on-disk casing is the expected one.
+        rootlisting = os.listdir(self.repo.path)
+        self.assertIn("DIR2", rootlisting)
+        self.assertNotIn("dir2", rootlisting)
+        self.assertEqual(
+            set(os.listdir(os.path.join(self.repo.path, "DIR2"))),
+            {"FILE1", "FILE2"},
+        )
+
     if sys.platform == "win32":
 
         def test_remove_materialized_while_stopped(self) -> None:

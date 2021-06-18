@@ -2139,6 +2139,48 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
       });
 }
 
+namespace {
+/**
+ * Value returned by comparePathComponent
+ */
+enum class CompareResult {
+  EQUAL,
+  BEFORE,
+  AFTER,
+};
+
+/**
+ * Compare the 2 passed in path based on the case sensitivity.
+ *
+ * Returns:
+ *  - CompareResult::EQUAL if both are equal according to the case sensitivity
+ *  - CompareResult::BEFORE if left is lexicographically before right
+ *  - CompareResult::AFTER if left is lexicographically after right
+ *
+ */
+CompareResult comparePathComponent(
+    PathComponentPiece left,
+    PathComponentPiece right,
+    CaseSensitivity caseSensitivity) {
+  if (caseSensitivity == CaseSensitivity::Insensitive) {
+    if (left.stringPiece().equals(
+            right.stringPiece(), folly::AsciiCaseInsensitive())) {
+      return CompareResult::EQUAL;
+    }
+  } else {
+    if (left == right) {
+      return CompareResult::EQUAL;
+    }
+  }
+
+  if (left < right) {
+    return CompareResult::BEFORE;
+  } else {
+    return CompareResult::AFTER;
+  }
+}
+} // namespace
+
 /*
 This algorithm starts at the root `TreeInode` of the working directory and the
 root source control commit `Tree`, traversing the trees in a level order
@@ -2672,34 +2714,41 @@ void TreeInode::computeCheckoutActions(
           pendingLoads,
           wasDirectoryListModified);
       ++oldIdx;
-    } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
-      action = processCheckoutEntry(
-          ctx,
-          *contents,
-          &oldEntries[oldIdx],
-          nullptr,
-          pendingLoads,
-          wasDirectoryListModified);
-      ++oldIdx;
-    } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
-      action = processCheckoutEntry(
-          ctx,
-          *contents,
-          nullptr,
-          &newEntries[newIdx],
-          pendingLoads,
-          wasDirectoryListModified);
-      ++newIdx;
     } else {
-      action = processCheckoutEntry(
-          ctx,
-          *contents,
-          &oldEntries[oldIdx],
-          &newEntries[newIdx],
-          pendingLoads,
-          wasDirectoryListModified);
-      ++oldIdx;
-      ++newIdx;
+      auto compare = comparePathComponent(
+          oldEntries[oldIdx].getName(),
+          newEntries[newIdx].getName(),
+          getMount()->getCheckoutConfig()->getCaseSensitive());
+
+      if (compare == CompareResult::BEFORE) {
+        action = processCheckoutEntry(
+            ctx,
+            *contents,
+            &oldEntries[oldIdx],
+            nullptr,
+            pendingLoads,
+            wasDirectoryListModified);
+        ++oldIdx;
+      } else if (compare == CompareResult::AFTER) {
+        action = processCheckoutEntry(
+            ctx,
+            *contents,
+            nullptr,
+            &newEntries[newIdx],
+            pendingLoads,
+            wasDirectoryListModified);
+        ++newIdx;
+      } else {
+        action = processCheckoutEntry(
+            ctx,
+            *contents,
+            &oldEntries[oldIdx],
+            &newEntries[newIdx],
+            pendingLoads,
+            wasDirectoryListModified);
+        ++oldIdx;
+        ++newIdx;
+      }
     }
 
     if (action) {
@@ -2778,11 +2827,12 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
       auto success = invalidateChannelEntryCache(state, name, std::nullopt);
       if (success.hasValue()) {
-        contents.emplace(
+        auto [it, inserted] = contents.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
+        XDCHECK(inserted);
       } else {
         ctx->addError(this, name, success.exception());
       }
@@ -2868,19 +2918,18 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     return nullptr;
   }
 
-  // Update the entry
-  if (!newScmEntry) {
-    // TODO: remove entry.getInodeNumber() from both the overlay and the
-    // InodeTable.  Or at least verify that it's already done in a test.
-    //
-    // This logic could potentially be unified with TreeInode::tryRemoveChild
-    // and TreeInode::checkoutUpdateEntry.
-    contents.erase(it);
-  } else {
-    entry = DirEntry{
+  // TODO: remove entry.getInodeNumber() from both the overlay and the
+  // InodeTable.  Or at least verify that it's already done in a test.
+  //
+  // This logic could potentially be unified with TreeInode::tryRemoveChild
+  // and TreeInode::checkoutUpdateEntry.
+  contents.erase(it);
+  if (newScmEntry) {
+    contents.emplace(
+        newScmEntry->getName(),
         modeFromTreeEntryType(newScmEntry->getType()),
         getOverlay()->allocateInodeNumber(),
-        newScmEntry->getHash()};
+        newScmEntry->getHash());
   }
 
   wasDirectoryListModified = true;
@@ -2906,6 +2955,15 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   return nullptr;
 }
+
+namespace {
+/**
+ * Get this Inode's name.
+ */
+PathComponent getInodeName(CheckoutContext* ctx, const InodePtr& inode) {
+  return inode->getLocationInfo(ctx->renameLock()).name;
+}
+} // namespace
 
 Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
@@ -2935,33 +2993,34 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             << "entry removed while holding rename lock during checkout: "
             << inode->getLogPath();
       }
-      inodeName = copyCanonicalInodeName(it);
-      name = inodeName->piece();
       if (it->second.getInode() != inode.get()) {
         return EDEN_BUG_FUTURE(InvalidationRequired)
             << "entry changed while holding rename lock during checkout: "
             << inode->getLogPath();
       }
 
-      // Tell the OS to invalidate its cache for this entry.
+      // Tell the OS to invalidate its cache for this entry. For case
+      // insensitive mounts, we need to invalidate the current name, hence
+      // using it->first instead of name.
       auto success = invalidateChannelEntryCache(
-          *contents, name, it->second.getInodeNumber());
+          *contents, it->first, it->second.getInodeNumber());
       if (success.hasException()) {
-        ctx->addError(this, name, success.exception());
+        ctx->addError(this, it->first, success.exception());
         return InvalidationRequired::No;
       }
 
       // This is a file, so we can simply unlink it, and replace/remove the
       // entry as desired.
-      deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
+      deletedInode = inode->markUnlinked(this, it->first, ctx->renameLock());
+      contents->entries.erase(it);
+
       if (newScmEntry) {
-        XDCHECK_EQ(newScmEntry->getName(), name);
-        it->second = DirEntry(
+        auto [it, inserted] = contents->entries.emplace(
+            newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->getHash());
-      } else {
-        contents->entries.erase(it);
+        XDCHECK(inserted);
       }
     }
 
@@ -2974,12 +3033,21 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   // If we are going from a directory to a directory, all we need to do
   // is call checkout().
   if (newTree) {
-    // TODO: Also apply permissions changes to the entry.
-
     XCHECK(newScmEntry.has_value());
     XCHECK(newScmEntry->isTree());
-    return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
-        .thenValue([](folly::Unit) { return InvalidationRequired::No; });
+
+    if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
+            CaseSensitivity::Insensitive &&
+        newScmEntry->getName() != getInodeName(ctx, treeInode)) {
+      // For case insensitive mount, the name of the new and old entries might
+      // differ in casing. In that case, we want to fallthrough to the case
+      // below to force the old name to be removed and then re-added with its
+      // new name.
+    } else {
+      // TODO: Also apply permissions changes to the entry.
+      return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
+          .thenValue([](folly::Unit) { return InvalidationRequired::No; });
+    }
   }
 
   // We need to remove this directory (and possibly replace it with a file).
@@ -2989,11 +3057,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   // returns if the directory is empty.
   return treeInode->checkout(ctx, std::move(oldTree), nullptr)
       .thenValue(
-          [ctx,
-           name = PathComponent{name},
-           parentInode = inodePtrFromThis(),
-           treeInode,
-           newScmEntry](auto&&) -> folly::Future<InvalidationRequired> {
+          [ctx, parentInode = inodePtrFromThis(), treeInode, newScmEntry](
+              auto&&) -> folly::Future<InvalidationRequired> {
             // Make sure the treeInode was completely removed by the checkout.
             // If there were still untracked files inside of it, it won't have
             // been deleted, and we have a conflict that we cannot resolve.
@@ -3026,12 +3091,15 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
               // flush the readdir cache right here.
               auto success = parentInode->invalidateChannelDirCache(*contents);
               if (success.hasException()) {
-                ctx->addError(parentInode.get(), name, success.exception());
+                ctx->addError(
+                    parentInode.get(),
+                    getInodeName(ctx, treeInode),
+                    success.exception());
                 return InvalidationRequired::No;
               }
 
               auto ret = contents->entries.emplace(
-                  name,
+                  newScmEntry->getName(),
                   modeFromTreeEntryType(newScmEntry->getType()),
                   parentInode->getOverlay()->allocateInodeNumber(),
                   newScmEntry->getHash());
@@ -3039,6 +3107,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             }
 
             if (!inserted) {
+              const auto& name = getInodeName(ctx, treeInode);
               // Hmm.  Someone else already created a new entry in this location
               // before we had a chance to add our new entry.  We don't block
               // new file or directory creations during a checkout operation, so
