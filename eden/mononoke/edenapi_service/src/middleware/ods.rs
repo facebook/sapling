@@ -15,24 +15,24 @@ use crate::handlers::{EdenApiMethod, HandlerInfo};
 
 define_stats! {
     prefix = "mononoke.edenapi.request";
-    requests: dynamic_timeseries("{}.requests", (repo_and_method: String); Rate, Sum),
-    success: dynamic_timeseries("{}.success", (repo_and_method: String); Rate, Sum),
-    failure_4xx: dynamic_timeseries("{}.failure_4xx", (repo_and_method: String); Rate, Sum),
-    failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); Rate, Sum),
-    response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (repo_and_method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    files_duration: dynamic_histogram("{}.files_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    trees_duration: dynamic_histogram("{}.trees_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    complete_trees_duration: dynamic_histogram("{}.complete_trees_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    history_duration: dynamic_histogram("{}.history_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    commit_location_to_hash_duration: dynamic_histogram("{}.commit_location_to_hash_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    commit_hash_to_location_duration: dynamic_histogram("{}.commit_hash_to_location_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    commit_revlog_data_duration: dynamic_histogram("{}.commit_revlog_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    commit_hash_lookup_duration: dynamic_histogram("{}.commit_hash_lookup_duration_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    full_idmap_clone_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    bookmarks_duration: dynamic_histogram("{}.bookmarks_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    lookup_duration: dynamic_histogram("{}.files_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    upload_file_duration: dynamic_histogram("{}.files_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    requests: dynamic_timeseries("{}.requests", (method: String); Rate, Sum),
+    success: dynamic_timeseries("{}.success", (method: String); Rate, Sum),
+    failure_4xx: dynamic_timeseries("{}.failure_4xx", (method: String); Rate, Sum),
+    failure_5xx: dynamic_timeseries("{}.failure_5xx", (method: String); Rate, Sum),
+    response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    files_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    complete_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    commit_location_to_hash_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    commit_hash_to_location_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    commit_revlog_data_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    commit_hash_lookup_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    full_idmap_clone_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    bookmarks_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    lookup_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    upload_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -47,7 +47,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let hander_info = state.try_borrow::<HandlerInfo>()?;
     let method = hander_info.method?;
     let repo = hander_info.repo.clone()?;
-    let repo_and_method = format!("{}.{}", &repo, method.to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -57,38 +56,39 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
             use EdenApiMethod::*;
             match method {
-                Files => STATS::files_duration.add_value(dur_ms, (repo,)),
-                Trees => STATS::trees_duration.add_value(dur_ms, (repo,)),
-                CompleteTrees => STATS::complete_trees_duration.add_value(dur_ms, (repo,)),
-                History => STATS::history_duration.add_value(dur_ms, (repo,)),
+                Files => STATS::files_duration_ms.add_value(dur_ms),
+                Trees => STATS::trees_duration_ms.add_value(dur_ms),
+                CompleteTrees => STATS::complete_trees_duration_ms.add_value(dur_ms),
+                History => STATS::history_duration_ms.add_value(dur_ms),
                 CommitLocationToHash => {
-                    STATS::commit_location_to_hash_duration.add_value(dur_ms, (repo,))
+                    STATS::commit_location_to_hash_duration_ms.add_value(dur_ms)
                 }
                 CommitHashToLocation => {
-                    STATS::commit_hash_to_location_duration.add_value(dur_ms, (repo,))
+                    STATS::commit_hash_to_location_duration_ms.add_value(dur_ms)
                 }
-                CommitRevlogData => STATS::commit_revlog_data_duration.add_value(dur_ms, (repo,)),
-                CommitHashLookup => STATS::commit_hash_lookup_duration.add_value(dur_ms, (repo,)),
+                CommitRevlogData => STATS::commit_revlog_data_duration_ms.add_value(dur_ms),
+                CommitHashLookup => STATS::commit_hash_lookup_duration_ms.add_value(dur_ms),
                 Clone => STATS::clone_duration.add_value(dur_ms, (repo,)),
                 FullIdMapClone => STATS::full_idmap_clone_duration.add_value(dur_ms, (repo,)),
-                Bookmarks => STATS::bookmarks_duration.add_value(dur_ms, (repo,)),
-                Lookup => STATS::lookup_duration.add_value(dur_ms, (repo,)),
-                UploadFile => STATS::upload_file_duration.add_value(dur_ms, (repo,)),
+                Bookmarks => STATS::bookmarks_duration_ms.add_value(dur_ms),
+                Lookup => STATS::lookup_duration_ms.add_value(dur_ms),
+                UploadFile => STATS::upload_file_duration_ms.add_value(dur_ms),
             }
         }
 
-        STATS::requests.add_value(1, (repo_and_method.clone(),));
+        let method = method.to_string();
+        STATS::requests.add_value(1, (method.clone(),));
 
         if status.is_success() {
-            STATS::success.add_value(1, (repo_and_method.clone(),));
+            STATS::success.add_value(1, (method.clone(),));
         } else if status.is_client_error() {
-            STATS::failure_4xx.add_value(1, (repo_and_method.clone(),));
+            STATS::failure_4xx.add_value(1, (method.clone(),));
         } else if status.is_server_error() {
-            STATS::failure_5xx.add_value(1, (repo_and_method.clone(),));
+            STATS::failure_5xx.add_value(1, (method.clone(),));
         }
 
         if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
-            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (repo_and_method,))
+            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method,))
         }
     });
 
