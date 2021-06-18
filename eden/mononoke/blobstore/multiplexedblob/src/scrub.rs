@@ -74,6 +74,10 @@ pub enum ScrubWriteMostly {
     /// Mode for populating empty stores.  Assumes its already missing. Don't attempt to read. Write with IfAbsent so won't overwrite if run incorrectluy.
     /// More efficient than the above if thes store is totally empty.
     PopulateIfAbsent,
+    /// Mode for rescrubbing write-mostly stores before enabling them. Assumes that the data in them is correct,
+    /// and won't read from the main stores unless the write-mostly stores have missing data or read failures
+    /// This ensures that load on the main stores is kept to a minimum
+    ScrubIfAbsent,
 }
 
 #[derive(Clone, Debug)]
@@ -317,7 +321,8 @@ async fn blobstore_get(
                                     match scrub_options.scrub_action_on_missing_write_mostly {
                                         ScrubWriteMostly::SkipMissing => None,
                                         ScrubWriteMostly::Scrub => Some(PutBehaviour::Overwrite),
-                                        ScrubWriteMostly::PopulateIfAbsent => {
+                                        ScrubWriteMostly::PopulateIfAbsent
+                                        | ScrubWriteMostly::ScrubIfAbsent => {
                                             Some(PutBehaviour::IfAbsent)
                                         }
                                     };

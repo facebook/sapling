@@ -180,6 +180,25 @@ impl MultiplexedBlobstoreBase {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
+        if write_mostly == ScrubWriteMostly::ScrubIfAbsent {
+            let mut results = join_all(multiplexed_get(
+                ctx,
+                self.write_mostly_blobstores.as_ref(),
+                key,
+                OperationType::ScrubGet,
+                scuba.clone(),
+            ))
+            .await;
+            if let Some((_, Ok(success_return @ Some(_)))) = results.pop() {
+                if results.iter().all(|r| match &r.1 {
+                    Ok(ret @ Some(_)) => ret == &success_return,
+                    _ => false,
+                }) {
+                    return Ok(success_return);
+                }
+            }
+        }
+
         let results = join_all(
             multiplexed_get(
                 ctx,
@@ -202,12 +221,14 @@ impl MultiplexedBlobstoreBase {
                         )
                         .map(|f| f.map(|v| (true, v)).left_future()),
                     ),
-                    ScrubWriteMostly::PopulateIfAbsent => Either::Right(
-                        // No need to query, give None for each store
-                        self.write_mostly_blobstores.iter().map(|(id, _store)| {
-                            future::ready((true, (*id, Ok(None)))).right_future()
-                        }),
-                    ),
+                    ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
+                        Either::Right(
+                            // No need to query, give None for each store
+                            self.write_mostly_blobstores.iter().map(|(id, _store)| {
+                                future::ready((true, (*id, Ok(None)))).right_future()
+                            }),
+                        )
+                    }
                 }
                 .map(|f| f.right_future()),
             ),
