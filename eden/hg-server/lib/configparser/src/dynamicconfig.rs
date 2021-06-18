@@ -363,7 +363,7 @@ pub(crate) fn get_platform() -> Platform {
     match os_info.os_type() {
         Type::Fedora => Platform::Fedora,
         Type::Macos => Platform::OSX,
-        Type::Centos => Platform::Centos,
+        Type::CentOS => Platform::Centos,
         Type::Ubuntu => Platform::Ubuntu,
         Type::Windows => Platform::Windows,
         _ => Platform::Unknown,
