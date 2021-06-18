@@ -54,7 +54,12 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
                 )
                 start_process.wait()
 
-        test(start_args=["--", "--allowRoot"])
+        real_daemon_args = ["--daemon-binary", FindExe.EDEN_DAEMON, "--", "--allowRoot"]
+        privhelper = FindExe.EDEN_PRIVHELPER
+        if privhelper is not None:
+            real_daemon_args.extend(["--privhelper_path", privhelper])
+
+        test(start_args=real_daemon_args)
         test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     def test_eden_start_starts_systemd_service(self) -> None:
