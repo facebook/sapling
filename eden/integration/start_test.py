@@ -135,6 +135,11 @@ class DirectInvokeTest(testcase.IntegrationTestCase):
     def test_eden_cmd_arg(self) -> None:
         """Directly invoking edenfs with an edenfsctl subcommand should fail."""
         cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]
+
+        privhelper = FindExe.EDEN_PRIVHELPER
+        if privhelper is not None:
+            cmd.extend(["--privhelper_path", privhelper])
+
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertNotEqual(out.returncode, 0)
         self.assertEqual(b"", out.stdout)
