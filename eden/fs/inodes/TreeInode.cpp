@@ -2472,18 +2472,25 @@ Future<Unit> TreeInode::computeDiff(
         // This entry is present in the old tree but not the old one.
         processRemoved(scEntries[scIdx]);
         ++scIdx;
-      } else if (scEntries[scIdx].getName() < inodeIter->first) {
-        processRemoved(scEntries[scIdx]);
-        ++scIdx;
-      } else if (scEntries[scIdx].getName() > inodeIter->first) {
-        processUntracked(inodeIter->first, &inodeIter->second);
-        ++inodeIter;
       } else {
-        const auto& scmEntry = scEntries[scIdx];
-        auto* inodeEntry = &inodeIter->second;
-        ++scIdx;
-        ++inodeIter;
-        processBothPresent(scmEntry, inodeEntry);
+        auto compare = comparePathComponent(
+            scEntries[scIdx].getName(),
+            inodeIter->first,
+            getMount()->getCheckoutConfig()->getCaseSensitive());
+
+        if (compare == CompareResult::BEFORE) {
+          processRemoved(scEntries[scIdx]);
+          ++scIdx;
+        } else if (compare == CompareResult::AFTER) {
+          processUntracked(inodeIter->first, &inodeIter->second);
+          ++inodeIter;
+        } else {
+          const auto& scmEntry = scEntries[scIdx];
+          auto* inodeEntry = &inodeIter->second;
+          ++scIdx;
+          ++inodeIter;
+          processBothPresent(scmEntry, inodeEntry);
+        }
       }
     }
   }

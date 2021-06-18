@@ -11,6 +11,7 @@
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
@@ -44,6 +45,8 @@ T getFutureResult(folly::Future<T>& future, const char* filename, int line) {
 
 #define EXPECT_FUTURE_RESULT(future) getFutureResult(future, __FILE__, __LINE__)
 
+constexpr folly::StringPiece kReadmeContent{"No one reads docs.\n"};
+
 /**
  * A helper class for implementing the various diff tests.
  *
@@ -63,7 +66,7 @@ class DiffTest {
         {"src/2.txt", "This is src/2.txt.\n"},
         {"src/a/b/3.txt", "This is 3.txt.\n"},
         {"src/a/b/c/4.txt", "This is 4.txt.\n"},
-        {"doc/readme.txt", "No one reads docs.\n"},
+        {"doc/readme.txt", kReadmeContent},
         {"toplevel.txt", "toplevel\n"},
     });
     mount_.initialize(builder_);
@@ -126,6 +129,7 @@ class DiffTest {
  private:
   FakeTreeBuilder builder_;
   TestMount mount_;
+  std::string readmeContent_;
 };
 
 /**
@@ -282,6 +286,29 @@ TEST(DiffTest, fileReplacedWithDir) {
           std::make_pair("src/2.txt/subdir/foo.txt", ScmFileStatus::ADDED),
           std::make_pair("src/2.txt/subdir/bar.txt", ScmFileStatus::ADDED),
           std::make_pair("src/2.txt", ScmFileStatus::REMOVED)));
+}
+
+TEST(DiffTest, fileCasingChange) {
+  DiffTest test;
+  auto& mount = test.getMount();
+  mount.deleteFile("doc/readme.txt");
+  mount.rmdir("doc");
+
+  mount.mkdir("DOC");
+  mount.addFile("DOC/README.txt", kReadmeContent);
+
+  auto result = test.diff();
+
+  if (mount.getEdenMount()->getCheckoutConfig()->getCaseSensitive() ==
+      CaseSensitivity::Insensitive) {
+    test.checkNoChanges();
+  } else {
+    EXPECT_THAT(
+        *result.entries_ref(),
+        UnorderedElementsAre(
+            std::make_pair("doc/readme.txt", ScmFileStatus::REMOVED),
+            std::make_pair("DOC/README.txt", ScmFileStatus::ADDED)));
+  }
 }
 
 // Test file adds/removes/modifications with various orderings of names between
