@@ -177,15 +177,11 @@ impl Client {
 
         let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
 
-        let mut meta = Vec::with_capacity(n_requests);
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {
             let res = raise_for_status(res).await?;
-
-            let response_meta = ResponseMeta::from(&res);
-            tracing::debug!("{:?}", &response_meta);
-            meta.push(response_meta);
+            tracing::debug!("{:?}", ResponseMeta::from(&res));
 
             let entries = res.into_cbor_stream::<T>().err_into().boxed();
             streams.push(entries);
@@ -194,11 +190,7 @@ impl Client {
         let entries = stream::select_all(streams).boxed();
         let stats = stats.err_into().boxed();
 
-        Ok(Fetch {
-            meta,
-            entries,
-            stats,
-        })
+        Ok(Fetch { entries, stats })
     }
 
     /// Fetch data from the server.
@@ -218,21 +210,13 @@ impl Client {
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
     {
-        let Fetch {
-            meta,
-            entries,
-            stats,
-        } = self.fetch_raw::<T>(requests, progress).await?;
+        let Fetch { entries, stats } = self.fetch_raw::<T>(requests, progress).await?;
 
         let entries = entries
             .and_then(|v| future::ready(v.to_api().map_err(|e| EdenApiError::from(e.into()))))
             .boxed();
 
-        Ok(Fetch {
-            meta,
-            entries,
-            stats,
-        })
+        Ok(Fetch { entries, stats })
     }
 
     /// Log the request to the configured log directory as JSON.
@@ -371,11 +355,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        let Fetch {
-            meta,
-            entries,
-            stats,
-        } = self
+        let Fetch { entries, stats } = self
             .fetch::<WireHistoryResponseChunk>(requests, progress)
             .await?;
 
@@ -385,11 +365,7 @@ impl EdenApi for Client {
             .try_flatten()
             .boxed();
 
-        Ok(Fetch {
-            meta,
-            entries,
-            stats,
-        })
+        Ok(Fetch { entries, stats })
     }
 
     async fn trees(
@@ -722,7 +698,6 @@ impl EdenApi for Client {
         }
 
         Ok(Fetch {
-            meta: Default::default(),
             stats,
             entries: Box::pin(futures::stream::iter(
                 knowns
@@ -860,7 +835,6 @@ impl EdenApi for Client {
             .collect::<Vec<Result<_, _>>>();
 
         Ok(Fetch {
-            meta: Default::default(),
             stats: Box::pin(async { Ok(Default::default()) }),
             entries: Box::pin(futures::stream::iter(all_tokens)),
         })

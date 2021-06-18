@@ -236,7 +236,6 @@ async fn handle_response<T: ToWire>(res: Fetch<T>, bar: ProgressBar) -> Result<(
     bar.finish_at_current_pos();
 
     log::info!("{}", &stats);
-    log::trace!("Response metadata: {:#?}", &res.meta);
 
     if atty::is(atty::Stream::Stdout) {
         log::warn!("Not writing output because stdout is a TTY");
@@ -256,7 +255,6 @@ async fn handle_response_raw<T: Serialize>(res: Fetch<T>, bar: ProgressBar) -> R
     bar.finish_at_current_pos();
 
     log::info!("{}", &stats);
-    log::trace!("Response metadata: {:#?}", &res.meta);
 
     if atty::is(atty::Stream::Stdout) {
         log::warn!("Not writing output because stdout is a TTY");

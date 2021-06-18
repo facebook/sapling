@@ -525,7 +525,6 @@ fn extract_rename(data: &[u8]) -> Option<Key> {
 /// Convert `Vec<T>` to `Fetch<T>`.
 fn convert_to_fetch<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>) -> Fetch<T> {
     Fetch {
-        meta: Default::default(),
         stats: Box::pin(async { Ok(Default::default()) }),
         entries: Box::pin(futures::stream::iter(values)),
     }

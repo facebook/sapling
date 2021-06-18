@@ -17,7 +17,6 @@ pub use edenapi_trait::ResponseMeta;
 
 /// Non-async version of `Fetch`.
 pub struct BlockingFetch<T> {
-    pub meta: Vec<ResponseMeta>,
     pub entries: Vec<T>,
     pub stats: Stats,
 }
@@ -27,19 +26,9 @@ impl<T> BlockingFetch<T> {
     where
         F: Future<Output = Result<Fetch<T>, EdenApiError>>,
     {
-        let Fetch {
-            meta,
-            entries,
-            stats,
-        } = block_on(fetch)?;
-
+        let Fetch { entries, stats } = block_on(fetch)?;
         let entries = block_on(entries.try_collect())?;
         let stats = block_on(stats)?;
-
-        Ok(Self {
-            meta,
-            entries,
-            stats,
-        })
+        Ok(Self { entries, stats })
     }
 }

@@ -29,10 +29,6 @@ pub type StatsFuture = Pin<Box<dyn Future<Output = Result<Stats, EdenApiError>> 
 /// The result of a data fetching operation, which may have involved
 /// several individual HTTP requests.
 pub struct Fetch<T> {
-    /// Metadata about each of the requests that were sent during fetching,
-    /// arranged in the order in which the responses arrived.
-    pub meta: Vec<ResponseMeta>,
-
     /// A `Stream` containing the combined responses for all of the requests.
     /// There are no ordering guarantees; entries from different HTTP responses
     /// may be arbitrarily interleaved.
@@ -47,7 +43,6 @@ pub struct Fetch<T> {
 impl<T: Send + 'static> Fetch<T> {
     pub fn empty() -> Self {
         Self {
-            meta: Vec::new(),
             entries: stream::empty().boxed(),
             stats: future::ok(Stats::default()).boxed(),
         }

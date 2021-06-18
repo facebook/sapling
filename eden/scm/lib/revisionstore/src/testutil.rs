@@ -251,7 +251,6 @@ impl FakeEdenApi {
             .collect::<Vec<_>>();
 
         Ok(Fetch {
-            meta: vec![ResponseMeta::default()],
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
@@ -272,7 +271,6 @@ impl FakeEdenApi {
             .collect::<Vec<_>>();
 
         Ok(Fetch {
-            meta: vec![ResponseMeta::default()],
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
@@ -310,7 +308,6 @@ impl EdenApi for FakeEdenApi {
             .collect::<Vec<_>>();
 
         Ok(Fetch {
-            meta: vec![ResponseMeta::default()],
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
