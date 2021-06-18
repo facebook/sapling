@@ -23,7 +23,7 @@ mod response;
 mod stats;
 mod stream;
 
-pub use client::{HttpClient, ResponseStream, StatsFuture};
+pub use client::{HttpClient, ResponseFuture, StatsFuture};
 pub use curl::easy::HttpVersion;
 pub use errors::{Abort, HttpClientError, TlsError};
 pub use header::Header;

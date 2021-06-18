@@ -13,6 +13,7 @@ use std::iter::FromIterator;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
+use futures::stream::FuturesUnordered;
 use http::StatusCode;
 use itertools::Itertools;
 use minibytes::Bytes;
@@ -175,8 +176,9 @@ impl Client {
         let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
         let n_requests = requests.len();
 
-        let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
+        let (responses, stats) = self.client.send_async_with_progress(requests, progress)?;
 
+        let mut responses = responses.into_iter().collect::<FuturesUnordered<_>>();
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {

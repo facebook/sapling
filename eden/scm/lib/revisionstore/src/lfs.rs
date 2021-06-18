@@ -26,7 +26,7 @@ use std::{
 use anyhow::{bail, ensure, format_err, Context, Result};
 use futures::{
     future::FutureExt,
-    stream::{iter, StreamExt, TryStreamExt},
+    stream::{iter, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use http::status::StatusCode;
 use minibytes::Bytes;
@@ -1103,7 +1103,8 @@ impl LfsRemoteInner {
 
                     let req = add_extra(req);
 
-                    let (mut stream, _) = client.send_async(vec![req])?;
+                    let (responses, _) = client.send_async(vec![req])?;
+                    let mut stream = responses.into_iter().collect::<FuturesUnordered<_>>();
 
                     let reply = timeout(request_timeout, stream.next())
                         .await

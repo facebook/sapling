@@ -24,8 +24,8 @@ use crate::{
     stats::Stats,
 };
 
-pub type ResponseStream =
-    Pin<Box<dyn Stream<Item = Result<AsyncResponse, HttpClientError>> + Send + 'static>>;
+pub type ResponseFuture =
+    Pin<Box<dyn Future<Output = Result<AsyncResponse, HttpClientError>> + Send + 'static>>;
 pub type StatsFuture =
     Pin<Box<dyn Future<Output = Result<Stats, HttpClientError>> + Send + 'static>>;
 
@@ -130,29 +130,28 @@ impl HttpClient {
     }
 
     /// Async version of `send` which runs all of the given request concurrently
-    /// in another thread. Returns a stream of responses (returned in the order
-    /// in which they arrive) as well as a future that will return aggregated
-    /// transfer statistics once all of the requests have completed.
+    /// in another thread.
     ///
-    /// Note that the response stream will yield a `Response` whenever all of
-    /// the headers for that responses have been received. The response body is
-    /// available as a `Stream` inside of each returned `Response` struct
+    /// Returns a `Vec` of `ResponseFuture`s corresponding to each of the given
+    /// input `Request`s. (They are returned in the same order as they were
+    /// passed in.) Each `ResponseFuture` will resolve once all of the headers
+    /// for that request have been received. The resulting `AsyncResponse` can
+    /// be used to access the headers and body stream.
     pub fn send_async<I: IntoIterator<Item = Request>>(
         &self,
         requests: I,
-    ) -> Result<(ResponseStream, StatsFuture), HttpClientError> {
+    ) -> Result<(Vec<ResponseFuture>, StatsFuture), HttpClientError> {
         self.send_async_with_progress(requests, |_| ())
     }
 
-    /// Same as `send_async()`, but takes an additional closure for
-    /// monitoring the collective progress of all of the transfers.
-    /// The closure will be called whenever any of the underlying
-    /// transfers make progress.
+    /// Same as `send_async()`, but takes an additional closure for monitoring
+    /// the collective progress of all of the transfers. The closure will be
+    /// called whenever any of the underlying transfers make progress.
     pub fn send_async_with_progress<I, P>(
         &self,
         requests: I,
         progress_cb: P,
-    ) -> Result<(ResponseStream, StatsFuture), HttpClientError>
+    ) -> Result<(Vec<ResponseFuture>, StatsFuture), HttpClientError>
     where
         I: IntoIterator<Item = Request>,
         P: FnMut(Progress) + Send + 'static,
@@ -160,15 +159,19 @@ impl HttpClient {
         let client = self.clone();
 
         let mut stream_requests = Vec::new();
-        let response_stream = stream::FuturesUnordered::new();
+        let mut responses = Vec::new();
+
         for req in requests {
             let (receiver, streams) = ChannelReceiver::new();
 
-            let req = req.into_streaming(receiver);
-            stream_requests.push(req);
+            // Create a blocking streaming HTTP request to be dispatched on a
+            // separate IO task.
+            stream_requests.push(req.into_streaming(receiver));
 
-            let res = AsyncResponse::new(streams);
-            response_stream.push(res);
+            // Create response Future to return to the caller. The response is
+            // linked to the request via channels, allowing async Rust code to
+            // seamlessly receive data from the IO task.
+            responses.push(AsyncResponse::new(streams).boxed());
         }
 
         let task = tokio::task::spawn_blocking(move || {
@@ -180,7 +183,7 @@ impl HttpClient {
             .map(|res| Ok(res??))
             .boxed();
 
-        Ok((response_stream.boxed(), stats))
+        Ok((responses, stats))
     }
 
     /// Perform the given requests, but stream the responses to the
@@ -440,9 +443,12 @@ mod tests {
         let req3 = Request::get(url3);
 
         let client = HttpClient::new();
-        let (stream, stats) = client.send_async(vec![req1, req2, req3])?;
+        let (futures, stats) = client.send_async(vec![req1, req2, req3])?;
 
-        let responses = stream.try_collect::<Vec<_>>().await?;
+        let mut responses = Vec::new();
+        for fut in futures {
+            responses.push(fut.await?);
+        }
 
         mock1.assert();
         mock2.assert();
