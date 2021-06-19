@@ -306,7 +306,14 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
-        let contentstore = self.contentstore;
+        let contentstore = if self
+            .config
+            .get_or_default::<bool>("scmstore", "contentstorefallback")?
+        {
+            self.contentstore
+        } else {
+            None
+        };
 
         let logging_regex = self
             .config
@@ -474,7 +481,14 @@ impl<'a> TreeStoreBuilder<'a> {
             None
         };
 
-        let contentstore = self.contentstore;
+        let contentstore = if self
+            .config
+            .get_or_default::<bool>("scmstore", "contentstorefallback")?
+        {
+            self.contentstore
+        } else {
+            None
+        };
 
         Ok(TreeStore {
             indexedlog_local,
