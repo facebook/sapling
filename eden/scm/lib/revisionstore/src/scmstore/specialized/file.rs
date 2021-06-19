@@ -33,8 +33,8 @@ use crate::{
     memcache::McData,
     remotestore::HgIdRemoteStore,
     ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
-    ExtStoredPolicy, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore, StoreKey,
-    StoreResult,
+    ExtStoredPolicy, LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore,
+    StoreKey, StoreResult,
 };
 
 pub struct FileStore {
@@ -282,38 +282,6 @@ impl FileStore {
         }
     }
 
-    /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
-    /// For compatibility with ContentStore::get_shared_mutable
-    #[instrument(skip(self))]
-    pub fn get_shared_mutable(&self) -> Result<Arc<dyn HgIdMutableDeltaStore>> {
-        if self.indexedlog_cache.is_none() && self.lfs_cache.is_none() {
-            bail!("cannot get shared_mutable, no local cache stores")
-        }
-        Ok(Arc::new(FileStore {
-            extstored_policy: self.extstored_policy.clone(),
-            lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
-
-            indexedlog_local: self.indexedlog_cache.clone(),
-            lfs_local: self.lfs_cache.clone(),
-
-            indexedlog_cache: None,
-            lfs_cache: None,
-            cache_to_local_cache: false,
-
-            memcache: None,
-            cache_to_memcache: false,
-
-            edenapi: None,
-            lfs_remote: None,
-
-            contentstore: None,
-            fetch_logger: self.fetch_logger.clone(),
-
-            aux_local: None,
-            aux_cache: None,
-        }))
-    }
-
     #[allow(unused_must_use)]
     #[instrument(skip(self))]
     pub fn flush(&self) -> Result<()> {
@@ -361,8 +329,44 @@ impl FileStore {
 
         result
     }
+}
 
-    pub fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+impl LegacyStore for FileStore {
+    /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
+    /// For compatibility with ContentStore::get_shared_mutable
+    #[instrument(skip(self))]
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+        // this is infallible in ContentStore so panic if there are no shared/cache stores.
+        assert!(
+            self.indexedlog_cache.is_some() || self.lfs_cache.is_some(),
+            "cannot get shared_mutable, no shared / local cache stores available"
+        );
+        Arc::new(FileStore {
+            extstored_policy: self.extstored_policy.clone(),
+            lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
+
+            indexedlog_local: self.indexedlog_cache.clone(),
+            lfs_local: self.lfs_cache.clone(),
+
+            indexedlog_cache: None,
+            lfs_cache: None,
+            cache_to_local_cache: false,
+
+            memcache: None,
+            cache_to_memcache: false,
+
+            edenapi: None,
+            lfs_remote: None,
+
+            contentstore: None,
+            fetch_logger: self.fetch_logger.clone(),
+
+            aux_local: None,
+            aux_cache: None,
+        })
+    }
+
+    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
         let mut seen = self.fetch_logger.take_seen();
         if let Some(contentstore) = self.contentstore.as_ref() {
             seen.extend(contentstore.get_logged_fetches());
@@ -1402,7 +1406,7 @@ impl RemoteDataStore for FileStore {
         // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need memcache + multiplex, etc)
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
-            multiplex.add_store(self.get_shared_mutable()?);
+            multiplex.add_store(self.get_shared_mutable());
             if let Some(ref memcache) = self.memcache {
                 multiplex.add_store(memcache.clone());
             }

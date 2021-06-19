@@ -10,6 +10,7 @@ use std::{
     ops::Deref,
     path::PathBuf,
     str::{self, FromStr},
+    sync::Arc,
 };
 
 use anyhow::{bail, Result};
@@ -99,6 +100,12 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
             },
         )
     }
+}
+
+pub trait LegacyStore: HgIdMutableDeltaStore + RemoteDataStore + Send + Sync {
+    fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>>;
+    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf>;
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

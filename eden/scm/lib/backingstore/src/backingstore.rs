@@ -16,7 +16,7 @@ use manifest_tree::TreeManifest;
 use progress::null::NullProgressFactory;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
-    LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
+    LegacyStore, LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
 };
 use std::path::Path;
 use std::sync::Arc;

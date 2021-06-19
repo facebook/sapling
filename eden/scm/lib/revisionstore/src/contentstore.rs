@@ -24,7 +24,8 @@ use types::{Key, RepoPathBuf};
 use crate::{
     datastore::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, Metadata, RemoteDataStore, ReportingRemoteDataStore, StoreResult,
+        HgIdMutableDeltaStore, LegacyStore, Metadata, RemoteDataStore, ReportingRemoteDataStore,
+        StoreResult,
     },
     indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
     lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
@@ -97,13 +98,15 @@ impl ContentStore {
 
         Ok(repair_str)
     }
+}
 
+impl LegacyStore for ContentStore {
     /// Some blobs may contain copy-from metadata, let's strip it. For more details about the
     /// copy-from metadata, see `datastore::strip_metadata`.
     ///
     /// XXX: This should only be used on `ContentStore` that are storing actual
     /// file content, tree stores should use the `get` method instead.
-    pub fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
+    fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
         if let StoreResult::Found(vec) = self.get(StoreKey::hgid(key.clone()))? {
             let bytes = vec.into();
             let (bytes, _) = strip_metadata(&bytes)?;
@@ -113,7 +116,7 @@ impl ContentStore {
         }
     }
 
-    pub fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
         if let Some(remote_store) = &self.remote_store {
             remote_store.take_seen()
         } else {
@@ -121,7 +124,7 @@ impl ContentStore {
         }
     }
 
-    pub fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
         self.shared_mutabledatastore.clone()
     }
 }

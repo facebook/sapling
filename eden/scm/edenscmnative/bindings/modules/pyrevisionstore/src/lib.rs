@@ -41,9 +41,9 @@ use revisionstore::{
     Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
     HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
     HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
-    IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType, LocalStore, MemcacheStore, Metadata,
-    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
-    RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
+    IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType, LegacyStore, LocalStore, MemcacheStore,
+    Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack,
+    RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -1373,7 +1373,7 @@ py_class!(pub class filescmstore |py| {
 
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
         let store = self.store(py);
-        mutabledeltastore::create_instance(py, store.get_shared_mutable().map_pyerr(py)?)
+        mutabledeltastore::create_instance(py, store.get_shared_mutable())
     }
 });
 

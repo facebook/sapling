@@ -27,7 +27,7 @@ use edenapi_types::{
 };
 use minibytes::Bytes;
 use progress::{ProgressBar, ProgressFactory, Unit};
-use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
+use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore, LegacyStore};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;

@@ -21,7 +21,9 @@ use pypathmatcher::PythonMatcher;
 use pyrevisionstore::{contentstore, filescmstore};
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
+use revisionstore::LegacyStore;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::warn;
 use treestate::filestate::{FileStateV2, StateFlags};
@@ -96,20 +98,24 @@ py_class!(class checkoutplan |py| {
         Ok(conflicts)
     }
 
-    def apply(&self, content_store: &contentstore) -> PyResult<PyNone> {
-        let store = content_store.extract_inner_ref(py);
+    def apply(&self, store: &PyObject) -> PyResult<PyNone> {
+        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+            .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
+
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store(store)
+            plan.apply_remote_data_store(&store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def apply_dry_run(&self, content_store: &contentstore) -> PyResult<(usize, u64)> {
-        let store = content_store.extract_inner_ref(py);
+    def apply_dry_run(&self, store: &PyObject) -> PyResult<(usize, u64)> {
+        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+            .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
+
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store_dry_run(store)
+            plan.apply_remote_data_store_dry_run(&store)
         )).map_pyerr(py)
     }
 

@@ -17,6 +17,7 @@ pymanifest = { path = "../pymanifest" }
 pyrevisionstore = { path = "../pyrevisionstore" }
 pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
+revisionstore = { path = "../../../../lib/revisionstore" }
 vfs = { path = "../../../../lib/vfs" }
 tracing = "0.1"
 treestate = { path = "../../../../lib/treestate" }

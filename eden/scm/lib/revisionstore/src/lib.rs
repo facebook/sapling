@@ -163,7 +163,7 @@ pub mod util;
 pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{
-    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore,
+    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, LegacyStore,
     RemoteDataStore, StoreResult,
 };
 pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};

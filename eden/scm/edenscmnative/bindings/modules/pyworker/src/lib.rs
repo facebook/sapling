@@ -21,10 +21,10 @@ use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
 use cpython_ext::{ExtractInner, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
-use pyrevisionstore::contentstore;
+use pyrevisionstore::{contentstore, filescmstore};
 use revisionstore::{
-    datastore::RemoteDataStore, localstore::LocalStore, redact_if_needed, ContentStore,
-    HgIdDataStore, StoreKey, StoreResult,
+    datastore::RemoteDataStore, localstore::LocalStore, redact_if_needed, HgIdDataStore,
+    LegacyStore, StoreKey, StoreResult,
 };
 use types::{HgId, Key, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
@@ -196,12 +196,12 @@ fn threaded_writer(
 
 #[derive(Clone)]
 struct WriterState {
-    store: Arc<ContentStore>,
+    store: Arc<dyn LegacyStore>,
     working_copy: VFS,
 }
 
 impl WriterState {
-    pub fn new(root: PathBuf, store: Arc<ContentStore>) -> Result<Self> {
+    pub fn new(root: PathBuf, store: Arc<dyn LegacyStore>) -> Result<Self> {
         let working_copy = VFS::new(root)?;
         Ok(Self {
             store,
@@ -213,8 +213,10 @@ impl WriterState {
 py_class!(class writerworker |py| {
     data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>), (Key, Option<UpdateFlag>)>>>;
 
-    def __new__(_cls, contentstore: contentstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
-        let store = contentstore.extract_inner(py);
+    def __new__(_cls, store: PyObject, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
+        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+            .or_else(|_| filescmstore::downcast_from(py, store).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
+
         let root = root.to_path_buf();
         let writer_state = WriterState::new(root, store).map_pyerr(py)?;
 
@@ -355,6 +357,7 @@ mod tests {
     use revisionstore::{
         datastore::{Delta, HgIdMutableDeltaStore},
         testutil::make_config,
+        ContentStore,
     };
     use types::{testutil::key, RepoPath};
 
