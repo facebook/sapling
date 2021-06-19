@@ -86,6 +86,48 @@ pub struct FileStoreFetch {
     other_errors: Vec<Error>,
 }
 
+impl FileStoreFetch {
+    /// Return the list of keys which could not be fetched, or any errors encountered
+    fn missing(mut self) -> Result<Vec<Key>> {
+        if let Some(err) = self.other_errors.pop() {
+            return Err(err).into();
+        }
+
+        let mut not_found = Vec::new();
+        for (key, mut errors) in self.incomplete.drain() {
+            if let Some(err) = errors.pop() {
+                return Err(err).into();
+            }
+            not_found.push(key);
+        }
+
+        Ok(not_found)
+    }
+
+    /// Return the single requested file if found, or any errors encountered
+    fn single(mut self) -> Result<Option<StoreFile>> {
+        if let Some(err) = self.other_errors.pop() {
+            return Err(err).into();
+        }
+
+        for (_key, mut errors) in self.incomplete.drain() {
+            if let Some(err) = errors.pop() {
+                return Err(err).into();
+            } else {
+                return Ok(None);
+            }
+        }
+
+        Ok(Some(
+            self.complete
+                .drain()
+                .next()
+                .ok_or_else(|| anyhow!("no results found in either incomplete or complete"))?
+                .1,
+        ))
+    }
+}
+
 impl FileStore {
     #[instrument(skip(self, keys))]
     pub fn fetch(&self, keys: impl Iterator<Item = Key>, attrs: FileAttributes) -> FileStoreFetch {
@@ -326,6 +368,14 @@ impl FileStore {
             seen.extend(contentstore.get_logged_fetches());
         }
         seen
+    }
+
+    #[instrument(skip(self))]
+    fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
+        self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT)
+            .single()?
+            .map(|entry| entry.content.unwrap().file_content())
+            .transpose()
     }
 }
 
@@ -1306,13 +1356,9 @@ impl HgIdDataStore for FileStore {
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
                 )
-                .complete
-                .drain()
-                .next()
+                .single()?
             {
-                Some((_, entry)) => {
-                    StoreResult::Found(entry.content.unwrap().hg_content()?.into_vec())
-                }
+                Some(entry) => StoreResult::Found(entry.content.unwrap().hg_content()?.into_vec()),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -1325,11 +1371,9 @@ impl HgIdDataStore for FileStore {
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
                 )
-                .complete
-                .drain()
-                .next()
+                .single()?
             {
-                Some((_, entry)) => StoreResult::Found(entry.content.unwrap().metadata()?),
+                Some(entry) => StoreResult::Found(entry.content.unwrap().metadata()?),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -1348,9 +1392,8 @@ impl RemoteDataStore for FileStore {
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
             )
-            .incomplete
+            .missing()?
             .into_iter()
-            .map(|(k, _)| k)
             .map(StoreKey::HgId)
             .collect())
     }
@@ -1381,9 +1424,8 @@ impl LocalStore for FileStore {
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
             )
-            .incomplete
+            .missing()?
             .into_iter()
-            .map(|(k, _)| k)
             .map(StoreKey::HgId)
             .collect())
     }
@@ -1419,11 +1461,9 @@ impl ContentDataStore for FileStore {
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
                 )
-                .complete
-                .drain()
-                .next()
+                .single()?
             {
-                Some((_sk, entry)) => StoreResult::Found(entry.content.unwrap().file_content()?),
+                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -1436,17 +1476,12 @@ impl ContentDataStore for FileStore {
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
                 )
-                .complete
-                .drain()
-                .next()
+                .single()?
             {
-                Some((
-                    _sk,
-                    StoreFile {
-                        content: Some(LazyFile::Lfs(_blob, pointer)),
-                        ..
-                    },
-                )) => StoreResult::Found(pointer.into()),
+                Some(StoreFile {
+                    content: Some(LazyFile::Lfs(_blob, pointer)),
+                    ..
+                }) => StoreResult::Found(pointer.into()),
                 Some(_) => StoreResult::NotFound(key),
                 None => StoreResult::NotFound(key),
             },
