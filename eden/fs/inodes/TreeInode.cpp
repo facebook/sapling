@@ -3136,6 +3136,17 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
           });
 }
 
+#ifdef _WIN32
+namespace {
+/**
+ * Test if the passed in InodeNumber is known by the the InodeMap.
+ */
+bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
+  return inodeMap.lookupLoadedInode(ino) || inodeMap.isInodeRemembered(ino);
+}
+} // namespace
+#endif
+
 folly::Try<void> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
@@ -3150,13 +3161,18 @@ folly::Try<void> TreeInode::invalidateChannelEntryCache(
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      if (ino && getInodeMap()->isInodeRemembered(*ino)) {
-        // When no inode number is passed in, we still need to invalidate the
-        // ProjectedFS file, as tombstones are a special kind of placeholder
-        // that EdenFS doesn't have inodes for.
-        getInodeMap()->decFsRefcount(*ino);
+      // Try to remove the file first, and then call decFsRefcount if needed.
+      // When no inode number is passed in, we still need to invalidate the
+      // ProjectedFS file, as tombstones are a special kind of placeholder that
+      // EdenFS doesn't have inodes for.
+      auto ret = fsChannel->removeCachedFile(path.value() + name);
+      if (ret.hasValue()) {
+        auto& inodeMap = *getInodeMap();
+        if (ino && needDecFsRefcount(inodeMap, *ino)) {
+          getInodeMap()->decFsRefcount(*ino);
+        }
       }
-      return fsChannel->removeCachedFile(path.value() + name);
+      return ret;
     }
   }
 #endif
@@ -3181,9 +3197,9 @@ folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      if (getInodeMap()->isInodeRemembered(getNodeId())) {
-        getInodeMap()->decFsRefcount(getNodeId());
-      }
+      // Don't call decFsRefcount here as we're adding a placeholder, and thus
+      // this TreeInode need to be kept in the InodeMap until
+      // invalidateChannelEntryCache is called on it.
       return fsChannel->addDirectoryPlaceholder(path.value());
     }
   }
