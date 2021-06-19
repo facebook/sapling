@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ cat >> $HGRCPATH <<EOF
   > [treemanifest]
@@ -169,64 +168,7 @@ able to view it even with 'treemanifest.demandgenerate' being False.
   +f1
   
 - Check the tree manifest for commit '9055b56f3916' and 'b9b574be2f5d'.
-
-  $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
-  -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
-  -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
-  -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
-  -r--r--r--    1114 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.dataidx
-  -r--r--r--     219 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.datapack
-  -r--r--r--    1114 61406e4caf3e020d101d44b3a0790ad31ac67e05.dataidx
-  -r--r--r--     219 61406e4caf3e020d101d44b3a0790ad31ac67e05.datapack
-  -r--r--r--    1114 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.dataidx
-  -r--r--r--     219 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.datapack
-  -r--r--r--    1196 8aa73f0a2fee603010f1e55513a484b15ab84a9f.histidx
-  -r--r--r--     183 8aa73f0a2fee603010f1e55513a484b15ab84a9f.histpack
-  -r--r--r--    1114 eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70.dataidx
-  -r--r--r--     219 eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70.datapack
-  -r--r--r--    1196 f2f83026385a0ae7128583b50734e5d09f0b66ec.histidx
-  -r--r--r--     183 f2f83026385a0ae7128583b50734e5d09f0b66ec.histpack
-
-- Tree manifest data for commit '9055b56f3916'.
-
-  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/5e71d43af637c17fb8ad3b3eb9799f9ea30fa786:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  397e59856f06  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  53c631458e33  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/61406e4caf3e020d101d44b3a0790ad31ac67e05:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  906f17f69284  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  a6875e5fbf69  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  33600a12f793  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  40f43426c87b  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  31a1621c0fb2  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  b7db2b1fa98f  000000000000  49            (missing)
-  
+# TODO(meyer): Replace packfile inspection with indexedlog inspection
 
 - Again, this would generate the tree manifest from the corresponding flat
 manifest for commit 'f7febcf0f689'.
@@ -248,67 +190,14 @@ manifest for commit 'f7febcf0f689'.
    f1
   +f12
   
-  $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
-  -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
-  -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
-  -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
-  -r--r--r--    1114 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.dataidx
-  -r--r--r--     219 5e71d43af637c17fb8ad3b3eb9799f9ea30fa786.datapack
-  -r--r--r--    1114 61406e4caf3e020d101d44b3a0790ad31ac67e05.dataidx
-  -r--r--r--     219 61406e4caf3e020d101d44b3a0790ad31ac67e05.datapack
-  -r--r--r--    1114 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.dataidx
-  -r--r--r--     219 7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e.datapack
-  -r--r--r--    1196 8aa73f0a2fee603010f1e55513a484b15ab84a9f.histidx
-  -r--r--r--     183 8aa73f0a2fee603010f1e55513a484b15ab84a9f.histpack
-  -r--r--r--    1114 eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70.dataidx
-  -r--r--r--     219 eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70.datapack
-  -r--r--r--    1196 f2f83026385a0ae7128583b50734e5d09f0b66ec.histidx
-  -r--r--r--     183 f2f83026385a0ae7128583b50734e5d09f0b66ec.histpack
 
 - Tree manifest data for commit 'f7febcf0f689'.
 
-  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/5e71d43af637c17fb8ad3b3eb9799f9ea30fa786:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  397e59856f06  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  53c631458e33  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/61406e4caf3e020d101d44b3a0790ad31ac67e05:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  906f17f69284  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  a6875e5fbf69  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/7a828dc4ddbfaeff244f0e49c9a57ae4b90b8d2e:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  33600a12f793  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  40f43426c87b  000000000000  49            (missing)
-  
-  .hg/store/packs/manifests/eef786b4f59e9cc9a04bd2ac252a9f9b72bcca70:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  31a1621c0fb2  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  b7db2b1fa98f  000000000000  49            (missing)
-  
+# TODO(meyer): Replace packfile inspection with indexedlog inspection
 
 - Clean up generated tree manifests for remaining tests.
 
-  $ rm -rf .hg/store/packs/manifests
+  $ rm -rf .hg/store/manifests
 
 - Test rebasing of the flat ony commits works as expected.
 

@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -58,17 +57,7 @@ Make a draft commit
   $ cd client1
   $ echo f >> subdir/x
   $ hg commit -qm "hybrid commit"
-  $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/5395c3a9f408d2f2ffac93a2f1d6f039234be6ff:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  97c1b2747888  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  c0196aba344d  000000000000  49            (missing)
-  
-
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 Test bundling/unbundling
   $ hg bundle -r . --base '.^' ../treebundle.hg --debug 2>&1 | grep treegroup
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
@@ -76,16 +65,7 @@ Test bundling/unbundling
   $ cd ../client2
   $ hg unbundle ../treebundle.hg --debug 2>&1 | grep treegroup
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
-  $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/5395c3a9f408d2f2ffac93a2f1d6f039234be6ff:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  97c1b2747888  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  c0196aba344d  000000000000  49            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 Test pushing
   $ hg push -r tip --to master --debug 2>&1 2>&1 | grep rebasepackpart
   bundle2-output-part: "b2x:rebasepackpart" (params: 3 mandatory) streamed payload

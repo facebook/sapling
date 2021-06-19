@@ -3,7 +3,6 @@
   $ disable treemanifest
   $ enable remotenames
   $ setconfig remotenames.selectivepull=1
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ . "$TESTDIR/library.sh"
 
@@ -93,19 +92,6 @@
    NOTLFS
   +BECOME-LFS-AGAIN
   
-
-# lfs content could be read after repack
-
-  $ hg repack
-
-  $ find $CACHEDIR/master/packs | sort
-  $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histidx
-  $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histpack
-  $TESTTMP/hgcache/master/packs/c35125c9a76fac1fd07ab94539029532cf76dd4f.dataidx
-  $TESTTMP/hgcache/master/packs/c35125c9a76fac1fd07ab94539029532cf76dd4f.datapack
-  $TESTTMP/hgcache/master/packs/repacklock
-
   $ cp -R . ../shallow2
 
   $ hg log -p -r ::tip -T '{node} {desc}\n'
@@ -231,18 +217,7 @@
    BECOME-LFS-AGAIN
   +ADD-A-LINE
   
-# repack again
-
   $ cd ../shallow
-
-  $ hg repack
-  $ find $CACHEDIR/master/packs | sort
-  $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.dataidx
-  $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.datapack
-  $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histidx
-  $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
-  $TESTTMP/hgcache/master/packs/repacklock
 
   $ hg log -p -r ::tip -T '{node} {desc}\n'
   0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
@@ -400,4 +375,4 @@
   diff --git a/a.bin b/a.bin
   Binary file a.bin has changed
   
-
+# comment so we don't need to end with trailing spaces

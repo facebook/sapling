@@ -2,7 +2,6 @@
 
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ hginit master
   $ cd master
@@ -141,18 +140,6 @@ the server supports our custom getfiles method.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a
   a
-
-# verify files are read-only
-
-  $ ls_l .hg/store/packs
-  -r--r--r--    1295 5feb6151e62f92e71ce2df45c52b1ee4de891c40.histidx
-  -r--r--r--     350 5feb6151e62f92e71ce2df45c52b1ee4de891c40.histpack
-  -r--r--r--    1117 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histidx
-  -r--r--r--      90 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histpack
-  -r--r--r--    1194 9b9360a408e070d43cd6a598139f56a6a358cd7c.dataidx
-  -r--r--r--     253 9b9360a408e070d43cd6a598139f56a6a358cd7c.datapack
-  -r--r--r--    1074 fea0528e5e8268df06cd40c39230727aff9901eb.dataidx
-  -r--r--r--      63 fea0528e5e8268df06cd40c39230727aff9901eb.datapack
   $ cd ..
 
 # push from shallow to full

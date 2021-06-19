@@ -79,13 +79,11 @@ Y are swapped 0 to 2 times, and merge those branches.
   o  A
   
 
-Try the same on a repacked shallow repo
+Try the same on a shallow repo
 
   $ hgcloneshallow ssh://user@dummy/nonshallow1 $TESTTMP/shallow1 -q
   * files fetched over * (glob) (?)
   $ cd $TESTTMP/shallow1
-
-  $ hg repack
 
   $ for i in B C D E H; do
   >   echo log via $i:
@@ -237,3 +235,5 @@ Try again in a shallow repo:
   ├─╯
   o  A
   
+
+# trailing whitespace

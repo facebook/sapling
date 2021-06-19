@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ setconfig treemanifest.flatcompat=False remotefilelog.localdatarepack=True
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+  $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server
@@ -60,8 +59,7 @@ Transition to hybrid flat+tree client
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ ls_l $CACHEDIR/master/packs/manifests | wc -l
-  \s*4 (re)
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 # Viewing flat draft commit should not produce tree packs
   $ hg log -r tip --stat -T '{desc}\n'
@@ -69,8 +67,7 @@ Transition to hybrid flat+tree client
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ ls_l $CACHEDIR/master/packs/manifests | wc -l
-  \s*4 (re)
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Make a local hybrid flat+tree draft commit
   $ echo h >> subdir/x
@@ -79,15 +76,7 @@ Make a local hybrid flat+tree draft commit
   $ hg commit -qm "hybrid flat+tree commit"
   $ hg up '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 3d24c0f5de7320d93b08453373aedf295e433c09.histidx
-  -r--r--r--     183 3d24c0f5de7320d93b08453373aedf295e433c09.histpack
-  -r--r--r--    1114 48dcae2c46611b2159b72c9dec819b95cfcf3df7.dataidx
-  -r--r--r--     219 48dcae2c46611b2159b72c9dec819b95cfcf3df7.datapack
-  -r--r--r--    1196 73638ba2b0129f1d74a7b455dab952c6634e52c8.histidx
-  -r--r--r--     183 73638ba2b0129f1d74a7b455dab952c6634e52c8.histpack
-  -r--r--r--    1114 764ae1eb8d6408a3271d5c5f4fc94b2d2e1d3002.dataidx
-  -r--r--r--     219 764ae1eb8d6408a3271d5c5f4fc94b2d2e1d3002.datapack
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Enable sendtrees and verify flat is converted to tree on demand
   $ cat >> $HGRCPATH <<EOF
@@ -103,17 +92,13 @@ Enable sendtrees and verify flat is converted to tree on demand
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*8 (re)
-  $ hg repack
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Make a local tree-only draft commit
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*4 (re)
-  $ ls .hg/store/packs/manifests > $TESTTMP/origpacks
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
   $ echo t >> subdir/x
   $ hg commit -qm "tree only commit"
-  $ ls .hg/store/packs/manifests > $TESTTMP/aftercommit1packs
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
   $ hg debugdata -c 3
   0b096b20288404c17aa355fdeca48decf58d745d
   test
@@ -121,25 +106,15 @@ Make a local tree-only draft commit
   subdir/x
   
   tree only commit (no-eol)
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*8 (re)
-# No manifest revlog revision was added
-  $ hg debugindex -m --config treemanifest.treeonly=False
-  hg debugindex: invalid arguments
-  (use 'hg debugindex -h' to get help)
-  [255]
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Tree-only amend
   $ echo >> subdir/x
   $ hg commit --amend
 # amend commit was added
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*12 (re)
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 # No manifest revlog revision was added
-  $ hg debugindex -m --config treemanifest.treeonly=False
-  hg debugindex: invalid arguments
-  (use 'hg debugindex -h' to get help)
-  [255]
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
   $ hg log -r 'predecessors(tip)-tip' --stat
   commit:      43903a6bf43f
@@ -150,12 +125,7 @@ Tree-only amend
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-# Delete the original commits packs
-  $ cd .hg/store/packs/manifests
-  $ rm -rf `comm -3 $TESTTMP/origpacks $TESTTMP/aftercommit1packs`
-  $ cd ../../../..
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*8 (re)
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test pulling new commits from a hybrid server
   $ cd ../master
@@ -759,3 +729,5 @@ old repository into another repo.
   ├─╯
   o  d618f764f9a11819b57268f02604ec1d311afc4c
   
+
+# trailing whitespace

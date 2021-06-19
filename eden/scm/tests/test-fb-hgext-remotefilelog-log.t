@@ -118,12 +118,10 @@ Log on a file via -fr
   79c51fb9642383579314de1dcd88e4dd7b1b518a
 
 Trace renames
-  $ setconfig remotefilelog.localdatarepack=True
   $ echo >> x
   $ hg commit -m "Edit x"
   $ hg mv x z
   $ hg commit -m move
-  $ hg repack
   $ hg log -f z -T '{desc}\n' -G --pager=off
   @  move
   │

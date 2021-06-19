@@ -3,7 +3,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setconfig treemanifest.flatcompat=False
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ setupcommon
 
@@ -272,16 +271,7 @@ treemanifest data for the public commits.
   o  085784c01c08 public add x
   
 # Verify only the infinitepush commit tree data was downloaded
-  $ hg debugdatapack .hg/store/packs/manifests/*datapack
-  .hg/store/packs/manifests/a9b899bcf54bca96b39e9e135ca0625126487ceb:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  9eee655b90d1  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  604088751312  000000000000  92            (missing)
-  
+# TODO(meyer): Replace packfile inspection with indexedlog inspection
 
 # Create a new commit on master with a noticeable number of trees
   $ cd ../master

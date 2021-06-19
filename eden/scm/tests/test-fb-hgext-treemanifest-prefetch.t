@@ -3,7 +3,6 @@
   $ CACHEDIR=`pwd`/hgcache
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ enable remotenames
   $ hginit master
@@ -62,86 +61,8 @@ Test prefetch
   $ hg prefetch -r '0 + 1 + 2'
   4 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ ls $CACHEDIR/master/packs/manifests
-  214f2046312905a44188b27497625a36ffaa4c3d.histidx
-  214f2046312905a44188b27497625a36ffaa4c3d.histpack
-  5363bd2b98ea8fb0987f683c0cae80e0313e95a6.dataidx
-  5363bd2b98ea8fb0987f683c0cae80e0313e95a6.datapack
-  9695a88823f13dc82d06280705d9b37f7c25c50d.histidx
-  9695a88823f13dc82d06280705d9b37f7c25c50d.histpack
-  9c4f8bc12fc0d3a742847e75687c57cc0cafa334.dataidx
-  9c4f8bc12fc0d3a742847e75687c57cc0cafa334.datapack
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > --long $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6:
-  subdir:
-  Node                                      Delta Base                                Delta Length  Blob Size
-  ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
-  
-  (empty name):
-  Node                                      Delta Base                                Delta Length  Blob Size
-  1be4ab2126dd2252dcae6be2aac2561dd3ddcda0  0000000000000000000000000000000000000000  95            (missing)
-  
-  dir:
-  Node                                      Delta Base                                Delta Length  Blob Size
-  bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43            (missing)
-  
-  (empty name):
-  Node                                      Delta Base                                Delta Length  Blob Size
-  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46            (missing)
-  
-  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
-  dir:
-  Node                                      Delta Base                                Delta Length  Blob Size
-  a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43            (missing)
-  
-  subdir:
-  Node                                      Delta Base                                Delta Length  Blob Size
-  ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
-  
-  (empty name):
-  Node                                      Delta Base                                Delta Length  Blob Size
-  60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95            (missing)
-  
-  $ hg debughistorypack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/*.histidx
-  
-  
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  60a7f7acb6bb  1be4ab2126dd  000000000000  bd6f9b289c01  
-  
-  dir
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  a18d21674e76  bc0c2c938b92  000000000000  bd6f9b289c01  
-  
-  subdir
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
-  
-  
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  1be4ab2126dd  ef362f8bbe8a  000000000000  f15c65c6e9bd  
-  ef362f8bbe8a  000000000000  000000000000  ecfb693caff5  
-  
-  dir
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  bc0c2c938b92  000000000000  000000000000  ecfb693caff5  
-  
-  subdir
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > --node-delta ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/5363bd2b98ea8fb0987f683c0cae80e0313e95a6:
-  
-  
-  Node                                      Delta Base                                Delta SHA1                                Delta Length
-  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  3b295111780498d177793f9228bf736b915f0255  46
-  $ hg -R ../master debugindex ../master/.hg/store/00manifesttree.i
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      47     -1       0 ef362f8bbe8a 000000000000 000000000000
-       1        47      61      0       1 1be4ab2126dd ef362f8bbe8a 000000000000
-       2       108      58      1       2 60a7f7acb6bb 1be4ab2126dd 000000000000
+
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test prefetch with base node (subdir/ shouldn't show up in the pack)
   $ rm -rf $CACHEDIR/master
@@ -155,31 +76,8 @@ requires tree manifest for the base commit.
   3 trees fetched over 0.00s
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   2 trees fetched over * (glob)
-  $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/b3bd3b918c8eb05705e84b9c46b6be6cc2934f64.dataidx
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
-  $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/b3bd3b918c8eb05705e84b9c46b6be6cc2934f64:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  bc0c2c938b92  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  1be4ab2126dd  000000000000  95            (missing)
-  
 Test prefetching when a draft commit is marked public
   $ mkdir $TESTTMP/cachedir.bak
   $ mv $CACHEDIR/* $TESTTMP/cachedir.bak
@@ -244,34 +142,7 @@ Test auto prefetch during normal access
    dir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ ls $CACHEDIR/master/packs/manifests
-  0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
-  0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack
-  93d481677f2b09bd1cec155608977cb9806df077.dataidx
-  93d481677f2b09bd1cec155608977cb9806df077.datapack
-
-  $ hg debugdatapack --config extensions.remotefilelog= $CACHEDIR/master/packs/manifests/*.datapack
-  $TESTTMP/hgcache/master/packs/manifests/93d481677f2b09bd1cec155608977cb9806df077:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  bc0c2c938b92  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  1be4ab2126dd  000000000000  95            (missing)
-  
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'
@@ -301,33 +172,7 @@ Test auto prefetch during pull
   no changes found
   prefetching trees for 3 commits
   6 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/adc41dd93f904447812dd994d49bce59ea7c4360:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  1be4ab2126dd  000000000000  95            (missing)
-  
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  bc0c2c938b92  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  ef362f8bbe8a  000000000000  46            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
   $ hg debugstrip -q -r 'draft()'
 
@@ -340,21 +185,8 @@ Test auto prefetch during pull
   prefetching tree for bd6f9b289c01
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   3 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
+
 
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
@@ -362,8 +194,7 @@ Test auto prefetch during pull
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   3 trees fetched over * (glob)
-  $ ls $CACHEDIR/master/packs/manifests/*dataidx
-  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
   searching for changes
@@ -371,33 +202,8 @@ Test auto prefetch during pull
   prefetching tree for bd6f9b289c01
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
-  $ ls $CACHEDIR/master/packs/manifests/*dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  >  $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
-  $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  bc0c2c938b92  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  1be4ab2126dd  000000000000  95            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
+
 
 Test prefetching certain revs during pull
   $ cd ../master
@@ -418,21 +224,8 @@ Test prefetching certain revs during pull
   prefetching tree for bd6f9b289c01
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via cfacdcc4cee5
   3 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
+
 
 - Test prefetching only the new tree parts for a commit who's parent tree is not
 - downloaded already. Note that subdir/z was not downloaded this time.
@@ -443,30 +236,7 @@ Test prefetching certain revs during pull
   prefetching tree for cfacdcc4cee5
   fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via cfacdcc4cee5
   2 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog= \
-  > $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/59658c2bcbdcbfd3c836edc4cdca4f0297acc287:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  bf22bc15398b  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  aa52a49be522  000000000000  95            (missing)
-  
-  $TESTTMP/hgcache/master/packs/manifests/9c4f8bc12fc0d3a742847e75687c57cc0cafa334:
-  dir:
-  Node          Delta Base    Delta Length  Blob Size
-  a18d21674e76  000000000000  43            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  60a7f7acb6bb  000000000000  95            (missing)
-  
+TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test that prefetch refills just part of a tree when the cache is deleted
 
@@ -487,29 +257,6 @@ trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
   $ hg prefetch -r '2 + 4'
   5 trees fetched over * (glob)
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
-
-Test repack option
-  $ rm -rf $CACHEDIR/master
-
-  $ hg prefetch -r '0'
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' ef362f8bbe8aa457b0cfc49f200cbeb7747984ed, found via 7609b5c63072
-  2 trees fetched over * (glob)
-  $ hg prefetch -r '2'
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on ef362f8bbe8aa457b0cfc49f200cbeb7747984ed, found via 7609b5c63072
-  3 trees fetched over * (glob)
-
-  $ hg prefetch -r '4' --repack
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via 7609b5c63072
-  2 trees fetched over 0.00s
-  (running background incremental repack)
-
-  $ sleep 3
-  $ hg debugwaitonrepack
-  $ ls_l $CACHEDIR/master/packs/manifests | grep datapack | wc -l
-  \s*1 (re)
 
 Test prefetching with no options works. The expectation is to prefetch the stuff
 required for working with the draft commits which happens to be only revision 5
