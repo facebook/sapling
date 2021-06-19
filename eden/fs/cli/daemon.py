@@ -229,15 +229,18 @@ def prepare_edenfs_privileges(
 
 def get_edenfs_environment() -> Dict[str, str]:
     """Get the environment to use to start the edenfs daemon."""
-    # On Windows simply use the existing environment unchanged for now.
-    if sys.platform == "win32":
-        return os.environ.copy()
+    eden_env = {}
 
-    # Reset $PATH to the following contents, so that everyone has the
-    # same consistent settings.
-    path_dirs = ["/opt/facebook/hg/bin", "/usr/local/bin", "/bin", "/usr/bin"]
+    if sys.platform != "win32":
+        # Reset $PATH to the following contents, so that everyone has the
+        # same consistent settings.
+        path_dirs = ["/opt/facebook/hg/bin", "/usr/local/bin", "/bin", "/usr/bin"]
 
-    eden_env = {"PATH": ":".join(path_dirs)}
+        eden_env["PATH"] = ":".join(path_dirs)
+    else:
+        # On Windows, copy the existing PATH as it's not clear what locations
+        # are needed.
+        eden_env["PATH"] = os.environ["PATH"]
 
     if sys.platform == "darwin":
         # Prevent warning on mac, which will crash eden:
@@ -267,6 +270,16 @@ def get_edenfs_environment() -> Dict[str, str]:
         "THRIFT_TLS_CL_CERT_PATH",
         "THRIFT_TLS_CL_KEY_PATH",
     ]
+
+    if sys.platform == "win32":
+        preserve += [
+            "APPDATA",
+            "SYSTEMROOT",
+            "USERPROFILE",
+            "USERNAME",
+            "PROGRAMDATA",
+            "LOCALAPPDATA",
+        ]
 
     for name, value in os.environ.items():
         # Preserve any environment variable starting with "TESTPILOT_".
