@@ -510,11 +510,13 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
   {
     const auto& contents = root.lockContents();
     for (auto& entry : root.iterate(contents)) {
-      auto name = root.entryName(entry);
+      auto candidateName = rootPath + root.entryName(entry);
+
       for (auto& node : recursiveChildren_) {
-        if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
+        if (node->alwaysMatch_ ||
+            node->matcher_.match(candidateName.stringPiece())) {
           results.emplace_back(
-              root.entryToResult(rootPath + name, entry, originRootId));
+              root.entryToResult(candidateName.copy(), entry, originRootId));
           if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
             fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
           }
@@ -525,14 +527,13 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
 
       // Remember to recurse through child dirs after we've released
       // the lock on the contents.
-      if (root.entryIsTree(entry) &&
-          (includeDotfiles_ || !name.stringPiece().startsWith('.'))) {
+      if (root.entryIsTree(entry)) {
         if (root.entryShouldLoadChildTree(entry)) {
-          subDirNames.emplace_back(rootPath + name);
+          subDirNames.emplace_back(std::move(candidateName));
         } else {
           futures.emplace_back(
               store->getTree(root.entryHash(entry), context)
-                  .thenValue([candidateName = rootPath + name,
+                  .thenValue([candidateName = std::move(candidateName),
                               store,
                               &context,
                               this,

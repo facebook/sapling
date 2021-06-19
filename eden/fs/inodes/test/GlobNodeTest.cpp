@@ -179,29 +179,7 @@ TEST_P(GlobNodeTest, starExcludeDot) {
   EXPECT_EQ(expect, matches);
 }
 
-TEST_P(GlobNodeTest, starStarExcludeDot) {
-  auto matches = doGlobExcludeDotFiles("dir/sub/**/sub/b.txt", kZeroRootId);
-
-  std::vector<GlobResult> expect;
-  EXPECT_EQ(expect, matches);
-}
-
-TEST_P(GlobNodeTest, starStarRootExcludeDot) {
-  auto matches = doGlobExcludeDotFiles("**/root", kZeroRootId);
-
-  std::vector<GlobResult> expect;
-  EXPECT_EQ(expect, matches);
-}
-
 #ifndef _WIN32
-TEST_P(GlobNodeTest, starStarRootIncludeDot) {
-  auto matches = doGlobIncludeDotFiles("**/root", kZeroRootId);
-
-  std::vector<GlobResult> expect{
-      GlobResult(".eden/root"_relpath, dtype_t::Symlink, kZeroRootId)};
-  EXPECT_EQ(expect, matches);
-}
-
 TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   // Ensure that we enumerate things from the overlay
   mount_.addFile("root.txt", "added\n");
