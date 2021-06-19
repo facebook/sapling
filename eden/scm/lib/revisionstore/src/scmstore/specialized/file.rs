@@ -321,7 +321,11 @@ impl FileStore {
     }
 
     pub fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        self.fetch_logger.take_seen()
+        let mut seen = self.fetch_logger.take_seen();
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            seen.extend(contentstore.get_logged_fetches());
+        }
+        seen
     }
 }
 

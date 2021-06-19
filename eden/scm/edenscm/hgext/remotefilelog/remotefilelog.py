@@ -624,6 +624,10 @@ class remotefileslog(filelog.fileslog):
             self.contentstore.flush()
             self.logfetches()
 
+        if self.filescmstore:
+            self.filescmstore.flush()
+            self.logfetches()
+
         if self.metadatastore:
             self.metadatastore.flush()
         self.commitsharedpacks()

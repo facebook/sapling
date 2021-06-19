@@ -44,6 +44,7 @@
   $ clone master shallow --noupdate
   $ cd shallow
 
+  $ setconfig scmstore.contentstorefallback=True
   $ hg update -q master --config remotefilelog.undesiredfileregex=".*" 2>&1 | sort
   2 trees fetched over 0.00s
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
