@@ -16,7 +16,7 @@ jobs:
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: 1.52.1
+        toolchain: 1.53.0
         default: true
         profile: minimal
     - name: Install Python 3.8
