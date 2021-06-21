@@ -132,7 +132,7 @@ def _limitsample(sample, desiredlen):
         # Stabilize test across Python 2 / Python 3.
         return set(sorted(sample)[:desiredlen])
     if len(sample) > desiredlen:
-        sample = set(random.sample(sample, desiredlen))
+        sample = set(random.sample(list(sample), desiredlen))
     return sample
 
 
