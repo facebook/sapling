@@ -331,14 +331,15 @@ async fn redaction_list<'a>(
         redacted_blobs.get_all_redacted_blobs(),
         cs_id.load(&ctx, blobrepo.blobstore()).map_err(Error::from),
     )?;
-    let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
+    let redacted_map = redacted_blobs.redacted();
+    let redacted_keys = redacted_map.iter().map(|(key, _)| key).collect();
     let path_keys =
         find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, redacted_keys)
             .await?;
     let mut res = path_keys
         .into_iter()
         .filter_map(move |(path, key)| {
-            redacted_blobs
+            redacted_map
                 .get(&key.blobstore_key())
                 .cloned()
                 .map(|redacted_meta| (redacted_meta.task, path, redacted_meta.log_only))

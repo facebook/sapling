@@ -17,14 +17,13 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::num::NonZeroU64;
 use std::{ops::Deref, sync::Arc};
 use tunables::tunables;
 
 pub use crate::errors::ErrorKind;
-pub use crate::store::{RedactedMetadata, SqlRedactedContentStore};
+pub use crate::store::{RedactedBlobs, RedactedMetadata, SqlRedactedContentStore};
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";
@@ -33,7 +32,7 @@ pub mod config {
 
 #[derive(Debug, Clone)]
 pub struct RedactedBlobstoreConfigInner {
-    redacted: Option<HashMap<String, RedactedMetadata>>,
+    redacted: Option<Arc<RedactedBlobs>>,
     scuba_builder: MononokeScubaSampleBuilder,
 }
 
@@ -52,7 +51,7 @@ impl Deref for RedactedBlobstoreConfig {
 
 impl RedactedBlobstoreConfig {
     pub fn new(
-        redacted: Option<HashMap<String, RedactedMetadata>>,
+        redacted: Option<Arc<RedactedBlobs>>,
         scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
@@ -126,26 +125,34 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
     }
 
     // Checks for access to this key, then yields the blobstore if access is allowed.
-    pub fn access_blobstore(
-        &self,
-        ctx: &CoreContext,
-        key: &str,
+    pub fn access_blobstore<'s: 'a, 'a>(
+        &'s self,
+        ctx: &'a CoreContext,
+        key: &'a str,
         operation: &'static str,
-    ) -> Result<&T> {
+    ) -> Result<&'s T> {
         match &self.config.redacted {
-            Some(redacted) => redacted.get(key).map_or(Ok(&self.blobstore), |metadata| {
-                debug!(
-                    ctx.logger(),
-                    "{} operation with redacted blobstore with key {:?}", operation, key
-                );
-                self.to_scuba_redacted_blob_accessed(&ctx, &key, operation);
+            Some(redacted) => {
+                redacted
+                    .redacted()
+                    .get(key)
+                    .map_or(Ok(&self.blobstore), |metadata| {
+                        debug!(
+                            ctx.logger(),
+                            "{} operation with redacted blobstore with key {:?}", operation, key
+                        );
+                        self.to_scuba_redacted_blob_accessed(&ctx, &key, operation);
 
-                if metadata.log_only {
-                    Ok(&self.blobstore)
-                } else {
-                    Err(ErrorKind::Censored(key.to_string(), metadata.task.to_string()).into())
-                }
-            }),
+                        if metadata.log_only {
+                            Ok(&self.blobstore)
+                        } else {
+                            Err(
+                                ErrorKind::Censored(key.to_string(), metadata.task.to_string())
+                                    .into(),
+                            )
+                        }
+                    })
+            }
             None => Ok(&self.blobstore),
         }
     }
@@ -254,17 +261,17 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = hashmap! {
+        let redacted_pairs = RedactedBlobs::FromSql(hashmap! {
             redacted_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: false,
             },
-        };
+        });
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
             RedactedBlobstoreConfig::new(
-                Some(redacted_pairs),
+                Some(Arc::new(redacted_pairs)),
                 MononokeScubaSampleBuilder::with_discard(),
             ),
         );
@@ -315,17 +322,17 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = hashmap! {
+        let redacted_pairs = RedactedBlobs::FromSql(hashmap! {
             redacted_log_only_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: true,
             },
-        };
+        });
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
             RedactedBlobstoreConfig::new(
-                Some(redacted_pairs),
+                Some(Arc::new(redacted_pairs)),
                 MononokeScubaSampleBuilder::with_discard(),
             ),
         );

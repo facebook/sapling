@@ -217,7 +217,7 @@ mod test {
     use mononoke_types::typed_hash::MononokeId;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use permission_checker::MononokeIdentity;
-    use redactedblobstore::RedactedMetadata;
+    use redactedblobstore::{RedactedBlobs, RedactedMetadata};
     use test_repo_factory::TestRepoFactory;
 
     #[fbinit::test]
@@ -226,12 +226,12 @@ mod test {
         let reason = "test reason";
 
         let repo = TestRepoFactory::new()?
-            .redacted(Some(
+            .redacted(Some(RedactedBlobs::FromSql(
                 hashmap! { content_id.blobstore_key() => RedactedMetadata {
                    task: reason.to_string(),
                    log_only: false,
                 }},
-            ))
+            )))
             .build()?;
 
         let ctx = RepositoryRequestContext::test_builder(fb)?

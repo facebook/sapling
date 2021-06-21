@@ -56,7 +56,7 @@ use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
 use readonlyblob::ReadOnlyBlobstore;
-use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
+use redactedblobstore::{RedactedBlobs, SqlRedactedContentStore};
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
@@ -116,8 +116,7 @@ pub struct RepoFactory {
     censored_scuba_params: CensoredScubaParams,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
-    redacted_blobs:
-        RepoFactoryCache<MetadataDatabaseConfig, Arc<HashMap<String, RedactedMetadata>>>,
+    redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
@@ -212,8 +211,7 @@ impl RepoFactory {
                 let redacted_blobs = self
                     .redacted_blobs(&repo_config.storage_config.metadata)
                     .await?;
-                // TODO: Make RepoBlobstore take Arc<...> so it can share the hashmap.
-                Some(redacted_blobs.as_ref().clone())
+                Some(redacted_blobs)
             }
             Redaction::Disabled => None,
         };
@@ -268,10 +266,7 @@ impl RepoFactory {
             .await
     }
 
-    async fn redacted_blobs(
-        &self,
-        config: &MetadataDatabaseConfig,
-    ) -> Result<Arc<HashMap<String, RedactedMetadata>>> {
+    async fn redacted_blobs(&self, config: &MetadataDatabaseConfig) -> Result<Arc<RedactedBlobs>> {
         self.redacted_blobs
             .get_or_try_init(config, || async move {
                 let sql_factory = self.sql_factory(config).await?;

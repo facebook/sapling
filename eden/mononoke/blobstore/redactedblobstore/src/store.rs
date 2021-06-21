@@ -68,19 +68,34 @@ pub struct RedactedMetadata {
     pub log_only: bool,
 }
 
+#[derive(Debug, Clone)]
+pub enum RedactedBlobs {
+    FromSql(HashMap<String, RedactedMetadata>),
+}
+
+impl RedactedBlobs {
+    pub fn redacted(&self) -> &HashMap<String, RedactedMetadata> {
+        match self {
+            Self::FromSql(hm) => &hm,
+        }
+    }
+}
+
 impl SqlRedactedContentStore {
-    pub async fn get_all_redacted_blobs(&self) -> Result<HashMap<String, RedactedMetadata>, Error> {
+    pub async fn get_all_redacted_blobs(&self) -> Result<RedactedBlobs, Error> {
         let redacted_blobs = GetAllRedactedBlobs::query(&self.read_connection).await?;
-        Ok(redacted_blobs
-            .into_iter()
-            .map(|(key, task, log_only)| {
-                let redacted_metadata = RedactedMetadata {
-                    task,
-                    log_only: log_only.unwrap_or(false),
-                };
-                (key, redacted_metadata)
-            })
-            .collect())
+        Ok(RedactedBlobs::FromSql(
+            redacted_blobs
+                .into_iter()
+                .map(|(key, task, log_only)| {
+                    let redacted_metadata = RedactedMetadata {
+                        task,
+                        log_only: log_only.unwrap_or(false),
+                    };
+                    (key, redacted_metadata)
+                })
+                .collect(),
+        ))
     }
 
     pub async fn insert_redacted_blobs(
@@ -136,7 +151,8 @@ mod test {
             .await
             .expect("insert failed");
 
-        let res = store.get_all_redacted_blobs().await.expect("select failed");
+        let all = store.get_all_redacted_blobs().await.expect("select failed");
+        let res = all.redacted();
         assert_eq!(res.len(), 4);
         assert!(!res.get(&key_a).unwrap().log_only);
         assert!(!res.get(&key_b).unwrap().log_only);
@@ -147,7 +163,8 @@ mod test {
             .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now(), true)
             .await
             .expect("insert failed");
-        let res = store.get_all_redacted_blobs().await.expect("select failed");
+        let all = store.get_all_redacted_blobs().await.expect("select failed");
+        let res = all.redacted();
         assert!(res.get(&key_a).unwrap().log_only);
         assert!(res.get(&key_b).unwrap().log_only);
 
@@ -155,7 +172,8 @@ mod test {
             .delete_redacted_blobs(&redacted_keys1)
             .await
             .expect("delete failed");
-        let res = store.get_all_redacted_blobs().await.expect("select failed");
+        let all = store.get_all_redacted_blobs().await.expect("select failed");
+        let res = all.redacted();
 
         assert_eq!(res.contains_key(&key_c), true);
         assert_eq!(res.contains_key(&key_d), true);

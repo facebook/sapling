@@ -11,9 +11,8 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata};
+use redactedblobstore::{RedactedBlobs, RedactedBlobstore, RedactedBlobstoreConfig};
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// RedactedBlobstore should be part of every blobstore since it is a layer
@@ -90,7 +89,7 @@ pub struct RepoBlobstoreArgs {
 impl RepoBlobstoreArgs {
     pub fn new<T: Blobstore + 'static>(
         blobstore: T,
-        redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
+        redacted_blobs: Option<Arc<RedactedBlobs>>,
         repoid: RepositoryId,
         scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {

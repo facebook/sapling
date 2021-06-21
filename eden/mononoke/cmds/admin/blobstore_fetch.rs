@@ -26,14 +26,12 @@ use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
 use mononoke_types::{FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{
-    RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata, SqlRedactedContentStore,
+    RedactedBlobs, RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore,
 };
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
-use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::iter::FromIterator;
 use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::error::SubcommandError;
@@ -192,8 +190,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
                 redacted_blobs
                     .get_all_redacted_blobs()
                     .await
-                    .map_err(Error::from)
-                    .map(HashMap::from_iter)
+                    .map(Arc::new)
                     .map(Some)
             }
             Redaction::Disabled => Ok(None),
@@ -266,7 +263,7 @@ async fn get_from_sources<T: Blobstore + Clone>(
     no_prefix: bool,
     key: String,
     ctx: CoreContext,
-    redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
+    redacted_blobs: Option<Arc<RedactedBlobs>>,
     scuba_redaction_builder: MononokeScubaSampleBuilder,
     repo_id: RepositoryId,
 ) -> Result<Option<BlobstoreGetData>, Error> {

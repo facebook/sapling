@@ -678,7 +678,7 @@ mod test {
     use memblob::Memblob;
     use mononoke_types::ContentMetadataId;
     use mononoke_types_mocks::hash::{FOURS_SHA256, ONES_SHA256, THREES_SHA256, TWOS_SHA256};
-    use redactedblobstore::RedactedMetadata;
+    use redactedblobstore::{RedactedBlobs, RedactedMetadata};
     use std::collections::HashSet;
     use std::sync::{
         atomic::{AtomicU64, Ordering},
@@ -1037,12 +1037,12 @@ mod test {
 
         // Now, create a new blob repo with the same blob store, but with some data redacted.
         let repo = factory
-            .redacted(Some(hashmap! {
+            .redacted(Some(RedactedBlobs::FromSql(hashmap! {
                 meta.content_id.blobstore_key() => RedactedMetadata {
                     task: "test".to_string(),
                     log_only: false,
                 }
-            }))
+            })))
             .build()?;
 
         let ctx = RepositoryRequestContext::test_builder(fb)?

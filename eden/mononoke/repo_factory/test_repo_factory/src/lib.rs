@@ -8,7 +8,6 @@
 //! Repository factory for tests.
 #![deny(missing_docs)]
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -50,7 +49,7 @@ use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
-use redactedblobstore::RedactedMetadata;
+use redactedblobstore::RedactedBlobs;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
@@ -79,7 +78,7 @@ pub struct TestRepoFactory {
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
     metadata_db: SqlConnections,
-    redacted: Option<HashMap<String, RedactedMetadata>>,
+    redacted: Option<Arc<RedactedBlobs>>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
 }
@@ -183,8 +182,8 @@ impl TestRepoFactory {
     }
 
     /// Redact content in repos that are built by this factory.
-    pub fn redacted(&mut self, redacted: Option<HashMap<String, RedactedMetadata>>) -> &mut Self {
-        self.redacted = redacted;
+    pub fn redacted(&mut self, redacted: Option<RedactedBlobs>) -> &mut Self {
+        self.redacted = redacted.map(Arc::new);
         self
     }
 
