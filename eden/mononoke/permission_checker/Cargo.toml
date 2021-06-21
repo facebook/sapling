@@ -23,7 +23,7 @@ curl-sys = { git = "https://github.com/kulshrax/curl-rust", rev = "2a15bbd8dbbd5
 enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4c86952f1e799960e736c0b2bb9d2a6d935bf1" }
-object = { git = "https://github.com/andrewjcg/object", rev = "1d502e8abc01f8aeae33be41713a23cf59559287" }
+object = { git = "https://github.com/andrewjcg/object", rev = "ddbae7208292a13a016e8952c256f69737c763ab" }
 openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
 openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
 petgraph = { git = "https://github.com/jkeljo/petgraph", rev = "e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384" }
