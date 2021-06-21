@@ -97,6 +97,7 @@ use thiserror::Error;
 
 pub mod batch;
 pub mod derive_impl;
+pub mod logging;
 pub mod mapping_impl;
 
 pub use derive_impl::enabled_type_config;
