@@ -499,8 +499,8 @@ impl WalkState {
                 if self.chunk_contains(id) {
                     self.record(&self.visited_bcs, &id)
                 } else {
-                    if !self.visited_bcs.contains_key(&id)
-                        && self.chunk_direction == Direction::NewestFirst
+                    if self.chunk_direction == Direction::NewestFirst
+                        && !self.visited_bcs.contains_key(&id)
                     {
                         self.record_multi(&self.deferred_bcs, id, outgoing);
                     }
@@ -575,8 +575,8 @@ impl WalkState {
                 if self.chunk_contains(id) {
                     self.record(&self.visited_changeset_info, &id)
                 } else {
-                    if !self.visited_changeset_info.contains_key(&id)
-                        && self.chunk_direction == Direction::NewestFirst
+                    if self.chunk_direction == Direction::NewestFirst
+                        && !self.visited_changeset_info.contains_key(&id)
                     {
                         self.record_multi(&self.deferred_bcs, id, outgoing);
                     }
