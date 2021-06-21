@@ -2033,3 +2033,11 @@ function packer() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
 }
+
+function check_git_wc() {
+  "$MONONOKE_CHECK_GIT_WC" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}

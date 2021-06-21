@@ -18,6 +18,7 @@ MONONOKE_BINS = {
     "MONONOKE_BLOBIMPORT": "blobimport",
     "MONONOKE_BLOBSTORE_HEALER": "blobstore_healer",
     "MONONOKE_BONSAI_VERIFY": "bonsai_verify",
+    "MONONOKE_CHECK_GIT_WC": "check_git_wc",
     "MONONOKE_FASTREPLAY": "fastreplay",
     "MONONOKE_GITIMPORT": "gitimport",
     "MONONOKE_HGCLI": "hgcli",
