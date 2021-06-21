@@ -250,6 +250,7 @@ mod test {
     use maplit::hashmap;
     use memblob::Memblob;
     use prefixblob::PrefixBlobstore;
+    use std::sync::Arc;
 
     #[fbinit::test]
     async fn test_redacted_key(fb: FacebookInit) {
@@ -261,12 +262,12 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = RedactedBlobs::FromSql(hashmap! {
+        let redacted_pairs = RedactedBlobs::FromSql(Arc::new(hashmap! {
             redacted_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: false,
             },
-        });
+        }));
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
@@ -322,12 +323,12 @@ mod test {
         borrowed!(ctx);
 
         let inner = Memblob::default();
-        let redacted_pairs = RedactedBlobs::FromSql(hashmap! {
+        let redacted_pairs = RedactedBlobs::FromSql(Arc::new(hashmap! {
             redacted_log_only_key.to_owned() => RedactedMetadata {
                 task: redacted_task.to_owned(),
                 log_only: true,
             },
-        });
+        }));
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),

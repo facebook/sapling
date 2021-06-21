@@ -12,6 +12,7 @@ use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct SqlRedactedContentStore {
@@ -70,13 +71,13 @@ pub struct RedactedMetadata {
 
 #[derive(Debug, Clone)]
 pub enum RedactedBlobs {
-    FromSql(HashMap<String, RedactedMetadata>),
+    FromSql(Arc<HashMap<String, RedactedMetadata>>),
 }
 
 impl RedactedBlobs {
-    pub fn redacted(&self) -> &HashMap<String, RedactedMetadata> {
+    pub fn redacted(&self) -> Arc<HashMap<String, RedactedMetadata>> {
         match self {
-            Self::FromSql(hm) => &hm,
+            Self::FromSql(hm) => hm.clone(),
         }
     }
 }
@@ -84,7 +85,7 @@ impl RedactedBlobs {
 impl SqlRedactedContentStore {
     pub async fn get_all_redacted_blobs(&self) -> Result<RedactedBlobs, Error> {
         let redacted_blobs = GetAllRedactedBlobs::query(&self.read_connection).await?;
-        Ok(RedactedBlobs::FromSql(
+        Ok(RedactedBlobs::FromSql(Arc::new(
             redacted_blobs
                 .into_iter()
                 .map(|(key, task, log_only)| {
@@ -95,7 +96,7 @@ impl SqlRedactedContentStore {
                     (key, redacted_metadata)
                 })
                 .collect(),
-        ))
+        )))
     }
 
     pub async fn insert_redacted_blobs(
