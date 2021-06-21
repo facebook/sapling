@@ -906,7 +906,9 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
         assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
         match scrub_action_on_missing_write_mostly {
-            ScrubWriteMostly::Scrub | ScrubWriteMostly::PopulateIfAbsent => {
+            ScrubWriteMostly::Scrub
+            | ScrubWriteMostly::PopulateIfAbsent
+            | ScrubWriteMostly::ScrubIfAbsent => {
                 assert_eq!(bs2.get_bytes(k1), Some(v1.clone()))
             }
             ScrubWriteMostly::SkipMissing => {
