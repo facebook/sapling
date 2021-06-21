@@ -496,7 +496,7 @@ where
                     let mut derived_data_scuba = init_derived_data_scuba::<Derivable>(
                         &ctx,
                         repo.name(),
-                        &derived_data_config,
+                        &derived_data_config.scuba_table,
                         &bcs_id,
                     );
 
@@ -715,7 +715,7 @@ mod test {
             Ok(res)
         }
 
-        async fn put(
+        async fn put_impl(
             &self,
             _ctx: CoreContext,
             csid: ChangesetId,
@@ -729,6 +729,15 @@ mod test {
         }
 
         fn options(&self) {}
+
+
+        fn repo_name(&self) -> &str {
+            "repo"
+        }
+
+        fn derived_data_scuba_table(&self) -> &Option<String> {
+            &None
+        }
     }
 
     async fn derive_for_master(ctx: CoreContext, repo: BlobRepo) {

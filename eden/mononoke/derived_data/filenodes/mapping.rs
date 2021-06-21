@@ -212,7 +212,7 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
             .await
     }
 
-    async fn put(
+    async fn put_impl(
         &self,
         ctx: CoreContext,
         _csid: ChangesetId,
@@ -244,6 +244,14 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
     }
 
     fn options(&self) {}
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
+    }
 }
 
 async fn fetch_root_filenode(

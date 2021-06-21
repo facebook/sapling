@@ -81,6 +81,7 @@ impl BonsaiDerivable for RootDeletedManifestId {
 #[derive(Clone)]
 pub struct RootDeletedManifestMapping {
     blobstore: RepoBlobstore,
+    repo: BlobRepo,
 }
 
 #[async_trait]
@@ -90,6 +91,7 @@ impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore(),
+            repo: repo.clone(),
         })
     }
 
@@ -102,6 +104,14 @@ impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     }
 
     fn options(&self) {}
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
+    }
 }
 
 impl_bonsai_derived_mapping!(

@@ -140,6 +140,7 @@ async fn fetch_unode_parents<B: Blobstore>(
 #[derive(Clone)]
 pub struct RootFastlogMapping {
     blobstore: Arc<dyn Blobstore>,
+    repo: BlobRepo,
 }
 
 impl BlobstoreExistsMapping for RootFastlogMapping {
@@ -148,6 +149,7 @@ impl BlobstoreExistsMapping for RootFastlogMapping {
     fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
+            repo: repo.clone(),
         })
     }
 
@@ -160,6 +162,14 @@ impl BlobstoreExistsMapping for RootFastlogMapping {
     }
 
     fn options(&self) {}
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
+    }
 }
 
 impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping, RootFastlog);

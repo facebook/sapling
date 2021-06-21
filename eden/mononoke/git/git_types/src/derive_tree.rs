@@ -32,11 +32,16 @@ use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
 #[derive(Clone)]
 pub struct TreeMapping {
     blobstore: Arc<dyn Blobstore>,
+    repo: BlobRepo,
 }
 
 impl TreeMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Self {
-        Self { blobstore }
+    pub fn new(
+        blobstore: Arc<dyn Blobstore>,
+        _config: &DerivedDataTypesConfig,
+        repo: BlobRepo,
+    ) -> Self {
+        Self { blobstore, repo }
     }
 
     fn root_key(&self, cs_id: ChangesetId) -> String {
@@ -74,7 +79,7 @@ impl BonsaiDerivedMapping for TreeMapping {
             .await
     }
 
-    async fn put(
+    async fn put_impl(
         &self,
         ctx: CoreContext,
         csid: ChangesetId,
@@ -86,6 +91,14 @@ impl BonsaiDerivedMapping for TreeMapping {
     }
 
     fn options(&self) {}
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
+    }
 }
 
 #[async_trait]
@@ -116,7 +129,11 @@ impl BonsaiDerived for TreeHandle {
         repo: &BlobRepo,
     ) -> Result<Self::DefaultMapping, DeriveError> {
         let config = derived_data::enabled_type_config(repo, Self::NAME)?;
-        Ok(TreeMapping::new(repo.blobstore().boxed(), config))
+        Ok(TreeMapping::new(
+            repo.blobstore().boxed(),
+            config,
+            repo.clone(),
+        ))
     }
 }
 

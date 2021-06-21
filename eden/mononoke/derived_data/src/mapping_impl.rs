@@ -42,6 +42,12 @@ pub trait BlobstoreRootIdMapping {
     /// Returns the blobstore that backs this mapping.
     fn blobstore(&self) -> &dyn Blobstore;
 
+    /// Name of the repository
+    fn repo_name(&self) -> &str;
+
+    /// Name of the scuba table used for logging
+    fn derived_data_scuba_table(&self) -> &Option<String>;
+
     /// Create a key for this mapping for a particular changeset.
     fn format_key(&self, cs_id: ChangesetId) -> String {
         format!("{}{}", self.prefix(), cs_id)
@@ -100,6 +106,12 @@ pub trait BlobstoreExistsMapping {
 
     /// Returns the blobstore that backs this mapping.
     fn blobstore(&self) -> &dyn Blobstore;
+
+    /// Name of the repository
+    fn repo_name(&self) -> &str;
+
+    /// Name of the scuba table used for logging
+    fn derived_data_scuba_table(&self) -> &Option<String>;
 
     /// Create a key for this mapping for a particular changeset.
     fn format_key(&self, cs_id: ChangesetId) -> String {
@@ -187,7 +199,7 @@ macro_rules! impl_bonsai_derived_mapping {
                 self.fetch_batch(&ctx, csids).await
             }
 
-            async fn put(
+            async fn put_impl(
                 &self,
                 ctx: ::context::CoreContext,
                 csid: ::mononoke_types::ChangesetId,
@@ -198,6 +210,14 @@ macro_rules! impl_bonsai_derived_mapping {
 
             fn options(&self) -> <Self::Value as $crate::BonsaiDerivable>::Options {
                 <$mapping as $mapping_impl>::options(self)
+            }
+
+            fn repo_name(&self) -> &str {
+                <$mapping as $mapping_impl>::repo_name(self)
+            }
+
+            fn derived_data_scuba_table(&self) -> &Option<String> {
+                <$mapping as $mapping_impl>::derived_data_scuba_table(self)
             }
         }
 

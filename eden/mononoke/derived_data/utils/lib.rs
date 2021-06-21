@@ -186,8 +186,8 @@ struct DerivedUtilsFromMapping<M> {
 }
 
 impl<M> DerivedUtilsFromMapping<M> {
-    fn new(mapping: M) -> Self {
-        let mapping = RegenerateMapping::new(mapping);
+    fn new(mapping: M, repo: BlobRepo) -> Self {
+        let mapping = RegenerateMapping::new(mapping, repo);
         Self { mapping }
     }
 }
@@ -239,7 +239,7 @@ where
         let orig_mapping = self.mapping.clone();
         // With InMemoryMapping we can ensure that mapping entries are written only after
         // all corresponding blobs were successfully saved
-        let in_memory_mapping = InMemoryMapping::new(self.mapping.clone());
+        let in_memory_mapping = InMemoryMapping::new(self.mapping.clone(), repo.clone());
 
         // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
         // `::persist` is later used to bulk write all pending data.
@@ -376,6 +376,7 @@ where
 struct InMemoryMapping<M: BonsaiDerivedMapping + Clone> {
     mapping: M,
     buffer: Arc<Mutex<HashMap<ChangesetId, M::Value>>>,
+    repo: BlobRepo,
 }
 
 impl<M> InMemoryMapping<M>
@@ -383,10 +384,11 @@ where
     M: BonsaiDerivedMapping + Clone,
     <M as BonsaiDerivedMapping>::Value: Clone,
 {
-    fn new(mapping: M) -> Self {
+    fn new(mapping: M, repo: BlobRepo) -> Self {
         Self {
             mapping,
             buffer: Arc::new(Mutex::new(HashMap::new())),
+            repo,
         }
     }
 
@@ -425,7 +427,7 @@ where
         Ok(ans.into_iter().chain(fetched.into_iter()).collect())
     }
 
-    async fn put(
+    async fn put_impl(
         &self,
         _ctx: CoreContext,
         csid: ChangesetId,
@@ -438,6 +440,16 @@ where
 
     fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
         self.mapping.options()
+    }
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        // Don't log to scuba since the write to the real mapping hasn't
+        // actually happened
+        &None
     }
 }
 
@@ -482,43 +494,73 @@ fn derived_data_utils_impl(
     match name {
         RootUnodeManifestId::NAME => {
             let mapping = RootUnodeManifestMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         RootFastlog::NAME => {
             let mapping = RootFastlogMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         MappedHgChangesetId::NAME => {
             let mapping = HgChangesetIdMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         RootFsnodeId::NAME => {
             let mapping = RootFsnodeMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         BlameRoot::NAME => {
             let mapping = BlameRootMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         ChangesetInfo::NAME => {
             let mapping = ChangesetInfoMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         RootDeletedManifestId::NAME => {
             let mapping = RootDeletedManifestMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         FilenodesOnlyPublic::NAME => {
             let mapping = FilenodesOnlyPublicMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         RootSkeletonManifestId::NAME => {
             let mapping = RootSkeletonManifestMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         TreeHandle::NAME => {
-            let mapping = TreeMapping::new(repo.blobstore().boxed(), config);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
+            let mapping = TreeMapping::new(repo.blobstore().boxed(), config, repo.clone());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(
+                mapping,
+                repo.clone(),
+            )))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }

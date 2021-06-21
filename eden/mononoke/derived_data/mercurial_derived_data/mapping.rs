@@ -49,6 +49,7 @@ pub struct HgChangesetIdMapping {
     repo_id: RepositoryId,
     mapping: Arc<dyn BonsaiHgMapping>,
     options: HgChangesetDeriveOptions,
+    repo: BlobRepo,
 }
 
 impl HgChangesetIdMapping {
@@ -61,6 +62,7 @@ impl HgChangesetIdMapping {
             repo_id: repo.get_repoid(),
             mapping: repo.bonsai_hg_mapping().clone(),
             options,
+            repo: repo.clone(),
         })
     }
 }
@@ -84,7 +86,12 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
         Ok(map)
     }
 
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
+    async fn put_impl(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        id: Self::Value,
+    ) -> Result<(), Error> {
         self.mapping
             .add(
                 &ctx,
@@ -100,6 +107,14 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
 
     fn options(&self) -> HgChangesetDeriveOptions {
         self.options.clone()
+    }
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
     }
 }
 

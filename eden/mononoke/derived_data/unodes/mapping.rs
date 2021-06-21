@@ -89,6 +89,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
 pub struct RootUnodeManifestMapping {
     blobstore: RepoBlobstore,
     unode_version: UnodeVersion,
+    repo: BlobRepo,
 }
 
 #[async_trait]
@@ -99,6 +100,7 @@ impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
         Ok(Self {
             blobstore: repo.get_blobstore(),
             unode_version: config.unode_version,
+            repo: repo.clone(),
         })
     }
 
@@ -115,6 +117,14 @@ impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
 
     fn options(&self) -> UnodeVersion {
         self.unode_version
+    }
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
     }
 }
 

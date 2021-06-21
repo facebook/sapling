@@ -73,6 +73,7 @@ impl BonsaiDerivable for ChangesetInfo {
 #[derive(Clone)]
 pub struct ChangesetInfoMapping {
     blobstore: Arc<dyn Blobstore>,
+    repo: BlobRepo,
 }
 
 #[async_trait]
@@ -82,6 +83,7 @@ impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
+            repo: repo.clone(),
         })
     }
 
@@ -94,6 +96,14 @@ impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     }
 
     fn options(&self) {}
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
+    }
 }
 
 impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping, ChangesetInfo);

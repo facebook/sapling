@@ -87,6 +87,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use context::{CoreContext, SessionClass};
+use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -115,7 +116,7 @@ pub enum DeriveError {
 /// Trait for defining how derived data is derived.  This trait should be
 /// implemented by derivable data types.
 #[async_trait]
-pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
+pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone + std::fmt::Debug {
     /// Name of derived data
     ///
     /// Should be unique string (among derived data types), which is used to identify or
@@ -296,10 +297,32 @@ pub trait BonsaiDerivedMapping: Send + Sync + Clone {
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error>;
 
     /// Saves mapping between bonsai changeset and derived data id
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error>;
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
+        let mut scuba = logging::init_derived_data_scuba::<Self::Value>(
+            &ctx,
+            self.repo_name(),
+            self.derived_data_scuba_table(),
+            &csid,
+        );
+        let (stats, res) = self.put_impl(ctx.clone(), csid, id.clone()).timed().await;
+        logging::log_mapping_insertion::<Self::Value>(&ctx, &mut scuba, &stats, &res, &id);
+
+        res
+    }
+
+    async fn put_impl(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        id: Self::Value,
+    ) -> Result<(), Error>;
 
     /// Get the derivation options that apply for this mapping.
     fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
+
+    fn repo_name(&self) -> &str;
+
+    fn derived_data_scuba_table(&self) -> &Option<String>;
 }
 
 /// This mapping can be used when we want to ignore values before it was put
@@ -309,13 +332,15 @@ pub trait BonsaiDerivedMapping: Send + Sync + Clone {
 pub struct RegenerateMapping<M> {
     regenerate: Arc<Mutex<HashSet<ChangesetId>>>,
     base: M,
+    repo: BlobRepo,
 }
 
 impl<M> RegenerateMapping<M> {
-    pub fn new(base: M) -> Self {
+    pub fn new(base: M, repo: BlobRepo) -> Self {
         Self {
             regenerate: Default::default(),
             base,
+            repo,
         }
     }
 
@@ -341,12 +366,27 @@ where
         self.base.get(ctx, csids).await
     }
 
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
+    async fn put_impl(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        id: Self::Value,
+    ) -> Result<(), Error> {
         self.regenerate.with(|regenerate| regenerate.remove(&csid));
         self.base.put(ctx, csid, id).await
     }
 
     fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
         self.base.options()
+    }
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        // Don't log to scuba when using  "RegenerateMapping" scuba table
+        // It will be logged when putting into `base` mapping
+        &None
     }
 }

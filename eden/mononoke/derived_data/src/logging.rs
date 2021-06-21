@@ -9,7 +9,6 @@ use crate::BonsaiDerivable;
 use anyhow::Error;
 use context::CoreContext;
 use futures_stats::FutureStats;
-use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
@@ -23,16 +22,16 @@ define_stats! {
 
 pub fn init_derived_data_scuba<Derivable: BonsaiDerivable>(
     ctx: &CoreContext,
-    name: &str,
-    derived_data_config: &DerivedDataConfig,
+    reponame: &str,
+    derived_data_scuba_table: &Option<String>,
     bcs_id: &ChangesetId,
 ) -> MononokeScubaSampleBuilder {
-    match &derived_data_config.scuba_table {
+    match &derived_data_scuba_table {
         Some(scuba_table) => {
             let mut builder = MononokeScubaSampleBuilder::new(ctx.fb, scuba_table);
             builder.add_common_server_data();
             builder.add("derived_data", Derivable::NAME);
-            builder.add("reponame", name);
+            builder.add("reponame", reponame);
             builder.add("changeset", format!("{}", bcs_id));
             builder
         }
@@ -94,4 +93,41 @@ pub fn log_derivation_end<Derivable>(
         stats.completion_time.as_millis_unchecked() as i64,
         (Derivable::NAME,),
     );
+}
+
+pub fn log_mapping_insertion<Derivable>(
+    ctx: &CoreContext,
+    derived_data_scuba: &mut MononokeScubaSampleBuilder,
+    stats: &FutureStats,
+    res: &Result<(), Error>,
+    value: &Derivable,
+) where
+    Derivable: BonsaiDerivable,
+{
+    let tag = if res.is_ok() {
+        "Inserted mapping"
+    } else {
+        "Failed to insert mapping"
+    };
+
+    ctx.perf_counters().insert_perf_counters(derived_data_scuba);
+
+    let msg = match res {
+        Ok(_) => None,
+        Err(err) => Some(format!("{:#}", err)),
+    };
+
+
+    let mut value = format!("{:?}", value);
+    // limit how much data we log to scuba
+    let limit = 1000;
+    if value.len() > limit {
+        value = value.chars().take(limit).collect();
+    }
+
+    derived_data_scuba
+        .add_future_stats(&stats)
+        .add("mapping_value", value)
+        // derived data name and bcs_id already logged as separate fields
+        .log_with_msg(tag, msg);
 }

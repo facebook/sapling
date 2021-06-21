@@ -114,6 +114,7 @@ impl BonsaiDerivable for BlameRoot {
 pub struct BlameRootMapping {
     blobstore: Arc<dyn Blobstore>,
     options: BlameDeriveOptions,
+    repo: BlobRepo,
 }
 
 #[async_trait]
@@ -126,6 +127,7 @@ impl BlobstoreExistsMapping for BlameRootMapping {
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
             options,
+            repo: repo.clone(),
         })
     }
 
@@ -139,6 +141,14 @@ impl BlobstoreExistsMapping for BlameRootMapping {
 
     fn options(&self) -> BlameDeriveOptions {
         self.options
+    }
+
+    fn repo_name(&self) -> &str {
+        self.repo.name()
+    }
+
+    fn derived_data_scuba_table(&self) -> &Option<String> {
+        &self.repo.get_derived_data_config().scuba_table
     }
 }
 
