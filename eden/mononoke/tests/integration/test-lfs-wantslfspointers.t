@@ -103,6 +103,12 @@ Create a new client repository, using getpack (with its own cachepath).
   > [remotefilelog]
   > fetchpacks = True
   > getpackversion = 2
+  > write-hgcache-to-indexedlog = True
+  > write-local-to-indexedlog = True
+  > indexedlogdatastore = True
+  > indexedloghistorystore = True
+  > lfs = True
+  > useruststore = True
   > cachepath=$TESTTMP/cachepath-alt2
   > EOF
 
@@ -111,6 +117,4 @@ Create a new client repository, using getpack (with its own cachepath).
 Now set wantslfspointers, make sure we download lfs pointers
   $ hgmn update -r master_bookmark -v --config lfs.wantslfspointers=True
   resolving manifests
-  lfs: downloading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

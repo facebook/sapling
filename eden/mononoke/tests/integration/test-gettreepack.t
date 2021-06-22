@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
 setup configuration
   $ setup_common_config
@@ -54,15 +53,19 @@ Pull from Mononoke
   warning: stream clone is disabled
 
 Make sure that cache is empty
-  $ ls $TESTTMP/cachepath/repo/packs/manifests
+  $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedlogdatastore/0 |& grep Entry | wc -l
+  0
+  $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedloghistorystore/0 |& grep Entry | wc -l
+  0
 
   $ hgmn prefetch -r "min(all())" -r1
   $ hgmn prefetch -r 2
 
 Make sure that new entries were downloaded
-  $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
-  $ ls $TESTTMP/cachepath/repo/packs/manifests | wc -l
-  8
+  $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedlogdatastore/0 |& grep Entry | wc -l
+  3
+  $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedloghistorystore/0 |& grep Entry | wc -l
+  3
 
 Update to the revisions. Change the path to make sure that gettreepack command is
 not sent because we've already downloaded all the trees

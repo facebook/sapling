@@ -6,7 +6,10 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
+# For now this test requires packfiles as there's no existing config option for disabling indexedlog integrity checks
+# to force the client to try to push corrupted data
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+  $ setconfig scmstore.enableshim=False
 
 # setup config repo
 
@@ -55,6 +58,9 @@
 # change access to file, as it is readonly
   $ chmod 666 "$PACK_TO_CORRUPT"
   $ sed -i s/hello_world/aaaaaaaaaaa/ "$PACK_TO_CORRUPT"
+# TODO(meyer): Corrupt indexedlog instead and disable integrity checks
+#  $ chmod 666 .hg/store/indexedlogdatastore/log
+#  $ sed -i s/hello_world/aaaaaaaaaaa/ .hg/store/indexedlogdatastore/log
 
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
