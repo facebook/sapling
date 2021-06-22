@@ -524,7 +524,7 @@ mod test {
             ctx.clone(),
             &changeset_fetcher,
             Arc::new(SkiplistIndex::new()),
-            vec![string_to_bonsai(fb, &repo, "416b719c25bc1e5c071ed9929072647d72ca10c3").await],
+            vec![string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await],
             vec![
                 string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
                 string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
@@ -536,7 +536,7 @@ mod test {
             ctx.clone(),
             &repo,
             vec![
-                string_to_bonsai(fb, &repo, "416b719c25bc1e5c071ed9929072647d72ca10c3").await,
+                string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
                 string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
                 string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
             ],
@@ -557,7 +557,7 @@ mod test {
             ctx.clone(),
             &changeset_fetcher,
             Arc::new(SkiplistIndex::new()),
-            vec![string_to_bonsai(fb, &repo, "416b719c25bc1e5c071ed9929072647d72ca10c3").await],
+            vec![string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await],
             vec![string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await],
         )
         .boxify();
@@ -566,7 +566,7 @@ mod test {
             ctx.clone(),
             &repo,
             vec![
-                string_to_bonsai(fb, &repo, "416b719c25bc1e5c071ed9929072647d72ca10c3").await,
+                string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
                 string_to_bonsai(fb, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
                 string_to_bonsai(fb, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
                 string_to_bonsai(fb, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,

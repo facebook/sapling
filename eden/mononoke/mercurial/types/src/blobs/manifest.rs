@@ -215,6 +215,10 @@ impl HgBlobManifest {
     pub fn computed_node_id(&self) -> HgNodeHash {
         self.computed_node_id
     }
+
+    pub fn content(&self) -> &ManifestContent {
+        &self.content
+    }
 }
 
 #[async_trait]

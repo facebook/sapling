@@ -14,7 +14,7 @@ use futures::future::try_join_all;
 use futures::{
     channel::mpsc,
     compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
 };
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
@@ -25,7 +25,8 @@ use mercurial_types::{
     HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{FileType, MPath, RepoPath};
-use std::{io::Write, sync::Arc};
+use sorted_vector_map::SortedVectorMap;
+use std::{collections::BTreeMap, io::Write, sync::Arc};
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 struct ParentIndex(usize);
@@ -93,6 +94,49 @@ async fn create_hg_manifest(
         path,
         parents,
     } = tree_info;
+
+    // See if any of the parents have the same hg manifest. If yes, then we can just reuse it
+    // without recreating manifest again.
+    // But note that we reuse only if manifest has more than on parent, and there are a few reasons for
+    // it:
+    // 1) If a commit have a single parent then create_hg_manifest function shouldn't normally be called -
+    //    it can only happen if a file hasn't changed, but nevertheless there's an entry for this file
+    //    in the bonsai. This should happen rarely, and recreating manifest in these cases shouldn't be
+    //    a problem.
+    // 2) It adds an additional read of parent manifests, and it can potentially be expensive if manifests
+    //    are large.
+    //    We'd rather not do it if we don't need to, and it seems that we don't really need to (see point 1)
+    if parents.len() > 1 {
+        let mut subentries_vec_map = BTreeMap::new();
+        for (name, (_context, subentry)) in &subentries {
+            let subentry = match subentry {
+                Entry::Tree(manifest_id) => Entry::Tree(*manifest_id.untraced()),
+                Entry::Leaf(leaf) => Entry::Leaf(*leaf.untraced()),
+            };
+            subentries_vec_map.insert(name.clone(), subentry);
+        }
+
+        let subentries_vec_map = SortedVectorMap::from(subentries_vec_map);
+
+        let (p1_parent, p2_parent) = hg_parents(&parents);
+        let loaded_parents = {
+            let ctx = &ctx;
+            let blobstore = &blobstore;
+
+            future::try_join_all(p1_parent.into_iter().chain(p2_parent).map(|id| async move {
+                let mf = id.load(ctx, blobstore).map_err(Error::from).await?;
+                Result::<_, Error>::Ok((id, mf))
+            }))
+            .await?
+        };
+
+        if let Some((reuse_id, _)) = loaded_parents
+            .into_iter()
+            .find(|(_, p)| p.content().files == subentries_vec_map)
+        {
+            return Ok(((), Traced::generate(reuse_id)));
+        }
+    }
 
     let mut contents = Vec::new();
     for (name, (_context, subentry)) in subentries {

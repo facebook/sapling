@@ -1513,7 +1513,7 @@ mod test {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "416b719c25bc1e5c071ed9929072647d72ca10c3",
+            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
         )
         .await;
         let sli = SkiplistIndex::new();
@@ -1644,7 +1644,7 @@ mod test {
         let _merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "416b719c25bc1e5c071ed9929072647d72ca10c3",
+            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
         )
         .await;
         let sli = SkiplistIndex::new();
@@ -2351,7 +2351,7 @@ mod test {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "416b719c25bc1e5c071ed9929072647d72ca10c3",
+            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
         )
         .await;
 
@@ -2520,7 +2520,7 @@ mod test {
         let merge_node = string_to_bonsai(
             ctx.clone(),
             &repo,
-            "416b719c25bc1e5c071ed9929072647d72ca10c3",
+            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
         )
         .await;
 
@@ -3039,8 +3039,8 @@ mod test {
             repo,
             sli,
             "d7542c9db7f4c77dab4b315edd328edf1514952f",
-            "80274ca17119952e89d706b3d9e9f30dc831c92d",
-            Some("80274ca17119952e89d706b3d9e9f30dc831c92d"),
+            "1f6bc010883e397abeca773192f3370558ee1320",
+            Some("1f6bc010883e397abeca773192f3370558ee1320"),
         )
         .await;
     }

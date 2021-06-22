@@ -379,7 +379,7 @@ mod test {
             ctx.clone(),
             &repo,
             &[
-                "80274ca17119952e89d706b3d9e9f30dc831c92d",
+                "1f6bc010883e397abeca773192f3370558ee1320",
                 "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                 "16839021e338500b3cf7c9b871c8a07351697d68",
             ],
@@ -416,7 +416,7 @@ mod test {
             ctx.clone(),
             &repo,
             vec![
-                string_to_bonsai(fb, &repo, "80274ca17119952e89d706b3d9e9f30dc831c92d").await,
+                string_to_bonsai(fb, &repo, "1f6bc010883e397abeca773192f3370558ee1320").await,
                 string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
             ],
             nodestream,
@@ -437,7 +437,7 @@ mod test {
             ctx.clone(),
             &repo,
             &[
-                "416b719c25bc1e5c071ed9929072647d72ca10c3",
+                "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
                 "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                 "16839021e338500b3cf7c9b871c8a07351697d68",
             ],
@@ -473,7 +473,7 @@ mod test {
             ctx.clone(),
             &repo,
             vec![
-                string_to_bonsai(fb, &repo, "416b719c25bc1e5c071ed9929072647d72ca10c3").await,
+                string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
                 string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
             ],
             nodestream,

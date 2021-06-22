@@ -277,12 +277,12 @@ Do the invisible merge by gradually merging TOMERGES into master
   Current: 51c49b0bd6828234ce57148769ca56f254e463bd
   To merge: 15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1
   Merged as (bonsai): e0d0f35215c77449e9e63807cbec7f09368ebd0591f11adb53a133a53add4a7a
-  Merged as (hg): a2da597439baf0918aaf1d6153ce85a7066bee9d
+  Merged as (hg): f2ac779eb5ef342aab788bcb278e57e53b2bc83e
   file count is: 4
-  Current: 537d8dc759cb6c028c6907e51bf01217f6e748bf
+  Current: 0eb9c5feca13f5b7c5daf2c34b659c3846569fad
   To merge: 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
   Merged as (bonsai): 9e0bfdd3a6cd0a41697e67f00baf3d060e0e7660f7e2b0e2be34c3f5c5691984
-  Merged as (hg): 00ee43db03b2bd0ed0e9ad806f23f042dd3ddff8
+  Merged as (hg): 005686fbc230dc0be4e1cc2fabf46d87bbb19001
   file count is: 6
   $ REPONAME=fbs-mon hgmn pull -q |& grep -v 'devel-warn'
   [1]
@@ -351,7 +351,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ REPONAME=fbs-mon hgmn pull -q
   $ log -r master_bookmark
-  o  pushredirected_3 [public;rev=14;a272f72e81b3] default/master_bookmark
+  o  pushredirected_3 [public;rev=14;223e2529a7b8] default/master_bookmark
   │
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
