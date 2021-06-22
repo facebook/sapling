@@ -730,6 +730,21 @@ def _setupdiff(ui):
 
     extensions.wrapfunction(context.workingfilectx, "data", workingfilectxdata)
 
+    def workingfilectxsize(orig, self):
+        try:
+            # Try lookup working copy first.
+            return orig(self)
+        except IOError:
+            # Then try working copy parent if the file is outside sparse.
+            if util.safehasattr(self._repo, "sparsematch"):
+                sparsematch = self._repo.sparsematch()
+                if not sparsematch(self._path):
+                    basectx = self._changectx._parents[0]
+                    return basectx[self._path].size()
+            raise
+
+    extensions.wrapfunction(context.workingfilectx, "size", workingfilectxsize)
+
     # wrap trydiff to filter diffs if '--sparse' is set
     def trydiff(
         orig,
