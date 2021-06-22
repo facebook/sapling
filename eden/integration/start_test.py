@@ -61,10 +61,23 @@ class StartTest(testcase.EdenTestCase):
         # `eden start --if-necessary` should start edenfs now
         if start.eden_start_needs_allow_root_option(systemd=False):
             output = self.eden.run_cmd(
-                "start", "--if-necessary", "--", "--allowRoot", capture_stderr=True
+                "start",
+                "--if-necessary",
+                *self.edenfsctl_args(),
+                "--",
+                "--allowRoot",
+                *self.edenfs_args(),
+                capture_stderr=True,
             )
         else:
-            output = self.eden.run_cmd("start", "--if-necessary", capture_stderr=True)
+            output = self.eden.run_cmd(
+                "start",
+                "--if-necessary",
+                *self.edenfsctl_args(),
+                "--",
+                *self.edenfs_args(),
+                capture_stderr=True,
+            )
         self.assertIn("Started edenfs", output)
         self.assertTrue(self.eden.is_healthy())
 
@@ -76,13 +89,24 @@ class StartTest(testcase.EdenTestCase):
     def test_start_if_not_running(self) -> None:
         # EdenFS is already running when the test starts, so
         # `eden start --if-not-running` should have nothing to do
-        output = self.eden.run_cmd("start", "--if-not-running", "--", "--allowRoot")
+        output = self.eden.run_cmd(
+            "start",
+            "--if-not-running",
+            *self.edenfsctl_args(),
+            "--",
+            "--allowRoot",
+            *self.edenfs_args(),
+        )
         self.assertRegex(output, r"EdenFS is already running \(pid [0-9]+\)\n")
         self.assertTrue(self.eden.is_healthy())
 
         # `eden start` should fail without `--if-not-running`
         proc = self.eden.run_unchecked(
-            "start", stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+            "start",
+            *self.edenfsctl_args(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
         )
         self.assertNotEqual(proc.returncode, 0)
         self.assertRegex(
@@ -93,13 +117,32 @@ class StartTest(testcase.EdenTestCase):
         # If we stop eden, `eden start --if-not-running` should start it
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
-        self.eden.run_cmd("start", "--if-not-running", "--", "--allowRoot")
+        self.eden.run_cmd(
+            "start",
+            "--if-not-running",
+            *self.edenfsctl_args(),
+            "--",
+            "--allowRoot",
+            *self.edenfs_args(),
+        )
         self.assertTrue(self.eden.is_healthy())
 
         # Stop edenfs.  We didn't start it through self.eden.start()
         # so the self.eden class doesn't really know it is running and that
         # it needs to be shut down.
         self.eden.run_cmd("stop")
+
+    def edenfsctl_args(self) -> List[str]:
+        return ["--daemon-binary", FindExe.EDEN_DAEMON]
+
+    def edenfs_args(self) -> List[str]:
+        args = []
+
+        privhelper = FindExe.EDEN_PRIVHELPER
+        if privhelper is not None:
+            args.extend(["--privhelper_path", privhelper])
+
+        return args
 
 
 @testcase.eden_repo_test
