@@ -14,7 +14,6 @@
 
 DEFINE_string(query, "", "Query to run");
 DEFINE_string(repo, "", "Repository to run the query against");
-DEFINE_string(watchman_socket, "", "Socket to the watchman daemon");
 
 namespace {
 
@@ -75,12 +74,7 @@ void watchman_glob(benchmark::State& state) {
   auto evbThread = folly::EventBaseThread();
   auto eventBase = evbThread.getEventBase();
 
-  folly::Optional<std::string> sockPath;
-  if (!FLAGS_watchman_socket.empty()) {
-    sockPath = FLAGS_watchman_socket;
-  }
-
-  WatchmanClient client(eventBase, std::move(sockPath));
+  WatchmanClient client(eventBase);
   client.connect().get();
   auto watch = client.watch(path.stringPiece()).get();
 
