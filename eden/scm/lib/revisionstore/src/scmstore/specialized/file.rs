@@ -225,7 +225,11 @@ impl FileStore {
                     base: None,
                     key,
                 };
-                contentstore.add(&delta, &meta);
+                if let Some(indexedlog_local) = indexedlog_local.as_mut() {
+                    indexedlog_local.unlocked(|| contentstore.add(&delta, &meta))
+                } else {
+                    contentstore.add(&delta, &meta)
+                }?;
                 continue;
             }
             let hg_blob_len = bytes.len() as u64;

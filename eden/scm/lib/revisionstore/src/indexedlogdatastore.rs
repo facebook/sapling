@@ -347,6 +347,13 @@ impl<'a> IndexedLogHgIdDataStoreWriteGuard<'a> {
         self.0.log.flush()?;
         Ok(())
     }
+
+    /// Run a function with the write guard temporarily unlocked
+    ///
+    /// Used when calling recursively into contentstore during add
+    pub fn unlocked<U>(&mut self, f: impl FnOnce() -> U) -> U {
+        RwLockWriteGuard::unlocked(&mut self.0, f)
+    }
 }
 
 impl KeyedValue for Entry {
