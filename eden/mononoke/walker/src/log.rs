@@ -11,3 +11,4 @@ pub const GRAPH: &str = "graph";
 pub const LOADED: &str = "loaded";
 pub const SIZING: &str = "sizing";
 pub const VALIDATE: &str = "validate";
+pub const SUPPRESS: &str = "suppress";

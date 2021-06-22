@@ -773,6 +773,7 @@ pub enum NodeData {
     // Node has an invalid hash
     HashValidationFailureAsData(Node),
     NotRequired,
+    OutsideChunk,
     // Bonsai
     Bookmark(ChangesetId),
     Changeset(BonsaiChangeset),

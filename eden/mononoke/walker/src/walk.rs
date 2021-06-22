@@ -9,6 +9,7 @@ use crate::graph::{
     AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType,
     PathKey, SqlShardInfo, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
 };
+use crate::log;
 use crate::setup::JobWalkParams;
 use crate::state::InternedType;
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG};
@@ -1867,7 +1868,7 @@ where
                 {
                     ctx
                 } else {
-                    info!(ctx.logger(), "Suppressing edge {:?}", walk_item);
+                    info!(ctx.logger(), #log::SUPPRESS, "Suppressing edge {:?}", walk_item);
                     return future::ready((walk_item.target, shard_key, Ok(None))).left_future();
                 };
 

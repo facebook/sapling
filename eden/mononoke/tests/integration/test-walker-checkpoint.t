@@ -236,7 +236,7 @@ OldestFirst, hg should have a run with only main bounds
   Repo bounds: (1, 6)
   Continuing from checkpoint run 1 chunk 4 with catchup None and main Some((5, 6)) bounds
   Starting chunk 5 with bounds (5, 6)
-  Seen,Loaded: 12,9
+  Seen,Loaded: 12,12
   Deferred: 0
   Chunk 5 updating checkpoint to (1, 6)
   Completed in 5 chunks of size 1

@@ -334,38 +334,32 @@ impl WalkState {
                 self.public_not_visited.remove(&id);
             }
             // Hg
-            (Node::BonsaiHgMapping(k), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
+            (Node::BonsaiHgMapping(k), Some(_)) => {
                 self.record(&self.visited_bcs_mapping, &self.bcs_ids.interned(&k.inner));
             }
             // Derived
-            (Node::ChangesetInfoMapping(bcs_id), Some(NodeData::ChangesetInfoMapping(Some(_)))) => {
+            (Node::ChangesetInfoMapping(bcs_id), Some(_)) => {
                 self.record(
                     &self.visited_changeset_info_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
-            (
-                Node::DeletedManifestMapping(bcs_id),
-                Some(NodeData::DeletedManifestMapping(Some(_))),
-            ) => {
+            (Node::DeletedManifestMapping(bcs_id), Some(_)) => {
                 self.record(
                     &self.visited_deleted_manifest_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
-            (Node::FsnodeMapping(bcs_id), Some(NodeData::FsnodeMapping(Some(_)))) => {
+            (Node::FsnodeMapping(bcs_id), Some(_)) => {
                 self.record(&self.visited_fsnode_mapping, &self.bcs_ids.interned(bcs_id));
             }
-            (
-                Node::SkeletonManifestMapping(bcs_id),
-                Some(NodeData::SkeletonManifestMapping(Some(_))),
-            ) => {
+            (Node::SkeletonManifestMapping(bcs_id), Some(_)) => {
                 self.record(
                     &self.visited_skeleton_manifest_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
-            (Node::UnodeMapping(bcs_id), Some(NodeData::UnodeMapping(Some(_)))) => {
+            (Node::UnodeMapping(bcs_id), Some(_)) => {
                 self.record(&self.visited_unode_mapping, &self.bcs_ids.interned(bcs_id));
             }
             _ => {}
@@ -982,15 +976,17 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         walk_item: &OutgoingEdge,
         _route: Option<EmptyRoute>,
     ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
-        match self.chunk_direction {
+        let node_data = match self.chunk_direction {
             Direction::NewestFirst => {
                 let i = self.bcs_ids.interned(bcs_id);
                 self.record_multi(&self.deferred_bcs, i, &walk_item);
+                None
             }
             // We'll never visit backward looking edges when running OldestFirst, so don't record them.
-            Direction::OldestFirst => {}
-        }
-        ((walk_item.target.clone(), None, None), EmptyRoute {})
+            // returning Some for NodeData tells record_resolved_visit that we don't need to visit this node again if we see it.
+            Direction::OldestFirst => Some(NodeData::OutsideChunk),
+        };
+        ((walk_item.target.clone(), node_data, None), EmptyRoute {})
     }
 }
 
