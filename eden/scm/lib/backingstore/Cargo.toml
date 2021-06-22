@@ -21,3 +21,6 @@ manifest-tree = { path = "../manifest-tree" }
 progress = { path = "../progress" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
+
+[features]
+fb = ["configparser/fb"]
