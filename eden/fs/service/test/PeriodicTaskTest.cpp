@@ -227,6 +227,11 @@ TEST_F(PeriodicTaskTest, slowTask) {
       .getCategory("eden/fs/service/PeriodicTask")
       ->addHandler(logHandler);
 
+  // TODO(T93776519) remove once Buck v2 strips the fbcode prefix.
+  folly::LoggerDB::get()
+      .getCategory("fbcode/eden/fs/service/PeriodicTask")
+      ->addHandler(logHandler);
+
   // Schedule a slow periodic task.
   // We test to make sure that log messages are generated about the fact that it
   // runs slowly.
