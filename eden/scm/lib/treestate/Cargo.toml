@@ -15,7 +15,7 @@ types = { path = "../types" }
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
-itertools = "0.8"
+itertools = "0.10.1"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_chacha = "0.2"
