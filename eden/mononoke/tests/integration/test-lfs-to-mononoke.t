@@ -6,7 +6,9 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+# scmstore shim disabled due to test's reliance on pack files
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False scmstore.enableshim=False
+
 
 Setup repo config (we use blob_files to share across Mononoke and API Server):
   $ LFS_THRESHOLD="1000" setup_common_config "blob_files"
@@ -260,3 +262,4 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
+# trailing whitespace

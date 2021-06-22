@@ -19,6 +19,10 @@ Init:
 
   $ enable lfs remotefilelog
   $ setconfig lfs.url=file://$TESTTMP/remote remotefilelog.cachepath=$TESTTMP/cache
+# Disable scmstore because this tests specifically legacy LFS
+# TODO(meyer): Not removing because I think we should be able to make this work as it does with
+# remotefilelog only.
+  $ setconfig scmstore.enableshim=False
 
 Helper functions to create commits:
 

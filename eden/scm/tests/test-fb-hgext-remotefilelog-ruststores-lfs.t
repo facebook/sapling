@@ -2,6 +2,8 @@
 
   $ configure modern
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+# test relies on pack files
+  $ setconfig scmstore.enableshim=False
 
   $ newserver master
   $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server
