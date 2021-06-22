@@ -46,7 +46,7 @@
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -66,8 +66,6 @@
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 0db8825b9792 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  lfs: uploading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
-  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:
@@ -93,7 +91,7 @@
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B $TESTTMP/lfs-cache2
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -116,8 +114,6 @@
 
   $ hgmn update -r master_bookmark -v
   resolving manifests
-  lfs: downloading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
-  lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated

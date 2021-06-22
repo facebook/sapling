@@ -52,7 +52,7 @@ Make client repo
   $ cd client-push
 
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache1"
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
@@ -66,11 +66,6 @@ Make client repo
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 2b6ce7b50f34 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
-  lfs: need to transfer 2 objects (80 bytes)
-  lfs: uploading c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 (40 bytes)
-  lfs: processed: c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1
-  lfs: uploading aac24ec70120b177274d359073212777a40780e2874b120a0f210096e55cfa5f (40 bytes)
-  lfs: processed: aac24ec70120b177274d359073212777a40780e2874b120a0f210096e55cfa5f
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:

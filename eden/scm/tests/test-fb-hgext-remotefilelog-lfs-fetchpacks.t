@@ -1,7 +1,6 @@
 #chg-compatible
-
   $ disable treemanifest
-  $ setconfig remotenames.selectivepull=1
+  $ setconfig remotenames.selectivepull=1 remotefilelog.lfs=True
 
   $ . "$TESTDIR/library.sh"
 
@@ -33,7 +32,6 @@
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > fetchpacks=True
-  > backgroundrepack=True
   > getpackversion=1
   > [lfs]
   > url=file:$TESTTMP/dummy-remote/
@@ -105,8 +103,8 @@
 
   $ hg debugfilerev -v
   0d2948821b2b: x-lfs
-   x: bin=0 lnk=0 flag=2000 size=17 copied='' chain=1ff4e6c9b276
-    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639\nsize 17\nx-is-binary 0\n'
+   x: bin=0 lnk=0 flag=0 size=17 copied='' chain=1ff4e6c9b276
+    rawdata: 'THIS-IS-LFS-FILE\n'
 
   $ hg show
   commit:      0d2948821b2b
@@ -123,3 +121,5 @@
   @@ -0,0 +1,1 @@
   +THIS-IS-LFS-FILE
   
+
+# trailing whitespace

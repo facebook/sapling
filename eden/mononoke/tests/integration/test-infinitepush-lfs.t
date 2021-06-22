@@ -43,12 +43,12 @@ setup repo-push and repo-pull
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
   $ cd "${TESTTMP}/repo-push"
-  $ setup_hg_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
+  $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
   $ cd "${TESTTMP}/repo-pull"
-  $ setup_hg_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
+  $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
 Do infinitepush (aka commit cloud) push
   $ cd "${TESTTMP}/repo-push"
@@ -76,10 +76,6 @@ Do infinitepush (aka commit cloud) push
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
-  lfs: computing set of blobs to upload
-  lfs: uploading f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245 (200 bytes)
-  lfs: processed: f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245
-  lfs: computing set of blobs to upload
   1 changesets found
   list of changesets:
   68394cf51f7e96952fe832a3c05d17a9b49e8b4b

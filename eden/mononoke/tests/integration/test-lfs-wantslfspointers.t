@@ -103,12 +103,7 @@ Create a new client repository, using getpack (with its own cachepath).
   > [remotefilelog]
   > fetchpacks = True
   > getpackversion = 2
-  > write-hgcache-to-indexedlog = True
-  > write-local-to-indexedlog = True
-  > indexedlogdatastore = True
-  > indexedloghistorystore = True
   > lfs = True
-  > useruststore = True
   > cachepath=$TESTTMP/cachepath-alt2
   > EOF
 

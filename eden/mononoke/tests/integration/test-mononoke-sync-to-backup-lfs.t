@@ -50,7 +50,7 @@ Create a new client repository. Enable LFS there.
   > pushrebase =
   > remotenames =
   > EOF
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
 
 Update in the client repo
@@ -65,8 +65,6 @@ Perform LFS push
   $ hgmn push -r . --to master_bookmark -v
   pushing rev 99262937f158 to destination ssh://user@dummy/orig bookmark master_bookmark
   searching for changes
-  lfs: uploading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
-  lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
   validated revset for rebase
   1 changesets found
   uncompressed size of bundle content:

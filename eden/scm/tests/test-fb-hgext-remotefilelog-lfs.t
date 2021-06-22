@@ -2,7 +2,7 @@
 
   $ disable treemanifest
   $ enable remotenames
-  $ setconfig remotenames.selectivepull=1
+  $ setconfig remotenames.selectivepull=1 remotefilelog.lfs=True
 
   $ . "$TESTDIR/library.sh"
 
@@ -152,16 +152,17 @@
   $ hg commit -m shallow.lfs.commit
 
   $ hg debugdata y f3e0509ec09891552c970794f82de8d6805701c7
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442
-  size 35
-  x-hg-copy x
-  x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
-  x-is-binary 0
+  
+  copy: x
+  copyrev: d33b2f7888d4f6f9112256d0f1c625af6d188fde
+  
+  NOTLFS
+  BECOME-LFS-AGAIN
+  ADD-A-LINE
 
   $ hg debugfilerevision -r . y
   515a4dfd2e0c: shallow.lfs.commit
-   y: bin=0 lnk=0 flag=2000 size=35 copied='x' chain=f3e0509ec098
+   y: bin=0 lnk=0 flag=0 size=35 copied='x' chain=f3e0509ec098
 
   $ hg log -r . -T '{file_copies}\n'
   y (x)
@@ -348,7 +349,7 @@
   $ cd ../shallow
   $ hg pull -q
   5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over *s (glob) (?)
-  $ hg log --removed a.bin --config diff.nobinary=1 --git -p -T '{desc}\n' -r '::tip' --config lfs.url=null://
+  $ hg log --removed a.bin --config diff.nobinary=1 --git -p -T '{desc}\n' -r '::tip'
   binary
   diff --git a/a.bin b/a.bin
   new file mode 100644

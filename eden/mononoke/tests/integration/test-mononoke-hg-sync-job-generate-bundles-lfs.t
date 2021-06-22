@@ -56,7 +56,7 @@ Make client repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames= -q
   $ cd client-push
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
 Push to Mononoke
   $ cd "$TESTTMP/client-push"
@@ -158,7 +158,7 @@ Setup another client and update to latest commit from mercurial
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-pull --noupdate --config extensions.remotenames= -q
   $ cd client-pull
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -167,15 +167,11 @@ Setup another client and update to latest commit from mercurial
 
   $ hg up 2 -v
   resolving manifests
-  lfs: downloading c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 (40 bytes)
-  lfs: processed: c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   40 lfs-largefile
   $ hg up 3 -v
   resolving manifests
-  lfs: downloading 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80 (30 bytes)
-  lfs: processed: 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   30 lfs-largefile

@@ -32,7 +32,7 @@ Setup client repo
 
   $ hgclone_treemanifest ssh://user@dummy/repo-hg hg-client
   $ cd hg-client
-  $ setup_hg_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
+  $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
 
 Create new commits
 
@@ -61,12 +61,6 @@ Create new commits
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
-  lfs: computing set of blobs to upload
-  lfs: need to transfer 2 objects (213 bytes)
-  lfs: uploading f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245 (200 bytes)
-  lfs: processed: f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245
-  lfs: uploading 177507a4ee8737f0930661b3261e9e50edcec96d5cca59b7a4ef3b260936ce09 (13 bytes)
-  lfs: processed: 177507a4ee8737f0930661b3261e9e50edcec96d5cca59b7a4ef3b260936ce09
   1 changesets found
   list of changesets:
   48d4d2fa17e54179e24de7fcb4a8ced38738ca4e
@@ -86,7 +80,7 @@ Clone the repository, and pull
 
   $ hgclone_treemanifest ssh://user@dummy/repo-hg hg-client
   $ cd hg-client
-  $ setup_hg_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
+  $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
   $ hgmn pull
   pulling from ssh://user@dummy/repo
   searching for changes

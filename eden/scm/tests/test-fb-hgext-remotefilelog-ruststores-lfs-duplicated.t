@@ -1,11 +1,11 @@
 #chg-compatible
 
   $ newserver master
-  $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server
+  $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server remotefilelog.lfs=True
 
   $ clone master shallow --noupdate
   $ switchrepo shallow
-  $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server lfs.threshold=10B
+  $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server lfs.threshold=10B remotefilelog.lfs=True
 
   $ echo "THIS IS AN LFS BLOB" > x
   $ hg commit -qAm x

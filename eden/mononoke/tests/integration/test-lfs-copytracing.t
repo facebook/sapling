@@ -34,11 +34,11 @@ Setup Mononoke
 Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"
 
-Clone the repository, then enable HG LFS
+Clone the repository, then enable LFS
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache1"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -62,7 +62,7 @@ Create a new repository, enable LFS there as well
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs2 --noupdate --config extensions.remotenames=
   $ cd repo-hg-lfs2
   $ setup_hg_client
-  $ setup_hg_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
+  $ setup_hg_modern_lfs "$lfs_uri" 1000B "$TESTTMP/lfs-cache2"
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -87,5 +87,5 @@ Pull changes from Mononoke
 
   $ hg debugfilerevision
   ee97b40ee584: copy and move large
-   largeCopy: bin=1 lnk=0 flag=2000 size=2000 copied='large' chain=ca253e07b280
-   largeNew: bin=1 lnk=0 flag=2000 size=2000 copied='large' chain=ca253e07b280
+   largeCopy: bin=1 lnk=0 flag=0 size=2000 copied='large' chain=ca253e07b280
+   largeNew: bin=1 lnk=0 flag=0 size=2000 copied='large' chain=ca253e07b280
