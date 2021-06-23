@@ -10,8 +10,8 @@
 //! Combination of IdMap and IdDag.
 
 use crate::clone::CloneData;
-use crate::errors::programming;
 use crate::errors::NotFoundError;
+use crate::errors::{programming, DagError};
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -57,7 +57,7 @@ use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::io;
 use std::ops::Deref;
@@ -445,8 +445,82 @@ where
     P: TryClone + Send + Sync,
     S: TryClone + Persist + Send + Sync,
 {
-    async fn import_pull_data(&mut self, _clone_data: CloneData<VertexName>) -> Result<()> {
-        unimplemented!()
+    async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+        let (lock, map_lock, dag_lock) = self.reload()?;
+
+        let mut next_free_client_id = self.dag.next_free_id(0, Group::MASTER)?;
+        let mut new_client_segments = vec![];
+        let server_idmap_tree: BTreeMap<_, _> = clone_data.idmap.clone().into_iter().collect();
+        let mut last_server_id = None; // Can't use 0 since server might return segment starting from 0 (for example if pulling from empty repo)
+
+        for server_segment in clone_data.flat_segments.segments {
+            if server_segment.low > server_segment.high {
+                return programming(format!(
+                    "server returned incorrect segment {:?}",
+                    server_segment
+                ));
+            }
+            match last_server_id {
+                Some(last_server_id) if server_segment.low <= last_server_id => {
+                    return programming(format!(
+                        "server returned non sorted segment {:?}, previous segment high {}",
+                        server_segment, last_server_id
+                    ));
+                }
+                _ => {}
+            }
+            last_server_id = Some(server_segment.high);
+            let mut parent_names = vec![];
+            for server_parent in server_segment.parents {
+                let parent_name = clone_data.idmap.get(&server_parent);
+                // all parents should be in server's id_map
+                let parent_name = parent_name.ok_or_else(|| {
+                    DagError::Programming(format!(
+                        "server does not provide name for id {}",
+                        server_parent
+                    ))
+                })?;
+                parent_names.push(parent_name.clone());
+            }
+            // Parents should already be known locally:
+            // Either existed before, or was added in previously processed segment from server
+            let client_parents = self.map.vertex_id_batch(&parent_names).await?;
+            let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
+
+            let new_client_id_low = next_free_client_id;
+            let new_client_id_high =
+                new_client_id_low + server_segment.high.0 - server_segment.low.0;
+            next_free_client_id = new_client_id_high + 1;
+            new_client_segments.push(FlatSegment {
+                low: new_client_id_low,
+                high: new_client_id_high,
+                parents: client_parents,
+            });
+
+            // this can be negative becase we generally don't know if client id's are greater or lower then server id's
+            let server_to_client_offset = new_client_id_low.0 as i64 - server_segment.low.0 as i64;
+
+            let new_server_ids =
+                server_idmap_tree.range(server_segment.low..server_segment.high + 1);
+
+            for (sever_id, name) in new_server_ids {
+                let client_id = Id((sever_id.0 as i64 + server_to_client_offset) as u64);
+                self.map.insert(client_id, name.as_ref())?;
+            }
+        }
+
+        let new_client_segments = PreparedFlatSegments {
+            segments: new_client_segments,
+        };
+
+        self.dag
+            .build_segments_volatile_from_prepared_flat_segments(&new_client_segments)?;
+
+        if cfg!(debug_assertions) {
+            self.verify_missing().await?;
+        }
+
+        self.persist(lock, map_lock, dag_lock)
     }
 }
 
