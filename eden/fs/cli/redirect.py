@@ -682,19 +682,10 @@ class UnmountCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
-        vers_date, _vers_time = instance.get_running_version_parts()
-        if vers_date and vers_date < "20190701":
-            # The redirection feature was shipped internally around the end
-            # of June; using July 1st as a cutoff is reasonable.  If they
-            # aren't running a new enough build, just silently bail out
-            # early.
-            return 0
-
         mount_table = mtab.new()
         redirs = get_effective_redirections(checkout, mount_table)
 
         for redir in redirs.values():
-            print(f"Removing {redir.repo_path}", file=sys.stderr)
             redir.remove_existing(checkout)
             if redir.type == RedirectionType.UNKNOWN:
                 continue
