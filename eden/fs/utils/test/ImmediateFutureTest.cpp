@@ -7,8 +7,8 @@
 
 #include "eden/fs/utils/ImmediateFuture.h"
 
+#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
@@ -38,6 +38,50 @@ TEST(ImmediateFuture, thenValue) {
       std::move(fortyFour).thenValue([](const int& v) { return v + 1; });
   auto fortySix = std::move(fortyFive).thenValue([](int&& v) { return v + 1; });
   EXPECT_EQ(std::move(fortySix).get(), 46);
+}
+
+TEST(ImmediateFuture, ensureBasic) {
+  size_t count = 0;
+  auto ensureFn = [&] { count++; };
+
+  ImmediateFuture<int> fortyTwo{42};
+  auto fortyThree = std::move(fortyTwo)
+                        .thenValue([](int v) { return v + 1; })
+                        .ensure(ensureFn);
+  auto fortyFour = std::move(fortyThree)
+                       .thenValue([](int&& v) { return v + 1; })
+                       .ensure(ensureFn);
+  EXPECT_EQ(std::move(fortyFour).get(), 44);
+  EXPECT_EQ(2, count);
+}
+
+TEST(ImmediateFuture, ensureThrowInFuture) {
+  size_t count = 0;
+  auto ensureFn = [&] { count++; };
+
+  ImmediateFuture<int> fortyTwo{42};
+  auto fortyThree = std::move(fortyTwo)
+                        .thenValue([](int v) { return v + 1; })
+                        .ensure(ensureFn);
+  auto bad = std::move(fortyThree)
+                 .thenValue([](int) { throw std::runtime_error("ensure"); })
+                 .ensure(ensureFn);
+  EXPECT_THROW(std::move(bad).get(), std::runtime_error);
+  EXPECT_EQ(2, count);
+}
+
+TEST(ImmediateFuture, ensureThrowInFunc) {
+  size_t count = 0;
+  auto ensureFn = [&] { count++; };
+  auto badEnsureFn = [] { throw std::runtime_error("ensure"); };
+
+  ImmediateFuture<int> fortyTwo{42};
+  auto bad = std::move(fortyTwo)
+                 .thenValue([](int v) { return v + 1; })
+                 .ensure(badEnsureFn)
+                 .ensure(ensureFn);
+  EXPECT_THROW(std::move(bad).get(), std::runtime_error);
+  EXPECT_EQ(1, count);
 }
 
 TEST(ImmediateFuture, thenValueReturnsImmediateFuture) {

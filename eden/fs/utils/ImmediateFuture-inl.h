@@ -24,6 +24,17 @@ ImmediateFuture<T>::thenValue(Func&& func) && {
 
 template <typename T>
 template <typename Func>
+ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
+  return std::move(*this).thenTry(
+      [func = std::forward<Func>(func)](
+          folly::Try<T> try_) mutable -> folly::Try<T> {
+        func();
+        return try_;
+      });
+}
+
+template <typename T>
+template <typename Func>
 ImmediateFuture<detail::continuation_result_t<Func, folly::Try<T>>>
 ImmediateFuture<T>::thenTry(Func&& func) && {
   using NewType = detail::continuation_result_t<Func, folly::Try<T>>;

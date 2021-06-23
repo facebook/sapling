@@ -108,6 +108,22 @@ class ImmediateFuture {
       Func&& func) &&;
 
   /**
+   * Call func unconditionally once this future is ready and
+   * the value/exception is passed through to the resulting Future.
+   *
+   * Func is like std::function<void()>. If func throws, its exception
+   * will be propagated and the original value/exception discarded.
+   *
+   * This method must be called with an rvalue-ref and should no longer be used
+   * afterwards:
+   *
+   *   ImmediateFuture<int> fut{42};
+   *   std::move(fut).ensure([&]() { cleanup(); });
+   */
+  template <typename Func>
+  ImmediateFuture<T> ensure(Func&& func) &&;
+
+  /**
    * Build a SemiFuture out of this ImmediateFuture and returns it.
    *
    * The returned semi future can then be executed on an executor with its
