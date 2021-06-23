@@ -70,7 +70,7 @@ set_property(GLOBAL APPEND PROPERTY JOB_POOLS rust_job_pool=1)
 # Cargo build static library.
 #
 # ```cmake
-# rust_static_library(<TARGET> [CRATE <CRATE_NAME>] [FEATURES <FEATURE_NAME>])
+# rust_static_library(<TARGET> [CRATE <CRATE_NAME>])
 # ```
 #
 # Parameters:
@@ -80,8 +80,6 @@ set_property(GLOBAL APPEND PROPERTY JOB_POOLS rust_job_pool=1)
 # - CRATE_NAME:
 #   Name of the crate. This parameter is optional. If unspecified, it will
 #   fallback to `${TARGET}`.
-# - FEATURES:
-#   Name of the Rust feature to enable.
 #
 # This function creates two targets:
 # - "${TARGET}": an interface library target contains the static library built
@@ -93,17 +91,12 @@ set_property(GLOBAL APPEND PROPERTY JOB_POOLS rust_job_pool=1)
 # headers with the interface library.
 #
 function(rust_static_library TARGET)
-  fb_cmake_parse_args(ARG "" "CRATE;FEATURES" "" "${ARGN}")
+  fb_cmake_parse_args(ARG "" "CRATE" "" "${ARGN}")
 
   if(DEFINED ARG_CRATE)
     set(crate_name "${ARG_CRATE}")
   else()
     set(crate_name "${TARGET}")
-  endif()
-  if(DEFINED ARG_FEATURES)
-    set(features --features ${ARG_FEATURES})
-  else()
-    set(features )
   endif()
 
   set(cargo_target "${TARGET}.cargo")
@@ -116,11 +109,7 @@ function(rust_static_library TARGET)
     set(cargo_cmd cargo.exe)
   endif()
 
-  if(DEFINED ARG_FEATURES)
-    set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name} --features ${ARG_FEATURES})
-  else()
-    set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
-  endif()
+  set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   if(USE_CARGO_VENDOR)
     set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
     set(cargo_flags ${cargo_flags})
