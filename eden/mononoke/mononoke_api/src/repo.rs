@@ -1416,6 +1416,20 @@ impl RepoContext {
         Ok(clone_data)
     }
 
+    pub async fn segmented_changelog_pull_fast_forward_master(
+        &self,
+        old_master: ChangesetId,
+        new_master: ChangesetId,
+    ) -> Result<CloneData<ChangesetId>, MononokeError> {
+        let blob_repo = self.blob_repo();
+        let pull_data = blob_repo
+            .segmented_changelog()
+            .pull_fast_forward_master(&self.ctx, old_master, new_master)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(pull_data)
+    }
+
     pub async fn segmented_changelog_full_idmap_clone_data(
         &self,
     ) -> Result<StreamCloneData<ChangesetId>, MononokeError> {

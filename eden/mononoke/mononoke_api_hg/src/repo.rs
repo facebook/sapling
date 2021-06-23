@@ -375,8 +375,27 @@ impl HgRepoContext {
     pub async fn segmented_changelog_clone_data(
         &self,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
-        const CHUNK_SIZE: usize = 1000;
         let m_clone_data = self.repo().segmented_changelog_clone_data().await?;
+        self.convert_clone_data(m_clone_data).await
+    }
+
+    pub async fn segmented_changelog_pull_fast_forward_master(
+        &self,
+        old_master: ChangesetId,
+        new_master: ChangesetId,
+    ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        let m_clone_data = self
+            .repo()
+            .segmented_changelog_pull_fast_forward_master(old_master, new_master)
+            .await?;
+        self.convert_clone_data(m_clone_data).await
+    }
+
+    async fn convert_clone_data(
+        &self,
+        m_clone_data: CloneData<ChangesetId>,
+    ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        const CHUNK_SIZE: usize = 1000;
         let idmap_list = m_clone_data.idmap.into_iter().collect::<Vec<_>>();
         let mut hg_idmap = HashMap::new();
         for chunk in idmap_list.chunks(CHUNK_SIZE) {
