@@ -126,6 +126,14 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
+    /// Import pull data (serialized in mincode) and flush.
+    def importpulldata(&self, data: PyBytes) -> PyResult<PyNone> {
+        let data: CloneData<Vertex> = mincode::deserialize(data.data(py)).map_pyerr(py)?;
+        let mut inner = self.inner(py).borrow_mut();
+        block_on(inner.import_pull_data(data)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// Strip commits. ONLY used to make LEGACY TESTS running.
     /// Fails if called in a non-test environment.
     /// New tests should avoid depending on `strip`.
