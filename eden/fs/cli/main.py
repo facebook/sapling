@@ -1370,6 +1370,14 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             if active:
                 try:
                     stop_aux_processes_for_path(mount)
+                except Exception as ex:
+                    print_stderr(f"error stoping aux processes {mount}: {ex}")
+                    exit_code = 1
+                    # We intentionally fall through here and remove the mount point
+                    # so that the eden daemon will attempt to unmount it.
+                    # unmounting could still timeout, though we unmount with -f,
+                    # so should this theoretically should not happen.
+                try:
                     instance.unmount(mount)
                 except Exception as ex:
                     print_stderr(f"error unmounting {mount}: {ex}")
