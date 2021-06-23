@@ -129,11 +129,16 @@ impl TestDag {
 
     /// Use this DAG as the "server", return the "client" Dag that has lazy Vertexes.
     pub async fn client(&self) -> TestDag {
-        let data = self.dag.export_clone_data().await.unwrap();
         let mut client = TestDag::new();
-        client.dag.import_clone_data(data).await.unwrap();
         let remote = self.remote_protocol(client.output.clone());
         client.dag.set_remote_protocol(remote);
+        client
+    }
+
+    pub async fn client_cloned_data(&self) -> TestDag {
+        let mut client = self.client().await;
+        let data = self.dag.export_clone_data().await.unwrap();
+        client.dag.import_clone_data(data).await.unwrap();
         client
     }
 

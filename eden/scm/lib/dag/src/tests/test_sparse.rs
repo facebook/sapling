@@ -7,10 +7,10 @@
 
 use super::ProtocolMonitor;
 use super::TestDag;
-use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
+use crate::ops::{DagAddHeads, DagImportPullData, DagPullFastForwardMasterData};
 use crate::Id;
 use crate::VertexName;
 use futures::TryStreamExt;
@@ -42,7 +42,7 @@ async fn test_sparse_dag() {
     server2.drawdag("C-D-E-M-X J-E", &["M"]);
 
     for opt_remote_dag in vec![Some(server1.dag), None] {
-        let mut client = server2.client().await;
+        let mut client = server2.client_cloned_data().await;
 
         // Note: some ids (ex. 11) does not have matching name in its IdMap.
         // The server-side non-master (X) is not cloned.
@@ -104,7 +104,7 @@ async fn test_sparse_dag() {
 async fn test_negative_cache() {
     let server = TestDag::draw("A-B  # master: B");
 
-    let mut client = server.client().await;
+    let mut client = server.client_cloned_data().await;
 
     // Lookup "C" - not found.
     assert!(client.dag.vertex_id("C".into()).await.is_err());
@@ -122,7 +122,7 @@ async fn test_negative_cache() {
 #[tokio::test]
 async fn test_add_heads() {
     let server = TestDag::draw("A-B  # master: B");
-    let mut client = server.client().await;
+    let mut client = server.client_cloned_data().await;
 
     let pending = TestDag::draw("A-C B-C-D-E-F-G E-H-K I-J-K");
     let parents = pending.dag.dag_snapshot().unwrap();
@@ -142,7 +142,7 @@ async fn test_add_heads() {
     client.dag.flush(&["G".into()]).await.unwrap();
     assert_eq!(client.output(), ["resolve names: [K, I, G, C], heads: [B]"]);
 
-    let mut client = server.client().await;
+    let mut client = server.client_cloned_data().await;
     client
         .dag
         .add_heads_and_flush(&parents, &["K".into()], &["G".into()])
@@ -154,5 +154,91 @@ async fn test_add_heads() {
             "resolve names: [G, K, I, H, A], heads: [B]",
             "resolve names: [F, D, C], heads: [B]"
         ]
+    );
+}
+
+#[tokio::test]
+async fn test_basic_pull() {
+    let server = TestDag::draw("A-B-C-D  # master: D");
+    let mut client = server.client().await;
+    client.drawdag("A-B", &["B"]);
+
+    let pull_data = server
+        .dag
+        .pull_fast_forward_master(VertexName("B".into()), VertexName("D".into()))
+        .await
+        .unwrap();
+
+    client.dag.import_pull_data(pull_data).await.unwrap();
+
+    assert_eq!(server.render_graph(), client.render_graph());
+}
+
+#[tokio::test]
+async fn test_pull_remap() {
+    // In this test client and server going to have different IDs, but isomorphic graphs
+    let mut server = TestDag::new();
+    server.drawdag(
+        r#"
+        A-B--C--D
+           \   /
+            F-G
+    "#,
+        &["D"],
+    );
+    server.drawdag("B-E", &["E"]);
+    let mut client = server.client().await;
+    client.drawdag("A-B-E", &["E"]);
+
+    let pull_data = server
+        .dag
+        .pull_fast_forward_master("E".into(), "D".into())
+        .await
+        .unwrap();
+
+    client.dag.import_pull_data(pull_data).await.unwrap();
+
+    assert_eq!(
+        client.output(),
+        vec![
+            "resolve names: [E, B, A], heads: []".to_string(),
+            "resolve names: [E, B, A], heads: []".to_string(),
+        ]
+    );
+
+    assert_eq!(
+        client.render_graph(),
+        "
+            D    6
+            ├─╮
+            │ G  5
+            │ │
+            │ F  4
+            │ │
+            C │  3
+            ├─╯
+            │ E  2
+            ├─╯
+            B  1
+            │
+            A  0"
+    );
+
+    assert_eq!(
+        server.render_graph(),
+        "
+            E  6
+            │
+            │ D    5
+            │ ├─╮
+            │ │ G  4
+            │ │ │
+            │ │ F  3
+            ├───╯
+            │ C  2
+            ├─╯
+            B  1
+            │
+            A  0"
     );
 }
