@@ -179,6 +179,29 @@ TEST_P(GlobNodeTest, starExcludeDot) {
   EXPECT_EQ(expect, matches);
 }
 
+TEST_P(GlobNodeTest, starStarExcludeDot) {
+  auto matches = doGlobExcludeDotFiles("dir/sub/**/sub/b.txt", kZeroRootId);
+
+  std::vector<GlobResult> expect;
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, starStarRootExcludeDot) {
+  auto matches = doGlobExcludeDotFiles("**/root", kZeroRootId);
+
+  std::vector<GlobResult> expect;
+  EXPECT_EQ(expect, matches);
+}
+
+TEST_P(GlobNodeTest, starStarBeginning) {
+  auto matches = doGlobExcludeDotFiles("**/sub/b.txt", kZeroRootId);
+
+  std::vector<GlobResult> expect{
+      GlobResult("dir/sub/b.txt"_relpath, dtype_t::Regular, kZeroRootId),
+  };
+  EXPECT_EQ(expect, matches);
+}
+
 #ifndef _WIN32
 TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   // Ensure that we enumerate things from the overlay

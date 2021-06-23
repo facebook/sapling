@@ -148,6 +148,7 @@ class GlobNode {
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
+      RelativePathPiece startOfRecursive,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch,
       const RootId& originRootId);
