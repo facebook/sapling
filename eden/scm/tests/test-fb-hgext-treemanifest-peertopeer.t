@@ -56,9 +56,9 @@ Create client1 - it will have both server commits
   $ echo b > dir/b
   $ hg commit -Aqm 'initial commit'
 
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore 2>/dev/stdout | grep Entry | wc -l
   2
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore 2>/dev/stdout | grep Entry | wc -l
   2
   $ clearcache
 
@@ -105,9 +105,9 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   summary:     add subdir/x
   
   $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
-  $ hg debugdumpindexedlog ../client2/.hg/store/manifests/indexedlogdatastore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog ../client2/.hg/store/manifests/indexedlogdatastore 2>/dev/stdout | grep Entry | wc -l
   6
-  $ hg debugdumpindexedlog ../client2/.hg/store/manifests/indexedloghistorystore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog ../client2/.hg/store/manifests/indexedloghistorystore 2>/dev/stdout | grep Entry | wc -l
   6
 Pulling between peers should send local trees but not remote trees
 # Strip back one server commit and one draft commit, so we can pull them again
@@ -116,9 +116,9 @@ Pulling between peers should send local trees but not remote trees
 # Delete the old local tree data from the draft commit, so we can verify it is
 # downloaded again during pull.
   $ rm -rf .hg/store/manifests
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore 2>/dev/stdout | grep Entry | wc -l
   0
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore 2>/dev/stdout | grep Entry | wc -l
   0
 # Change this client to use a different cache from the other client, since the
 # other client may populate data that we need to test if this client is
@@ -134,9 +134,9 @@ Pulling between peers should send local trees but not remote trees
   $ rm -rf $TESTTMP/hgcache2/*
   $ hg pull -q --config treemanifest.sendtrees=True ../client1 --config remotefilelog.fallbackpath=ssh://user@dummy/master
 # Check that the local commits for the draft commit were downloaded to the local store.
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedlogdatastore 2>/dev/stdout | grep Entry | wc -l
   4
-  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore |& grep Entry | wc -l
+  $ hg debugdumpindexedlog .hg/store/manifests/indexedloghistorystore 2>/dev/stdout | grep Entry | wc -l
   4
 
 # Verify the real-public commit wasn't received during the pull and therefore
