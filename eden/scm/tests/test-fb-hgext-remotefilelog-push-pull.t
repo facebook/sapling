@@ -2,6 +2,7 @@
 
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
+  $ setconfig scmstore.enableshim=True scmstore.contentstorefallback=True
 
   $ hginit master
   $ cd master
@@ -16,12 +17,22 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { ssh : { connections : 2,
+  { metrics : { fallback : { fetch : 2,
+                             fetchhitcontent : 2,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 1484},
                         write : { bytes : 778}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 859},
                         write : { bytes : 631}}}}
 
@@ -49,14 +60,24 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 975},
                         write : { bytes : 608}}}}
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 2,
+                             fetchhitcontent : 2,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 625},
                         write : { bytes : 147}}}}
@@ -71,9 +92,19 @@ the server supports our custom getfiles method.
   $ cd shallow
   $ echo z > z
   $ hg commit -qAm z
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ echo x >> x
   $ echo y >> y
   $ hg commit -qAm xxyy
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ cd ../shallow2
   $ clearcache
   $ hg pull ../shallow
@@ -84,7 +115,12 @@ the server supports our custom getfiles method.
   adding file changes
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   added 3 changesets with 4 changes to 3 files
-  { metrics : { ssh : { connections : 2,
+  { metrics : { fallback : { fetch : 2,
+                             fetchhitcontent : 2,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 2,
                         getpack : { calls : 3,  revs : 3},
                         read : { bytes : 1403},
                         write : { bytes : 337}}}}
@@ -92,6 +128,11 @@ the server supports our custom getfiles method.
 # pull from shallow to shallow (ssh)
 
   $ hg debugstrip -r d34c38483be9d08f205eaae60c380a29b48e0189
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg pull ssh://user@dummy/$TESTTMP/shallow --config remotefilelog.cachepath=${CACHEDIR}2
   pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes
@@ -100,23 +141,48 @@ the server supports our custom getfiles method.
   adding file changes
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   added 3 changesets with 4 changes to 3 files
-  remote: { metrics : { ssh : { connections : 1,
+  remote: { metrics : { fallback : { fetch : 2,
+  remote:                            fetchhitcontent : 2,
+  remote:                            fetchhitptr : 0,
+  remote:                            fetchmiss : 0,
+  remote:                            writeptr : 0},
+  remote:               ssh : { connections : 1,
   remote:                       getpack : { calls : 1,  revs : 1},
   remote:                       read : { bytes : 625},
   remote:                       write : { bytes : 147}}}}
-  { metrics : { ssh : { connections : 2,
+  { metrics : { fallback : { fetch : 2,
+                             fetchhitcontent : 2,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         read : { bytes : 2848},
                         write : { bytes : 755}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ cat z
   z
 
 
   $ hg -R ../shallow debugstrip -qr 'desc(xxyy)'
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg debugstrip -qr 'desc(xxyy)'
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ cd ..
 
 # push from shallow to shallow
@@ -124,6 +190,11 @@ the server supports our custom getfiles method.
   $ cd shallow
   $ echo a > a
   $ hg commit -qAm a
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg push ssh://user@dummy/$TESTTMP/shallow2
   pushing to ssh://user@dummy/$TESTTMP/shallow2
   searching for changes
@@ -131,13 +202,28 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  { metrics : { ssh : { connections : 1,
+  remote: { metrics : { fallback : { fetch : 0,
+  remote:                            fetchhitcontent : 0,
+  remote:                            fetchhitptr : 0,
+  remote:                            fetchmiss : 0,
+  remote:                            writeptr : 0}}}
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 612},
                         write : { bytes : 991}}}}
 
   $ cd ../shallow2
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ cat a
   a
   $ cd ..
@@ -152,7 +238,12 @@ the server supports our custom getfiles method.
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 589},
                         write : { bytes : 1454}}}}
 
@@ -171,9 +262,19 @@ the server supports our custom getfiles method.
   $ cd ../shallow
   $ echo p > p
   $ hg commit -qAm p
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg debugmakepublic .
   $ echo d > d
   $ hg commit -qAm d
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
 
   $ cd ../shallow2
   $ hg pull ../shallow
@@ -183,6 +284,11 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
 
   $ cd ..
 
@@ -202,15 +308,45 @@ the server supports our custom getfiles method.
   $ cd multimf-shallow
   $ echo a > a
   $ hg commit -qAm a
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ echo b > b
   $ hg commit -qAm b
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ echo c > c
   $ hg commit -qAm c1
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg up -q 'desc(a)'
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ echo c > c
   $ hg commit -qAm c2
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ echo cc > c
   $ hg commit -qAm c22
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg log -G -T '{desc}\n'
   @  c22
   │
@@ -226,6 +362,11 @@ the server supports our custom getfiles method.
   $ cd ../multimf-shallow2
 - initial commit to prevent hg pull from being a clone
   $ echo z > z && hg commit -qAm z
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg pull -f ssh://user@dummy/$TESTTMP/multimf-shallow
   pulling from ssh://user@dummy/$TESTTMP/multimf-shallow
   searching for changes
@@ -235,11 +376,31 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 5 changesets with 4 changes to 3 files
-  { metrics : { ssh : { connections : 1,
+  remote: { metrics : { fallback : { fetch : 0,
+  remote:                            fetchhitcontent : 0,
+  remote:                            fetchhitptr : 0,
+  remote:                            fetchmiss : 0,
+  remote:                            writeptr : 0}}}
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 2883},
                         write : { bytes : 608}}}}
 
   $ hg up -q 'desc(c22)'
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}
   $ hg log -f -T '{node}\n' c
   d8f06a4c6d38c9308d3dcbee10c27ae5a01ab93f
   853b3dc5bcf912b088c60ccd3ec60f35e96b92bb
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0}}}

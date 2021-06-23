@@ -1,6 +1,7 @@
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
   $ setconfig treemanifest.treeonly=False
+  $ setconfig scmstore.enableshim=True scmstore.contentstorefallback=True
 
   $ hginit master
   $ cd master
@@ -23,7 +24,12 @@ Clone it
   fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, found via d2ae7f538514
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  { metrics : { ssh : { connections : 2,
+  { metrics : { fallback : { fetch : 4,
+                             fetchhitcontent : 4,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
@@ -75,7 +81,12 @@ Pull exactly up to d into the client
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 1070},
                         write : { bytes : 680}}}}
 
@@ -87,4 +98,3 @@ Test error message about MissingNodesError
   > EOS
   abort: "unable to find the following nodes locally or on the server: ('', f064a7f8e3e138341587096641d86e9d23cd9778)"
   (commit: 055a42cdd88768532f9cf79daa407fc8d138de9b)
-

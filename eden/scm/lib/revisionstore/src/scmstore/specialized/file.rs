@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -66,6 +66,7 @@ pub struct FileStore {
 
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,
+    pub(crate) fallbacks: Arc<ContentStoreFallbacks>,
 
     // Aux Data Stores
     pub(crate) aux_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -84,6 +85,73 @@ pub struct FileStoreFetch {
     pub complete: HashMap<Key, StoreFile>,
     pub incomplete: HashMap<Key, Vec<Error>>,
     other_errors: Vec<Error>,
+}
+
+#[derive(Debug, Default)]
+struct ContentStoreFallbacksInner {
+    fetch: u64,
+    fetch_miss: u64,
+    fetch_hit_ptr: u64,
+    fetch_hit_content: u64,
+    write_ptr: u64,
+}
+
+#[derive(Debug)]
+pub struct ContentStoreFallbacks {
+    inner: Mutex<ContentStoreFallbacksInner>,
+}
+
+impl ContentStoreFallbacks {
+    pub(crate) fn new() -> Self {
+        ContentStoreFallbacks {
+            inner: Mutex::new(ContentStoreFallbacksInner::default()),
+        }
+    }
+
+    #[instrument(level = "warn", skip(self))]
+    fn fetch(&self, _key: &Key) {
+        self.inner.lock().fetch += 1;
+    }
+
+    #[instrument(level = "warn", skip(self))]
+    fn fetch_miss(&self, _key: &Key) {
+        self.inner.lock().fetch_miss += 1;
+    }
+
+    #[instrument(level = "warn", skip(self))]
+    fn fetch_hit_ptr(&self, _key: &Key) {
+        self.inner.lock().fetch_hit_ptr += 1;
+    }
+
+    #[instrument(level = "warn", skip(self))]
+    fn fetch_hit_content(&self, _key: &Key) {
+        self.inner.lock().fetch_hit_content += 1;
+    }
+
+    #[instrument(level = "warn", skip(self))]
+    fn write_ptr(&self, _key: &Key) {
+        self.inner.lock().write_ptr += 1;
+    }
+
+    pub fn fetch_count(&self) -> u64 {
+        self.inner.lock().fetch
+    }
+
+    pub fn fetch_miss_count(&self) -> u64 {
+        self.inner.lock().fetch_miss
+    }
+
+    pub fn fetch_hit_ptr_count(&self) -> u64 {
+        self.inner.lock().fetch_hit_ptr
+    }
+
+    pub fn fetch_hit_content_count(&self) -> u64 {
+        self.inner.lock().fetch_hit_content
+    }
+
+    pub fn write_ptr_count(&self) -> u64 {
+        self.inner.lock().write_ptr
+    }
 }
 
 impl FileStoreFetch {
@@ -220,6 +288,7 @@ impl FileStore {
                 let contentstore = self.contentstore.as_ref().ok_or_else(|| {
                     anyhow!("trying to write LFS pointer but no ContentStore is available")
                 })?;
+                self.fallbacks.write_ptr(&key);
                 let delta = Delta {
                     data: bytes,
                     base: None,
@@ -279,6 +348,7 @@ impl FileStore {
             lfs_remote: None,
 
             contentstore: None,
+            fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
 
             aux_local: self.aux_local.clone(),
@@ -333,6 +403,10 @@ impl FileStore {
 
         result
     }
+
+    pub fn fallbacks(&self) -> Arc<ContentStoreFallbacks> {
+        self.fallbacks.clone()
+    }
 }
 
 impl LegacyStore for FileStore {
@@ -363,6 +437,7 @@ impl LegacyStore for FileStore {
             lfs_remote: None,
 
             contentstore: None,
+            fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
 
             aux_local: None,
@@ -783,6 +858,9 @@ pub struct FetchState {
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Arc<FetchLogger>,
 
+    /// Track ContentStore Fallbacks
+    fallbacks: Arc<ContentStoreFallbacks>,
+
     // Config
     extstored_policy: ExtStoredPolicy,
     compute_aux_data: bool,
@@ -807,6 +885,7 @@ impl FetchState {
             computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
+            fallbacks: file_store.fallbacks.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
         }
@@ -1160,6 +1239,7 @@ impl FetchState {
     #[instrument(level = "debug", skip(self, bytes))]
     fn found_contentstore(&mut self, key: Key, bytes: Vec<u8>, meta: Metadata) {
         if meta.is_lfs() {
+            self.fallbacks.fetch_hit_ptr(&key);
             // Do nothing. We're trying to avoid exposing LFS pointers to the consumer of this API.
             // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
             // ExtStoredPolicy behavior), but hopefully not, and if so we'll need to make it type safe.
@@ -1168,6 +1248,7 @@ impl FetchState {
             tracing::warn!(
                 "contentstore fetched a file scmstore couldn't, this indicates a bug or unsupported configuration"
             );
+            self.fallbacks.fetch_hit_content(&key);
             self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
         }
     }
@@ -1182,6 +1263,7 @@ impl FetchState {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
             );
+            self.fallbacks.fetch(&key);
             // Using the ContentStore API, fetch the hg file blob, then, if it's found, also fetch the file metadata.
             // Returns the requested file as Result<(Option<Vec<u8>>, Option<Metadata>)>
             // Produces a Result::Err if either the blob or metadata get returned an error
@@ -1202,8 +1284,13 @@ impl FetchState {
 
             match res {
                 Ok((Some(blob), Some(meta))) => self.found_contentstore(key, blob, meta),
-                Err(err) => self.errors.keyed_error(key, err),
-                _ => {}
+                Err(err) => {
+                    self.fallbacks.fetch_miss(&key);
+                    self.errors.keyed_error(key, err)
+                }
+                _ => {
+                    self.fallbacks.fetch_miss(&key);
+                }
             }
         }
 

@@ -19,7 +19,12 @@
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 085784c01c08
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  { metrics : { ssh : { connections : 2,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
@@ -49,7 +54,12 @@ Test auto creating trees for merge commit
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  { metrics : { ssh : { connections : 1,
+  { metrics : { fallback : { fetch : 0,
+                             fetchhitcontent : 0,
+                             fetchhitptr : 0,
+                             fetchmiss : 0,
+                             writeptr : 0},
+                ssh : { connections : 1,
                         read : { bytes : 1081},
                         write : { bytes : 657}}}}
   $ hg manifest -r tip

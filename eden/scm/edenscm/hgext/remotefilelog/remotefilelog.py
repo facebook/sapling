@@ -655,10 +655,10 @@ class remotefileslog(filelog.fileslog):
         self._memcachestore = None
 
     def logfetches(self):
+        ui = self.repo.ui
         if self.contentstore:
             fetched = self.contentstore.getloggedfetches()
             if fetched:
-                ui = self.repo.ui
                 for path in fetched:
                     ui.log(
                         "undesired_file_fetches",
@@ -667,3 +667,19 @@ class remotefileslog(filelog.fileslog):
                         reponame=self.repo.name,
                     )
                 ui.metrics.gauge("undesiredfilefetches", len(fetched))
+        scmstore = None
+        if self.contentstore and type(self.contentstore) is revisionstore.filescmstore:
+            scmstore = self.contentstore
+        elif self.filescmstore:
+            scmstore = self.filescmstore
+        if scmstore:
+            fetch = self.filescmstore.fallback_fetch_count()
+            fetchmiss = self.filescmstore.fallback_fetchmiss_count()
+            fetchhitptr = self.filescmstore.fallback_fetchhitptr_count()
+            fetchhitcontent = self.filescmstore.fallback_fetchhitcontent_count()
+            writeptr = self.filescmstore.fallback_writeptr_count()
+            ui.metrics.gauge("fallback_fetch", fetch)
+            ui.metrics.gauge("fallback_fetchmiss", fetchmiss)
+            ui.metrics.gauge("fallback_fetchhitptr", fetchhitptr)
+            ui.metrics.gauge("fallback_fetchhitcontent", fetchhitcontent)
+            ui.metrics.gauge("fallback_writeptr", writeptr)

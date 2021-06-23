@@ -1375,6 +1375,30 @@ py_class!(pub class filescmstore |py| {
         let store = self.store(py);
         mutabledeltastore::create_instance(py, store.get_shared_mutable())
     }
+
+    def fallback_fetch_count(&self) -> PyResult<PyInt> {
+        let store = self.store(py);
+        Ok(store.fallbacks().fetch_count().to_py_object(py))
+    }
+
+    def fallback_fetchmiss_count(&self) -> PyResult<PyInt> {
+        let store = self.store(py);
+        Ok(store.fallbacks().fetch_miss_count().to_py_object(py))
+    }
+
+    def fallback_fetchhitptr_count(&self) -> PyResult<PyInt> {
+        let store = self.store(py);
+        Ok(store.fallbacks().fetch_hit_ptr_count().to_py_object(py))
+    }
+
+    def fallback_fetchhitcontent_count(&self) -> PyResult<PyInt> {
+        let store = self.store(py);
+        Ok(store.fallbacks().fetch_hit_content_count().to_py_object(py))
+    }
+    def fallback_writeptr_count(&self) -> PyResult<PyInt> {
+        let store = self.store(py);
+        Ok(store.fallbacks().write_ptr_count().to_py_object(py))
+    }
 });
 
 impl filescmstore {
