@@ -415,7 +415,7 @@ impl<'a> AddSyncTarget<'a> {
                 }
             };
 
-            let content = Bytes::from(moved_src.to_vec());
+            let content = create_relative_symlink(&moved_src, &dst)?;
             links.insert(dst, content);
         }
         Ok(links)
@@ -478,6 +478,33 @@ impl<'a> AddSyncTarget<'a> {
     }
 }
 
+fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
+    let common_components = path.common_components(base);
+    let path_no_prefix = path.into_iter().skip(common_components).collect::<Vec<_>>();
+    let base_no_prefix = base.into_iter().skip(common_components).collect::<Vec<_>>();
+
+    if path_no_prefix.is_empty() || base_no_prefix.is_empty() {
+        return Err(anyhow!(
+            "Can't create symlink for {} and {}: one path is a parent of another"
+        ));
+    }
+
+    let path = path_no_prefix;
+    let base = base_no_prefix;
+    let mut result = vec![];
+
+    for _ in 0..(base.len() - 1) {
+        result.push(b".."[..].to_vec())
+    }
+
+    for component in path.into_iter() {
+        result.push(component.as_ref().to_vec());
+    }
+
+    let result: Vec<u8> = result.join(&b"/"[..]);
+    Ok(Bytes::from(result))
+}
+
 // Verifies that no two sources create the same path in the target
 fn add_and_check_all_paths<'a>(
     all_files_in_target: &'a mut HashMap<MPath, SourceName>,
@@ -509,4 +536,34 @@ fn add_and_check<'a>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_create_relative_symlink() -> Result<(), Error> {
+        let path = MPath::new(&b"dir/1.txt"[..])?;
+        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let bytes = create_relative_symlink(&path, &base)?;
+        assert_eq!(bytes, Bytes::from(&b"1.txt"[..]));
+
+        let path = MPath::new(&b"dir/1.txt"[..])?;
+        let base = MPath::new(&b"base/2.txt"[..])?;
+        let bytes = create_relative_symlink(&path, &base)?;
+        assert_eq!(bytes, Bytes::from(&b"../dir/1.txt"[..]));
+
+        let path = MPath::new(&b"dir/subdir/1.txt"[..])?;
+        let base = MPath::new(&b"dir/2.txt"[..])?;
+        let bytes = create_relative_symlink(&path, &base)?;
+        assert_eq!(bytes, Bytes::from(&b"subdir/1.txt"[..]));
+
+        let path = MPath::new(&b"dir1/subdir1/1.txt"[..])?;
+        let base = MPath::new(&b"dir2/subdir2/2.txt"[..])?;
+        let bytes = create_relative_symlink(&path, &base)?;
+        assert_eq!(bytes, Bytes::from(&b"../../dir1/subdir1/1.txt"[..]));
+
+        Ok(())
+    }
 }

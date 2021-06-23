@@ -206,8 +206,8 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         hashmap! {
             MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
             MPath::new("source_2/second")? => ("second".to_string(), FileType::Regular),
-            MPath::new("linkfiles/first")? => ("source_1/first".to_string(), FileType::Symlink),
-            MPath::new("linkfiles/second")? => ("source_2/second".to_string(), FileType::Symlink),
+            MPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
+            MPath::new("linkfiles/second")? => ("../source_2/second".to_string(), FileType::Symlink),
         }
     );
 
