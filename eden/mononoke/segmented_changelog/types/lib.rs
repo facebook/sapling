@@ -104,6 +104,14 @@ pub trait SegmentedChangelog: Send + Sync {
     /// only needs one head.
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>>;
 
+    /// Uses segmented changelog fast forward master pull fastpath.
+    async fn pull_fast_forward_master(
+        &self,
+        ctx: &CoreContext,
+        old_master: ChangesetId,
+        new_master: ChangesetId,
+    ) -> Result<CloneData<ChangesetId>>;
+
     /// An intermediate step in the quest for Segmented Changelog clones requires the server to
     /// send over the full idmap. For every commit (in master) we send the id that it corresponds
     /// to in the iddag.

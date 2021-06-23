@@ -138,6 +138,15 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         Ok(clone_data)
     }
 
+    async fn pull_fast_forward_master(
+        &self,
+        _ctx: &CoreContext,
+        _old_master: ChangesetId,
+        _new_master: ChangesetId,
+    ) -> Result<CloneData<ChangesetId>> {
+        unimplemented!()
+    }
+
     async fn full_idmap_clone_data(
         &self,
         ctx: &CoreContext,

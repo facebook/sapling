@@ -390,6 +390,20 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         read_dag.clone_data(ctx).await
     }
 
+    async fn pull_fast_forward_master(
+        &self,
+        ctx: &CoreContext,
+        old_master: ChangesetId,
+        new_master: ChangesetId,
+    ) -> Result<CloneData<ChangesetId>> {
+        // Might need to wait here for segmented changelog to catch up
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        read_dag
+            .pull_fast_forward_master(ctx, old_master, new_master)
+            .await
+    }
+
     async fn full_idmap_clone_data(
         &self,
         ctx: &CoreContext,
