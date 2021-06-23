@@ -140,11 +140,48 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
 
     async fn pull_fast_forward_master(
         &self,
-        _ctx: &CoreContext,
-        _old_master: ChangesetId,
-        _new_master: ChangesetId,
+        ctx: &CoreContext,
+        old_master: ChangesetId,
+        new_master: ChangesetId,
     ) -> Result<CloneData<ChangesetId>> {
-        unimplemented!()
+        let request_ids = self
+            .idmap
+            .find_many_dag_ids(ctx, vec![old_master, new_master])
+            .await?;
+        let old = *request_ids
+            .get(&old_master)
+            .ok_or_else(|| format_err!("Old id {} not found", old_master))?;
+        let new = *request_ids
+            .get(&new_master)
+            .ok_or_else(|| format_err!("New id {} not found", new_master))?;
+        let master_group = self.iddag.master_group()?;
+
+        if !master_group.contains(old) {
+            bail!("old vertex {} is not in master group", old);
+        }
+
+        if !master_group.contains(new) {
+            bail!("new vertex {} is not in master group", new);
+        }
+        let old_ancestors = self.iddag.ancestors(old.into())?;
+        let new_ancestors = self.iddag.ancestors(new.into())?;
+
+        let result_span = new_ancestors.difference(&old_ancestors);
+        let flat_segments = self.iddag.idset_to_flat_segments(result_span)?;
+
+        let ids = flat_segments.parents_and_head().into_iter().collect();
+
+        let idmap = self
+            .idmap
+            .find_many_changeset_ids(&ctx, ids)
+            .await
+            .context("error retrieving mappings for parents_and_head")?;
+
+        let pull_data = CloneData {
+            flat_segments,
+            idmap,
+        };
+        Ok(pull_data)
     }
 
     async fn full_idmap_clone_data(
