@@ -16,7 +16,7 @@ use crate::progress::{
 };
 use crate::sampling::SamplingOptions;
 use crate::state::{InternedType, StepStats};
-use crate::tail::TailParams;
+use crate::tail::{ChunkingParams, ClearStateParams, TailParams};
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::{OutgoingEdge, RepoWalkParams};
 
@@ -1093,73 +1093,86 @@ fn parse_tail_args<'a>(
 ) -> Result<TailParams, Error> {
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
 
-    let public_changeset_chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
-    let public_changeset_chunk_size = if !public_changeset_chunk_by.is_empty() {
-        args::get_usize_opt(sub_m, CHUNK_SIZE_ARG)
-    } else {
-        None
-    };
+    let chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
 
-    let chunk_direction = sub_m
-        .value_of(CHUNK_DIRECTION_ARG)
-        .map_or(Ok(Direction::NewestFirst), Direction::from_str)?;
+    let chunking = if !chunk_by.is_empty() {
+        let direction = sub_m
+            .value_of(CHUNK_DIRECTION_ARG)
+            .map_or(Ok(Direction::NewestFirst), Direction::from_str)?;
 
-    let clear_interned_types = parse_interned_types(
-        sub_m,
-        INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
-        EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
-        DEFAULT_CHUNK_CLEAR_INTERNED_TYPES,
-    )?;
+        let clear_state =
+            if let Some(sample_rate) = args::get_u64_opt(&sub_m, CHUNK_CLEAR_SAMPLE_RATE_ARG) {
+                let interned_types = parse_interned_types(
+                    sub_m,
+                    INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
+                    EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
+                    DEFAULT_CHUNK_CLEAR_INTERNED_TYPES,
+                )?;
 
-    let clear_node_types = parse_node_types(
-        sub_m,
-        INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
-        EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
-        &[],
-    )?;
+                let node_types = parse_node_types(
+                    sub_m,
+                    INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
+                    EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
+                    &[],
+                )?;
 
-    let clear_sample_rate = args::get_u64_opt(&sub_m, CHUNK_CLEAR_SAMPLE_RATE_ARG);
+                Some(ClearStateParams {
+                    sample_rate,
+                    interned_types,
+                    node_types,
+                })
+            } else {
+                None
+            };
 
-    let checkpoint_name = sub_m.value_of(CHECKPOINT_NAME_ARG).map(|s| s.to_string());
+        let checkpoints = if let Some(checkpoint_name) = sub_m.value_of(CHECKPOINT_NAME_ARG) {
+            let checkpoint_path = sub_m.value_of(CHECKPOINT_PATH_ARG).map(|s| s.to_string());
+            let sql_checkpoints = if let Some(checkpoint_path) = checkpoint_path {
+                SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
+            } else {
+                SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)?
+            };
 
-    let checkpoints = if let Some(checkpoint_name) = checkpoint_name {
-        let checkpoint_path = sub_m.value_of(CHECKPOINT_PATH_ARG).map(|s| s.to_string());
-        let sql_checkpoints = if let Some(checkpoint_path) = checkpoint_path {
-            SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
+            Some(CheckpointsByName::new(
+                checkpoint_name.to_string(),
+                sql_checkpoints,
+                args::get_u64_opt(&sub_m, CHECKPOINT_SAMPLE_RATE_ARG).unwrap(),
+            ))
         } else {
-            SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)?
+            None
         };
 
-        Some(CheckpointsByName::new(checkpoint_name, sql_checkpoints))
+        // Safe to unwrap these as there is clap default set
+        let chunk_size = args::get_usize_opt(sub_m, CHUNK_SIZE_ARG).unwrap();
+        let allow_remaining_deferred =
+            args::get_bool_opt(&sub_m, ALLOW_REMAINING_DEFERRED_ARG).unwrap();
+
+        let repo_lower_bound_override = args::get_u64_opt(&sub_m, REPO_LOWER_BOUND);
+        let repo_upper_bound_override = args::get_u64_opt(&sub_m, REPO_UPPER_BOUND);
+
+        Some(ChunkingParams {
+            chunk_by,
+            chunk_size,
+            direction,
+            clear_state,
+            checkpoints,
+            allow_remaining_deferred,
+            repo_lower_bound_override,
+            repo_upper_bound_override,
+        })
     } else {
         None
     };
 
-    // Can unwrap these as they have a clap default set
+    // Can unwrap as there is clap default set
     let state_max_age = args::get_u64_opt(&sub_m, STATE_MAX_AGE_ARG)
         .map(Duration::from_secs)
         .unwrap();
-    let checkpoint_sample_rate = args::get_u64_opt(&sub_m, CHECKPOINT_SAMPLE_RATE_ARG).unwrap();
-    let allow_remaining_deferred =
-        args::get_bool_opt(&sub_m, ALLOW_REMAINING_DEFERRED_ARG).unwrap();
-
-    let repo_lower_bound_override = args::get_u64_opt(&sub_m, REPO_LOWER_BOUND);
-    let repo_upper_bound_override = args::get_u64_opt(&sub_m, REPO_UPPER_BOUND);
 
     Ok(TailParams {
         tail_secs,
-        public_changeset_chunk_size,
-        public_changeset_chunk_by,
-        chunk_direction,
-        clear_interned_types,
-        clear_node_types,
-        clear_sample_rate,
-        checkpoints,
+        chunking,
         state_max_age,
-        checkpoint_sample_rate,
-        allow_remaining_deferred,
-        repo_lower_bound_override,
-        repo_upper_bound_override,
     })
 }
 
@@ -1511,7 +1524,7 @@ pub async fn setup_common<'a>(
             }
         };
 
-        if tail_params.public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
+        if tail_params.chunking.is_none() && walk_roots.is_empty() {
             bail!(
                 "No walk roots provided, pass with  --{}, --{} or --{}",
                 BOOKMARK_ARG,
@@ -1596,18 +1609,19 @@ async fn setup_repo<'a>(
         }
     });
 
-    tail_params.public_changeset_chunk_by.retain(|t| {
-        if let Some(t) = t.derived_data_name() {
-            resolved.config.derived_data_config.is_enabled(t)
-        } else {
-            true
-        }
-    });
-
     let mut root_node_types: HashSet<_> =
         walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-    if tail_params.public_changeset_chunk_size.is_some() {
-        root_node_types.extend(tail_params.public_changeset_chunk_by.iter().cloned());
+
+    if let Some(ref mut chunking) = tail_params.chunking {
+        chunking.chunk_by.retain(|t| {
+            if let Some(t) = t.derived_data_name() {
+                resolved.config.derived_data_config.is_enabled(t)
+            } else {
+                true
+            }
+        });
+
+        root_node_types.extend(chunking.chunk_by.iter().cloned());
     }
 
     let (include_edge_types, include_node_types) =

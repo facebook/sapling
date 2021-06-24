@@ -547,7 +547,11 @@ async fn run_one(
         None,
         command.sampler,
         job_params.enable_derive,
-        Some(sub_params.tail_params.chunk_direction),
+        sub_params
+            .tail_params
+            .chunking
+            .as_ref()
+            .map(|v| v.direction),
     );
 
     let type_params = RepoWalkTypeParams {

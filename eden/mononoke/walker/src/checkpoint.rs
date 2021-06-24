@@ -93,13 +93,15 @@ impl Checkpoint {
 pub struct CheckpointsByName {
     checkpoint_name: String,
     sql_checkpoints: Arc<SqlCheckpoints>,
+    pub sample_rate: u64,
 }
 
 impl CheckpointsByName {
-    pub fn new(checkpoint_name: String, sql_checkpoints: SqlCheckpoints) -> Self {
+    pub fn new(checkpoint_name: String, sql_checkpoints: SqlCheckpoints, sample_rate: u64) -> Self {
         Self {
             checkpoint_name,
             sql_checkpoints: Arc::new(sql_checkpoints),
+            sample_rate,
         }
     }
 
@@ -364,6 +366,7 @@ mod tests {
         let checkpoints = CheckpointsByName::new(
             "test_checkpoint".to_string(),
             SqlCheckpoints::with_sqlite_in_memory()?,
+            0,
         );
 
         let repo_id = RepositoryId::new(123);

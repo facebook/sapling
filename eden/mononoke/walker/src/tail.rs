@@ -76,20 +76,29 @@ fn roots_for_chunk(
 }
 
 #[derive(Clone, Debug)]
-pub struct TailParams {
-    pub tail_secs: Option<u64>,
-    pub public_changeset_chunk_size: Option<usize>,
-    pub public_changeset_chunk_by: HashSet<NodeType>,
-    pub chunk_direction: Direction,
-    pub clear_interned_types: HashSet<InternedType>,
-    pub clear_node_types: HashSet<NodeType>,
-    pub clear_sample_rate: Option<u64>,
+pub struct ClearStateParams {
+    pub sample_rate: u64,
+    pub interned_types: HashSet<InternedType>,
+    pub node_types: HashSet<NodeType>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ChunkingParams {
+    pub chunk_size: usize,
+    pub chunk_by: HashSet<NodeType>,
+    pub direction: Direction,
+    pub clear_state: Option<ClearStateParams>,
     pub checkpoints: Option<CheckpointsByName>,
-    pub state_max_age: Duration,
-    pub checkpoint_sample_rate: u64,
     pub allow_remaining_deferred: bool,
     pub repo_lower_bound_override: Option<u64>,
     pub repo_upper_bound_override: Option<u64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TailParams {
+    pub tail_secs: Option<u64>,
+    pub chunking: Option<ChunkingParams>,
+    pub state_max_age: Duration,
 }
 
 // Represent that only one end of the bound is optional, depending on direction
@@ -209,7 +218,11 @@ where
         }
         repo_params.scuba_builder.add("session", session_text);
 
-        let mut checkpoint = if let Some(checkpoints) = tail_params.checkpoints.as_ref() {
+        let mut checkpoint = if let Some(checkpoints) = tail_params
+            .chunking
+            .as_ref()
+            .and_then(|v| v.checkpoints.as_ref())
+        {
             checkpoints.load(repo_id).await?
         } else {
             None
@@ -219,37 +232,38 @@ where
             info!(repo_params.logger, #log::CHUNKING, "Found checkpoint with bounds: ({}, {})", cp.lower_bound, cp.upper_bound);
         }
 
-        let chunk_params = tail_params
-            .public_changeset_chunk_size
-            .map(|chunk_size| {
+        let fetcher_params = tail_params
+            .chunking
+            .as_ref()
+            .map(|chunking| {
                 let heads_fetcher = PublicChangesetBulkFetch::new(
                     repo_params.repo.get_changesets_object(),
                     repo_params.repo.get_phases(),
                 )
                 .with_read_from_master(false)
                 .with_step(MAX_FETCH_STEP);
-                heads_fetcher.map(|v| (chunk_size as usize, v))
+                heads_fetcher.map(|v| (chunking, v))
             })
             .transpose()?;
 
-        let is_chunking = chunk_params.is_some();
+        let is_chunking = fetcher_params.is_some();
         let mut run_start = Timestamp::now();
-        let mut chunk_smaller_than_fetch = false;
+        let mut chunk_smaller_than_fetch = None;
 
         // Get the chunk stream and whether the bounds it covers are contiguous
         let (contiguous_bounds, mut best_bounds, chunk_stream) = if let Some((
-            chunk_size,
+            chunking,
             heads_fetcher,
-        )) = &chunk_params
+        )) = &fetcher_params
         {
-            if *chunk_size < MAX_FETCH_STEP as usize {
-                chunk_smaller_than_fetch = true;
+            if chunking.chunk_size < MAX_FETCH_STEP as usize {
+                chunk_smaller_than_fetch = Some(chunking.direction);
             }
             let (mut lower, mut upper) = heads_fetcher.get_repo_bounds(&ctx).await?;
-            if let Some(lower_override) = tail_params.repo_lower_bound_override {
+            if let Some(lower_override) = chunking.repo_lower_bound_override {
                 lower = lower_override;
             }
-            if let Some(upper_override) = tail_params.repo_upper_bound_override {
+            if let Some(upper_override) = chunking.repo_upper_bound_override {
                 upper = upper_override;
             }
 
@@ -273,28 +287,28 @@ where
                     (true, None, None, Some((lower, upper)))
                 } else {
                     let (catchup_bounds, main_bounds) =
-                        checkpoint.stream_bounds(lower, upper, tail_params.chunk_direction)?;
+                        checkpoint.stream_bounds(lower, upper, chunking.direction)?;
 
-                    let contiguous_bounds =
-                        match (tail_params.chunk_direction, catchup_bounds, main_bounds) {
-                            (
-                                Direction::NewestFirst,
-                                Some((catchup_lower, _)),
-                                Some((_, main_upper)),
-                            ) => catchup_lower == main_upper,
-                            (
-                                Direction::OldestFirst,
-                                Some((_, catchup_upper)),
-                                Some((main_lower, _)),
-                            ) => catchup_upper == main_lower,
-                            (_, Some(_), None) => false,
-                            _ => true,
-                        };
+                    let contiguous_bounds = match (chunking.direction, catchup_bounds, main_bounds)
+                    {
+                        (
+                            Direction::NewestFirst,
+                            Some((catchup_lower, _)),
+                            Some((_, main_upper)),
+                        ) => catchup_lower == main_upper,
+                        (
+                            Direction::OldestFirst,
+                            Some((_, catchup_upper)),
+                            Some((main_lower, _)),
+                        ) => catchup_upper == main_lower,
+                        (_, Some(_), None) => false,
+                        _ => true,
+                    };
                     info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint run {} chunk {} with catchup {:?} and main {:?} bounds",
                         checkpoint.update_run_number, checkpoint.update_chunk_number, catchup_bounds, main_bounds);
                     (
                         contiguous_bounds,
-                        if tail_params.chunk_direction == Direction::NewestFirst {
+                        if chunking.direction == Direction::NewestFirst {
                             Some(checkpoint.lower_bound)
                         } else {
                             Some(checkpoint.upper_bound)
@@ -309,8 +323,8 @@ where
 
             let load_ids = |(lower, upper)| {
                 heads_fetcher
-                    .fetch_ids(&ctx, tail_params.chunk_direction, Some((lower, upper)))
-                    .chunks(*chunk_size)
+                    .fetch_ids(&ctx, chunking.direction, Some((lower, upper)))
+                    .chunks(chunking.chunk_size)
                     .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
             };
 
@@ -326,7 +340,7 @@ where
                 main_s.right_stream()
             };
 
-            let best_bounds = if tail_params.chunk_direction == Direction::NewestFirst {
+            let best_bounds = if chunking.direction == Direction::NewestFirst {
                 BestBounds::NewestFirst(best_bound, upper)
             } else {
                 BestBounds::OldestFirst(lower, best_bound)
@@ -359,9 +373,9 @@ where
             let chunk_members: HashSet<ChangesetId> = chunk_members
                 .into_iter()
                 .map(|((cs_id, id), (fetch_low, fetch_upper))| {
-                    if chunk_smaller_than_fetch {
+                    if let Some(direction) = chunk_smaller_than_fetch {
                         // Adjust the bounds so it doesn't exceed previous chunk
-                        if tail_params.chunk_direction == Direction::NewestFirst {
+                        if direction == Direction::NewestFirst {
                             chunk_low = min(chunk_low, id);
                             chunk_upper = max(chunk_upper, fetch_upper);
                             if let Some(last_chunk_low) = last_chunk_low {
@@ -423,9 +437,10 @@ where
             let extra_roots = visitor
                 .start_chunk(&chunk_members, hg_mapping_prepop)?
                 .into_iter();
-            let chunk_roots =
-                roots_for_chunk(chunk_members, &tail_params.public_changeset_chunk_by)?;
-            repo_params.walk_roots.extend(chunk_roots);
+            if let Some(chunking) = tail_params.chunking.as_ref() {
+                let chunk_roots = roots_for_chunk(chunk_members, &chunking.chunk_by)?;
+                repo_params.walk_roots.extend(chunk_roots);
+            }
             repo_params.walk_roots.extend(extra_roots);
 
             cloned!(ctx, job_params, make_run, type_params);
@@ -436,29 +451,25 @@ where
             let walk_output =
                 walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params).boxed();
             let cp_name = tail_params
-                .checkpoints
+                .chunking
                 .as_ref()
+                .and_then(|chunking| chunking.checkpoints.as_ref())
                 .map(|v| v.name().to_string());
             make_sink(walk_output, run_start, chunk_num, cp_name).await?;
             visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
 
-            if is_chunking {
+            if let Some(chunking) = tail_params.chunking.as_ref() {
                 info!(logger, #log::LOADED, "Deferred: {}", visitor.num_deferred());
-                if let Some(sample_rate) = tail_params.clear_sample_rate {
-                    if sample_rate != 0 && chunk_num % sample_rate == 0 {
+                if let Some(clear_state) = chunking.clear_state.as_ref() {
+                    if clear_state.sample_rate != 0 && chunk_num % clear_state.sample_rate == 0 {
                         info!(logger, #log::CHUNKING, "Clearing state after chunk {}", chunk_num);
-                        visitor.clear_state(
-                            &tail_params.clear_node_types,
-                            &tail_params.clear_interned_types,
-                        );
+                        visitor.clear_state(&clear_state.node_types, &clear_state.interned_types);
                     }
                 }
 
                 // Record checkpoint and update best_bounds
-                if let Some(checkpoints) = tail_params.checkpoints.as_ref() {
-                    if tail_params.checkpoint_sample_rate != 0
-                        && chunk_num % tail_params.checkpoint_sample_rate == 0
-                    {
+                if let Some(checkpoints) = chunking.checkpoints.as_ref() {
+                    if checkpoints.sample_rate != 0 && chunk_num % checkpoints.sample_rate == 0 {
                         let maybe_new = if let Some(best_bounds) = best_bounds.as_ref() {
                             best_bounds
                                 .checkpoint(
@@ -483,24 +494,24 @@ where
             }
         }
 
-        visitor.end_chunks(
-            &repo_params.logger,
-            contiguous_bounds
-                && !tail_params.allow_remaining_deferred
-                // If lower bound overridden then not contiguous to repo start. Overriding upper bound should not result in deferred.
-                && ((tail_params.chunk_direction == Direction::NewestFirst && tail_params.repo_lower_bound_override.is_none())
-                    || (tail_params.chunk_direction == Direction::OldestFirst && tail_params.repo_upper_bound_override.is_none())),
-        )?;
+        if let Some(chunking) = tail_params.chunking.as_ref() {
+            visitor.end_chunks(
+                &repo_params.logger,
+                    contiguous_bounds
+                        && !chunking.allow_remaining_deferred
+                        // If lower bound overridden then not contiguous to repo start. Overriding upper bound should not result in deferred.
+                        && ((chunking.direction == Direction::NewestFirst && chunking.repo_lower_bound_override.is_none())
+                            || (chunking.direction == Direction::OldestFirst && chunking.repo_upper_bound_override.is_none())),
+                )?;
 
-        match (tail_params.checkpoints.as_ref(), checkpoint.as_ref()) {
-            (Some(checkpoints), Some(cp)) => checkpoints.finish(repo_id, cp).await?,
-            _ => {}
-        }
+            match (chunking.checkpoints.as_ref(), checkpoint.as_ref()) {
+                (Some(checkpoints), Some(cp)) => checkpoints.finish(repo_id, cp).await?,
+                _ => {}
+            }
 
-        if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(
                 repo_params.logger, #log::CHUNKING,
-                "Completed in {} chunks of size {}", chunk_num, chunk_size
+                "Completed in {} chunks of size {}", chunk_num, chunking.chunk_size
             );
         };
 

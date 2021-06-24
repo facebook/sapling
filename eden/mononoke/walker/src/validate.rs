@@ -939,7 +939,11 @@ async fn run_one(
         always_emit_edge_types.clone(),
         job_params.enable_derive,
         sub_params.lfs_threshold,
-        Some(sub_params.tail_params.chunk_direction),
+        sub_params
+            .tail_params
+            .chunking
+            .as_ref()
+            .map(|v| v.direction),
     );
 
     let type_params = RepoWalkTypeParams {
