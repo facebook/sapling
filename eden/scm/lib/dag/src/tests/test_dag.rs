@@ -16,6 +16,8 @@ use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
 use crate::render::render_namedag;
+use crate::Group;
+use crate::Level;
 use crate::NameDag;
 use crate::Result;
 use crate::Vertex;
@@ -205,6 +207,21 @@ impl TestDag {
             output,
         };
         Arc::new(remote)
+    }
+
+    /// Describe segments at the given level and group as a string.
+    pub fn debug_segments(&self, level: Level, group: Group) -> String {
+        let lines = crate::namedag::debug_segments_by_level_group(
+            &self.dag.dag,
+            &self.dag.map,
+            level,
+            group,
+        );
+        lines
+            .iter()
+            .map(|l| format!("\n        {}", l))
+            .collect::<Vec<String>>()
+            .concat()
     }
 
     /// Output of remote protocols since the last call.

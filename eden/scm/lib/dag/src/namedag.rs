@@ -47,6 +47,7 @@ use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::IdSet;
+use crate::Level;
 use crate::Result;
 use crate::VerLink;
 use dag_types::FlatSegment;
@@ -1741,11 +1742,13 @@ where
     }
 }
 
-fn debug<S: IdDagStore>(
+pub(crate) fn debug_segments_by_level_group<S: IdDagStore>(
     iddag: &IdDag<S>,
     idmap: &dyn IdConvert,
-    f: &mut fmt::Formatter,
-) -> fmt::Result {
+    level: Level,
+    group: Group,
+) -> Vec<String> {
+    let mut result = Vec::new();
     // Show Id, with optional hash.
     let show = |id: Id| DebugId {
         id,
@@ -1762,6 +1765,33 @@ fn debug<S: IdDagStore>(
         result.join(" ")
     };
 
+    if let Ok(segments) = iddag.next_segments(group.min_id(), level) {
+        for segment in segments.into_iter().rev() {
+            if let (Ok(span), Ok(parents), Ok(flags)) =
+                (segment.span(), segment.parents(), segment.flags())
+            {
+                let mut line = format!(
+                    "{:.12?} : {:.12?} {:.12?}",
+                    show(span.low),
+                    show(span.high),
+                    parents.into_iter().map(show).collect::<Vec<_>>(),
+                );
+                let flags = show_flags(flags);
+                if !flags.is_empty() {
+                    line += &format!(" {}", flags);
+                }
+                result.push(line);
+            }
+        }
+    }
+    result
+}
+
+fn debug<S: IdDagStore>(
+    iddag: &IdDag<S>,
+    idmap: &dyn IdConvert,
+    f: &mut fmt::Formatter,
+) -> fmt::Result {
     if let Ok(max_level) = iddag.max_level() {
         writeln!(f, "Max Level: {}", max_level)?;
         for lv in (0..=max_level).rev() {
@@ -1773,23 +1803,8 @@ fn debug<S: IdDagStore>(
                 }
                 if let Ok(segments) = iddag.next_segments(group.min_id(), lv) {
                     writeln!(f, "   Segments: {}", segments.len())?;
-                    for segment in segments.into_iter().rev() {
-                        if let (Ok(span), Ok(parents), Ok(flags)) =
-                            (segment.span(), segment.parents(), segment.flags())
-                        {
-                            write!(
-                                f,
-                                "    {:.12?} : {:.12?} {:.12?}",
-                                show(span.low),
-                                show(span.high),
-                                parents.into_iter().map(show).collect::<Vec<_>>(),
-                            )?;
-                            let flags = show_flags(flags);
-                            if !flags.is_empty() {
-                                write!(f, " {}", flags)?;
-                            }
-                            writeln!(f)?;
-                        }
+                    for line in debug_segments_by_level_group(iddag, idmap, lv, group) {
+                        writeln!(f, "    {}", line)?;
                     }
                 }
             }
