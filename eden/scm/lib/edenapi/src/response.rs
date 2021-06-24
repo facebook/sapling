@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use futures::prelude::*;
 
-use async_runtime::block_on;
+use async_runtime::block_unless_interrupted;
 use http_client::Stats;
 
 use crate::errors::EdenApiError;
@@ -26,9 +27,11 @@ impl<T> BlockingFetch<T> {
     where
         F: Future<Output = Result<Fetch<T>, EdenApiError>>,
     {
-        let Fetch { entries, stats } = block_on(fetch)?;
-        let entries = block_on(entries.try_collect())?;
-        let stats = block_on(stats)?;
+        let Fetch { entries, stats } =
+            block_unless_interrupted(fetch).context("transfer interrupted by user")??;
+        let entries = block_unless_interrupted(entries.try_collect())
+            .context("transfer interrupted by user")??;
+        let stats = block_unless_interrupted(stats).context("transfer interrupted by user")??;
         Ok(Self { entries, stats })
     }
 }
