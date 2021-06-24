@@ -9,7 +9,8 @@ use std::fmt::{self, Display};
 
 use anyhow::{bail, Context, Result};
 use chrono::{
-    DateTime as ChronoDateTime, FixedOffset, Local, LocalResult, NaiveDateTime, TimeZone,
+    DateTime as ChronoDateTime, Duration as ChronoDuration, FixedOffset, Local, LocalResult,
+    NaiveDateTime, TimeZone,
 };
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
@@ -106,6 +107,15 @@ impl DateTime {
             timestamp_secs: self.timestamp_secs(),
             tz_offset_secs: self.tz_offset_secs(),
         }
+    }
+}
+
+impl std::ops::Add<ChronoDuration> for DateTime {
+    type Output = DateTime;
+
+    #[inline]
+    fn add(self, rhs: ChronoDuration) -> DateTime {
+        DateTime::new(self.into_chrono() + rhs)
     }
 }
 

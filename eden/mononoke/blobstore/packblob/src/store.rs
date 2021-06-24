@@ -11,8 +11,8 @@ use crate::pack;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
-    OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
+    BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
 };
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
@@ -148,6 +148,33 @@ impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_impl(ctx, key, value, None).await
+    }
+}
+
+#[async_trait]
+impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B> {
+    async fn enumerate<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
+    ) -> Result<BlobstoreEnumerationData> {
+        let mut enumeration = self.inner.enumerate(ctx, range).await?;
+        // Include only keys with the envelope suffix, and remove the suffix
+        // from those keys.
+        enumeration.keys = enumeration
+            .keys
+            .into_iter()
+            .filter_map(|mut key| {
+                if key.ends_with(ENVELOPE_SUFFIX) {
+                    let new_len = key.len() - ENVELOPE_SUFFIX.len();
+                    key.truncate(new_len);
+                    Some(key)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        Ok(enumeration)
     }
 }
 

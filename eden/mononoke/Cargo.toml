@@ -173,6 +173,7 @@ members = [
   "blobstore/cacheblob",
   "blobstore/chaosblob",
   "blobstore/delayblob",
+  "blobstore/ephemeral_blobstore",
   "blobstore/factory",
   "blobstore/fileblob",
   "blobstore/if",

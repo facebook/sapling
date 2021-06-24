@@ -17,14 +17,29 @@ use std::str::FromStr;
 
 use crate::errors::ErrorKind;
 
-const REPO_ID_PREFIX: &str = "repo";
-const REPO_ID_SUFFIX: &str = ".";
-const REPO_ID_SUFFIX_PATTERN: &str = r"\.";
+pub const REPO_ID_PREFIX: &str = "repo";
+pub const REPO_ID_SUFFIX: &str = ".";
+pub const REPO_ID_SUFFIX_PATTERN: &str = r"\.";
+
+pub const EPH_ID_PREFIX: &str = "eph";
+pub const EPH_ID_SUFFIX: &str = ".";
+pub const EPH_ID_SUFFIX_PATTERN: &str = r"\.";
 
 lazy_static! {
-    /// Used to strip of repo prefixes when embedding keys inside blobs
+    /// Matches the repo prefix for repo-specific keys.
     pub static ref REPO_PREFIX_REGEX: Regex = Regex::new(
         format!(r"^{}(\d{{3}}\d+){}", REPO_ID_PREFIX, REPO_ID_SUFFIX_PATTERN
+    ).as_str()).unwrap();
+
+    /// Matches the ephemeral and repo prefix for repo-specific ephemeral
+    /// keys.
+    pub static ref EPH_REPO_PREFIX_REGEX: Regex = Regex::new(
+        format!(
+            r"^{}(\d+){}{}(\d{{3}}\d+){}",
+            EPH_ID_PREFIX,
+            EPH_ID_SUFFIX_PATTERN,
+            REPO_ID_PREFIX,
+            REPO_ID_SUFFIX_PATTERN,
     ).as_str()).unwrap();
 }
 

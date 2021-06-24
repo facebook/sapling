@@ -12,7 +12,9 @@ use anyhow::{bail, format_err, Error, Result};
 use ascii::AsciiString;
 use blobstore::{PackMetadata, SizeMetadata};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
+use mononoke_types::hash::Context as HashContext;
+use mononoke_types::repo::{EPH_REPO_PREFIX_REGEX, REPO_PREFIX_REGEX};
+use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{
     PackedEntry, PackedFormat, PackedValue, SingleValue, StorageEnvelope, StorageFormat,
     ZstdFromDictValue,
@@ -351,6 +353,8 @@ fn compute_pack_hash(keys: &[String]) -> AsciiString {
 /// of the key.
 fn split_key_prefix(key: &str) -> (&str, &str) {
     if let Some(m) = REPO_PREFIX_REGEX.find(key) {
+        key.split_at(m.end())
+    } else if let Some(m) = EPH_REPO_PREFIX_REGEX.find(key) {
         key.split_at(m.end())
     } else {
         ("", key)
