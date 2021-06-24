@@ -396,7 +396,9 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         old_master: ChangesetId,
         new_master: ChangesetId,
     ) -> Result<CloneData<ChangesetId>> {
-        // Might need to wait here for segmented changelog to catch up
+        self.build_up_to_heads(ctx, &[old_master, new_master])
+            .await
+            .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag
