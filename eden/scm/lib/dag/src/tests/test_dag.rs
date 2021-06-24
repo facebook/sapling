@@ -157,9 +157,14 @@ impl TestDag {
     /// Use this DAG as the "server", return the "client" Dag that has lazy Vertexes.
     pub async fn client(&self) -> TestDag {
         let mut client = TestDag::new();
-        let remote = self.remote_protocol(client.output.clone());
-        client.dag.set_remote_protocol(remote);
+        client.set_remote(&self);
         client
+    }
+
+    /// Update remote protocol to use the (updated) server graph.
+    pub fn set_remote(&mut self, server_dag: &Self) {
+        let remote = server_dag.remote_protocol(self.output.clone());
+        self.dag.set_remote_protocol(remote);
     }
 
     /// Similar to `client`, but also clone the Dag from the server.
