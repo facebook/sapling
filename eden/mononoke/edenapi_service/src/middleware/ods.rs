@@ -33,6 +33,7 @@ define_stats! {
     bookmarks_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     lookup_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    pull_fast_forward_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -73,6 +74,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Bookmarks => STATS::bookmarks_duration_ms.add_value(dur_ms),
                 Lookup => STATS::lookup_duration_ms.add_value(dur_ms),
                 UploadFile => STATS::upload_file_duration_ms.add_value(dur_ms),
+                PullFastForwardMaster => STATS::pull_fast_forward_duration_ms.add_value(dur_ms),
             }
         }
 

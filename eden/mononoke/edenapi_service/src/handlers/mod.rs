@@ -35,6 +35,7 @@ mod complete_trees;
 mod files;
 mod history;
 mod lookup;
+mod pull;
 mod repos;
 mod trees;
 
@@ -55,6 +56,7 @@ pub enum EdenApiMethod {
     Clone,
     FullIdMapClone,
     Bookmarks,
+    PullFastForwardMaster,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -73,6 +75,7 @@ impl fmt::Display for EdenApiMethod {
             Self::Bookmarks => "bookmarks",
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
+            Self::PullFastForwardMaster => "pull_fast_forward_master",
         };
         write!(f, "{}", name)
     }
@@ -161,6 +164,7 @@ define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 define_handler!(bookmarks_handler, bookmarks::bookmarks);
 define_handler!(lookup_handler, lookup::lookup);
 define_handler!(upload_file_handler, files::upload_file);
+define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -213,6 +217,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/clone")
             .with_path_extractor::<clone::CloneParams>()
             .to(clone_handler);
+        route
+            .post("/:repo/pull_fast_forward_master")
+            .with_path_extractor::<pull::PullFastForwardParams>()
+            .to(pull_fast_forward_master);
         route
             .post("/:repo/full_idmap_clone")
             .with_path_extractor::<clone::CloneParams>()

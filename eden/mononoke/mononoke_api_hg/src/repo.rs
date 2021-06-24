@@ -381,9 +381,21 @@ impl HgRepoContext {
 
     pub async fn segmented_changelog_pull_fast_forward_master(
         &self,
-        old_master: ChangesetId,
-        new_master: ChangesetId,
+        old_master: HgChangesetId,
+        new_master: HgChangesetId,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        let hg_to_bonsai: HashMap<HgChangesetId, ChangesetId> = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), vec![old_master, new_master])
+            .await?
+            .into_iter()
+            .collect();
+        let old_master = *hg_to_bonsai
+            .get(&old_master)
+            .ok_or_else(|| format_err!("Failed to convert old_master {} to bonsai", old_master))?;
+        let new_master = *hg_to_bonsai
+            .get(&new_master)
+            .ok_or_else(|| format_err!("Failed to convert new_master {} to bonsai", new_master))?;
         let m_clone_data = self
             .repo()
             .segmented_changelog_pull_fast_forward_master(old_master, new_master)
