@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
@@ -20,6 +19,8 @@ use crate::render::render_namedag;
 use crate::NameDag;
 use crate::Result;
 use crate::Vertex;
+use futures::StreamExt;
+use nonblocking::non_blocking;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -71,9 +72,17 @@ impl TestDag {
         }
     }
 
-    /// Add vertexes to the graph.
+    /// Add vertexes to the graph. Does not resolve vertexes remotely.
     pub fn drawdag(&mut self, text: &str, master_heads: &[&str]) {
         self.drawdag_with_limited_heads(text, master_heads, None);
+    }
+
+    /// Add vertexes to the graph. Async version that might resolve vertexes
+    /// remotely on demand.
+    pub async fn drawdag_async(&mut self, text: &str, master_heads: &[&str]) {
+        // Do not call self.validate to avoid fetching vertexes remotely.
+        self.drawdag_with_limited_heads_async(text, master_heads, None, false)
+            .await
     }
 
     /// Add vertexes to the graph.
@@ -86,6 +95,17 @@ impl TestDag {
         master_heads: &[&str],
         heads: Option<&[&str]>,
     ) {
+        non_blocking(self.drawdag_with_limited_heads_async(text, master_heads, heads, true))
+            .unwrap()
+    }
+
+    pub async fn drawdag_with_limited_heads_async(
+        &mut self,
+        text: &str,
+        master_heads: &[&str],
+        heads: Option<&[&str]>,
+        validate: bool,
+    ) {
         let (all_heads, parent_func) = get_heads_and_parents_func_from_ascii(text);
         let heads = match heads {
             Some(heads) => heads
@@ -95,17 +115,21 @@ impl TestDag {
             None => all_heads,
         };
         self.dag.dag.set_new_segment_size(self.seg_size);
-        non_blocking_result(self.dag.add_heads(&parent_func, &heads)).unwrap();
-        self.validate();
+        self.dag.add_heads(&parent_func, &heads).await.unwrap();
+        if validate {
+            self.validate().await;
+        }
         let master_heads = master_heads
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
             .collect::<Vec<_>>();
         let need_flush = !master_heads.is_empty();
         if need_flush {
-            non_blocking_result(self.dag.flush(&master_heads)).unwrap();
+            self.dag.flush(&master_heads).await.unwrap();
         }
-        self.validate();
+        if validate {
+            self.validate().await;
+        }
     }
 
     /// Replace ASCII with Ids in the graph.
@@ -185,12 +209,13 @@ impl TestDag {
         result
     }
 
-    fn validate(&self) {
+    async fn validate(&self) {
         // All vertexes should be accessible, and round-trip through IdMap.
-        for v in non_blocking_result(self.dag.all()).unwrap().iter().unwrap() {
+        let mut iter = self.dag.all().await.unwrap().iter().await.unwrap();
+        while let Some(v) = iter.next().await {
             let v = v.unwrap();
-            let id = non_blocking_result(self.dag.vertex_id(v.clone())).unwrap();
-            let v2 = non_blocking_result(self.dag.vertex_name(id)).unwrap();
+            let id = self.dag.vertex_id(v.clone()).await.unwrap();
+            let v2 = self.dag.vertex_name(id).await.unwrap();
             assert_eq!(v, v2);
         }
     }
