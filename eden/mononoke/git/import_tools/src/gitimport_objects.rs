@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 
+use crate::gitlfs::GitImportLfs;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -118,7 +119,7 @@ impl StoreLoadable<GitPool> for GitTree {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct GitimportPreferences {
     pub derive_trees: bool,
     pub derive_hg: bool,
@@ -128,6 +129,7 @@ pub struct GitimportPreferences {
     /// useful when several repos are imported simultainously.
     pub gitrepo_name: Option<String>,
     pub concurrency: usize,
+    pub lfs: GitImportLfs,
 }
 
 impl Default for GitimportPreferences {
@@ -139,6 +141,7 @@ impl Default for GitimportPreferences {
             bonsai_git_mapping: false,
             gitrepo_name: None,
             concurrency: 20,
+            lfs: GitImportLfs::default(),
         }
     }
 }

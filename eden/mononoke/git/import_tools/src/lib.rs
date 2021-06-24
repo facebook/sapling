@@ -8,12 +8,14 @@
 #![feature(try_blocks)]
 
 mod gitimport_objects;
+mod gitlfs;
 
 pub use crate::gitimport_objects::{
     convert_git_filemode, convert_time_to_datetime, oid_to_sha1, CommitMetadata, ExtractedCommit,
     FullRepoImport, GitLeaf, GitManifest, GitRangeImport, GitTree, GitimportPreferences,
     GitimportTarget, ImportMissingForCommit,
 };
+pub use crate::gitlfs::{GitImportLfs, LfsMetaData};
 use anyhow::{format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
@@ -23,7 +25,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
+use filestore::{self, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
 use futures_stats::TimedTryFutureExt;
 use git2::{ObjectType, Oid, Repository, Sort, TreeWalkMode, TreeWalkResult};
@@ -46,85 +48,103 @@ use tokio::task;
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
+fn git_store_request(
+    ctx: &CoreContext,
+    git_id: Oid,
+    git_bytes: Bytes,
+) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
+    let size = git_bytes.len().try_into()?;
+    let git_sha1 =
+        hash::RichGitSha1::from_bytes(Bytes::copy_from_slice(git_id.as_bytes()), "blob", size)?;
+    let req = StoreRequest::with_git_sha1(size, git_sha1);
+    debug!(
+        ctx.logger(),
+        "Uploading git-blob:{} size:{}",
+        git_sha1.sha1().to_brief(),
+        size
+    );
+    Ok((req, stream::once(async move { Ok(git_bytes) })))
+}
+
+async fn lfs_store_request(
+    ctx: &CoreContext,
+    lfs: &GitImportLfs,
+    lfs_meta: LfsMetaData,
+    path: &MPath,
+) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
+    let (store_req, bstream) = lfs.fetch_bytes(ctx, &lfs_meta).await?;
+    info!(
+        ctx.logger(),
+        "Uploading LFS {} sha256:{} size:{}",
+        path,
+        lfs_meta.sha256.to_brief(),
+        lfs_meta.size,
+    );
+    Ok((store_req, bstream))
+}
+
 async fn do_upload<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
     pool: GitPool,
     oid: Oid,
+    path: &MPath,
+    lfs: &GitImportLfs,
 ) -> Result<ContentMetadata, Error> {
-    // First lets see if we already have the blob in Mononoke.
-    let sha1 = oid_to_sha1(&oid)?;
-    if let Some(meta) =
-        filestore::get_metadata(blobstore, ctx, &FetchKey::from(Alias::GitSha1(sha1))).await?
-    {
-        debug!(
-            ctx.logger(),
-            "Found git-blob:{} size:{} in blobstore.",
-            sha1.to_brief(),
-            meta.total_size,
-        );
-        return Ok(meta);
-    }
-
-    // Blob not already in Mononoke, lets upload it.
-    let (id, bytes) = pool
-        .with(move |repo| {
-            let blob = repo.find_blob(oid)?;
-            let bytes = Bytes::copy_from_slice(blob.content());
-            let id = blob.id();
-            Result::<_, Error>::Ok((id, bytes))
+    let (git_id, git_bytes) = pool
+        .with({
+            move |repo| {
+                let blob = repo.find_blob(oid)?;
+                let bytes = Bytes::copy_from_slice(blob.content());
+                let id = blob.id();
+                Result::<_, Error>::Ok((id, bytes))
+            }
         })
         .await?;
 
-    let size = bytes.len().try_into()?;
-    let git_sha1 =
-        hash::RichGitSha1::from_bytes(Bytes::copy_from_slice(id.as_bytes()), "blob", size)?;
-    let req = StoreRequest::with_git_sha1(size, git_sha1);
-    debug!(
-        ctx.logger(),
-        "Uploading git-blob:{} size:{}",
-        sha1.to_brief(),
-        size
-    );
-    let meta = filestore::store(
-        blobstore,
-        FilestoreConfig::default(),
-        ctx,
-        &req,
-        stream::once(async move { Ok(bytes) }),
-    )
-    .await?;
+    let (req, bstream) = if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, &git_id) {
+        let (req, bstream) = lfs_store_request(ctx, lfs, lfs_meta, path).await?;
+        (req, bstream.left_stream())
+    } else {
+        let (req, bstream) = git_store_request(ctx, git_id, git_bytes)?;
+        (req, bstream.right_stream())
+    };
+
+    let meta = filestore::store(blobstore, FilestoreConfig::default(), ctx, &req, bstream).await?;
 
     Ok(meta)
 }
 
 // TODO: Try to produce copy-info?
-// TODO: Translate LFS pointers?
 async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
     pool: GitPool,
     changes: S,
+    lfs: &GitImportLfs,
 ) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
 {
     changes
-        .map_ok(move |change| {
-            cloned!(pool);
-            async move {
-                match change {
-                    BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
-                    | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                        let meta = do_upload(ctx, blobstore, pool, oid).await?;
-                        Ok((
-                            path,
-                            Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
-                        ))
+        .map_ok(|change| async {
+            task::spawn({
+                cloned!(pool, ctx, blobstore, lfs);
+                async move {
+                    match change {
+                        BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
+                        | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
+                            let meta = do_upload(&ctx, &blobstore, pool, oid, &path, &lfs).await?;
+                            Ok((
+                                path,
+                                Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
+                            ))
+                        }
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
                     }
-                    BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
                 }
-            }
+            })
+            .await?
         })
         .try_buffer_unordered(100)
         .try_collect()
@@ -204,7 +224,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         .map(|oid| async {
             let oid = oid.with_context(|| "While walking commits")?;
             task::spawn({
-                cloned!(ctx, repo, pool);
+                cloned!(ctx, repo, pool, prefs.lfs);
                 async move {
                     let ExtractedCommit {
                         metadata,
@@ -219,6 +239,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
                         repo.blobstore(),
                         pool.clone(),
                         bonsai_diff(ctx.clone(), pool, tree, parent_trees),
+                        &lfs,
                     )
                     .await?;
 
@@ -503,22 +524,27 @@ pub async fn import_tree_as_single_bonsai_changeset(
     let mut uploading = 0;
     let file_changes = stream::iter(file_paths.into_iter())
         .map(Ok)
-        .map_ok(move |(path, (oid, mode))| {
-            uploading += 1;
-            if uploading % 1000 == 0 {
-                info!(ctx.logger(), "started uploading {} entries", uploading);
-            }
-            async move {
-                let path = MPath::new(path)?;
-                let content_metadata = do_upload(&ctx, repo.blobstore(), pool.clone(), oid).await?;
-                let file_type = convert_git_filemode(mode)?;
-                let file_change = FileChange::new(
-                    content_metadata.content_id,
-                    file_type,
-                    content_metadata.total_size,
-                    None,
-                );
-                Result::<_, Error>::Ok((path, Some(file_change)))
+        .map_ok({
+            let lfs = prefs.lfs.clone();
+            move |(path, (oid, mode))| {
+                uploading += 1;
+                if uploading % 1000 == 0 {
+                    info!(ctx.logger(), "started uploading {} entries", uploading);
+                }
+                cloned!(lfs);
+                async move {
+                    let path = MPath::new(path)?;
+                    let content_metadata =
+                        do_upload(&ctx, repo.blobstore(), pool.clone(), oid, &path, &lfs).await?;
+                    let file_type = convert_git_filemode(mode)?;
+                    let file_change = FileChange::new(
+                        content_metadata.content_id,
+                        file_type,
+                        content_metadata.total_size,
+                        None,
+                    );
+                    Result::<_, Error>::Ok((path, Some(file_change)))
+                }
             }
         })
         .try_buffer_unordered(100)

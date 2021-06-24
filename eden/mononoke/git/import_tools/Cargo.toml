@@ -24,11 +24,16 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git-pool = { version = "0.1.0", path = "../git-pool" }
 git2 = "0.13"
 git_types = { version = "0.1.0", path = "../git_types" }
+http = "0.2"
+hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
+hyper-openssl = "0.9"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+pin-project = "0.4"
+rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_trace"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "1.6.1", features = ["full", "test-util"] }
