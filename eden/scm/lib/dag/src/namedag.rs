@@ -500,8 +500,7 @@ where
             // this can be negative becase we generally don't know if client id's are greater or lower then server id's
             let server_to_client_offset = new_client_id_low.0 as i64 - server_segment.low.0 as i64;
 
-            let new_server_ids =
-                server_idmap_tree.range(server_segment.low..server_segment.high + 1);
+            let new_server_ids = server_idmap_tree.range(server_segment.low..=server_segment.high);
 
             for (sever_id, name) in new_server_ids {
                 let client_id = Id((sever_id.0 as i64 + server_to_client_offset) as u64);
