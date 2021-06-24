@@ -34,9 +34,6 @@ pub fn run_background(mut command: Command) -> Result<Child> {
 mod tests {
     use super::*;
 
-    use std::thread::sleep;
-    use std::time::Duration;
-
     use tempdir::TempDir;
 
     #[test]
@@ -60,7 +57,7 @@ mod tests {
         };
 
         let mut child = run_background(cmd).unwrap();
-        let result = child.wait().unwrap();
+        child.wait().unwrap();
 
         assert!(file_path.exists());
     }
