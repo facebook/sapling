@@ -147,13 +147,14 @@ impl Pack {
     /// Converts the pack into something that can go into a blobstore
     pub(crate) fn into_blobstore_bytes(
         self,
-        prefix: String,
+        pack_prefix: String,
     ) -> Result<(String, Vec<String>, BlobstoreBytes)> {
         for entry in &self.entries {
-            if let Some(repo_prefix) = REPO_PREFIX_REGEX.find(&entry.key) {
+            let (prefix, _) = split_key_prefix(&entry.key);
+            if !prefix.is_empty() {
                 bail!(
-                    "Repo prefix {} found in packed blob key {}",
-                    repo_prefix.as_str(),
+                    "Key prefix {} found in packed blob key {}",
+                    prefix,
                     entry.key
                 );
             }
@@ -168,7 +169,7 @@ impl Pack {
         };
 
         // Build the pack identity
-        let mut pack_key = prefix;
+        let mut pack_key = pack_prefix;
         pack_key.push_str(compute_pack_hash(&link_keys).as_str());
         pack_key.push_str(store::ENVELOPE_SUFFIX);
 
@@ -177,7 +178,7 @@ impl Pack {
             entries: self.entries,
         };
 
-        // Wrap in thrift encoding and returm as bytes
+        // Wrap in thrift encoding and return as bytes
         Ok((
             pack_key,
             link_keys,
@@ -250,11 +251,8 @@ pub(crate) fn decode_pack(
     packed: PackedFormat,
     key: &str,
 ) -> Result<(BlobstoreBytes, SizeMetadata)> {
-    // Strip repo prefix, if any
-    let key = match REPO_PREFIX_REGEX.find(key) {
-        Some(m) => &key[m.end()..],
-        None => key,
-    };
+    // Strip key prefix, if any
+    let (_, key) = split_key_prefix(key);
 
     let PackedFormat {
         key: pack_key,
@@ -346,6 +344,17 @@ fn compute_pack_hash(keys: &[String]) -> AsciiString {
         hash_context.update(key.as_bytes());
     }
     hash_context.finish().to_hex()
+}
+
+/// Find the key prefix for a given key.  Key prefixes are removed when
+/// keys are stored in packs.  Returns the key prefix and the remainder
+/// of the key.
+fn split_key_prefix(key: &str) -> (&str, &str) {
+    if let Some(m) = REPO_PREFIX_REGEX.find(key) {
+        key.split_at(m.end())
+    } else {
+        ("", key)
+    }
 }
 
 #[cfg(test)]

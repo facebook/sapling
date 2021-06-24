@@ -152,18 +152,23 @@ impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
 }
 
 impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
-    // Put packed content, returning the pack's key if successful.
-    // `prefix` is in the control of the packer, e.g. if packing only
-    // filecontent together packer can chose "repoXXXX.packed.file_content."
-    // `prefix` is only used for the temporary pack file
+    /// Put packed content, returning the pack's key if successful.
+    ///
+    /// `key_prefix` is prefixed to all keys within the pack and used to
+    /// create links to the pack for each packed key.
+    ///
+    /// `pack_prefix` is prefixed to the pack key, and is under the control of
+    /// the packer, e.g. if packing only filecontent together packer can chose
+    /// "repoXXXX.packed.file_content.".  It is used for the temporary pack
+    /// file name and stored within the pack itself.
     pub async fn put_packed<'a>(
         &'a self,
         ctx: &'a CoreContext,
         pack: pack::Pack,
-        repo_prefix: String,
-        prefix: String,
+        key_prefix: String,
+        pack_prefix: String,
     ) -> Result<String> {
-        let (pack_key, link_keys, blob) = pack.into_blobstore_bytes(prefix)?;
+        let (pack_key, link_keys, blob) = pack.into_blobstore_bytes(pack_prefix)?;
 
         // pass through the put after wrapping
         self.inner.put(ctx, pack_key.clone(), blob).await?;
@@ -171,7 +176,7 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         // add the links
         let links = FuturesUnordered::new();
         for key in link_keys {
-            let key = format!("{}{}{}", repo_prefix, key, ENVELOPE_SUFFIX);
+            let key = format!("{}{}{}", key_prefix, key, ENVELOPE_SUFFIX);
             links.push(self.inner.link(ctx, &pack_key, key));
         }
         links.try_collect().await?;
