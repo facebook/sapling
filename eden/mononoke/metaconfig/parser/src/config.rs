@@ -439,8 +439,8 @@ mod test {
         BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
         CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
-        FilestoreParams, HookBypass, HookConfig, HookManagerParams, HookParams,
-        InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
         MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
         PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
         SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
@@ -825,6 +825,16 @@ mod test {
 
             [storage.files.blobstore.blob_files]
             path = "/tmp/www"
+
+            [storage.files.ephemeral_blobstore]
+            initial_bubble_lifespan_secs = 86400
+            bubble_expiration_grace_secs = 3600
+
+            [storage.files.ephemeral_blobstore.metadata.local]
+            local_db_path = "/tmp/www-ephemeral"
+
+            [storage.files.ephemeral_blobstore.blobstore.blob_files]
+            path = "/tmp/www-ephemeral"
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
@@ -892,6 +902,7 @@ mod test {
                     db_address: "mutation_db_address".into(),
                 },
             }),
+            ephemeral_blobstore: None,
         };
 
         let mut repos = HashMap::new();
@@ -1078,6 +1089,16 @@ mod test {
                     blobstore: BlobConfig::Files {
                         path: "/tmp/www".into(),
                     },
+                    ephemeral_blobstore: Some(EphemeralBlobstoreConfig {
+                        blobstore: BlobConfig::Files {
+                            path: "/tmp/www-ephemeral".into(),
+                        },
+                        metadata: DatabaseConfig::Local(LocalDatabaseConfig {
+                            path: "/tmp/www-ephemeral".into(),
+                        }),
+                        initial_bubble_lifespan: Duration::from_secs(86400),
+                        bubble_expiration_grace: Duration::from_secs(3600),
+                    }),
                 },
                 write_lock_db_address: None,
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1338,6 +1359,7 @@ mod test {
                             db_address: "some_db".into(),
                         },
                     }),
+                    ephemeral_blobstore: None,
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1412,6 +1434,7 @@ mod test {
                         mutation: RemoteDatabaseConfig { db_address: "other_other_mutation_db".into(), },
                     }),
 
+                    ephemeral_blobstore: None,
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,

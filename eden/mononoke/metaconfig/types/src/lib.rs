@@ -800,6 +800,9 @@ pub struct StorageConfig {
     pub blobstore: BlobConfig,
     /// Metadata database
     pub metadata: MetadataDatabaseConfig,
+    /// Blobstore for ephemeral changesets and snapshots.  If omitted
+    /// then this repo cannot store ephemeral changesets or snapshots.
+    pub ephemeral_blobstore: Option<EphemeralBlobstoreConfig>,
 }
 
 /// Whether we should read from this blobstore normally in a Multiplex,
@@ -1058,6 +1061,25 @@ impl MetadataDatabaseConfig {
             MetadataDatabaseConfig::Local(_) => None,
         }
     }
+}
+
+/// Configuration for the ephemeral blobstore, which stores
+/// blobs for ephemeral changesets and snapshots.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct EphemeralBlobstoreConfig {
+    /// The configuration of the blobstore where ephemeral blobs
+    /// are stored.
+    pub blobstore: BlobConfig,
+
+    /// Configuration of the database where metadata for the
+    /// ephemeral blobstore (e.g. bubble expiration) is stored.
+    pub metadata: DatabaseConfig,
+
+    /// Initial lifespan for bubbles.
+    pub initial_bubble_lifespan: Duration,
+
+    /// Grace period for already-opened bubbles after expiration.
+    pub bubble_expiration_grace: Duration,
 }
 
 /// Params for the bundle2 replay

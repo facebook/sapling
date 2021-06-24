@@ -10,18 +10,18 @@ use std::num::{NonZeroU64, NonZeroUsize};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, DatabaseConfig, FilestoreParams, LocalDatabaseConfig,
-    MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PackConfig, PackFormat,
-    RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
+    BlobConfig, BlobstoreId, DatabaseConfig, EphemeralBlobstoreConfig, FilestoreParams,
+    LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PackConfig,
+    PackFormat, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
     ShardedRemoteDatabaseConfig, StorageConfig,
 };
 use nonzero_ext::nonzero;
 use repos::{
     RawBlobstoreConfig, RawBlobstorePackConfig, RawBlobstorePackFormat, RawDbConfig, RawDbLocal,
-    RawDbRemote, RawDbShardableRemote, RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig,
-    RawMultiplexedStoreType, RawStorageConfig,
+    RawDbRemote, RawDbShardableRemote, RawDbShardedRemote, RawEphemeralBlobstoreConfig,
+    RawFilestoreParams, RawMetadataConfig, RawMultiplexedStoreType, RawStorageConfig,
 };
 
 use crate::convert::Convert;
@@ -33,6 +33,31 @@ impl Convert for RawStorageConfig {
         Ok(StorageConfig {
             metadata: self.metadata.convert()?,
             blobstore: self.blobstore.convert()?,
+            ephemeral_blobstore: self
+                .ephemeral_blobstore
+                .map(RawEphemeralBlobstoreConfig::convert)
+                .transpose()?,
+        })
+    }
+}
+
+impl Convert for RawEphemeralBlobstoreConfig {
+    type Output = EphemeralBlobstoreConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(EphemeralBlobstoreConfig {
+            metadata: self.metadata.convert()?,
+            blobstore: self.blobstore.convert()?,
+            initial_bubble_lifespan: Duration::from_secs(
+                self.initial_bubble_lifespan_secs
+                    .try_into()
+                    .context("Failed to convert initial_bubble_lifespan")?,
+            ),
+            bubble_expiration_grace: Duration::from_secs(
+                self.bubble_expiration_grace_secs
+                    .try_into()
+                    .context("Failed to convert bubble_expiration_grace")?,
+            ),
         })
     }
 }
@@ -147,17 +172,26 @@ fn parse_scuba_sample_rate(sample_rate: Option<i64>) -> Result<NonZeroU64> {
     Ok(rate)
 }
 
-impl Convert for RawBlobstorePackConfig {
-    type Output = PackConfig;
+impl Convert for RawBlobstorePackFormat {
+    type Output = PackFormat;
 
     fn convert(self) -> Result<Self::Output> {
-        let put_format = match self.put_format {
+        let pack_format = match self {
             RawBlobstorePackFormat::Raw(_) => PackFormat::Raw,
             RawBlobstorePackFormat::ZstdIndividual(zstd) => {
                 PackFormat::ZstdIndividual(zstd.compression_level)
             }
             RawBlobstorePackFormat::UnknownField(f) => bail!("Unsupported PackFormat {}", f),
         };
+        Ok(pack_format)
+    }
+}
+
+impl Convert for RawBlobstorePackConfig {
+    type Output = PackConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let put_format = self.put_format.convert()?;
         Ok(PackConfig { put_format })
     }
 }

@@ -213,6 +213,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
                     multiplex_id,
                     ..
                 },
+            ..
         } => (blobstores, multiplex_id, db_address),
         storage => return Err(format_err!("unsupported storage: {:?}", storage)),
     };
