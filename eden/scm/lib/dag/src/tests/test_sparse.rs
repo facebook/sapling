@@ -11,6 +11,7 @@ use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::{DagAddHeads, DagImportPullData, DagPullFastForwardMasterData};
+use crate::Group;
 use crate::Id;
 use crate::VertexName;
 use futures::TryStreamExt;
@@ -267,4 +268,53 @@ async fn test_pull_overlap() {
             │
             A  0"#
     );
+}
+
+#[tokio::test]
+async fn test_pull_lazy_with_merges() {
+    // Test fast-forward pull on a lazy graph with merges.
+    let mut server = TestDag::new();
+
+    // Initial state. Both client and server has just one vertex.
+    server.drawdag("A", &["A"]);
+    let mut client = server.client_cloned_data().await;
+
+    // Take some IDs so IDs are different from client graph.
+    server.drawdag("X-Y", &["Y"]);
+
+    // Linear fast-forward. The client has a lazy graph.
+    server.drawdag("A-B-C-D-E", &["E"]);
+    client.pull_ff_master(&server, "A", "E").await.unwrap();
+    assert_eq!(client.output(), [] as [&str; 0]);
+
+    // C, D are lazy, but E is not.
+    assert!(!client.contains_vertex_locally("C"));
+    assert!(!client.contains_vertex_locally("D"));
+    assert!(client.contains_vertex_locally("E"));
+
+    // Add merges. Test parents remap.
+    server.drawdag(
+        r#"
+                  D
+                   \
+        C E-F---G-H-I-J-K
+         \     /   /
+          L-M-N   M
+        "#,
+        &["K"],
+    );
+    assert_eq!(
+        server.debug_segments(0, Group::MASTER),
+        r#"
+        I+13 : K+15 [D+5, H+12, M+9]
+        G+11 : H+12 [F+7, N+10]
+        L+8 : N+10 [C+4]
+        B+3 : F+7 [A+0]
+        X+1 : Y+2 [] Root
+        A+0 : A+0 [] Root OnlyHead"#
+    );
+
+
+    // BUG: Error out with VertexNotFound(C)
+    client.pull_ff_master(&server, "E", "K").await.unwrap();
 }

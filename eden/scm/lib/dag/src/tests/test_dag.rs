@@ -232,6 +232,11 @@ impl TestDag {
         result
     }
 
+    /// Check that a vertex exists locally.
+    pub fn contains_vertex_locally(&self, name: impl Into<Vertex>) -> bool {
+        non_blocking_result(self.dag.contains_vertex_name_locally(&[name.into()])).unwrap()[0]
+    }
+
     async fn validate(&self) {
         // All vertexes should be accessible, and round-trip through IdMap.
         let mut iter = self.dag.all().await.unwrap().iter().await.unwrap();
