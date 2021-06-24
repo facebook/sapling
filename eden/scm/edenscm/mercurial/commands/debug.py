@@ -1692,6 +1692,64 @@ def debuginstall(ui, **opts):
     return problems
 
 
+@command(
+    "debuginternals|debugint",
+    [
+        ("o", "output", "", _("export internal files to a specified tar file")),
+    ],
+)
+def debuginternals(ui, repo, *args, **opts):
+    """list or export internal files
+
+    With --output, components that are less than 20MB are included.
+    Larger components can be specified explicitly using their basename
+    as arguments. For example, ``debuginternals -o a.tar.gz segments``
+    will ensure the ``segments`` component is included in ``a.tar.gz``.
+    """
+    names = [
+        "blackbox",
+        "blackbox.log",
+        "store/hgcommits",
+        "store/indexedlogdatastore",
+        "store/indexedloghistorystore",
+        "store/lfs",
+        "store/manifests",
+        "store/metalog",
+        "store/mutation",
+        "store/segments",
+    ]
+    outpath = opts.get("output")
+    if outpath:
+        import tarfile
+
+        tar = tarfile.open(outpath, "x:gz", compresslevel=2)
+    else:
+        tar = None
+
+    for name in names:
+        if name.startswith("store/"):
+            path = repo.svfs.join(name[6:])
+        else:
+            path = repo.sharedvfs.join(name)
+        if not os.path.exists(path):
+            continue
+        size = util.fssize(path)
+        humansize = util.bytecount(size)
+        if tar is not None:
+            if size < 2e7 or any(a == os.path.basename(name) for a in args):
+                tar.add(path, arcname=name)
+                status = _(" (added to tar)")
+            else:
+                status = _(" (skipped)")
+        else:
+            status = ""
+        ui.write_err(_("%s\t%s%s\n") % (humansize, name, status))
+
+    if tar is not None:
+        ui.write(_("%s\n") % outpath)
+        tar.close()
+
+
 @command("debugknown", [], _("REPO ID..."), norepo=True)
 def debugknown(ui, repopath, *ids, **opts):
     """test whether node ids are known to a repo

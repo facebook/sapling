@@ -142,6 +142,7 @@ Show debug commands if there are no other candidates
   debugindexedloghistorystore
   debuginitgit
   debuginstall
+  debuginternals
   debugknown
   debuglabelcomplete
   debuglocks
@@ -454,6 +455,7 @@ Show all commands + options
   debugindexedloghistorystore: long
   debuginitgit: git-dir
   debuginstall: template
+  debuginternals: output
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock, wait

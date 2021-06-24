@@ -5038,3 +5038,16 @@ def faultinjection(ui, name, ex=None):
         if ex is None:
             ex = error.Abort(_("injected error by tests: %s") % name)
         raise ex
+
+
+def fssize(path):
+    # type: (str) -> int
+    """Return bytes of a path (or directory)"""
+    size = 0
+    if os.path.isfile(path):
+        size += os.stat(path).st_size
+    else:
+        for dirpath, dirnames, filenames in os.walk(path):
+            paths = [os.path.join(path, dirpath, name) for name in filenames + dirnames]
+            size += sum(st.st_size for st in statfiles(paths) if st)
+    return size

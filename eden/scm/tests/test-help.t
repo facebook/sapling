@@ -1005,6 +1005,8 @@ Test list of internal help commands
                  (no help text available)
    debuginitgit  init a repo from a git backend
    debuginstall  test Mercurial installation
+   debuginternals
+                 list or export internal files
    debugknown    test whether node ids are known to a repo
    debuglocks    show or modify state of locks
    debugmakepublic
