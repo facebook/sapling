@@ -63,7 +63,7 @@ impl<T> SamplingWalkVisitor<T> {
         sample_path_regex: Option<Regex>,
         sampler: Arc<T>,
         enable_derive: bool,
-        chunk_direction: Direction,
+        chunk_direction: Option<Direction>,
     ) -> Self {
         Self {
             inner: WalkState::new(
@@ -321,15 +321,18 @@ where
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         route: Option<PathTrackingRoute<P>>,
-    ) -> (
-        (WalkKeyOptPath<P>, WalkPayloadMtime, Option<StepStats>),
-        PathTrackingRoute<P>,
-    ) {
+    ) -> Result<
+        (
+            (WalkKeyOptPath<P>, WalkPayloadMtime, Option<StepStats>),
+            PathTrackingRoute<P>,
+        ),
+        Error,
+    > {
         let inner_route = route.as_ref().map(|_| EmptyRoute {});
         let route = PathTrackingRoute::evolve(route, walk_item, None);
         let ((n, _nd, stats), _inner_route) =
-            self.inner.defer_visit(bcs_id, walk_item, inner_route);
-        (
+            self.inner.defer_visit(bcs_id, walk_item, inner_route)?;
+        Ok((
             (
                 WalkKeyOptPath {
                     node: n,
@@ -339,7 +342,7 @@ where
                 stats,
             ),
             route,
-        )
+        ))
     }
 }
 
@@ -426,15 +429,18 @@ where
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         route: Option<EmptyRoute>,
-    ) -> (
+    ) -> Result<
         (
-            WalkKeyOptPath<WrappedPathHash>,
-            WalkPayloadMtime,
-            Option<StepStats>,
+            (
+                WalkKeyOptPath<WrappedPathHash>,
+                WalkPayloadMtime,
+                Option<StepStats>,
+            ),
+            EmptyRoute,
         ),
-        EmptyRoute,
-    ) {
-        let ((n, nd, stats), route) = self.inner.defer_visit(bcs_id, walk_item, route);
+        Error,
+    > {
+        let ((n, nd, stats), route) = self.inner.defer_visit(bcs_id, walk_item, route)?;
         let output = (
             WalkKeyOptPath {
                 node: n,
@@ -446,7 +452,7 @@ where
             },
             stats,
         );
-        (output, route)
+        Ok((output, route))
     }
 }
 

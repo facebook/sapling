@@ -170,7 +170,7 @@ pub struct WalkState {
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
     enable_derive: bool,
-    chunk_direction: Direction,
+    chunk_direction: Option<Direction>,
     // Interning
     bcs_ids: InternMap<ChangesetId, InternedId<ChangesetId>>,
     hg_cs_ids: InternMap<HgChangesetId, InternedId<HgChangesetId>>,
@@ -222,7 +222,7 @@ impl WalkState {
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
         enable_derive: bool,
-        chunk_direction: Direction,
+        chunk_direction: Option<Direction>,
     ) -> Self {
         let fac = RandomState::default();
         Self {
@@ -493,7 +493,7 @@ impl WalkState {
                 if self.chunk_contains(id) {
                     self.record(&self.visited_bcs, &id)
                 } else {
-                    if self.chunk_direction == Direction::NewestFirst
+                    if self.chunk_direction == Some(Direction::NewestFirst)
                         && !self.visited_bcs.contains_key(&id)
                     {
                         self.record_multi(&self.deferred_bcs, id, outgoing);
@@ -569,7 +569,7 @@ impl WalkState {
                 if self.chunk_contains(id) {
                     self.record(&self.visited_changeset_info, &id)
                 } else {
-                    if self.chunk_direction == Direction::NewestFirst
+                    if self.chunk_direction == Some(Direction::NewestFirst)
                         && !self.visited_changeset_info.contains_key(&id)
                     {
                         self.record_multi(&self.deferred_bcs, id, outgoing);
@@ -975,18 +975,23 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         _route: Option<EmptyRoute>,
-    ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
+    ) -> Result<((Node, Option<NodeData>, Option<StepStats>), EmptyRoute), Error> {
         let node_data = match self.chunk_direction {
-            Direction::NewestFirst => {
+            Some(Direction::NewestFirst) => {
                 let i = self.bcs_ids.interned(bcs_id);
                 self.record_multi(&self.deferred_bcs, i, &walk_item);
                 None
             }
             // We'll never visit backward looking edges when running OldestFirst, so don't record them.
             // returning Some for NodeData tells record_resolved_visit that we don't need to visit this node again if we see it.
-            Direction::OldestFirst => Some(NodeData::OutsideChunk),
+            Some(Direction::OldestFirst) => Some(NodeData::OutsideChunk),
+            None => bail!(
+                "Attempt to defer {:?} step {:?} when not chunking",
+                bcs_id,
+                walk_item
+            ),
         };
-        ((walk_item.target.clone(), node_data, None), EmptyRoute {})
+        Ok(((walk_item.target.clone(), node_data, None), EmptyRoute {}))
     }
 }
 

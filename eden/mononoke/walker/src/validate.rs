@@ -185,7 +185,7 @@ impl ValidatingVisitor {
         always_emit_edge_types: HashSet<EdgeType>,
         enable_derive: bool,
         lfs_threshold: Option<u64>,
-        chunk_direction: Direction,
+        chunk_direction: Option<Direction>,
     ) -> Self {
         Self {
             repo_stats_key,
@@ -567,14 +567,14 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         route: Option<ValidateRoute>,
-    ) -> ((Node, Option<CheckData>, Option<StepStats>), ValidateRoute) {
+    ) -> Result<((Node, Option<CheckData>, Option<StepStats>), ValidateRoute), Error> {
         let ((node, _node_data, stats), _route) =
             self.inner
-                .defer_visit(bcs_id, walk_item, Some(EmptyRoute {}));
-        (
+                .defer_visit(bcs_id, walk_item, Some(EmptyRoute {}))?;
+        Ok((
             (node.clone(), None, stats),
             ValidateRoute::next_route(route, node),
-        )
+        ))
     }
 }
 
@@ -939,7 +939,7 @@ async fn run_one(
         always_emit_edge_types.clone(),
         job_params.enable_derive,
         sub_params.lfs_threshold,
-        sub_params.tail_params.chunk_direction,
+        Some(sub_params.tail_params.chunk_direction),
     );
 
     let type_params = RepoWalkTypeParams {

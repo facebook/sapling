@@ -182,7 +182,7 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
         bcs_id: &ChangesetId,
         walk_item: &OutgoingEdge,
         route: Option<Route>,
-    ) -> (VOut, Route);
+    ) -> Result<(VOut, Route), Error>;
 }
 
 // Visitor methods that are only needed during tailing
@@ -2140,7 +2140,7 @@ where
 
     let (vout, via, next) = match step_output {
         StepOutput::Deferred(bcs_id) => {
-            let (vout, via) = visitor.defer_visit(&bcs_id, &walk_item, via);
+            let (vout, via) = visitor.defer_visit(&bcs_id, &walk_item, via)?;
             (vout, via, vec![])
         }
         StepOutput::Done(node_data, children) => {
