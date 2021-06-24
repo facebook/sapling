@@ -182,6 +182,7 @@ impl TestDag {
         old_master: impl Into<Vertex>,
         new_master: impl Into<Vertex>,
     ) -> Result<()> {
+        self.set_remote(server);
         let data = server
             .dag
             .pull_fast_forward_master(old_master.into(), new_master.into())
