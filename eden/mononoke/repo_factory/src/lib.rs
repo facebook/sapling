@@ -8,6 +8,7 @@
 //! Repository factory.
 #![feature(trait_alias)]
 
+use context::CoreContext;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use std::collections::HashMap;
 use std::future::Future;
@@ -280,6 +281,13 @@ impl RepoFactory {
                 Ok(Arc::new(redacted_blobs))
             })
             .await
+    }
+
+    fn ctx(&self, repo_identity: &ArcRepoIdentity) -> CoreContext {
+        let repo_name = String::from(repo_identity.name());
+        let logger = self.env.logger.new(o!("repo" => repo_name));
+        let session = SessionContainer::new_with_defaults(self.env.fb);
+        session.new_context(logger, self.env.scuba_sample_builder.clone())
     }
 
     /// Returns a named volatile pool if caching is enabled.
@@ -654,13 +662,9 @@ impl RepoFactory {
             .open::<SegmentedChangelogSqlConnections>()
             .context(RepoFactoryError::SegmentedChangelog)?;
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
-        let repo_name = String::from(repo_identity.name());
-        let logger = self.env.logger.new(o!("repo" => repo_name));
-        let session = SessionContainer::new_with_defaults(self.env.fb);
-        let ctx = session.new_context(logger, self.env.scuba_sample_builder.clone());
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
-            &ctx,
+            &self.ctx(&repo_identity),
             repo_identity.id(),
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
@@ -700,12 +704,8 @@ impl RepoFactory {
                     .await?,
             )
             .await?;
-        let repo_name = String::from(repo_identity.name());
-        let logger = self.env.logger.new(o!("repo" => repo_name));
-        let session = SessionContainer::new_with_defaults(self.env.fb);
-        let ctx = session.new_context(logger, self.env.scuba_sample_builder.clone());
         SkiplistIndex::from_blobstore(
-            &ctx,
+            &self.ctx(&repo_identity),
             &repo_config.skiplist_index_blobstore_key,
             &blobstore_without_cache.boxed(),
         )
