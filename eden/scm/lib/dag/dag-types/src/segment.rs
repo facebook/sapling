@@ -68,7 +68,7 @@ impl PreparedFlatSegments {
         self.segments.extend(rhs.segments);
     }
 
-    /// Return list of all (unique) parents + head of this flat segments list
+    /// Return list of all (unique) parents + head of this flat segments list.
     pub fn parents_and_head(&self) -> BTreeSet<Id> {
         let mut s: BTreeSet<Id> = self
             .segments

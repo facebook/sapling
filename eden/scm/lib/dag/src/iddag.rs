@@ -545,7 +545,8 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(PreparedFlatSegments { segments })
     }
 
-    /// return all flat segments that overlaps with range (and potentially cover larger range then supplied)
+    /// Return all flat segments that overlap with range (and potentially cover
+    /// larger range than supplied).
     fn flat_segments_range(&self, min: Id, max_incl: Id) -> Result<Vec<FlatSegment>> {
         let level = 0;
         let mut segments = Vec::new();
@@ -565,6 +566,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(segments)
     }
 
+    /// Extract flat segments that cover the given `set` exactly.
     pub fn idset_to_flat_segments(&self, set: IdSet) -> Result<PreparedFlatSegments> {
         let mut segments = Vec::new();
 
