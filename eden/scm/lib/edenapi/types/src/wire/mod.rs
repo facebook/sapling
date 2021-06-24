@@ -55,6 +55,7 @@ pub mod errors;
 pub mod file;
 pub mod history;
 pub mod metadata;
+pub mod pull;
 pub mod token;
 pub mod tree;
 
