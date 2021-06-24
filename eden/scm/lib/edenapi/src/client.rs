@@ -46,6 +46,7 @@ use crate::api::{EdenApi, ProgressCallback};
 use crate::builder::Config;
 use crate::errors::EdenApiError;
 use crate::response::{Fetch, ResponseMeta};
+use crate::types::wire::pull::PullFastForwardRequest;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.
@@ -62,6 +63,7 @@ mod paths {
     pub const COMPLETE_TREES: &str = "trees/complete";
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
+    pub const PULL_FAST_FORWARD: &str = "pull_fast_forward_master";
     pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
@@ -507,11 +509,35 @@ impl EdenApi for Client {
 
     async fn pull_fast_forward_master(
         &self,
-        _repo: String,
-        _old_master: HgId,
-        _new_master: HgId,
+        repo: String,
+        old_master: HgId,
+        new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        unimplemented!()
+        let msg = format!(
+            "Requesting pull fast forward data for the '{}' repository",
+            repo
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        let url = self.url(paths::PULL_FAST_FORWARD, Some(&repo))?;
+        let req = self
+            .configure(Request::post(url))?
+            .cbor(
+                &PullFastForwardRequest {
+                    old_master,
+                    new_master,
+                }
+                .to_wire(),
+            )
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], None).await?;
+        let clone_data = fetch.entries.next().await.ok_or_else(|| {
+            EdenApiError::Other(format_err!("clone data missing from reponse body"))
+        })??;
+        Ok(clone_data)
     }
 
     async fn full_idmap_clone_data(
