@@ -10,7 +10,9 @@ use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
 use crate::ops::DagImportCloneData;
+use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
+use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
@@ -23,6 +25,7 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use tracing::debug;
 
 /// Dag structure for testing purpose.
 pub struct TestDag {
@@ -135,11 +138,28 @@ impl TestDag {
         client
     }
 
+    /// Similar to `client`, but also clone the Dag from the server.
     pub async fn client_cloned_data(&self) -> TestDag {
         let mut client = self.client().await;
         let data = self.dag.export_clone_data().await.unwrap();
         client.dag.import_clone_data(data).await.unwrap();
         client
+    }
+
+    /// Pull from the server Dag using the master fast forward fast path.
+    pub async fn pull_ff_master(
+        &mut self,
+        server: &Self,
+        old_master: impl Into<Vertex>,
+        new_master: impl Into<Vertex>,
+    ) -> Result<()> {
+        let data = server
+            .dag
+            .pull_fast_forward_master(old_master.into(), new_master.into())
+            .await?;
+        debug!("pull_ff data: {:?}", &data);
+        self.dag.import_pull_data(data).await?;
+        Ok(())
     }
 
     /// Remote protocol used to resolve Id <-> Vertex remotely using the test dag

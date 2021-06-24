@@ -190,13 +190,7 @@ async fn test_pull_remap() {
     let mut client = server.client().await;
     client.drawdag("A-B-E", &["E"]);
 
-    let pull_data = server
-        .dag
-        .pull_fast_forward_master("E".into(), "D".into())
-        .await
-        .unwrap();
-
-    client.dag.import_pull_data(pull_data).await.unwrap();
+    client.pull_ff_master(&server, "E", "D").await.unwrap();
 
     assert_eq!(
         client.output(),
