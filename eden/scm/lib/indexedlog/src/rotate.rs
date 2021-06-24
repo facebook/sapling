@@ -579,7 +579,10 @@ impl RotateLog {
                                     Err(e) => {
                                         // Don't delete the log if we were unable to delete the
                                         // meta file.
-                                        debug!("Error removing rotate log meta: {:?}", name);
+                                        debug!(
+                                            "Error removing rotate log meta: {:?} {:?}",
+                                            name, e
+                                        );
                                         continue;
                                     }
                                 }
