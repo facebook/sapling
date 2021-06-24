@@ -488,6 +488,12 @@ where
             let client_parents = self.vertex_id_batch(&parent_names).await?;
             let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
 
+            for (name, &id) in parent_names.iter().zip(&client_parents) {
+                if !self.map.contains_vertex_name(name).await? {
+                    self.map.insert(id, name.as_ref())?;
+                }
+            }
+
             let new_client_id_low = next_free_client_id;
             let new_client_id_high =
                 new_client_id_low + server_segment.high.0 - server_segment.low.0;

@@ -314,8 +314,20 @@ async fn test_pull_lazy_with_merges() {
         A+0 : A+0 [] Root OnlyHead"#
     );
 
-
-    // BUG: Error out with "Clone data does not contain vertex for [3]. This is most likely a
-    // server-side bug."
     client.pull_ff_master(&server, "E", "K").await.unwrap();
+    assert_eq!(
+        client.debug_segments(0, Group::MASTER),
+        r#"
+        11 : K+13 [D+3, H+10, M+7] OnlyHead
+        9 : H+10 [F+5, N+8] OnlyHead
+        L+6 : N+8 [C+2]
+        A+0 : F+5 [] Root OnlyHead"#
+    );
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [C], heads: [E]",
+            "resolve names: [D], heads: [E]",
+        ]
+    );
 }
