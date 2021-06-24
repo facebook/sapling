@@ -315,6 +315,7 @@ async fn test_pull_lazy_with_merges() {
     );
 
 
-    // BUG: Error out with VertexNotFound(C)
+    // BUG: Error out with "Clone data does not contain vertex for [3]. This is most likely a
+    // server-side bug."
     client.pull_ff_master(&server, "E", "K").await.unwrap();
 }

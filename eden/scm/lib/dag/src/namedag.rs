@@ -442,9 +442,9 @@ impl<IS, M, P, S> DagImportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
     IdDag<IS>: TryClone,
-    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Persist + Send + Sync,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         let (lock, map_lock, dag_lock) = self.reload()?;
@@ -483,9 +483,9 @@ where
                 })?;
                 parent_names.push(parent_name.clone());
             }
-            // Parents should already be known locally:
+            // Parents should exist in the local graph.
             // Either existed before, or was added in previously processed segment from server
-            let client_parents = self.map.vertex_id_batch(&parent_names).await?;
+            let client_parents = self.vertex_id_batch(&parent_names).await?;
             let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
 
             let new_client_id_low = next_free_client_id;
