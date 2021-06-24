@@ -176,6 +176,7 @@ Show debug commands if there are no other candidates
   debugrunshell
   debugscmstore
   debugsegmentclone
+  debugsegmentpull
   debugsendunbundle
   debugsetparents
   debugshell
@@ -487,6 +488,7 @@ Show all commands + options
   debugrunshell: cmd
   debugscmstore: mode, path, python
   debugsegmentclone: 
+  debugsegmentpull: 
   debugsendunbundle: 
   debugsetparents: 
   debugshell: command

@@ -1065,6 +1065,10 @@ Test list of internal help commands
                  test file and tree fetching using scmstore
    debugsegmentclone
                  clone a repository using segmented changelog
+   debugsegmentpull
+                 pull a repository using segmented changelog. This command does
+                 not do discovery and requrires specifying old/new master
+                 revisions
    debugsendunbundle
                  Send unbundle wireproto command to a given server
    debugsetparents

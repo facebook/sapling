@@ -25,6 +25,7 @@ commands! {
     mod python;
     mod racyoutput;
     mod segmentclone;
+    mod segmentpull;
     mod store;
 }
 
