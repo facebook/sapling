@@ -236,3 +236,35 @@ async fn test_pull_remap() {
             A  0"
     );
 }
+
+#[tokio::test]
+async fn test_pull_overlap() {
+    let mut server = TestDag::new();
+    server.drawdag("A-B-C-D-E-F", &["F"]);
+    let mut client = server.client().await;
+    client.drawdag("A", &["A"]);
+
+    client.pull_ff_master(&server, "A", "D").await.unwrap();
+
+    // BUG: C-D appear twice in the graph.
+    client.pull_ff_master(&server, "B", "F").await.unwrap();
+    assert_eq!(
+        client.render_graph(),
+        r#"
+            F  7
+            │
+            E  6
+            │
+            D  3
+            │
+            C  4
+            │
+            │ D  3
+            │ │
+            │ C  4
+            ├─╯
+            B  1
+            │
+            A  0"#
+    );
+}
