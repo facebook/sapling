@@ -60,7 +60,7 @@ Pull:
 
   $ setconfig paths.default=test:e2
   $ hg debugsegmentpull $C $E
-  Got 1 segments and 2 ids
+  Got 1 segments and 3 ids
   $ hg log -Gr ::$E -T '{desc} {remotenames}'
   o  E
   │
