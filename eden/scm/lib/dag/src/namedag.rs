@@ -502,8 +502,8 @@ where
 
             let new_server_ids = server_idmap_tree.range(server_segment.low..=server_segment.high);
 
-            for (sever_id, name) in new_server_ids {
-                let client_id = Id((sever_id.0 as i64 + server_to_client_offset) as u64);
+            for (server_id, name) in new_server_ids {
+                let client_id = Id((server_id.0 as i64 + server_to_client_offset) as u64);
                 self.map.insert(client_id, name.as_ref())?;
             }
         }
