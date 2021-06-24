@@ -43,21 +43,12 @@ pub async fn copy(
     target_repo: &BlobRepo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
-    from_dir: MPath,
-    to_dir: MPath,
+    from_to_dirs: Vec<(MPath, MPath)>,
     author: String,
     msg: String,
     limits: Limits,
     options: Options,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let (from_entries, to_entries) = try_join(
-        list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
-        list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
-    )
-    .await?;
-    let from_entries = from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
-    let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
-
     // These are the file changes that have to be removed first
     let mut remove_file_changes = BTreeMap::new();
     // These are the file changes that have to be copied
@@ -66,62 +57,73 @@ pub async fn copy(
     let mut contents_to_upload = vec![];
     let same_repo = source_repo.get_repoid() == target_repo.get_repoid();
 
-    for (from_suffix, fsnode_file) in from_entries {
-        if let Some(ref regex) = options.maybe_exclude_file_regex {
-            if from_suffix.matches_regex(&regex) {
-                continue;
+    for (from_dir, to_dir) in from_to_dirs {
+        let (from_entries, to_entries) = try_join(
+            list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
+            list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
+        )
+        .await?;
+        let from_entries =
+            from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
+        let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
+
+        for (from_suffix, fsnode_file) in from_entries {
+            if let Some(ref regex) = options.maybe_exclude_file_regex {
+                if from_suffix.matches_regex(&regex) {
+                    continue;
+                }
             }
-        }
 
-        let from_path = from_dir.join(&from_suffix);
-        let to_path = to_dir.join(&from_suffix);
+            let from_path = from_dir.join(&from_suffix);
+            let to_path = to_dir.join(&from_suffix);
 
-        if let Some(to_fsnode) = to_entries.get(&from_suffix) {
-            if to_fsnode == &fsnode_file {
-                continue;
+            if let Some(to_fsnode) = to_entries.get(&from_suffix) {
+                if to_fsnode == &fsnode_file {
+                    continue;
+                }
+
+                if options.overwrite {
+                    remove_file_changes.insert(to_path.clone(), None);
+                } else {
+                    continue;
+                }
             }
 
-            if options.overwrite {
-                remove_file_changes.insert(to_path.clone(), None);
+            debug!(
+                ctx.logger(),
+                "from {}, to {}, size: {}",
+                from_path,
+                to_path,
+                fsnode_file.size()
+            );
+            file_changes.insert(to_path, Some((from_path, fsnode_file)));
+
+            if !same_repo {
+                contents_to_upload.push(fsnode_file.content_id().clone());
+            }
+
+            if let Some(lfs_threshold) = limits.lfs_threshold {
+                if fsnode_file.size() < lfs_threshold.get() {
+                    total_file_size += fsnode_file.size();
+                } else {
+                    debug!(
+                        ctx.logger(),
+                        "size is not accounted because of lfs threshold"
+                    );
+                }
             } else {
-                continue;
-            }
-        }
-
-        debug!(
-            ctx.logger(),
-            "from {}, to {}, size: {}",
-            from_path,
-            to_path,
-            fsnode_file.size()
-        );
-        file_changes.insert(to_path, Some((from_path, fsnode_file)));
-
-        if !same_repo {
-            contents_to_upload.push(fsnode_file.content_id().clone());
-        }
-
-        if let Some(lfs_threshold) = limits.lfs_threshold {
-            if fsnode_file.size() < lfs_threshold.get() {
                 total_file_size += fsnode_file.size();
-            } else {
-                debug!(
-                    ctx.logger(),
-                    "size is not accounted because of lfs threshold"
-                );
             }
-        } else {
-            total_file_size += fsnode_file.size();
-        }
 
-        if let Some(limit) = limits.total_file_num_limit {
-            if file_changes.len() as u64 >= limit.get() {
-                break;
+            if let Some(limit) = limits.total_file_num_limit {
+                if file_changes.len() as u64 >= limit.get() {
+                    break;
+                }
             }
-        }
-        if let Some(limit) = limits.total_size_limit {
-            if total_file_size as u64 > limit.get() {
-                break;
+            if let Some(limit) = limits.total_size_limit {
+                if total_file_size as u64 > limit.get() {
+                    break;
+                }
             }
         }
     }
@@ -207,28 +209,31 @@ pub async fn remove_excessive_files(
     target_repo: &BlobRepo,
     source_cs_id: ChangesetId,
     target_cs_id: ChangesetId,
-    from_dir: MPath,
-    to_dir: MPath,
+    from_to_dirs: Vec<(MPath, MPath)>,
     author: String,
     msg: String,
     maybe_total_file_num_limit: Option<NonZeroU64>,
 ) -> Result<ChangesetId, Error> {
-    let (from_entries, to_entries) = try_join(
-        list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
-        list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
-    )
-    .await?;
-    let from_entries = from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
-    let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
-
     let mut to_delete = BTreeMap::new();
-    for to_suffix in to_entries.keys() {
-        if !from_entries.contains_key(to_suffix) {
-            let to_path = to_dir.join(to_suffix);
-            to_delete.insert(to_path, None);
-            if let Some(limit) = maybe_total_file_num_limit {
-                if to_delete.len() as u64 >= limit.get() {
-                    break;
+
+    for (from_dir, to_dir) in from_to_dirs {
+        let (from_entries, to_entries) = try_join(
+            list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
+            list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
+        )
+        .await?;
+        let from_entries =
+            from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
+        let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
+
+        for to_suffix in to_entries.keys() {
+            if !from_entries.contains_key(to_suffix) {
+                let to_path = to_dir.join(to_suffix);
+                to_delete.insert(to_path, None);
+                if let Some(limit) = maybe_total_file_num_limit {
+                    if to_delete.len() as u64 >= limit.get() {
+                        break;
+                    }
                 }
             }
         }
@@ -359,8 +364,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -380,6 +384,62 @@ mod test {
                 MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
                 MPath::new("dir_to/b")? => "b".to_string(),
                 MPath::new("dir_to/c")? => "c".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_rsync_multiple(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from_1/a", "a")
+            .add_file("dir_from_1/b", "b")
+            .add_file("dir_from_1/c", "c")
+            .add_file("dir_to_1/a", "dontoverwrite")
+            .add_file("dir_from_2/aa", "aa")
+            .add_file("dir_from_2/bb", "bb")
+            .add_file("dir_from_2/cc", "cc")
+            .commit()
+            .await?;
+
+        let new_cs_id = copy(
+            &ctx,
+            &repo,
+            &repo,
+            cs_id,
+            cs_id,
+            vec![
+                (MPath::new("dir_from_1")?, MPath::new("dir_to_1")?),
+                (MPath::new("dir_from_2")?, MPath::new("dir_to_2")?),
+            ],
+            "author".to_string(),
+            "msg".to_string(),
+            Limits::default(),
+            Options::default(),
+        )
+        .await?
+        .last()
+        .copied()
+        .unwrap();
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, new_cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_from_1/a")? => "a".to_string(),
+                MPath::new("dir_from_1/b")? => "b".to_string(),
+                MPath::new("dir_from_1/c")? => "c".to_string(),
+                MPath::new("dir_to_1/a")? => "dontoverwrite".to_string(),
+                MPath::new("dir_to_1/b")? => "b".to_string(),
+                MPath::new("dir_to_1/c")? => "c".to_string(),
+
+                MPath::new("dir_from_2/aa")? => "aa".to_string(),
+                MPath::new("dir_from_2/bb")? => "bb".to_string(),
+                MPath::new("dir_from_2/cc")? => "cc".to_string(),
+                MPath::new("dir_to_2/aa")? => "aa".to_string(),
+                MPath::new("dir_to_2/bb")? => "bb".to_string(),
+                MPath::new("dir_to_2/cc")? => "cc".to_string(),
             }
         );
         Ok(())
@@ -408,8 +468,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             limit.clone(),
@@ -437,8 +496,7 @@ mod test {
             &repo,
             first_cs_id,
             first_cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             limit,
@@ -483,8 +541,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -531,8 +588,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -563,8 +619,7 @@ mod test {
             &repo,
             first_cs_id,
             first_cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -613,8 +668,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits {
@@ -662,8 +716,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -683,8 +736,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),
@@ -749,8 +801,7 @@ mod test {
             &repo,
             cs_id,
             cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             None,
@@ -762,6 +813,50 @@ mod test {
             hashmap! {
                 MPath::new("dir_from/a")? => "a".to_string(),
                 MPath::new("dir_to/a")? => "a".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_delete_excessive_files_multiple_dirs(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from_1/a", "a")
+            .add_file("dir_to_1/a", "a")
+            .add_file("dir_to_1/b", "b")
+            .add_file("dir_to_1/c/d", "c/d")
+            .add_file("dir_from_2/a", "a")
+            .add_file("dir_to_2/a", "a")
+            .add_file("dir_to_2/b", "b")
+            .commit()
+            .await?;
+
+        let cs_id = remove_excessive_files(
+            &ctx,
+            &repo,
+            &repo,
+            cs_id,
+            cs_id,
+            vec![
+                (MPath::new("dir_from_1")?, MPath::new("dir_to_1")?),
+                (MPath::new("dir_from_2")?, MPath::new("dir_to_2")?),
+            ],
+            "author".to_string(),
+            "msg".to_string(),
+            None,
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_from_1/a")? => "a".to_string(),
+                MPath::new("dir_to_1/a")? => "a".to_string(),
+                MPath::new("dir_from_2/a")? => "a".to_string(),
+                MPath::new("dir_to_2/a")? => "a".to_string(),
             }
         );
 
@@ -793,8 +888,7 @@ mod test {
             &target_repo,
             source_cs_id,
             target_cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             None,
@@ -838,8 +932,7 @@ mod test {
             &target_repo,
             source_cs_id,
             target_cs_id,
-            MPath::new("dir_from")?,
-            MPath::new("dir_to")?,
+            vec![(MPath::new("dir_from")?, MPath::new("dir_to")?)],
             "author".to_string(),
             "msg".to_string(),
             Limits::default(),

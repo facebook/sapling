@@ -33,6 +33,7 @@ pub const ARG_EXCLUDE_FILE_REGEX: &str = "exclude-file-regex";
 pub const ARG_TOTAL_FILE_NUM_LIMIT: &str = "total-file-num-limit";
 pub const ARG_TOTAL_SIZE_LIMIT: &str = "total-size-limit";
 pub const ARG_FROM_DIR: &str = "from-dir";
+pub const ARG_FROM_TO_DIRS: &str = "from-to-dirs";
 pub const ARG_LFS_THRESHOLD: &str = "lfs-threshold";
 pub const ARG_OVERWRITE: &str = "overwrite";
 pub const ARG_TO_DIR: &str = "to-dir";
@@ -88,7 +89,7 @@ pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name(ARG_FROM_DIR)
                 .long(ARG_FROM_DIR)
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .help(
                     "name of the directory to copy from. \
                        Error is return if this path doesn't exist or if it's a file",
@@ -98,11 +99,20 @@ pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name(ARG_TO_DIR)
                 .long(ARG_TO_DIR)
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .help(
                     "name of the directory to copy to. \
                        Error is return if this path is a file",
                 ),
+        )
+        .arg(
+            Arg::with_name(ARG_FROM_TO_DIRS)
+                .long(ARG_FROM_TO_DIRS)
+                .multiple(true)
+                .takes_value(true)
+                .required(false)
+                .help("'from_dir=to_dir' directories that needs copying")
+                .conflicts_with_all(&[ARG_FROM_DIR, ARG_TO_DIR]),
         )
         .arg(
             Arg::with_name(ARG_COMMIT_MESSAGE)
@@ -148,7 +158,16 @@ async fn parse_common_args<'a>(
     matches: &'a ArgMatches<'_>,
     source_repo: &'a BlobRepo,
     target_repo: &'a BlobRepo,
-) -> Result<(ChangesetId, ChangesetId, MPath, MPath, String, String), Error> {
+) -> Result<
+    (
+        ChangesetId,
+        ChangesetId,
+        Vec<(MPath, MPath)>,
+        String,
+        String,
+    ),
+    Error,
+> {
     let source_cs_id = matches
         .value_of(ARG_SOURCE_CSID)
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_SOURCE_CSID))?;
@@ -173,15 +192,30 @@ async fn parse_common_args<'a>(
     )
     .await?;
 
-    let from_dir = matches
-        .value_of(ARG_FROM_DIR)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
-    let from_dir = MPath::new(from_dir)?;
+    let from_to_dirs = if let Some(from_to_dirs) = matches.value_of(ARG_FROM_TO_DIRS) {
+        let mut res = vec![];
+        for from_to in from_to_dirs.split(',') {
+            let dirs = from_to.split('=').collect::<Vec<_>>();
+            if dirs.len() != 2 {
+                return Err(anyhow!("invalid format of {}", ARG_FROM_TO_DIRS));
+            }
+            res.push((MPath::new(dirs[0])?, MPath::new(dirs[1])?));
+        }
 
-    let to_dir = matches
-        .value_of(ARG_TO_DIR)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
-    let to_dir = MPath::new(to_dir)?;
+        res
+    } else {
+        let from_dir = matches
+            .value_of(ARG_FROM_DIR)
+            .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
+        let from_dir = MPath::new(from_dir)?;
+
+        let to_dir = matches
+            .value_of(ARG_TO_DIR)
+            .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
+        let to_dir = MPath::new(to_dir)?;
+
+        vec![(from_dir, to_dir)]
+    };
 
     let author = matches
         .value_of(ARG_COMMIT_AUTHOR)
@@ -194,8 +228,7 @@ async fn parse_common_args<'a>(
     Ok((
         source_cs_id,
         target_cs_id,
-        from_dir,
-        to_dir,
+        from_to_dirs,
         author.to_string(),
         msg.to_string(),
     ))
@@ -213,7 +246,7 @@ pub async fn subcommand_rsync<'a>(
 
     match sub_matches.subcommand() {
         (SUBCOMMAND_COPY, Some(sub_matches)) => {
-            let (source_cs_id, target_cs_id, from_dir, to_dir, author, msg) =
+            let (source_cs_id, target_cs_id, from_to_dirs, author, msg) =
                 parse_common_args(&ctx, sub_matches, &source_repo, &target_repo).await?;
             let cs_ids = copy(
                 &ctx,
@@ -221,8 +254,7 @@ pub async fn subcommand_rsync<'a>(
                 &target_repo,
                 source_cs_id,
                 target_cs_id,
-                from_dir,
-                to_dir,
+                from_to_dirs,
                 author,
                 msg,
                 limits_from_matches(sub_matches),
@@ -238,7 +270,7 @@ pub async fn subcommand_rsync<'a>(
             println!("{}", result_cs_id);
         }
         (SUBCOMMAND_REMOVE_EXCESSIVE_FILES, Some(sub_matches)) => {
-            let (source_cs_id, target_cs_id, from_dir, to_dir, author, msg) =
+            let (source_cs_id, target_cs_id, from_to_dirs, author, msg) =
                 parse_common_args(&ctx, sub_matches, &source_repo, &target_repo).await?;
 
             let maybe_total_file_num_limit: Option<NonZeroU64> =
@@ -250,8 +282,7 @@ pub async fn subcommand_rsync<'a>(
                 &target_repo,
                 source_cs_id,
                 target_cs_id,
-                from_dir,
-                to_dir,
+                from_to_dirs,
                 author,
                 msg,
                 maybe_total_file_num_limit,
