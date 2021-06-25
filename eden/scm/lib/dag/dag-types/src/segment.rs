@@ -68,8 +68,9 @@ impl PreparedFlatSegments {
         self.segments.extend(rhs.segments);
     }
 
-    /// Return list of all (unique) parents + head of this flat segments list.
+    /// Return set of all (unique) parents + head + roots of flat segments.
     pub fn parents_and_head(&self) -> BTreeSet<Id> {
+        // Parents
         let mut s: BTreeSet<Id> = self
             .segments
             .iter()
@@ -77,8 +78,29 @@ impl PreparedFlatSegments {
             .flatten()
             .copied()
             .collect();
+        // Head
         if let Some(h) = self.head_id() {
             s.insert(h);
+        }
+        // Roots
+        let id_set: BTreeSet<(Id, Id)> = self.segments.iter().map(|s| (s.low, s.high)).collect();
+        let contains = |id: Id| -> bool {
+            for &(low, high) in id_set.range(..=(id, Id::MAX)).rev() {
+                if id >= low && id <= high {
+                    return true;
+                }
+                if id < low {
+                    break;
+                }
+            }
+            false
+        };
+        for seg in &self.segments {
+            let pids: Vec<Id> = seg.parents.iter().copied().collect();
+            if pids.iter().all(|&p| !contains(p)) {
+                // seg.low is a root.
+                s.insert(seg.low);
+            }
         }
         s
     }

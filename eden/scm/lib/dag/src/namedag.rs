@@ -688,15 +688,8 @@ where
         let new_ancestors = self.dag.ancestors(new.into())?;
 
         let missing_set = new_ancestors.difference(&old_ancestors);
-        let roots = self.dag.roots(missing_set.clone())?;
         let flat_segments = self.dag.idset_to_flat_segments(missing_set)?;
-        let mut ids: Vec<_> = flat_segments
-            .parents_and_head()
-            .into_iter()
-            .chain(roots.iter())
-            .collect();
-        ids.sort_unstable();
-        ids.dedup();
+        let ids: Vec<_> = flat_segments.parents_and_head().into_iter().collect();
 
         let idmap: HashMap<Id, VertexName> = {
             tracing::debug!("pull: {} vertexes in idmap", ids.len());
