@@ -147,7 +147,7 @@ impl<'de> serde::de::Visitor<'de> for Blake2HexVisitor {
 macro_rules! impl_typed_hash_no_context {
     {
         hash_type => $typed: ty,
-        thrift_type => $thrift_typed: ty,
+        thrift_type => $thrift_typed: path,
     } => {
         impl $typed {
             pub const fn new(blake2: $crate::private::Blake2) -> Self {
@@ -197,7 +197,7 @@ macro_rules! impl_typed_hash_no_context {
 
             // (this is public because downstream code wants to be able to serialize these nodes)
             pub fn into_thrift(self) -> $thrift_typed {
-                <$thrift_typed>::new($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
+                $thrift_typed($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
             }
         }
 
@@ -351,7 +351,7 @@ macro_rules! impl_typed_context {
 macro_rules! impl_typed_hash {
     {
         hash_type => $typed: ident,
-        thrift_hash_type => $thrift_hash_type: ty,
+        thrift_hash_type => $thrift_hash_type: path,
         value_type => $value_type: ident,
         context_type => $typed_context: ident,
         context_key => $key: expr,
