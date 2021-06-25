@@ -22,7 +22,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "1.0"
-tokio = { version = "1.6.1", features = ["full", "test-util"] }
+tokio = { version = "1.7.1", features = ["full", "test-util"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
