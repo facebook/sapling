@@ -37,6 +37,12 @@ py_class!(class IO |py| {
         Ok(PyNone)
     }
 
+    /// Test if the pager is active.
+    def is_pager_active(&self) -> PyResult<bool> {
+        let io = RustIO::main().map_pyerr(py)?;
+        Ok(io.is_pager_active())
+    }
+
     /// Write to pager's main buffer. Text should be in utf-8.
     def write(&self, bytes: PyBytes) -> PyResult<PyNone> {
         self.check_closed(py)?;

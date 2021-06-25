@@ -353,6 +353,12 @@ impl IO {
         *main_io_ref = Some(Arc::downgrade(&self.inner));
     }
 
+    /// Check if the pager is active.
+    pub fn is_pager_active(&self) -> bool {
+        let inner = self.inner.lock();
+        inner.pager_handle.is_some()
+    }
+
     pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if inner.pager_handle.is_some() {
