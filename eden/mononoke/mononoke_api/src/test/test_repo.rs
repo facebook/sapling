@@ -949,6 +949,122 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
+async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = test_repo_factory::build_empty()?;
+    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+        .add_file("file_to_copy", "context1")
+        .commit()
+        .await?;
+
+    let commit_with_copies = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+        .add_file_with_copy_info("copy_one", "context", (root, "file_to_copy"))
+        .add_file_with_copy_info("copy_two", "context", (root, "file_to_copy"))
+        .commit()
+        .await?;
+
+    let mononoke =
+        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists");
+    let commit_with_copies_ctx = repo
+        .changeset(commit_with_copies)
+        .await?
+        .ok_or(anyhow!("commit not found"))?;
+    let diff = commit_with_copies_ctx
+        .diff(
+            root,
+            true, /* include_copies_renames */
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+        )
+        .await?;
+
+    assert_eq!(diff.len(), 2);
+    match diff.get(0) {
+        Some(ChangesetPathDiffContext::Copied(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
+        }
+        other => panic!("unexpected diff: {:?}", other),
+    }
+    match diff.get(1) {
+        Some(ChangesetPathDiffContext::Copied(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
+        }
+        other => panic!("unexpected diff: {:?}", other),
+    }
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = test_repo_factory::build_empty()?;
+    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+        .add_file("file_to_move", "context1")
+        .commit()
+        .await?;
+
+    let commit_with_moves = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+        .add_file_with_copy_info("copy_one", "context", (root, "file_to_move"))
+        .add_file_with_copy_info("copy_two", "context", (root, "file_to_move"))
+        .add_file_with_copy_info("copy_zzz", "context", (root, "file_to_move"))
+        .delete_file("file_to_move")
+        .commit()
+        .await?;
+
+    let mononoke =
+        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists");
+    let commit_with_moves_ctx = repo
+        .changeset(commit_with_moves)
+        .await?
+        .ok_or(anyhow!("commit not found"))?;
+    let diff = commit_with_moves_ctx
+        .diff(
+            root,
+            true, /* include_copies_renames */
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+        )
+        .await?;
+
+    assert_eq!(diff.len(), 3);
+    // The first copy of the file becomes a move.
+    match diff.get(0) {
+        Some(ChangesetPathDiffContext::Moved(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+        }
+        other => panic!("unexpected diff: {:?}", other),
+    }
+    match diff.get(1) {
+        Some(ChangesetPathDiffContext::Copied(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+        }
+        other => panic!("unexpected diff: {:?}", other),
+    }
+    match diff.get(2) {
+        Some(ChangesetPathDiffContext::Copied(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("copy_zzz")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+        }
+        other => panic!("unexpected diff: {:?}", other),
+    }
+    Ok(())
+}
+
+#[fbinit::test]
 async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(

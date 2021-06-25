@@ -447,7 +447,8 @@ impl ChangesetContext {
         }
         let other = ChangesetContext::new(self.repo.clone(), other);
 
-        // map from from_path to to_path
+        // map from from_path to to_paths (there may be multiple copies
+        // for each from_path, so this maps to a vector of paths)
         let mut copy_path_map = HashMap::new();
         // map from to_path to from_path
         let mut inv_copy_path_map = HashMap::new();
@@ -458,7 +459,10 @@ impl ChangesetContext {
                 if let Some((from_path, csid)) = file_change.as_ref().and_then(|fc| fc.copy_from())
                 {
                     if *csid == other.id {
-                        copy_path_map.insert(from_path, to_path);
+                        copy_path_map
+                            .entry(from_path)
+                            .or_insert_with(Vec::new)
+                            .push(to_path);
                     }
                 }
             }
@@ -479,25 +483,26 @@ impl ChangesetContext {
                 })
                 .try_collect::<HashMap<_, _>>()
                 .await?;
-            inv_copy_path_map = copy_path_map
-                .iter()
-                .map(move |(from_path, to_path)| {
-                    let mf_entry = from_path_to_mf_entry.get(from_path).cloned().ok_or(
-                        MononokeError::from(anyhow!(
-                            "internal error cannot find {:?} in parent commit",
-                            from_path
-                        )),
-                    )?;
-                    let res: Result<_, MononokeError> = Ok((to_path, (from_path, mf_entry)));
-                    res
-                })
-                .collect::<Result<HashMap<_, _>, _>>()?;
+
+            // Build the inverse copy map (from to_path to from_path),
+            // which includes the manifest entry for the from_path.
+            for (from_path, to_paths) in copy_path_map.iter() {
+                let mf_entry = from_path_to_mf_entry
+                    .get(from_path)
+                    .ok_or(MononokeError::from(anyhow!(
+                        "internal error: cannot find {:?} in parent commit",
+                        from_path
+                    )))?;
+                for to_path in to_paths {
+                    inv_copy_path_map.insert(to_path, (from_path, mf_entry.clone()));
+                }
+            }
         }
 
         // set of paths from other that were copied in (not moved)
         // We check if `self` contains paths that were source for copy or move in `other`
         // If self does contain a path, then we consider it to be a copy, otherwise
-        // it's a move.
+        // it's a move to the first location it was copied to.
         let copied_paths = self
             .root_fsnode_id()
             .await?
@@ -545,8 +550,15 @@ impl ChangesetContext {
                         } else if let Some((from_path, from_entry)) = inv_copy_path_map.get(&&path)
                         {
                             // There's copy information that we can use.
-                            if copied_paths.contains(from_path) {
-                                // If the source still exists in the current commit it was a copy.
+                            if copied_paths.contains(from_path)
+                                || copy_path_map
+                                    .get(*from_path)
+                                    .and_then(|to_paths| to_paths.first())
+                                    != Some(&&path)
+                            {
+                                // If the source still exists in the current
+                                // commit, or this isn't the first place it
+                                // was copied to, it was a copy.
                                 Some(ChangesetPathDiffContext::Copied(
                                     ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
@@ -560,7 +572,8 @@ impl ChangesetContext {
                                     ),
                                 ))
                             } else {
-                                // If it doesn't it was a move
+                                // If it doesn't, and this is the first place
+                                // it was copied to, it was a move.
                                 Some(ChangesetPathDiffContext::Moved(
                                     ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
