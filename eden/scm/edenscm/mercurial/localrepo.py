@@ -1100,16 +1100,22 @@ class localrepository(object):
         if enabled is not None:
             return edenapi.getclient(self.ui) if enabled else None
 
-        if self.ui.config("edenapi", "url"):
-            return edenapi.getclient(self.ui)
-        else:
-            # If remote path is an EagerRepo, use EdenApi provided by it.
-            path = self.ui.paths.get("default")
-            if path is not None and path.url.scheme in ("eager", "test"):
-                return edenapi.getclient(self.ui)
-
-            # NOTE: Consider making this an error instead.
+        path = self.ui.paths.get("default")
+        if path is None:
             return None
+        scheme = path.url.scheme
+
+        # EdenAPI is only supported by Mononoke-backed repos. It should not
+        # be enabled for repos whose remote path is not a mononoke:// URL.
+        if scheme == "mononoke" and self.ui.config("edenapi", "url"):
+            return edenapi.getclient(self.ui)
+
+        # If remote path is an EagerRepo, use EdenApi provided by it.
+        if scheme in ("eager", "test"):
+            return edenapi.getclient(self.ui)
+
+        # NOTE: Consider making this an error instead.
+        return None
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
