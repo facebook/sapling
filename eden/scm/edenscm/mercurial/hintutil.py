@@ -82,13 +82,21 @@ def show(ui):
             return name in acked or ui.configbool("hint", "ack-%s" % name)
 
     names = []
+    if util.mainio.is_pager_active():
+        # For stream pager, people expect hints to be at the end, not in a
+        # separate panel. Make it so. When the pager is active, we know that the
+        # stdout is not being redirected to a file or pipe, so this won't affect
+        # automation reading stdout.
+        write = ui.write
+    else:
+        write = ui.write_err
     for name, msg in messages:
         if not isacked(name):
-            ui.write_err("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
+            write("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
     if names and not isacked("hint-ack"):
         msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
-        ui.write_err(msg, notice=_("hint[%s]") % "hint-ack")
+        write(msg, notice=_("hint[%s]") % "hint-ack")
     messages[:] = []
     triggered.clear()
 
