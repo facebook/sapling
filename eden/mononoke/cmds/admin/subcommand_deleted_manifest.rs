@@ -26,15 +26,17 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 use manifest::{get_implicit_deletes, PathOrPrefix};
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::{ChangesetId, DeletedManifestId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{debug, Logger};
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, str::FromStr};
 
 pub const DELETED_MANIFEST: &str = "deleted-manifest";
 const COMMAND_MANIFEST: &str = "manifest";
 const COMMAND_VERIFY: &str = "verify";
+const COMMAND_FETCH: &str = "fetch";
 const ARG_CSID: &str = "csid";
+const ARG_ID: &str = "id";
 const ARG_LIMIT: &str = "limit";
 const ARG_PATH: &str = "path";
 
@@ -64,6 +66,16 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .arg(
                     Arg::with_name(ARG_LIMIT)
                         .help("number of commits to be verified")
+                        .takes_value(true)
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(COMMAND_FETCH)
+                .about("fetch and print deleted manifest entry by id")
+                .arg(
+                    Arg::with_name(ARG_ID)
+                        .help("deleted file manifest id to fetch")
                         .takes_value(true)
                         .required(true),
                 ),
@@ -103,6 +115,19 @@ pub async fn subcommand_deleted_manifest<'a>(
                 .compat()
                 .await?;
             subcommand_verify(ctx, repo, cs_id, limit).await?;
+            Ok(())
+        }
+        (COMMAND_FETCH, Some(matches)) => {
+            let mf_id = DeletedManifestId::from_str(
+                matches
+                    .value_of(ARG_ID)
+                    .ok_or_else(|| format_err!("{} not set", ARG_ID))?,
+            )?;
+            let mf = mf_id
+                .load(&ctx, repo.blobstore())
+                .await
+                .map_err(Error::from)?;
+            println!("{:?}", mf);
             Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
