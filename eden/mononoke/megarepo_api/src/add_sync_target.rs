@@ -15,7 +15,8 @@ use context::CoreContext;
 use derived_data_utils::derived_data_utils;
 use futures::{future, stream, stream::FuturesUnordered, StreamExt, TryStreamExt};
 use megarepo_config::{
-    MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig,
+    verify_config, MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion,
+    SyncTargetConfig,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
@@ -76,6 +77,8 @@ impl<'a> AddSyncTarget<'a> {
         changesets_to_merge: HashMap<SourceName, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
+        verify_config(ctx, &sync_target_config).map_err(MegarepoError::request)?;
+
         let repo = self
             .find_repo_by_id(ctx, sync_target_config.target.repo_id)
             .await?;

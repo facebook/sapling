@@ -14,11 +14,9 @@ context = { version = "0.1.0", path = "../../server/context" }
 faster-hex = "0.4"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-itertools = "0.10.1"
 maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
-mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha-1 = "0.8"
 slog = { version = "2.5", features = ["max_level_trace"] }
 version_cconf_index = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo/version_cconf_index" }
