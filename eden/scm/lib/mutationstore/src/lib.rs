@@ -236,129 +236,62 @@ impl MutationStore {
 
     /// Calculate the "obsolete" set, a subset of `draft` with visible successors.
     /// A vertex that is in `public` or `draft` is considered visible.
-    ///
-    /// For best performance, the callsite should consider calling
-    /// `dag.sort(result)` to bind the `result` of this function to the main
-    /// commit graph.
     pub async fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
         let visible = public | draft.clone();
         let this = Arc::new(self.try_clone()?);
         let hints = draft.hints().clone();
         hints.update_flags_with(|f| f - Flags::ANCESTORS - Flags::FULL);
 
-        // Evaluate `obsolete()` for all `draft`.
-        // A draft is obsoleted if it has a visible successor.
-        async fn evaluate_fn(
-            this: Arc<MutationStore>,
-            visible: Set,
-            draft: Set,
-        ) -> dag::Result<Set> {
-            // Vertex -> Node.
-            let draft_nodes = draft
-                .iter()
-                .await?
-                .filter_map(|v| async { v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()) })
-                .collect::<Vec<Node>>()
-                .await;
+        // Vertex -> Node.
+        let draft_nodes = draft
+            .iter()
+            .await?
+            .filter_map(|v| async { v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()) })
+            .collect::<Vec<Node>>()
+            .await;
 
-            // Obtain the obsolete graph about draft successors.
-            let obsdag = this
-                .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
-                .await
-                .map_err(|e| dag::errors::BackendError::Other(e))?;
+        // Obtain the obsolete graph about draft successors.
+        let obsdag = this
+            .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
+            .await
+            .map_err(|e| dag::errors::BackendError::Other(e))?;
 
-            // Filter out invisible successors.
-            let obsvisible = {
-                let mut obsall = obsdag.all().await?;
-                // In a non-lazy graph the following code is good enough to calculate
-                // obsvisible: obsdag.ancestors(obsall & visible).await?
-                //
-                // However, in a lazy graph obsdag.all() might have too many names
-                // outside the main graph and cause excessive server-side lookups.
-                // So we manually ignore names not in the local graph to avoid the
-                // slow path.
-                if let Some(visible_id_convert) = visible.id_convert() {
-                    let obsnames: Vec<VertexName> = { obsall.iter().await?.try_collect().await? };
-                    let obsnames: Vec<VertexName> = {
-                        let contains = visible_id_convert
-                            .contains_vertex_name_locally(&obsnames)
-                            .await?;
-                        obsnames
-                            .into_iter()
-                            .zip(contains)
-                            .filter_map(|(v, c)| if c { Some(v) } else { None })
-                            .collect()
-                    };
-                    obsall = Set::from_static_names(obsnames);
-                }
-                obsdag.ancestors(obsall & visible).await?
-            };
-
-            // Heads of `obsvisible` are not obsoleted. Other part (parent) of
-            // `obsvisible` are obsoleted.
-            let obsoleted = obsdag.parents(obsvisible).await?;
-
-            // Filter out unknown nodes.
-            let obsoleted = draft & obsoleted;
-
-            // Flatten the set for performance.
-            Ok(obsoleted.flatten().await?)
-        }
-
-        // Spot check `obsolete()` for nodes.
-        //
-        // This is faster for revsets like `smallset & obsolete()`, where
-        // smallset is way smaller than `draft()`.
-        async fn contains_fn(
-            this: Arc<MutationStore>,
-            contains_count: Arc<AtomicUsize>,
-            visible: Set,
-            set: &MetaSet,
-            v: &VertexName,
-        ) -> dag::Result<bool> {
-            // If "contains" is called a few times, calculate the full "obsolete()"
-            // and use that instead.
-            if contains_count.fetch_add(1, SeqCst) > 4 {
-                set.evaluate().await?.contains(v).await
-            } else if let Ok(id) = Node::from_slice(v.as_ref()) {
-                let obsdag = this
-                    .get_dag_advanced(vec![id], DagFlags::SUCCESSORS)
-                    .await
-                    .map_err(|e| dag::errors::BackendError::Other(e))?;
-                Ok((obsdag.all().await? & visible).count().await? > 1)
-            } else {
-                Ok(false)
+        // Filter out invisible successors.
+        let obsvisible = {
+            let mut obsall = obsdag.all().await?;
+            // In a non-lazy graph the following code is good enough to calculate
+            // obsvisible: obsdag.ancestors(obsall & visible).await?
+            //
+            // However, in a lazy graph obsdag.all() might have too many names
+            // outside the main graph and cause excessive server-side lookups.
+            // So we manually ignore names not in the local graph to avoid the
+            // slow path.
+            if let Some(visible_id_convert) = visible.id_convert() {
+                let obsnames: Vec<VertexName> = { obsall.iter().await?.try_collect().await? };
+                let obsnames: Vec<VertexName> = {
+                    let contains = visible_id_convert
+                        .contains_vertex_name_locally(&obsnames)
+                        .await?;
+                    obsnames
+                        .into_iter()
+                        .zip(contains)
+                        .filter_map(|(v, c)| if c { Some(v) } else { None })
+                        .collect()
+                };
+                obsall = Set::from_static_names(obsnames);
             }
-        }
+            obsdag.ancestors(obsall & visible).await?
+        };
 
-        // The set has 2 code paths: contains, and full iteration.
-        //
-        // The contains test can be used to spot check a few nodes without
-        // calculating the full set (ex. smallset & obsolete()).
-        //
-        // The full iteration is used in other cases.
-        Ok(Set::from_async_evaluate_contains(
-            {
-                let visible = visible.clone();
-                let this = this.clone();
-                Box::new(move || {
-                    Box::pin(evaluate_fn(this.clone(), visible.clone(), draft.clone()))
-                })
-            },
-            {
-                let contains_count = Arc::new(AtomicUsize::new(0));
-                Box::new(move |set, v| {
-                    Box::pin(contains_fn(
-                        this.clone(),
-                        contains_count.clone(),
-                        visible.clone(),
-                        set,
-                        v,
-                    ))
-                })
-            },
-            hints,
-        ))
+        // Heads of `obsvisible` are not obsoleted. Other part (parent) of
+        // `obsvisible` are obsoleted.
+        let obsoleted = obsdag.parents(obsvisible).await?;
+
+        // Filter out unknown nodes.
+        let obsoleted = draft & obsoleted;
+
+        // Flatten the set for performance.
+        Ok(obsoleted.flatten().await?)
     }
 
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
