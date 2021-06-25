@@ -305,7 +305,7 @@ class obsoletecache(object):
                 obsolete = ms.calculateobsolete(publicnodes, draftnodes)
                 self.obsolete[None] = obsolete
                 self.complete[None] = True
-                return obsolete
+                return obsolete.flatten()
 
             # Testing each node separately will result in lots of repeated tests.
             # Instead, we can do the following:
