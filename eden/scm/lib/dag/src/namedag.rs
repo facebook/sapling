@@ -499,13 +499,33 @@ where
                 &root_names
             );
 
+            // Pre-lookup in one round-trip.
+            let mut names = parent_names
+                .iter()
+                .chain(root_names.iter())
+                .cloned()
+                .collect::<Vec<_>>();
+            names.sort_unstable();
+            names.dedup();
+            let resolved = self.vertex_id_batch(&names).await?;
+            assert_eq!(resolved.len(), names.len());
+            for (id, name) in resolved.into_iter().zip(names) {
+                if let Ok(id) = id {
+                    if !self.map.contains_vertex_name(&name).await? {
+                        self.map.insert(id, name.as_ref())?;
+                    }
+                }
+            }
+
             for name in root_names {
-                // PERF: contains_vertex_name does not have a batch version.
                 if self.contains_vertex_name(&name).await? {
                     let e = crate::Error::NeedSlowPath(format!("{:?} exists in local graph", name));
                     return Err(e);
                 }
             }
+
+            let client_parents = self.vertex_id_batch(&parent_names).await?;
+            client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
         }
 
         let mut next_free_client_id = self.dag.next_free_id(0, Group::MASTER)?;
@@ -542,16 +562,11 @@ where
                 })?;
                 parent_names.push(parent_name.clone());
             }
-            // Parents should exist in the local graph.
-            // Either existed before, or was added in previously processed segment from server
-            let client_parents = self.vertex_id_batch(&parent_names).await?;
+            // Parents should exist in the local graph and can be resolved without looking
+            // up remotely. Either looked up above, or inserted by the `self.map.insert`
+            // loop below.
+            let client_parents = self.map.vertex_id_batch(&parent_names).await?;
             let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
-
-            for (name, &id) in parent_names.iter().zip(&client_parents) {
-                if !self.map.contains_vertex_name(name).await? {
-                    self.map.insert(id, name.as_ref())?;
-                }
-            }
 
             let new_client_id_low = next_free_client_id;
             let new_client_id_high =

@@ -198,8 +198,7 @@ async fn test_pull_remap() {
         [
             "resolve names: [E, B, A], heads: []",
             "resolve names: [E, B, A], heads: []",
-            "resolve names: [C], heads: [E]",
-            "resolve names: [F], heads: [E]"
+            "resolve names: [C, F], heads: [E]"
         ]
     );
 
@@ -318,13 +317,5 @@ async fn test_pull_lazy_with_merges() {
         L+6 : N+8 [C+2]
         A+0 : F+5 [] Root OnlyHead"#
     );
-    assert_eq!(
-        client.output(),
-        [
-            "resolve names: [F], heads: [E]",
-            "resolve names: [L], heads: [E]",
-            "resolve names: [C], heads: [E]",
-            "resolve names: [D], heads: [E]",
-        ]
-    );
+    assert_eq!(client.output(), ["resolve names: [C, D, F, L], heads: [E]"]);
 }
