@@ -15,10 +15,10 @@ use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use revisionstore::{
-    datastore::strip_metadata, scmstore::types::StoreFile, scmstore::ReadStore, RemoteDataStore,
-    StoreKey, StoreResult,
+    datastore::strip_metadata,
+    scmstore::specialized::{FileAttributes, FileStore},
+    RemoteDataStore, StoreKey, StoreResult,
 };
-use std::boxed::Box;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::{File, OpenOptions};
@@ -257,31 +257,9 @@ impl CheckoutPlan {
         Ok(stats)
     }
 
-    pub async fn apply_read_store(
-        &self,
-        store: Arc<dyn ReadStore<Key, StoreFile>>,
-    ) -> Result<CheckoutStats> {
-        self.apply_stream(|keys| {
-            store
-                .fetch_stream(Box::pin(stream::iter(keys)))
-                .map(|r| match r {
-                    Ok(f) => match f.content() {
-                        None => bail!(
-                            "{} not found",
-                            f.key()
-                                .expect("ReadStore returned not found content without key")
-                        ),
-                        Some(content) => Ok((
-                            content.clone(),
-                            f.key()
-                                .expect("ReadStore returned content without key")
-                                .clone(),
-                        )),
-                    },
-                    Err(err) => Err(err.into()),
-                })
-        })
-        .await
+    pub async fn apply_read_store(&self, store: Arc<FileStore>) -> Result<CheckoutStats> {
+        self.apply_stream(|keys| Self::stream_data_from_scmstore(store, keys))
+            .await
     }
 
     pub async fn apply_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
@@ -290,6 +268,31 @@ impl CheckoutPlan {
     ) -> Result<CheckoutStats> {
         self.apply_stream(|keys| Self::stream_data_from_remote_data_store(store, keys))
             .await
+    }
+
+    pub fn stream_data_from_scmstore(
+        store: Arc<FileStore>,
+        keys: Vec<Key>,
+    ) -> UnboundedReceiver<Result<(Bytes, Key)>> {
+        let (tx, rx) = mpsc::unbounded();
+        let store = store.clone();
+        Handle::current().spawn_blocking(move || {
+            for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+                for result in store
+                    .fetch(chunk.iter().cloned(), FileAttributes::CONTENT)
+                    .results()
+                {
+                    let result = match result {
+                        Err(err) => Err(err),
+                        Ok((key, mut file)) => file.file_content().map(|content| (content, key)),
+                    };
+                    if tx.unbounded_send(result).is_err() {
+                        return;
+                    }
+                }
+            }
+        });
+        rx
     }
 
     pub fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
@@ -352,21 +355,17 @@ impl CheckoutPlan {
         Ok((count, size))
     }
 
-    pub async fn apply_read_store_dry_run(
-        &self,
-        store: Arc<dyn ReadStore<Key, StoreFile>>,
-    ) -> Result<(usize, u64)> {
+    pub async fn apply_read_store_dry_run(&self, store: Arc<FileStore>) -> Result<(usize, u64)> {
         let keys = self
             .update_content
             .iter()
             .map(UpdateContentAction::make_key);
-        let keys: Vec<_> = keys.collect();
-        let mut stream = store.fetch_stream(Box::pin(stream::iter(keys)));
+        let mut stream = Self::stream_data_from_scmstore(store, keys.collect());
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
-            let file = result?;
+            let (bytes, _) = result?;
             count += 1;
-            size += file.content().unwrap().len() as u64;
+            size += bytes.len() as u64;
         }
         Ok((count, size))
     }
@@ -385,7 +384,7 @@ impl CheckoutPlan {
     pub async fn check_unknown_files(
         &self,
         manifest: &impl Manifest,
-        store: Arc<dyn ReadStore<Key, StoreFile>>,
+        store: Arc<FileStore>,
         tree_state: &mut TreeState,
     ) -> Result<Vec<RepoPathBuf>> {
         let vfs = &self.checkout.vfs;
@@ -448,8 +447,7 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        let check_content = store
-            .fetch_stream(Box::pin(stream::iter(check_content)))
+        let check_content = Self::stream_data_from_scmstore(store, check_content)
             .chunks(VFS_BATCH_SIZE)
             .map(|v| {
                 let vfs = vfs.clone();
@@ -486,11 +484,11 @@ impl CheckoutPlan {
         Ok(r)
     }
 
-    fn check_content(vfs: &VFS, files: Vec<StoreFile>) -> Result<Vec<RepoPathBuf>> {
+    fn check_content(vfs: &VFS, files: Vec<(Bytes, Key)>) -> Result<Vec<RepoPathBuf>> {
         let mut result = vec![];
         for file in files {
-            let path = &file.key().expect("Store returned file without key").path;
-            match Self::check_file(vfs, &file, path) {
+            let path = &file.1.path;
+            match Self::check_file(vfs, file.0, path) {
                 Err(err) => {
                     warn!("Can not check {}: {}", path, err);
                     result.push(path.clone())
@@ -502,13 +500,9 @@ impl CheckoutPlan {
         Ok(result)
     }
 
-    fn check_file(vfs: &VFS, file: &StoreFile, path: &RepoPath) -> Result<bool> {
-        let expected_content = match file.content() {
-            None => bail!("Did not find content for {} in store", path),
-            Some(c) => c,
-        };
+    fn check_file(vfs: &VFS, expected_content: Bytes, path: &RepoPath) -> Result<bool> {
         let actual_content = vfs.read(path)?;
-        Ok(actual_content.eq(expected_content))
+        Ok(actual_content.eq(&expected_content))
     }
 
     // Functions below use blocking fs operations in spawn_blocking proc.

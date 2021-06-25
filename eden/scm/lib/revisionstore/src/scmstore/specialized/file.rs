@@ -80,13 +80,6 @@ impl Drop for FileStore {
     }
 }
 
-#[derive(Debug)]
-pub struct FileStoreFetch {
-    pub complete: HashMap<Key, StoreFile>,
-    pub incomplete: HashMap<Key, Vec<Error>>,
-    other_errors: Vec<Error>,
-}
-
 #[derive(Debug, Default)]
 struct ContentStoreFallbacksInner {
     fetch: u64,
@@ -154,6 +147,13 @@ impl ContentStoreFallbacks {
     }
 }
 
+#[derive(Debug)]
+pub struct FileStoreFetch {
+    pub complete: HashMap<Key, StoreFile>,
+    pub incomplete: HashMap<Key, Vec<Error>>,
+    other_errors: Vec<Error>,
+}
+
 impl FileStoreFetch {
     /// Return the list of keys which could not be fetched, or any errors encountered
     fn missing(mut self) -> Result<Vec<Key>> {
@@ -193,6 +193,28 @@ impl FileStoreFetch {
                 .ok_or_else(|| anyhow!("no results found in either incomplete or complete"))?
                 .1,
         ))
+    }
+
+
+    /// Returns a stream of all successful fetches and errors, for compatibility with old scmstore
+    pub fn results(mut self) -> impl Iterator<Item = Result<(Key, StoreFile)>> {
+        self.complete
+            .into_iter()
+            .map(Ok)
+            .chain(
+                self.incomplete
+                    .into_iter()
+                    .map(|(key, errors)| {
+                        if errors.len() > 0 {
+                            errors
+                        } else {
+                            vec![anyhow!("key not found: {}", key)]
+                        }
+                    })
+                    .flatten()
+                    .map(Err),
+            )
+            .chain(self.other_errors.into_iter().map(Err))
     }
 }
 
@@ -505,6 +527,14 @@ impl StoreFile {
         );
         Ok(())
     }
+
+    #[instrument(skip(self))]
+    pub fn file_content(&mut self) -> Result<Bytes> {
+        self.content
+            .as_mut()
+            .ok_or_else(|| anyhow!("no content available"))?
+            .file_content()
+    }
 }
 
 impl BitOr for StoreFile {
@@ -581,17 +611,17 @@ impl FileAttributes {
         !*self == FileAttributes::NONE
     }
 
-    const NONE: Self = FileAttributes {
+    pub const NONE: Self = FileAttributes {
         content: false,
         aux_data: false,
     };
 
-    const CONTENT: Self = FileAttributes {
+    pub const CONTENT: Self = FileAttributes {
         content: true,
         aux_data: false,
     };
 
-    const AUX: Self = FileAttributes {
+    pub const AUX: Self = FileAttributes {
         content: false,
         aux_data: true,
     };

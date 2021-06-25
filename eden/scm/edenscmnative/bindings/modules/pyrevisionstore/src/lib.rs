@@ -1401,12 +1401,6 @@ py_class!(pub class filescmstore |py| {
     }
 });
 
-impl filescmstore {
-    pub fn get_oldscmstore<'a>(&'a self, py: Python<'a>) -> &'a BoxedReadStore<Key, StoreFile> {
-        self.oldscmstore(py)
-    }
-}
-
 impl ExtractInnerRef for filescmstore {
     type Inner = Arc<FileStore>;
 

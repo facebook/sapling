@@ -81,7 +81,7 @@ py_class!(class checkoutplan |py| {
         let plan = self.plan(py);
         let state = state.get_state(py);
         let manifest = manifest.borrow_underlying(py).clone();
-        let store = scmstore.get_oldscmstore(py).clone();
+        let store = scmstore.extract_inner(py);
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             try_block_unless_interrupted(
@@ -120,7 +120,7 @@ py_class!(class checkoutplan |py| {
     }
 
     def apply_scmstore_dry_run(&self, scmstore: &filescmstore) -> PyResult<(usize, u64)> {
-        let store = scmstore.get_oldscmstore(py).clone();
+        let store = scmstore.extract_inner(py);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
             plan.apply_read_store_dry_run(store)
@@ -128,7 +128,7 @@ py_class!(class checkoutplan |py| {
     }
 
     def apply_scmstore(&self, scmstore: &filescmstore) -> PyResult<PyNone> {
-        let store = scmstore.get_oldscmstore(py).clone();
+        let store = scmstore.extract_inner(py);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
             plan.apply_read_store(store)
