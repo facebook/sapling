@@ -1092,6 +1092,14 @@ class localrepository(object):
 
     @util.propertycache
     def edenapi(self):
+        # `edenapi.enable` is a manual override option that allows the user to
+        # force EdenAPI to be enabled or disabled, primarily useful for testing.
+        # This is intended as a manual override only; normal usage should rely
+        # on the logic below to determine whether or not to enable EdenAPI.
+        enabled = self.ui.config("edenapi", "enable")
+        if enabled is not None:
+            return edenapi.getclient(self.ui) if enabled else None
+
         if self.ui.config("edenapi", "url"):
             return edenapi.getclient(self.ui)
         else:

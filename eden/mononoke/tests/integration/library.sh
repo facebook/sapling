@@ -1337,7 +1337,7 @@ function hgmn {
 }
 
 function hgedenapi {
-  hg --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "remotefilelog.http=true" "$@"
+  hg --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "edenapi.enable=true" --config "remotefilelog.http=true" "$@"
 }
 
 function hgmn_local {
@@ -1570,6 +1570,7 @@ function setup_hg_edenapi() {
 
   cat >> .hg/hgrc <<EOF
 [edenapi]
+enable=true
 url=https://localhost:$MONONOKE_SOCKET/edenapi/$repo
 [remotefilelog]
 http=True
