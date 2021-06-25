@@ -276,7 +276,8 @@ void OverlayFileAccess::fallocate(
     uint64_t offset,
     uint64_t length) {
   auto entry = getEntryForInode(inode.getNodeId());
-  auto result = entry->file.fallocate(offset, length);
+  auto result =
+      entry->file.fallocate(offset, length + FsOverlay::kHeaderLength);
   if (result.hasError()) {
     throw InodeError(
         result.error(),

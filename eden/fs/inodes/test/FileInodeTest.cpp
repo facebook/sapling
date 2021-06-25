@@ -396,6 +396,18 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(true, isInodeMaterialized(parent));
 }
 
+#ifdef __linux__
+TEST_F(FileInodeTest, fallocate) {
+  mount_.addFile("dir/fallocate_file", "");
+  auto inode = mount_.getFileInode("dir/fallocate_file");
+  inode->fallocate(0, 42, ObjectFetchContext::getNullContext()).get(0ms);
+
+  auto attr = getFileAttr(inode);
+  BASIC_ATTR_XCHECKS(inode, attr);
+  EXPECT_EQ(42, attr.st_size);
+}
+#endif
+
 TEST(FileInode, truncatingDuringLoad) {
   FakeTreeBuilder builder;
   builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
