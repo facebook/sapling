@@ -908,6 +908,7 @@ class localrepository(object):
             remote = conn.peer
             remotenamechanges = {}  # changes to remotenames, {name: hexnode}
             heads = set()
+            fastpath = []
 
             # Resolve the bookmark names to heads.
             if bookmarknames:
@@ -933,11 +934,27 @@ class localrepository(object):
                 for name in bookmarknames:
                     if name in remotebookmarks:
                         hexnode = remotebookmarks[name]
+                        if (
+                            name == bookmarks.mainbookmark(self)
+                            and self.ui.configbool("pull", "master-fastpath")
+                            and "lazychangelog" in self.storerequirements
+                        ):
+                            remotename = bookmarks.remotenameforurl(
+                                self.ui, remote.url()
+                            )
+                            old = self._remotenames.mark2nodes().get(
+                                "%s/%s" % (remotename, name)
+                            )
+                            if old:
+                                old = old[0]
+                                self.ui.debug(
+                                    "master fast path %s => %s\n" % (hex(old), hexnode)
+                                )
+                                fastpath.append((old, bin(hexnode)))
                         heads.add(bin(hexnode))
                         remotenamechanges[name] = hexnode  # update it
                     else:
                         remotenamechanges[name] = nullhex  # delete it
-
             # Resolve headnames to heads.
             if headnames:
                 batch = remote.iterbatch()
@@ -950,8 +967,16 @@ class localrepository(object):
             for node in headnodes:
                 heads.add(node)
 
+            fastpathheads = set()
+            for (old, new) in fastpath:
+                fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
+                self.changelog.inner.importpulldata(fastpulldata)
+                fastpathheads.add(new)
+
+            pullheads = heads - fastpathheads
+
             # Only perform a pull if heads are not empty.
-            if heads:
+            if pullheads:
                 # Bypass the bookmarks logic as remotenames are updated here.
                 # Note: remotenamechanges contains bookmark deletion
                 # information while the exchange.pull does not know about what
@@ -965,8 +990,8 @@ class localrepository(object):
                     "updatevisibility": False,
                 }
                 opargs = {"extras": extras}
-                heads = sorted(heads)
-                exchange.pull(self, remote, heads, opargs=opargs)
+                pullheads = sorted(pullheads)
+                exchange.pull(self, remote, pullheads, opargs=opargs)
 
             # Update remotenames.
             if remotenamechanges:
