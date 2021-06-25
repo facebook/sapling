@@ -169,13 +169,13 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         let result_span = new_ancestors.difference(&old_ancestors);
         let flat_segments = self.iddag.idset_to_flat_segments(result_span)?;
 
-        let ids = flat_segments.parents_and_head().into_iter().collect();
+        let ids = flat_segments.parents_head_and_roots().into_iter().collect();
 
         let idmap = self
             .idmap
             .find_many_changeset_ids(&ctx, ids)
             .await
-            .context("error retrieving mappings for parents_and_head")?;
+            .context("error retrieving mappings for parents_head_and_roots")?;
 
         let pull_data = CloneData {
             flat_segments,

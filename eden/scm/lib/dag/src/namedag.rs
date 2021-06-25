@@ -689,7 +689,7 @@ where
 
         let missing_set = new_ancestors.difference(&old_ancestors);
         let flat_segments = self.dag.idset_to_flat_segments(missing_set)?;
-        let ids: Vec<_> = flat_segments.parents_and_head().into_iter().collect();
+        let ids: Vec<_> = flat_segments.parents_head_and_roots().into_iter().collect();
 
         let idmap: HashMap<Id, VertexName> = {
             tracing::debug!("pull: {} vertexes in idmap", ids.len());

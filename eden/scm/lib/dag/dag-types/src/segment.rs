@@ -69,7 +69,7 @@ impl PreparedFlatSegments {
     }
 
     /// Return set of all (unique) parents + head + roots of flat segments.
-    pub fn parents_and_head(&self) -> BTreeSet<Id> {
+    pub fn parents_head_and_roots(&self) -> BTreeSet<Id> {
         // Parents
         let mut s: BTreeSet<Id> = self
             .segments
