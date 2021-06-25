@@ -520,7 +520,20 @@ def dispatch(req):
             req.ui.log("perftrace", "Trace:\n%s\n", output, key=key, payload=output)
             req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
 
-        req.ui._measuredtimes["command_duration"] = duration * 1000
+        def truncateduration(duration):
+            """Truncate the passed in duration to only 3 significant digits."""
+            millis = int(duration * 1000)
+            if millis < 1000:
+                return millis
+
+            for power in range(3, 19):
+                threshold = 10 ** power
+                if millis < threshold:
+                    factor = int(threshold / 1000)
+                    return int(millis / factor) * factor
+            return millis
+
+        req.ui._measuredtimes["command_duration"] = truncateduration(duration)
         retmask = req.ui.configint("ui", "exitcodemask")
 
         try:
