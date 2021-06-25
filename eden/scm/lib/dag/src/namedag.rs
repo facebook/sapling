@@ -447,6 +447,13 @@ where
     S: TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+        if !self.pending_heads.is_empty() {
+            return programming(format!(
+                "import_pull_data called with pending heads ({:?})",
+                &self.pending_heads,
+            ));
+        }
+
         let (lock, map_lock, dag_lock) = self.reload()?;
 
         // Parents that should exist in the local graph. Look them up in 1 round-trip

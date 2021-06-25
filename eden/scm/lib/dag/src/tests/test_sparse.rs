@@ -319,3 +319,16 @@ async fn test_pull_lazy_with_merges() {
     );
     assert_eq!(client.output(), ["resolve names: [C, D, F, L], heads: [E]"]);
 }
+
+#[tokio::test]
+async fn test_pull_no_pending_changes() {
+    let mut server = TestDag::draw("A # master: A");
+    let mut client = server.client_cloned_data().await;
+    server.drawdag("A-B-C", &["C"]);
+    client.drawdag("A-D", &[]);
+    let e = client.pull_ff_master(&server, "A", "C").await.unwrap_err();
+    assert_eq!(
+        e.to_string(),
+        "ProgrammingError: import_pull_data called with pending heads ([D])"
+    );
+}
