@@ -35,6 +35,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use std::collections::HashSet;
 use std::io;
 use std::path::Path;
 use std::sync::Arc;
@@ -58,9 +59,15 @@ pub struct HybridCommits {
     lazy_hash_desc: String,
 }
 
+const EDENSCM_DISABLE_REMOTE_RESOLVE: &str = "EDENSCM_DISABLE_REMOTE_RESOLVE";
+
 struct EdenApiProtocol {
     client: Arc<dyn EdenApi>,
     reponame: String,
+
+    /// Manually disabled names defined by `EDENSCM_DISABLE_REMOTE_RESOLVE`
+    /// in the form `hex1,hex2,...`.
+    disabled_names: HashSet<Vertex>,
 }
 
 fn to_dag_error<E: Into<anyhow::Error>>(e: E) -> dag::Error {
@@ -82,6 +89,13 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
             }
             let mut hgids = Vec::with_capacity(names.len());
             for name in names {
+                if self.disabled_names.contains(&name) {
+                    let msg = format!(
+                        "Resolving {:?} is disabled via {}",
+                        name, EDENSCM_DISABLE_REMOTE_RESOLVE
+                    );
+                    return Err(dag::errors::BackendError::Generic(msg).into());
+                }
                 hgids.push(Id20::from_slice(name.as_ref()).map_err(to_dag_error)?);
             }
             let heads: Vec<_> = heads
@@ -174,9 +188,18 @@ impl HybridCommits {
 
     /// Enable fetching commit hashes lazily via EdenAPI.
     pub fn enable_lazy_commit_hashes(&mut self) {
+        let mut disabled_names: HashSet<Vertex> = Default::default();
+        if let Ok(env) = std::env::var(EDENSCM_DISABLE_REMOTE_RESOLVE) {
+            for hex in env.split(",") {
+                if let Ok(name) = Vertex::from_hex(hex.as_ref()) {
+                    disabled_names.insert(name);
+                }
+            }
+        }
         let protocol = EdenApiProtocol {
             reponame: self.reponame.clone(),
             client: self.client.clone(),
+            disabled_names,
         };
         self.commits.dag.set_remote_protocol(Arc::new(protocol));
         self.lazy_hash_desc = format!("lazy, using EdenAPI (repo = {})", &self.reponame);
