@@ -94,6 +94,8 @@ py_class!(pub class idmap |py| {
                 .into_iter()
                 .zip(contains)
                 .filter_map(|(v, c)| if c { Some(v) } else { None }).collect();
+            let result = vertexes.into_iter().map(|v| PyBytes::new(py, v.as_ref())).collect();
+            return Ok(result);
         };
 
         let ids = block_on(map.vertex_id_batch(&vertexes)).map_pyerr(py)?;
