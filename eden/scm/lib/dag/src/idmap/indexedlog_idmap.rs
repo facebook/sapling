@@ -349,7 +349,9 @@ impl IdConvert for IdMap {
     async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
         let mut list = Vec::with_capacity(names.len());
         for name in names {
-            list.push(self.find_id_by_name(name.as_ref())?.is_some());
+            let contains = self.find_id_by_name(name.as_ref())?.is_some();
+            tracing::trace!("contains_vertex_name_locally({:?}) = {}", name, contains);
+            list.push(contains);
         }
         Ok(list)
     }

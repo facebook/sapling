@@ -1627,11 +1627,15 @@ where
     }
 
     async fn contains_vertex_name_locally(&self, names: &[VertexName]) -> Result<Vec<bool>> {
+        tracing::trace!("contains_vertex_name_locally names: {:?}", &names);
         let mut list = self.map.contains_vertex_name_locally(names).await?;
+        tracing::trace!("contains_vertex_name_locally list (local): {:?}", &list);
+        assert_eq!(list.len(), names.len());
         let map = self.overlay_map.read();
         for (b, name) in list.iter_mut().zip(names.iter()) {
-            if !*b {
-                *b = *b || map.has_vertex_name(name);
+            if !*b && map.has_vertex_name(name) {
+                tracing::trace!("contains_vertex_name_locally overlay has {:?}", &name);
+                *b = true;
             }
         }
         Ok(list)

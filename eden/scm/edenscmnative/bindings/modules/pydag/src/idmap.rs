@@ -90,6 +90,7 @@ py_class!(pub class idmap |py| {
                 return Err(PyErr::new::<exc::ValueError, _>(py, "inverse and local cannot be both True"));
             }
             let contains = block_on(map.contains_vertex_name_locally(&vertexes)).map_pyerr(py)?;
+            assert_eq!(contains.len(), contains.len());
             vertexes = vertexes
                 .into_iter()
                 .zip(contains)
