@@ -16,6 +16,7 @@ py_exception!(error, CommitLookupError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
+py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
 py_exception!(error, RustError);
 py_exception!(error, RevisionstoreError);
@@ -79,6 +80,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
+    m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
     m.add(
         py,
@@ -148,6 +150,14 @@ fn register_error_handlers() {
             Some(PyErr::new::<RevisionstoreError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
+            ))
+        } else if matches!(
+            e.downcast_ref::<dag::Error>(),
+            Some(dag::Error::NeedSlowPath(e))
+        ) {
+            Some(PyErr::new::<NeedSlowPathError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
             ))
         } else if matches!(
             e.downcast_ref::<dag::Error>(),

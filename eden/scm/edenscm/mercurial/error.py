@@ -31,6 +31,7 @@ CommitLookupError = bindings.error.CommitLookupError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
 MetaLogError = bindings.error.MetaLogError
+NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path
 RustError = bindings.error.RustError
 RevisionstoreError = bindings.error.RevisionstoreError
