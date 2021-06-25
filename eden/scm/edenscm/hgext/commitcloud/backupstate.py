@@ -47,7 +47,6 @@ class BackupState(object):
             if filename.startswith(cls.prefix)
         ]
         heads = set()
-        hasnode = repo.changelog.hasnode
         threshold = time.time() - cls.oldbackupcache
         # union the recent cache files
         for filename in files:
@@ -60,7 +59,7 @@ class BackupState(object):
             if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
                 continue
             heads = heads.union([nodemod.bin(head.strip()) for head in lines[2:]])
-        heads = {h for h in heads if hasnode(h)}
+        heads = set(repo.changelog.filternodes(list(heads), local=True))
         # return the cached backedup heads in found
         if heads:
             return heads
@@ -94,9 +93,9 @@ class BackupState(object):
                 )
                 self.initfromserver()
                 return
-            heads = (nodemod.bin(head.strip()) for head in lines[2:])
-            hasnode = repo.changelog.hasnode
-            self.heads = {h for h in heads if hasnode(h)}
+            heads = [nodemod.bin(head.strip()) for head in lines[2:]]
+            heads = repo.changelog.filternodes(heads, local=True)
+            self.heads = set(heads)
         else:
             self.initfromserver()
 
@@ -136,9 +135,7 @@ class BackupState(object):
     @util.propertycache
     def backedup(self):
         unfi = self.repo
-        hasnode = unfi.changelog.hasnode
-        heads = [head for head in self.heads if hasnode(head)]
-        return set(unfi.nodes("not public() & ::%ln", heads))
+        return set(unfi.nodes("not public() & ::%ln", self.heads))
 
     def _write(self, f):
         f.write(encodeutf8("%s\n" % FORMAT_VERSION))
