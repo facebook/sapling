@@ -42,6 +42,7 @@ typedef IdType ContentMetadataId (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
 typedef IdType BlameId (rust.newtype)
 typedef IdType BlameV2Id (rust.newtype)
+typedef IdType RedactionKeyListId (rust.newtype)
 
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary. Could also be used for
@@ -506,4 +507,9 @@ union BlameV2 {
 
   // This version of the file was rejected for blaming.
   2: BlameRejected rejected,
+}
+
+struct RedactionKeyList {
+  // List of keys to be redacted
+  1: list<string> keys,
 }

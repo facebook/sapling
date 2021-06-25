@@ -28,6 +28,7 @@ pub mod globalrev;
 pub mod hash;
 pub mod path;
 pub mod rawbundle2;
+pub mod redaction_key_list;
 pub mod repo;
 pub mod skeleton_manifest;
 pub mod sql_types;
@@ -48,6 +49,7 @@ pub use generation::{Generation, FIRST_GENERATION};
 pub use globalrev::Globalrev;
 pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, PrefixTrie, RepoPath};
 pub use rawbundle2::RawBundle2;
+pub use redaction_key_list::RedactionKeyList;
 pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
 pub use svnrev::Svnrev;
 pub use typed_hash::{
