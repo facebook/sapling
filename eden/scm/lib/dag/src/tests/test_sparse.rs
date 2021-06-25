@@ -195,9 +195,11 @@ async fn test_pull_remap() {
 
     assert_eq!(
         client.output(),
-        vec![
-            "resolve names: [E, B, A], heads: []".to_string(),
-            "resolve names: [E, B, A], heads: []".to_string(),
+        [
+            "resolve names: [E, B, A], heads: []",
+            "resolve names: [E, B, A], heads: []",
+            "resolve names: [C], heads: [E]",
+            "resolve names: [F], heads: [E]"
         ]
     );
 
@@ -247,23 +249,16 @@ async fn test_pull_overlap() {
 
     client.pull_ff_master(&server, "A", "D").await.unwrap();
 
-    // BUG: C-D appear twice in the graph.
-    client.pull_ff_master(&server, "B", "F").await.unwrap();
+    let e = client.pull_ff_master(&server, "B", "F").await.unwrap_err();
+    assert_eq!(e.to_string(), "NeedSlowPath: C exists in local graph");
+
     assert_eq!(
         client.render_graph(),
         r#"
-            F  7
-            │
-            E  6
-            │
             D  3
             │
-            C  4
+            C  2
             │
-            │ D  3
-            │ │
-            │ C  4
-            ├─╯
             B  1
             │
             A  0"#
@@ -285,7 +280,7 @@ async fn test_pull_lazy_with_merges() {
     // Linear fast-forward. The client has a lazy graph.
     server.drawdag("A-B-C-D-E", &["E"]);
     client.pull_ff_master(&server, "A", "E").await.unwrap();
-    assert_eq!(client.output(), [] as [&str; 0]);
+    assert_eq!(client.output(), ["resolve names: [B], heads: [A]"]);
 
     // C, D are lazy, but E is not.
     assert!(!client.contains_vertex_locally("C"));
@@ -326,6 +321,8 @@ async fn test_pull_lazy_with_merges() {
     assert_eq!(
         client.output(),
         [
+            "resolve names: [F], heads: [E]",
+            "resolve names: [L], heads: [E]",
             "resolve names: [C], heads: [E]",
             "resolve names: [D], heads: [E]",
         ]

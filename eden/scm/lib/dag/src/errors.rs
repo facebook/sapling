@@ -21,6 +21,10 @@ pub enum DagError {
     #[error("{0:?} cannot be found")]
     IdNotFound(Id),
 
+    /// A fast path cannot be used.
+    #[error("NeedSlowPath: {0}")]
+    NeedSlowPath(String),
+
     /// Callsite does something wrong. For example, a "parent function" does not
     /// return reproducible results for a same vertex if called twice.
     #[error("ProgrammingError: {0}")]

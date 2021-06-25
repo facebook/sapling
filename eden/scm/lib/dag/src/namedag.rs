@@ -449,6 +449,65 @@ where
     async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         let (lock, map_lock, dag_lock) = self.reload()?;
 
+        // Parents that should exist in the local graph. Look them up in 1 round-trip
+        // and insert to the local graph.
+        // Also check that roots of the new segments do not overlap with the local graph.
+        // For example,
+        //
+        //      D          When the client has B (and A, C), and is pulling D,
+        //     /|\         the server provides D, E, F, with parents B and C,
+        //    F B E        and roots F and E.
+        //      |\|        The client must have B and C, and must not have F
+        //      A C        or E.
+        {
+            let mut root_ids: Vec<Id> = Vec::new();
+            let mut parent_ids: Vec<Id> = Vec::new();
+            let segments = &clone_data.flat_segments.segments;
+            let id_set = IdSet::from_spans(segments.iter().map(|s| s.low..=s.high));
+            for seg in segments {
+                let pids: Vec<Id> = seg.parents.iter().copied().collect();
+                // Parents that are not part of the pull vertexes should exist
+                // in the local graph.
+                let connected_pids: Vec<Id> = pids
+                    .iter()
+                    .copied()
+                    .filter(|&p| !id_set.contains(p))
+                    .collect();
+                if connected_pids.len() == pids.len() {
+                    // The "low" of the segment is a root (of vertexes to insert).
+                    // It needs an overlap check.
+                    root_ids.push(seg.low);
+                }
+                parent_ids.extend(connected_pids);
+            }
+
+            let to_names = |ids: &[Id], hint: &str| -> Result<Vec<VertexName>> {
+                let names = ids.iter().map(|i| match clone_data.idmap.get(&i) {
+                    Some(v) => Ok(v.clone()),
+                    None => {
+                        programming(format!("server does not provide name for {} {:?}", hint, i))
+                    }
+                });
+                names.collect()
+            };
+
+            let parent_names = to_names(&parent_ids, "parent")?;
+            let root_names = to_names(&root_ids, "root")?;
+            tracing::trace!(
+                "pull: connected parents: {:?}, roots: {:?}",
+                &parent_names,
+                &root_names
+            );
+
+            for name in root_names {
+                // PERF: contains_vertex_name does not have a batch version.
+                if self.contains_vertex_name(&name).await? {
+                    let e = crate::Error::NeedSlowPath(format!("{:?} exists in local graph", name));
+                    return Err(e);
+                }
+            }
+        }
+
         let mut next_free_client_id = self.dag.next_free_id(0, Group::MASTER)?;
         let mut new_client_segments = vec![];
         let server_idmap_tree: BTreeMap<_, _> = clone_data.idmap.clone().into_iter().collect();
