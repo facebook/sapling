@@ -29,10 +29,6 @@ use crate::{
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
     repack::ToKeys,
-    scmstore::{
-        FetchError, FetchStream, KeyStream, KeyedValue, ReadStore, WriteError, WriteResults,
-        WriteStore, WriteStream,
-    },
     sliceext::SliceExt,
     types::StoreKey,
 };
@@ -356,14 +352,6 @@ impl<'a> IndexedLogHgIdDataStoreWriteGuard<'a> {
     }
 }
 
-impl KeyedValue for Entry {
-    type Key = Key;
-
-    fn key(&self) -> Self::Key {
-        self.key.clone()
-    }
-}
-
 impl std::convert::From<crate::memcache::McData> for Entry {
     fn from(v: crate::memcache::McData) -> Self {
         Entry::new(v.key, v.data, v.metadata)
@@ -402,60 +390,6 @@ impl std::convert::From<FileEntry> for Entry {
             v.data_unchecked().into(),
             v.metadata().clone(),
         )
-    }
-}
-
-impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
-    fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
-        Box::pin(keys.then(move |key| {
-            let self_ = self.clone();
-            let key_ = key.clone();
-            spawn_blocking(move || {
-                match self_.get_entry(key.clone()) {
-                    Ok(None) => Err(FetchError::not_found(key.clone())),
-                    Ok(Some(entry)) => {
-                        if self_.extstored_policy == ExtStoredPolicy::Ignore
-                            && entry.metadata().is_lfs()
-                        {
-                            Err(FetchError::not_found(key.clone()))
-                        } else {
-                            Ok(entry)
-                        }
-                    }
-                    Err(e) => Err(FetchError::with_key(key.clone(), e)),
-                }
-            })
-            .map(move |spawn_res| {
-                match spawn_res {
-                    Ok(Ok(entry)) => Ok(entry),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(FetchError::with_key(key_, e)),
-                }
-            })
-        }))
-    }
-}
-
-impl WriteStore<Key, Entry> for IndexedLogHgIdDataStore {
-    fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
-        Box::pin(values.then(move |value| {
-            let self_ = self.clone();
-            let key = value.key.clone();
-            spawn_blocking(move || {
-                let key = value.key.clone();
-                match self_.put_entry(value) {
-                    Ok(()) => Ok(key),
-                    Err(e) => Err(WriteError::with_key(key, e)),
-                }
-            })
-            .map(move |spawn_res| {
-                match spawn_res {
-                    Ok(Ok(entry)) => Ok(entry),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(WriteError::with_key(key, e)),
-                }
-            })
-        }))
     }
 }
 

@@ -33,9 +33,8 @@ use pyprogress::PyProgressFactory;
 use revisionstore::{
     repack,
     scmstore::{
-        specialized::FileAttributes, util::file_to_async_key_stream, BoxedReadStore,
-        FileScmStoreBuilder, FileStore, FileStoreBuilder, LegacyDatastore, StoreFile, StoreTree,
-        TreeScmStoreBuilder, TreeStore, TreeStoreBuilder,
+        file_to_async_key_stream, FileAttributes, FileStore, FileStoreBuilder, TreeStore,
+        TreeStoreBuilder,
     },
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
@@ -1149,13 +1148,8 @@ fn make_filescmstore<'a>(
     edenapi_filestore: Option<Arc<EdenApiFileStore>>,
     suffix: Option<String>,
     correlator: Option<String>,
-) -> Result<(
-    Arc<FileStore>,
-    BoxedReadStore<Key, StoreFile>,
-    Arc<ContentStore>,
-)> {
+) -> Result<(Arc<FileStore>, Arc<ContentStore>)> {
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator.clone());
-    let mut scmstore_builder = FileScmStoreBuilder::new(&config);
     let mut filestore_builder = FileStoreBuilder::new(&config);
 
     if config.get_or_default::<bool>("scmstore", "auxindexedlog")? {
@@ -1180,12 +1174,10 @@ fn make_filescmstore<'a>(
 
     if let Some(ref suffix) = suffix {
         builder = builder.suffix(suffix);
-        scmstore_builder = scmstore_builder.suffix(suffix);
         filestore_builder = filestore_builder.suffix(suffix);
     }
 
     builder = if let Some(edenapi) = edenapi_filestore {
-        scmstore_builder = scmstore_builder.shared_edenapi(edenapi.clone());
         filestore_builder = filestore_builder.edenapi(edenapi.clone());
         builder.remotestore(edenapi)
     } else {
@@ -1204,7 +1196,6 @@ fn make_filescmstore<'a>(
 
     filestore_builder = filestore_builder.indexedlog_cache(indexedlog_cache.clone());
     builder = builder.shared_indexedlog_shared(indexedlog_cache.clone());
-    scmstore_builder = scmstore_builder.shared_indexedlog(indexedlog_cache);
 
     if let Some(lfs_local) = lfs_local {
         filestore_builder = filestore_builder.lfs_local(lfs_local.clone());
@@ -1218,18 +1209,15 @@ fn make_filescmstore<'a>(
 
     let contentstore = Arc::new(builder.build()?);
 
-    scmstore_builder = scmstore_builder.legacy_fallback(LegacyDatastore(contentstore.clone()));
     filestore_builder = filestore_builder.contentstore(contentstore.clone());
 
-    let scmstore = scmstore_builder.build()?;
     let filestore = Arc::new(filestore_builder.build()?);
 
-    Ok((filestore, scmstore, contentstore))
+    Ok((filestore, contentstore))
 }
 
 py_class!(pub class filescmstore |py| {
     data store: Arc<FileStore>;
-    data oldscmstore: BoxedReadStore<Key, StoreFile>;
     data contentstore: Arc<ContentStore>;
 
     def __new__(_cls,
@@ -1248,9 +1236,9 @@ py_class!(pub class filescmstore |py| {
         let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
 
-        let (filestore, oldscmstore, contentstore) = make_filescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (filestore, contentstore) = make_filescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
 
-        filescmstore::create_instance(py, filestore, oldscmstore, contentstore)
+        filescmstore::create_instance(py, filestore, contentstore)
     }
 
     def get_contentstore(&self) -> PyResult<contentstore> {
@@ -1421,13 +1409,8 @@ fn make_treescmstore<'a>(
     edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
     suffix: Option<String>,
     correlator: Option<String>,
-) -> Result<(
-    Arc<TreeStore>,
-    BoxedReadStore<Key, StoreTree>,
-    Arc<ContentStore>,
-)> {
+) -> Result<(Arc<TreeStore>, Arc<ContentStore>)> {
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
-    let mut scmstore_builder = TreeScmStoreBuilder::new(&config);
     let mut treestore_builder = TreeStoreBuilder::new(&config);
 
     builder = if let Some(path) = path {
@@ -1444,7 +1427,6 @@ fn make_treescmstore<'a>(
 
     if let Some(ref suffix) = suffix {
         builder = builder.suffix(suffix);
-        scmstore_builder = scmstore_builder.suffix(suffix);
         treestore_builder = treestore_builder.suffix(suffix);
     }
 
@@ -1453,7 +1435,6 @@ fn make_treescmstore<'a>(
 
     // Extract EdenApiAdapter for scmstore construction later on
     if let Some(edenapi) = edenapi_treestore {
-        scmstore_builder = scmstore_builder.shared_edenapi(edenapi.clone());
         treestore_builder = treestore_builder.edenapi(edenapi);
     }
 
@@ -1467,22 +1448,18 @@ fn make_treescmstore<'a>(
 
     treestore_builder = treestore_builder.indexedlog_cache(indexedlog_cache.clone());
     builder = builder.shared_indexedlog_shared(indexedlog_cache.clone());
-    scmstore_builder = scmstore_builder.shared_indexedlog(indexedlog_cache);
 
     let contentstore = Arc::new(builder.build()?);
 
     treestore_builder = treestore_builder.contentstore(contentstore.clone());
-    scmstore_builder = scmstore_builder.legacy_fallback(LegacyDatastore(contentstore.clone()));
 
-    let scmstore = scmstore_builder.build()?;
     let treestore = Arc::new(treestore_builder.build()?);
 
-    Ok((treestore, scmstore, contentstore))
+    Ok((treestore, contentstore))
 }
 
 py_class!(pub class treescmstore |py| {
     data store: Arc<TreeStore>;
-    data oldscmstore: BoxedReadStore<Key, StoreTree>;
     data contentstore: Arc<ContentStore>;
 
     def __new__(_cls,
@@ -1501,9 +1478,9 @@ py_class!(pub class treescmstore |py| {
         let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
 
-        let (treestore, oldscmstore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (treestore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
 
-        treescmstore::create_instance(py, treestore, oldscmstore, contentstore)
+        treescmstore::create_instance(py, treestore, contentstore)
     }
 
     def get_contentstore(&self) -> PyResult<contentstore> {

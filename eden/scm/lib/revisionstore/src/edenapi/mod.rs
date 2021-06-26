@@ -20,7 +20,6 @@ use crate::{
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::ExtStoredPolicy,
     remotestore::HgIdRemoteStore,
-    scmstore::EdenApiAdapter,
     types::StoreKey,
 };
 
@@ -48,19 +47,6 @@ pub struct EdenApiRemoteStore<T> {
     repo: String,
     progress: Arc<dyn ProgressFactory>,
     _phantom: PhantomData<T>,
-}
-
-impl<T> EdenApiRemoteStore<T> {
-    pub fn get_scmstore_adapter(
-        &self,
-        extstored_policy: ExtStoredPolicy,
-    ) -> EdenApiAdapter<Arc<dyn EdenApi>> {
-        EdenApiAdapter {
-            client: self.client.clone(),
-            repo: self.repo.clone(),
-            extstored_policy,
-        }
-    }
 }
 
 impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
