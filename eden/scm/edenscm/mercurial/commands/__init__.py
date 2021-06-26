@@ -2968,7 +2968,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             # Ensure that the biggrep results are flushed before we
             # start to intermingle with the local grep process output
             ui.flush()
-            return _rungrep(cmd, sorted(filestogrep), m)
+            return _rungrep(ui, cmd, sorted(filestogrep), m)
 
         return 0
 
@@ -2978,19 +2978,31 @@ def grep(ui, repo, pattern, *pats, **opts):
     files = [file for file in files if not islink(file)]
 
     ui.pager("grep")
-    return _rungrep(cmd, files, m)
+    return _rungrep(ui, cmd, files, m)
 
 
-def _rungrep(cmd, files, match):
-    p = subprocess.Popen(
-        cmd, bufsize=-1, close_fds=util.closefds, stdin=subprocess.PIPE
-    )
-    write = p.stdin.write
-    for f in files:
-        write(pycompat.encodeutf8(match.rel(f) + "\0"))
+def _rungrep(ui, cmd, files, match):
+    import tempfile
 
-    p.stdin.close()
-    return p.wait()
+    with tempfile.NamedTemporaryFile("w+b", prefix="hg-grep") as ftmp:
+        for f in files:
+            ftmp.write(pycompat.encodeutf8(match.rel(f) + "\0"))
+        ftmp.flush()
+        ftmp.seek(0)
+        # XXX: stderr is not redirected to ui.write_err properly.
+        p = subprocess.Popen(
+            cmd,
+            bufsize=-1,
+            close_fds=util.closefds,
+            stdin=ftmp,
+            stdout=subprocess.PIPE,
+        )
+
+        write = ui.writebytes
+        for line in p.stdout:
+            write(line)
+
+        return p.wait()
 
 
 @command(
