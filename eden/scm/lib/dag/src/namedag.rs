@@ -454,6 +454,13 @@ where
             ));
         }
 
+        if let Some(highest_seg) = clone_data.flat_segments.segments.last() {
+            let id = highest_seg.high;
+            if !clone_data.idmap.contains_key(&id) {
+                return programming(format!("server does not provide name for head {:?}", id));
+            }
+        }
+
         let (lock, map_lock, dag_lock) = self.reload()?;
 
         // Parents that should exist in the local graph. Look them up in 1 round-trip
