@@ -970,8 +970,11 @@ class localrepository(object):
             fastpathheads = set()
             for (old, new) in fastpath:
                 fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
-                self.changelog.inner.importpulldata(fastpulldata)
-                fastpathheads.add(new)
+                try:
+                    self.changelog.inner.importpulldata(fastpulldata)
+                    fastpathheads.add(new)
+                except errormod.NeedSlowPathError as e:
+                    self.ui.debug("cannot use pull fast path: %s\n" % e)
 
             pullheads = heads - fastpathheads
 

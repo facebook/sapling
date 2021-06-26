@@ -58,10 +58,55 @@ Pull:
   o  A
   
 
+
   $ setconfig paths.default=test:e2
   $ hg pull --debug --config pull.master-fastpath=True
   pulling from test:e2
   master fast path 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  o  E remote/master
+  │
+  o  D
+  │
+  o  C
+  │
+  o  B
+  │
+  o  A
+  
+
+Test fallback to slow path:
+
+  $ newremoterepo
+  $ setconfig paths.default=test:e1
+  $ hg debugchangelog --migrate lazy
+  $ hg pull -r $C
+  pulling from test:e1
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  o  C remote/master
+  │
+  o  B
+  │
+  o  A
+  
+  $ setconfig paths.default=test:e2
+  $ drawdag <<EOS
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg pull --debug --config pull.master-fastpath=True
+  pulling from test:e2
+  master fast path 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+  cannot use pull fast path: NeedSlowPath: f585351a92f85104bff7c284233c338b10eb1df7 exists in local graph
+  query 1; heads
+  searching for changes
+  local heads: 1; remote heads: 1 (explicit: 1); initial common: 0
+  all local heads known remotely
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   o  E remote/master
   │
