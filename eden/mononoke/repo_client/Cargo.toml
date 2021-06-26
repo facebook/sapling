@@ -83,6 +83,7 @@ mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4
 object = { git = "https://github.com/andrewjcg/object", rev = "ddbae7208292a13a016e8952c256f69737c763ab" }
 openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
 openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+os_info = { git = "https://github.com/xavierd/os_info.git", rev = "2ea23c0f6c20f211bc059c9e88ddebace1c458ff" }
 petgraph = { git = "https://github.com/jkeljo/petgraph", rev = "e3e9dd8632d23973fdc0b42c1117d5e5fc5fa384" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
