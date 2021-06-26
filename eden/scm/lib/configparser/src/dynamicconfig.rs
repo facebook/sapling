@@ -365,7 +365,16 @@ pub(crate) fn get_platform() -> Platform {
         Type::CentOS => Platform::Centos,
         Type::Ubuntu => Platform::Ubuntu,
         Type::Windows => Platform::Windows,
-        _ => Platform::Unknown,
+        _ => {
+            // Some versions of os_info might fail to detect CentOS.
+            // Let's double check before returning "Unknown".
+            // See https://github.com/stanislav-tkach/os_info/pull/267.
+            if Path::new("/etc/centos-release").exists() {
+                Platform::Centos
+            } else {
+                Platform::Unknown
+            }
+        }
     }
 }
 
