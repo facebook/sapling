@@ -552,14 +552,15 @@ mod tests {
 
     use std::fs::remove_file;
 
-    use futures::stream;
     use minibytes::Bytes;
     use tempfile::TempDir;
 
-    use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
-    use crate::scmstore::{Fallback, FetchError};
+    use crate::{
+        scmstore::specialized::{FileAttributes, FileStore},
+        testutil::*,
+    };
 
     #[test]
     fn test_empty() {
@@ -802,177 +803,78 @@ mod tests {
     }
 
     #[test]
-    fn test_scmstore_read() {
-        let tempdir = TempDir::new().unwrap();
+    fn test_scmstore_read() -> Result<()> {
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let meta = Default::default();
+
+        // Setup local indexedlog
+        let tmp = TempDir::new()?;
+        let local = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?);
+
+        local.add(&d, &meta).unwrap();
+        local.flush().unwrap();
+
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.indexedlog_local = Some(local.clone());
+
+        // Attempt fetch.
+        let mut fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT)
+            .single()?
+            .expect("key not found");
+        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_scmstore_write_read() -> Result<()> {
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let meta = Default::default();
+
+        // Setup local indexedlog
+        let tmp = TempDir::new()?;
+        let local = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?);
+
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.indexedlog_local = Some(local.clone());
+
+        // Write a file
+        store.write_batch(std::iter::once((k.clone(), d.data.clone(), meta)))?;
+
+        // Attempt fetch.
+        let mut fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT)
+            .single()?
+            .expect("key not found");
+        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_scmstore_extstore_use() -> Result<()> {
+        let tempdir = TempDir::new()?;
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
             IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
-
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: key("a", "1"),
-        };
-        let metadata = Default::default();
-
-        log.add(&delta, &metadata).unwrap();
-
-        log.flush().unwrap();
-
-        let log = Arc::new(log);
-
-        let mut fetched: Vec<_> =
-            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![key("a", "1")]))))
-                .collect();
-
-        assert_eq!(fetched.len(), 1);
-        assert_eq!(
-            fetched
-                .get_mut(0)
-                .unwrap()
-                .as_mut()
-                .unwrap()
-                .content()
-                .unwrap(),
-            Bytes::from(&[1, 2, 3, 4][..])
-        );
-    }
-
-    #[test]
-    fn test_scmstore_fallback() {
-        let tempdir = TempDir::new().unwrap();
-        let log1 = IndexedLogHgIdDataStore::new(
-            &tempdir,
-            ExtStoredPolicy::Use,
-            &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
-        let log2 = IndexedLogHgIdDataStore::new(
-            &tempdir,
-            ExtStoredPolicy::Use,
-            &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
-
-        let delta1 = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: key("a", "1"),
-        };
-        let delta2 = Delta {
-            data: Bytes::from(&[2, 3, 4, 5][..]),
-            base: None,
-            key: key("b", "2"),
-        };
-        let metadata = Default::default();
-
-        log1.add(&delta1, &metadata).unwrap();
-        log1.flush().unwrap();
-
-        log2.add(&delta2, &metadata).unwrap();
-        log2.flush().unwrap();
-
-        let log1 = Arc::new(log1);
-        let log2 = Arc::new(log2);
-
-        let fallback = Arc::new(Fallback {
-            preferred: log1,
-            fallback: log2,
-        });
-
-        let mut fetched: Vec<Result<Entry, _>> = block_on_stream(
-            fallback.fetch_stream(Box::pin(stream::iter(vec![key("a", "1"), key("b", "2")]))),
-        )
-        .collect();
-
-        assert_eq!(fetched.len(), 2);
-        assert_eq!(
-            fetched
-                .get_mut(0)
-                .unwrap()
-                .as_mut()
-                .unwrap()
-                .content()
-                .unwrap(),
-            Bytes::from(&[1, 2, 3, 4][..])
-        );
-        assert_eq!(
-            fetched
-                .get_mut(1)
-                .unwrap()
-                .as_mut()
-                .unwrap()
-                .content()
-                .unwrap(),
-            Bytes::from(&[2, 3, 4, 5][..])
-        );
-    }
-
-    #[test]
-    fn test_scmstore_write_read() {
-        let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(
-            &tempdir,
-            ExtStoredPolicy::Use,
-            &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
-
-        let entry_key = key("a", "1");
-        let content = Bytes::from(&[1, 2, 3, 4][..]);
-        let metadata = Default::default();
-        let entry = Entry::new(entry_key.clone(), content, metadata);
-
-        let log = Arc::new(log);
-
-        let entries = vec![entry];
-
-        let written: Vec<_> = block_on_stream(
-            log.clone()
-                .write_stream(Box::pin(stream::iter(entries.clone()))),
-        )
-        .collect();
-
-        assert_eq!(
-            written
-                .into_iter()
-                .map(|r| r.expect("failed to write to test write store"))
-                .collect::<Vec<_>>(),
-            vec![entry_key.clone()]
-        );
-
-        // TODO(meyer): Add "flush" support to WriteStore trait
-        log.flush().unwrap();
-
-        let fetched: Vec<_> =
-            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![entry_key])))).collect();
-
-        assert_eq!(
-            fetched
-                .into_iter()
-                .map(|r| r.expect("failed to fetch from test read store"))
-                .collect::<Vec<_>>(),
-            entries
-        );
-    }
-
-    #[test]
-    fn test_scmstore_extstore_use() {
-        let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(
-            &tempdir,
-            ExtStoredPolicy::Use,
-            &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
+        )?;
 
         let lfs_key = key("a", "1");
         let nonlfs_key = key("b", "2");
@@ -985,50 +887,48 @@ mod tests {
             size: None,
             flags: None,
         };
+
         let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
-        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content, nonlfs_metadata);
+        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content.clone(), nonlfs_metadata);
 
-        let log = Arc::new(log);
+        log.put_entry(lfs_entry)?;
+        log.put_entry(nonlfs_entry)?;
 
-        let entries = vec![lfs_entry, nonlfs_entry];
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.indexedlog_local = Some(Arc::new(log));
+        store.extstored_policy = ExtStoredPolicy::Use;
 
-        let written: Vec<_> = block_on_stream(
-            log.clone()
-                .write_stream(Box::pin(stream::iter(entries.clone()))),
-        )
-        .collect();
-
-        assert_eq!(
-            written
-                .into_iter()
-                .map(|r| r.expect("failed to write to test write store"))
-                .collect::<Vec<_>>(),
-            vec![lfs_key.clone(), nonlfs_key.clone()]
+        let mut fetched = store.fetch(
+            vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
+            FileAttributes::CONTENT,
         );
-
-        let fetched: Vec<_> =
-            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![lfs_key, nonlfs_key]))))
-                .collect();
 
         assert_eq!(
             fetched
-                .into_iter()
-                .map(|r| r.expect("failed to fetch from test read store"))
-                .collect::<Vec<_>>(),
-            entries
+                .complete
+                .get_mut(&nonlfs_key)
+                .expect("key not found")
+                .file_content()?,
+            content
         );
+
+        // Note: We don't fully respect ExtStoredPolicy in scmstore. We try to resolve the pointer,
+        // and if we can't we no longer return the serialized pointer. Thus, this fails with
+        // "unknown metadata" trying to deserialize a malformed LFS pointer.
+        assert!(format!("{:#?}", fetched.incomplete[&lfs_key][0]).contains("unknown metadata"));
+        Ok(())
     }
 
     #[test]
-    fn test_scmstore_extstore_ignore() {
-        let tempdir = TempDir::new().unwrap();
+    fn test_scmstore_extstore_ignore() -> Result<()> {
+        let tempdir = TempDir::new()?;
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
             IndexedLogDataStoreType::Shared,
-        )
-        .unwrap();
+        )?;
 
         let lfs_key = key("a", "1");
         let nonlfs_key = key("b", "2");
@@ -1041,31 +941,33 @@ mod tests {
             size: None,
             flags: None,
         };
+
         let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
-        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content, nonlfs_metadata);
+        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content.clone(), nonlfs_metadata);
 
-        let log = Arc::new(log);
+        log.put_entry(lfs_entry)?;
+        log.put_entry(nonlfs_entry)?;
 
-        let entries = vec![lfs_entry, nonlfs_entry.clone()];
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.indexedlog_local = Some(Arc::new(log));
+        store.extstored_policy = ExtStoredPolicy::Ignore;
 
-        let written: Vec<_> =
-            block_on_stream(log.clone().write_stream(Box::pin(stream::iter(entries)))).collect();
-
-        assert_eq!(
-            written
-                .into_iter()
-                .map(|r| r.expect("failed to write to test write store"))
-                .collect::<Vec<_>>(),
-            vec![lfs_key.clone(), nonlfs_key.clone()]
+        let mut fetched = store.fetch(
+            vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
+            FileAttributes::CONTENT,
         );
 
-        let fetched: Vec<_> = block_on_stream(
-            log.fetch_stream(Box::pin(stream::iter(vec![lfs_key.clone(), nonlfs_key]))),
-        )
-        .collect();
+        assert_eq!(
+            fetched
+                .complete
+                .get_mut(&nonlfs_key)
+                .expect("key not found")
+                .file_content()?,
+            content
+        );
 
-        let exepcted = vec![Err(FetchError::not_found(lfs_key)), Ok(nonlfs_entry)];
-
-        assert_eq!(fetched.into_iter().collect::<Vec<_>>(), exepcted);
+        assert_eq!(fetched.incomplete[&lfs_key].len(), 0);
+        Ok(())
     }
 }
