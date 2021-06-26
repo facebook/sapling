@@ -132,6 +132,12 @@ fn register_error_handlers() {
                         cpython_ext::Str::from(e.to_string()),
                     ));
                 }
+                dag::Error::NeedSlowPath(_) => {
+                    return Some(PyErr::new::<NeedSlowPathError, _>(
+                        py,
+                        cpython_ext::Str::from(e.to_string()),
+                    ));
+                }
                 _ => {}
             }
         }
@@ -153,7 +159,7 @@ fn register_error_handlers() {
             ))
         } else if matches!(
             e.downcast_ref::<dag::Error>(),
-            Some(dag::Error::NeedSlowPath(e))
+            Some(dag::Error::NeedSlowPath(_))
         ) {
             Some(PyErr::new::<NeedSlowPathError, _>(
                 py,
