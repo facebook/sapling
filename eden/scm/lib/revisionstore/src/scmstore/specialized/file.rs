@@ -45,7 +45,7 @@ pub struct FileStore {
     pub(crate) cache_to_memcache: bool,
 
     // Record remote fetches
-    pub(crate) fetch_logger: Arc<FetchLogger>,
+    pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
 
     // Local-only stores
     pub(crate) indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -156,7 +156,7 @@ pub struct FileStoreFetch {
 
 impl FileStoreFetch {
     /// Return the list of keys which could not be fetched, or any errors encountered
-    fn missing(mut self) -> Result<Vec<Key>> {
+    pub fn missing(mut self) -> Result<Vec<Key>> {
         if let Some(err) = self.other_errors.pop() {
             return Err(err).into();
         }
@@ -173,7 +173,7 @@ impl FileStoreFetch {
     }
 
     /// Return the single requested file if found, or any errors encountered
-    fn single(mut self) -> Result<Option<StoreFile>> {
+    pub fn single(mut self) -> Result<Option<StoreFile>> {
         if let Some(err) = self.other_errors.pop() {
             return Err(err).into();
         }
@@ -429,6 +429,33 @@ impl FileStore {
     pub fn fallbacks(&self) -> Arc<ContentStoreFallbacks> {
         self.fallbacks.clone()
     }
+
+    pub fn empty() -> Self {
+        FileStore {
+            extstored_policy: ExtStoredPolicy::Ignore,
+            lfs_threshold_bytes: None,
+
+            indexedlog_local: None,
+            lfs_local: None,
+
+            indexedlog_cache: None,
+            lfs_cache: None,
+            cache_to_local_cache: true,
+
+            memcache: None,
+            cache_to_memcache: true,
+
+            edenapi: None,
+            lfs_remote: None,
+
+            contentstore: None,
+            fallbacks: Arc::new(ContentStoreFallbacks::new()),
+            fetch_logger: None,
+
+            aux_local: None,
+            aux_cache: None,
+        }
+    }
 }
 
 impl LegacyStore for FileStore {
@@ -468,7 +495,11 @@ impl LegacyStore for FileStore {
     }
 
     fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        let mut seen = self.fetch_logger.take_seen();
+        let mut seen = self
+            .fetch_logger
+            .as_ref()
+            .map(|fl| fl.take_seen())
+            .unwrap_or_default();
         if let Some(contentstore) = self.contentstore.as_ref() {
             seen.extend(contentstore.get_logged_fetches());
         }
@@ -886,7 +917,7 @@ pub struct FetchState {
     computed_aux_data: HashMap<Key, LocalStoreType>,
 
     /// Tracks remote fetches which match a specific regex
-    fetch_logger: Arc<FetchLogger>,
+    fetch_logger: Option<Arc<FetchLogger>>,
 
     /// Track ContentStore Fallbacks
     fallbacks: Arc<ContentStoreFallbacks>,
@@ -1147,7 +1178,9 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
-        self.fetch_logger.report_keys(pending.iter());
+        self.fetch_logger
+            .as_ref()
+            .map(|fl| fl.report_keys(pending.iter()));
 
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
@@ -1185,7 +1218,9 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
-        self.fetch_logger.report_keys(pending.iter());
+        self.fetch_logger
+            .as_ref()
+            .map(|fl| fl.report_keys(pending.iter()));
 
         for entry in store.files_blocking(pending, None)?.entries.into_iter() {
             self.found_edenapi(entry);
@@ -1214,7 +1249,9 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
-        self.fetch_logger.report_keys(self.lfs_pointers.keys());
+        self.fetch_logger
+            .as_ref()
+            .map(|fl| fl.report_keys(self.lfs_pointers.keys()));
 
         // Fetch & write to local LFS stores
         store.batch_fetch(&pending, {

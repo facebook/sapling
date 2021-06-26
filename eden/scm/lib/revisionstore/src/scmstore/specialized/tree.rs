@@ -218,6 +218,22 @@ impl TreeStore {
             contentstore: None,
         }))
     }
+
+    pub fn empty() -> Self {
+        TreeStore {
+            indexedlog_local: None,
+
+            indexedlog_cache: None,
+            cache_to_local_cache: true,
+
+            memcache: None,
+            cache_to_memcache: true,
+
+            edenapi: None,
+
+            contentstore: None,
+        }
+    }
 }
 
 impl HgIdDataStore for TreeStore {

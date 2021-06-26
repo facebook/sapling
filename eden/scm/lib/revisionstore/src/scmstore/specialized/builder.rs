@@ -320,7 +320,7 @@ impl<'a> FileStoreBuilder<'a> {
             .get_opt::<String>("remotefilelog", "undesiredfileregex")?
             .map(|s| Regex::new(&s))
             .transpose()?;
-        let fetch_logger = Arc::new(FetchLogger::new(logging_regex));
+        let fetch_logger = Some(Arc::new(FetchLogger::new(logging_regex)));
 
         Ok(FileStore {
             extstored_policy,
