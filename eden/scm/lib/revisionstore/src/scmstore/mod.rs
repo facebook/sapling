@@ -6,12 +6,13 @@
  */
 
 pub use self::{
-    specialized::{
-        ContentStoreFallbacks, FileAttributes, FileStore, FileStoreBuilder, TreeStore,
-        TreeStoreBuilder,
-    },
+    builder::{FileStoreBuilder, TreeStoreBuilder},
+    file::{ContentStoreFallbacks, FileAttributes, FileStore, StoreFile},
+    tree::TreeStore,
     util::file_to_async_key_stream,
 };
 
-pub mod specialized;
+pub mod builder;
+pub mod file;
+pub mod tree;
 pub mod util;

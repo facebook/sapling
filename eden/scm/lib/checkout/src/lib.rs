@@ -16,7 +16,7 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use revisionstore::{
     datastore::strip_metadata,
-    scmstore::specialized::{FileAttributes, FileStore},
+    scmstore::{FileAttributes, FileStore},
     RemoteDataStore, StoreKey, StoreResult,
 };
 use std::collections::HashMap;

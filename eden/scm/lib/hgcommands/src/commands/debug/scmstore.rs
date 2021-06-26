@@ -11,8 +11,7 @@ use async_runtime::{block_on, stream_to_iter as block_on_stream};
 use clidispatch::errors;
 use configparser::config::ConfigSet;
 use revisionstore::scmstore::{
-    specialized::{FileAttributes, FileStoreBuilder, TreeStoreBuilder},
-    util::file_to_async_key_stream,
+    file_to_async_key_stream, FileAttributes, FileStoreBuilder, TreeStoreBuilder,
 };
 use types::Key;
 

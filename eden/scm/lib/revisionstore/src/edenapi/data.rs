@@ -157,7 +157,7 @@ mod tests {
         indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
         localstore::ExtStoredPolicy,
         remotestore::HgIdRemoteStore,
-        scmstore::specialized::{FileAttributes, FileStore, TreeStore},
+        scmstore::{FileAttributes, FileStore, TreeStore},
         testutil::*,
     };
 

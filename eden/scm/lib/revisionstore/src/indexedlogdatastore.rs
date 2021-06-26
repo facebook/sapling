@@ -492,7 +492,7 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        scmstore::specialized::{FileAttributes, FileStore},
+        scmstore::{FileAttributes, FileStore},
         testutil::*,
     };
 
