@@ -493,6 +493,10 @@ def clone(
 
     if destrepo:
         _writehgrc(destrepo, abspath, ui.configlist("_configs", "configfiles"))
+        # Reload hgrc to pick up `%include` configs. We don't need to
+        # regenerate dynamicconfig here, unless the hgrc contains reponame or
+        # username overrides (unlikely).
+        destrepo.ui.reloadconfigs(destrepo.root)
 
     # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
     # configs.
@@ -770,8 +774,6 @@ def _writehgrc(repo, abspath, configfiles):
                     fp.write(
                         pycompat.encodeutf8(util.tonativeeol("%%include %s\n" % file))
                     )
-
-        repo.ui.setconfig("paths", "default", defaulturl, "clone")
 
 
 def clonepreclose(
