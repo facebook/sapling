@@ -953,8 +953,9 @@ class localrepository(object):
                             )
                             if old:
                                 old = old[0]
-                                self.ui.debug(
-                                    "master fast path %s => %s\n" % (hex(old), hexnode)
+                                tracing.debug(
+                                    "master: %s => %s" % (hex(old), hexnode),
+                                    target="pull::fastpath",
                                 )
                                 fastpath.append((old, bin(hexnode)))
                         heads.add(bin(hexnode))
@@ -980,7 +981,9 @@ class localrepository(object):
                     self.changelog.inner.importpulldata(fastpulldata)
                     fastpathheads.add(new)
                 except errormod.NeedSlowPathError as e:
-                    self.ui.debug("cannot use pull fast path: %s\n" % e)
+                    tracing.warn(
+                        "cannot use pull fast path: %s\n" % e, target="pull::fastpath"
+                    )
 
             pullheads = heads - fastpathheads
 
