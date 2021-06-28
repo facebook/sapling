@@ -33,7 +33,6 @@ use anyhow::Result;
 use bitflags::bitflags;
 use dag::namedag::MemNameDag;
 use dag::nameset::hints::Flags;
-use dag::nameset::meta::MetaSet;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
 use dag::Set;
@@ -48,8 +47,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::path::Path;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use types::mutation::MutationEntry;
 use types::node::Node;
@@ -689,15 +686,12 @@ mod tests {
         // A is not a draft.
         assert!(!r(obsolete.contains(&v("A")))?);
 
-        // The set is not evaluated yet.
-        assert_eq!(format!("{:?}", &obsolete), "<meta ?>");
+        // The set evaluated.
+        // (0x42 == b'B', 0x58 == b'X')
+        assert_eq!(format!("{:.2?}", &obsolete), "<static [42, 58]>");
 
         // E does not have a successor.
         assert!(!r(obsolete.contains(&v("E")))?);
-
-        // Enough "contains" check. The set should be evaluated now.
-        // (0x42 == b'B', 0x58 == b'X')
-        assert_eq!(format!("{:.2?}", &obsolete), "<meta <static [42, 58]>>");
 
         Ok(())
     }
