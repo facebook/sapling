@@ -287,7 +287,7 @@ void HgBackingStore::getTreeBatch(
         folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
     if (metadataEnabled) {
       treeMetadataFuture =
-          metadataImporter_->getTreeMetadata(proxyHash->revHash(), *id);
+          metadataImporter_->getTreeMetadata(*id, proxyHash->revHash());
     }
     metadataFutures.push_back(std::move(treeMetadataFuture));
   }
