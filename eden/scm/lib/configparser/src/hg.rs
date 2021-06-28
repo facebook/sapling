@@ -325,16 +325,17 @@ impl ConfigSetHgExt for ConfigSet {
                     bail!("unable to read repo config to get repo name");
                 }
 
-                (
-                    temp_config
-                        .get("remotefilelog", "reponame")
-                        .unwrap_or_default()
-                        .to_string(),
-                    temp_config
-                        .get("ui", "username")
-                        .unwrap_or_default()
-                        .to_string(),
-                )
+                let repo_name: String = temp_config.get_or_default("remotefilelog", "reponame")?;
+                let forbid_empty_reponame: bool =
+                    temp_config.get_or_default("configs", "forbid-empty-reponame")?;
+                if forbid_empty_reponame && repo_name.is_empty() {
+                    let msg = "reponame is empty".to_string();
+                    return Err(Error::General(msg).into());
+                }
+
+                let user_name: String = temp_config.get_or_default("ui", "username")?;
+
+                (repo_name, user_name)
             };
 
             // Regen inline
