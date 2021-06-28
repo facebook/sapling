@@ -211,7 +211,7 @@ impl SourceVersionBuilder {
     }
 
     pub fn linkfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
-        self.linkfiles.insert(src.to_string(), dst.to_string());
+        self.linkfiles.insert(dst.to_string(), src.to_string());
         self
     }
 

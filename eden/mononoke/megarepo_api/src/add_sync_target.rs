@@ -393,7 +393,7 @@ impl<'a> AddSyncTarget<'a> {
         mover: &MultiMover,
     ) -> Result<BTreeMap<MPath, Bytes>, MegarepoError> {
         let mut links = BTreeMap::new();
-        for (src, dst) in &source_config.mapping.linkfiles {
+        for (dst, src) in &source_config.mapping.linkfiles {
             // src is a file inside a given source, so mover needs to be applied to it
             let src = MPath::new(src).map_err(MegarepoError::request)?;
             let dst = MPath::new(dst).map_err(MegarepoError::request)?;
