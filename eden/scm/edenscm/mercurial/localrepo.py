@@ -945,14 +945,13 @@ class localrepository(object):
                             and self.ui.configbool("pull", "master-fastpath")
                             and "lazychangelog" in self.storerequirements
                         ):
-                            remotename = bookmarks.remotenameforurl(
-                                self.ui, remote.url()
-                            )
-                            old = self._remotenames.mark2nodes().get(
-                                "%s/%s" % (remotename, name)
-                            )
+                            # The remotenames might be stale. Try to get the
+                            # head from the master group.
+                            dag = self.changelog.dag
+                            mastergroup = dag.mastergroup()
+                            masterheads = dag.heads(mastergroup)
+                            old = masterheads.first()
                             if old:
-                                old = old[0]
                                 tracing.debug(
                                     "master: %s => %s" % (hex(old), hexnode),
                                     target="pull::fastpath",
