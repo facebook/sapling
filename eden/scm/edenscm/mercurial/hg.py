@@ -794,8 +794,10 @@ def clonepreclose(
     clonecodepath is one of:
     - "copy": The clone was done by copying local files.
     - "legacy-pull": The clone was done by the (legacy) pull code path.
-    - "modern": The clone was done by the modern clone.streamclone code path,
+    - "revlog": The clone was done by the clone.streamclone code path,
       which is less racy and writes remote bookmarks.
+    - "segments": The clone was done by lazy changelog path.
+    - "emergency": The clone was done by the emergency code path.
     """
     return srcpeer, destpeer
 

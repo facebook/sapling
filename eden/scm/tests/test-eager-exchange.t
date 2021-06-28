@@ -137,8 +137,6 @@ Clone (using edenapi clonedata, bypassing peer interface):
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
-   DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
 
 Clone:
 
@@ -148,8 +146,6 @@ Clone:
   populating main commit graph
   tip commit: 178c10ffbc2f92d5407c14478ae9d9dea81f232e
   fetching selected remote bookmarks
-   DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '178c10ffbc2f92d5407c14478ae9d9dea81f232e')])
    DEBUG eagerepo::api: bookmarks master

@@ -282,7 +282,7 @@ def exclone(orig, ui, *args, **opts):
     # Skip this function is the modern clone code path is used, which will
     # update selective pull remote bookmarks (but it will not write all remote
     # bookmarks, which is considered as a legacy behavior).
-    if opts.get("clonecodepath") == "modern":
+    if opts.get("clonecodepath") not in {"legacy-pull", "copy"}:
         return (srcpeer, dstpeer)
 
     with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
