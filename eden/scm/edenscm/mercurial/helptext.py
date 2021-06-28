@@ -117,14 +117,6 @@ To disable color use::
 
 See :hg:`help config.ui.color` for details.
 
-.. container:: windows
-
-  The default pager on Windows does not support color, so enabling the pager
-  will effectively disable color.  See :hg:`help config.ui.paginate` to disable
-  the pager.  Alternately, MSYS and Cygwin shells provide `less` as a pager,
-  which can be configured to support ANSI color mode.  Windows 10 natively
-  supports ANSI color mode.
-
 Mode
 ====
 
@@ -1808,6 +1800,36 @@ Setting used to control when to paginate and with what external tool. See
       encoding = utf-8
 
     Has no effect if streampager is used.
+
+``scroll-past-eof``
+    Whether to scroll past the end of the output. Default: false.
+
+    Only affects streampager.
+
+``wrapping-mode``
+    Choose the line wrapping boundary: none, word, line.
+
+    - none: do not wrap lines
+    - word: wrap at word boundary
+    - line: wrap at any characters
+
+    Default: line
+
+    Only affects streampager.
+
+``interface``
+    Choose the default interface: fullscreen, direct, hybrid, delayed:2000ms.
+
+    - fullscreen: enter full screen interface immediately.
+    - direct: output directly to terminal without buffering.
+    - hybrid: direct for short output, fullscreen for large (>1 page) output.
+    - delayed: buffer wait for the given time before outputting completed short
+      output directly to the terminal, or entering fullscreen mode for longer
+      output.
+
+    Default: hybrid
+
+    Only affects streampager.
 
 ``patch``
 ---------
@@ -3974,9 +3996,7 @@ To set the pager that should be used, set the application variable::
   pager = less -FRX
 
 If no pager is set in the user or repository configuration, Mercurial uses the
-environment variable $PAGER. If $PAGER is not set, pager.pager from the default
-or system configuration is used. If none of these are set, a default pager will
-be used, typically `less` on Unix and `more` on Windows.
+builtin streampager, which renders stderr and progress bars properly.
 
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::
@@ -4001,6 +4021,8 @@ To globally turn off all attempts to use a pager, set::
   paginate = never
 
 which will prevent the pager from running.
+
+For more config options, check :hg:`help config.pager`.
 """
 
 
