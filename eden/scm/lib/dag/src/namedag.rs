@@ -1234,6 +1234,14 @@ where
         Ok(result)
     }
 
+    /// Returns a set that covers all vertexes in the master group.
+    async fn master_group(&self) -> Result<NameSet> {
+        let spans = self.dag().master_group()?;
+        let result = NameSet::from_spans_dag(spans, self)?;
+        result.hints().add_flags(Flags::ANCESTORS);
+        Ok(result)
+    }
+
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)

@@ -26,6 +26,11 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(block_on(self.dag(py).all()).map_pyerr(py)?))
     }
 
+    /// Return a set including vertexes in the master group.
+    def mastergroup(&self) -> PyResult<Names> {
+        Ok(Names(block_on(self.dag(py).master_group()).map_pyerr(py)?))
+    }
+
     /// Calculate all ancestors reachable from the set.
     def ancestors(&self, set: Names) -> PyResult<Names> {
         Ok(Names(block_on(self.dag(py).ancestors(set.0)).map_pyerr(py)?))

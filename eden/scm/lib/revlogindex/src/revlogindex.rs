@@ -1049,6 +1049,11 @@ impl DagAlgorithm for RevlogIndex {
         Ok(result)
     }
 
+    /// Returns a set that covers all vertexes in the master group.
+    async fn master_group(&self) -> dag::Result<Set> {
+        self.all().await
+    }
+
     /// Vertexes buffered, not persisted.
     async fn dirty(&self) -> dag::Result<Set> {
         let low = Id(self.data_len() as _);

@@ -41,6 +41,9 @@ pub trait DagAlgorithm: Send + Sync {
     /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> Result<NameSet>;
 
+    /// Returns a set that covers all vertexes in the master group.
+    async fn master_group(&self) -> Result<NameSet>;
+
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet>;
 

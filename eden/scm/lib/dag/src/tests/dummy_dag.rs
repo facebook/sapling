@@ -44,6 +44,11 @@ impl DagAlgorithm for DummyDag {
         crate::errors::programming("DummyDag does not support all()")
     }
 
+    /// Returns a set that covers all vertexes in the master group.
+    async fn master_group(&self) -> Result<NameSet> {
+        crate::errors::programming("DummyDag does not support master_group()")
+    }
+
     /// Vertexes buffered in memory, not yet written to disk.
     async fn dirty(&self) -> Result<NameSet> {
         Ok(NameSet::empty())
