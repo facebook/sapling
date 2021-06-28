@@ -56,6 +56,8 @@ struct Inner {
     progress_has_content: bool,
     // Whether progress (stderr) and stdout (is likely) sharing output.
     progress_conflict_with_output: bool,
+    // Whether to redirect stdout writes to stderr. More useful for pager use-case.
+    redirect_err_to_out: bool,
 
     // How many (nested) blocks want progress output disabled.
     progress_disabled: usize,
@@ -124,6 +126,11 @@ impl io::Write for IOError {
             None => return Ok(buf.len()),
         };
         let mut inner = inner.lock();
+        if inner.redirect_err_to_out {
+            inner.clear_progress_for_output()?;
+            inner.output_on_new_line = buf.ends_with(b"\n");
+            return inner.output.write(buf);
+        }
         inner.clear_progress_for_error()?;
         inner.error_on_new_line = buf.ends_with(b"\n");
         if let Some(error) = inner.error.as_mut() {
@@ -239,6 +246,7 @@ impl IO {
             error_on_new_line: true,
             progress_has_content: false,
             progress_disabled: 0,
+            redirect_err_to_out: false,
         };
 
         Self {
@@ -256,6 +264,7 @@ impl IO {
         inner.input = Box::new(io::stdin());
         inner.output = Box::new(io::stdout());
         inner.error = Some(Box::new(io::stderr()));
+        inner.redirect_err_to_out = false;
         inner.progress = None;
 
         // Wait for the pager (if running).
@@ -281,6 +290,12 @@ impl IO {
     pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
+        if inner.redirect_err_to_out {
+            inner.clear_progress_for_output()?;
+            inner.output_on_new_line = data.ends_with(b"\n");
+            inner.output.write_all(data)?;
+            return Ok(());
+        }
         inner.clear_progress_for_error()?;
         inner.error_on_new_line = data.ends_with(b"\n");
         if let Some(ref mut error) = inner.error {
@@ -312,6 +327,7 @@ impl IO {
             progress_disabled: 0,
             output_on_new_line: true,
             error_on_new_line: true,
+            redirect_err_to_out: false,
         };
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -416,6 +432,9 @@ impl IO {
         // This makes `hg 2>foo` works as expected.
         if err_is_tty {
             inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
+            let separate =
+                config.get_opt::<bool>("pager", "separate-stderr").ok() == Some(Some(true));
+            inner.redirect_err_to_out = !separate;
         }
         inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
 

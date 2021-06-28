@@ -1792,6 +1792,13 @@ Setting used to control when to paginate and with what external tool. See
 
     Has no effect if streampager is used.
 
+``separate-stderr``
+    Whether to show stderr in a separate pane.
+
+    If set to false, stderr will be mixed into stdout output.
+
+    Only affects streampager. Default: false.
+
 ``encoding``
     Encoding to use to output to ther pager.
 
