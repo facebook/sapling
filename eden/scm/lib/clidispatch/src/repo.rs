@@ -9,6 +9,7 @@ use crate::errors;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use std::fs;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -121,9 +122,13 @@ impl Repo {
         let store_path = shared_dot_hg_path.join("store");
 
         let config = configparser::hg::load::<String, String>(Some(&dot_hg_path), None)?;
-        let repo_name = config
-            .get("remotefilelog", "reponame")
-            .map(|v| v.to_string());
+        let repo_name = configparser::hg::read_repo_name_from_disk(&shared_dot_hg_path)
+            .ok()
+            .or_else(|| {
+                config
+                    .get("remotefilelog", "reponame")
+                    .map(|v| v.to_string())
+            });
 
         Ok(Repo {
             path,

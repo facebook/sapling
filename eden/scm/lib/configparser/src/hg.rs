@@ -12,6 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
+use std::io;
 use std::io::{Error as IOError, ErrorKind};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
@@ -311,6 +312,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Synchronously generate the new config if it's out of date with our version
         if version != Some(this_version) {
+            tracing::info!("dynamicconfig: regenerate at {}", repo_path.display());
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
                 // We need to know the repo name, but that's stored in the repository configs at
@@ -325,7 +327,30 @@ impl ConfigSetHgExt for ConfigSet {
                     bail!("unable to read repo config to get repo name");
                 }
 
-                let repo_name: String = temp_config.get_or_default("remotefilelog", "reponame")?;
+                let repo_name: String = match read_repo_name_from_disk(&repo_path) {
+                    Ok(name) => {
+                        tracing::debug!("repo name: {:?} (from .hg/reponame)", &name);
+                        name
+                    }
+                    Err(e) => {
+                        tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
+                        let name: String =
+                            temp_config.get_or_default("remotefilelog", "reponame")?;
+                        if !name.is_empty() {
+                            tracing::debug!("repo name: {:?} (from config)", &name);
+                            let path = get_repo_name_path(&repo_path);
+                            match fs::write(&path, &name) {
+                                Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
+                                Err(e) => tracing::warn!(
+                                    "repo name: cannot write to .hg/reponame: {:?}",
+                                    e
+                                ),
+                            }
+                        }
+                        name
+                    }
+                };
+
                 let forbid_empty_reponame: bool =
                     temp_config.get_or_default("configs", "forbid-empty-reponame")?;
                 if forbid_empty_reponame && repo_name.is_empty() {
@@ -583,6 +608,25 @@ pub fn generate_dynamicconfig(
     }
 
     Ok(())
+}
+
+/// Get the path of the reponame file.
+fn get_repo_name_path(shared_dot_hg_path: &Path) -> PathBuf {
+    shared_dot_hg_path.join("reponame")
+}
+
+/// Read repo name from shared `.hg` path.
+pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String> {
+    let repo_name_path = get_repo_name_path(shared_dot_hg_path);
+    let name = fs::read_to_string(&repo_name_path)?.trim().to_string();
+    if name.is_empty() {
+        Err(IOError::new(
+            ErrorKind::InvalidData,
+            format!("reponame could not be empty ({})", repo_name_path.display()),
+        ))
+    } else {
+        Ok(name)
+    }
 }
 
 #[cfg(test)]
