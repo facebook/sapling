@@ -16,7 +16,6 @@ crossbeam = "0.8"
 edenapi = { path = "../edenapi" }
 edenapi_types = { path = "../edenapi/types" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-batch = "0.6"
 hex = "0.4"
 hg-http = { path = "../hg-http" }
 hgtime = { path = "../hgtime" }
@@ -41,7 +40,6 @@ serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sha-1 = "0.8"
 sha2 = "0.8"
-streams = { path = "../streams" }
 tempfile = "3.1"
 thiserror = "1.0"
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
