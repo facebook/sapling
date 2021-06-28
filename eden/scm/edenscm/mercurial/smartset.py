@@ -814,6 +814,10 @@ class nameset(abstractsmartset):
             yield repo[n]
 
     def __contains__(self, rev):
+        if rev == nullrev:
+            # NameSet does not contain virtual "null" ids.
+            # Do not bother looking up remotely.
+            return False
         try:
             node = self._tonode(rev)
         except error.CommitLookupError:

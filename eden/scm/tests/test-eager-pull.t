@@ -135,12 +135,11 @@ Fast path can still be used with stale remotenames:
    DEBUG pull::fastpath: master: 9bc730a19041f9ec7cb33c626e811aa233efb18c => 7b3a68e117f183a6da8e60779d8fbeeed22382bb
    DEBUG dag::protocol: resolve names [9d37022187178c68e8fe8dff17c9c57fb62b9ea5, a194cadd16930608adaa649035ad4c16930cbd0f] remotely
 
-  $ LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
+  $ EDENSCM_DISABLE_REMOTE_RESOLVE=0000000000000000000000000000000000000000 LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
   o    H remote/master
   ├─╮
   │ o  I
   │ │
-   DEBUG dag::protocol: resolve names [0000000000000000000000000000000000000000] remotely
   │ o  J
   │
   o  G
