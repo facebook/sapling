@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 """
 mark commits as "Landed" on pull
@@ -146,7 +147,13 @@ def _pull(orig, ui, repo, *args, **opts):
     r = orig(ui, repo, *args, **opts)
     maxrevafterpull = len(repo.changelog)
 
-    if ui.configbool("pullcreatemarkers", "use-graphql"):
+    # With lazy pull fast path the legacy "createmarkers" path will trigger
+    # one-by-one resolution for all newly pulled commits. That's unusably slow
+    # and is incompatible with the lazy pull. Force GraphQL code path in that
+    # case.
+    if ui.configbool("pullcreatemarkers", "use-graphql") or ui.configbool(
+        "pull", "master-fastpath"
+    ):
         _cleanuplanded(repo)
     else:
         createmarkers(r, repo, maxrevbeforepull, maxrevafterpull)
