@@ -2,7 +2,7 @@
 
   $ configure modern
 
-  $ setconfig paths.default=test:e1 ui.traceback=1
+  $ setconfig paths.default=test:e1
   $ setconfig treemanifest.flatcompat=0
 #   $ export LOG=edenscm::mercurial::eagerpeer=trace,eagerepo=trace
 
@@ -116,3 +116,30 @@ Test fallback to slow path:
   │
   o  A
   
+Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
+
+  $ newremoterepo
+  $ setconfig paths.default=test:e1
+  $ hg debugchangelog --migrate lazy
+  $ hg pull
+  pulling from test:e1
+
+  $ setconfig paths.default=test:e2
+  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True --config fault-injection.transaction-metalog-commit=True
+  pulling from test:e2
+   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+  abort: injected error by tests: transaction-metalog-commit
+  transaction abort!
+  rollback failed - please run hg recover
+  [255]
+  $ hg recover
+  rolling back interrupted transaction
+
+Suboptimal: fast path cannot be used:
+
+  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  pulling from test:e2
+   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+    WARN pull::fastpath: cannot use pull fast path: NeedSlowPath: f585351a92f85104bff7c284233c338b10eb1df7 exists in local graph
+  
+  no changes found

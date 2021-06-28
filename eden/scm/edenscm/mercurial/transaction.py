@@ -599,6 +599,7 @@ class transaction(util.transactional):
             trdesc = "Transaction: %s" % self.desc
             message = "\n".join([command, trdesc])
 
+            util.faultinjection(self.uiconfig, "transaction-metalog-commit")
             metalog.commit(
                 message,
                 int(util.timer()),

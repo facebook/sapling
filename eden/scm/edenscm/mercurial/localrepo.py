@@ -1630,6 +1630,9 @@ class localrepository(object):
 
         def releasefn(tr, success):
             repo = reporef()
+            if repo is None:
+                # In __del__, the repo is no longer valid.
+                return
             if success:
                 # this should be explicitly invoked here, because
                 # in-memory changes aren't written out at closing
