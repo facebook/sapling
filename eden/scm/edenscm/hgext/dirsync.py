@@ -300,7 +300,11 @@ def dirsyncctx(ctx, matcher=None):
     maps = getconfigs(ctx)
     resultmirrored = set()
     resultctx = ctx
-    if not maps:
+
+    # Do not dirsync if there is nothing to sync.
+    # Do not dirsync metaedit commits, because they might break assertions in
+    # metadataonlyctx (manifest is unchanged).
+    if not maps or (ctx.mutinfo() or {}).get("mutop") == "metaedit":
         return resultctx, resultmirrored
 
     needsync = configstomatcher(maps)
