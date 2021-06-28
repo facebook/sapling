@@ -184,6 +184,7 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
   00changelog.i
   blackbox
   hgrc.dynamic
+  reponame
   requires
   store
   treestate

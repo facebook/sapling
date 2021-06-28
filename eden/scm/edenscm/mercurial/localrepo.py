@@ -455,6 +455,12 @@ class localrepository(object):
         elif create:
             raise errormod.RepoError(_("repository %s already exists") % path)
 
+        # Prepare .hg/reponame in localvfs before calling into dynamicconfig.
+        if created:
+            reponame = self.ui.config("remotefilelog", "reponame")
+            if reponame and not self.localvfs.exists("reponame"):
+                self.localvfs.writeutf8("reponame", reponame.strip())
+
         self.ui.reloadconfigs(self.root)
 
         self._loadextensions()

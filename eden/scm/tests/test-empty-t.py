@@ -28,6 +28,7 @@ sh % "ls .hg" == r"""
     00changelog.i
     blackbox
     hgrc.dynamic
+    reponame
     requires
     store
     treestate"""
@@ -54,6 +55,7 @@ sh % "ls .hg" == r"""
     dirstate
     hgrc
     hgrc.dynamic
+    reponame
     requires
     store
     treestate

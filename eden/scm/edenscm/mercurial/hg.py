@@ -471,6 +471,7 @@ def clone(
     # Create the destination repo before we even open the connection to the
     # source, so we can use any repo-specific configuration for the connection.
     try:
+        # Note: This triggers hgrc.dynamic generation with empty repo hgrc.
         destpeer = peer(ui, peeropts, dest, create=True)
     except OSError as inst:
         if inst.errno == errno.EEXIST:
