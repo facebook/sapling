@@ -146,6 +146,12 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(lfs_threshold)
     }
 
+    fn get_edenapi_retries(&self) -> i32 {
+        self.config
+            .get_or_default::<i32>("scmstore", "retries")
+            .unwrap_or_default()
+    }
+
     fn use_edenapi(&self) -> Result<bool> {
         Ok(self
             .config
@@ -244,6 +250,8 @@ impl<'a> FileStoreBuilder<'a> {
         let extstored_policy = self.get_extstored_policy()?;
         let lfs_threshold_bytes = self.get_lfs_threshold()?.map(|b| b.value());
 
+        let edenapi_retries = self.get_edenapi_retries();
+
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
             Some(indexedlog_local)
         } else {
@@ -325,6 +333,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
+            edenapi_retries,
 
             indexedlog_local,
             lfs_local,

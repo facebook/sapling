@@ -43,6 +43,7 @@ pub struct FileStore {
     pub(crate) lfs_threshold_bytes: Option<u64>,
     pub(crate) cache_to_local_cache: bool,
     pub(crate) cache_to_memcache: bool,
+    pub(crate) edenapi_retries: i32,
 
     // Record remote fetches
     pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
@@ -355,6 +356,7 @@ impl FileStore {
         FileStore {
             extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
+            edenapi_retries: self.edenapi_retries.clone(),
 
             indexedlog_local: self.indexedlog_local.clone(),
             lfs_local: self.lfs_local.clone(),
@@ -434,6 +436,7 @@ impl FileStore {
         FileStore {
             extstored_policy: ExtStoredPolicy::Ignore,
             lfs_threshold_bytes: None,
+            edenapi_retries: 0,
 
             indexedlog_local: None,
             lfs_local: None,
@@ -471,6 +474,7 @@ impl LegacyStore for FileStore {
         Arc::new(FileStore {
             extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
+            edenapi_retries: self.edenapi_retries.clone(),
 
             indexedlog_local: self.indexedlog_cache.clone(),
             lfs_local: self.lfs_cache.clone(),
