@@ -33,6 +33,7 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
+#include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -143,6 +144,11 @@ void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
 MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory() {
   return MetadataImporter::getMetadataImporterFactory<
       DefaultMetadataImporter>();
+}
+
+std::shared_ptr<IHiveLogger> DefaultEdenMain::getHiveLogger(
+    SessionInfo /*sessionInfo*/) {
+  return std::make_shared<NullHiveLogger>();
 }
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {
@@ -258,6 +264,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
+    auto hiveLogger = main.getHiveLogger(sessionInfo);
+
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
@@ -265,6 +273,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(privHelper),
         std::move(edenConfig),
         main.getMetadataImporterFactory(),
+        std::move(hiveLogger),
         main.getEdenfsVersion());
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);

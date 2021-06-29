@@ -38,6 +38,7 @@ ServerState::ServerState(
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<IHiveLogger> hiveLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
     std::shared_ptr<NfsServer> nfs,
     bool enableFaultDetection)
@@ -47,6 +48,7 @@ ServerState::ServerState(
       clock_{std::move(clock)},
       processNameCache_{std::move(processNameCache)},
       structuredLogger_{std::move(structuredLogger)},
+      hiveLogger_{std::move(hiveLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       nfs_{std::move(nfs)},
       config_{edenConfig},

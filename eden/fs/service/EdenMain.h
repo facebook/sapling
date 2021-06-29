@@ -16,6 +16,8 @@ namespace eden {
 
 class EdenConfig;
 class EdenServer;
+class IHiveLogger;
+struct SessionInfo;
 
 /**
  * Hooks to customize the flavor of the edenfs daemon build.
@@ -30,6 +32,8 @@ class EdenMain {
   virtual void didFollyInit() = 0;
   virtual void prepare(const EdenServer& server) = 0;
   virtual MetadataImporterFactory getMetadataImporterFactory() = 0;
+  virtual std::shared_ptr<IHiveLogger> getHiveLogger(
+      SessionInfo sessionInfo) = 0;
 
   void runServer(const EdenServer& server);
 };
@@ -45,6 +49,8 @@ class DefaultEdenMain : public EdenMain {
   virtual void didFollyInit() override;
   virtual void prepare(const EdenServer& server) override;
   virtual MetadataImporterFactory getMetadataImporterFactory() override;
+  virtual std::shared_ptr<IHiveLogger> getHiveLogger(
+      SessionInfo sessionInfo) override;
 };
 
 int runEdenMain(EdenMain&& main, int argc, char** argv);

@@ -26,6 +26,7 @@ namespace eden {
 class Clock;
 class EdenConfig;
 class FaultInjector;
+class IHiveLogger;
 class ProcessNameCache;
 class StructuredLogger;
 class TopLevelIgnores;
@@ -47,6 +48,7 @@ class ServerState {
       std::shared_ptr<Clock> clock,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<IHiveLogger> hiveLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
       std::shared_ptr<NfsServer> nfs,
       bool enableFaultInjection = false);
@@ -145,6 +147,14 @@ class ServerState {
     return structuredLogger_;
   }
 
+  /**
+   * Returns a HiveLogger that can be used to send log events to external
+   * long term storage for offline consumption.
+   */
+  const std::shared_ptr<IHiveLogger>& getHiveLogger() const {
+    return hiveLogger_;
+  }
+
   FaultInjector& getFaultInjector() {
     return *faultInjector_;
   }
@@ -162,6 +172,7 @@ class ServerState {
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<IHiveLogger> hiveLogger_;
   std::unique_ptr<FaultInjector> const faultInjector_;
   std::shared_ptr<NfsServer> nfs_;
 

@@ -63,6 +63,7 @@ namespace eden {
 
 class BackingStore;
 class HgQueuedBackingStore;
+class IHiveLogger;
 class BlobCache;
 class TreeCache;
 class Dirstate;
@@ -114,6 +115,7 @@ class EdenServer : private TakeoverHandler {
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
       MetadataImporterFactory metadataImporterFactory,
+      std::shared_ptr<IHiveLogger> hiveLogger,
       std::string version = "");
 
   virtual ~EdenServer();
