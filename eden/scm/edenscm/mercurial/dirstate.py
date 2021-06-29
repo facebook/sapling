@@ -1269,6 +1269,7 @@ class dirstate(object):
                         )
 
             except error.LockError as ex:
+                # pyre-fixme[61]: `waitforlock` may not be initialized here.
                 if waitforlock:
                     ui.write_err(
                         _(

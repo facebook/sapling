@@ -125,9 +125,11 @@ class GitRepository(repobase.Repository):
         git_commit_env = {
             "GIT_AUTHOR_NAME": author_name,
             "GIT_AUTHOR_EMAIL": author_email,
+            # pyre-fixme[61]: `date_str` may not be initialized here.
             "GIT_AUTHOR_DATE": date_str,
             "GIT_COMMITTER_NAME": committer_name,
             "GIT_COMMITTER_EMAIL": committer_email,
+            # pyre-fixme[61]: `committer_date_str` may not be initialized here.
             "GIT_COMMITTER_DATE": committer_date_str,
         }
 
