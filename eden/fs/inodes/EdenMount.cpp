@@ -241,7 +241,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().stringPiece())
-      .via(serverState_->getThreadPool().get())
+      .via(getServerThreadPool().get())
       .thenValue([this, progressCallback = std::move(progressCallback)](
                      auto&&) mutable {
         auto parent = checkoutConfig_->getParentCommit();
@@ -658,7 +658,7 @@ folly::Future<folly::Unit> EdenMount::unmount() {
           }
 #ifdef _WIN32
           return channel_->stop()
-              .via(serverState_->getThreadPool().get())
+              .via(getServerThreadPool().get())
               .ensure([this] { channel_.reset(); });
 #else
           if (getNfsdChannel() != nullptr) {
@@ -683,7 +683,8 @@ folly::Future<folly::Unit> EdenMount::unmount() {
   });
 }
 
-const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
+const shared_ptr<UnboundedQueueExecutor>& EdenMount::getServerThreadPool()
+    const {
   return serverState_->getThreadPool();
 }
 
@@ -917,7 +918,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().stringPiece())
-      .via(serverState_->getThreadPool().get())
+      .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         auto fromTreeFuture =
             objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
@@ -983,7 +984,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
             .checkAsync("inodeCheckout", getPath().stringPiece())
-            .via(serverState_->getThreadPool().get())
+            .via(getServerThreadPool().get())
             .thenValue([ctx,
                         treeResults = std::move(treeResults),
                         rootInode = std::move(rootInode)](auto&&) mutable {
@@ -1516,7 +1517,7 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
 void EdenMount::preparePostChannelCompletion(
     EdenMount::StopFuture&& channelCompleteFuture) {
   std::move(channelCompleteFuture)
-      .via(serverState_->getThreadPool().get())
+      .via(getServerThreadPool().get())
       .thenValue(
           [this](FOLLY_MAYBE_UNUSED EdenMount::ChannelStopData&& stopData) {
 #ifdef _WIN32

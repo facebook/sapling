@@ -3612,7 +3612,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
   XLOG(DBG4) << "starting prefetch for " << getLogPath();
 
   folly::via(
-      getMount()->getThreadPool().get(),
+      getMount()->getServerThreadPool().get(),
       [lease = std::move(*prefetchLease)]() mutable {
         // prefetch() is called by readdir, under the assumption that a series
         // of stat calls on its entries will follow. (e.g. `ls -l` or `find

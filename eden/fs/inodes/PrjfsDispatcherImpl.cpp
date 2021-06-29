@@ -248,7 +248,7 @@ folly::Future<folly::Unit> renameFile(
   auto newParentInode = createDirInode(mount, newPath.dirname(), context);
 
   return folly::collect(oldParentInode, newParentInode)
-      .via(mount.getThreadPool().get())
+      .via(mount.getServerThreadPool().get())
       .thenValue(
           [oldPath = std::move(oldPath),
            newPath = std::move(newPath),

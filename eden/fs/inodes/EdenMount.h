@@ -378,7 +378,7 @@ class EdenMount {
   /**
    * Returns the server's thread pool.
    */
-  const std::shared_ptr<UnboundedQueueExecutor>& getThreadPool() const;
+  const std::shared_ptr<UnboundedQueueExecutor>& getServerThreadPool() const;
 
   /**
    * Returns the Clock with which this mount was configured.
