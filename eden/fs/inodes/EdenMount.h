@@ -21,6 +21,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <stdexcept>
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -384,6 +385,10 @@ class EdenMount {
    */
   const Clock& getClock() const {
     return *clock_;
+  }
+
+  folly::StringPiece getRepoName() const {
+    return basename(checkoutConfig_->getRepoSource());
   }
 
   /** Get the TreeInode for the root of the mount. */

@@ -20,7 +20,6 @@
 #include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
 
-#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
