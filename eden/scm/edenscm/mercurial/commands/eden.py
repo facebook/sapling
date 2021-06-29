@@ -360,7 +360,16 @@ class HgServer(object):
             return True
 
         try:
-            cmd_function(req)
+            try:
+                cmd_function(req)
+            except error.CommitLookupError as e:
+                if "lazychangelog" not in self.repo.storerequirements:
+                    # Perhaps non-lazy -> lazy migration. Restart import helper
+                    # process.
+                    raise ResetRepoError(e)
+                else:
+                    # Re-raise as-is.
+                    raise
         except Exception as ex:
             logging.exception("error processing command %r", command)
             self.send_exception(req, ex)
