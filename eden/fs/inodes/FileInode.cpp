@@ -13,11 +13,13 @@
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/DirType.h"
@@ -180,6 +182,7 @@ ReturnType FileInode::runWhileDataLoaded(
         blob = state.getCachedBlob(getMount(), interest);
       }
       if (blob) {
+        logAccess(fetchContext);
         // The blob was still in cache, so we can run the function immediately.
         return folly::makeFutureWith([&] {
           return std::forward<Fn>(fn)(std::move(state), std::move(blob));
@@ -194,6 +197,7 @@ ReturnType FileInode::runWhileDataLoaded(
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
+      logAccess(fetchContext);
       return folly::makeFutureWith(
           [&] { return std::forward<Fn>(fn)(std::move(state), nullptr); });
   }
@@ -253,6 +257,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
           XCHECK(state.isNull());
           materializeInParent();
         };
+        logAccess(fetchContext);
         // Note that we explicitly create a temporary LockedState object
         // to pass to the caller to ensure that the state lock will be released
         // when they return, even if the caller's function accepts the state as
@@ -276,6 +281,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
+      logAccess(fetchContext);
       return folly::makeFutureWith(
           [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
@@ -674,6 +680,7 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   auto state = LockedState{this};
 
+  logAccess(fetchContext);
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
@@ -1090,6 +1097,24 @@ OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
 
 ObjectStore* FileInode::getObjectStore() const {
   return getMount()->getObjectStore();
+}
+
+void FileInode::logAccess(ObjectFetchContext& fetchContext) {
+  auto ino = getNodeId();
+
+  // Don't log root inode access
+  if (ino == kRootNodeId) {
+    return;
+  }
+
+  std::optional<std::string> fetchDetail = std::nullopt;
+  if (fetchContext.getCauseDetail().has_value()) {
+    fetchDetail.emplace(fetchContext.getCauseDetail().value().str());
+  }
+
+  FileAccess fileAccess{
+      ino, fetchContext.getCause(), fetchDetail, getMount()->getPath()};
+  getMount()->getServerState()->getHiveLogger()->logFileAccess(fileAccess);
 }
 
 } // namespace eden

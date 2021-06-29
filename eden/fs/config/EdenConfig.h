@@ -605,6 +605,26 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Used to control file access logging for predicitve prefetch
+   * profiles.
+   */
+  ConfigSetting<bool> logFileAccesses{
+      "prefetch-profiles:file-access-logging-enabled",
+      false,
+      this};
+
+  /**
+   * A number from 0 - 100 to determine how often we should log file access
+   * events. This is currectly agnostic to the type of file access. If this
+   * is not at 100, we will not log filenames and we will only log directory
+   * paths
+   */
+  ConfigSetting<uint32_t> logFileAccessesPercentage{
+      "prefetch-profiles:file-access-logging-percentage",
+      0,
+      this};
+
   // [overlay]
 
   /**

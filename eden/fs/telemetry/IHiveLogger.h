@@ -8,12 +8,22 @@
 #pragma once
 
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/SessionInfo.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 
 class EdenConfig;
 class EdenServer;
+
+struct FileAccess {
+  InodeNumber inodeNumber;
+  ObjectFetchContext::Cause cause;
+  std::optional<std::string> causeDetail;
+  AbsolutePath mountPath;
+};
 
 // TODO: Deprecate ScribeLogger and rename this class ScribeLogger.
 class IHiveLogger {
@@ -26,6 +36,8 @@ class IHiveLogger {
         reloadableConfig_{edenConfig},
         edenServer_{edenServer} {}
   virtual ~IHiveLogger() = default;
+
+  virtual void logFileAccess(FileAccess access) = 0;
 
   /**
    * This allows us to create objects derived from IHiveLogger with
@@ -46,6 +58,8 @@ class NullHiveLogger : public IHiveLogger {
   std::unique_ptr<IHiveLogger> create() override {
     return std::make_unique<NullHiveLogger>();
   }
+
+  void logFileAccess(FileAccess /* access */) override {}
 };
 
 } // namespace facebook::eden
