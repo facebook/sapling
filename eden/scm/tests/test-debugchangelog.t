@@ -267,7 +267,6 @@ To lazy:
   │ │
   │ o  F
   │ │
-   DEBUG dag::protocol: resolve names [0000000000000000000000000000000000000000] remotely
   │ o  H
   │
   o  A
