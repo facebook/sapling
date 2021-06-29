@@ -8,56 +8,12 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/NfsServer.h"
-#include <folly/concurrency/DynamicBoundedQueue.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
+
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/utils/EdenTaskQueue.h"
 
 namespace facebook::eden {
-
-namespace {
-using Task = folly::CPUThreadPoolExecutor::CPUTask;
-using Queue = folly::DMPMCQueue<Task, true>;
-/**
- * Task queue that will hold the pending NFS requests.
- *
- * This is backed by a DMPMCQueue.
- */
-class NfsTaskQueue : public folly::BlockingQueue<Task> {
- public:
-  explicit NfsTaskQueue(uint64_t maxInflightRequests)
-      : queue_(Queue{maxInflightRequests}) {}
-
-  folly::BlockingQueueAddResult add(Task item) override {
-    queue_.enqueue(std::move(item));
-    return sem_.post();
-  }
-
-  Task take() override {
-    sem_.wait();
-    Task res;
-    queue_.dequeue(res);
-    return res;
-  }
-
-  folly::Optional<Task> try_take_for(std::chrono::milliseconds time) override {
-    if (!sem_.try_wait_for(time)) {
-      return folly::none;
-    }
-    Task res;
-    queue_.dequeue(res);
-    return res;
-  }
-
-  size_t size() override {
-    return queue_.size();
-  }
-
- private:
-  folly::LifoSem sem_;
-  Queue queue_;
-};
-} // namespace
 
 NfsServer::NfsServer(
     folly::EventBase* evb,
@@ -66,7 +22,7 @@ NfsServer::NfsServer(
     : evb_(evb),
       threadPool_(std::make_shared<folly::CPUThreadPoolExecutor>(
           numServicingThreads,
-          std::make_unique<NfsTaskQueue>(maxInflightRequests),
+          std::make_unique<EdenTaskQueue>(maxInflightRequests),
           std::make_unique<folly::NamedThreadFactory>("NfsThreadPool"))),
       mountd_(evb_, threadPool_) {}
 
