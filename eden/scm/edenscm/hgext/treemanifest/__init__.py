@@ -279,8 +279,7 @@ def usehttpfetching(repo):
         # Cannot use SSH.
         return True
     return (
-        repo.ui.configbool("treemanifest", "http")
-        and getattr(repo, "edenapi", None) is not None
+        repo.ui.configbool("treemanifest", "http") and repo.nullableedenapi is not None
     )
 
 

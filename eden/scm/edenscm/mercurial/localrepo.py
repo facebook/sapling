@@ -920,7 +920,7 @@ class localrepository(object):
             if bookmarknames:
                 if (
                     self.ui.configbool("pull", "httpbookmarks")
-                    and getattr(self, "edenapi", None) is not None
+                    and self.nullableedenapi is not None
                 ):
                     (fetchedbookmarks, _stats) = self.edenapi.bookmarks(
                         self.name, list(bookmarknames)
@@ -1101,28 +1101,38 @@ class localrepository(object):
 
         return cl
 
-    @util.propertycache
-    def edenapi(self):
+    def _getedenapi(self, nullable=True):
+        def absent(reason):
+            if nullable:
+                return None
+            else:
+                raise errormod.Abort(
+                    _("edenapi is required but disabled by %s") % reason
+                )
+
         # `edenapi.enable` is a manual override option that allows the user to
         # force EdenAPI to be enabled or disabled, primarily useful for testing.
         # This is intended as a manual override only; normal usage should rely
         # on the logic below to determine whether or not to enable EdenAPI.
         enabled = self.ui.config("edenapi", "enable")
         if enabled is not None:
-            return edenapi.getclient(self.ui) if enabled else None
+            if not enabled:
+                return absent(_("edenapi.enable being empty"))
+            return edenapi.getclient(self.ui)
 
         path = self.ui.paths.get("default")
         if path is None:
-            return None
+            return absent(_("empty paths.default"))
         scheme = path.url.scheme
 
         # Legacy tests are incomplete with EdenAPI.
         # They are using either: None or file scheme, or ssh scheme with
         # dummyssh.
-        if scheme in {None, "file"} or (
-            scheme == "ssh" and "dummyssh" in self.ui.config("ui", "ssh")
-        ):
-            return None
+        if scheme in {None, "file"}:
+            return absent(_("paths.default being 'file:'"))
+
+        if scheme == "ssh" and "dummyssh" in self.ui.config("ui", "ssh"):
+            return absent(_("paths.default being 'ssh:' and dummyssh in use"))
 
         if self.ui.config("edenapi", "url"):
             return edenapi.getclient(self.ui)
@@ -1131,8 +1141,15 @@ class localrepository(object):
         if scheme in ("eager", "test"):
             return edenapi.getclient(self.ui)
 
-        # NOTE: Consider making this an error instead.
-        return None
+        return absent(_("missing edenapi.url config"))
+
+    @util.propertycache
+    def edenapi(self):
+        return self._getedenapi(nullable=False)
+
+    @util.propertycache
+    def nullableedenapi(self):
+        return self._getedenapi(nullable=True)
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to

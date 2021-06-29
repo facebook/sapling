@@ -533,7 +533,7 @@ class remotefileslog(filelog.fileslog):
             if repo.ui.config("ui", "ssh") == "false":
                 # Cannot use ssh. Force EdenAPI.
                 useedenapi = True
-            if repo.edenapi is not None and useedenapi:
+            if repo.nullableedenapi is not None and useedenapi:
                 self._edenapistore = repo.edenapi.filestore(repo.name)
 
         return self._edenapistore

@@ -608,7 +608,7 @@ def clone(
             # Can we use EdenAPI CloneData provided by a separate EdenAPI
             # client?
             if (
-                getattr(destrepo, "edenapi", None)
+                getattr(destrepo, "nullableedenapi", None)
                 and (
                     ui.configbool("clone", "force-edenapi-clonedata")
                     or destrepo.ui.configbool("clone", "force-edenapi-clonedata")
