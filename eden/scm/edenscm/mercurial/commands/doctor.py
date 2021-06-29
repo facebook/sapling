@@ -24,6 +24,7 @@ from .. import (
     bookmarks as bookmod,
     error,
     extensions,
+    edenapi,
     hg,
     progress,
     revlog,
@@ -270,7 +271,10 @@ def openchangelog(ui, svfs):
     repo = ChangelogRepo(ui, svfs)
     try:
         cl = localrepo._openchangelog(repo)
-    except Exception:
+    except Exception as e:
+        if ui.debugflag or ui.tracebackflag:
+            ui.traceback()
+        ui.warn("cannot open changelog: %s\n" % e)
         return None
     return cl
 
@@ -595,6 +599,19 @@ class ChangelogRepo(object):
     """Minimal repo object to construct the changelog object"""
 
     def __init__(self, ui, svfs):
+        shareddothgpath = os.path.dirname(svfs.join(""))
+        sharedvfs = vfsmod.vfs(shareddothgpath)
+        self.sharedvfs = sharedvfs
+        root = os.path.dirname(shareddothgpath)
+        ui.reloadconfigs(root)
         self.ui = ui
         self.svfs = svfs
         self.storerequirements = scmutil.readrequires(svfs)
+
+    @property
+    def edenapi(self):
+        return edenapi.getclient(self.ui)
+
+    @property
+    def name(self):
+        return self.sharedvfs.tryreadutf8("reponame").strip()
