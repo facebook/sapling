@@ -1116,9 +1116,15 @@ class localrepository(object):
             return None
         scheme = path.url.scheme
 
-        # EdenAPI is only supported by Mononoke-backed repos. It should not
-        # be enabled for repos whose remote path is not a mononoke:// URL.
-        if scheme == "mononoke" and self.ui.config("edenapi", "url"):
+        # Legacy tests are incomplete with EdenAPI.
+        # They are using either: None or file scheme, or ssh scheme with
+        # dummyssh.
+        if scheme in {None, "file"} or (
+            scheme == "ssh" and "dummyssh" in self.ui.config("ui", "ssh")
+        ):
+            return None
+
+        if self.ui.config("edenapi", "url"):
             return edenapi.getclient(self.ui)
 
         # If remote path is an EagerRepo, use EdenApi provided by it.
