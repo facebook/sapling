@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
-    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
+    BlameVersion, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
     CommitcloudBookmarksFillerMode, ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig,
     HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
     InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
@@ -386,11 +386,18 @@ impl Convert for RawDerivedDataTypesConfig {
             Some(version) => return Err(anyhow!("unknown unode version {}", version)),
         };
         let blame_filesize_limit = self.blame_filesize_limit.map(|limit| limit as u64);
+        let blame_version = match self.blame_version {
+            None => BlameVersion::default(),
+            Some(1) => BlameVersion::V1,
+            Some(2) => BlameVersion::V2,
+            Some(version) => return Err(anyhow!("unknown blame version {}", version)),
+        };
         Ok(DerivedDataTypesConfig {
             types,
             unode_version,
             blame_filesize_limit,
             hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),
+            blame_version,
         })
     }
 }

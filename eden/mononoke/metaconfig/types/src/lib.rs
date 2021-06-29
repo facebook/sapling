@@ -254,6 +254,9 @@ pub struct DerivedDataTypesConfig {
     /// Whether to save committer field in commit extras when generating
     /// hg changesets.
     pub hg_set_committer_extra: bool,
+
+    /// What blame version should be used. Default: V1.
+    pub blame_version: BlameVersion,
 }
 
 /// What type of unode derived data to generate
@@ -268,6 +271,21 @@ pub enum UnodeVersion {
 impl Default for UnodeVersion {
     fn default() -> Self {
         UnodeVersion::V1
+    }
+}
+
+/// What type of blame derived data to generate
+#[derive(Eq, Clone, Copy, Debug, PartialEq)]
+pub enum BlameVersion {
+    /// Blame v1
+    V1,
+    /// Blame v2
+    V2,
+}
+
+impl Default for BlameVersion {
+    fn default() -> Self {
+        BlameVersion::V1
     }
 }
 

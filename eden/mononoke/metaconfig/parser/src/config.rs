@@ -436,8 +436,8 @@ mod test {
     use cached_config::TestSource;
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
-        BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-        CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
+        BlameVersion, BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams,
+        CacheWarmupParams, CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
         EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
         HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
@@ -1051,6 +1051,7 @@ mod test {
                         unode_version: UnodeVersion::V2,
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,
+                        blame_version: BlameVersion::V1,
                     },
                     backfilling: DerivedDataTypesConfig::default(),
                     scuba_table: None,
