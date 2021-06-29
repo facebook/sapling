@@ -13,14 +13,18 @@
 namespace facebook::eden {
 
 class EdenConfig;
+class EdenServer;
 
 // TODO: Deprecate ScribeLogger and rename this class ScribeLogger.
 class IHiveLogger {
  public:
   IHiveLogger(
       SessionInfo sessionInfo,
-      std::shared_ptr<const EdenConfig> edenConfig)
-      : sessionInfo_{std::move(sessionInfo)}, reloadableConfig_{edenConfig} {}
+      std::shared_ptr<const EdenConfig> edenConfig,
+      EdenServer* edenServer)
+      : sessionInfo_{std::move(sessionInfo)},
+        reloadableConfig_{edenConfig},
+        edenServer_{edenServer} {}
   virtual ~IHiveLogger() = default;
 
   /**
@@ -32,11 +36,12 @@ class IHiveLogger {
  protected:
   SessionInfo sessionInfo_;
   ReloadableConfig reloadableConfig_;
+  EdenServer* edenServer_;
 };
 
 class NullHiveLogger : public IHiveLogger {
  public:
-  NullHiveLogger() : IHiveLogger{SessionInfo{}, {}} {}
+  NullHiveLogger() : IHiveLogger{SessionInfo{}, {}, nullptr} {}
 
   std::unique_ptr<IHiveLogger> create() override {
     return std::make_unique<NullHiveLogger>();

@@ -34,7 +34,8 @@ class EdenMain {
   virtual MetadataImporterFactory getMetadataImporterFactory() = 0;
   virtual std::shared_ptr<IHiveLogger> getHiveLogger(
       SessionInfo sessionInfo,
-      std::shared_ptr<EdenConfig> edenConfig) = 0;
+      std::shared_ptr<EdenConfig> edenConfig,
+      EdenServer* edenServer) = 0;
 
   void runServer(const EdenServer& server);
 };
@@ -52,7 +53,8 @@ class DefaultEdenMain : public EdenMain {
   virtual MetadataImporterFactory getMetadataImporterFactory() override;
   virtual std::shared_ptr<IHiveLogger> getHiveLogger(
       SessionInfo sessionInfo,
-      std::shared_ptr<EdenConfig> edenConfig) override;
+      std::shared_ptr<EdenConfig> edenConfig,
+      EdenServer* edenServer) override;
 };
 
 int runEdenMain(EdenMain&& main, int argc, char** argv);
