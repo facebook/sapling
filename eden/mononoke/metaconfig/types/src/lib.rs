@@ -102,6 +102,10 @@ pub enum AllowlistEntry {
 pub struct RedactionConfig {
     /// Which blobstore should be used to fetch the redacted key lists
     pub blobstore: BlobConfig,
+    /// Blobstore used for backups. Only used by admin to save new blobs.
+    pub darkstorm_blobstore: Option<BlobConfig>,
+    /// Configerator location where RedactionSets object is stored
+    pub redaction_sets_location: String,
 }
 
 /// Configuration for all repos

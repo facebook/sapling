@@ -19,9 +19,9 @@ use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
-    AllowlistEntry, BackupRepoConfig, CensoredScubaParams, CommitSyncConfig, CommonConfig,
-    HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly,
-    StorageConfig,
+    AllowlistEntry, BackupRepoConfig, BlobConfig, CensoredScubaParams, CommitSyncConfig,
+    CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig,
+    RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -175,19 +175,28 @@ fn parse_common_config(
         local_path: scuba_censored_local_path,
     };
 
-    let redaction_config = common.redaction_config;
-    let redaction_config = RedactionConfig {
-        blobstore: common_storage_config
-            .get(&redaction_config.blobstore)
+    let get_blobstore = |name| -> Result<BlobConfig> {
+        Ok(common_storage_config
+            .get(name)
             .cloned()
             .ok_or_else(|| {
                 ConfigurationError::InvalidConfig(format!(
-                    "Storage \"{}\" not defined",
-                    redaction_config.blobstore
+                    "Storage \"{}\" not defined for redaction config",
+                    name
                 ))
             })?
             .convert()?
-            .blobstore,
+            .blobstore)
+    };
+
+    let redaction_config = common.redaction_config;
+    let redaction_config = RedactionConfig {
+        blobstore: get_blobstore(&redaction_config.blobstore)?,
+        darkstorm_blobstore: match &redaction_config.darkstorm_blobstore {
+            Some(storage) => Some(get_blobstore(storage)?),
+            None => None,
+        },
+        redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
     Ok(CommonConfig {
@@ -835,6 +844,7 @@ mod test {
 
             [redaction_config]
             blobstore="main"
+            redaction_sets_location="loc"
 
             [[whitelist_entry]]
             tier = "tier1"
@@ -1193,7 +1203,9 @@ mod test {
                     local_path: Some("censored_local_path".to_string()),
                 },
                 redaction_config: RedactionConfig {
-                    blobstore: main_storage_config.blobstore.clone()
+                    blobstore: main_storage_config.blobstore.clone(),
+                    darkstorm_blobstore: None,
+                    redaction_sets_location: "loc".to_string(),
                 },
             }
         );
@@ -1355,6 +1367,7 @@ mod test {
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
+        redaction_sets_location = "loc"
         "#;
 
         let paths = btreemap! {
@@ -1458,6 +1471,7 @@ mod test {
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
+        redaction_sets_location = "loc"
         "#;
 
         let paths = btreemap! {
@@ -1556,6 +1570,7 @@ mod test {
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
+        redaction_sets_location = "loc"
         "#;
 
         let paths = btreemap! {

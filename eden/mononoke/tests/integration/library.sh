@@ -577,6 +577,7 @@ CONFIG
   cat >> common/common.toml <<CONFIG
 [redaction_config]
 blobstore = "$blobstorename"
+redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
