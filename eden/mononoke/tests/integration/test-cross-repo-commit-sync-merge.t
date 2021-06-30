@@ -74,6 +74,10 @@ insert sync mapping entry
 
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --commit "$TOMERGE" |& grep -v "using repo"
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -85,6 +89,10 @@ run the sync again
   * changeset 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 synced as fa8f65693524f78f5e0a40099d10acdc3001d6d472c62baabf03231e51b109c7 in * (glob)
   * successful sync (glob)
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
+  *Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)

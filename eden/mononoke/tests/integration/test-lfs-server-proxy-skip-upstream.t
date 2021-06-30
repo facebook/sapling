@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create two repositories
-  $ setup_mononoke_config blob_files
+  $ setup_common_config blob_files
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs_repo
 
 # Start a "server" that never responds as the upstream
@@ -38,6 +38,7 @@
 
   $ REPOID=1 lfs_import "$LFS_HELPER" "$(cat spec)"
   * using repo "lfs_repo" repoid RepositoryId(1) (glob)
+  *Reloading redacted config from configerator* (glob)
   * lfs_upload: importing blob Sha256(ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746) (glob)
   * lfs_upload: imported blob Sha256(ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746) (glob)
 

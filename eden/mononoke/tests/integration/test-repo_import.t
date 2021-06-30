@@ -62,11 +62,13 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * Execution error: The repo (repo) doesn't have a commit sync config (glob)
   Error: Execution failed
   [1]
@@ -88,6 +90,7 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -108,6 +111,7 @@
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Started importing git commits to Mononoke (glob)

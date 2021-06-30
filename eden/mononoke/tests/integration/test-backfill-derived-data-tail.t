@@ -47,6 +47,7 @@ setup configuration
 build the skiplist that will be used to slice the repository
   $ mononoke_admin skiplist build skiplist_4 --exponent 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   *] creating a skiplist from scratch (glob)
   *] build 5 skiplist nodes (glob)
 

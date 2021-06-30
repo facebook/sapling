@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create a repository
-  $ setup_mononoke_config
+  $ setup_common_config
   $ REPOID=1 setup_mononoke_repo_config repo1
 
 # Start an LFS server for this repository
@@ -26,4 +26,3 @@
     "message": "Object does not exist: Canonical(ContentId(Blake2(1111111111111111111111111111111111111111111111111111111111111111)))",
     "request_id": "*" (glob)
   }
-

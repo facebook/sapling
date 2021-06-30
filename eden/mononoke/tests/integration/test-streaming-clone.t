@@ -20,6 +20,7 @@ setup configuration
 
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0 (glob)
   * about to upload 1 entries (glob)
   * inserting into streaming clone database (glob)
@@ -28,6 +29,7 @@ setup configuration
 Try creating again, this should fail
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * cannot create new streaming clone chunks because they already exists (glob)
   [1]
 
@@ -56,6 +58,7 @@ Try creating again, this should fail
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0 (glob)
   * about to upload 3 entries (glob)
   * inserting into streaming clone database (glob)
@@ -133,6 +136,7 @@ Push a few new commits and update streaming clone
 Check that with last chunk skipping no new batches are uploaded
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 192, data: 165 (glob)
   * about to upload 0 entries (glob)
   * inserting into streaming clone database (glob)
@@ -140,6 +144,7 @@ Check that with last chunk skipping no new batches are uploaded
 
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 192, data: 165 (glob)
   * about to upload 1 entries (glob)
   * inserting into streaming clone database (glob)

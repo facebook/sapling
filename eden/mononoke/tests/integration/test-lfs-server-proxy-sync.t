@@ -8,7 +8,7 @@
 
 # Create two repositories
 
-  $ setup_mononoke_config blob_files
+  $ setup_common_config blob_files
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
   $ REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs2
 

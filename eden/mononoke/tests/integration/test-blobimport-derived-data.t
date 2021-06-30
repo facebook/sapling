@@ -21,7 +21,7 @@
   $ hg commit -Aqm "commit 1"
   $ hg bookmark master
 
-  $ setup_mononoke_config blob_files
+  $ setup_common_config blob_files
 
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo

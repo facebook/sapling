@@ -577,6 +577,7 @@ CONFIG
   cat >> common/common.toml <<CONFIG
 [redaction_config]
 blobstore = "$blobstorename"
+darkstorm_blobstore = "$blobstorename"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
 [[whitelist_entry]]
@@ -735,6 +736,18 @@ EOF
     "verbose_unixnames": [],
     "verbose_source_hostnames": []
   }
+}
+EOF
+  fi
+
+  export REDACTION_CONF
+  REDACTION_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/redaction"
+  mkdir -p "$REDACTION_CONF"
+
+  if [[ ! -f "$REDACTION_CONF/redaction_sets" ]]; then
+    cat >> "$REDACTION_CONF/redaction_sets" <<EOF
+{
+  "all_redactions": []
 }
 EOF
   fi

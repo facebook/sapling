@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create a repository. We use MULTIPLEXED here because that is the one that records BlobGets counters.
-  $ setup_mononoke_config "blob_files"
+  $ setup_common_config "blob_files"
   $ MULTIPLEXED=1 REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
 
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)

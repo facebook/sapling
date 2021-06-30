@@ -38,6 +38,7 @@ start SCS server
   $ echo $HG_HASH_2 > hash_list
   $ backfill_mapping --svnrev hash_list
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
 
 check that mapping is populated
   $ echo ${HG_HASH_1^^}

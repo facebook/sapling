@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_mononoke_config
+  $ setup_common_config
   $ cd $TESTTMP
 
 setup common configuration

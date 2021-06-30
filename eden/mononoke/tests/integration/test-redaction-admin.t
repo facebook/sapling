@@ -68,12 +68,14 @@ Push files
 Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
   * Checking if redacted content exist in 'master' bookmark... (glob)
   * invalid (hash|bookmark) or does not exist in this repository: master (glob)
   [1]
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --main-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
   * Checking if redacted content exist in 'master_bookmark' bookmark... (glob)
   * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
@@ -82,6 +84,7 @@ Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   [1]
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --force
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
@@ -90,6 +93,7 @@ Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
 Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c --force
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
@@ -100,6 +104,7 @@ Censor multiple files but pass these files via a filename
   $ echo -e "f\ndir/g" > "$TESTTMP"/input
   $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 --input-file "$TESTTMP/input" --force
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
@@ -111,6 +116,7 @@ Censor multiple files but pass these files via a filename
 Expect error when censoring tree
   $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir 
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * failed to identify the files associated with the file paths [MPath("dir/dirdir")] (glob)
   [1]
@@ -118,6 +124,7 @@ Expect error when censoring tree
 Expect error when trying to censor nonexisting file
   $ mononoke_admin redaction add "[TASK]Censor nofile" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir/nofile
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * failed to identify the files associated with the file paths [MPath("dir/dirdir/nofile")] (glob)
   [1]
@@ -132,6 +139,7 @@ No new entry in the table
 Uncensor some of the stuff
   $ mononoke_admin redaction remove 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
 Fewer entries in the table
@@ -142,11 +150,13 @@ Fewer entries in the table
 Let's make sure multiple files can be redacted under the same task
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g --force
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
 List redacted files:
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(2cc2702dde1d7133c30a1ed763ee82c04befb237))) (glob)
   * Please be patient. (glob)
@@ -157,6 +167,7 @@ List redacted files:
 List redacted files for a commit without any
   $ mononoke_admin redaction list ac82d8b1f7c418c61a493ed229ffaa981bda8e90
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
   * Please be patient. (glob)
@@ -165,9 +176,11 @@ List redacted files for a commit without any
 Redact a file in log-only mode
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g --log-only --force
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
   * Please be patient. (glob)

@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ setup_mononoke_config
+  $ setup_common_config
 
 # Create a repository without ACL checking enforcement
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1

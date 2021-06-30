@@ -172,13 +172,26 @@ Update redacted blob
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90
 
 Censore the redacted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
-  $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c --force
+  $ MONONOKE_EXEC_STAGE=admin mononoke_admin redaction create-key-list 064d994d0240f9738dba1ef7479f0a4ce8486b05 c --force | head -n 1 | sed 's/Redaction saved as: //g' > rs_1
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)
-  $ mononoke_admin redaction add my_task_2 73f850a225400422723d433ab3ea194c09c2c8c5 log_only --force --log-only
+  $ MONONOKE_EXEC_STAGE=admin mononoke_admin redaction create-key-list 73f850a225400422723d433ab3ea194c09c2c8c5 log_only --force | head -n 1 | sed 's/Redaction saved as: //g' > rs_2
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(aac5f17ddfcadf26a410f701b860b2a7c7d5c082cec420b816296014660f7fca)) (glob)
+  $ cat > "$REDACTION_CONF/redaction_sets" <<EOF
+  > {
+  >  "all_redactions": [
+  >    {"reason": "T1", "id": "$(cat rs_1)", "enforce": true},
+  >    {"reason": "T2", "id": "$(cat rs_2)", "enforce": false}
+  >  ]
+  > }
+  > EOF
+  $ rm rs_1 rs_2
 
+# We could not restart mononoke here, but then we'd have to wait 60s for it to
+# update the redaction config automatically
 Restart mononoke
   $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"

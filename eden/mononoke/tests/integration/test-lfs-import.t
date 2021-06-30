@@ -8,7 +8,7 @@
   $ LFS_HELPER="$(realpath "${TESTTMP}/lfs")"
 
 # Setup Mononoke
-  $ setup_mononoke_config
+  $ setup_common_config
 
 # Create a mock LFS helper
   $ cat > "$LFS_HELPER" <<EOF
@@ -28,6 +28,7 @@
   > EOF
   $ lfs_import "$LFS_HELPER" "$(cat bad_hash)"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
   lfs: d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38 128
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
@@ -53,6 +54,7 @@
   > EOF
   $ lfs_import "$LFS_HELPER" "$(cat bad_hash)"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
   lfs: d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38 128
   * lfs_upload: importing blob Sha256(d6c9160e8ac378413dd55fba213970bbf55afdddaf85999dc3cf8d941f08fb38) (glob)
@@ -78,6 +80,7 @@
   > EOF
   $ lfs_import "$LFS_HELPER" "$(cat ok)"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * lfs_upload: importing blob Sha256(14217d6d598954662767fb151ff41cc10261f233d60d92aba9fdaa8534c2db33) (glob)
   lfs: 14217d6d598954662767fb151ff41cc10261f233d60d92aba9fdaa8534c2db33 128
   * lfs_upload: imported blob Sha256(14217d6d598954662767fb151ff41cc10261f233d60d92aba9fdaa8534c2db33) (glob)

@@ -10,7 +10,7 @@ use crate::RedactionConfigBlobstore;
 use anyhow::{Context, Error, Result};
 use arc_swap::ArcSwap;
 use blobstore::{Blobstore, Loadable};
-use cached_config::ConfigHandle;
+use cached_config::{ConfigHandle, ConfigStore};
 use cloned::cloned;
 use context::CoreContext;
 use derivative::*;
@@ -83,13 +83,29 @@ pub struct RedactedMetadata {
 #[derive(Debug, Clone)]
 pub enum RedactedBlobs {
     FromSql(Arc<HashMap<String, RedactedMetadata>>),
+    FromConfigerator(Arc<ConfigeratorRedactedBlobs>),
 }
 
 impl RedactedBlobs {
     pub fn redacted(&self) -> Arc<HashMap<String, RedactedMetadata>> {
         match self {
             Self::FromSql(hm) => hm.clone(),
+            Self::FromConfigerator(conf) => conf.get_map(),
         }
+    }
+
+    pub async fn from_configerator(
+        store: &ConfigStore,
+        config_path: &str,
+        ctx: CoreContext,
+        blobstore: Arc<RedactionConfigBlobstore>,
+    ) -> Result<Self, Error> {
+        let handle = store
+            .get_config_handle(config_path.to_string())
+            .with_context(|| format!("redaction sets not found at {}", config_path))?;
+        Ok(Self::FromConfigerator(Arc::new(
+            ConfigeratorRedactedBlobs::new(ctx, handle, blobstore).await?,
+        )))
     }
 }
 
@@ -113,7 +129,6 @@ pub struct ConfigeratorRedactedBlobs {
 }
 
 impl ConfigeratorRedactedBlobs {
-    #[allow(dead_code)]
     async fn new(
         ctx: CoreContext,
         handle: ConfigHandle<RedactionSets>,
@@ -157,7 +172,6 @@ impl ConfigeratorRedactedBlobs {
         })
     }
 
-    #[allow(dead_code)]
     fn get_map(&self) -> Arc<HashMap<String, RedactedMetadata>> {
         self.inner_config.load().map.clone()
     }

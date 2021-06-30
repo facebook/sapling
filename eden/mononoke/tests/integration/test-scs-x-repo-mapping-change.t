@@ -42,7 +42,7 @@ make some simple requests that we can use to check scuba logging
   $ update_commit_sync_map_first_option
 
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn up -q master_bookmark 
+  $ REPONAME=large-mon hgmn up -q master_bookmark
   $ REPONAME=large-mon hgmn mv -q smallrepofolder smallrepofolder_after
   $ hg ci -Aqm "commit which changes the mapping" --extra "change-xrepo-mapping-to-version=new_version"
   $ echo new_content > smallrepofolder_after/file.txt
@@ -62,6 +62,8 @@ make some simple requests that we can use to check scuba logging
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "large-mon" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   * using repo "small-mon" repoid RepositoryId(1) (glob)
+  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(99422dd32c96c129e248b13139d0235afb2d7e40399b6eeb41e0e68dcde33676)) (glob)
   RewrittenAs([(ChangesetId(Blake2(e56f1455ae7d43b9972781881be8c764e37d414068a10bbaee0ff99fb51ff633)), CommitSyncConfigVersion("new_version"))])

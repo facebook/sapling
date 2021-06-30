@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create a repository
-  $ setup_mononoke_config
+  $ setup_common_config
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
 
 # Start an LFS server for this repository

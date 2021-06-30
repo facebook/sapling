@@ -34,12 +34,13 @@
   $ hg ci -m merge
   $ MERGE="$(hg log -r . -T '{node}')"
 
-  $ setup_mononoke_config
+  $ setup_common_config
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
 
   $ mononoke_admin convert --from hg --to bonsai "$MERGE"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   e3a69d381c99627e69b54ba7c5781a743e7db0008ab6013bacc250e65d6ce37e
   $ mononoke_admin bonsai-fetch "$MERGE" --json 2> /dev/null | jq -r '.["parents"]'
   [
@@ -51,12 +52,13 @@ Reverse order of parents
   $ rm -r "$TESTTMP/repo"
   $ rm -r $TESTTMP/monsql
   $ rm -r $TESTTMP/mononoke-config
-  $ setup_mononoke_config
+  $ setup_common_config
   $ echo "$MERGE $P2 $P1" > "$TESTTMP"/fix-parent-order
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo --fix-parent-order "$TESTTMP"/fix-parent-order
   $ mononoke_admin convert --from hg --to bonsai "$MERGE"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  *Reloading redacted config from configerator* (glob)
   604ae7945460476f2a4ab463a8db6d4311213a93f5b2682a8e1139a485610e56
   $ mononoke_admin bonsai-fetch "$MERGE" --json 2> /dev/null | jq -r '.["parents"]'
   [
@@ -68,7 +70,7 @@ Specify incorrect parents, make sure blobimport fails
   $ rm -r $TESTTMP/repo
   $ rm -r $TESTTMP/monsql
   $ rm -r $TESTTMP/mononoke-config
-  $ setup_mononoke_config
+  $ setup_common_config
   $ echo "$MERGE $P2 $P2" > "$TESTTMP"/fix-parent-order
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo --fix-parent-order "$TESTTMP"/fix-parent-order &> /dev/null

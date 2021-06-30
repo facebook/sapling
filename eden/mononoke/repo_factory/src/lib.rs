@@ -15,6 +15,7 @@ use std::future::Future;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use tunables::tunables;
 
 use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
@@ -211,7 +212,7 @@ impl RepoFactory {
         let redacted_blobs = match repo_config.redaction {
             Redaction::Enabled => {
                 let redacted_blobs = self
-                    .redacted_blobs(&repo_config.storage_config.metadata)
+                    .redacted_blobs(self.ctx(None), &repo_config.storage_config.metadata)
                     .await?;
                 Some(redacted_blobs)
             }
@@ -268,17 +269,32 @@ impl RepoFactory {
             .await
     }
 
-    async fn redacted_blobs(&self, config: &MetadataDatabaseConfig) -> Result<Arc<RedactedBlobs>> {
+    async fn redacted_blobs(
+        &self,
+        ctx: CoreContext,
+        db_config: &MetadataDatabaseConfig,
+    ) -> Result<Arc<RedactedBlobs>> {
         self.redacted_blobs
-            .get_or_try_init(config, || async move {
-                let sql_factory = self.sql_factory(config).await?;
-                let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>()?;
-                // Fetch redacted blobs in a separate task so that slow polls
-                // in repo construction don't interfere with the SQL query.
-                let redacted_blobs = tokio::task::spawn(async move {
-                    redacted_content_store.get_all_redacted_blobs().await
-                })
-                .await??;
+            .get_or_try_init(db_config, || async move {
+                let redacted_blobs = if tunables().get_redaction_config_from_xdb() {
+                    let sql_factory = self.sql_factory(db_config).await?;
+                    let redacted_content_store = sql_factory.open::<SqlRedactedContentStore>()?;
+                    // Fetch redacted blobs in a separate task so that slow polls
+                    // in repo construction don't interfere with the SQL query.
+                    tokio::task::spawn(async move {
+                        redacted_content_store.get_all_redacted_blobs().await
+                    })
+                    .await??
+                } else {
+                    let blobstore = self.redaction_config_blobstore().await?;
+                    RedactedBlobs::from_configerator(
+                        &self.env.config_store,
+                        &self.redaction_config.redaction_sets_location,
+                        ctx,
+                        blobstore,
+                    )
+                    .await?
+                };
                 Ok(Arc::new(redacted_blobs))
             })
             .await
@@ -292,9 +308,13 @@ impl RepoFactory {
         Ok(Arc::new(RedactionConfigBlobstore::new(blobstore)))
     }
 
-    fn ctx(&self, repo_identity: &ArcRepoIdentity) -> CoreContext {
-        let repo_name = String::from(repo_identity.name());
-        let logger = self.env.logger.new(o!("repo" => repo_name));
+    fn ctx(&self, repo_identity: Option<&ArcRepoIdentity>) -> CoreContext {
+        let logger = repo_identity
+            .map(|id| {
+                let repo_name = String::from(id.name());
+                self.env.logger.new(o!("repo" => repo_name))
+            })
+            .unwrap_or_else(|| self.env.logger.new(o!()));
         let session = SessionContainer::new_with_defaults(self.env.fb);
         session.new_context(logger, self.env.scuba_sample_builder.clone())
     }
@@ -673,7 +693,7 @@ impl RepoFactory {
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
-            &self.ctx(&repo_identity),
+            &self.ctx(Some(&repo_identity)),
             repo_identity.id(),
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
@@ -714,7 +734,7 @@ impl RepoFactory {
             )
             .await?;
         SkiplistIndex::from_blobstore(
-            &self.ctx(&repo_identity),
+            &self.ctx(Some(&repo_identity)),
             &repo_config.skiplist_index_blobstore_key,
             &blobstore_without_cache.boxed(),
         )
