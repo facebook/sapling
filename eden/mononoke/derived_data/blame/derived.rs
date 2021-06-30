@@ -25,7 +25,7 @@ use mononoke_types::{
 };
 use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
-use unodes::{find_unode_renames, RootUnodeManifestId};
+use unodes::{find_unode_renames_incorrect_for_blame_v1, RootUnodeManifestId};
 
 pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
@@ -80,7 +80,7 @@ impl BonsaiDerivable for BlameRoot {
         let (root_mf, parents_mf, renames) = future::try_join3(
             root_manifest.err_into(),
             future::try_join_all(parents_manifest).err_into(),
-            find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
+            find_unode_renames_incorrect_for_blame_v1(ctx.clone(), repo.clone(), &bonsai),
         )
         .await?;
 

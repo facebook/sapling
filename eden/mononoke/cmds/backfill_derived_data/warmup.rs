@@ -22,7 +22,7 @@ use futures::{
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{ChangesetId, FileUnodeId};
 use std::{collections::HashSet, sync::Arc};
-use unodes::{find_unode_renames, RootUnodeManifestId};
+use unodes::{find_unode_rename_sources, RootUnodeManifestId};
 
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
@@ -199,7 +199,7 @@ async fn prefetch_content(
     let (root_manifest, parents_manifests, renames) = try_join3(
         root_manifest_fut,
         future::try_join_all(parents_manifest_futs),
-        find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
+        find_unode_rename_sources(ctx, repo, &bonsai),
     )
     .await?;
 
@@ -216,8 +216,8 @@ async fn prefetch_content(
     .map(|result| async {
         match result {
             Ok((path, file)) => {
-                let rename = renames.get(&path).copied();
-                let fut = prefetch_content_unode(ctx.clone(), repo.clone(), rename, file);
+                let rename_unode_id = renames.get(&path).map(|source| source.unode_id);
+                let fut = prefetch_content_unode(ctx.clone(), repo.clone(), rename_unode_id, file);
                 let join_handle = tokio::task::spawn(fut);
                 join_handle.await?
             }
