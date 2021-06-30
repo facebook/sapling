@@ -50,6 +50,18 @@ impl PreparedFlatSegments {
         self.segments.last().map(|s| s.high)
     }
 
+    pub fn vertex_count(&self) -> u64 {
+        let mut count = 0;
+        for segment in &self.segments {
+            count += segment.high.0 - segment.low.0 + 1;
+        }
+        count
+    }
+
+    pub fn segment_count(&self) -> usize {
+        self.segments.len()
+    }
+
     /// Merge with another (newer) `AssignHeadOutcome`.
     pub fn merge(&mut self, rhs: Self) {
         if rhs.segments.is_empty() {
