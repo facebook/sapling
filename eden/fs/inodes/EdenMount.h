@@ -387,6 +387,9 @@ class EdenMount {
     return *clock_;
   }
 
+  /**
+   * Used for getting the repo name for logging purposes.
+   */
   folly::StringPiece getRepoName() const {
     return basename(checkoutConfig_->getRepoSource());
   }
