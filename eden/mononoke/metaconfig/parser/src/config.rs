@@ -20,7 +20,8 @@ use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
     AllowlistEntry, BackupRepoConfig, CensoredScubaParams, CommitSyncConfig, CommonConfig,
-    HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig, RepoReadOnly, StorageConfig,
+    HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly,
+    StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -35,8 +36,10 @@ pub fn load_common_config(
     config_path: impl AsRef<Path>,
     config_store: &ConfigStore,
 ) -> Result<CommonConfig> {
-    let common = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?.common;
-    parse_common_config(common)
+    let RawRepoConfigs {
+        common, storage, ..
+    } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+    parse_common_config(common, &storage)
 }
 
 /// Holds configuration for repostories.
@@ -75,7 +78,7 @@ pub fn load_repo_configs(
         repo_configs.insert(reponame.clone(), config);
     }
 
-    let common = parse_common_config(common)?;
+    let common = parse_common_config(common, &storage)?;
 
     Ok(RepoConfigs {
         repos: repo_configs,
@@ -104,7 +107,10 @@ pub fn load_storage_configs(
     Ok(StorageConfigs { storage })
 }
 
-fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
+fn parse_common_config(
+    common: RawCommonConfig,
+    common_storage_config: &HashMap<String, RawStorageConfig>,
+) -> Result<CommonConfig> {
     let mut tiers_num = 0;
     let security_config: Vec<_> = common
         .whitelist_entry
@@ -168,11 +174,28 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
         table: scuba_censored_table,
         local_path: scuba_censored_local_path,
     };
+
+    let redaction_config = common.redaction_config;
+    let redaction_config = RedactionConfig {
+        blobstore: common_storage_config
+            .get(&redaction_config.blobstore)
+            .cloned()
+            .ok_or_else(|| {
+                ConfigurationError::InvalidConfig(format!(
+                    "Storage \"{}\" not defined",
+                    redaction_config.blobstore
+                ))
+            })?
+            .convert()?
+            .blobstore,
+    };
+
     Ok(CommonConfig {
         security_config,
         loadlimiter_category,
         enable_http_control_api: common.enable_http_control_api,
         censored_scuba_params,
+        redaction_config,
     })
 }
 
@@ -724,21 +747,6 @@ mod test {
             unode_version = 2
             blame_filesize_limit = 101
 
-            [storage.main.metadata.remote]
-            primary = { db_address = "db_address" }
-            filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
-            mutation = { db_address = "mutation_db_address" }
-
-            [storage.main.blobstore.multiplexed]
-            multiplex_id = 1
-            scuba_table = "blobstore_scuba_table"
-            components = [
-                { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
-                { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
-            ]
-            queue_db = { remote = { db_address = "queue_db_address" } }
-            minimum_successful_writes = 2
-
             [[bookmarks]]
             name="master"
             allowed_users="^(svcscm|twsvcscm)$"
@@ -819,27 +827,14 @@ mod test {
             hgsql_name = "www-foobar"
             hgsql_globalrevs_name = "www-barfoo"
             phabricator_callsign="WWW"
-
-            [storage.files.metadata.local]
-            local_db_path = "/tmp/www"
-
-            [storage.files.blobstore.blob_files]
-            path = "/tmp/www"
-
-            [storage.files.ephemeral_blobstore]
-            initial_bubble_lifespan_secs = 86400
-            bubble_expiration_grace_secs = 3600
-
-            [storage.files.ephemeral_blobstore.metadata.local]
-            local_db_path = "/tmp/www-ephemeral"
-
-            [storage.files.ephemeral_blobstore.blobstore.blob_files]
-            path = "/tmp/www-ephemeral"
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
             scuba_censored_table="censored_table"
             scuba_local_path_censored="censored_local_path"
+
+            [redaction_config]
+            blobstore="main"
 
             [[whitelist_entry]]
             tier = "tier1"
@@ -849,7 +844,42 @@ mod test {
             identity_data = "user"
         "#;
 
+        let storage = r#"
+        [main.metadata.remote]
+        primary = { db_address = "db_address" }
+        filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
+        mutation = { db_address = "mutation_db_address" }
+
+        [main.blobstore.multiplexed]
+        multiplex_id = 1
+        scuba_table = "blobstore_scuba_table"
+        components = [
+            { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
+        ]
+        queue_db = { remote = { db_address = "queue_db_address" } }
+        minimum_successful_writes = 2
+
+        [files.metadata.local]
+        local_db_path = "/tmp/www"
+
+        [files.blobstore.blob_files]
+        path = "/tmp/www"
+
+        [files.ephemeral_blobstore]
+        initial_bubble_lifespan_secs = 86400
+        bubble_expiration_grace_secs = 3600
+
+        [files.ephemeral_blobstore.metadata.local]
+        local_db_path = "/tmp/www-ephemeral"
+
+        [files.ephemeral_blobstore.blobstore.blob_files]
+        path = "/tmp/www-ephemeral"
+        "#;
+
+
         let paths = btreemap! {
+            "common/storage.toml" => storage,
             "common/common.toml" => common_content,
             "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => fbsource_content,
@@ -1000,7 +1030,7 @@ mod test {
                 wireproto_logging: WireprotoLoggingConfig {
                     scribe_category: Some("category".to_string()),
                     storage_config_and_threshold: Some((
-                        main_storage_config,
+                        main_storage_config.clone(),
                         crate::convert::repo::DEFAULT_ARG_SIZE_THRESHOLD,
                     )),
                     local_path: None,
@@ -1162,6 +1192,9 @@ mod test {
                     table: Some("censored_table".to_string()),
                     local_path: Some("censored_local_path".to_string()),
                 },
+                redaction_config: RedactionConfig {
+                    blobstore: main_storage_config.blobstore.clone()
+                },
             }
         );
         assert_eq!(
@@ -1319,8 +1352,14 @@ mod test {
         disabled = {}
         "#;
 
+        const COMMON: &str = r#"
+        [redaction_config]
+        blobstore = "multiplex_store"
+        "#;
+
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
+            "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
         };
@@ -1387,9 +1426,11 @@ mod test {
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
 
         [multiplex_store.blobstore.multiplexed]
+        multiplex_id = 1
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
+        queue_db = { remote = { db_address = "queue_db_address" } }
 
         [manifold_store.metadata.remote]
         primary = { db_address = "other_db" }
@@ -1414,8 +1455,14 @@ mod test {
         disabled = {}
         "#;
 
+        const COMMON: &str = r#"
+        [redaction_config]
+        blobstore = "multiplex_store"
+        "#;
+
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
+            "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
         };
@@ -1506,8 +1553,14 @@ mod test {
         storage_config = "multiplex_store"
         "#;
 
+        const COMMON: &str = r#"
+        [redaction_config]
+        blobstore = "multiplex_store"
+        "#;
+
         let paths = btreemap! {
             "common/storage.toml" => STORAGE,
+            "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
         };

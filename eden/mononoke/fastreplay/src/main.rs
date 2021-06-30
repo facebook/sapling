@@ -230,10 +230,7 @@ async fn bootstrap_repositories<'a>(
     let readonly_storage = matches.readonly_storage();
     let blobstore_options = matches.blobstore_options();
 
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        config.common.censored_scuba_params.clone(),
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &config.common);
 
     let env = MononokeApiEnvironment {
         repo_factory,

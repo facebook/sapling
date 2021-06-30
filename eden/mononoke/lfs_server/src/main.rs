@@ -263,10 +263,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
-    let repo_factory = Arc::new(RepoFactory::new(
-        matches.environment().clone(),
-        common.censored_scuba_params,
-    ));
+    let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
 
     let futs = repos
         .into_iter()

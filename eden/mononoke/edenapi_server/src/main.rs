@@ -100,10 +100,7 @@ async fn start(fb: FacebookInit, logger: Logger, matches: &MononokeMatches<'_>) 
     let scuba_logger = matches.scuba_sample_builder();
 
     debug!(logger, "Initializing Mononoke API");
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        repo_configs.common.censored_scuba_params.clone(),
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
 
     let env = MononokeApiEnvironment {
         repo_factory,

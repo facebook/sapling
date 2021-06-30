@@ -85,7 +85,6 @@ async fn do_main<'a>(
     let config_store = matches.config_store();
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
-    let censored_scuba_params = common.censored_scuba_params;
 
     let location = match matches.subcommand() {
         (SUBCOMMAND_LOCAL_PATH, Some(sub)) => {
@@ -97,10 +96,7 @@ async fn do_main<'a>(
         (name, _) => return Err(format_err!("Invalid subcommand: {:?}", name)),
     };
 
-    let repo_factory = Arc::new(RepoFactory::new(
-        matches.environment().clone(),
-        censored_scuba_params,
-    ));
+    let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
 
     let futs = repos
         .into_iter()

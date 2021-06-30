@@ -48,7 +48,8 @@ use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    ArcRepoConfig, BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction, RepoConfig,
+    ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, MetadataDatabaseConfig,
+    Redaction, RedactionConfig, RepoConfig,
 };
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
@@ -115,6 +116,7 @@ pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 pub struct RepoFactory {
     pub env: Arc<MononokeEnvironment>,
     censored_scuba_params: CensoredScubaParams,
+    redaction_config: RedactionConfig,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
@@ -124,19 +126,17 @@ pub struct RepoFactory {
 }
 
 impl RepoFactory {
-    pub fn new(
-        env: Arc<MononokeEnvironment>,
-        censored_scuba_params: CensoredScubaParams,
-    ) -> RepoFactory {
+    pub fn new(env: Arc<MononokeEnvironment>, common: &CommonConfig) -> RepoFactory {
         RepoFactory {
             env,
-            censored_scuba_params,
+            censored_scuba_params: common.censored_scuba_params.clone(),
             sql_factories: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
+            redaction_config: common.redaction_config.clone(),
         }
     }
 

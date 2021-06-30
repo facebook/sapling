@@ -156,7 +156,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repo_listeners = {
         cloned!(root_log, service, will_exit, env);
         async move {
-            let repo_factory = RepoFactory::new(env, config.common.censored_scuba_params.clone());
+            let repo_factory = RepoFactory::new(env, &config.common);
 
             let env = MononokeApiEnvironment {
                 repo_factory,

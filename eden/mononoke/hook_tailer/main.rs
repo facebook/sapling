@@ -129,10 +129,7 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        common_config.censored_scuba_params,
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
 
     let blobrepo = repo_factory.build(repo_name, config.clone()).await?;
 

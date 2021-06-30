@@ -1481,10 +1481,7 @@ pub async fn setup_common<'a>(
         }
     };
 
-    let mut repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        common_config.censored_scuba_params.clone(),
-    );
+    let mut repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
 
     if let Some(blobstore_sampler) = blobstore_sampler.clone() {
         repo_factory.with_blobstore_override({

@@ -34,7 +34,7 @@ use futures_old::stream::Stream as OldStream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
-use metaconfig_types::{CensoredScubaParams, RepoConfig, RepoReadOnly};
+use metaconfig_types::{RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -397,15 +397,9 @@ async fn do_main(
         logger,
         "Loading repository: {} (id = {})", repo_name, repo_id
     );
+    let config = args::load_repo_configs(&config_store, &matches)?;
 
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        // We don't need to log redacted access from here
-        CensoredScubaParams {
-            table: None,
-            local_path: None,
-        },
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &config.common);
 
     let repo: BlobRepo = repo_factory.build(repo_name, repo_config.clone()).await?;
 

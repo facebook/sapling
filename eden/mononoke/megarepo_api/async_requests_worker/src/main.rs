@@ -68,10 +68,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let config_store = matches.config_store();
     let repo_configs = args::load_repo_configs(&config_store, &matches)?;
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        repo_configs.common.censored_scuba_params.clone(),
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
     let env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
         disabled_hooks: Default::default(),

@@ -97,6 +97,13 @@ pub enum AllowlistEntry {
     Tier(String),
 }
 
+/// Configuration for how blobs are redacted
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct RedactionConfig {
+    /// Which blobstore should be used to fetch the redacted key lists
+    pub blobstore: BlobConfig,
+}
+
 /// Configuration for all repos
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CommonConfig {
@@ -109,6 +116,8 @@ pub struct CommonConfig {
     /// Whether to enable the control API over HTTP. At this time, this is only meant to be used in
     /// tests.
     pub enable_http_control_api: bool,
+    /// Configuration for redaction of blobs
+    pub redaction_config: RedactionConfig,
 }
 
 /// Configuration for logging of censored blobstore accesses

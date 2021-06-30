@@ -443,10 +443,7 @@ where
         _ => {}
     };
 
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        common_config.censored_scuba_params,
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
 
     if let Some(redaction_override) = redaction_override {
         config.redaction = redaction_override;

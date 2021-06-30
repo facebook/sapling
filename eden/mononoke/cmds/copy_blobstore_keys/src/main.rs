@@ -239,10 +239,7 @@ async fn open_repo<'a>(
         _ => {}
     };
 
-    let repo_factory = RepoFactory::new(
-        matches.environment().clone(),
-        common_config.censored_scuba_params,
-    );
+    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
 
     let repo = repo_factory.build(reponame, config).await?;
 

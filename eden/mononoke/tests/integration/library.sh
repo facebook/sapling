@@ -575,6 +575,9 @@ CONFIG
   fi
 
   cat >> common/common.toml <<CONFIG
+[redaction_config]
+blobstore = "$blobstorename"
+
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
