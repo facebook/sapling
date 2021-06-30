@@ -26,6 +26,7 @@ use crate::{
     fetch_logger::FetchLogger,
     localstore::LocalStore,
     types::{ContentHash, StoreKey},
+    RepackLocation,
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -106,6 +107,14 @@ pub trait LegacyStore: HgIdMutableDeltaStore + RemoteDataStore + Send + Sync {
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>>;
     fn get_logged_fetches(&self) -> HashSet<RepoPathBuf>;
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore>;
+    fn add_pending(
+        &self,
+        key: &Key,
+        data: Bytes,
+        meta: Metadata,
+        location: RepackLocation,
+    ) -> Result<()>;
+    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

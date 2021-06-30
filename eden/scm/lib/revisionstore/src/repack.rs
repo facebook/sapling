@@ -21,7 +21,6 @@ use thiserror::Error;
 use types::Key;
 
 use crate::{
-    contentstore::ContentStore,
     datapack::{DataPack, DataPackVersion},
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
@@ -32,6 +31,7 @@ use crate::{
     mutablehistorypack::MutableHistoryPack,
     mutablepack::MutablePack,
     types::StoreKey,
+    LegacyStore,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
@@ -311,7 +311,7 @@ fn repack_no_store(path: PathBuf, kind: RepackKind, config: &ConfigSet) -> Resul
 
 fn repack_datapack_to_contentstore(
     paths: Vec<PathBuf>,
-    store: &ContentStore,
+    store: &Arc<dyn LegacyStore>,
     location: RepackLocation,
 ) -> Result<()> {
     let mut repacked = Vec::with_capacity(paths.len());
@@ -451,7 +451,7 @@ fn repack_histpack_to_metadatastore(
 /// is fullfilled.
 pub fn repack(
     path: PathBuf,
-    stores: Option<(Arc<ContentStore>, Arc<MetadataStore>)>,
+    stores: Option<(Arc<dyn LegacyStore>, Arc<MetadataStore>)>,
     kind: RepackKind,
     location: RepackLocation,
     config: &ConfigSet,

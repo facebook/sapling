@@ -34,7 +34,7 @@ use crate::{
     remotestore::HgIdRemoteStore,
     ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
     ExtStoredPolicy, LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore,
-    StoreKey, StoreResult,
+    RepackLocation, StoreKey, StoreResult,
 };
 
 pub struct FileStore {
@@ -516,6 +516,40 @@ impl LegacyStore for FileStore {
             .single()?
             .map(|entry| entry.content.unwrap().file_content())
             .transpose()
+    }
+
+    // If ContentStore is available, these call into ContentStore. Otherwise, implement these
+    // methods on top of scmstore (though they should still eventaully be removed).
+    fn add_pending(
+        &self,
+        key: &Key,
+        data: Bytes,
+        meta: Metadata,
+        location: RepackLocation,
+    ) -> Result<()> {
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.add_pending(key, data, meta, location)
+        } else {
+            let delta = Delta {
+                data,
+                base: None,
+                key: key.clone(),
+            };
+
+            match location {
+                RepackLocation::Local => self.add(&delta, &meta),
+                RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
+            }
+        }
+    }
+
+    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.commit_pending(location)
+        } else {
+            self.flush()?;
+            Ok(None)
+        }
     }
 }
 

@@ -127,11 +127,9 @@ impl LegacyStore for ContentStore {
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
         self.shared_mutabledatastore.clone()
     }
-}
 
-// Repack specific methods, not to be used directly but by the repack code.
-impl ContentStore {
-    pub(crate) fn add_pending(
+    // Repack specific methods, not to be used directly but by the repack code.
+    fn add_pending(
         &self,
         key: &Key,
         data: Bytes,
@@ -150,7 +148,7 @@ impl ContentStore {
         }
     }
 
-    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         match location {
             RepackLocation::Local => self.flush(),
             RepackLocation::Shared => self.shared_mutabledatastore.flush(),

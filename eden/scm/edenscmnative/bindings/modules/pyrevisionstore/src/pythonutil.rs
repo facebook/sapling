@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use cpython::{
-    exc, FromPyObject, PyBytes, PyDict, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
-    ToPyObject,
+    exc, FromPyObject, PyBytes, PyClone, PyDict, PyErr, PyObject, PyResult, PyTuple, Python,
+    PythonObject, PythonObjectWithCheckedDowncast, ToPyObject,
 };
 
-use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
+
 use revisionstore::{
     datastore::{Delta, Metadata},
-    StoreKey,
+    LegacyStore, StoreKey,
 };
 use types::{Key, Node, RepoPathBuf};
+
+use crate::{contentstore, filescmstore};
 
 pub fn to_node(py: Python, node: &PyBytes) -> Node {
     let mut bytes: [u8; 20] = Default::default();
@@ -60,6 +65,15 @@ pub fn to_delta(
         },
         key,
     })
+}
+
+pub fn as_legacystore(py: Python, store: PyObject) -> PyResult<Arc<dyn LegacyStore>> {
+    Ok(contentstore::downcast_from(py, store.clone_ref(py))
+        .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+        .or_else(|_| {
+            filescmstore::downcast_from(py, store)
+                .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+        })?)
 }
 
 pub fn from_base(py: Python, delta: &Delta) -> (PyPathBuf, PyBytes) {

@@ -25,15 +25,15 @@ use edenapi_types::{
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
     LookupResponse, TreeEntry, UploadToken,
 };
-use minibytes::Bytes;
 use progress::{ProgressBar, ProgressFactory, Unit};
-use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore, LegacyStore};
+use pyrevisionstore::as_legacystore;
+use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_contentstore, as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid,
-    to_hgid, to_hgids, to_keys, to_path, to_tree_attrs, wrap_callback,
+    as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid, to_hgid, to_hgids,
+    to_keys, to_path, to_tree_attrs, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -519,7 +519,7 @@ pub trait EdenApiPyExt: EdenApi {
         _progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let keys = to_keys(py, &keys)?;
-        let store = as_contentstore(py, store)?;
+        let store = as_legacystore(py, store)?;
         let callback = callback.map(wrap_callback);
 
         let data = keys

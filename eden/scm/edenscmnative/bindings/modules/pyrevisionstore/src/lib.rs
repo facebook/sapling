@@ -66,6 +66,7 @@ mod pythonutil;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub use crate::pythondatastore::PythonHgIdDataStore;
+pub use crate::pythonutil::as_legacystore;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
@@ -91,7 +92,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             py,
             repack_py(
                 packpath: &PyPath,
-                stores: Option<(contentstore, metadatastore)>,
+                stores: Option<(PyObject, metadatastore)>,
                 full: bool,
                 shared: bool,
                 config: config
@@ -117,13 +118,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 fn repack_py(
     py: Python,
     packpath: &PyPath,
-    stores: Option<(contentstore, metadatastore)>,
+    stores: Option<(PyObject, metadatastore)>,
     full: bool,
     shared: bool,
     config: config,
 ) -> PyResult<PyNone> {
-    let stores =
-        stores.map(|(content, metadata)| (content.extract_inner(py), metadata.extract_inner(py)));
+    let stores = if let Some((content, metadata)) = stores {
+        Some((as_legacystore(py, content)?, metadata.extract_inner(py)))
+    } else {
+        None
+    };
 
     let kind = if full {
         RepackKind::Full

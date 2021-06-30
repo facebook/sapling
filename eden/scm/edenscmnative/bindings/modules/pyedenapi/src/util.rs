@@ -13,8 +13,8 @@ use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::{Progress, ProgressCallback, ResponseMeta};
 use edenapi_types::{ContentId, TreeAttributes, CONTENT_ID_HASH_LENGTH_BYTES};
-use pyrevisionstore::{contentstore, mutabledeltastore, mutablehistorystore};
-use revisionstore::{ContentStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore};
+use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
+use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use std::io::Write;
 use types::{HgId, Key, RepoPathBuf};
 
@@ -98,10 +98,6 @@ pub fn wrap_callback(callback: PyObject) -> ProgressCallback {
         let py = gil.python();
         let _ = callback.call(py, progress.as_tuple(), None);
     })
-}
-
-pub fn as_contentstore(py: Python, store: PyObject) -> PyResult<Arc<ContentStore>> {
-    Ok(store.extract::<contentstore>(py)?.extract_inner(py))
 }
 
 pub fn as_deltastore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutableDeltaStore>> {
