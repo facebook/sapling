@@ -1913,6 +1913,10 @@ folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 
+folly::StringPiece nfsProcName(uint32_t procNumber) {
+  return procNumber < kNfs3dHandlers.size() ? kNfs3dHandlers[procNumber].name
+                                            : "<unknown>";
+}
 } // namespace facebook::eden
 
 #endif

@@ -64,6 +64,9 @@ struct NfsTraceEvent : TraceEventBase {
   uint32_t getProcNumber() const {
     return procNumber_;
   }
+  const std::unique_ptr<std::string>& getArguments() const {
+    return std::get<StartDetails>(details_).arguments;
+  }
 
  private:
   struct StartDetails {
@@ -205,6 +208,7 @@ class Nfsd3 {
   std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
 };
 
+folly::StringPiece nfsProcName(uint32_t procNumber);
 } // namespace facebook::eden
 
 #endif

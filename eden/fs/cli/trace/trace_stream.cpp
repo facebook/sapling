@@ -66,6 +66,17 @@ std::string formatFuseCall(
       resultString);
 }
 
+std::string formatNfsCall(
+    const NfsCall& call,
+    const std::string& arguments = std::string{}) {
+  return fmt::format(
+      "{}: {}({}) {}",
+      static_cast<uint32_t>(call.get_xid()),
+      call.get_procName(),
+      call.get_procNumber(),
+      arguments);
+}
+
 int trace_hg(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
@@ -200,20 +211,41 @@ int trace_fs(
           .via(evbThread.getEventBase())
           .get();
 
-  client.semifuture_debugOutstandingFuseCalls(mountRoot.stringPiece().str())
-      .via(evbThread.getEventBase())
-      .thenValue([](std::vector<FuseCall> outstandingCalls) {
-        if (outstandingCalls.empty()) {
-          return;
-        }
-        std::string_view header = "Outstanding FUSE calls"sv;
-        fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
-        for (const auto& call : outstandingCalls) {
-          fmt::print("+ {}\n", formatFuseCall(call));
-        }
-        fmt::print("{}\n", std::string(header.size(), '-'));
-      })
-      .wait(kTimeout);
+  // TODO (liuz): Rather than issuing one call per filesystem interface, it
+  // would be better to introduce a new thrift method that returns a list of
+  // live filesystem calls, with an optional FuseCall, optional NfsCall,
+  // optional PrjfsCall, just like streamingeden's FsEvent.
+  std::vector<folly::SemiFuture<folly::Unit>> outstandingCallFutures;
+  outstandingCallFutures.emplace_back(
+      client.semifuture_debugOutstandingFuseCalls(mountRoot.stringPiece().str())
+          .via(evbThread.getEventBase())
+          .thenValue([](std::vector<FuseCall> outstandingCalls) {
+            if (outstandingCalls.empty()) {
+              return;
+            }
+            std::string_view header = "Outstanding FUSE calls"sv;
+            fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+            for (const auto& call : outstandingCalls) {
+              fmt::print("+ {}\n", formatFuseCall(call));
+            }
+            fmt::print("{}\n", std::string(header.size(), '-'));
+          }));
+
+  outstandingCallFutures.emplace_back(
+      client.semifuture_debugOutstandingNfsCalls(mountRoot.stringPiece().str())
+          .via(evbThread.getEventBase())
+          .thenValue([](std::vector<NfsCall> outstandingCalls) {
+            if (outstandingCalls.empty()) {
+              return;
+            }
+            std::string_view header = "Outstanding NFS calls"sv;
+            fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+            for (const auto& call : outstandingCalls) {
+              fmt::print("+ {}\n", formatNfsCall(call));
+            }
+            fmt::print("{}\n", std::string(header.size(), '-'));
+          }));
+  folly::collectAll(outstandingCallFutures).wait(kTimeout);
 
   std::unordered_map<uint64_t, FsEvent> activeRequests;
 
@@ -226,7 +258,16 @@ int trace_fs(
     FsEvent& evt = event.value();
 
     const FsEventType eventType = evt.get_type();
-    const uint64_t unique = evt.get_fuseRequest().get_unique();
+    const FuseCall* fuseRequest = evt.get_fuseRequest();
+    const NfsCall* nfsRequest = evt.get_nfsRequest();
+    if (!fuseRequest && !nfsRequest) {
+      fprintf(stderr, "Error: trace event must have a non-null *Request\n");
+      return;
+    }
+
+    const uint64_t unique = fuseRequest
+        ? fuseRequest->get_unique()
+        : static_cast<uint32_t>(nfsRequest->get_xid());
 
     switch (eventType) {
       case FsEventType::UNKNOWN:
@@ -235,14 +276,18 @@ int trace_fs(
         activeRequests[unique] = evt;
         fmt::print(
             "+ {}\n",
-            formatFuseCall(evt.get_fuseRequest(), evt.get_arguments()));
+            fuseRequest
+                ? formatFuseCall(*evt.get_fuseRequest(), evt.get_arguments())
+                : formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments()));
         break;
       }
       case FsEventType::FINISH: {
-        const std::string formatted_call = formatFuseCall(
-            evt.get_fuseRequest(),
-            "" /* arguments */,
-            evt.get_result() ? std::to_string(*evt.get_result()) : "");
+        const std::string formatted_call = fuseRequest
+            ? formatFuseCall(
+                  *evt.get_fuseRequest(),
+                  "" /* arguments */,
+                  evt.get_result() ? std::to_string(*evt.get_result()) : "")
+            : formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
         const auto it = activeRequests.find(unique);
         if (it != activeRequests.end()) {
           auto& record = it->second;

@@ -31,8 +31,9 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
-#endif // _WIN32
+#endif // !_WIN32
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -712,6 +713,14 @@ FuseCall populateFuseCall(
   return fc;
 }
 
+NfsCall populateNfsCall(const NfsTraceEvent& event) {
+  NfsCall nfsCall;
+  nfsCall.xid_ref() = event.getXid();
+  nfsCall.procNumber_ref() = event.getProcNumber();
+  nfsCall.procName_ref() = nfsProcName(event.getProcNumber());
+  return nfsCall;
+}
+
 /**
  * Returns true if event should not be traced.
  */
@@ -750,15 +759,23 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     // While subscribed to FuseChannel's TraceBus, request detailed argument
     // strings.
     TraceDetailedArgumentsHandle argHandle;
-    TraceSubscriptionHandle<FuseTraceEvent> subHandle;
+    std::variant<
+        TraceSubscriptionHandle<FuseTraceEvent>,
+        TraceSubscriptionHandle<NfsTraceEvent>>
+        subHandle;
   };
 
   auto context = std::make_shared<Context>();
-  auto* channel = edenMount->getFuseChannel();
-  if (channel) {
-    context->argHandle = channel->traceDetailedArguments();
+  auto* fuseChannel = edenMount->getFuseChannel();
+  auto* nfsdChannel = edenMount->getNfsdChannel();
+  if (fuseChannel) {
+    context->argHandle = fuseChannel->traceDetailedArguments();
+  } else if (nfsdChannel) {
+    context->argHandle = nfsdChannel->traceDetailedArguments();
   } else {
-    EDEN_BUG() << "tracing isn't supported yet for NFS";
+    EDEN_BUG() << "tracing isn't supported yet for the "
+               << edenMount->getCheckoutConfig()->getMountProtocol()
+               << " filesystem type";
   }
 
   auto [serverStream, publisher] =
@@ -790,47 +807,79 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     apache::thrift::ServerStreamPublisher<FsEvent> publisher;
   };
 
-  context->subHandle = channel->getTraceBus().subscribeFunction(
-      folly::to<std::string>("strace-", edenMount->getPath().basename()),
-      [owner = PublisherOwner{std::move(publisher)},
-       serverState = server_->getServerState(),
-       eventCategoryMask](const FuseTraceEvent& event) {
-        if (isEventMasked(eventCategoryMask, event)) {
-          return;
-        }
+  if (fuseChannel) {
+    context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
+        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        [owner = PublisherOwner{std::move(publisher)},
+         serverState = server_->getServerState(),
+         eventCategoryMask](const FuseTraceEvent& event) {
+          if (isEventMasked(eventCategoryMask, event)) {
+            return;
+          }
 
-        FsEvent te;
-        auto times = thriftTraceEventTimes(event);
-        te.times_ref() = times;
+          FsEvent te;
+          auto times = thriftTraceEventTimes(event);
+          te.times_ref() = times;
 
-        // Legacy timestamp fields.
-        te.timestamp_ref() = *times.timestamp_ref();
-        te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
+          // Legacy timestamp fields.
+          te.timestamp_ref() = *times.timestamp_ref();
+          te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
 
-        te.fuseRequest_ref() = populateFuseCall(
-            event.getUnique(),
-            event.getRequest(),
-            *serverState->getProcessNameCache());
+          te.fuseRequest_ref() = populateFuseCall(
+              event.getUnique(),
+              event.getRequest(),
+              *serverState->getProcessNameCache());
 
-        switch (event.getType()) {
-          case FuseTraceEvent::START:
-            te.type_ref() = FsEventType::START;
-            if (auto& arguments = event.getArguments()) {
-              te.arguments_ref() = *arguments;
-            }
-            break;
-          case FuseTraceEvent::FINISH:
-            te.type_ref() = FsEventType::FINISH;
-            te.result_ref().from_optional(event.getResponseCode());
-            break;
-        }
+          switch (event.getType()) {
+            case FuseTraceEvent::START:
+              te.type_ref() = FsEventType::START;
+              if (auto& arguments = event.getArguments()) {
+                te.arguments_ref() = *arguments;
+              }
+              break;
+            case FuseTraceEvent::FINISH:
+              te.type_ref() = FsEventType::FINISH;
+              te.result_ref().from_optional(event.getResponseCode());
+              break;
+          }
 
-        te.requestInfo_ref() = thriftRequestInfo(
-            event.getRequest().pid, *serverState->getProcessNameCache());
+          te.requestInfo_ref() = thriftRequestInfo(
+              event.getRequest().pid, *serverState->getProcessNameCache());
 
-        owner.publisher.next(te);
-      });
+          owner.publisher.next(te);
+        });
+  } else if (nfsdChannel) {
+    context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
+        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        [owner = PublisherOwner{std::move(publisher)},
+         serverState = server_->getServerState()](const NfsTraceEvent& event) {
+          FsEvent te;
+          auto times = thriftTraceEventTimes(event);
+          te.times_ref() = times;
 
+          // Legacy timestamp fields.
+          te.timestamp_ref() = *times.timestamp_ref();
+          te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
+
+          te.nfsRequest_ref() = populateNfsCall(event);
+
+          switch (event.getType()) {
+            case NfsTraceEvent::START:
+              te.type_ref() = FsEventType::START;
+              if (auto& arguments = event.getArguments()) {
+                te.arguments_ref() = *arguments;
+              }
+              break;
+            case NfsTraceEvent::FINISH:
+              te.type_ref() = FsEventType::FINISH;
+              break;
+          }
+
+          te.requestInfo_ref() = RequestInfo{};
+
+          owner.publisher.next(te);
+        });
+  }
   return std::move(serverStream);
 }
 
@@ -1753,6 +1802,27 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
           call.unique,
           call.request,
           *server_->getServerState()->getProcessNameCache()));
+    }
+  }
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
+void EdenServiceHandler::debugOutstandingNfsCalls(
+    FOLLY_MAYBE_UNUSED std::vector<NfsCall>& outstandingCalls,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  if (auto* nfsdChannel = edenMount->getNfsdChannel()) {
+    for (const auto& call : nfsdChannel->getOutstandingRequests()) {
+      NfsCall nfsCall;
+      nfsCall.xid_ref() = call.xid;
+      outstandingCalls.push_back(nfsCall);
     }
   }
 #else
