@@ -217,6 +217,8 @@ async fn subcommand_show_blame(
     Ok(())
 }
 
+/// Finds a leaf that should exist.  Returns an error if the path is not
+/// a file in this changeset.
 async fn find_leaf(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -237,6 +239,22 @@ async fn find_leaf(
         )),
         Some(file_unode_id) => Ok(file_unode_id),
     }
+}
+
+/// Attempts to find a leaf, but returns `None` if the path is not a file.
+async fn try_find_leaf(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    csid: ChangesetId,
+    path: MPath,
+) -> Result<Option<FileUnodeId>, Error> {
+    let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
+    let entry_opt = mf_root
+        .manifest_unode_id()
+        .clone()
+        .find_entry(ctx, repo.get_blobstore(), Some(path.clone()))
+        .await?;
+    Ok(entry_opt.and_then(|entry| entry.into_leaf()))
 }
 
 async fn subcommand_show_diffs(
@@ -317,36 +335,53 @@ async fn subcommand_compute_blame(
                     let file_unode = file_unode_id.load(&ctx, &blobstore).await?;
                     let csid = *file_unode.linknode();
                     let bonsai = csid.load(&ctx, &blobstore).await?;
+                    let mut parents = Vec::new();
+                    if bonsai.parents().count() == 1 {
+                        // The bonsai changeset only has a single parent, so
+                        // we can assume that is where the file came from.
+                        for parent_unode_id in file_unode.parents().iter() {
+                            parents.push((Some(0), path.clone(), *parent_unode_id));
+                        }
+                    } else {
+                        // We must work out which is the first changeset parent that the
+                        // parent unodes came from.
+                        let mut parent_indexes = HashMap::new();
+                        for (parent_index, parent_csid) in bonsai.parents().enumerate() {
+                            if let Some(parent_file_unode_id) =
+                                try_find_leaf(ctx.clone(), repo.clone(), parent_csid, path.clone())
+                                    .await?
+                            {
+                                parent_indexes.insert(parent_file_unode_id, parent_index);
+                            }
+                        }
+                        for parent_unode_id in file_unode.parents().iter() {
+                            parents.push((
+                                parent_indexes.get(parent_unode_id).copied(),
+                                path.clone(),
+                                *parent_unode_id,
+                            ));
+                        }
+                    }
                     let copy_from = bonsai
                         .file_changes_map()
                         .get(&path)
                         .and_then(|file_change| Some(file_change.as_ref()?.copy_from().clone()?));
-                    let copy_parent: Option<(Option<usize>, MPath, FileUnodeId)> = match copy_from {
-                        None => None,
-                        Some((r_path, r_csid)) => {
-                            let r_parent_index = bonsai
-                                .parents()
-                                .position(|csid| csid == *r_csid)
-                                .ok_or_else(|| {
-                                    format_err!(
-                                        "commit {} path {} has copy-from with invalid parent {}",
-                                        csid,
-                                        path,
-                                        r_csid,
-                                    )
-                                })?;
-                            let r_unode_id =
-                                find_leaf(ctx.clone(), repo, *r_csid, r_path.clone()).await?;
-                            Some((Some(r_parent_index), r_path.clone(), r_unode_id))
-                        }
+                    if let Some((r_path, r_csid)) = copy_from {
+                        let r_parent_index = bonsai
+                            .parents()
+                            .position(|csid| csid == *r_csid)
+                            .ok_or_else(|| {
+                                format_err!(
+                                    "commit {} path {} has copy-from with invalid parent {}",
+                                    csid,
+                                    path,
+                                    r_csid,
+                                )
+                            })?;
+                        let r_unode_id =
+                            find_leaf(ctx.clone(), repo, *r_csid, r_path.clone()).await?;
+                        parents.push((Some(r_parent_index), r_path.clone(), r_unode_id))
                     };
-                    let parents: Vec<_> = file_unode
-                        .parents()
-                        .iter()
-                        .enumerate()
-                        .map(|(index, unode_id)| (Some(index), path.clone(), *unode_id))
-                        .chain(copy_parent)
-                        .collect();
                     Ok::<_, Error>(((csid, parent_index, path, file_unode_id), parents))
                 }
                 .boxed()
