@@ -1297,11 +1297,11 @@ def shelved(repo, subset, x):
     # read node from each file
     nodes = [nodemod.bin(shelve.readobsshelveinfo()["node"]) for shelve in shelves]
     # filter if some of the revisions are not in repo
-    nodes = filter(lambda x: x in repo, nodes)
-    # convert to full hash
-    nodes = [nodemod.hex(repo[x].node()) for x in nodes]
+    # local=True because shelved commits cannot be public and only public
+    # commits can be lazy so we avoid remote lookups.
+    nodes = repo.changelog.filternodes(nodes, local=True)
     # returns intersection with shelved commits (including hidden)
-    return subset & repo.revs("%ls", nodes)
+    return subset & repo.revs("%ln", nodes)
 
 
 templatekeyword = registrar.templatekeyword()
