@@ -1107,14 +1107,18 @@ void FileInode::logAccess(ObjectFetchContext& fetchContext) {
     return;
   }
 
-  std::optional<std::string> fetchDetail = std::nullopt;
-  if (fetchContext.getCauseDetail().has_value()) {
-    fetchDetail.emplace(fetchContext.getCauseDetail().value().str());
+  std::optional<std::string> fetchDetail;
+
+  const auto& detail = fetchContext.getCauseDetail();
+  if (detail.has_value()) {
+    fetchDetail.emplace(detail.value().str());
   }
 
-  FileAccess fileAccess{
-      ino, fetchContext.getCause(), fetchDetail, getMount()->getPath()};
-  getMount()->getServerState()->getHiveLogger()->logFileAccess(fileAccess);
+  getMount()->getServerState()->getHiveLogger()->logFileAccess(FileAccess{
+      ino,
+      fetchContext.getCause(),
+      std::move(fetchDetail),
+      getMount()->getPath()});
 }
 
 } // namespace eden
