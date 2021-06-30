@@ -127,11 +127,14 @@ py_class!(pub class commits |py| {
     }
 
     /// Import pull data (serialized in mincode) and flush.
-    def importpulldata(&self, data: PyBytes) -> PyResult<PyNone> {
+    /// Returns (commit_count, segment_count) on success.
+    def importpulldata(&self, data: PyBytes) -> PyResult<(u64, usize)> {
         let data: CloneData<Vertex> = mincode::deserialize(data.data(py)).map_pyerr(py)?;
+        let commits = data.flat_segments.vertex_count();
+        let segments = data.flat_segments.segment_count();
         let mut inner = self.inner(py).borrow_mut();
         block_on(inner.import_pull_data(data)).map_pyerr(py)?;
-        Ok(PyNone)
+        Ok((commits, segments))
     }
 
     /// Strip commits. ONLY used to make LEGACY TESTS running.
