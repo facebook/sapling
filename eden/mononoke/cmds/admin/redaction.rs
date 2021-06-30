@@ -9,7 +9,7 @@ use crate::common::get_file_nodes;
 use anyhow::{anyhow, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::Loadable;
+use blobstore::{Loadable, Storable};
 use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -25,8 +25,11 @@ use futures::{
 };
 use manifest::ManifestOps;
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
-use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
+use mononoke_types::{
+    blob::BlobstoreValue, typed_hash::MononokeId, ContentId, RedactionKeyList, Timestamp,
+};
 use redactedblobstore::SqlRedactedContentStore;
+use repo_factory::RepoFactory;
 use slog::{error, info, Logger};
 use std::collections::HashSet;
 use std::fs::File;
@@ -36,8 +39,11 @@ use crate::error::SubcommandError;
 
 pub const REDACTION: &str = "redaction";
 const REDACTION_ADD: &str = "add";
+const REDACTION_CREATE_KEY_LIST: &str = "create-key-list";
+const REDACTION_CREATE_KEY_LIST_RAW: &str = "create-key-list-from-ids";
 const REDACTION_REMOVE: &str = "remove";
 const REDACTION_LIST: &str = "list";
+const ARG_KEYS: &str = "keys";
 const ARG_HASH: &str = "hash";
 const ARG_TASK: &str = "task";
 const ARG_LOG_ONLY: &str = "log-only";
@@ -49,6 +55,41 @@ const DEFAULT_MAIN_BOOKMARK: &str = "master";
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(REDACTION)
         .about("handle file redaction")
+        .subcommand(add_path_parameters(
+            SubCommand::with_name(REDACTION_CREATE_KEY_LIST)
+                .about("Add a new redaction key list to the blobstore, to be later configured via configerator.")
+                .arg(
+                    Arg::with_name(ARG_HASH)
+                        .help("hg id, bonsai id or bookmark")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_MAIN_BOOKMARK)
+                        .long(ARG_MAIN_BOOKMARK)
+                        .takes_value(true)
+                        .required(false)
+                        .default_value(DEFAULT_MAIN_BOOKMARK)
+                        .help("Redaction fails if any of the content to be redacted is present in --main-bookmark unless --force is set.")
+                )
+                .arg(
+                    Arg::with_name(ARG_FORCE)
+                        .long(ARG_FORCE)
+                        .takes_value(false)
+                        .help("by default redaction fails if any of the redacted files is in main-bookmark. This flag overrides it.")
+                )
+        ))
+        .subcommand(
+            SubCommand::with_name(REDACTION_CREATE_KEY_LIST_RAW)
+                .about("Add a new redaction set to the blobstore, to be later configured via configerator. This is given hashes directly.")
+                .arg(
+                    Arg::with_name(ARG_KEYS)
+                        .long(ARG_KEYS)
+                        .multiple(true)
+                        .takes_value(true)
+                        .help("List of keys")
+                )
+        )
         .subcommand(add_path_parameters(
             SubCommand::with_name(REDACTION_ADD)
                 .about("add a new redacted file at a given commit")
@@ -166,6 +207,12 @@ pub async fn subcommand_redaction<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {
+        (REDACTION_CREATE_KEY_LIST, Some(sub_sub_m)) => {
+            redaction_create_key_list(fb, logger, matches, sub_sub_m).await
+        }
+        (REDACTION_CREATE_KEY_LIST_RAW, Some(sub_sub_m)) => {
+            redaction_create_key_list_raw(fb, logger, matches, sub_sub_m).await
+        }
         (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m).await,
         (REDACTION_REMOVE, Some(sub_sub_m)) => {
             redaction_remove(fb, logger, matches, sub_sub_m).await
@@ -201,45 +248,31 @@ fn paths_parser(sub_m: &ArgMatches<'_>) -> Result<Vec<MPath>, Error> {
     }
 }
 
+fn task_parser(sub_m: &ArgMatches<'_>) -> Result<String, Error> {
+    match sub_m.value_of(ARG_TASK) {
+        Some(task) => Ok(task.to_string()),
+        None => Err(format_err!("Task is needed")),
+    }
+}
+
 /// Fetch the task id and the file list from the subcommand cli matches
 fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>), Error> {
-    let task = match sub_m.value_of(ARG_TASK) {
-        Some(task) => task.to_string(),
-        None => return Err(format_err!("Task is needed")),
-    };
-
-    let paths = match paths_parser(sub_m) {
-        Ok(paths) => paths,
-        Err(e) => return Err(e),
-    };
-    Ok((task, paths))
+    Ok((task_parser(sub_m)?, paths_parser(sub_m)?))
 }
 
 /// Boilerplate to prepare a bunch of prerequisites for the rest of blaclisting operations
-async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
+async fn get_ctx_blobrepo_cs_id<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
-) -> Result<
-    (
-        CoreContext,
-        BlobRepo,
-        SqlRedactedContentStore,
-        HgChangesetId,
-    ),
-    SubcommandError,
-> {
+) -> Result<(CoreContext, BlobRepo, HgChangesetId), SubcommandError> {
     let rev = match sub_m.value_of(ARG_HASH) {
         Some(rev) => rev.to_string(),
         None => return Err(SubcommandError::InvalidArgs),
     };
 
-    let config_store = matches.config_store();
-
     let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
-    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
-        .context("While opening SqlRedactedContentStore")?;
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 
@@ -250,7 +283,7 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
 
-    Ok((ctx, blobrepo, redacted_blobs, hg_cs_id))
+    Ok((ctx, blobrepo, hg_cs_id))
 }
 
 /// Fetch a vector of `ContentId`s for a vector of `MPath`s
@@ -272,6 +305,105 @@ async fn content_ids_for_paths(
     try_join_all(content_ids).await
 }
 
+async fn redaction_create_key_list_impl<'a, 'b>(
+    _fb: FacebookInit,
+    _logger: Logger,
+    matches: &'a MononokeMatches<'b>,
+    ctx: &'a CoreContext,
+    blobstore_keys: Vec<String>,
+) -> Result<(), SubcommandError> {
+    let common = args::load_common_config(matches.config_store(), &matches)?;
+    let factory = RepoFactory::new(matches.environment().clone(), &common);
+
+    let blobstore = factory.redaction_config_blobstore().await?;
+    let darkstorm_blobstore = factory
+        .redaction_config_blobstore_from_config(
+            &common.redaction_config.darkstorm_blobstore.ok_or_else(|| {
+                anyhow!("Admin tier config must have darkstorm_blobstore field set")
+            })?,
+        )
+        .await?;
+
+    let store_keys = |blobstore| {
+        cloned!(blobstore_keys);
+        async move {
+            RedactionKeyList {
+                keys: blobstore_keys,
+            }
+            .into_blob()
+            .store(&ctx, &blobstore)
+            .await
+        }
+    };
+
+    let (id, id2) = futures::try_join!(store_keys(blobstore), store_keys(darkstorm_blobstore))?;
+
+    if id != id2 {
+        Err(format_err!(
+            "Id mismatch on darkstorm and non-darkstorm blobstores: {} vs {}",
+            id,
+            id2
+        ))?
+    }
+
+
+    println!("Redaction saved as: {}", id);
+    println!(
+        "To finish the redaction process, you need to commit this id to \
+        scm/mononoke/redaction/redaction_sets.cconf on configerator"
+    );
+    Ok(())
+}
+
+async fn redaction_create_key_list<'a, 'b>(
+    fb: FacebookInit,
+    logger: Logger,
+    matches: &'a MononokeMatches<'b>,
+    sub_m: &'a ArgMatches<'b>,
+) -> Result<(), SubcommandError> {
+    let paths = paths_parser(sub_m)?;
+    let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let content_ids =
+        content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths).await?;
+    let blobstore_keys: Vec<_> = content_ids
+        .iter()
+        .map(|content_id| content_id.blobstore_key())
+        .collect();
+
+    let force = sub_m.is_present(ARG_FORCE);
+    if !force {
+        let main_bookmark = sub_m
+            .value_of(ARG_MAIN_BOOKMARK)
+            .unwrap_or(DEFAULT_MAIN_BOOKMARK);
+        check_if_content_is_reachable_from_bookmark(
+            &ctx,
+            &blobrepo,
+            blobstore_keys.iter().collect(),
+            main_bookmark,
+        )
+        .await?;
+    }
+
+    redaction_create_key_list_impl(fb, logger, matches, &ctx, blobstore_keys).await
+}
+
+async fn redaction_create_key_list_raw<'a, 'b>(
+    fb: FacebookInit,
+    logger: Logger,
+    matches: &'a MononokeMatches<'b>,
+    sub_m: &'a ArgMatches<'b>,
+) -> Result<(), SubcommandError> {
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let keys = sub_m
+        .values_of(ARG_KEYS)
+        .ok_or(SubcommandError::InvalidArgs)?
+        .map(|key| key.to_string())
+        .collect::<Vec<_>>();
+
+    redaction_create_key_list_impl(fb, logger, matches, &ctx, keys).await
+}
+
 async fn redaction_add<'a, 'b>(
     fb: FacebookInit,
     logger: Logger,
@@ -279,8 +411,10 @@ async fn redaction_add<'a, 'b>(
     sub_m: &'a ArgMatches<'b>,
 ) -> Result<(), SubcommandError> {
     let (task, paths) = task_and_paths_parser(sub_m)?;
-    let (ctx, blobrepo, redacted_blobs, cs_id) =
-        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let redacted_blobs =
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+            .context("While opening SqlRedactedContentStore")?;
 
     let content_ids =
         content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths).await?;
@@ -320,8 +454,10 @@ async fn redaction_list<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let (ctx, blobrepo, redacted_blobs, cs_id) =
-        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let redacted_blobs =
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+            .context("While opening SqlRedactedContentStore")?;
     info!(
         logger,
         "Listing redacted files for ChangesetId: {:?}", cs_id
@@ -364,8 +500,10 @@ async fn redaction_remove<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let paths = paths_parser(sub_m)?;
-    let (ctx, blobrepo, redacted_blobs, cs_id) =
-        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let redacted_blobs =
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+            .context("While opening SqlRedactedContentStore")?;
     let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths).await?;
     let blobstore_keys: Vec<_> = content_ids
         .into_iter()

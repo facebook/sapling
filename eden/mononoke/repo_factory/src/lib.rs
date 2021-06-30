@@ -284,7 +284,7 @@ impl RepoFactory {
             .await
     }
 
-    async fn redaction_config_blobstore_from_config(
+    pub async fn redaction_config_blobstore_from_config(
         &self,
         config: &BlobConfig,
     ) -> Result<ArcRedactionConfigBlobstore> {
