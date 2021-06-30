@@ -31,6 +31,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
@@ -113,6 +114,7 @@ TestMount::TestMount()
       clock_,
       make_shared<ProcessNameCache>(),
       make_shared<NullStructuredLogger>(),
+      make_shared<NullHiveLogger>(),
       edenConfig_,
       nullptr,
       /*enableFaultInjection=*/true)};

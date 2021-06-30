@@ -153,7 +153,7 @@ struct CheckoutResult {
  * - The Overlay object used for storing local changes (that have not been
  *   committed/snapshotted yet).
  */
-class EdenMount {
+class EdenMount : public std::enable_shared_from_this<EdenMount> {
  public:
   using State = MountState;
 
@@ -673,6 +673,14 @@ class EdenMount {
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode,
       ObjectFetchContext& context);
+
+  /**
+   * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
+   * pointers inside of EdenServer's MountList.
+   */
+  std::weak_ptr<EdenMount> getWeakMount() {
+    return weak_from_this();
+  }
 
  private:
   friend class RenameLock;

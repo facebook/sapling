@@ -16,13 +16,13 @@
 namespace facebook::eden {
 
 class EdenConfig;
-class EdenServer;
+class EdenMount;
 
 struct FileAccess {
   InodeNumber inodeNumber;
   ObjectFetchContext::Cause cause;
   std::optional<std::string> causeDetail;
-  AbsolutePath mountPath;
+  std::weak_ptr<EdenMount> edenMount;
 };
 
 // TODO: Deprecate ScribeLogger and rename this class ScribeLogger.
@@ -30,11 +30,8 @@ class IHiveLogger {
  public:
   IHiveLogger(
       SessionInfo sessionInfo,
-      std::shared_ptr<const EdenConfig> edenConfig,
-      EdenServer* edenServer)
-      : sessionInfo_{std::move(sessionInfo)},
-        reloadableConfig_{edenConfig},
-        edenServer_{edenServer} {}
+      std::shared_ptr<const EdenConfig> edenConfig)
+      : sessionInfo_{std::move(sessionInfo)}, reloadableConfig_{edenConfig} {}
   virtual ~IHiveLogger() = default;
 
   virtual void logFileAccess(FileAccess access) = 0;
@@ -48,12 +45,11 @@ class IHiveLogger {
  protected:
   SessionInfo sessionInfo_;
   ReloadableConfig reloadableConfig_;
-  EdenServer* edenServer_;
 };
 
 class NullHiveLogger : public IHiveLogger {
  public:
-  NullHiveLogger() : IHiveLogger{SessionInfo{}, {}, nullptr} {}
+  NullHiveLogger() : IHiveLogger{SessionInfo{}, {}} {}
 
   std::unique_ptr<IHiveLogger> create() override {
     return std::make_unique<NullHiveLogger>();

@@ -148,8 +148,7 @@ MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory() {
 
 std::shared_ptr<IHiveLogger> DefaultEdenMain::getHiveLogger(
     SessionInfo /*sessionInfo*/,
-    std::shared_ptr<EdenConfig> /*edenConfig*/,
-    EdenServer* /*edenServer*/) {
+    std::shared_ptr<EdenConfig> /*edenConfig*/) {
   return std::make_shared<NullHiveLogger>();
 }
 
@@ -266,20 +265,17 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
+    auto hiveLogger = main.getHiveLogger(sessionInfo, edenConfig);
+
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
-        sessionInfo,
+        std::move(sessionInfo),
         std::move(privHelper),
-        edenConfig,
+        std::move(edenConfig),
         main.getMetadataImporterFactory(),
+        std::move(hiveLogger),
         main.getEdenfsVersion());
-
-    if (server.has_value()) {
-      auto hiveLogger = main.getHiveLogger(
-          std::move(sessionInfo), std::move(edenConfig), &(server.value()));
-      server->getServerState()->setHiveLogger(std::move(hiveLogger));
-    }
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {

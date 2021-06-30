@@ -48,6 +48,7 @@ class ServerState {
       std::shared_ptr<Clock> clock,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<IHiveLogger> hiveLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
       std::shared_ptr<NfsServer> nfs,
       bool enableFaultInjection = false);
@@ -144,14 +145,6 @@ class ServerState {
 
   const std::shared_ptr<StructuredLogger>& getStructuredLogger() const {
     return structuredLogger_;
-  }
-
-  /**
-   * Overwrite the default NullHiveLogger. This should only be called from
-   * within EdenMain, after the server is created but before it is started.
-   */
-  void setHiveLogger(std::shared_ptr<IHiveLogger> hiveLogger) {
-    hiveLogger_ = std::move(hiveLogger);
   }
 
   /**

@@ -1118,7 +1118,7 @@ void FileInode::logAccess(ObjectFetchContext& fetchContext) {
       ino,
       fetchContext.getCause(),
       std::move(fetchDetail),
-      getMount()->getPath()});
+      getMount()->getWeakMount()});
 }
 
 } // namespace eden

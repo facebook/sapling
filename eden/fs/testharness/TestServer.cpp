@@ -77,6 +77,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       std::move(privHelper),
       config,
       MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>(),
+      make_shared<NullHiveLogger>(),
       "test server");
 }
 
