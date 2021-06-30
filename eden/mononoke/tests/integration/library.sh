@@ -1546,6 +1546,7 @@ function setup_hg_lfs() {
 lfs=
 [lfs]
 url=$1
+use-client-certs=False
 threshold=$2
 usercache=$3
 EOF
@@ -1562,6 +1563,7 @@ rustworkers=True
 [extensions]
 lfs=!
 [lfs]
+use-client-certs=False
 url=$1
 threshold=$2
 backofftimes=0

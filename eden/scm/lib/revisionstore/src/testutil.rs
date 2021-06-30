@@ -622,6 +622,13 @@ mod lfs_mocks {
         );
 
         config.set(
+            "lfs",
+            "use-client-certs",
+            Some("False"),
+            &Default::default(),
+        );
+
+        config.set(
             "experimental",
             "lfs.user-agent",
             Some(format!("mercurial/revisionstore/unittests/{}", agent_sufix)),

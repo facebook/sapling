@@ -23,7 +23,7 @@ use std::{
     time::Instant,
 };
 
-use anyhow::{bail, ensure, format_err, Context, Result};
+use anyhow::{anyhow, bail, ensure, format_err, Context, Result};
 use futures::{
     future::FutureExt,
     stream::{iter, FuturesUnordered, StreamExt, TryStreamExt},
@@ -114,6 +114,7 @@ struct HttpOptions {
     throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
     proxy_unix_socket: Option<String>,
+    use_client_certs: bool,
 }
 
 pub(crate) enum LfsRemoteInner {
@@ -1043,6 +1044,16 @@ impl LfsRemoteInner {
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
     ) -> Result<Bytes, FetchError> {
+        if http_options.use_client_certs && http_options.auth.is_none() {
+            return Err(FetchError {
+                url,
+                method,
+                error: TransferError::HttpClientError(HttpClientError::Other(anyhow!(
+                    "Certificate not found when attempting to send LFS request."
+                ))),
+            });
+        }
+
         if http_options.proxy_unix_socket.is_some() {
             url.set_scheme("http").expect("Couldn't set url scheme");
         }
@@ -1514,10 +1525,11 @@ impl LfsRemote {
             }
             let proxy_unix_socket = get_auth_proxy_socket_path(config)?;
 
+            let use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
             let auth = if proxy_unix_socket.is_some() {
                 url.set_scheme("http").expect("Couldn't change url scheme");
                 None
-            } else if config.get_or("lfs", "use-client-certs", || true)? {
+            } else if use_client_certs {
                 AuthSection::from_config(config).best_match_for(&url)?
             } else {
                 None
@@ -1593,6 +1605,7 @@ impl LfsRemote {
                         throttle_backoff_times,
                         request_timeout,
                         proxy_unix_socket,
+                        use_client_certs,
                     },
                 }),
             })
