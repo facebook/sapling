@@ -8,7 +8,8 @@
 #![deny(warnings)]
 
 mod errors;
-mod store;
+mod redaction_config_blobstore;
+pub mod store;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -23,6 +24,9 @@ use std::{ops::Deref, sync::Arc};
 use tunables::tunables;
 
 pub use crate::errors::ErrorKind;
+pub use crate::redaction_config_blobstore::{
+    ArcRedactionConfigBlobstore, RedactionConfigBlobstore,
+};
 pub use crate::store::{RedactedBlobs, RedactedMetadata, SqlRedactedContentStore};
 
 pub mod config {

@@ -58,6 +58,7 @@ use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
 use readonlyblob::ReadOnlyBlobstore;
+use redactedblobstore::{ArcRedactionConfigBlobstore, RedactionConfigBlobstore};
 use redactedblobstore::{RedactedBlobs, SqlRedactedContentStore};
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
@@ -281,6 +282,14 @@ impl RepoFactory {
                 Ok(Arc::new(redacted_blobs))
             })
             .await
+    }
+
+    async fn redaction_config_blobstore_from_config(
+        &self,
+        config: &BlobConfig,
+    ) -> Result<ArcRedactionConfigBlobstore> {
+        let blobstore = self.blobstore(&config).await?;
+        Ok(Arc::new(RedactionConfigBlobstore::new(blobstore)))
     }
 
     fn ctx(&self, repo_identity: &ArcRepoIdentity) -> CoreContext {
@@ -734,5 +743,10 @@ impl RepoFactory {
             })
             .unwrap_or_default();
         Arc::new(filestore_config)
+    }
+
+    pub async fn redaction_config_blobstore(&self) -> Result<ArcRedactionConfigBlobstore> {
+        self.redaction_config_blobstore_from_config(&self.redaction_config.blobstore)
+            .await
     }
 }
