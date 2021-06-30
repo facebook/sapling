@@ -18,6 +18,7 @@
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace folly {
@@ -27,6 +28,10 @@ class Executor;
 namespace facebook::eden {
 
 namespace {
+constexpr size_t kTraceBusCapacity = 25000;
+static_assert(sizeof(NfsTraceEvent) == 40);
+static_assert(kTraceBusCapacity * sizeof(NfsTraceEvent) == 1000000);
+
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
   explicit Nfsd3ServerProcessor(
@@ -34,12 +39,16 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       const folly::Logger* straceLogger,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
-      folly::Promise<Nfsd3::StopData>& stopPromise)
+      folly::Promise<Nfsd3::StopData>& stopPromise,
+      std::atomic<size_t>& traceDetailedArguments,
+      std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         caseSensitive_(caseSensitive),
         iosize_(iosize),
-        stopPromise_{stopPromise} {}
+        stopPromise_{stopPromise},
+        traceDetailedArguments_(traceDetailedArguments),
+        traceBus_(traceBus) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -113,6 +122,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // lifetime of  nfs3d. The way we currently enforce this is by waiting for
   // this promise to be set before destroying of the nfs3d.
   folly::Promise<Nfsd3::StopData>& stopPromise_;
+  std::atomic<size_t>& traceDetailedArguments_;
+  std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
 };
 
 /**
@@ -1742,7 +1753,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       "{}({})",
       handlerEntry.name,
       handlerEntry.formatArgs(deser));
-  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
+  if (traceDetailedArguments_.load(std::memory_order_acquire)) {
+    traceBus_->publish(
+        NfsTraceEvent::start(xid, procNumber, handlerEntry.formatArgs(deser)));
+  } else {
+    traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
+  }
+  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
+      .ensure([this, xid, procNumber]() {
+        traceBus_->publish(NfsTraceEvent::finish(xid, procNumber));
+      });
 }
 
 void Nfsd3ServerProcessor::onSocketClosed() {
@@ -1769,12 +1789,36 @@ Nfsd3::Nfsd3(
               straceLogger,
               caseSensitive,
               iosize,
-              stopPromise_),
+              stopPromise_,
+              traceDetailedArguments_,
+              traceBus_),
           evb,
           std::move(threadPool)),
       processAccessLog_(std::move(processNameCache)),
       invalidationExecutor_{
-          folly::SerialExecutor::create(folly::getGlobalCPUExecutor())} {}
+          folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
+      traceDetailedArguments_{0},
+      traceBus_{
+          TraceBus<NfsTraceEvent>::create("NfsTrace", kTraceBusCapacity)} {
+  traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
+      "NFS request tracking", [this](const NfsTraceEvent& event) {
+        switch (event.getType()) {
+          case NfsTraceEvent::START: {
+            auto state = telemetryState_.wlock();
+            // allow duplicated calls since the client may retry a request
+            (void)state->requests.emplace(
+                event.getXid(), OutstandingRequest{event.getXid()});
+            break;
+          }
+          case NfsTraceEvent::FINISH: {
+            auto state = telemetryState_.wlock();
+            // allow duplicated calls since the client may retry a request
+            (void)state->requests.erase(event.getXid());
+            break;
+          }
+        }
+      }));
+}
 
 void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   server_.initialize(addr);
@@ -1811,6 +1855,24 @@ folly::Future<folly::Unit> Nfsd3::flushInvalidations() {
   });
   return result;
 }
+
+std::vector<Nfsd3::OutstandingRequest> Nfsd3::getOutstandingRequests() {
+  std::vector<Nfsd3::OutstandingRequest> outstandingCalls;
+
+  for (const auto& entry : telemetryState_.rlock()->requests) {
+    outstandingCalls.push_back(entry.second);
+  }
+  return outstandingCalls;
+}
+
+TraceDetailedArgumentsHandle Nfsd3::traceDetailedArguments() {
+  auto handle =
+      std::shared_ptr<void>(nullptr, [&copy = traceDetailedArguments_](void*) {
+        copy.fetch_sub(1, std::memory_order_acq_rel);
+      });
+  traceDetailedArguments_.fetch_add(1, std::memory_order_acq_rel);
+  return handle;
+};
 
 Nfsd3::~Nfsd3() {
   // TODO(xavierd): wait for the pending requests,

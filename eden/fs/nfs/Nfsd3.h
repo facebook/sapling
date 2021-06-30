@@ -14,6 +14,7 @@
 
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -25,6 +26,61 @@ namespace facebook::eden {
 
 class Notifications;
 class ProcessNameCache;
+
+using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
+
+struct NfsTraceEvent : TraceEventBase {
+  enum Type : unsigned char {
+    START,
+    FINISH,
+  };
+
+  NfsTraceEvent() = delete;
+
+  static NfsTraceEvent start(uint32_t xid, uint32_t procNumber) {
+    return NfsTraceEvent{
+        xid, procNumber, StartDetails{std::unique_ptr<std::string>{}}};
+  }
+
+  static NfsTraceEvent
+  start(uint32_t xid, uint32_t procNumber, std::string&& args) {
+    return NfsTraceEvent{
+        xid, procNumber, StartDetails{std::make_unique<std::string>(args)}};
+  }
+
+  static NfsTraceEvent finish(uint32_t xid, uint32_t procNumber) {
+    return NfsTraceEvent{xid, procNumber, FinishDetails{}};
+  }
+
+  Type getType() const {
+    return std::holds_alternative<StartDetails>(details_) ? Type::START
+                                                          : Type::FINISH;
+  }
+
+  uint32_t getXid() const {
+    return xid_;
+  }
+
+  uint32_t getProcNumber() const {
+    return procNumber_;
+  }
+
+ private:
+  struct StartDetails {
+    std::unique_ptr<std::string> arguments;
+  };
+
+  struct FinishDetails {};
+
+  using Details = std::variant<StartDetails, FinishDetails>;
+
+  NfsTraceEvent(uint32_t xid, uint32_t procNumber, Details&& details)
+      : xid_{xid}, procNumber_{procNumber}, details_{std::move(details)} {}
+
+  uint32_t xid_;
+  uint32_t procNumber_;
+  Details details_;
+};
 
 class Nfsd3 {
  public:
@@ -97,6 +153,10 @@ class Nfsd3 {
 
   struct StopData {};
 
+  struct OutstandingRequest {
+    uint32_t xid;
+  };
+
   /**
    * Return a future that will be triggered on unmount.
    */
@@ -111,11 +171,38 @@ class Nfsd3 {
   Nfsd3& operator=(const Nfsd3&) = delete;
   Nfsd3& operator=(Nfsd3&&) = delete;
 
+  /**
+   * Returns the approximate set of outstanding NFS requests. Since
+   * telemetry is tracked on a background thread, the result may very slightly
+   * lag reality.
+   */
+  std::vector<Nfsd3::OutstandingRequest> getOutstandingRequests();
+
+  /**
+   * While the returned handle is alive, NfsTraceEvents published on the
+   * TraceBus will have detailed argument strings.
+   */
+  TraceDetailedArgumentsHandle traceDetailedArguments();
+
+  TraceBus<NfsTraceEvent>& getTraceBus() {
+    return *traceBus_;
+  }
+
  private:
+  struct TelemetryState {
+    std::unordered_map<uint64_t, OutstandingRequest> requests;
+  };
+  folly::Synchronized<TelemetryState> telemetryState_;
+  std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
+
   folly::Promise<StopData> stopPromise_;
   RpcServer server_;
   ProcessAccessLog processAccessLog_;
   folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
+  std::atomic<size_t> traceDetailedArguments_;
+  // The TraceBus must be the last member because its subscribed functions may
+  // close over `this` and can run until the TraceBus itself is deallocated.
+  std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
 };
 
 } // namespace facebook::eden
