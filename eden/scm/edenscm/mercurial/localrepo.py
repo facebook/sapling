@@ -977,7 +977,13 @@ class localrepository(object):
             for (old, new) in fastpath:
                 fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
                 try:
-                    self.changelog.inner.importpulldata(fastpulldata)
+                    commits, segments = self.changelog.inner.importpulldata(
+                        fastpulldata
+                    )
+                    self.ui.status(
+                        _("added %s commits lazily (%s segments)\n")
+                        % (commits, segments)
+                    )
                     fastpathheads.add(new)
                 except errormod.NeedSlowPathError as e:
                     tracing.warn(

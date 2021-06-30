@@ -55,6 +55,7 @@ Pull:
   $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
   pulling from test:e2
    DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+  added 2 commits lazily (1 segments)
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   o  E remote/master
   │
@@ -120,6 +121,7 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True --config fault-injection.transaction-metalog-commit=True
   pulling from test:e2
    DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
+  added 2 commits lazily (1 segments)
   abort: injected error by tests: transaction-metalog-commit
   transaction abort!
   rollback failed - please run hg recover
@@ -134,6 +136,7 @@ Fast path can still be used with stale remotenames:
   pulling from test:e3
    DEBUG pull::fastpath: master: 9bc730a19041f9ec7cb33c626e811aa233efb18c => 7b3a68e117f183a6da8e60779d8fbeeed22382bb
    DEBUG dag::protocol: resolve names [9d37022187178c68e8fe8dff17c9c57fb62b9ea5, a194cadd16930608adaa649035ad4c16930cbd0f] remotely
+  added 5 commits lazily (3 segments)
 
   $ EDENSCM_DISABLE_REMOTE_RESOLVE=0000000000000000000000000000000000000000 LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
   o    H remote/master
