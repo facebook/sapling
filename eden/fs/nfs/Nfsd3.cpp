@@ -1721,6 +1721,39 @@ constexpr auto kNfs3dHandlers = [] {
   return handlers;
 }();
 
+namespace {
+struct LiveRequest {
+  LiveRequest(
+      std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus,
+      std::atomic<size_t>& traceDetailedArguments,
+      HandlerEntry& handlerEntry,
+      folly::io::Cursor& deser,
+      uint32_t xid,
+      uint32_t procNumber)
+      : traceBus_{std::move(traceBus)}, xid_{xid}, procNumber_{procNumber} {
+    if (traceDetailedArguments.load(std::memory_order_acquire)) {
+      traceBus_->publish(NfsTraceEvent::start(
+          xid, procNumber, handlerEntry.formatArgs(deser)));
+    } else {
+      traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
+    }
+  }
+
+  LiveRequest(LiveRequest&& that) noexcept = default;
+  LiveRequest& operator=(LiveRequest&&) = delete;
+
+  ~LiveRequest() {
+    if (traceBus_) {
+      traceBus_->publish(NfsTraceEvent::finish(xid_, procNumber_));
+    }
+  }
+
+  std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus_;
+  uint32_t xid_;
+  uint32_t procNumber_;
+};
+} // namespace
+
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
@@ -1753,16 +1786,12 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       "{}({})",
       handlerEntry.name,
       handlerEntry.formatArgs(deser));
-  if (traceDetailedArguments_.load(std::memory_order_acquire)) {
-    traceBus_->publish(
-        NfsTraceEvent::start(xid, procNumber, handlerEntry.formatArgs(deser)));
-  } else {
-    traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
-  }
+
+  auto liveRequest = LiveRequest{
+      traceBus_, traceDetailedArguments_, handlerEntry, deser, xid, procNumber};
+
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
-      .ensure([this, xid, procNumber]() {
-        traceBus_->publish(NfsTraceEvent::finish(xid, procNumber));
-      });
+      .ensure([liveRequest = std::move(liveRequest)]() {});
 }
 
 void Nfsd3ServerProcessor::onSocketClosed() {
