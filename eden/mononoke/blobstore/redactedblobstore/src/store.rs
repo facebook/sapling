@@ -6,12 +6,23 @@
  */
 
 #![deny(warnings)]
-use anyhow::Error;
-use mononoke_types::Timestamp;
+use crate::RedactionConfigBlobstore;
+use anyhow::{Context, Error, Result};
+use arc_swap::ArcSwap;
+use blobstore::{Blobstore, Loadable};
+use cached_config::ConfigHandle;
+use cloned::cloned;
+use context::CoreContext;
+use derivative::*;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures_ext::future::{spawn_controlled, ControlledHandle};
+use mononoke_types::{typed_hash::RedactionKeyListId, RedactionKeyList, Timestamp};
+use redaction_set::RedactionSets;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -82,8 +93,127 @@ impl RedactedBlobs {
     }
 }
 
+#[derive(Debug)]
+struct InnerConfig {
+    raw_config: Arc<RedactionSets>,
+    map: Arc<HashMap<String, RedactedMetadata>>,
+}
+
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct ConfigeratorRedactedBlobs {
+    #[derivative(Debug = "ignore")]
+    ctx: CoreContext,
+    #[derivative(Debug = "ignore")]
+    handle: ConfigHandle<RedactionSets>,
+    blobstore: Arc<RedactionConfigBlobstore>,
+    inner_config: Arc<ArcSwap<InnerConfig>>,
+    /// Handle of the background task reloading the redacted config
+    _controlled_handle: ControlledHandle,
+}
+
+impl ConfigeratorRedactedBlobs {
+    #[allow(dead_code)]
+    async fn new(
+        ctx: CoreContext,
+        handle: ConfigHandle<RedactionSets>,
+        blobstore: Arc<RedactionConfigBlobstore>,
+    ) -> Result<Self> {
+        let inner_config = Arc::new(ArcSwap::from_pointee(
+            InnerConfig::new(handle.get(), &ctx, &blobstore).await?,
+        ));
+
+        let controlled_handle = spawn_controlled({
+            cloned!(ctx, blobstore, handle, inner_config);
+            async move {
+                loop {
+                    let interval = std::time::Duration::from_secs(60);
+                    tokio::time::sleep(interval).await;
+                    let new_config = handle.get();
+                    let cur_config = &inner_config.load().raw_config;
+                    // Checking ptr_eq first as an optimization
+                    if !Arc::ptr_eq(&new_config, cur_config) && new_config != *cur_config {
+                        match InnerConfig::new(new_config, &ctx, &blobstore).await {
+                            Ok(new_inner_config) => inner_config.store(Arc::new(new_inner_config)),
+                            Err(err) => {
+                                slog::warn!(
+                                    ctx.logger(),
+                                    "Failed to reload redaction config: {:?}",
+                                    err
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        Ok(ConfigeratorRedactedBlobs {
+            ctx,
+            handle,
+            blobstore,
+            inner_config,
+            _controlled_handle: controlled_handle,
+        })
+    }
+
+    #[allow(dead_code)]
+    fn get_map(&self) -> Arc<HashMap<String, RedactedMetadata>> {
+        self.inner_config.load().map.clone()
+    }
+}
+
+impl InnerConfig {
+    async fn new(
+        config: Arc<RedactionSets>,
+        ctx: &CoreContext,
+        blobstore: &dyn Blobstore,
+    ) -> Result<Self> {
+        slog::info!(ctx.logger(), "Reloading redacted config from configerator");
+        let map: HashMap<String, RedactedMetadata> = stream::iter(
+            config
+                .all_redactions
+                .iter()
+                .map(|redaction| async move {
+                    let keylist: RedactionKeyList = RedactionKeyListId::from_str(&redaction.id)
+                        .with_context(|| format!("Invalid keylist id: {}", redaction.id))?
+                        .load(&ctx, &blobstore)
+                        .await
+                        .with_context(|| format!("Keylist with id {} not found", redaction.id))?;
+                    let keys_with_metadata = keylist
+                        .keys
+                        .into_iter()
+                        .map(|key| {
+                            (
+                                key,
+                                RedactedMetadata {
+                                    task: redaction.reason.clone(),
+                                    log_only: !redaction.enforce,
+                                },
+                            )
+                        })
+                        .collect::<Vec<_>>();
+
+                    Result::<_, Error>::Ok(keys_with_metadata)
+                })
+                // If we don't collect, it triggers a compile bug P421135476
+                .collect::<Vec<_>>(),
+        )
+        .buffer_unordered(100)
+        .try_collect::<Vec<Vec<_>>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .collect();
+        Ok(Self {
+            raw_config: config,
+            map: Arc::new(map),
+        })
+    }
+}
+
 impl SqlRedactedContentStore {
-    pub async fn get_all_redacted_blobs(&self) -> Result<RedactedBlobs, Error> {
+    pub async fn get_all_redacted_blobs(&self) -> Result<RedactedBlobs> {
         let redacted_blobs = GetAllRedactedBlobs::query(&self.read_connection).await?;
         Ok(RedactedBlobs::FromSql(Arc::new(
             redacted_blobs
@@ -105,7 +235,7 @@ impl SqlRedactedContentStore {
         task: &String,
         add_timestamp: &Timestamp,
         log_only: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let log_only = &log_only;
         let redacted_inserts: Vec<_> = content_keys
             .iter()
@@ -118,7 +248,7 @@ impl SqlRedactedContentStore {
             .map(|_| ())
     }
 
-    pub async fn delete_redacted_blobs(&self, content_keys: &[String]) -> Result<(), Error> {
+    pub async fn delete_redacted_blobs(&self, content_keys: &[String]) -> Result<()> {
         DeleteRedactedBlobs::query(&self.write_connection, &content_keys[..])
             .await
             .map_err(Error::from)
