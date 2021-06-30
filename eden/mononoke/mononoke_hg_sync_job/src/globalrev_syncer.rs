@@ -230,7 +230,7 @@ queries! {
 
     read GetGlobalrevCounter(repo: String) -> (u64) {
         "
-        SELECT value FROM revision_references
+        SELECT CAST(value AS UNSIGNED) FROM revision_references
         WHERE repo = {repo}
           AND namespace = 'counter'
           AND name = 'commit'
