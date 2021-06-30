@@ -1662,6 +1662,14 @@ class RestartCmd(Subcmd):
             "performing a full restart.",
         )
 
+        parser.add_argument(
+            "--only-if-running",
+            action="store_true",
+            default=False,
+            help="Only perform a restart if there is already an EdenFS instance"
+            "running.",
+        )
+
     async def run(self, args: argparse.Namespace) -> int:
         self.args = args
         if args.restart_type is None:
@@ -1683,7 +1691,11 @@ class RestartCmd(Subcmd):
                 return status
         elif edenfs_pid is None:
             # The daemon is not running
-            return await self._start(instance)
+            if args.only_if_running:
+                print("EdenFS not running; not starting EdenFS")
+                return 0
+            else:
+                return await self._start(instance)
         else:
             if health.status == fb303_status.STARTING:
                 print(
