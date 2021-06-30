@@ -52,11 +52,12 @@ use super::{
         BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG,
         BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG, BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG,
         CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER,
-        LOCAL_CONFIGERATOR_PATH_ARG, LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG,
-        MANIFOLD_THRIFT_OPS_ARG, MANIFOLD_WEAK_CONSISTENCY_MS_ARG, MYSQL_CONN_OPEN_TIMEOUT,
-        MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT,
-        MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
-        MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
+        LOCAL_CONFIGERATOR_PATH_ARG, LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY,
+        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_THRIFT_OPS_ARG,
+        MANIFOLD_WEAK_CONSISTENCY_MS_ARG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
+        MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT,
+        MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
         MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
         READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
         TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
@@ -285,7 +286,7 @@ fn create_root_log_drain(
     )?;
 
     let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
-        .value_of("logview-category")
+        .value_of(LOGVIEW_CATEGORY)
     {
         Some(category) => {
             #[cfg(fbcode_build)]
@@ -293,14 +294,30 @@ fn create_root_log_drain(
                 // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
                 // since logview is sampled anyway.
                 let logview_drain = ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
-                let drain = slog::Duplicate::new(glog_drain, logview_drain);
-                Arc::new(drain.ignore_res())
+                match matches.value_of(LOGVIEW_ADDITIONAL_LEVEL_FILTER) {
+                    Some(log_level_str) => {
+                        let logview_level = Level::from_str(log_level_str)
+                            .map_err(|_| format_err!("Unknown log level: {}", log_level_str))?;
+
+                        let drain = slog::Duplicate::new(
+                            glog_drain,
+                            logview_drain.filter_level(logview_level).ignore_res(),
+                        );
+                        Arc::new(drain.ignore_res())
+                    }
+                    None => {
+                        let drain = slog::Duplicate::new(glog_drain, logview_drain);
+                        Arc::new(drain.ignore_res())
+                    }
+                }
             }
             #[cfg(not(fbcode_build))]
             {
+                let _unused = LOGVIEW_ADDITIONAL_LEVEL_FILTER;
                 let _ = (fb, category);
                 unimplemented!(
-                    "Passed --logview-category, but it is supported only for fbcode builds"
+                    "Passed --{}, but it is supported only for fbcode builds",
+                    LOGVIEW_CATEGORY
                 )
             }
         }

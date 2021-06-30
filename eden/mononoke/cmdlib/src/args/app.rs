@@ -79,6 +79,8 @@ pub const WITH_READONLY_STORAGE_ARG: &str = "with-readonly-storage";
 
 pub const LOG_INCLUDE_TAG: &str = "log-include-tag";
 pub const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
+pub const LOGVIEW_CATEGORY: &str = "logview-category";
+pub const LOGVIEW_ADDITIONAL_LEVEL_FILTER: &str = "logview-additional-level-filter";
 // Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
 pub const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 
@@ -839,10 +841,20 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("fate of the process when a panic happens"),
     )
     .arg(
-        Arg::with_name("logview-category")
-            .long("logview-category")
+        Arg::with_name(LOGVIEW_CATEGORY)
+            .long(LOGVIEW_CATEGORY)
             .takes_value(true)
             .help("logview category to log to. Logview is not used if not set"),
+    )
+    .arg(
+        Arg::with_name(LOGVIEW_ADDITIONAL_LEVEL_FILTER)
+            .long(LOGVIEW_ADDITIONAL_LEVEL_FILTER)
+            .takes_value(true)
+            .possible_values(&slog::LOG_LEVEL_NAMES)
+            .requires(LOGVIEW_CATEGORY)
+            .help("logview level to filter. If logview category is not set then this is ignored. \
+             Note that this level is applied AFTER --log-level/--debug was applied, so it doesn't make sense to set this parameter to a lower level \
+             than --log-level"),
     )
     .arg(
         Arg::with_name("debug")
@@ -855,7 +867,7 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("log-level")
             .help("log level to use (does not work with --debug)")
             .takes_value(true)
-            .possible_values(&["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
+            .possible_values(&slog::LOG_LEVEL_NAMES)
             .conflicts_with("debug"),
     )
     .arg(
