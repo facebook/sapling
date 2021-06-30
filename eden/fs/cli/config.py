@@ -1083,7 +1083,7 @@ class EdenCheckout:
 
                     prefetch_profiles.append(profile)
 
-        enable_tree_overlay = config.get("enable-tree-overlay")
+        enable_tree_overlay = repository.get("enable-tree-overlay")
         # Older mount that doesn't have tree overlay setting should remain disabled.
         if not isinstance(enable_tree_overlay, bool):
             enable_tree_overlay = False
