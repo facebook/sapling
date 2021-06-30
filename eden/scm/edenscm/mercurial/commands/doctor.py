@@ -274,7 +274,7 @@ def openchangelog(ui, svfs):
     except Exception as e:
         if ui.debugflag or ui.tracebackflag:
             ui.traceback()
-        ui.warn("cannot open changelog: %s\n" % e)
+        ui.warn(_("cannot open changelog: %s\n") % e)
         return None
     return cl
 
