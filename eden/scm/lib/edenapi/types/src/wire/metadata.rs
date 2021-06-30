@@ -684,6 +684,22 @@ impl Arbitrary for WireSha256 {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireAnyFileContentId {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        use WireAnyFileContentId::*;
+
+        let variant = g.gen_range(0, 3);
+        match variant {
+            0 => WireContentId(Arbitrary::arbitrary(g)),
+            1 => WireSha1(Arbitrary::arbitrary(g)),
+            2 => WireSha256(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

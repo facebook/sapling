@@ -10,16 +10,18 @@ use std::collections::HashMap;
 use anyhow::{self, format_err, Context};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
-use filestore::{self, Alias, StoreRequest};
+use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::Stream01CompatExt;
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
 use mercurial_types::blobs::RevlogChangeset;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
+use mercurial_types::{
+    HgChangesetId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestId,
+};
 use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{
@@ -59,6 +61,26 @@ impl HgRepoContext {
     /// The configuration for the repository.
     pub(crate) fn config(&self) -> &RepoConfig {
         self.repo.config()
+    }
+
+    /// Fetch file content size
+    pub async fn fetch_file_content_size(
+        &self,
+        content_id: ContentId,
+    ) -> Result<u64, MononokeError> {
+        Ok(filestore::get_metadata(
+            self.blob_repo().blobstore(),
+            self.ctx(),
+            &FetchKey::Canonical(content_id),
+        )
+        .await?
+        .ok_or_else(|| {
+            MononokeError::InvalidRequest(format!(
+                "failed to fetch or rebuild metadata for ContentId('{}'), file content must be prior uploaded",
+                content_id
+            ))
+        })?
+        .total_size)
     }
 
     async fn is_key_present_in_blobstore(&self, key: &str) -> Result<bool, MononokeError> {
@@ -104,6 +126,19 @@ impl HgRepoContext {
             .await
     }
 
+    /// Convert `Sha1 alias` to the canonical ContentId
+    pub async fn convert_file_sha1(&self, sha1: Sha1) -> Result<ContentId, MononokeError> {
+        Ok(FetchKey::Aliased(Alias::Sha1(sha1))
+            .load(self.ctx(), self.blob_repo().blobstore())
+            .await
+            .map_err(|_| {
+                MononokeError::InvalidRequest(format!(
+                    "failed to fetch ContentId for Sha1('{}'), file content must be prior uploaded",
+                    sha1
+                ))
+            })?)
+    }
+
     /// Store file into blobstore by `Sha1 alias`
     pub async fn store_file_by_sha1(
         &self,
@@ -127,6 +162,17 @@ impl HgRepoContext {
     pub async fn is_file_present_by_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&Alias::Sha256(sha256).blobstore_key())
             .await
+    }
+
+    /// Convert `Sha256 alias` to the canonical ContentId
+    pub async fn convert_file_sha256(&self, sha256: Sha256) -> Result<ContentId, MononokeError> {
+        Ok(FetchKey::Aliased(Alias::Sha256(sha256))
+            .load(self.ctx(), self.blob_repo().blobstore())
+            .await
+            .map_err(|_| {MononokeError::InvalidRequest(format!(
+                "failed to fetch ContentId for Sha256('{}'), file content must be prior uploaded",
+                sha256
+            ))})?)
     }
 
     /// Store file into blobstore by `Sha256 alias`
@@ -185,6 +231,34 @@ impl HgRepoContext {
         manifest_id: HgManifestId,
     ) -> Result<Option<HgTreeContext>, MononokeError> {
         HgTreeContext::new_check_exists(self.clone(), manifest_id).await
+    }
+
+
+    /// Store HgFilenode into blobstore
+    pub async fn store_hg_filenode(
+        &self,
+        filenode_id: HgFileNodeId,
+        p1: Option<HgFileNodeId>,
+        p2: Option<HgFileNodeId>,
+        content_id: ContentId,
+        content_size: u64,
+        metadata: Bytes,
+    ) -> Result<(), MononokeError> {
+        let envelope = HgFileEnvelope::from_mut(HgFileEnvelopeMut {
+            node_id: filenode_id,
+            p1,
+            p2,
+            content_id,
+            content_size,
+            metadata,
+        })
+        .into_blob();
+        self.blob_repo()
+            .blobstore()
+            .put(self.ctx(), filenode_id.blobstore_key(), envelope.into())
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(())
     }
 
     /// Request all of the tree nodes in the repo under a given path.

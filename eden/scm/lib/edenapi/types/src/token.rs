@@ -6,6 +6,8 @@
  */
 
 use crate::AnyId;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 /// Token metadata for file content token type.
@@ -60,4 +62,33 @@ impl UploadToken {
         }
     }
     // TODO: implement secure signed tokens
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadToken {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            data: Arbitrary::arbitrary(g),
+            signature: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTokenData {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            id: Arbitrary::arbitrary(g),
+            metadata: None,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTokenSignature {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            signature: Arbitrary::arbitrary(g),
+        }
+    }
 }

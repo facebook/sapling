@@ -14,9 +14,9 @@ use serde::Deserialize;
 use std::str::FromStr;
 
 use edenapi_types::{
-    wire::{ToWire, WireFileRequest},
-    AnyFileContentId, AnyId, FileContentTokenMetadata, FileEntry, FileRequest, UploadToken,
-    UploadTokenMetadata,
+    wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
+    AnyFileContentId, AnyId, FileContentTokenMetadata, FileEntry, FileRequest,
+    UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use load_limiter::Metric;
@@ -34,6 +34,8 @@ use super::{EdenApiMethod, HandlerInfo};
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
 
+const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
+
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct FileParams {
     repo: String,
@@ -44,6 +46,11 @@ pub struct UploadFileParams {
     repo: String,
     idtype: String,
     id: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadHgFilenodesParams {
+    repo: String,
 }
 
 /// Fetch the content of the files requested by the client.
@@ -158,7 +165,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressGetpackFiles).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;
@@ -175,4 +182,96 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map(|v| v.to_wire());
 
     Ok(cbor_stream(stream::iter(vec![token])))
+}
+
+/// Store the content of a single HgFilenode
+async fn store_hg_filenode(
+    repo: HgRepoContext,
+    item: UploadHgFilenodeRequest,
+    index: usize,
+) -> Result<UploadHgFilenodeResponse, Error> {
+    // TODO(liubovd): validate signature of the upload token (item.token) and
+    // return 'ErrorKind::UploadHgFilenodeRequestInvalidToken' if it's invalid.
+    // This will be added later, for now assume tokens are always valid.
+
+    let node_id = item.data.node_id;
+    let token = item.data.file_content_upload_token;
+
+    let filenode: HgFileNodeId = HgFileNodeId::from_node_hash(HgNodeHash::from(node_id));
+
+    let p1: Option<HgFileNodeId> = item
+        .data
+        .p1
+        .map(HgNodeHash::from)
+        .map(HgFileNodeId::from_node_hash);
+
+    let p2: Option<HgFileNodeId> = item
+        .data
+        .p2
+        .map(HgNodeHash::from)
+        .map(HgFileNodeId::from_node_hash);
+
+    let content_id = match match token.data.id {
+        AnyId::AnyFileContentId(id) => Some(id),
+        _ => None,
+    }
+    .ok_or_else(|| {
+        ErrorKind::UploadHgFilenodeRequestInvalidToken(
+            node_id.clone(),
+            "the provided token is not for file content".into(),
+        )
+    })? {
+        AnyFileContentId::ContentId(id) => mononoke_types::ContentId::from(id),
+        AnyFileContentId::Sha1(id) => {
+            repo.convert_file_sha1(mononoke_types::hash::Sha1::from(id))
+                .await?
+        }
+        AnyFileContentId::Sha256(id) => {
+            repo.convert_file_sha256(mononoke_types::hash::Sha256::from(id))
+                .await?
+        }
+    };
+
+    let content_size = match token.data.metadata {
+        Some(UploadTokenMetadata::FileContentTokenMetadata(meta)) => meta.content_size,
+        _ => repo.fetch_file_content_size(content_id).await?,
+    };
+
+    let metadata = Bytes::from(item.data.metadata);
+
+    repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
+        .await?;
+
+    Ok(UploadHgFilenodeResponse {
+        index,
+        token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id)),
+    })
+}
+
+/// Upload list of hg filenodes requested by the client (batch request).
+pub async fn upload_hg_filenodes(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = UploadHgFilenodesParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::UploadHgFilenodes,
+    ));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let request = parse_wire_request::<WireBatch<WireUploadHgFilenodeRequest>>(state).await?;
+
+    let tokens = request
+        .batch
+        .into_iter()
+        .enumerate()
+        .map(move |(i, item)| store_hg_filenode(repo.clone(), item, i));
+
+    Ok(cbor_stream(
+        stream::iter(tokens)
+            .buffer_unordered(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST)
+            .map(|r| r.map(|v| v.to_wire())),
+    ))
 }

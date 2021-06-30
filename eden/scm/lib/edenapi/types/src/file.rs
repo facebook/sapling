@@ -15,7 +15,7 @@ use quickcheck::Arbitrary;
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::InvalidHgId;
+use crate::{InvalidHgId, UploadToken};
 
 /// Tombstone string that replaces the content of redacted files.
 /// TODO(T48685378): Handle redacted content in a less hacky way.
@@ -159,6 +159,48 @@ impl Arbitrary for FileRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct HgFilenodeData {
+    pub node_id: HgId,
+    pub p1: Option<HgId>,
+    pub p2: Option<HgId>,
+    pub file_content_upload_token: UploadToken,
+    pub metadata: Vec<u8>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadHgFilenodeRequest {
+    pub data: HgFilenodeData,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadHgFilenodeResponse {
+    pub index: usize,
+    pub token: UploadToken,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadHgFilenodeRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            data: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for HgFilenodeData {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            node_id: Arbitrary::arbitrary(g),
+            p1: Arbitrary::arbitrary(g),
+            p2: Arbitrary::arbitrary(g),
+            file_content_upload_token: Arbitrary::arbitrary(g),
+            metadata: Arbitrary::arbitrary(g),
         }
     }
 }

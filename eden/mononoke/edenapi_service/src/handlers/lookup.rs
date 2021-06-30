@@ -16,10 +16,8 @@ use edenapi_types::{
     AnyFileContentId, AnyId, LookupRequest, LookupResponse, UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use load_limiter::Metric;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
-use mononoke_api_hg::HgDataId;
-use mononoke_api_hg::HgRepoContext;
+use mononoke_api_hg::{HgDataId, HgRepoContext};
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
@@ -94,7 +92,7 @@ pub async fn lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressGetpackFiles).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
     let request = parse_wire_request::<WireBatch<WireLookupRequest>>(state).await?;
 
     let tokens = request

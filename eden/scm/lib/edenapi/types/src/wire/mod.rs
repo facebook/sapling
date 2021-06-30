@@ -74,7 +74,9 @@ pub use crate::wire::{
     },
     complete_tree::WireCompleteTreeRequest,
     errors::{WireError, WireResult},
-    file::{WireFileEntry, WireFileRequest},
+    file::{
+        WireFileEntry, WireFileRequest, WireUploadHgFilenodeRequest, WireUploadHgFilenodeResponse,
+    },
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{
         WireAnyFileContentId, WireContentId, WireDirectoryMetadata, WireDirectoryMetadataRequest,
@@ -111,6 +113,7 @@ pub enum WireToApiConversionError {
     UnrecognizedEnumVariant(&'static str),
     CannotPopulateRequiredField(&'static str),
     PathValidationError(RepoPathParseError),
+    InvalidUploadTokenType(&'static str),
 }
 
 impl From<Infallible> for WireToApiConversionError {

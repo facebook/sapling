@@ -46,6 +46,7 @@ pub enum EdenApiMethod {
     Files,
     Lookup,
     UploadFile,
+    UploadHgFilenodes,
     Trees,
     CompleteTrees,
     History,
@@ -76,6 +77,7 @@ impl fmt::Display for EdenApiMethod {
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
             Self::PullFastForwardMaster => "pull_fast_forward_master",
+            Self::UploadHgFilenodes => "upload_filenodes",
         };
         write!(f, "{}", name)
     }
@@ -165,6 +167,7 @@ define_handler!(bookmarks_handler, bookmarks::bookmarks);
 define_handler!(lookup_handler, lookup::lookup);
 define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
+define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -237,5 +240,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
             .to(upload_file_handler);
+        route
+            .put("/:repo/upload/filenodes")
+            .with_path_extractor::<files::UploadHgFilenodesParams>()
+            .to(upload_hg_filenodes_handler);
     })
 }

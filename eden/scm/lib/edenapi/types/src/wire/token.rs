@@ -6,6 +6,8 @@
  */
 
 #[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
 
 use crate::token::{
@@ -165,5 +167,34 @@ impl ToApi for WireFileContentTokenMetadata {
         Ok(FileContentTokenMetadata {
             content_size: self.content_size,
         })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireUploadToken {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            data: Arbitrary::arbitrary(g),
+            signature: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireUploadTokenData {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            id: Arbitrary::arbitrary(g),
+            metadata: None,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireUploadTokenSignature {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            signature: Arbitrary::arbitrary(g),
+        }
     }
 }

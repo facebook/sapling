@@ -6,6 +6,8 @@
  */
 
 #[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
 
 use crate::anyid::{AnyId, LookupRequest, LookupResponse};
@@ -128,5 +130,52 @@ impl ToApi for WireLookupResponse {
             index: self.index,
             token: self.token.to_api()?,
         })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireAnyId {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        use WireAnyId::*;
+
+        let variant = g.gen_range(0, 4);
+        match variant {
+            0 => WireAnyFileContentId(Arbitrary::arbitrary(g)),
+            1 => WireHgFilenodeId(Arbitrary::arbitrary(g)),
+            2 => WireHgTreeId(Arbitrary::arbitrary(g)),
+            3 => WireHgChangesetId(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireLookupRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            id: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+
+    use quickcheck::quickcheck;
+
+    quickcheck! {
+        // Wire serialize roundtrips
+        fn test_lookup_roundtrip_serialize(v: WireLookupRequest) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        // API-Wire roundtrips
+        fn test_lookup_roundtrip_wire(v: LookupRequest) -> bool {
+            check_wire_roundtrip(v)
+        }
     }
 }

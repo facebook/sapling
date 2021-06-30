@@ -66,6 +66,10 @@ pub enum ErrorKind {
     CommitRevlogDataRequestFailed,
     #[error("HgId not found: {0}")]
     HgIdNotFound(HgId),
+    #[error(
+        "Invalid file content upload token in 'upload/filenodes' request for filenode: {0}, reason: {1}"
+    )]
+    UploadHgFilenodeRequestInvalidToken(HgId, String),
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

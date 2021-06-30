@@ -369,3 +369,19 @@ impl Arbitrary for Sha256 {
         v
     }
 }
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for AnyFileContentId {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        use AnyFileContentId::*;
+
+        let variant = g.gen_range(0, 3);
+        match variant {
+            0 => ContentId(Arbitrary::arbitrary(g)),
+            1 => Sha1(Arbitrary::arbitrary(g)),
+            2 => Sha256(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
