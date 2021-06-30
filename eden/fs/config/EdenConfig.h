@@ -615,13 +615,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * A number from 0 - 100 to determine how often we should log file access
+   * A number from 0 - x to determine how often we should log file access
    * events. This is currectly agnostic to the type of file access. If this
-   * is not at 100, we will not log filenames and we will only log directory
-   * paths
+   * is not at 100%, we will not log filenames and we will only log directory
+   * paths. In the following equation, 1/x = percentage, x is this variable.
+   * For 50% rollout, 1/x = .5, so x = 2, so this would be set to 2. 0
+   * indicates that the feature is off.
    */
-  ConfigSetting<uint32_t> logFileAccessesPercentage{
-      "prefetch-profiles:file-access-logging-percentage",
+  ConfigSetting<uint32_t> logFileAccessesSamplingDenominator{
+      "prefetch-profiles:file-access-logging-sampling-denominator",
       0,
       this};
 
