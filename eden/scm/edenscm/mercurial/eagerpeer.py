@@ -215,8 +215,8 @@ class eagerpeer(repository.peer):
     def pushkey(self, namespace, key, old, new):
         changed = False
         if namespace == "bookmarks":
-            existing = hex(self.listkeyspatterns(namespace, [key]).get(key, b""))
-            if old == existing:
+            existing = self.listkeyspatterns(namespace, [key]).get(key, b"")
+            if new != existing:
                 self._inner.setbookmark(key, bin(new))
                 self._flush()
                 changed = True
