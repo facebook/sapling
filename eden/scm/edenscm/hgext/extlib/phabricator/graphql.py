@@ -170,39 +170,60 @@ class Client(object):
         ]
 
     def getlandednodes(self, repo, diffids, timeout=10):
-        """Get landed nodes for diffids. Return {diffid: node}"""
+        """Get landed nodes for diffids. Return {diffid: node}, {diffid: set(node)}"""
         if not diffids:
-            return {}
-        query = """
-            query DiffToCommitQuery($diffids: [String!]!){
-                phabricator_diff_query(query_params: {
-                    numbers: $diffids
-                }) {
-                    results {
-                        nodes {
-                            number
-                            phabricator_diff_commit {
-                                nodes {
-                                    commit_identifier
+            return {}, {}
+        if self._mock:
+            ret = self._mocked_responses.pop()
+        else:
+            query = """
+                query DiffToCommitQuery($diffids: [String!]!){
+                    phabricator_diff_query(query_params: {
+                        numbers: $diffids
+                    }) {
+                        results {
+                            nodes {
+                                number
+                                phabricator_versions {
+                                    nodes {
+                                        local_commits {
+                                            primary_commit {
+                                                commit_identifier
+                                            }
+                                        }
+                                    }
+                                }
+                                phabricator_diff_commit {
+                                    nodes {
+                                        commit_identifier
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            """
-        params = {"diffids": diffids}
-        ret = self._client.query(timeout, query, params)
-        # Example result:
-        # { "data": {
-        #     "phabricator_diff_query": [
-        #       { "results": {
-        #           "nodes": [
-        #             { "phabricator_diff_commit": {
-        #                 "nodes": [
-        #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
+                """
+            params = {"diffids": diffids}
+            ret = self._client.query(timeout, query, params)
+            # Example result:
+            # { "data": {
+            #     "phabricator_diff_query": [
+            #       { "results": {"nodes": [{
+            #               "number": 123,
+            #               "phabricator_versions": {
+            #                 "nodes": [
+            #                   {"local_commits": [{"primary_commit": {"commit_identifier": "d131c2d7408acf233a4b2db04382005434346421"}}]},
+            #                   {"local_commits": [{"primary_commit": {"commit_identifier": "a421db7622bf0c454ab19479f166fd4a3a4a41f5"}}]},
+            #                   {"local_commits": []}]},
+            #               "phabricator_diff_commit": {
+            #                 "nodes": [
+            #                   { "commit_identifier": "9396e4a63208eb034b8b9cca909f9914cb2fbe85" } ] } } ] } } ] } }
+        return self._getlandednodes(repo, ret)
+
+    def _getlandednodes(self, repo, ret):
         difftonode = {}
         difftoglobalrev = {}
+        difftolocalcommits = {}  # {str: set(node)}
         for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
             try:
                 diffid = "%s" % result["number"]
@@ -216,6 +237,13 @@ class Client(object):
                     elif identifier.isdigit():
                         # This is probably a globalrev.
                         difftoglobalrev[diffid] = identifier
+                allversionnodes = result["phabricator_versions"]["nodes"]
+                for version in allversionnodes:
+                    versioncommits = version["local_commits"]
+                    for commit in versioncommits:
+                        difftolocalcommits.setdefault(diffid, set()).add(
+                            bin(commit["primary_commit"]["commit_identifier"])
+                        )
             except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue
@@ -235,8 +263,7 @@ class Client(object):
                     node = globalrevtonode.get(globalrev)
                     if node:
                         difftonode[diffid] = node
-
-        return difftonode
+        return difftonode, difftolocalcommits
 
     def getrevisioninfo(self, timeout, signalstatus, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)

@@ -31,6 +31,10 @@ from .phabstatus import COMMITTEDSTATUS, getdiffstatus
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem("pullcreatemarkers", "check-local-versions", default=True)
+
 
 def _isrevert(message, diffid):
     result = ("Revert D%s" % diffid) in message
@@ -44,11 +48,11 @@ def _cleanuplanded(repo, dryrun=False):
     This uses mutation and visibility directly.
     """
     limit = repo.ui.configint("pullcreatemarkers", "diff-limit", 100)
-    difftodraft = {}  # {str: node}
+    difftodraft = {}  # {str: {node}}
     for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
         diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
         if diffid and not _isrevert(ctx.description(), diffid):
-            difftodraft.setdefault(diffid, []).append(ctx.node())
+            difftodraft.setdefault(diffid, set()).add(ctx.node())
             # Bound the number of diffs we query from Phabricator.
             if len(difftodraft) >= limit:
                 break
@@ -56,7 +60,9 @@ def _cleanuplanded(repo, dryrun=False):
     ui = repo.ui
     try:
         client = graphql.Client(repo=repo)
-        difftopublic = client.getlandednodes(repo, list(difftodraft.keys()))
+        difftopublic, difftolocal = client.getlandednodes(
+            repo, list(difftodraft.keys())
+        )
     except KeyboardInterrupt:
         ui.warn(
             _(
@@ -76,8 +82,11 @@ def _cleanuplanded(repo, dryrun=False):
     mutationentries = []
     tohide = set()
     markedcount = 0
+    checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
     for diffid, draftnodes in sorted(difftodraft.items()):
         publicnode = difftopublic.get(diffid)
+        if checklocalversions:
+            draftnodes = draftnodes & difftolocal.get(diffid)
         if publicnode is None or publicnode not in unfi:
             continue
         # skip it if the local repo does not think it's a public commit.
@@ -86,7 +95,9 @@ def _cleanuplanded(repo, dryrun=False):
         # sanity check - the public commit should have a sane commit message.
         if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
             continue
-        draftnodestr = ", ".join(short(d) for d in draftnodes)
+        draftnodestr = ", ".join(
+            short(d) for d in sorted(draftnodes)
+        )  # making output deterministic
         if ui.verbose:
             ui.write(
                 _("marking D%s (%s) as landed as %s\n")
