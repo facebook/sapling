@@ -19,6 +19,16 @@ pub struct CloneData<Name> {
     pub idmap: HashMap<Id, Name>,
 }
 
+impl<Name> CloneData<Name> {
+    pub fn convert_vertex<T, F: Fn(Name) -> T>(self, f: F) -> CloneData<T> {
+        let idmap = self.idmap.into_iter().map(|(k, v)| (k, f(v))).collect();
+        CloneData {
+            flat_segments: self.flat_segments,
+            idmap,
+        }
+    }
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 
