@@ -4292,7 +4292,10 @@ def _performrevert(repo, parents, ctx, actions, interactive=False, tobackup=None
         checkout(f)
         normal(f)
 
-    copied = copies.pathcopies(repo[parent], ctx)
+    # When reverting a change, always enable copy tracing so we don't
+    # accidentally lose any data.
+    with repo.ui.configoverride({("experimental", "copytrace"): "on"}):
+        copied = copies.pathcopies(repo[parent], ctx)
 
     for f in actions["add"][0] + actions["undelete"][0] + actions["revert"][0]:
         if f in copied:

@@ -122,10 +122,11 @@ Test backing out a mv keeps the blame history even if copytracing is off
   $ hg backout -r . -m backout
   removing bar
   adding foo
-  changeset 72e748665938 backs out changeset 863da64a0012
+  changeset b53c2dfb1fb7 backs out changeset 863da64a0012
   $ hg status --change . -C
   A foo
+    bar
   R bar
   $ hg blame -c foo
-  72e748665938: a
-  72e748665938: b
+  3e92d79f743a: a
+  998f4c3a2bdf: b
