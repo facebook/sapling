@@ -143,10 +143,6 @@ Test pulling new commits from a hybrid server
   adding file changes
   added 1 changesets with 0 changes to 0 files
 
-  $ hg debugindex -m --config treemanifest.treeonly=False
-  hg debugindex: invalid arguments
-  (use 'hg debugindex -h' to get help)
-  [255]
   $ hg log -r tip --stat --pager=off
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
@@ -197,9 +193,6 @@ Test {manifest} template
 Test turning treeonly off and making sure we can still commit on top of treeonly
 commits
   $ echo >> subdir/x
-  $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
-  hg debugindex: invalid arguments
-  (use 'hg debugindex -h' to get help)
   $ hg commit -m 'treeonly from hybrid repo'
   $ hg log -r . -T '{desc}\n' --stat
   treeonly from hybrid repo
@@ -211,9 +204,6 @@ commits
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
-  hg debugindex: invalid arguments
-  (use 'hg debugindex -h' to get help)
   $ hg debugstrip -r .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
