@@ -8,6 +8,7 @@
 mod bytearrayobject;
 mod bytes;
 mod bytesobject;
+mod cell;
 pub mod convert;
 pub mod de;
 pub mod error;
@@ -26,6 +27,7 @@ mod tests;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;
+pub use crate::cell::pycell;
 pub use crate::error::{format_py_error, AnyhowResultExt, PyErr, ResultPyErrExt};
 pub use crate::extract::{ExtractInner, ExtractInnerRef};
 pub use crate::io::{wrap_pyio, wrap_rust_write, PyRustWrite, WrappedIO};
