@@ -508,6 +508,7 @@ def wraprepo(repo):
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
+            caps.add("designatednodes")
             caps.add("gettreepack")
             caps.add("treeonly")
             return caps
@@ -551,6 +552,12 @@ def wraprepo(repo):
 
                 mfnodes = [node for path, node in keys]
                 directories = [path for path, node in keys]
+
+                if self.ui.configbool("remotefilelog", "debug") and len(keys) == 1:
+                    name = keys[0][0]
+                    node = keys[0][1]
+                    msg = _("fetching tree %r %s") % (name, hex(node))
+                    self.ui.warn(msg + "\n")
 
                 start = util.timer()
                 with self.ui.timesection("getdesignatednodes"):
@@ -1528,13 +1535,10 @@ def servergettreepack(repo, proto, args):
     rootdir = args["rootdir"]
     depth = int(args.get("depth", str(2 ** 16)))
 
-    # Sort to produce a consistent output
-    mfnodes = sorted(wireproto.decodelist(args["mfnodes"]))
-    basemfnodes = sorted(wireproto.decodelist(args["basemfnodes"]))
-    directories = sorted(
-        list(
-            wireproto.unescapearg(d) for d in args["directories"].split(",") if d != ""
-        )
+    mfnodes = wireproto.decodelist(args["mfnodes"])
+    basemfnodes = wireproto.decodelist(args["basemfnodes"])
+    directories = list(
+        wireproto.unescapearg(d) for d in args["directories"].split(",") if d != ""
     )
 
     bundler = _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth)
@@ -1601,11 +1605,6 @@ def generatepackstream(
     deltaentry = <node: 20 byte><deltabase: 20 byte>
                  <delta len: 8 byte><delta>
     """
-    if directories:
-        raise RuntimeError(
-            "directories arg is not supported yet ('%s')" % ", ".join(directories)
-        )
-
     datastore = repo.manifestlog.datastore
 
     # Throw an exception early if the requested nodes aren't present. It's
@@ -1613,11 +1612,27 @@ def generatepackstream(
     # generation because at that point we've already added the part to the
     # stream and it's difficult to switch to an error then.
     missing = []
-    for n in mfnodes:
+    if len(directories) > 0:
+        iterator = zip(mfnodes, directories)
+        assert depth == 1
+    else:
+        iterator = list((n, rootdir) for n in mfnodes)
+
+    # Throw an exception early if the requested nodes aren't present. It's
+    # important that we throw it now and not later during the pack stream
+    # generation because at that point we've already added the part to the
+    # stream and it's difficult to switch to an error then.
+    missing = []
+    if len(directories) > 0:
+        iterator = zip(mfnodes, directories)
+        assert depth == 1
+    else:
+        iterator = list((n, rootdir) for n in mfnodes)
+    for n, dir in iterator:
         try:
-            datastore.get(rootdir, n)
+            datastore.get(dir, n)
         except shallowutil.MissingNodesError:
-            missing.append((rootdir, n))
+            missing.append((dir, n))
     if missing:
         raise shallowutil.MissingNodesError(missing, "tree nodes missing on server")
 
@@ -1652,6 +1667,23 @@ def _generatepackstream(
     """
     historystore = repo.manifestlog.historystore
     datastore = repo.manifestlog.datastore
+
+    # getdesignatednodes
+    if len(directories) > 0:
+        for mfnode, dir in zip(mfnodes, directories):
+            text = datastore.get(dir, mfnode)
+            p1node, p2node = historystore.getnodeinfo(dir, mfnode)[:2]
+
+            data = [(mfnode, nullid, text, 0)]
+
+            histdata = historystore.getnodeinfo(dir, mfnode)
+            p1node, p2node, linknode, copyfrom = histdata
+            history = [(mfnode, p1node, p2node, linknode, copyfrom)]
+
+            for chunk in wirepack.sendpackpart(dir, history, data, version=version):
+                yield chunk
+        yield wirepack.closepart()
+        return
 
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)

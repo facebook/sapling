@@ -2447,13 +2447,12 @@ def servergettreepack(repo, proto, args):
     rootdir = args["rootdir"]
     depth = int(args.get("depth", str(2 ** 16)))
 
-    # Sort to produce a consistent output
-    mfnodes = sorted(wireproto.decodelist(args["mfnodes"]))
-    basemfnodes = sorted(wireproto.decodelist(args["basemfnodes"]))
-    directories = sorted(
-        list(
-            wireproto.unescapearg(d) for d in args["directories"].split(",") if d != ""
-        )
+    mfnodes = wireproto.decodelist(args["mfnodes"])
+    basemfnodes = wireproto.decodelist(args["basemfnodes"])
+    directories = list(
+        wireproto.unescapestringarg(d)
+        for d in args["directories"].split(",")
+        if d != ""
     )
 
     bundler = _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories, depth)
@@ -2532,11 +2531,16 @@ def generatepackstream(
     # generation because at that point we've already added the part to the
     # stream and it's difficult to switch to an error then.
     missing = []
-    for n in mfnodes:
+    if len(directories) > 0:
+        iterator = zip(mfnodes, directories)
+        assert depth == 1
+    else:
+        iterator = list((n, rootdir) for n in mfnodes)
+    for n, dir in iterator:
         try:
-            datastore.get(rootdir, n)
+            datastore.get(dir, n)
         except shallowutil.MissingNodesError:
-            missing.append((rootdir, n))
+            missing.append((dir, n))
     if missing:
         raise shallowutil.MissingNodesError(missing, "tree nodes missing on server")
 
@@ -2571,6 +2575,26 @@ def _generatepackstream(
     """
     historystore = repo.manifestlog.historystore
     datastore = repo.manifestlog.datastore
+
+    # getdesignatednodes
+    if len(directories) > 0:
+        for mfnode, dir in zip(mfnodes, directories):
+            text = datastore.get(dir, mfnode)
+            p1node, p2node = historystore.getnodeinfo(dir, mfnode)[:2]
+
+            data = [(mfnode, nullid, text, 0)]
+
+            # Append history
+            # Only append first history for now, since the entire manifest
+            # history is very long.
+            histdata = historystore.getnodeinfo(dir, mfnode)
+            p1node, p2node, linknode, copyfrom = histdata
+            history = [(mfnode, p1node, p2node, linknode, copyfrom)]
+
+            for chunk in wirepack.sendpackpart(dir, history, data, version=version):
+                yield chunk
+        yield wirepack.closepart()
+        return
 
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)

@@ -173,7 +173,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching trees for 3 commits
-  6 trees fetched over * (glob)
+  * trees fetched over * (glob)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
   $ hg debugstrip -q -r 'draft()'

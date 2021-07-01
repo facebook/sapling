@@ -81,6 +81,7 @@ Checkout commits. Expect BFS prefetch to fill our tree
   fetching tree '' *, based on *, found via * (glob)
   3 trees fetched over * (glob)
   fetching tree for ('bar', *) (glob)
+  fetching tree 'bar' * (glob)
   1 trees fetched over * (glob)
   fetching 2 trees
   2 trees fetched over * (glob)
