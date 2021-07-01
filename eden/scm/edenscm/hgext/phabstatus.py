@@ -191,6 +191,32 @@ def showphabsignalstatus(repo, ctx, templ, **args):
         return result.get("signal_status")
 
 
+@templatekeyword("phabcommit")
+def showphabcommit(repo, ctx, templ, **args):
+    """String. Return the remote commit in Phabricator
+    if any
+    """
+    # local = ctx.hex()
+    # Copied from showsyncstatus
+    if not ctx.mutable():
+        return None
+
+    diffnum = getdiffnum(repo, ctx)
+    if diffnum is None:
+        return None
+
+    populateresponseforphab(repo, diffnum)
+    results = getdiffstatus(repo, diffnum)
+    try:
+        result = results[0]
+        remote = result["hash"]
+    except (IndexError, KeyError, ValueError, TypeError):
+        # We got no result back, or it did not contain all required fields
+        return None
+
+    return remote
+
+
 """
 in order to determine whether the local changeset is in sync with the
 remote one we compare the hash of the current changeset with the one we
@@ -258,6 +284,7 @@ def extsetup(ui):
             "phabsignalstatus": ["phabstatus"],
             "phabstatus": ["phabstatus"],
             "syncstatus": ["phabstatus"],
+            "phabcommit": ["phabstatus"],
         }
     )
     smartset.prefetchtable["phabstatus"] = _prefetch

@@ -99,6 +99,48 @@ sh % "'HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit' hg log -T '{syncstatus}\\n' -r ." 
     Error info: Unexpected graphql response format
     Error"""
 
+# Missing hash doesn't make us explode
+
+sh % "cat" << r"""
+[{"data": {"query": [{"results": {"nodes": [{
+  "number": 1,
+  "diff_status_name": "Approved",
+  "latest_active_diff": {
+    "local_commit_info": {
+      "nodes": [
+        {"property_value": "{\"lolwut\": {\"time\": 0}}"}
+      ]
+    }
+  },
+  "differential_diffs": {"count": 3},
+  "is_landing": false,
+  "created_time": 123,
+  "updated_time": 222
+}]}}]}}]
+""" > "$TESTTMP/mockduit"
+sh % "'HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit' hg log -T '{phabcommit}\\n' -r ." == ""
+
+# Hash field displayed
+
+sh % "cat" << r"""
+[{"data": {"query": [{"results": {"nodes": [{
+  "number": 1,
+  "diff_status_name": "Approved",
+  "latest_active_diff": {
+    "local_commit_info": {
+      "nodes": [
+        {"property_value": "{\"lolwut\": {\"commit\": \"ffffff\", \"time\": 0}}"}
+      ]
+    }
+  },
+  "differential_diffs": {"count": 3},
+  "is_landing": false,
+  "created_time": 123,
+  "updated_time": 222
+}]}}]}}]
+""" > "$TESTTMP/mockduit"
+sh % "'HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit' hg log -T '{phabcommit}\\n' -r ." == "ffffff"
+
 # Missing hash field is treated as unsync
 
 sh % "cat" << r"""
