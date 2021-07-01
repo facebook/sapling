@@ -330,10 +330,15 @@ impl<'a> FileStoreBuilder<'a> {
             .transpose()?;
         let fetch_logger = Some(Arc::new(FetchLogger::new(logging_regex)));
 
+        let allow_write_lfs_ptrs = self
+            .config
+            .get_or_default::<bool>("scmstore", "lfsptrwrites")?;
+
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
             edenapi_retries,
+            allow_write_lfs_ptrs,
 
             indexedlog_local,
             lfs_local,

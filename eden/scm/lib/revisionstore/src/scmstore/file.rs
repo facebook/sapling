@@ -39,11 +39,14 @@ use crate::{
 
 pub struct FileStore {
     // Config
+    // TODO(meyer): Move these to a separate config struct with default impl, etc.
     pub(crate) extstored_policy: ExtStoredPolicy,
     pub(crate) lfs_threshold_bytes: Option<u64>,
     pub(crate) cache_to_local_cache: bool,
     pub(crate) cache_to_memcache: bool,
     pub(crate) edenapi_retries: i32,
+    /// Allow explicitly writing serialized LFS pointers outside of tests
+    pub(crate) allow_write_lfs_ptrs: bool,
 
     // Record remote fetches
     pub(crate) fetch_logger: Option<Arc<FetchLogger>>,
@@ -302,10 +305,12 @@ impl FileStore {
         let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
-                ensure!(
-                    std::env::var("TESTTMP").is_ok(),
-                    "writing LFS pointers directly is not allowed outside of tests"
-                );
+                if !self.allow_write_lfs_ptrs {
+                    ensure!(
+                        std::env::var("TESTTMP").is_ok(),
+                        "writing LFS pointers directly is not allowed outside of tests"
+                    );
+                }
                 // TODO(meyer): We should try to eliminate directly writing LFS pointers, so we're only supporting it
                 // via ContentStore for now.
                 let contentstore = self.contentstore.as_ref().ok_or_else(|| {
@@ -357,6 +362,7 @@ impl FileStore {
             extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
             edenapi_retries: self.edenapi_retries.clone(),
+            allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
 
             indexedlog_local: self.indexedlog_local.clone(),
             lfs_local: self.lfs_local.clone(),
@@ -437,6 +443,7 @@ impl FileStore {
             extstored_policy: ExtStoredPolicy::Ignore,
             lfs_threshold_bytes: None,
             edenapi_retries: 0,
+            allow_write_lfs_ptrs: false,
 
             indexedlog_local: None,
             lfs_local: None,
@@ -475,6 +482,7 @@ impl LegacyStore for FileStore {
             extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
             edenapi_retries: self.edenapi_retries.clone(),
+            allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
 
             indexedlog_local: self.indexedlog_cache.clone(),
             lfs_local: self.lfs_cache.clone(),
