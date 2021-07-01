@@ -23,10 +23,12 @@
   searching for changes
   no changes found
   updating to branch default
-  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8, found via 17c112049057
-  2 trees fetched over * (glob)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd shallow
   $ enable remotenames

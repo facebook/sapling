@@ -18,7 +18,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 085784c01c08
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   { metrics : { fallback : { fetch : 0,
@@ -31,8 +31,8 @@
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 1948},
-                        write : { bytes : 966}}}}
+                        read : { bytes : 1980},
+                        write : { bytes : 963}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
@@ -62,10 +62,10 @@ Test auto creating trees for merge commit
                              fetchmiss : 0,
                              writeptr : 0},
                 ssh : { connections : 1,
-                        read : { bytes : 1081},
+                        read : { bytes : 1097},
                         write : { bytes : 657}}}}
   $ hg manifest -r tip
-  fetching tree '' 13532a59874531175abc845749c0491b36effb18, found via 92f4ca0e667c
+  fetching tree '' 13532a59874531175abc845749c0491b36effb18
   1 trees fetched over 0.00s
   x
   z
@@ -73,8 +73,8 @@ Test auto creating trees for merge commit
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 882},
-                        write : { bytes : 222}}}}
+                        read : { bytes : 898},
+                        write : { bytes : 219}}}}
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/*.histidx
   
   

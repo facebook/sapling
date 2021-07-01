@@ -21,7 +21,7 @@
 Clone it
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
-  fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, found via d2ae7f538514
+  fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   { metrics : { fallback : { fetch : 4,
@@ -34,8 +34,8 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2350},
-                        write : { bytes : 993}}}}
+                        read : { bytes : 2382},
+                        write : { bytes : 990}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -87,7 +87,7 @@ Pull exactly up to d into the client
                              fetchmiss : 0,
                              writeptr : 0},
                 ssh : { connections : 1,
-                        read : { bytes : 1070},
+                        read : { bytes : 1086},
                         write : { bytes : 680}}}}
 
 Test error message about MissingNodesError

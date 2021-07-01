@@ -61,10 +61,23 @@ Setup some arguments to see debug output from remotefilelog
 Fetch without designated nodes
 
   $ hgmn "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache1" --config treemanifest.ondemandfetch=False show "master_bookmark~2" >/dev/null
-  fetching tree '' 65b4f32575a18414983d65bbb6cdef3370aa582b, found via 0b5ea07e3544
-  7 trees fetched over 0.00s
-  fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0, based on 65b4f32575a18414983d65bbb6cdef3370aa582b, found via e1972bf883fd
-  5 trees fetched over * (glob)
+  fetching tree for ('', 65b4f32575a18414983d65bbb6cdef3370aa582b)
+  fetching tree '' 65b4f32575a18414983d65bbb6cdef3370aa582b
+  1 trees fetched over 0.00s
+  fetching tree for ('', 1595f1646547518ea8bb6f15db03fcaed5f98ab0)
+  fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0
+  1 trees fetched over 0.00s
+  fetching tree for ('root', a36092105bfeca1ee6283de2b3027138e51f0a89)
+  fetching tree 'root' a36092105bfeca1ee6283de2b3027138e51f0a89
+  1 trees fetched over 0.00s
+  fetching tree for ('root', 9aa1e4737597a611854828dcaca116ae50301412)
+  fetching tree 'root' 9aa1e4737597a611854828dcaca116ae50301412
+  1 trees fetched over 0.00s
+  fetching tree for ('root/d,', 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c)
+  fetching tree 'root/d,' 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c
+  1 trees fetched over 0.00s
+  fetching 2 trees
+  2 trees fetched over 0.00s
 
 Fetch with designated ndoes
 
@@ -89,7 +102,7 @@ Fetch with designated ndoes
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
-  38
+  42
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 

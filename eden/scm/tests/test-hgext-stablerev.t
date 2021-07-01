@@ -143,7 +143,7 @@ But they can be made optional or required:
   abort: must pass a target
   [255]
 
-Try making the script return different locations, based on the target:
+Try making the script return different locations
   $ cat <<'EOF' > stable.sh
   > #!/bin/bash
   > if [ "$TARGET" = "foo" ]; then

@@ -24,9 +24,11 @@ Create server
 Create client2 - it will have only the first commit, so client1 will be pushing
 two server and one local commits later.
   $ hgcloneshallow ssh://user@dummy/master client2 -q
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2278cc8c6ce6
-  2 trees fetched over * (glob)
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   $ cat >> client2/.hg/hgrc <<EOF
   > [remotefilelog]
   > reponame=master
@@ -44,8 +46,10 @@ Create create two more server commits
 Create client1 - it will have both server commits
   $ hgcloneshallow ssh://user@dummy/master client1 -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via b8ff91c925b4
-  2 trees fetched over * (glob)
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' 143a95c22d775432b9bdc0d78803b3657c140a80
+  1 trees fetched over 0.00s
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -69,8 +73,10 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 # already has.
   $ hg -R ../client2 prefetch -r 'all()'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2278cc8c6ce6
-  2 trees fetched over * (glob)
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [remotefilelog]
@@ -81,10 +87,14 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ hg push -q ssh://user@dummy/client2
   remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8, found via 2937cde31c19
-  2 trees fetched over 0.00s
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via b8ff91c925b4
-  2 trees fetched over 0.00s
+  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
+  1 trees fetched over 0.00s
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' 143a95c22d775432b9bdc0d78803b3657c140a80
+  1 trees fetched over 0.00s
   $ hg log
   commit:      54609f68e211
   user:        test

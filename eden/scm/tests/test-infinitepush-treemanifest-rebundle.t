@@ -84,8 +84,10 @@ Clone another client, this time treeonly
   searching for changes
   no changes found
   updating to branch default
-  fetching tree '' a8b0ba84fc9d10d4e1e5be15a0f2b83872021770, found via f7e449aab27f
-  2 trees fetched over * (glob)
+  fetching tree '' a8b0ba84fc9d10d4e1e5be15a0f2b83872021770
+  1 trees fetched over 0.00s
+  fetching tree 'dir1' ec3add9cd79d1751c64913f4cc8f7e2f066fcd76
+  1 trees fetched over 0.00s
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd client2
   $ enable infinitepush

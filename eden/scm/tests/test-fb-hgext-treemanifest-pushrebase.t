@@ -60,8 +60,10 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd ..
 
   $ initclients
-  fetching tree '' b25ede39b5168327f0596fcf74d1ff53842bad2a, found via b6aada302c59
-  2 trees fetched over * (glob)
+  fetching tree '' b25ede39b5168327f0596fcf74d1ff53842bad2a
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' 8515d4bfda768e04af4c13a69a72e28c7effbea7
+  1 trees fetched over 0.00s
   $ pushclients
 
   $ cd master

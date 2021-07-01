@@ -67,16 +67,6 @@ server, rather than relying on the server to perform this computation.
     [treemanifest]
     bfsprefetch = True
 
-`treemanifest.ondemandfetch` causes treemanifest to use an on-demand tree fetching
-strategy. The client will only download the tree nodes needed to complete the desired
-operation, rather than fetching the entire tree. This setting only applies to SSH
-fetching.
-
-::
-
-    [treemanifest]
-    ondemandfetch = True
-
 `treemanifest.http` causes treemanifest to fetch tress over HTTP using EdenAPI.
 
 ::
@@ -169,7 +159,6 @@ configitem("treemanifest", "server", default=False)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
-configitem("treemanifest", "ondemandfetch", default=True)
 configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"
@@ -548,7 +537,7 @@ def wraprepo(repo):
             fallbackpath = getfallbackpath(self)
             with self.connectionpool.get(fallbackpath) as conn:
                 if "designatednodes" not in conn.peer.capabilities():
-                    return False
+                    raise error.ProgrammingError("designatednodes must be supported")
 
                 mfnodes = [node for path, node in keys]
                 directories = [path for path, node in keys]
@@ -591,13 +580,7 @@ def wraprepo(repo):
             return True
 
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
-            # It is always safe to enable ondemandfetch: this requires the
-            # underlying designatednodes capability on the server side, but if
-            # that capability is not present, it simply won't prefetch anything.
-            with self.ui.configoverride(
-                {("treemanifest", "ondemandfetch"): True}, "forcebfsprefetch"
-            ):
-                self._bfsprefetch(rootdir, mfnodes, depth)
+            self._bfsprefetch(rootdir, mfnodes, depth)
 
         @perftrace.tracefunc("BFS Prefetch")
         def _bfsprefetch(self, rootdir, mfnodes, depth=None):
@@ -1757,62 +1740,7 @@ class remotetreestore(object):
         self._repo = repo
 
     def prefetch(self, datastore, historystore, keys):
-        # If on-demand fetching is enabled, we should attempt to
-        # fetch the single tree node over SSH via gettreepack.
-        # If the server does not support calling gettreepack in
-        # this way, we must resort to a full fetch.
-        if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
-            if self._repo.getdesignatednodes(keys):
-                return
-
-        names = list(set(name for name, node in keys))
-        nodes = list(set(node for name, node in keys))
-        if len(names) != 1:
-            # Non-ondemandfetch queries don't support fetching multiple trees at
-            # once. Simply return, then the normal lookup path (i.e. the
-            # non-prefetch one) will trigger single tree fetches.
-            return
-        name = names[0]
-
-        # Only look at the server if not root or is public
-        basemfnodes = []
-        linknode = None
-        if name == "" and len(self._repo) != 0:
-            node = nodes[0] if len(nodes) == 1 else self._repo["tip"].node()
-            if util.safehasattr(self._repo.manifestlog, "_revlog"):
-                mfrevlog = self._repo.manifestlog._revlog
-                if node in mfrevlog.nodemap:
-                    rev = mfrevlog.rev(node)
-                    linknode = self._repo[mfrevlog.linkrev(rev)].node()
-                    if self._repo[linknode].phase() != phases.public:
-                        raise KeyError((name, node))
-
-            if linknode is None:
-                # Recentlinknode is set any time a changectx accesses a
-                # manifest. This let's us get an approximate linknode to use for
-                # finding nearby manifests.
-                linknode = self._repo.manifestlog.recentlinknode
-                if linknode is None:
-                    linknode = self._repo["tip"].node()
-
-            # Find a recent tree that we already have
-            basemfnodes = _findrecenttree(self._repo, linknode, nodes)
-
-        if self._repo.ui.configbool("remotefilelog", "debug") and len(nodes) == 1:
-            node = nodes[0]
-            msg = _("fetching tree %r %s") % (name, hex(node))
-            if len(basemfnodes) >= 1:
-                msg += _(", based on %s") % hex(basemfnodes[0])
-            if len(basemfnodes) > 1:
-                msg += _(" and %d others") % (len(basemfnodes) - 1)
-            if linknode:
-                msg += _(", found via %s") % short(linknode)
-            self._repo.ui.warn(msg + "\n")
-        self._repo._prefetchtrees(name, nodes, basemfnodes, [])
-
-        mfl = self._repo.manifestlog
-        mfl.datastore.markforrefresh()
-        mfl.historystore.markforrefresh()
+        self._repo.getdesignatednodes(keys)
 
 
 def _debugcmdfindtreemanifest(orig, ctx):

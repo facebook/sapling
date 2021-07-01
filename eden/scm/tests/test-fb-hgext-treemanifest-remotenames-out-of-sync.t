@@ -42,11 +42,11 @@
   $ mkdir cache_client_concurrent
   $ mkdir cache_client
   $ hgcloneshallow ssh://user@dummy/repo client_concurrent -q --config remotefilelog.cachepath=$ROOTDIR/cache_client_concurrent
-  fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via a89d614e2364
+  fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hgcloneshallow ssh://user@dummy/repo client -q  --config remotefilelog.cachepath=$ROOTDIR/cache_client
-  fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via a89d614e2364
+  fetching tree '' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
@@ -114,7 +114,7 @@
   remote: pushing 1 changeset:
   remote:     e68715a0fc4c  x4
   remote: 2 new changesets from the server will be downloaded
-  fetching tree '' eda1f7bdb1c764a4e03857a25db3d6cad9d25088, based on a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via 12f14bedbd28
+  fetching tree '' eda1f7bdb1c764a4e03857a25db3d6cad9d25088
   1 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r .

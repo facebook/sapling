@@ -125,8 +125,10 @@ exporting bookmark master
 """
 
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q" == r"""
-    fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f, found via bd99ff0a074c
-    2 trees fetched over 0.00s"""
+    fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f
+    1 trees fetched over 0.00s
+    fetching tree 'x' 4f20beec050d22de4f11003f4cdadd266b59be20
+    1 trees fetched over 0.00s"""
 sh % "cd $TESTTMP/clientpushrebasemerge"
 (
     sh % "cat"
@@ -184,8 +186,9 @@ sh % "hg files -r master" == r"""
 
 # Check that a secondary client will pull a consistent view of the repository
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/pullingclient -q" == r"""
-    fetching tree '' f597a49b2fb7de2f6ccc8daea22210cc762f463f, based on 7607ba5a97e3117540bbb7525093678eb26e374f, found via 38d281aaf22d
-    3 trees fetched over 0.00s"""
+    fetching tree '' f597a49b2fb7de2f6ccc8daea22210cc762f463f
+    1 trees fetched over 0.00s
+    2 trees fetched over 0.00s"""
 sh % "cd $TESTTMP/pullingclient"
 eq(
     listcommitandmanifesthashes("$A::"),

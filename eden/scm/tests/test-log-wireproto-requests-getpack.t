@@ -34,9 +34,11 @@ Make getpackv1 request
   $ clearcache
 
   $ hg up -q tip
-  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
-  2 trees fetched over *s (glob)
+  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
+  1 trees fetched over 0.00s
 
 Make getpackv2 request
   $ clone master v2 --noupdate
@@ -50,9 +52,11 @@ Make getpackv2 request
   $ clearcache
 
   $ hg up -q tip
-  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06, found via 79c51fb96423
-  2 trees fetched over *s (glob)
+  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
+  1 trees fetched over 0.00s
 
 Check logged requests
   $ grep 'getpack' $TESTTMP/loggedrequests

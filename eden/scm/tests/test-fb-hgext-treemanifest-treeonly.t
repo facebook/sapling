@@ -31,9 +31,11 @@ The following will simulate the transition from flat to tree-only
 Create flat manifest client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
-  2 trees fetched over * (glob)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -145,8 +147,10 @@ Test pulling new commits from a hybrid server
 
   $ hg log -r tip --stat --pager=off
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
-  2 trees fetched over * (glob)
+  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
+  1 trees fetched over 0.00s
   commit:      098a163f13ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -211,9 +215,11 @@ Test peer-to-peer push/pull of tree only commits
   $ cd ..
   $ clearcache
   $ hgcloneshallow ssh://user@dummy/master client2 -q
-  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
-  2 trees fetched over * (glob)
+  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
+  1 trees fetched over 0.00s
   $ cd client2
   $ rm -rf $CACHEDIR
   $ cp ../client/.hg/hgrc .hg/hgrc
@@ -239,8 +245,10 @@ Test peer-to-peer push/pull of tree only commits
   │   y |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
-  2 trees fetched over * (glob)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   o  modify subdir/x
   │   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
@@ -354,8 +362,10 @@ Test prefetch
   $ clearcache
   $ hg prefetch -r d618f764f9a11819b57268f02604ec1d311afc4c
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 06f5aa20a0d4
-  2 trees fetched over * (glob)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   $ clearcache
 
   $ hg pull
@@ -402,11 +412,15 @@ Test pulling to a treeonly client from a treeonly server
   adding file changes
   added 2 changesets with 0 changes to 0 files
   $ hg log -r tip -T '{desc}\n' --stat
-  fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
-  2 trees fetched over * (glob)
+  fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' e249b5cd4abe985a0e7ecd0af4d66d60e560ef4c, found via 7253109af085
-  2 trees fetched over * (glob)
+  1 trees fetched over 0.00s
+  fetching tree '' e249b5cd4abe985a0e7ecd0af4d66d60e560ef4c
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' 986e3ffada22fd23777f362487d1077a8d8a0aa4
+  1 trees fetched over 0.00s
   modify subdir/x again
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -440,13 +454,15 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   searching for changes
   fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b (?)
   1 trees fetched over * (glob) (?)
-  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 5f0bc1aaff22
-  2 trees fetched over * (glob)
+  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
+  1 trees fetched over 0.00s
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 4 changesets with 3 changes to 2 files
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
        4       218      61      2       3 e249b5cd4abe 9bd1ef658bef 000000000000
        5       279      61      3       5 5f15f80c2b54 14bce01d0d73 000000000000
@@ -493,8 +509,8 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   $ hg push -r . --config extensions.pushrebase=! -f
   pushing to ssh://user@dummy/master
   searching for changes
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, based on 5f15f80c2b54c16d75780bd0344a0487d4e6ff3b, found via 5f0bc1aaff22
-  2 trees fetched over 0.00s
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  1 trees fetched over 0.00s
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -622,8 +638,8 @@ with pullprefetchrevs configured.
   searching for changes
   no changes found
   prefetching tree for dad1be784127
-  fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
-  2 trees fetched over * (glob)
+  fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b
+  1 trees fetched over 0.00s
   $ cd ..
 
 Test ondemand downloading trees with a limited depth
@@ -634,13 +650,15 @@ Test ondemand downloading trees with a limited depth
 
   $ clearcache
   $ hg status --change 'tip^'
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
-  2 trees fetched over * (glob)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  1 trees fetched over 0.00s
+  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   A subdir/x
 
   $ clearcache
   $ hg status --change 'tip^' --config treemanifest.fetchdepth=1
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   1 trees fetched over * (glob)
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
@@ -680,9 +698,11 @@ old repository into another repo.
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/secondmaster secondclient -q
-  fetching tree '' dcf227dd21f37ac6b3848ab69ee0d0910dbb4071, found via 0a0cac7a2bb2
-  2 trees fetched over * (glob)
+  fetching tree '' dcf227dd21f37ac6b3848ab69ee0d0910dbb4071
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  1 trees fetched over 0.00s
+  fetching tree 'second_dir' c7e02064396ec447f87d3ca29213b2213c661aa4
+  1 trees fetched over 0.00s
   $ cd secondclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -695,8 +715,10 @@ old repository into another repo.
   pushing rev 0a0cac7a2bb2 to destination ssh://user@dummy/master bookmark main
   searching for changes
   warning: repository is unrelated
-  fetching tree '' 99dd81527cb1abd011deb06b629366bfc7c76e3a, found via 03e23940cb22
-  2 trees fetched over * (glob)
+  fetching tree '' 99dd81527cb1abd011deb06b629366bfc7c76e3a
+  1 trees fetched over 0.00s
+  fetching tree 'second_dir' 52db1b54e51c03c6c0d929873d0a725c3ceca286
+  1 trees fetched over 0.00s
   exporting bookmark main
   remote: adding changesets
   remote: adding manifests
