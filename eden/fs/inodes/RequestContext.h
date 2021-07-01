@@ -91,7 +91,7 @@ class RequestContext : public ObjectFetchContext {
 
   // Override of `ObjectFetchContext`
   Cause getCause() const override {
-    return ObjectFetchContext::Cause::Channel;
+    return ObjectFetchContext::Cause::Fs;
   }
 
   void startRequest(

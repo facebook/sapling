@@ -48,7 +48,7 @@ class ObjectFetchContext {
   /**
    * Which interface caused this object fetch
    */
-  enum Cause : unsigned { Unknown, Channel, Thrift };
+  enum Cause : unsigned { Unknown, Fs, Thrift };
 
   ObjectFetchContext() {}
 
