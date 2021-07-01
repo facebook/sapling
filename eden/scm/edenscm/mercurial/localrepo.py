@@ -974,6 +974,7 @@ class localrepository(object):
                 heads.add(node)
 
             fastpathheads = set()
+            fastpathcommits, fastpathsegments = 0, 0
             for (old, new) in fastpath:
                 fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
                 try:
@@ -992,12 +993,22 @@ class localrepository(object):
                         )
                     )
                     fastpathheads.add(new)
+                    fastpathcommits += commits
+                    fastpathsegments += segments
                 except errormod.NeedSlowPathError as e:
                     tracing.warn(
                         "cannot use pull fast path: %s\n" % e, target="pull::fastpath"
                     )
 
             pullheads = heads - fastpathheads
+
+            self.ui.log(
+                "pull",
+                fastpathheads=len(fastpathheads),
+                slowpathheads=len(pullheads),
+                fastpathcommits=fastpathcommits,
+                fastpathsegments=fastpathsegments,
+            )
 
             # Only perform a pull if heads are not empty.
             if pullheads:
