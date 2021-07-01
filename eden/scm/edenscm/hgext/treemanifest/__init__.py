@@ -170,7 +170,6 @@ configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
 configitem("treemanifest", "ondemandfetch", default=True)
-configitem("treemanifest", "useruststore", default=True)
 configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"
@@ -191,10 +190,6 @@ def treeenabled(ui):
         or "treemanifest" in extensions.DEFAULT_EXTENSIONS
         or "treemanifest" in extensions.ALWAYS_ON_EXTENSIONS
     )
-
-
-def useruststore(ui):
-    return ui.configbool("treemanifest", "useruststore")
 
 
 def usehttpfetching(repo):
@@ -458,17 +453,7 @@ def wraprepo(repo):
             if not mfnodes:
                 return
 
-            if useruststore(self.ui):
-                self.manifestlog.datastore.prefetch(
-                    list(("", node) for node in mfnodes)
-                )
-            else:
-                # If we have no base nodes, scan the changelog looking for a
-                # semi-recent manifest node to treat as the base.
-                if not basemfnodes:
-                    basemfnodes = _findrecenttree(self, self["tip"].node(), mfnodes)
-
-                self._prefetchtrees("", mfnodes, basemfnodes, [])
+            self.manifestlog.datastore.prefetch(list(("", node) for node in mfnodes))
 
         @perftrace.tracefunc("Fetch Trees")
         def _prefetchtrees(self, *args, **kwargs):
@@ -634,72 +619,11 @@ def _prunesharedpacks(repo, packpath):
 
 def setuptreestores(repo, mfl):
     ui = repo.ui
-    if useruststore(ui):
-        mfl.makeruststore()
-        return
-
-    if not util.safehasattr(repo, "name"):
-        repo.name = ui.config("remotefilelog", "reponame", "unknown")
-    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    _prunesharedpacks(repo, packpath)
-
-    localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, PACK_CATEGORY)
-
-    remotestore = remotetreestore(repo)
-
-    mutablelocalstore = mutablestores.mutabledatahistorystore(
-        lambda: mfl._mutablelocalpacks
-    )
-    mutablesharedstore = mutablestores.mutabledatahistorystore(
-        lambda: mfl._mutablesharedpacks
-    )
-
-    # Data store
-    datastore = makedatapackstore(ui, packpath, True, deletecorruptpacks=True)
-    localdatastore = makedatapackstore(ui, localpackpath, False)
-    datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]
-    datastores.append(remotestore)
-
-    mfl.datastore = unioncontentstore(*datastores)
-
-    mfl.shareddatastores = [datastore]
-    # Local stores are stores that contain data not on the main server
-    mfl.localdatastores = [localdatastore]
-
-    # History store
-    sharedhistorystore = makehistorypackstore(
-        ui, packpath, True, deletecorruptpacks=True
-    )
-    localhistorystore = makehistorypackstore(ui, localpackpath, False)
-    mfl.sharedhistorystores = [sharedhistorystore]
-    mfl.localhistorystores = [localhistorystore]
-
-    histstores = [
-        sharedhistorystore,
-        localhistorystore,
-        mutablelocalstore,
-        mutablesharedstore,
-    ]
-    histstores.append(remotestore)
-
-    mfl.historystore = unionmetadatastore(*histstores)
-    shallowutil.reportpackmetrics(ui, "treestore", mfl.datastore, mfl.historystore)
-
-    remotestore.setshared(mfl.datastore, mfl.historystore)
+    mfl.makeruststore()
 
 
 class basetreemanifestlog(object):
     def __init__(self, repo):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks = mutablestores.pendingmutablepack(
-                repo,
-                lambda: shallowutil.getlocalpackpath(
-                    self._opener.vfs.base, "manifests"
-                ),
-            )
-            self._mutablesharedpacks = mutablestores.pendingmutablepack(
-                repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
-            )
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
@@ -734,19 +658,13 @@ class basetreemanifestlog(object):
 
     def _getmutablelocalpacks(self):
         """Returns a tuple containing a data pack and a history pack."""
-        if useruststore(self._repo.ui):
-            return (self.datastore, self.historystore)
-        else:
-            return self._mutablelocalpacks.getmutablepack()
+        return (self.datastore, self.historystore)
 
     def getmutablesharedpacks(self):
-        if useruststore(self._repo.ui):
-            return (
-                self.datastore.getsharedmutable(),
-                self.historystore.getsharedmutable(),
-            )
-
-        return self._mutablesharedpacks.getmutablepack()
+        return (
+            self.datastore.getsharedmutable(),
+            self.historystore.getsharedmutable(),
+        )
 
     def _addtreeentry(
         self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev=None
@@ -792,20 +710,13 @@ class basetreemanifestlog(object):
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
-        if useruststore(self.ui):
-            self.datastore.flush()
-            self.historystore.flush()
-        else:
-            self._mutablesharedpacks.commit()
+        self.datastore.flush()
+        self.historystore.flush()
 
     def commitpending(self):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks.commit()
         self.commitsharedpacks()
 
     def abortpending(self):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks.abort()
         self.commitsharedpacks()
 
     def __nonzero__(self):
@@ -1865,14 +1776,6 @@ class generatingdatastore(pycompat.ABC):
 
 
 class remotetreestore(generatingdatastore):
-    def __init__(self, repo):
-        super(remotetreestore, self).__init__(repo)
-
-        if useruststore(self._repo.ui):
-            self.prefetch = self._rustprefetch
-        else:
-            self.prefetch = self._pythonprefetch
-
     def _generatetrees(self, name, node):
         self._prefetchtrees([(name, node)])
 
@@ -1934,29 +1837,8 @@ class remotetreestore(generatingdatastore):
         mfl.datastore.markforrefresh()
         mfl.historystore.markforrefresh()
 
-    def _pythonprefetch(self, keys):
-        # Filter out keys for nodes already present locally.
-        keys = self._repo.manifestlog.datastore.getmissing(keys)
-        if not keys:
-            return
-
-        if len(keys) == 1 and list(keys) == [("", nullid)]:
-            return
-
-        if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
-            self._repo.getdesignatednodes(keys)
-
-    def _rustprefetch(self, *args):
-        # len() == 3 means it's a call from the Rust store layer, with the
-        # mutable stores. len() == 1 means it's a call from Python, which
-        # we'll then route to the Rust store layer, which will then come
-        # back to here.
-        if len(args) == 3:
-            keys = args[2]
-            self._prefetchtrees(keys)
-        else:
-            keys = args[0]
-            self.datastore.prefetch(keys)
+    def prefetch(self, datastore, historystore, keys):
+        self._prefetchtrees(keys)
 
 
 def _debugcmdfindtreemanifest(orig, ctx):
