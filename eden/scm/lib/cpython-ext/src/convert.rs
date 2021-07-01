@@ -7,6 +7,10 @@
 
 use cpython::*;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ord;
+use std::cmp::Ordering;
+use std::cmp::PartialOrd;
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
 /// Wrapper type. Converts between pure Rust bytes-like types and PyBytes.
@@ -51,7 +55,7 @@ impl<T> Deref for BytesLike<T> {
 ///   `MyType`.
 /// - For output, use `-> Serde<MyType>` in definition, and `Serde(v)` to
 ///   construct the return value.
-#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
+#[derive(Debug)]
 pub struct Serde<T>(pub T);
 
 impl<T: Serialize> ToPyObject for Serde<T> {
@@ -77,5 +81,37 @@ impl<T> Deref for Serde<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<T: PartialOrd> PartialOrd<Serde<T>> for Serde<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl<T: Ord> Ord for Serde<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl<T: Hash> Hash for Serde<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
+    }
+}
+
+impl<T: PartialEq> PartialEq for Serde<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl<T: Eq> Eq for Serde<T> {}
+
+impl<T: Clone> Clone for Serde<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }
