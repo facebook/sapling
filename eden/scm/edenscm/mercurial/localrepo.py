@@ -75,7 +75,7 @@ from . import (
     vfs as vfsmod,
     visibility,
 )
-from .i18n import _
+from .i18n import _, _n
 from .node import bin, hex, nullhex, nullid, short
 from .pycompat import range
 
@@ -981,8 +981,15 @@ class localrepository(object):
                         fastpulldata
                     )
                     self.ui.status(
-                        _("added %s commits lazily (%s segments)\n")
-                        % (commits, segments)
+                        _("imported commit graph for %s (%s)\n")
+                        % (
+                            _n("%s commit" % commits, "%s commits" % commits, commits),
+                            _n(
+                                "%s segment" % segments,
+                                "%s segments" % segments,
+                                segments,
+                            ),
+                        )
                     )
                     fastpathheads.add(new)
                 except errormod.NeedSlowPathError as e:
