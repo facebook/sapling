@@ -50,7 +50,10 @@ from __future__ import absolute_import
 import collections
 import random
 
+from edenscm import tracing
+
 from . import dagutil, error, progress, util
+from .eagerpeer import unwrap
 from .i18n import _
 from .node import nullid, nullrev, bin
 
@@ -278,6 +281,26 @@ def _findcommonheadsnew(
                 break
         return sorted(sample)
 
+    def httpcommitlookup(repo, sample):
+        (knownresponse, _stats) = local.edenapi.commitknown(local.name, sample)
+        commonsample = set()
+        for res in knownresponse:
+            tracing.debug(
+                "edenapi commitknown: %s" % str(res),
+                target="exchange::httpcommitlookup",
+            )
+            if unwrap(res["known"]):
+                commonsample.add(res["hgid"])
+        return commonsample
+
+    def httpenabled():
+        return (
+            isselectivepull
+            and ui.configbool("pull", "httpbookmarks")
+            and ui.configbool("exchange", "httpcommitlookup")
+            and getattr(remote, "edenapi", None) is not None
+        )
+
     from .bookmarks import selectivepullbookmarknames, remotenameforurl
 
     sample = set(_limitsample(localheads, initialsamplesize))
@@ -299,18 +322,26 @@ def _findcommonheadsnew(
 
     ui.debug("query 1; heads\n")
     batch = remote.iterbatch()
-    if isselectivepull:
-        # With selectivepull, limit heads for discovery for both local and
-        # remote repo - only list selected heads on remote.
-        # Return type: sorteddict[name: str, hex: str].
-        batch.listkeyspatterns("bookmarks", patterns=selected)
+    commonsample = set()
+
+    if httpenabled():
+        (fetchedbookmarks, _stats) = local.edenapi.bookmarks(local.name, list(selected))
+        remoteheads = {bm: n for (bm, n) in fetchedbookmarks.items() if n is not None}
+        commonsample = httpcommitlookup(local, sample)
     else:
-        # Legacy pull: list all heads on remote.
-        # Return type: List[node: bytes].
-        batch.heads()
-    batch.known(sample)
-    batch.submit()
-    remoteheads, remotehassample = batch.results()
+        if isselectivepull:
+            # With selectivepull, limit heads for discovery for both local and
+            # remote repo - only list selected heads on remote.
+            # Return type: sorteddict[name: str, hex: str].
+            batch.listkeyspatterns("bookmarks", patterns=selected)
+        else:
+            # Legacy pull: list all heads on remote.
+            # Return type: List[node: bytes].
+            batch.heads()
+        batch.known(sample)
+        batch.submit()
+        remoteheads, remotehassample = batch.results()
+        commonsample = {n for n, known in zip(sample, remotehassample) if known}
 
     # If the server has no selected names (ex. master), fallback to fetch all
     # heads.
@@ -370,8 +401,7 @@ def _findcommonheadsnew(
         # TODO: Consider returning [] as the 3rd return value here.
         return remoteheads, False, remoteheads
 
-    commonsample = [n for n, known in zip(sample, remotehassample) if known]
-    if set(commonsample).issuperset(set(localheads) - {nullid}):
+    if commonsample.issuperset(set(localheads) - {nullid}):
         ui.note(_("all local heads known remotely\n"))
         # TODO: Check how 'remoteheads' is used at upper layers, and if we
         # can avoid listing all heads remotely (which can be expensive).
@@ -380,7 +410,7 @@ def _findcommonheadsnew(
     # slow path: full blown discovery
 
     # unknown = localheads % commonheads
-    commonheads = dag.sort(commonremoteheads + commonsample)
+    commonheads = dag.sort(commonremoteheads + list(commonsample))
     unknown = dag.only(localheads, commonheads)
     missing = dag.sort([])
 
@@ -389,9 +419,7 @@ def _findcommonheadsnew(
         while len(unknown) > 0:
             # Quote from module doc: For each node that remote doesn't know,
             # move it and all its descendants to `missing`.
-            missingsample = [
-                n for n, known in zip(sample, remotehassample) if not known
-            ]
+            missingsample = set(sample) - commonsample
             if missingsample:
                 descendants = dag.range(missingsample, localheads)
                 missing += descendants
@@ -415,17 +443,19 @@ def _findcommonheadsnew(
                 "query %i; still undecided: %i, sample size is: %i\n"
                 % (roundtrips, len(unknown), len(sample))
             )
-
-            remotehassample = remote.known(sample)
+            if httpenabled():
+                commonsample = httpcommitlookup(local, sample)
+            else:
+                remotehassample = remote.known(sample)
+                commonsample = {n for n, known in zip(sample, remotehassample) if known}
 
             # Quote from module doc: For each node that remote knows, move it
             # and all its ancestors to `common`.
             # Don't maintain 'common' directly as it's less efficient with
             # revlog backend. Maintain 'commonheads' and 'unknown' instead.
-            newcommonheads = [n for n, known in zip(sample, remotehassample) if known]
-            if newcommonheads:
-                newcommon = dag.only(newcommonheads, commonheads)
-                commonheads += dag.sort(newcommonheads)
+            if commonsample:
+                newcommon = dag.only(commonsample, commonheads)
+                commonheads += dag.sort(commonsample)
                 unknown -= newcommon
 
     commonheads = set(dag.headsancestors(commonheads))
