@@ -15,8 +15,9 @@ use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
+use cpython_ext::pycell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
-use dag_types::Location;
+use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
@@ -402,10 +403,10 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         old_master: PyBytes,
         new_master: PyBytes,
-    ) -> PyResult<PyBytes> {
+    ) -> PyResult<pycell> {
         let old_master = to_hgid(py, &old_master);
         let new_master = to_hgid(py, &new_master);
-        let bytes = {
+        let data = {
             py.allow_threads(|| {
                 block_unless_interrupted(async move {
                     match self
@@ -413,15 +414,16 @@ pub trait EdenApiPyExt: EdenApi {
                         .await
                     {
                         Err(e) => Err(e),
-                        Ok(data) => Ok(mincode::serialize(&data)),
+                        Ok(data) => Ok(data.convert_vertex(|hgid| {
+                            VertexName(hgid.into_byte_array().to_vec().into())
+                        })),
                     }
                 })
             })
             .map_pyerr(py)?
             .map_pyerr(py)?
-            .map_pyerr(py)?
         };
-        Ok(PyBytes::new(py, &bytes))
+        pycell::new(py, data)
     }
 
     fn lookup_file_contents(
