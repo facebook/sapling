@@ -8,10 +8,10 @@
   $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
 
-  $ newrepo server
+  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
-  $ setconfig treemanifest.server=True
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ touch base
   $ hg commit -Aqm base
   $ hg bookmark master

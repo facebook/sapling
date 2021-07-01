@@ -12,7 +12,8 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > commitextras=
-  > treemanifest=
+  > treemanifest=!
+  > treemanifestserver=
   > [treemanifest]
   > server=True
   > EOF

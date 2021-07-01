@@ -5,10 +5,11 @@
   $ setconfig treemanifest.flatcompat=False
 
   $ enable lfs treemanifest pushrebase
-  $ hginit master
+  $ hginit master --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
 
   $ cd master
   $ setconfig remotefilelog.server=True treemanifest.server=True remotefilelog.shallowtrees=True
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ mkdir dir
   $ echo x > dir/x
   $ hg commit -qAm x1

@@ -11,10 +11,10 @@
   $ setconfig snapshot.enable-sync-bundle=true
 
 # Setup server
-  $ hg init server
+  $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd server
   $ setupserver
-  $ setconfig treemanifest.server=True
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ hg bookmark master
   $ cd ..
 

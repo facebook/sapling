@@ -9,7 +9,7 @@ Setup the server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > treeonly=True

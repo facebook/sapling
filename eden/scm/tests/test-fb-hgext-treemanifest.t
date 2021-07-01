@@ -6,6 +6,8 @@
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [remotefilelog]
   > server=True
   > [treemanifest]

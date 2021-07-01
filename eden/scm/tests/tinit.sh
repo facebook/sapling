@@ -24,13 +24,14 @@ dummysshcmd() {
 # Create a new repo
 newrepo() {
   reponame="$1"
+  shift
   if [ -z "$reponame" ]; then
     _repocount=$((_repocount+1))
     reponame=repo$_repocount
   fi
   mkdir "$TESTTMP/$reponame"
   cd "$TESTTMP/$reponame"
-  hg init
+  hg init "$@"
 }
 
 # create repo connected to remote repo ssh://user@dummy/server.
@@ -53,18 +54,19 @@ newserver() {
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
     hg --config extensions.lz4revlog= \
-      --config extensions.treemanifest= \
+      --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py \
       --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
-    enable lz4revlog remotefilelog remotenames treemanifest
+    enable lz4revlog remotefilelog remotenames
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        treemanifest.flatcompat=False treemanifest.rustmanifest=True \
        treemanifest.server=True treemanifest.treeonly=True \
        infinitepush.server=yes infinitepush.reponame="$reponame" \
        infinitepush.indextype=disk infinitepush.storetype=disk \
-       experimental.narrow-heads=false
+       experimental.narrow-heads=false \
+       extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   fi
 }
 

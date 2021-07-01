@@ -55,7 +55,7 @@ Helper script to test the lookup function
   > command = registrar.command(cmdtable)
   > @command('lookup', [], ('key'))
   > def _lookup(ui, repo, key, **opts):
-  >     treemanifestext = extensions.find('treemanifest')
+  >     treemanifestext = extensions.find('treemanifestserver')
   >     fallbackpath = treemanifestext.getfallbackpath(repo)
   >     with repo.connectionpool.get(fallbackpath) as conn:
   >         remote = conn.peer

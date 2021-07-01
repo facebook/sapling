@@ -16,7 +16,8 @@
   $ cd repo-hg
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=!
+  > treemanifestserver=
   > lfs=
   > [treemanifest]
   > server=True

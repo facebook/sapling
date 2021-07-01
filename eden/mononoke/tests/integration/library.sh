@@ -1374,7 +1374,8 @@ function hginit_treemanifest() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
 [extensions]
-treemanifest=
+treemanifest=!
+treemanifestserver=
 remotefilelog=
 smartlog=
 clienttelemetry=
@@ -1463,7 +1464,8 @@ function setup_hg_server() {
   cat >> .hg/hgrc <<EOF
 [extensions]
 commitextras=
-treemanifest=
+treemanifest=!
+treemanifestserver=
 remotefilelog=
 clienttelemetry=
 [treemanifest]

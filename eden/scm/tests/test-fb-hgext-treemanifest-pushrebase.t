@@ -43,7 +43,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > # Sleep gives all the hg serve processes time to load the original repo

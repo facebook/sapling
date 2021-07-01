@@ -2,6 +2,7 @@
 
 'narrow-heads' requires remotenames and visibility
 
+  $ configure dummyssh
   $ enable remotenames amend
   $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution= remotenames.rename.default=remote
   $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'
@@ -9,8 +10,8 @@
 
 Prepare the server repo
 
-  $ newrepo server
-  $ setconfig treemanifest.server=true
+  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=true extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ drawdag << 'EOS'
   > B
   > |
@@ -21,9 +22,9 @@ Prepare the server repo
   $ hg bookmark -r $A stable
 
 Prepare the client repo
-('--pull' during clone is required to get visibility requirement set)
 
-  $ hg clone $TESTTMP/server $TESTTMP/client -q --pull
+  $ cd ..
+  $ hg clone ssh://user@dummy/server $TESTTMP/client -q 
   $ cd $TESTTMP/client
 
 Verify the commits

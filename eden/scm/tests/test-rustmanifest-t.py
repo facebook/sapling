@@ -95,6 +95,7 @@ sh % "cd $TESTTMP/serverpushrebasemerge"
     << r"""
 [extensions]
 pushrebase=
+treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
 [remotefilelog]
 server=True
 [treemanifest]
@@ -102,6 +103,8 @@ server=True
 """
     >> ".hg/hgrc"
 )
+sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/tempclient -q" == ""
+sh % "cd $TESTTMP/tempclient"
 (
     sh % "drawdag"
     << r""" # drawdag.defaultfiles=false
@@ -113,6 +116,13 @@ eq(
     listcommitandmanifesthashes("$A::"),
     [("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f")],
 )
+sh % "hg push -r $A --to master --create" == r"""
+pushing rev bd99ff0a074c to destination ssh://user@dummy/serverpushrebasemerge bookmark master
+searching for changes
+remote: pushing 1 changeset:
+remote:     bd99ff0a074c  A
+exporting bookmark master
+"""
 
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q" == r"""
     fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f, found via bd99ff0a074c
@@ -171,41 +181,6 @@ sh % "hg files -r master" == r"""
     x/a
     x/b
     y/c"""
-
-# Check how data on server looks after pushrebase
-sh % "cd $TESTTMP/serverpushrebasemerge"
-# Check that the shape of the graph looks the same on the server as it did on
-# the client
-sh % "hg log -G -T {desc}" << r"""
-""" == r"""
-    o  F
-    │
-    o    E
-    ├─╮
-    │ o  D
-    │ │
-    o │  C
-    ├─╯
-    o  B
-    │
-    o  A"""
-
-eq(
-    listcommitandmanifesthashes("$A::"),
-    [
-        ("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f"),
-        ("B", "329658f81fe4", "02e01983feb89482571eb285cdf95791d5d5004c"),
-        ("C", "8f7b309be719", "7630040f028fe48237216dd272521b72cbc9fdd4"),
-        ("D", "4739f43fec6e", "241b1b1a0c626f74c431fea9a19f8d41babf6d66"),
-        ("E", "a932a3c05d51", "536621fb22888a57188bdb3fb7524956e9eea571"),
-        ("F", "38d281aaf22d", "f597a49b2fb7de2f6ccc8daea22210cc762f463f"),
-    ],
-)
-sh % "hg files -r master" == r"""
-    x/a
-    x/b
-    y/c"""
-sh % "hg cat -r master x/a x/b y/c" == "dbf"
 
 # Check that a secondary client will pull a consistent view of the repository
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/pullingclient -q" == r"""
@@ -285,10 +260,3 @@ eq(
         ("J", "3a19854876d1", "24ab094f699834d0b27ccc5b4c59066b3dd06438"),
     ],
 )
-
-sh % "hg files -r master" == r"""
-    x/a
-    x/b
-    y/c
-    y/d"""
-sh % "hg cat -r master x/a x/b y/c y/d" == "ibfh"

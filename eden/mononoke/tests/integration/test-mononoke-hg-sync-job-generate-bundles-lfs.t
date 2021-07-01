@@ -155,6 +155,7 @@ Sync a lfs pushrebase
     rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80\nsize 30\nx-hg-copy lfs-largefile\nx-hg-copyrev 82324eb7c94b0000f0eb52d4f1933c3cac636066\n'
 
 Setup another client and update to latest commit from mercurial
+  $ cd ..
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-pull --noupdate --config extensions.remotenames= -q
   $ cd client-pull
   $ setup_hg_client

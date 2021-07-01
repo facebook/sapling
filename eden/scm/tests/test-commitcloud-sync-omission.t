@@ -12,6 +12,8 @@
   $ hg init server
   $ cd server
   $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [infinitepush]
   > server = yes
   > indextype = disk

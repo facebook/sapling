@@ -14,7 +14,8 @@ Init treemanifest and remotefilelog
   $ cd repo-hg
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=!
+  > treemanifestserver=
   > remotefilelog=
   > [treemanifest]
   > server=True

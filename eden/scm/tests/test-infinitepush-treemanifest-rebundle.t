@@ -66,7 +66,7 @@ Push a bundle with four commits
 Upgrade the server to treemanifest
 
   $ cd $TESTTMP/master
-  $ enable treemanifest
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ setconfig treemanifest.server=true
   $ setconfig fastmanifest.usetree=true fastmanifest.usecache=false
 

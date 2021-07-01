@@ -14,9 +14,11 @@
 
 # Setup repo
 
-  $ hg init repo --config remotefilelog.reponame=repo
+  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > [remotefilelog]

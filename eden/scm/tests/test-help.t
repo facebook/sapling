@@ -371,6 +371,7 @@ Test extension help:
        stablerev     provide a way to expose the "stable" commit via a revset
        stat          (no help text available)
        traceprof     (no help text available)
+       treemanifestserver
        tweakdefaults
                      user friendly defaults
        undo          (no help text available)

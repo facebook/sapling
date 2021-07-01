@@ -8,7 +8,7 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [remotefilelog]
   > server=True
   > [treemanifest]

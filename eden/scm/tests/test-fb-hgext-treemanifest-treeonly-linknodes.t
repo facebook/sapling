@@ -10,7 +10,7 @@ Set up the server
   > [extensions]
   > pushrebase=
   > remotenames=
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [treemanifest]
   > server=true
   > treeonly=true

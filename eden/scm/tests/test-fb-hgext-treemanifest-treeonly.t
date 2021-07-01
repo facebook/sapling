@@ -10,7 +10,7 @@ Setup the server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -668,7 +668,7 @@ old repository into another repo.
   > [extensions]
   > pushrebase=
   > remotenames=
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > [remotefilelog]
   > server=True
   > shallowtrees=True

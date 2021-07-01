@@ -7,9 +7,9 @@ Push treeonly commits from a treeonly shallow repo to a treeonly server
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
   $ configure dummyssh
 
-  $ newrepo server
-  $ setconfig treemanifest.server=True
-  $ enable pushrebase treemanifest
+  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ enable pushrebase
 
   $ newrepo client
   $ setconfig paths.default=ssh://user@dummy/server

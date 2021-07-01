@@ -1,15 +1,15 @@
 #chg-compatible
 
-  $ enable amend commitcloud infinitepush rebase remotenames treemanifest pullcreatemarkers
+  $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
 
-  $ hg init server
+  $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd server
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
-  $ setconfig treemanifest.server=True
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ touch base
   $ hg commit -Aqm base
   $ hg bookmark master

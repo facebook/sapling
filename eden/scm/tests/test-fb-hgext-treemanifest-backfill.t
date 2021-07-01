@@ -14,7 +14,7 @@
   $ hg commit -qAm 'modify x'
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > 
   > [remotefilelog]
   > name=master
@@ -77,7 +77,7 @@ Test backfilling a commit with a null manifest
   $ cd nullrepo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   > 
   > [remotefilelog]
   > name=master

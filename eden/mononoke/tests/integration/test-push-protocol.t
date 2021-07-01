@@ -42,8 +42,8 @@ to pull these pushed commits
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3
   $ cd repo2
-  $ hg pull ../repo-hg
-  pulling from ../repo-hg
+  $ hg pull ssh://user@dummy/repo-hg
+  pulling from ssh://user@dummy/repo-hg
   searching for changes
   no changes found
 
