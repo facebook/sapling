@@ -386,16 +386,6 @@ def wraprepo(repo):
             tr.addpostclose("draftparenttreefetch", self._parenttreefetch)
             return tr
 
-        def _shouldusehttp(self):
-            """Returns True if HTTP fetching should be used."""
-            return usehttpfetching(self)
-
-        def _interactivedebug(self):
-            """Returns True if this is an interactive command running in debug mode."""
-            return self.ui.interactive() and self.ui.configbool(
-                "remotefilelog", "debug"
-            )
-
         def _parenttreefetch(self, tr):
             """Prefetches draft commit parents after draft commits are added to the
             repository. This is useful for avoiding expensive ondemand downloads when
@@ -455,74 +445,6 @@ def wraprepo(repo):
             caps.add("gettreepack")
             caps.add("treeonly")
             return caps
-
-        def getdesignatednodes(self, keys):
-            if self._interactivedebug():
-                n = len(keys)
-                (firstpath, firstnode) = keys[0]
-                firstnode = hex(firstnode)
-                self.ui.write_err(
-                    _n(
-                        "fetching tree for ('%(path)s', %(node)s)\n",
-                        "fetching %(num)s trees\n",
-                        n,
-                    )
-                    % {"path": firstpath, "node": firstnode, "num": n}
-                )
-
-            if self._shouldusehttp():
-                return self._httpgetdesignatednodes(keys)
-            else:
-                return self._sshgetdesignatednodes(keys)
-
-        @perftrace.tracefunc("SSH On-Demand Fetch Trees")
-        def _sshgetdesignatednodes(self, keys):
-            """
-            Fetch the specified tree nodes over SSH.
-
-            This method requires the server to support the "designatednodes"
-            capability. This capability overloads the gettreepack wireprotocol
-            command to allow the client to specify an exact set of tree nodes
-            to fetch; the server will then provide only those nodes.
-
-            Returns False if the server does not support "designatednodes",
-            and True otherwise.
-            """
-            fallbackpath = getfallbackpath(self)
-            with self.connectionpool.get(fallbackpath) as conn:
-                if "designatednodes" not in conn.peer.capabilities():
-                    raise error.ProgrammingError("designatednodes must be supported")
-
-                mfnodes = [node for path, node in keys]
-                directories = [path for path, node in keys]
-
-                if self.ui.configbool("remotefilelog", "debug") and len(keys) == 1:
-                    name = keys[0][0]
-                    node = keys[0][1]
-                    msg = _("fetching tree %r %s") % (name, hex(node))
-                    self.ui.warn(msg + "\n")
-
-                start = util.timer()
-                with self.ui.timesection("getdesignatednodes"):
-                    _gettrees(
-                        self,
-                        conn.peer,
-                        "",
-                        mfnodes,
-                        [],
-                        directories,
-                        start,
-                        depth=1,
-                        ondemandfetch=True,
-                    )
-
-            return True
-
-        @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
-        def _httpgetdesignatednodes(self, keys):
-            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            self.edenapi.storetrees(dpack, self.name, keys)
-            return True
 
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
             self._bfsprefetch(rootdir, mfnodes, depth)
@@ -1683,9 +1605,79 @@ def _generatepackstream(
 class remotetreestore(object):
     def __init__(self, repo):
         self._repo = repo
+        self.ui = repo.ui
+
+    def _interactivedebug(self):
+        """Returns True if this is an interactive command running in debug mode."""
+        return self.ui.interactive() and self.ui.configbool("remotefilelog", "debug")
 
     def prefetch(self, datastore, historystore, keys):
-        self._repo.getdesignatednodes(keys)
+        if self._interactivedebug():
+            n = len(keys)
+            (firstpath, firstnode) = keys[0]
+            firstnode = hex(firstnode)
+            self.ui.write_err(
+                _n(
+                    "fetching tree for ('%(path)s', %(node)s)\n",
+                    "fetching %(num)s trees\n",
+                    n,
+                )
+                % {"path": firstpath, "node": firstnode, "num": n}
+            )
+
+        if usehttpfetching(self._repo):
+            return self._httpgetdesignatednodes(keys)
+        else:
+            return self._sshgetdesignatednodes(keys)
+
+    @perftrace.tracefunc("SSH On-Demand Fetch Trees")
+    def _sshgetdesignatednodes(self, keys):
+        """
+        Fetch the specified tree nodes over SSH.
+
+        This method requires the server to support the "designatednodes"
+        capability. This capability overloads the gettreepack wireprotocol
+        command to allow the client to specify an exact set of tree nodes
+        to fetch; the server will then provide only those nodes.
+
+        Returns False if the server does not support "designatednodes",
+        and True otherwise.
+        """
+        fallbackpath = getfallbackpath(self._repo)
+        with self._repo.connectionpool.get(fallbackpath) as conn:
+            if "designatednodes" not in conn.peer.capabilities():
+                raise error.ProgrammingError("designatednodes must be supported")
+
+            mfnodes = [node for path, node in keys]
+            directories = [path for path, node in keys]
+
+            if self.ui.configbool("remotefilelog", "debug") and len(keys) == 1:
+                name = keys[0][0]
+                node = keys[0][1]
+                msg = _("fetching tree %r %s") % (name, hex(node))
+                self.ui.warn(msg + "\n")
+
+            start = util.timer()
+            with self.ui.timesection("getdesignatednodes"):
+                _gettrees(
+                    self._repo,
+                    conn.peer,
+                    "",
+                    mfnodes,
+                    [],
+                    directories,
+                    start,
+                    depth=1,
+                    ondemandfetch=True,
+                )
+
+        return True
+
+    @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
+    def _httpgetdesignatednodes(self, keys):
+        dpack, _hpack = self._repo.manifestlog.getmutablesharedpacks()
+        self._repo.edenapi.storetrees(dpack, self._repo.name, keys)
+        return True
 
 
 def _debugcmdfindtreemanifest(orig, ctx):
