@@ -615,7 +615,7 @@ with pullprefetchrevs configured.
   $ cd treeonlyrepo2
   $ cat >> .hg/hgrc <<EOF
   > [paths]
-  > default=$TESTTMP/master
+  > default=ssh://user@dummy/master
   > 
   > [treemanifest]
   > sendtrees=True
@@ -625,12 +625,12 @@ with pullprefetchrevs configured.
   > reponame=treeonlyrepo2
   > EOF
   $ hg pull
-  pulling from $TESTTMP/master
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 2 files
+  pulling from ssh://user@dummy/master
+  streaming all changes
+  7 files to transfer, 2.46 KB of data
+  transferred 2.46 KB in 0.0 seconds (2.41 MB/sec)
+  searching for changes
+  no changes found
   prefetching tree for dad1be784127
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
   2 trees fetched over * (glob)
