@@ -1720,66 +1720,11 @@ def _generatepackstream(
     yield wirepack.closepart()
 
 
-class generatingdatastore(pycompat.ABC):
-    """Abstract base class representing stores which generate trees on the
-    fly and write them to the shared store. Thereafter, the stores replay the
-    lookup operation on the shared store expecting it to succeed."""
-
+class remotetreestore(object):
     def __init__(self, repo):
         self._repo = repo
-        self._shareddata = None
-        self._beinggenerated = set()
 
-    def setshared(self, shareddata, sharedhistory):
-        self._shareddata = shareddata
-        self._sharedhistory = sharedhistory
-
-    @abc.abstractmethod
-    def _generatetrees(self, name, node):
-        pass
-
-    @contextlib.contextmanager
-    def _generating(self, name, node):
-        key = (name, node)
-        if key in self._beinggenerated:
-            # This key is already being generated, so we've reentered the
-            # generator and hit infinite recurssion.
-            raise KeyError((name, hex(node)))
-
-        self._beinggenerated.add(key)
-        yield
-        self._beinggenerated.remove(key)
-
-    def get(self, name, node):
-        with self._generating(name, node):
-            self._generatetrees(name, node)
-            return self._shareddata.get(name, node)
-
-    def getdeltachain(self, name, node):
-        with self._generating(name, node):
-            self._generatetrees(name, node)
-            return self._shareddata.getdeltachain(name, node)
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to a generating store")
-
-    def getmissing(self, keys):
-        return keys
-
-    def getmetrics(self):
-        return {}
-
-    def getnodeinfo(self, name, node):
-        with self._generating(name, node):
-            self._generatetrees(name, node)
-            return self._sharedhistory.getnodeinfo(name, node)
-
-
-class remotetreestore(generatingdatastore):
-    def _generatetrees(self, name, node):
-        self._prefetchtrees([(name, node)])
-
-    def _prefetchtrees(self, keys):
+    def prefetch(self, datastore, historystore, keys):
         # If on-demand fetching is enabled, we should attempt to
         # fetch the single tree node over SSH via gettreepack.
         # If the server does not support calling gettreepack in
@@ -1836,9 +1781,6 @@ class remotetreestore(generatingdatastore):
         mfl = self._repo.manifestlog
         mfl.datastore.markforrefresh()
         mfl.historystore.markforrefresh()
-
-    def prefetch(self, datastore, historystore, keys):
-        self._prefetchtrees(keys)
 
 
 def _debugcmdfindtreemanifest(orig, ctx):
