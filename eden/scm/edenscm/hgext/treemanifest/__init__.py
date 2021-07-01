@@ -444,52 +444,6 @@ def wraprepo(repo):
 
             self.manifestlog.datastore.prefetch(list(("", node) for node in mfnodes))
 
-        @perftrace.tracefunc("Fetch Trees")
-        def _prefetchtrees(self, *args, **kwargs):
-            self._treefetches += 1
-            if self._shouldusehttp():
-                return self._httpprefetchtrees(*args, **kwargs)
-            else:
-                return self._sshprefetchtrees(*args, **kwargs)
-
-        @perftrace.tracefunc("SSH Fetch Trees")
-        def _sshprefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
-            # If possible, use remotefilelog's more expressive fallbackpath
-            fallbackpath = getfallbackpath(self)
-            if mfnodes == basemfnodes:
-                self.ui.log(
-                    "features",
-                    feature="manifestfetchnodeeqbase",
-                    fullargs=repr(pycompat.sysargv),
-                    traceback=util.smarttraceback(),
-                )
-
-            depth = self.ui.configint("treemanifest", "fetchdepth")
-
-            if rootdir == "" and len(mfnodes) == 1 and list(mfnodes) == [nullid]:
-                return
-
-            if self.ui.configbool("treemanifest", "bfsprefetch"):
-                self._bfsprefetch(rootdir, mfnodes, depth)
-                return
-
-            start = util.timer()
-            with self.ui.timesection("fetchingtrees"):
-                with self.connectionpool.get(
-                    fallbackpath, reason="fetchingtrees"
-                ) as conn:
-                    remote = conn.peer
-                    _gettrees(
-                        self,
-                        remote,
-                        rootdir,
-                        mfnodes,
-                        basemfnodes,
-                        directories,
-                        start,
-                        depth,
-                    )
-
         def resettreefetches(self):
             fetches = self._treefetches
             self._treefetches = 0
@@ -563,15 +517,6 @@ def wraprepo(repo):
                     )
 
             return True
-
-        @perftrace.tracefunc("HTTP Fetch Trees")
-        def _httpprefetchtrees(
-            self, rootdir, mfnodes, basemfnodes, directories, depth=None
-        ):
-            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            self.edenapi.complete_trees(
-                dpack, self.name, rootdir, mfnodes, basemfnodes, depth
-            )
 
         @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
         def _httpgetdesignatednodes(self, keys):
