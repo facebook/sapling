@@ -1612,22 +1612,24 @@ class remotetreestore(object):
         return self.ui.interactive() and self.ui.configbool("remotefilelog", "debug")
 
     def prefetch(self, datastore, historystore, keys):
-        if self._interactivedebug():
-            n = len(keys)
-            (firstpath, firstnode) = keys[0]
-            firstnode = hex(firstnode)
-            self.ui.write_err(
-                _n(
-                    "fetching tree for ('%(path)s', %(node)s)\n",
-                    "fetching %(num)s trees\n",
-                    n,
-                )
-                % {"path": firstpath, "node": firstnode, "num": n}
-            )
-
         if usehttpfetching(self._repo):
-            return self._httpgetdesignatednodes(keys)
+            # http fetching is handled inside the content store, so raise a
+            # KeyError here.
+            raise shallowutil.MissingNodesError(keys)
         else:
+            if self._interactivedebug():
+                n = len(keys)
+                (firstpath, firstnode) = keys[0]
+                firstnode = hex(firstnode)
+                self.ui.write_err(
+                    _n(
+                        "fetching tree for ('%(path)s', %(node)s)\n",
+                        "fetching %(num)s trees\n",
+                        n,
+                    )
+                    % {"path": firstpath, "node": firstnode, "num": n}
+                )
+
             return self._sshgetdesignatednodes(keys)
 
     @perftrace.tracefunc("SSH On-Demand Fetch Trees")
@@ -1671,12 +1673,6 @@ class remotetreestore(object):
                     ondemandfetch=True,
                 )
 
-        return True
-
-    @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
-    def _httpgetdesignatednodes(self, keys):
-        dpack, _hpack = self._repo.manifestlog.getmutablesharedpacks()
-        self._repo.edenapi.storetrees(dpack, self._repo.name, keys)
         return True
 
 

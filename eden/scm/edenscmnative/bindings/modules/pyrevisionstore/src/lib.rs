@@ -1434,13 +1434,13 @@ fn make_treescmstore<'a>(
         treestore_builder = treestore_builder.suffix(suffix);
     }
 
-    // Match behavior of treemanifest contentstore construction (never include EdenApi)
-    builder = builder.remotestore(remote);
-
     // Extract EdenApiAdapter for scmstore construction later on
-    if let Some(edenapi) = edenapi_treestore {
-        treestore_builder = treestore_builder.edenapi(edenapi);
-    }
+    builder = if let Some(edenapi) = edenapi_treestore {
+        treestore_builder = treestore_builder.edenapi(edenapi.clone());
+        builder.remotestore(edenapi)
+    } else {
+        builder.remotestore(remote)
+    };
 
     let indexedlog_local = treestore_builder.build_indexedlog_local()?;
     let indexedlog_cache = treestore_builder.build_indexedlog_cache()?;
