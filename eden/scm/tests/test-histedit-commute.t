@@ -346,35 +346,6 @@ Verify that revsetalias entries work with histedit:
   #  r, roll = like fold, but discard this commit's description and date
   #
 
-should also work if a commit message is missing
-  $ BUNDLE="$TESTDIR/missing-comment.hg"
-  $ hg init missing
-  $ cd missing
-  $ hg unbundle $BUNDLE
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 1 files
-  $ hg co tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg log --graph
-  @  commit:      bd22688093b3
-  │  user:        Robert Altman <robert.altman@telventDTN.com>
-  │  date:        Mon Nov 28 16:40:04 2011 +0000
-  │  summary:     Update file.
-  │
-  o  commit:      3b3e956f9171
-  │  user:        Robert Altman <robert.altman@telventDTN.com>
-  │  date:        Mon Nov 28 16:37:57 2011 +0000
-  │
-  o  commit:      141947992243
-     user:        Robert Altman <robert.altman@telventDTN.com>
-     date:        Mon Nov 28 16:35:28 2011 +0000
-     summary:     Checked in text file
-  
-  $ hg histedit 'desc(Checked)'
-  $ cd ..
-
   $ cd ..
 
 

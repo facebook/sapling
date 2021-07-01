@@ -1,16 +1,35 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ enable rebase amend
 
   $ hg init a
   $ cd a
-  $ hg unbundle "$TESTDIR/bundles/rebase.hg"
-  adding changesets
-  adding manifests
-  adding file changes
-  added 8 changesets with 7 changes to 7 files
-  $ hg up tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True
+
+  $ echo A > A
+  $ hg commit -Aqm "A"
+  $ echo B > B
+  $ hg commit -Aqm "B"
+  $ echo C > C
+  $ hg commit -Aqm "C"
+  $ echo D > D
+  $ hg commit -Aqm "D"
+  $ hg up -q .~3
+  $ echo E > E
+  $ hg commit -Aqm "E"
+  $ hg book E
+  $ hg up -q .~1
+  $ echo F > F
+  $ hg commit -Aqm "F"
+  $ hg merge -q E
+  $ hg book -d E
+  $ echo G > G
+  $ hg commit -Aqm "G"
+  $ hg up -q .^
+  $ echo H > H
+  $ hg commit -Aqm "H"
   $ cd ..
 
 
@@ -19,32 +38,32 @@ D onto H - simple rebase:
 (this also tests that editor is invoked if '--edit' is specified, and that we
 can abort or warn for colliding untracked files)
 
-  $ hg clone -q -u . a a1
+  $ hg clone -q -u . ssh://user@dummy/a a1
   $ cd a1
 
   $ tglog
-  @  02de42196ebe 'H'
+  @  15ed2d917603 'H'
   │
-  │ o  eea13746799a 'G'
+  │ o  3dbfcf9931fb 'G'
   ╭─┤
-  o │  24b6387c8c8c 'F'
+  o │  c137c2b8081f 'F'
   │ │
-  │ o  9520eea781bc 'E'
+  │ o  4e18486b3568 'E'
   ├─╯
-  │ o  32af7686d403 'D'
+  │ o  b3325c91a4d9 'D'
   │ │
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
 
   $ hg status --rev "desc(D)^1" --rev 'desc(D)'
   A D
   $ echo collide > D
   $ HGEDITOR=cat hg rebase -s 'desc(D)' -d 'desc(H)' --edit --config merge.checkunknown=warn
-  rebasing 32af7686d403 "D"
+  rebasing b3325c91a4d9 "D"
   D: replacing untracked file
   D
   
@@ -52,7 +71,7 @@ can abort or warn for colliding untracked files)
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
   HG: Leave message empty to abort commit.
   HG: --
-  HG: user: Nicolas Dumazet <nicdumz.commits@gmail.com>
+  HG: user: test
   HG: branch 'default'
   HG: added D
   $ cat D.orig
@@ -60,21 +79,21 @@ can abort or warn for colliding untracked files)
   $ rm D.orig
 
   $ tglog
-  o  1619f02ff7dd 'D'
+  o  bdad251407f5 'D'
   │
-  @  02de42196ebe 'H'
+  @  15ed2d917603 'H'
   │
-  │ o  eea13746799a 'G'
+  │ o  3dbfcf9931fb 'G'
   ╭─┤
-  o │  24b6387c8c8c 'F'
+  o │  c137c2b8081f 'F'
   │ │
-  │ o  9520eea781bc 'E'
+  │ o  4e18486b3568 'E'
   ├─╯
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -83,32 +102,32 @@ D onto F - intermediate point:
 (this also tests that editor is not invoked if '--edit' is not specified, and
 that we can ignore for colliding untracked files)
 
-  $ hg clone -q -u . a a2
+  $ hg clone -q -u . ssh://user@dummy/a a2
   $ cd a2
   $ echo collide > D
 
   $ HGEDITOR=cat hg rebase -s 'desc(D)' -d 'desc(F)' --config merge.checkunknown=ignore
-  rebasing 32af7686d403 "D"
+  rebasing b3325c91a4d9 "D"
   $ cat D.orig
   collide
   $ rm D.orig
 
   $ tglog
-  o  2107530e74ab 'D'
+  o  80272bc566a5 'D'
   │
-  │ @  02de42196ebe 'H'
+  │ @  15ed2d917603 'H'
   ├─╯
-  │ o  eea13746799a 'G'
+  │ o  3dbfcf9931fb 'G'
   ╭─┤
-  o │  24b6387c8c8c 'F'
+  o │  c137c2b8081f 'F'
   │ │
-  │ o  9520eea781bc 'E'
+  │ o  4e18486b3568 'E'
   ├─╯
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -117,119 +136,121 @@ E onto H - skip of G:
 (this also tests that we can overwrite untracked files and don't create backups
 if they have the same contents)
 
-  $ hg clone -q -u . a a3
+  $ hg clone -q -u . ssh://user@dummy/a a3
   $ cd a3
   $ hg cat -r 'desc(E)' E | tee E
   E
 
   $ hg rebase -s 'desc(E)' -d 'desc(H)'
-  rebasing 9520eea781bc "E"
-  rebasing eea13746799a "G"
-  note: rebase of eea13746799a created no changes to commit
+  rebasing 4e18486b3568 "E"
+  rebasing 3dbfcf9931fb "G"
   $ f E.orig
   E.orig: file not found
 
   $ tglog
-  o  9f8b8ec77260 'E'
+  o  2a7617a60286 'G'
   │
-  @  02de42196ebe 'H'
+  o  2715de1086ea 'E'
   │
-  o  24b6387c8c8c 'F'
+  @  15ed2d917603 'H'
   │
-  │ o  32af7686d403 'D'
+  o  c137c2b8081f 'F'
+  │
+  │ o  b3325c91a4d9 'D'
   │ │
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
 
 F onto E - rebase of a branching point (skip G):
 
-  $ hg clone -q -u . a a4
+  $ hg clone -q -u . ssh://user@dummy/a a4
   $ cd a4
 
   $ hg rebase -s 'desc(F)' -d 'desc(E)'
-  rebasing 24b6387c8c8c "F"
-  rebasing eea13746799a "G"
-  note: rebase of eea13746799a created no changes to commit
-  rebasing 02de42196ebe "H"
+  rebasing c137c2b8081f "F"
+  rebasing 3dbfcf9931fb "G"
+  rebasing 15ed2d917603 "H"
 
   $ tglog
-  @  e9240aeaa6ad 'H'
+  @  fb83ea250ea6 'H'
   │
-  o  5d0ccadb6e3e 'F'
-  │
-  o  9520eea781bc 'E'
-  │
-  │ o  32af7686d403 'D'
-  │ │
-  │ o  5fddd98957c8 'C'
-  │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  ffbb9c437931 'G'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  8d8f63bc5025 'F'
+  │
+  o  4e18486b3568 'E'
+  │
+  │ o  b3325c91a4d9 'D'
+  │ │
+  │ o  f838bfaca5c7 'C'
+  │ │
+  │ o  27547f69f254 'B'
+  ├─╯
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
 
 G onto H - merged revision having a parent in ancestors of target:
 
-  $ hg clone -q -u . a a5
+  $ hg clone -q -u . ssh://user@dummy/a a5
   $ cd a5
 
   $ hg rebase -s 'desc(G)' -d 'desc(H)'
-  rebasing eea13746799a "G"
+  rebasing 3dbfcf9931fb "G"
 
   $ tglog
-  o    397834907a90 'G'
+  o    8483d57ef6a6 'G'
   ├─╮
-  │ @  02de42196ebe 'H'
+  │ @  15ed2d917603 'H'
   │ │
-  │ o  24b6387c8c8c 'F'
+  │ o  c137c2b8081f 'F'
   │ │
-  o │  9520eea781bc 'E'
+  o │  4e18486b3568 'E'
   ├─╯
-  │ o  32af7686d403 'D'
+  │ o  b3325c91a4d9 'D'
   │ │
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
 
 F onto B - G maintains E as parent:
 
-  $ hg clone -q -u . a a6
+  $ hg clone -q -u . ssh://user@dummy/a a6
   $ cd a6
 
   $ hg rebase -s 'desc(F)' -d 'desc(B)'
-  rebasing 24b6387c8c8c "F"
-  rebasing eea13746799a "G"
-  rebasing 02de42196ebe "H"
+  rebasing c137c2b8081f "F"
+  rebasing 3dbfcf9931fb "G"
+  rebasing 15ed2d917603 "H"
 
   $ tglog
-  @  c87be72f9641 'H'
+  @  a181cc259486 'H'
   │
-  │ o  17badd73d4f1 'G'
+  │ o  386251d51cd6 'G'
   ╭─┤
-  o │  74fb9ed646c4 'F'
+  o │  302673a1e012 'F'
   │ │
-  │ o  9520eea781bc 'E'
+  │ o  4e18486b3568 'E'
   │ │
-  │ │ o  32af7686d403 'D'
+  │ │ o  b3325c91a4d9 'D'
   │ │ │
-  │ │ o  5fddd98957c8 'C'
+  │ │ o  f838bfaca5c7 'C'
   ├───╯
-  o │  42ccdea3bb16 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -238,7 +259,7 @@ These will fail (using --source):
 
 G onto F - rebase onto an ancestor:
 
-  $ hg clone -q -u . a a7
+  $ hg clone -q -u . ssh://user@dummy/a a7
   $ cd a7
 
   $ hg rebase -s 'desc(G)' -d 'desc(F)'
@@ -253,8 +274,8 @@ F onto G - rebase onto a descendant:
 G onto B - merge revision with both parents not in ancestors of target:
 
   $ hg rebase -s 'desc(G)' -d 'desc(B)'
-  rebasing eea13746799a "G"
-  abort: cannot rebase eea13746799a without moving at least one of its parents
+  rebasing 3dbfcf9931fb "G"
+  abort: cannot rebase 3dbfcf9931fb without moving at least one of its parents
   [255]
   $ hg rebase --abort
   rebase aborted
@@ -264,7 +285,7 @@ These will abort gracefully (using --base):
 G onto G - rebase onto same changeset:
 
   $ hg rebase -b 'desc(G)' -d 'desc(G)'
-  nothing to rebase - eea13746799a is both "base" and destination
+  nothing to rebase - 3dbfcf9931fb is both "base" and destination
 
 G onto F - rebase onto an ancestor:
 
@@ -274,29 +295,29 @@ G onto F - rebase onto an ancestor:
 F onto G - rebase onto a descendant:
 
   $ hg rebase -b 'desc(F)' -d 'desc(G)'
-  nothing to rebase - "base" 24b6387c8c8c is already an ancestor of destination eea13746799a
+  nothing to rebase - "base" c137c2b8081f is already an ancestor of destination 3dbfcf9931fb
 
 C onto A - rebase onto an ancestor:
 
   $ hg rebase -d 'desc(A)' -s 'desc(C)'
-  rebasing 5fddd98957c8 "C"
-  rebasing 32af7686d403 "D"
+  rebasing f838bfaca5c7 "C"
+  rebasing b3325c91a4d9 "D"
   $ tglog
-  o  c9659aac0000 'D'
+  o  3f51ceb7b044 'D'
   │
-  o  e1c4361dd923 'C'
+  o  7d3e5262cbd7 'C'
   │
-  │ @  02de42196ebe 'H'
+  │ @  15ed2d917603 'H'
   │ │
-  │ │ o  eea13746799a 'G'
+  │ │ o  3dbfcf9931fb 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c 'F'
+  │ o │  c137c2b8081f 'F'
   ├─╯ │
-  │   o  9520eea781bc 'E'
+  │   o  4e18486b3568 'E'
   ├───╯
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
 
 Check rebasing public changeset
@@ -304,42 +325,43 @@ Check rebasing public changeset
   $ hg pull --config phases.publish=True -q -r 6 . # update phase of 6
   $ hg rebase -d 'desc(A)' -b 'desc(C)'
   nothing to rebase
-  $ hg debugmakepublic e1c4361dd923
+  $ hg debugmakepublic 'desc(C)'
   $ hg rebase -d 'desc(H)' -b 'desc(C)'
-  abort: can't rebase public changeset e1c4361dd923
+  abort: can't rebase public changeset 27547f69f254
   (see 'hg help phases' for details)
   [255]
   $ hg rebase -d 'desc(H)' -r 'desc(B) + (desc(C)::)'
-  abort: can't rebase public changeset e1c4361dd923
+  abort: can't rebase public changeset 27547f69f254
   (see 'hg help phases' for details)
   [255]
 
   $ hg rebase -d 'desc(H)' -b 'desc(C)' --keep
-  rebasing 42ccdea3bb16 "B"
-  rebasing e1c4361dd923 "C" (public/e1c4361dd923d224beba950dfa5e53c861201386)
-  rebasing c9659aac0000 "D"
+  rebasing 27547f69f254 "B"
+  rebasing f838bfaca5c7 "C" (public/f838bfaca5c7226600ebcfd84f3c3c13a28d3757)
+  rebasing 7d3e5262cbd7 "C" (public/7d3e5262cbd7c2f6fd18aae7d9373efdc84c9d6b)
+  rebasing 3f51ceb7b044 "D"
 
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
   $ hg rebase -s'max(desc(D))' -d'desc(A)'
-  rebasing 2b23e52411f4 "D"
+  rebasing 75424903c9c5 "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
   $ hg rebase -s'max(desc(D))' -d'desc(B)'
-  rebasing 2cb10d0cfc6c "D"
+  rebasing 90253e7fd6aa "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
   $ hg rebase -s'max(desc(D))' -d'desc(A)'
-  rebasing 3fc1b42ad852 "D"
+  rebasing d757f6e44660 "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
   $ hg rebase -s'max(desc(D))' -d'desc(B)'
-  rebasing 3838f70ff033 "D"
+  rebasing 94a187f19238 "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
 Source phase lower than destination phase: new changeset get the phase of destination:
   $ hg rebase -s'max(desc(C))' -d'max(desc(D))'
-  rebasing 6d4f22462821 "C"
+  rebasing 9ac0d3f9df94 "C"
   $ hg log --template "{phase}\n" -r 'rev(9)'
   draft
 
@@ -384,29 +406,50 @@ All destination are B
 
   $ hg init ah
   $ cd ah
-  $ hg unbundle "$TESTDIR/bundles/rebase-revset.hg"
-  adding changesets
-  adding manifests
-  adding file changes
-  added 9 changesets with 9 changes to 9 files
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True
+
+  $ echo A > A
+  $ hg commit -Aqm "A"
+  $ echo B > B
+  $ hg commit -Aqm "B"
+  $ hg up 'desc(A)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo C > C
+  $ hg commit -Aqm "C"
+  $ echo D > D
+  $ hg commit -Aqm "D"
+  $ echo E > E
+  $ hg commit -Aqm "E"
+  $ echo F > F
+  $ hg commit -Aqm "F"
+  $ hg up 'desc(D)'
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo G > G
+  $ hg commit -Aqm "G"
+  $ echo H > H
+  $ hg commit -Aqm "H"
+  $ echo I > I
+  $ hg commit -Aqm "I"
+
   $ tglog
-  o  479ddb54a924 'I'
+  @  b4b8c20ca6ab 'I'
   │
-  o  72434a4e60b0 'H'
+  o  7603f67b15cc 'H'
   │
-  o  3d8a618087a7 'G'
+  o  15356cd3838c 'G'
   │
-  │ o  41bfcc75ed73 'F'
+  │ o  f1c425d20bac 'F'
   │ │
-  │ o  c01897464e7f 'E'
+  │ o  e112fea37bd6 'E'
   ├─╯
-  o  ffd453c31098 'D'
+  o  36784c4b0d11 'D'
   │
-  o  c9e50f6cdc55 'C'
+  o  c5cefa58fd55 'C'
   │
-  │ o  8fd0f7e49f53 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -415,159 +458,159 @@ Simple case with keep:
 
 Source on have two descendant heads but ask for one
 
-  $ hg clone -q -u . ah ah1
+  $ hg clone -q -u . ssh://user@dummy/ah ah1
   $ cd ah1
   $ hg rebase -r 'max(desc(C))::desc(I)' -d 'desc(B)' -k
-  rebasing c9e50f6cdc55 "C"
-  rebasing ffd453c31098 "D"
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I"
+  rebasing c5cefa58fd55 "C"
+  rebasing 36784c4b0d11 "D"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
+  rebasing b4b8c20ca6ab "I"
   $ tglog
-  o  9bf1d9358a90 'I'
+  @  14e758467275 'I'
   │
-  o  274623a778d4 'H'
+  o  59919f39e719 'H'
   │
-  o  ab8c8617c8e8 'G'
+  o  5c927a9ef4c3 'G'
   │
-  o  c8cbf59f70da 'D'
+  o  9a075f22ae65 'D'
   │
-  o  563e4faab485 'C'
+  o  5b9a17fd775a 'C'
   │
-  │ o  479ddb54a924 'I'
+  │ o  b4b8c20ca6ab 'I'
   │ │
-  │ o  72434a4e60b0 'H'
+  │ o  7603f67b15cc 'H'
   │ │
-  │ o  3d8a618087a7 'G'
+  │ o  15356cd3838c 'G'
   │ │
-  │ │ o  41bfcc75ed73 'F'
+  │ │ o  f1c425d20bac 'F'
   │ │ │
-  │ │ o  c01897464e7f 'E'
+  │ │ o  e112fea37bd6 'E'
   │ ├─╯
-  │ o  ffd453c31098 'D'
+  │ o  36784c4b0d11 'D'
   │ │
-  │ o  c9e50f6cdc55 'C'
+  │ o  c5cefa58fd55 'C'
   │ │
-  o │  8fd0f7e49f53 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
 
   $ cd ..
 
 Base on have one descendant heads we ask for but common ancestor have two
 
-  $ hg clone -q -u . ah ah2
+  $ hg clone -q -u . ssh://user@dummy/ah ah2
   $ cd ah2
   $ hg rebase -r 'desc(D)::desc(I)' -d 'desc(B)' --keep
-  rebasing ffd453c31098 "D"
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I"
+  rebasing 36784c4b0d11 "D"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
+  rebasing b4b8c20ca6ab "I"
   $ tglog
-  o  9d7da0053b1c 'I'
+  @  7dccb2c249c2 'I'
   │
-  o  8fbd00952cbc 'H'
+  o  4b72b91391da 'H'
   │
-  o  51d434a615ee 'G'
+  o  f3f93c3518b4 'G'
   │
-  o  a9c125634b0b 'D'
+  o  a3a79b833e81 'D'
   │
-  │ o  479ddb54a924 'I'
+  │ o  b4b8c20ca6ab 'I'
   │ │
-  │ o  72434a4e60b0 'H'
+  │ o  7603f67b15cc 'H'
   │ │
-  │ o  3d8a618087a7 'G'
+  │ o  15356cd3838c 'G'
   │ │
-  │ │ o  41bfcc75ed73 'F'
+  │ │ o  f1c425d20bac 'F'
   │ │ │
-  │ │ o  c01897464e7f 'E'
+  │ │ o  e112fea37bd6 'E'
   │ ├─╯
-  │ o  ffd453c31098 'D'
+  │ o  36784c4b0d11 'D'
   │ │
-  │ o  c9e50f6cdc55 'C'
+  │ o  c5cefa58fd55 'C'
   │ │
-  o │  8fd0f7e49f53 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
 
   $ cd ..
 
 rebase subset
 
-  $ hg clone -q -u . ah ah3
+  $ hg clone -q -u . ssh://user@dummy/ah ah3
   $ cd ah3
   $ hg rebase -r 'desc(D)::desc(H)' -d 'desc(B)' --keep
-  rebasing ffd453c31098 "D"
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
+  rebasing 36784c4b0d11 "D"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
   $ tglog
-  o  8fbd00952cbc 'H'
+  o  4b72b91391da 'H'
   │
-  o  51d434a615ee 'G'
+  o  f3f93c3518b4 'G'
   │
-  o  a9c125634b0b 'D'
+  o  a3a79b833e81 'D'
   │
-  │ o  479ddb54a924 'I'
+  │ @  b4b8c20ca6ab 'I'
   │ │
-  │ o  72434a4e60b0 'H'
+  │ o  7603f67b15cc 'H'
   │ │
-  │ o  3d8a618087a7 'G'
+  │ o  15356cd3838c 'G'
   │ │
-  │ │ o  41bfcc75ed73 'F'
+  │ │ o  f1c425d20bac 'F'
   │ │ │
-  │ │ o  c01897464e7f 'E'
+  │ │ o  e112fea37bd6 'E'
   │ ├─╯
-  │ o  ffd453c31098 'D'
+  │ o  36784c4b0d11 'D'
   │ │
-  │ o  c9e50f6cdc55 'C'
+  │ o  c5cefa58fd55 'C'
   │ │
-  o │  8fd0f7e49f53 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
 
   $ cd ..
 
 rebase subset with multiple head
 
-  $ hg clone -q -u . ah ah4
+  $ hg clone -q -u . ssh://user@dummy/ah ah4
   $ cd ah4
   $ hg rebase -r 'desc(D)::(desc(H)+desc(F))' -d 'desc(B)' --keep
-  rebasing ffd453c31098 "D"
-  rebasing c01897464e7f "E"
-  rebasing 41bfcc75ed73 "F"
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
+  rebasing 36784c4b0d11 "D"
+  rebasing e112fea37bd6 "E"
+  rebasing f1c425d20bac "F"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
   $ tglog
-  o  8fbd00952cbc 'H'
+  o  4b72b91391da 'H'
   │
-  o  51d434a615ee 'G'
+  o  f3f93c3518b4 'G'
   │
-  │ o  df23d8bda0b7 'F'
+  │ o  0080ca510e8b 'F'
   │ │
-  │ o  47b7889448ff 'E'
+  │ o  4e2550095559 'E'
   ├─╯
-  o  a9c125634b0b 'D'
+  o  a3a79b833e81 'D'
   │
-  │ o  479ddb54a924 'I'
+  │ @  b4b8c20ca6ab 'I'
   │ │
-  │ o  72434a4e60b0 'H'
+  │ o  7603f67b15cc 'H'
   │ │
-  │ o  3d8a618087a7 'G'
+  │ o  15356cd3838c 'G'
   │ │
-  │ │ o  41bfcc75ed73 'F'
+  │ │ o  f1c425d20bac 'F'
   │ │ │
-  │ │ o  c01897464e7f 'E'
+  │ │ o  e112fea37bd6 'E'
   │ ├─╯
-  │ o  ffd453c31098 'D'
+  │ o  36784c4b0d11 'D'
   │ │
-  │ o  c9e50f6cdc55 'C'
+  │ o  c5cefa58fd55 'C'
   │ │
-  o │  8fd0f7e49f53 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
 
   $ cd ..
@@ -576,30 +619,30 @@ More advanced tests
 
 rebase on ancestor with revset
 
-  $ hg clone -q -u . ah ah5
+  $ hg clone -q -u . ssh://user@dummy/ah ah5
   $ cd ah5
   $ hg rebase -r 'desc(G)::' -d 'desc(C)'
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
+  rebasing b4b8c20ca6ab "I"
   $ tglog
-  o  fcb52e68a694 'I'
+  @  546b91480957 'I'
   │
-  o  77bd65cd7600 'H'
+  o  2d6c4405b0a6 'H'
   │
-  o  12d0e738fb18 'G'
+  o  f382fd7362d5 'G'
   │
-  │ o  41bfcc75ed73 'F'
+  │ o  f1c425d20bac 'F'
   │ │
-  │ o  c01897464e7f 'E'
+  │ o  e112fea37bd6 'E'
   │ │
-  │ o  ffd453c31098 'D'
+  │ o  36784c4b0d11 'D'
   ├─╯
-  o  c9e50f6cdc55 'C'
+  o  c5cefa58fd55 'C'
   │
-  │ o  8fd0f7e49f53 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  9ae2ed22e576 'A'
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -608,32 +651,34 @@ rebase with multiple root.
 We rebase E and G on B
 We would expect heads are I, F if it was supported
 
-  $ hg clone -q -u . ah ah6
+  $ hg clone -q -u . ssh://user@dummy/ah ah6
   $ cd ah6
-  $ hg rebase -r '(c01897464e7f3bb6f77cc94debcd48514133da09+3d8a618087a7b67fa87ecd461dcb049f5612ba77)::' -d 'desc(B)'
-  rebasing c01897464e7f "E"
-  rebasing 41bfcc75ed73 "F"
-  rebasing 3d8a618087a7 "G"
-  rebasing 72434a4e60b0 "H"
-  rebasing 479ddb54a924 "I"
+  $ hg rebase -r '(desc(C)+desc(G))::' -d 'desc(B)'
+  rebasing c5cefa58fd55 "C"
+  rebasing 36784c4b0d11 "D"
+  rebasing e112fea37bd6 "E"
+  rebasing f1c425d20bac "F"
+  rebasing 15356cd3838c "G"
+  rebasing 7603f67b15cc "H"
+  rebasing b4b8c20ca6ab "I"
   $ tglog
-  o  9136df9a87cf 'I'
+  @  14e758467275 'I'
   │
-  o  23e8f30da832 'H'
+  o  59919f39e719 'H'
   │
-  o  b0efe8534e8b 'G'
+  o  5c927a9ef4c3 'G'
   │
-  │ o  6eb5b496ab79 'F'
+  │ o  edd10be25ef8 'F'
   │ │
-  │ o  d15eade9b0b1 'E'
+  │ o  71b621f0015d 'E'
   ├─╯
-  │ o  ffd453c31098 'D'
-  │ │
-  │ o  c9e50f6cdc55 'C'
-  │ │
-  o │  8fd0f7e49f53 'B'
-  ├─╯
-  o  9ae2ed22e576 'A'
+  o  9a075f22ae65 'D'
+  │
+  o  5b9a17fd775a 'C'
+  │
+  o  27547f69f254 'B'
+  │
+  o  4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -656,66 +701,66 @@ each root have a different common ancestor with the destination and this is a de
   $ hg add K
   $ hg commit -m K
   $ tglog
-  @  23a4ace37988 'K'
+  @  2fb3a0db434a 'K'
   │
-  o  1301922eeb0c 'J'
+  o  f0001bb73b26 'J'
   │
-  │ o  e7ec4e813ba6 'I'
+  │ o  bda6f7e0a0ec 'I'
   │ │
-  │ o  02de42196ebe 'H'
+  │ o  15ed2d917603 'H'
   │ │
-  │ │ o  eea13746799a 'G'
+  │ │ o  3dbfcf9931fb 'G'
   ╭─┬─╯
-  │ o  24b6387c8c8c 'F'
+  │ o  c137c2b8081f 'F'
   │ │
-  o │  9520eea781bc 'E'
+  o │  4e18486b3568 'E'
   ├─╯
-  │ o  32af7686d403 'D'
+  │ o  b3325c91a4d9 'D'
   │ │
-  │ o  5fddd98957c8 'C'
+  │ o  f838bfaca5c7 'C'
   │ │
-  │ o  42ccdea3bb16 'B'
+  │ o  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
 (actual test)
 
   $ hg rebase --dest 'desc(G)' --rev 'desc(K) + desc(I)'
-  rebasing e7ec4e813ba6 "I"
-  rebasing 23a4ace37988 "K"
+  rebasing bda6f7e0a0ec "I"
+  rebasing 2fb3a0db434a "K"
   $ hg log --rev 'children(desc(G))'
-  commit:      adb617877056
+  commit:      786f4bf6631d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     I
   
-  commit:      882431a34a0e
+  commit:      691bd2b0d622
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     K
   
   $ tglog
-  @  882431a34a0e 'K'
+  @  691bd2b0d622 'K'
   │
-  │ o  adb617877056 'I'
+  │ o  786f4bf6631d 'I'
   ├─╯
-  │ o  1301922eeb0c 'J'
+  │ o  f0001bb73b26 'J'
   │ │
-  │ │ o  02de42196ebe 'H'
+  │ │ o  15ed2d917603 'H'
   │ │ │
-  o │ │  eea13746799a 'G'
+  o │ │  3dbfcf9931fb 'G'
   ╰─┬─╮
-    │ o  24b6387c8c8c 'F'
+    │ o  c137c2b8081f 'F'
     │ │
-    o │  9520eea781bc 'E'
+    o │  4e18486b3568 'E'
     ├─╯
-  o │  32af7686d403 'D'
+  o │  b3325c91a4d9 'D'
   │ │
-  o │  5fddd98957c8 'C'
+  o │  f838bfaca5c7 'C'
   │ │
-  o │  42ccdea3bb16 'B'
+  o │  27547f69f254 'B'
   ├─╯
-  o  cd010b8cd998 'A'
+  o  4a2df7238c3b 'A'
   
 
 Test that rebase is not confused by $CWD disappearing during rebase (issue4121)

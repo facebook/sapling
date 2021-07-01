@@ -20,6 +20,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
     << r"""
 [ui]
 logtemplate={rev}\n
+allowemptycommit=True
 """
     >> "$HGRCPATH"
 )
@@ -30,11 +31,18 @@ logtemplate={rev}\n
 
 sh % "hg init test01"
 sh % "cd test01"
-sh % 'hg unbundle "$TESTDIR/bundles/remote.hg"' == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 9 changesets with 7 changes to 4 files"""
+sh % "hg commit -qm 0"
+sh % "hg commit -qm 1"
+sh % "hg commit -qm 2"
+sh % "hg commit -qm 3"
+sh % "hg up -q 0"
+sh % "hg commit -qm 4"
+sh % "hg commit -qm 5"
+sh % "hg commit -qm 6"
+sh % "hg commit -qm 7"
+sh % "hg up -q 3"
+sh % "hg commit -qm 8"
+sh % "hg up -q null"
 
 sh % "hg log -G" == r"""
     o  8
@@ -75,21 +83,6 @@ sh % "hg log -G -r 'sort(all(), topo)'" == r"""
     │ o  4
     ├─╯
     o  0"""
-
-# (display nodes filtered by log options)
-
-sh % "hg log -G -r 'sort(all(), topo)' -k .3" == r"""
-    o  8
-    │
-    o  3
-    │
-    ~
-
-    o  7
-    │
-    o  6
-    │
-    ~"""
 
 # (revset skipping nodes)
 

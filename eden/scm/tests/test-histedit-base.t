@@ -8,30 +8,39 @@ Create repo a:
 
   $ hg init a
   $ cd a
-  $ hg unbundle "$TESTDIR/bundles/rebase.hg"
-  adding changesets
-  adding manifests
-  adding file changes
-  added 8 changesets with 7 changes to 7 files
-  $ hg up tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True ui.allowemptycommit=True
+  $ hg commit -qm "A"
+  $ hg commit -qm "B"
+  $ hg commit -qm "C"
+  $ hg commit -qm "D"
+  $ hg up -q .~3
+  $ hg commit -qm "E"
+  $ hg book E
+  $ hg up -q .~1
+  $ hg commit -qm "F"
+  $ hg merge -q E
+  $ hg book -d E
+  $ hg commit -qm "G"
+  $ hg up -q .^
+  $ hg commit -qm "H"
 
   $ tglogp
-  @  02de42196ebe draft 'H'
+  @  23a00112b28c draft 'H'
   │
-  │ o  eea13746799a draft 'G'
+  │ o  319f51d6224e draft 'G'
   ╭─┤
-  o │  24b6387c8c8c draft 'F'
+  o │  971baba67099 draft 'F'
   │ │
-  │ o  9520eea781bc draft 'E'
+  │ o  0e89a44ca1b2 draft 'E'
   ├─╯
-  │ o  32af7686d403 draft 'D'
+  │ o  9da08f1f4bcc draft 'D'
   │ │
-  │ o  5fddd98957c8 draft 'C'
+  │ o  9b96ea441fce draft 'C'
   │ │
-  │ o  42ccdea3bb16 draft 'B'
+  │ o  f68855660cff draft 'B'
   ├─╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 Verify that implicit base command and help are listed
 
@@ -40,159 +49,122 @@ Verify that implicit base command and help are listed
 
 Go to D
   $ hg update 'desc(D)'
-  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 edit the history to rebase B onto H
 
 
 Rebase B onto H
   $ hg histedit 'max(desc(B))' --commands - 2>&1 << EOF | fixbundle
-  > base 02de42196ebe
-  > pick 42ccdea3bb16 B
-  > pick 5fddd98957c8 C
-  > pick 32af7686d403 D
+  > base 23a00112b28c 
+  > pick f68855660cff B
+  > pick 9b96ea441fce C
+  > pick 9da08f1f4bcc D
   > EOF
 
   $ tglogp
-  @  0937e82309df draft 'D'
+  @  8e332b0db783 draft 'D'
   │
-  o  f778d1cbddac draft 'C'
+  o  fb0676d5bfd4 draft 'C'
   │
-  o  3d41b7cc7085 draft 'B'
+  o  047a902d2bc7 draft 'B'
   │
-  o  02de42196ebe draft 'H'
+  o  23a00112b28c draft 'H'
   │
-  │ o  eea13746799a draft 'G'
+  │ o  319f51d6224e draft 'G'
   ╭─┤
-  o │  24b6387c8c8c draft 'F'
+  o │  971baba67099 draft 'F'
   │ │
-  │ o  9520eea781bc draft 'E'
+  │ o  0e89a44ca1b2 draft 'E'
   ├─╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 Rebase back and drop something
   $ hg histedit 'max(desc(B))' --commands - 2>&1 << EOF | fixbundle
-  > base cd010b8cd998
-  > pick 3d41b7cc7085 B
-  > drop f778d1cbddac C
-  > pick 0937e82309df D
+  > base 7b3f3d5e5faf
+  > pick 047a902d2bc7 B
+  > drop fb0676d5bfd4 C
+  > pick 8e332b0db783 D
   > EOF
 
   $ tglogp
-  @  476cc3e4168d draft 'D'
+  @  22b78c3c2883 draft 'D'
   │
-  o  d273e35dcdf2 draft 'B'
+  o  cd1f16922537 draft 'B'
   │
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 Split stack
   $ hg histedit 'max(desc(B))' --commands - 2>&1 << EOF | fixbundle
-  > base cd010b8cd998
-  > pick d273e35dcdf2 B
-  > base cd010b8cd998
-  > pick 476cc3e4168d D
+  > base 7b3f3d5e5faf
+  > pick cd1f16922537 B
+  > base 7b3f3d5e5faf C
+  > pick 22b78c3c2883 D
   > EOF
 
   $ tglogp
-  @  d7a6f907a822 draft 'D'
+  @  3849e69e0651 draft 'D'
   │
-  │ o  d273e35dcdf2 draft 'B'
+  │ o  cd1f16922537 draft 'B'
   ├─╯
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 Abort
   $ echo x > B
   $ hg add B
   $ hg commit -m "X"
   $ tglogp
-  @  591369deedfd draft 'X'
+  @  5d4ea538b61e draft 'X'
   │
-  o  d7a6f907a822 draft 'D'
+  o  3849e69e0651 draft 'D'
   │
-  │ o  d273e35dcdf2 draft 'B'
+  │ o  cd1f16922537 draft 'B'
   ├─╯
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
-  
-  $ hg histedit 'max(desc(D))' --commands - 2>&1 << EOF | fixbundle
-  > base d273e35dcdf2 B
-  > drop d7a6f907a822 D
-  > pick 591369deedfd X
-  > EOF
-  merging B
-  warning: 1 conflicts while merging B! (edit, then use 'hg resolve --mark')
-  Fix up the change (pick 591369deedfd)
-  (hg histedit --continue to resume)
-  $ hg histedit --abort | fixbundle
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ tglogp
-  @  591369deedfd draft 'X'
-  │
-  o  d7a6f907a822 draft 'D'
-  │
-  │ o  d273e35dcdf2 draft 'B'
-  ├─╯
-  │ o  02de42196ebe draft 'H'
-  │ │
-  │ │ o  eea13746799a draft 'G'
-  │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
-  ├─╯ │
-  │   o  9520eea781bc draft 'E'
-  ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 Continue
   $ hg histedit 'max(desc(D))' --commands - 2>&1 << EOF | fixbundle
-  > base d273e35dcdf2 B
-  > drop d7a6f907a822 D
-  > pick 591369deedfd X
+  > base cd1f16922537 B
+  > drop 3849e69e0651 D
+  > pick 5d4ea538b61e X
   > EOF
-  merging B
-  warning: 1 conflicts while merging B! (edit, then use 'hg resolve --mark')
-  Fix up the change (pick 591369deedfd)
-  (hg histedit --continue to resume)
-  $ echo b2 > B
-  $ hg resolve --mark B
-  (no more unresolved files)
-  continue: hg histedit --continue
-  $ hg histedit --continue | fixbundle
   $ tglogp
-  @  03772da75548 draft 'X'
+  @  e077fa5e4ecb draft 'X'
   │
-  o  d273e35dcdf2 draft 'B'
+  o  cd1f16922537 draft 'B'
   │
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
 
 base on a previously picked changeset
@@ -203,51 +175,51 @@ base on a previously picked changeset
   $ hg add j
   $ hg commit -m "J"
   $ tglogp
-  @  e8c55b19d366 draft 'J'
+  @  5aeb8c4a279f draft 'J'
   │
-  o  b2f90fd8aa85 draft 'I'
+  o  e396a69a02fe draft 'I'
   │
-  o  03772da75548 draft 'X'
+  o  e077fa5e4ecb draft 'X'
   │
-  o  d273e35dcdf2 draft 'B'
+  o  cd1f16922537 draft 'B'
   │
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   
   $ hg histedit 'max(desc(B))' --commands - 2>&1 << EOF | fixbundle
-  > pick d273e35dcdf2 B
-  > pick 03772da75548 X
-  > base d273e35dcdf2 B
-  > pick e8c55b19d366 J
-  > base d273e35dcdf2 B
-  > pick b2f90fd8aa85 I
+  > pick cd1f16922537 B
+  > pick e077fa5e4ecb X
+  > base cd1f16922537 B
+  > pick 267942e061c5 J
+  > base cd1f16922537 B
+  > pick fcf8c295f0a2 I
   > EOF
-  hg: parse error: base "d273e35dcdf2" changeset was an edited list candidate
+  hg: parse error: base "cd1f16922537" changeset was an edited list candidate
   (base must only use unlisted changesets)
 
   $ tglogp
-  @  e8c55b19d366 draft 'J'
+  @  5aeb8c4a279f draft 'J'
   │
-  o  b2f90fd8aa85 draft 'I'
+  o  e396a69a02fe draft 'I'
   │
-  o  03772da75548 draft 'X'
+  o  e077fa5e4ecb draft 'X'
   │
-  o  d273e35dcdf2 draft 'B'
+  o  cd1f16922537 draft 'B'
   │
-  │ o  02de42196ebe draft 'H'
+  │ o  23a00112b28c draft 'H'
   │ │
-  │ │ o  eea13746799a draft 'G'
+  │ │ o  319f51d6224e draft 'G'
   │ ╭─┤
-  │ o │  24b6387c8c8c draft 'F'
+  │ o │  971baba67099 draft 'F'
   ├─╯ │
-  │   o  9520eea781bc draft 'E'
+  │   o  0e89a44ca1b2 draft 'E'
   ├───╯
-  o  cd010b8cd998 draft 'A'
+  o  7b3f3d5e5faf draft 'A'
   

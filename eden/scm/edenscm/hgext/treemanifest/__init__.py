@@ -1153,11 +1153,13 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
         return orig(self, repo, *args, **kwargs)
 
     self.manifestheader()
-    _convertdeltastotrees(repo, self.deltaiter())
+    for chunk in self.deltaiter():
+        raise error.ProgrammingError(
+            "manifest deltas are not supported in a changegroup"
+        )
     # Handle sub-tree manifests
     for chunkdata in iter(self.filelogheader, {}):
-        raise error.ProgrammingError("sub-trees are not supported in a " "changegroup")
-    return
+        raise error.ProgrammingError("sub-trees are not supported in a changegroup")
 
 
 def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
@@ -1165,58 +1167,10 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
         return orig(self, repo, revmap, trp, numchanges)
 
     self.manifestheader()
-    _convertdeltastotrees(repo, self.deltaiter())
-    return
-
-
-def _convertdeltastotrees(repo, deltas):
-    lrucache = util.lrucachedict(10)
-    first = False
-    with progress.spinner(repo.ui, _("converting manifests to trees")):
-        for chunkdata in deltas:
-            if not first:
-                first = True
-                repo.ui.debug("converting flat manifests to treemanifests\n")
-            _convertdeltatotree(repo, lrucache, *chunkdata)
-
-
-def _convertdeltatotree(
-    repo, lrucache, node, p1, p2, linknode, deltabase, delta, flags
-):
-    """Converts the given flat manifest delta into a tree. This may be extremely
-    slow since it may need to rebuild a flat manifest full text from a tree."""
-    mfl = repo.manifestlog
-
-    def gettext(tree, node):
-        text = lrucache.get(node)
-        if text is not None:
-            return text
-        text = tree.text()
-        lrucache[node] = text
-        return text
-
-    # Get flat base mf text
-    parenttree = mfl[p1].read()
-    parenttext = gettext(parenttree, p1)
-    if p1 == deltabase:
-        deltabasetext = parenttext
-    else:
-        deltabasetree = mfl[deltabase].read()
-        deltabasetext = gettext(deltabasetree, deltabase)
-
-    # Get flat manifests
-    parentflat = manifest.manifestdict(parenttext)
-
-    newflattext = bytes(mdiff.patch(deltabasetext, delta))
-    lrucache[node] = newflattext
-    newflat = manifest.manifestdict(newflattext)
-
-    # Diff old and new flat text to get new tree
-    added, removed = _difftoaddremove(parentflat.diff(newflat))
-    newtree = _getnewtree(parenttree, added, removed)
-
-    # Save new tree
-    mfl.add(mfl.ui, newtree, p1, p2, linknode, overridenode=node, overridep1node=p1)
+    for chunk in self.deltaiter():
+        raise error.ProgrammingError(
+            "manifest deltas are not supported in a changegroup"
+        )
 
 
 class InterceptedMutableDataPack(object):
