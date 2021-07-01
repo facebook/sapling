@@ -106,3 +106,26 @@ test --no-commit
   @@ -1,1 +0,0 @@
   -E
   \ No newline at end of file
+
+  $ cd ..
+
+Test backing out a mv keeps the blame history even if copytracing is off
+  $ hg init mv-backout
+  $ cd mv-backout
+  $ setconfig experimental.copytrace=off
+  $ echo a > foo
+  $ hg commit -Aqm a
+  $ echo b >> foo
+  $ hg commit -Aqm b
+  $ hg mv foo bar
+  $ hg commit -Aqm move
+  $ hg backout -r . -m backout
+  removing bar
+  adding foo
+  changeset 72e748665938 backs out changeset 863da64a0012
+  $ hg status --change . -C
+  A foo
+  R bar
+  $ hg blame -c foo
+  72e748665938: a
+  72e748665938: b
