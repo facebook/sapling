@@ -6,7 +6,9 @@
  */
 
 use crate::convert::Serde;
+use crate::none::PyNone;
 use cpython::*;
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::any::Any;
 use std::cell::RefCell;
@@ -17,7 +19,8 @@ use std::fmt::Debug;
 py_class!(pub class pycell |py| {
     data inner: RefCell<Option<Box<dyn Any + Sync + Send + 'static>>>;
     data fmt: Box<dyn (Fn(&(dyn Any)) -> String) + Send + Sync>;
-    data pyobject: Box<dyn (Fn(&(dyn Any), Python) -> PyObject) + Send + Sync>;
+    data fn_export: Box<dyn (Fn(&(dyn Any), Python) -> PyObject) + Send + Sync>;
+    data fn_import: Box<dyn (Fn(PyObject, Python) -> PyResult<Box<dyn Any + Sync + Send + 'static>>) + Send + Sync>;
 
     def __str__(&self) -> PyResult<String> {
         let str = self.inner(py).borrow().as_ref().map(|inner| {
@@ -30,15 +33,23 @@ py_class!(pub class pycell |py| {
 
     def export(&self) -> PyResult<Option<PyObject>> {
         let pyobj = self.inner(py).borrow().as_ref().map(|inner| {
-            let pyobject = self.pyobject(py);
-            pyobject(inner, py)
+            let export = self.fn_export(py);
+            export(inner, py)
         });
         Ok(pyobj)
+    }
+
+    def import(&self, obj: PyObject) -> PyResult<PyNone> {
+        let import = self.fn_import(py);
+        let obj = import(obj, py)?;
+        let inner = self.inner(py);
+        *inner.borrow_mut() = Some(obj);
+        Ok(PyNone)
     }
 });
 
 impl pycell {
-    pub fn new<T: Serialize + Debug + Sync + Send + 'static + Sized>(
+    pub fn new<T: DeserializeOwned + Serialize + Debug + Sync + Send + 'static + Sized>(
         py: Python,
         data: T,
     ) -> PyResult<Self> {
@@ -47,15 +58,21 @@ impl pycell {
             let obj = obj.downcast_ref::<T>().unwrap(); // does not fail
             format!("{:?}", obj)
         };
-        let pyobject = |obj: &(dyn Any), py: Python| {
+        let export = |obj: &(dyn Any), py: Python| {
             let obj = obj.downcast_ref::<T>().unwrap(); // does not fail
             Serde(obj).to_py_object(py)
         };
+        let import =
+            |obj: PyObject, py: Python| -> PyResult<Box<dyn Any + Sync + Send + 'static>> {
+                let obj: Serde<T> = Serde::extract(py, &obj)?;
+                Ok(Box::new(obj.0) as Box<dyn Any + Sync + Send + 'static>)
+            };
         Self::create_instance(
             py,
             RefCell::new(Some(inner)),
             Box::new(fmt),
-            Box::new(pyobject),
+            Box::new(export),
+            Box::new(import),
         )
     }
 
