@@ -14,8 +14,8 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::Debug;
 
-/// pycell allows to put arbitrary rust data and pass it between different rust functions through python code
-/// This allows to avoid using bincode or writing wrapper types for some basic use cases
+// pycell allows to put arbitrary rust data and pass it between different rust functions through python code
+// This allows to avoid using bincode or writing wrapper types for some basic use cases
 py_class!(pub class pycell |py| {
     data inner: RefCell<Option<Box<dyn Any + Sync + Send + 'static>>>;
     data fmt: Box<dyn (Fn(&(dyn Any)) -> String) + Send + Sync>;

@@ -7,14 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, collections::HashSet, convert::TryInto, iter::FromIterator};
+use std::{cell::RefCell, convert::TryInto};
 
 use cpython::*;
 
 use configparser::{
     config::{ConfigSet, Options, SupersetVerification},
     convert::parse_list,
-    hg::{generate_dynamicconfig, ConfigSetHgExt, OptionsHgExt},
+    hg::{ConfigSetHgExt, OptionsHgExt},
 };
 use cpython_ext::{error::ResultPyErrExt, PyNone, PyPath, PyPathBuf, Str};
 
@@ -205,12 +205,4 @@ fn errors_to_str_vec(errors: Vec<configparser::error::Error>) -> Vec<Str> {
         .into_iter()
         .map(|err| Str::from(format!("{}", err)))
         .collect()
-}
-
-fn get_user_name(py: Python, config: &config) -> String {
-    config
-        .get(py, "ui".to_string(), "username".to_string())
-        .unwrap_or(None)
-        .and_then(|s| s.to_string(py).map(|s| Some(s.to_string())).unwrap_or(None))
-        .unwrap_or_else(|| "".to_string())
 }

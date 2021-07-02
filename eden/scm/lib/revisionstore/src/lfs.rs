@@ -2576,6 +2576,7 @@ mod tests {
     #[cfg(feature = "fb")]
     mod fb_test {
         use super::*;
+        #[cfg(fbcode_build)]
         use mockito::mock;
         use parking_lot::Mutex;
         use std::env::set_var;

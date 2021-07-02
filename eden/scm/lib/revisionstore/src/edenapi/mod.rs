@@ -18,7 +18,6 @@ use types::Key;
 use crate::{
     datastore::{HgIdMutableDeltaStore, RemoteDataStore},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::ExtStoredPolicy,
     remotestore::HgIdRemoteStore,
     types::StoreKey,
 };

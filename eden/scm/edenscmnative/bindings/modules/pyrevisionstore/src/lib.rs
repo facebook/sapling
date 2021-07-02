@@ -1569,6 +1569,7 @@ py_class!(pub class treescmstore |py| {
     }
 
     def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
+        let _ = py;
         // TODO(meyer): Make sure we're only supposed to be tracking fetches for files, not trees.
         Ok(Vec::new())
     }

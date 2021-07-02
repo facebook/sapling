@@ -9,7 +9,6 @@ use crate::errors;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use std::fs;
-use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 

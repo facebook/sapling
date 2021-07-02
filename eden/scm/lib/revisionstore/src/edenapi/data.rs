@@ -144,8 +144,6 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 mod tests {
     use super::*;
 
-    use std::collections::HashMap;
-
     use maplit::hashmap;
     use tempfile::TempDir;
 
@@ -156,7 +154,6 @@ mod tests {
         edenapi::{File, Tree},
         indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
         localstore::ExtStoredPolicy,
-        remotestore::HgIdRemoteStore,
         scmstore::{FileAttributes, FileStore, TreeStore},
         testutil::*,
     };
@@ -248,7 +245,7 @@ mod tests {
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
 
         // Attempt fetch.
-        let mut fetched = store.fetch_batch(std::iter::once(k.clone()))?;
+        let fetched = store.fetch_batch(std::iter::once(k.clone()))?;
         assert_eq!(fetched.complete.len(), 0);
         assert_eq!(fetched.incomplete, vec![k]);
 

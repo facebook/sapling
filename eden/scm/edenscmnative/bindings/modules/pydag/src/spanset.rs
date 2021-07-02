@@ -47,6 +47,7 @@ py_class!(pub class spans |py| {
     /// with a cutoff minrev). Avoid using this function in new code.
     @staticmethod
     def unsaferange(start: Option<i64> = None, end: Option<i64> = None) -> PyResult<Spans> {
+        let _ = py;
         if end.unwrap_or(0) < 0 {
             return Ok(Spans(IdSet::empty()))
         }

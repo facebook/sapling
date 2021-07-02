@@ -201,7 +201,7 @@ impl FileStoreFetch {
 
 
     /// Returns a stream of all successful fetches and errors, for compatibility with old scmstore
-    pub fn results(mut self) -> impl Iterator<Item = Result<(Key, StoreFile)>> {
+    pub fn results(self) -> impl Iterator<Item = Result<(Key, StoreFile)>> {
         self.complete
             .into_iter()
             .map(Ok)

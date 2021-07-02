@@ -8,15 +8,12 @@
 use std::{
     io::{Cursor, Write},
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use futures::{FutureExt, StreamExt};
 use minibytes::Bytes;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use tokio::task::spawn_blocking;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi_types::{FileEntry, TreeEntry};
@@ -485,6 +482,7 @@ mod tests {
     use super::*;
 
     use std::fs::remove_file;
+    use std::sync::Arc;
 
     use minibytes::Bytes;
     use tempfile::TempDir;
