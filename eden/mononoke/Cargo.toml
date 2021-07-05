@@ -282,7 +282,6 @@ members = [
   "lfs_import_lib",
   "lfs_protocol",
   "lfs_server",
-  "load_limiter",
   "manifest",
   "megarepo_api",
   "megarepo_api/async_requests",

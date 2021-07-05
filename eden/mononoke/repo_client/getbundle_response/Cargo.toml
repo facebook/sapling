@@ -24,13 +24,13 @@ futures-util = "0.3.7"
 futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-load_limiter = { version = "0.1.0", path = "../../load_limiter" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
+rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 revset = { version = "0.1.0", path = "../../revset" }

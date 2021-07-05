@@ -7,14 +7,13 @@
 
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
-use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric, ThrottleReason};
 use permission_checker::MononokeIdentitySetExt;
+use rate_limiting::{BoxRateLimiter, LoadCost, Metric, RateLimitReason, RateLimiter};
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sshrelay::Metadata;
 use std::sync::Arc;
-use std::time::Duration;
 
 pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;
@@ -44,7 +43,7 @@ pub enum SessionClass {
 
 struct SessionContainerInner {
     metadata: Arc<Metadata>,
-    load_limiter: Option<BoxLoadLimiter>,
+    rate_limiter: Option<BoxRateLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
 }
@@ -84,25 +83,23 @@ impl SessionContainer {
         &self.inner.metadata
     }
 
-    pub fn load_limiter(&self) -> Option<&(dyn LoadLimiter + Send + Sync)> {
-        match self.inner.load_limiter {
-            Some(ref load_limiter) => Some(&**load_limiter),
+    pub fn rate_limiter(&self) -> Option<&(dyn RateLimiter + Send + Sync)> {
+        match self.inner.rate_limiter {
+            Some(ref rate_limiter) => Some(&**rate_limiter),
             None => None,
         }
     }
 
     pub fn bump_load(&self, metric: Metric, load: LoadCost) {
-        if let Some(limiter) = self.load_limiter() {
+        if let Some(limiter) = self.rate_limiter() {
             limiter.bump_load(metric, load)
         }
     }
 
-    pub async fn check_throttle(&self, metric: Metric) -> Result<(), ThrottleReason> {
-        const LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
-
-        match &self.inner.load_limiter {
+    pub async fn check_rate_limit(&self, metric: Metric) -> Result<(), RateLimitReason> {
+        match &self.inner.rate_limiter {
             Some(limiter) => limiter
-                .check_throttle(metric, LOAD_LIMIT_TIMEFRAME)
+                .check_rate_limit(metric, self.metadata().identities())
                 .await
                 .unwrap_or(Ok(())),
             None => Ok(()),

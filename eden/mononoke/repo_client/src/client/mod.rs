@@ -47,7 +47,6 @@ use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use load_limiter::Metric;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
@@ -63,6 +62,7 @@ use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use mononoke_types::{hash::GitSha1, ChangesetId};
 use nonzero_ext::nonzero;
 use rand::{self, Rng};
+use rate_limiting::Metric;
 use regex::Regex;
 use remotefilelog::{
     create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
@@ -650,7 +650,7 @@ impl RepoClient {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
-                    ctx.session().bump_load(Metric::EgressTotalManifests, 1.0);
+                    ctx.session().bump_load(Metric::TotalManifests, 1.0);
                     STATS::total_tree_count.add_value(1);
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
@@ -730,7 +730,7 @@ impl RepoClient {
                                         getpack_params.push((path.clone(), filenodes.clone()));
                                     }
 
-                                    ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+                                    ctx.session().bump_load(Metric::GetpackFiles, 1.0);
 
                                     let blob_futs: Vec<_> = filenodes
                                         .iter()
@@ -924,13 +924,7 @@ impl RepoClient {
                     })
             };
 
-            throttle_stream(
-                &self.session,
-                Metric::EgressGetpackFiles,
-                name,
-                request_stream,
-            )
-            .boxify()
+            throttle_stream(&self.session, Metric::GetpackFiles, name, request_stream).boxify()
         })
     }
 
@@ -1072,7 +1066,7 @@ where
     let session = session.clone();
     async move {
         session
-            .check_throttle(metric)
+            .check_rate_limit(metric)
             .await
             .map_err(|reason| ErrorKind::RequestThrottled {
                 request_name: request_name.into(),
@@ -1527,12 +1521,7 @@ impl HgCommands for RepoClient {
                 })
                 .boxify();
 
-            throttle_stream(
-                &self.session,
-                Metric::EgressCommits,
-                ops::GETBUNDLE,
-                move || s,
-            )
+            throttle_stream(&self.session, Metric::Commits, ops::GETBUNDLE, move || s)
         })
     }
 
@@ -1940,7 +1929,7 @@ impl HgCommands for RepoClient {
 
                 throttle_stream(
                     &self.session,
-                    Metric::EgressTotalManifests,
+                    Metric::TotalManifests,
                     ops::GETTREEPACK,
                     move || s,
                 )
@@ -2174,7 +2163,7 @@ impl HgCommands for RepoClient {
 
             throttle_stream(
                 &self.session,
-                Metric::EgressCommits,
+                Metric::Commits,
                 ops::GETCOMMITDATA,
                 move || s,
             )

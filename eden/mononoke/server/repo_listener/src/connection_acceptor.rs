@@ -31,10 +31,10 @@ use futures_util::compat::Stream01CompatExt;
 use futures_util::future::{AbortHandle, FutureExt};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
-use load_limiter::LoadLimiterEnvironment;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::{Ssl, SslAcceptor};
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, error, info, warn, Logger};
@@ -98,7 +98,7 @@ pub async fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,
-    load_limiter: Option<LoadLimiterEnvironment>,
+    rate_limiter: Option<RateLimitEnvironment>,
     scribe: Scribe,
     edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
@@ -132,7 +132,7 @@ pub async fn connection_acceptor(
         tls_acceptor,
         repo_handlers,
         security_checker,
-        load_limiter,
+        rate_limiter,
         scribe,
         logger: root_log.clone(),
         edenapi,
@@ -170,7 +170,7 @@ pub struct Acceptor {
     pub tls_acceptor: SslAcceptor,
     pub repo_handlers: HashMap<String, RepoHandler>,
     pub security_checker: ConnectionsSecurityChecker,
-    pub load_limiter: Option<LoadLimiterEnvironment>,
+    pub rate_limiter: Option<RateLimitEnvironment>,
     pub scribe: Scribe,
     pub logger: Logger,
     pub edenapi: EdenApi,
@@ -385,7 +385,7 @@ where
         &conn.pending.acceptor.repo_handlers,
         &conn.pending.acceptor.security_checker,
         stdio,
-        conn.pending.acceptor.load_limiter.clone(),
+        conn.pending.acceptor.rate_limiter.clone(),
         conn.pending.addr.ip(),
         conn.pending.acceptor.scribe.clone(),
         conn.pending.acceptor.qps.clone(),

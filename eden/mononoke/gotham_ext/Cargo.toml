@@ -19,7 +19,6 @@ hex = "0.4"
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
-load_limiter = { version = "0.1.0", path = "../load_limiter" }
 mime = "0.3.14"
 openssl = "0.10"
 percent-encoding = "2.1"

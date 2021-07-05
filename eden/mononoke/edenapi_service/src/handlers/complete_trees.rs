@@ -16,10 +16,10 @@ use edenapi_types::{
     CompleteTreeRequest, EdenApiServerError, TreeEntry,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use load_limiter::Metric;
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::path::MononokePath;
 use mononoke_api_hg::{HgDataContext, HgRepoContext, HgTreeContext};
+use rate_limiting::Metric;
 use types::Key;
 
 use crate::context::ServerContext;
@@ -42,7 +42,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressTotalManifests).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireCompleteTreeRequest>(state).await?;
 
     Ok(cbor_stream(
@@ -95,7 +95,7 @@ fn fetch_trees_under_path(
         .map_err(|e| EdenApiServerError::new(e.context(ErrorKind::CompleteTreeRequestFailed)))
         .and_then(move |(tree, path)| async { entry_for_tree(tree, path) })
         .inspect_ok(move |_| {
-            ctx.session().bump_load(Metric::EgressTotalManifests, 1.0);
+            ctx.session().bump_load(Metric::TotalManifests, 1.0);
         });
 
     Ok(stream)

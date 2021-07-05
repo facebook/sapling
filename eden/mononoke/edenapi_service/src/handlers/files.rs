@@ -19,9 +19,9 @@ use edenapi_types::{
     UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use load_limiter::Metric;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
+use rate_limiting::Metric;
 use types::Key;
 
 use crate::context::ServerContext;
@@ -62,7 +62,7 @@ pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressGetpackFiles).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::GetpackFiles).await?;
     let request = parse_wire_request::<WireFileRequest>(state).await?;
 
     Ok(cbor_stream(
@@ -85,7 +85,7 @@ fn fetch_all_files(
     stream::iter(fetches)
         .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
         .inspect_ok(move |_| {
-            ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+            ctx.session().bump_load(Metric::GetpackFiles, 1.0);
         })
 }
 

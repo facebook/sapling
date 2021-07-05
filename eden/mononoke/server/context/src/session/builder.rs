@@ -7,7 +7,7 @@
 
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
-use load_limiter::BoxLoadLimiter;
+use rate_limiting::BoxRateLimiter;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use sshrelay::Metadata;
 use std::convert::TryInto;
@@ -36,7 +36,7 @@ impl SessionContainerBuilder {
             fb,
             inner: SessionContainerInner {
                 metadata: Arc::new(Metadata::default()),
-                load_limiter: None,
+                rate_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
             },
@@ -49,8 +49,8 @@ impl SessionContainerBuilder {
         self
     }
 
-    pub fn load_limiter(mut self, value: impl Into<Option<BoxLoadLimiter>>) -> Self {
-        self.inner.load_limiter = value.into();
+    pub fn rate_limiter(mut self, value: impl Into<Option<BoxRateLimiter>>) -> Self {
+        self.inner.rate_limiter = value.into();
         self
     }
 

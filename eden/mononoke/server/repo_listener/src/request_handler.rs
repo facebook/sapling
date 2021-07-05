@@ -18,9 +18,10 @@ use futures::compat::Future01CompatExt;
 use futures_old::{sync::mpsc, Future, Stream};
 use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
-use load_limiter::{LoadLimiterEnvironment, Metric};
 use maplit::{hashmap, hashset};
 use qps::Qps;
+use rate_limiting::Metric;
+use rate_limiting::RateLimitEnvironment;
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
@@ -51,7 +52,7 @@ pub async fn request_handler(
     repo_handlers: &HashMap<String, RepoHandler>,
     security_checker: &ConnectionsSecurityChecker,
     stdio: Stdio,
-    load_limiter: Option<LoadLimiterEnvironment>,
+    rate_limiter: Option<RateLimitEnvironment>,
     addr: IpAddr,
     scribe: Scribe,
     qps: Option<Arc<Qps>>,
@@ -130,9 +131,7 @@ pub async fn request_handler(
 
     let mut session_builder = SessionContainer::builder(fb)
         .metadata(metadata.clone())
-        .load_limiter(
-            load_limiter.map(|l| l.get(metadata.identities(), metadata.client_hostname())),
-        );
+        .rate_limiter(rate_limiter.map(|r| r.get_rate_limiter()));
 
     if priority == &Priority::Wishlist {
         session_builder = session_builder

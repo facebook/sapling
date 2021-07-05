@@ -14,7 +14,8 @@ use fbinit::FacebookInit;
 use permission_checker::MononokeIdentitySet;
 
 use crate::{
-    BoxRateLimiter, LoadCost, Metric, MononokeRateLimitConfig, RateLimitReason, RateLimiter,
+    BoxRateLimiter, LoadCost, Metric, MononokeRateLimitConfig, RateLimitBody, RateLimitReason,
+    RateLimiter,
 };
 
 pub fn get_region_capacity(_datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
@@ -49,4 +50,16 @@ impl RateLimiter for FakeLimiter {
     }
 
     fn bump_load(&self, _metric: Metric, _load: LoadCost) {}
+
+    fn category(&self) -> &str {
+        &self.category
+    }
+
+    fn commits_per_author_limit(&self) -> Option<RateLimitBody> {
+        None
+    }
+
+    fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
+        None
+    }
 }

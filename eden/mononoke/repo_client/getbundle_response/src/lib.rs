@@ -34,7 +34,6 @@ use futures_old::{
 };
 use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
-use load_limiter::Metric;
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
 use mercurial_bundles::{
     changegroup::CgVersion,
@@ -49,6 +48,7 @@ use mercurial_types::{
 };
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId, Generation};
 use phases::{Phase, Phases};
+use rate_limiting::Metric;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -361,7 +361,7 @@ async fn find_commits_to_send(
         .collect();
 
     ctx.session()
-        .bump_load(Metric::EgressCommits, nodes_to_send.len() as f64);
+        .bump_load(Metric::Commits, nodes_to_send.len() as f64);
     ctx.perf_counters().add_to_counter(
         PerfCounterType::GetbundleNumCommits,
         nodes_to_send.len() as i64,

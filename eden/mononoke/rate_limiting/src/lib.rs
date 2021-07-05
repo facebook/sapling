@@ -48,6 +48,12 @@ pub trait RateLimiter {
     fn check_load_shed(&self, identities: &MononokeIdentitySet) -> Result<(), RateLimitReason>;
 
     fn bump_load(&self, metric: Metric, load: LoadCost);
+
+    fn category(&self) -> &str;
+
+    fn commits_per_author_limit(&self) -> Option<RateLimitBody>;
+
+    fn total_file_changes_limit(&self) -> Option<RateLimitBody>;
 }
 
 define_stats! {

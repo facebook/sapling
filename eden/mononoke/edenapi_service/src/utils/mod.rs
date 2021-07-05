@@ -12,8 +12,8 @@ use http::HeaderMap;
 use hyper::Body;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError};
-use load_limiter::Metric;
 use mononoke_api_hg::{HgRepoContext, RepoContextHgExt};
+use rate_limiting::Metric;
 
 use crate::context::ServerContext;
 use crate::errors::{ErrorKind, MononokeErrorExt};
@@ -35,7 +35,7 @@ pub async fn get_repo(
     throttle_metric: impl Into<Option<Metric>>,
 ) -> Result<HgRepoContext, HttpError> {
     if let Some(throttle_metric) = throttle_metric.into() {
-        rctx.ctx.session().check_throttle(throttle_metric).await?;
+        rctx.ctx.session().check_rate_limit(throttle_metric).await?;
     }
 
     let name = name.as_ref();

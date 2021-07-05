@@ -25,9 +25,9 @@ use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
-use load_limiter::LoadLimiterEnvironment;
 use mononoke_api::Mononoke;
 use openssl::ssl::SslAcceptor;
+use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, o, Logger};
@@ -41,7 +41,7 @@ use metaconfig_types::CommonConfig;
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
 
-const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
+const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/ratelimits";
 
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
@@ -61,16 +61,16 @@ pub async fn create_repo_listeners<'a>(
     will_exit: Arc<AtomicBool>,
     cslb_config: Option<String>,
 ) -> Result<()> {
-    let load_limiter = {
+    let rate_limiter = {
         let handle = config_store
-            .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
+            .get_config_handle(CONFIGERATOR_RATE_LIMITING_CONFIG.to_string())
             .ok();
 
         handle.and_then(|handle| {
             common_config
                 .loadlimiter_category
                 .clone()
-                .map(|category| LoadLimiterEnvironment::new(fb, category, handle))
+                .map(|category| RateLimitEnvironment::new(fb, category, handle))
         })
     };
 
@@ -98,7 +98,7 @@ pub async fn create_repo_listeners<'a>(
             will_exit.clone(),
             false,
             None,
-            load_limiter.clone(),
+            rate_limiter.clone(),
         )
         .context("Error instantiating EdenAPI")?
     };
@@ -113,7 +113,7 @@ pub async fn create_repo_listeners<'a>(
         handlers,
         tls_acceptor,
         terminate_process,
-        load_limiter,
+        rate_limiter,
         scribe,
         edenapi,
         will_exit,

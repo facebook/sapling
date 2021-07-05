@@ -24,7 +24,6 @@ use futures::{
 use futures_stats::TimedTryFutureExt;
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
-use limits::types::RateLimit;
 use mercurial_bundles::{
     Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId, StreamHeader,
 };
@@ -34,6 +33,7 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
+use rate_limiting::RateLimitBody;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -118,7 +118,8 @@ pub enum BundleResolverError {
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
     RateLimitExceeded {
-        limit: RateLimit,
+        limit_name: String,
+        limit: RateLimitBody,
         entity: String,
         value: f64,
     },
@@ -151,19 +152,19 @@ impl From<BundleResolverError> for Error {
                 format_err!("pushrebase failed Conflicts({:?})", conflicts)
             }
             RateLimitExceeded {
+                limit_name,
                 limit,
                 entity,
                 value,
             } => format_err!(
                 "Rate limit exceeded: {} for {}. \
                  The maximum allowed value is {} over a sliding {}s interval. \
-                 If allowed, the value would be {}. For help: {}.",
-                limit.name,
+                 If allowed, the value would be {}.",
+                limit_name,
                 entity,
-                limit.max_value,
-                limit.interval,
+                limit.raw_config.limit,
+                limit.window.as_secs(),
                 value,
-                limit.help,
             ),
             Error(err) => err,
         }

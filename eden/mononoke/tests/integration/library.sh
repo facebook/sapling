@@ -660,28 +660,26 @@ function setup_commitsyncmap {
 }
 
 function setup_configerator_configs {
-  export LOADSHED_CONF
-  LOADSHED_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/loadshedding"
-  mkdir -p "$LOADSHED_CONF"
+  export RATE_LIMIT_CONF
+  RATE_LIMIT_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/ratelimiting"
+  mkdir -p "$RATE_LIMIT_CONF"
 
-  if [[ ! -f "$LOADSHED_CONF/limits" ]]; then
-    cat >> "$LOADSHED_CONF/limits" <<EOF
+  if [[ ! -f "$RATE_LIMIT_CONF/ratelimits" ]]; then
+    cat >> "$RATE_LIMIT_CONF/ratelimits" <<EOF
 {
- "defaults": {
-"egress_bytes": 1000000000000,
- "ingress_blobstore_bytes": 1000000000000,
- "total_manifests": 1000000000000,
- "quicksand_manifests": 1000000000,
- "getpack_files": 1000000000,
- "commits": 1000000000
-},
-"datacenter_prefix_capacity": {
-},
-"hostprefixes": {
-},
-"quicksand_multiplier": 1.0,
-"rate_limits": {
-}
+  "rate_limits": [],
+  "load_shed_limits": [],
+  "datacenter_prefix_capacity": {},
+  "commits_per_author": {
+    "status": 0,
+    "limit": 300,
+    "window": 1800
+  },
+  "total_file_changes": {
+    "status": 0,
+    "limit": 80000,
+    "window": 5
+  }
 }
 EOF
   fi

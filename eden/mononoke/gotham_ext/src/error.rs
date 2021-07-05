@@ -8,7 +8,6 @@
 use anyhow::Error;
 use gotham::state::State;
 use hyper::{Body, StatusCode};
-use load_limiter::ThrottleReason;
 use mime::Mime;
 use rate_limiting::RateLimitReason;
 
@@ -76,11 +75,6 @@ impl HttpError {
     }
 }
 
-impl From<ThrottleReason> for HttpError {
-    fn from(r: ThrottleReason) -> Self {
-        Self::e429(r)
-    }
-}
 impl From<RateLimitReason> for HttpError {
     fn from(r: RateLimitReason) -> Self {
         Self::e429(r)

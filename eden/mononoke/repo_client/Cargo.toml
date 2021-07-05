@@ -31,7 +31,6 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
 itertools = "0.10.1"
 lazy_static = "1.0"
-load_limiter = { version = "0.1.0", path = "../load_limiter" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
@@ -43,6 +42,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 percent-encoding = "2.1"
 rand = { version = "0.7", features = ["small_rng"] }
+rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 regex = "1.4.2"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
 repo_read_write_status = { version = "0.1.0", path = "repo_read_write_status" }

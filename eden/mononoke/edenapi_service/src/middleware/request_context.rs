@@ -8,7 +8,7 @@
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
-use load_limiter::LoadLimiterEnvironment;
+use rate_limiting::RateLimitEnvironment;
 use slog::{o, Logger};
 use std::sync::Arc;
 
@@ -35,7 +35,7 @@ pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
     scuba: Arc<MononokeScubaSampleBuilder>,
-    load_limiter: Option<LoadLimiterEnvironment>,
+    rate_limiter: Option<RateLimitEnvironment>,
 }
 
 impl RequestContextMiddleware {
@@ -43,13 +43,13 @@ impl RequestContextMiddleware {
         fb: FacebookInit,
         logger: Logger,
         scuba: MononokeScubaSampleBuilder,
-        load_limiter: Option<LoadLimiterEnvironment>,
+        rate_limiter: Option<RateLimitEnvironment>,
     ) -> Self {
         Self {
             fb,
             logger,
             scuba: Arc::new(scuba),
-            load_limiter,
+            rate_limiter,
         }
     }
 }
@@ -62,12 +62,11 @@ impl Middleware for RequestContextMiddleware {
             .clone()
             .unwrap_or_default();
 
-        let load_limiter = self.load_limiter.as_ref().map(|l| l.get(&identities, None));
         let metadata = Metadata::default().set_identities(identities);
         let metadata = Arc::new(metadata);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
-            .load_limiter(load_limiter)
+            .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
 
         let request_id = request_id(&state);

@@ -12,10 +12,10 @@ use futures::{
     future::{try_join_all, BoxFuture},
     FutureExt,
 };
-use limits::types::{RateLimit, RateLimitStatus};
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mononoke_types::BonsaiChangeset;
+use rate_limiting::{RateLimitBody, RateLimitStatus};
 use sha2::{Digest, Sha256};
 use slog::{debug, warn};
 use std::collections::HashMap;
@@ -25,9 +25,12 @@ use tokio::time::timeout;
 
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
+const RATELIM_FETCH_TIMEOUT: Duration = Duration::from_secs(1);
 
 const COMMITS_PER_AUTHOR_KEY: &'static str = "commits_per_author";
+const COMMITS_PER_AUTHOR_LIMIT_NAME: &'static str = "Commits Per Author Rate Limit";
 const TOTAL_FILE_CHANGES_KEY: &'static str = "total_file_changes";
+const TOTAL_FILE_CHANGES_LIMIT_NAME: &'static str = "File Changes Rate Limit";
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub(crate) enum RateLimitedPushKind {
@@ -44,12 +47,11 @@ impl std::fmt::Display for RateLimitedPushKind {
     }
 }
 
-fn get_file_changes_rate_limit(ctx: &CoreContext) -> Option<(RateLimit, &str)> {
-    let maybe_rate_limit_with_category = ctx.session().load_limiter().and_then(|load_limiter| {
-        let category = load_limiter.category();
-        load_limiter
-            .rate_limits()
-            .total_file_changes
+fn get_file_changes_rate_limit(ctx: &CoreContext) -> Option<(RateLimitBody, &str)> {
+    let maybe_rate_limit_with_category = ctx.session().rate_limiter().and_then(|rate_limiter| {
+        let category = rate_limiter.category();
+        rate_limiter
+            .total_file_changes_limit()
             .clone()
             .map(|limit| (limit, category))
     });
@@ -74,21 +76,23 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         None => return Ok(()),
     };
 
-    let enforced = match limit.status {
+    let enforced = match limit.raw_config.status {
         RateLimitStatus::Disabled => return Ok(()),
         RateLimitStatus::Tracked => false,
         RateLimitStatus::Enforced => true,
         // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
         // here.
         _ => {
-            let e = anyhow!("Invalid file count rate limit status: {:?}", limit.status);
+            let e = anyhow!(
+                "Invalid file count rate limit status: {:?}",
+                limit.raw_config.status
+            );
             return Err(BundleResolverError::Error(e));
         }
     };
 
-    let max_value = limit.max_value as f64;
-    let interval = limit.interval as u32;
-    let timeout_dur = Duration::from_secs(limit.timeout as u64);
+    let max_value = limit.raw_config.limit as f64;
+    let interval = limit.window.as_secs() as u32;
 
     let counter = GlobalTimeWindowCounterBuilder::build(
         ctx.fb,
@@ -105,16 +109,16 @@ pub(crate) async fn enforce_file_changes_rate_limits<
             counter,
             max_value,
             interval,
-            timeout_dur,
             total_file_number as f64,
             enforced,
-            "File Changes Rate Limit",        /* rate_limit_name */
+            TOTAL_FILE_CHANGES_LIMIT_NAME,
             "file_changes_rate_limit_status", /* scuba_status_name */
             hashmap! { "push_kind" => push_kind.as_str() },
         )
         .await
     }
     .map_err(|value| BundleResolverError::RateLimitExceeded {
+        limit_name: TOTAL_FILE_CHANGES_LIMIT_NAME.to_string(),
         limit,
         entity: format!("{:?}", push_kind),
         value,
@@ -162,22 +166,26 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
     ctx: &CoreContext,
     bonsais: I,
 ) -> Result<(), BundleResolverError> {
-    let load_limiter = match ctx.session().load_limiter() {
-        Some(load_limiter) => load_limiter,
+    let rate_limiter = match ctx.session().rate_limiter() {
+        Some(rate_limiter) => rate_limiter,
         None => return Ok(()),
     };
 
-    let category = load_limiter.category();
-    let limit = &load_limiter.rate_limits().commits_per_author;
+    let category = rate_limiter.category();
 
-    let enforced = match limit.status {
+    let limit = match rate_limiter.commits_per_author_limit() {
+        Some(limit) => limit,
+        None => return Ok(()),
+    };
+
+    let enforced = match limit.raw_config.status {
         RateLimitStatus::Disabled => return Ok(()),
         RateLimitStatus::Tracked => false,
         RateLimitStatus::Enforced => true,
         // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
         // here.
         _ => {
-            let e = anyhow!("Invalid limit status: {:?}", limit.status);
+            let e = anyhow!("Invalid limit status: {:?}", limit.raw_config.status);
             return Err(BundleResolverError::Error(e));
         }
     };
@@ -188,16 +196,12 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
     }
 
     let counters = build_counters(ctx, category, groups);
-    let checks = dispatch_counter_checks_and_bumps(ctx, limit, counters, enforced);
+    let checks = dispatch_counter_checks_and_bumps(ctx, &limit, counters, enforced);
 
-    match timeout(
-        Duration::from_secs(limit.timeout as u64),
-        try_join_all(checks),
-    )
-    .await
-    {
+    match timeout(RATELIM_FETCH_TIMEOUT, try_join_all(checks)).await {
         Ok(Ok(_)) => Ok(()),
         Ok(Err((author, count))) => Err(BundleResolverError::RateLimitExceeded {
+            limit_name: COMMITS_PER_AUTHOR_LIMIT_NAME.to_string(),
             limit: limit.clone(),
             entity: author,
             value: count as f64,
@@ -239,13 +243,12 @@ fn build_counters(
 
 fn dispatch_counter_checks_and_bumps<'a>(
     ctx: &'a CoreContext,
-    limit: &'a RateLimit,
+    limit: &'a RateLimitBody,
     counters: Vec<(BoxGlobalTimeWindowCounter, String, u64)>,
     enforced: bool,
 ) -> impl Iterator<Item = BoxFuture<'a, Result<(), (String, f64)>>> + 'a {
-    let max_value = limit.max_value as f64;
-    let interval = limit.interval as u32;
-    let timeout_dur = Duration::from_secs(limit.timeout as u64);
+    let max_value = limit.raw_config.limit as f64;
+    let interval = limit.window.as_secs() as u32;
 
     counters.into_iter().map(move |(counter, author, bump)| {
         async move {
@@ -254,10 +257,9 @@ fn dispatch_counter_checks_and_bumps<'a>(
                 counter,
                 max_value,
                 interval,
-                timeout_dur,
                 bump as f64,
                 enforced,
-                "Commits Per Author Rate Limit",
+                COMMITS_PER_AUTHOR_LIMIT_NAME,
                 "commits_per_author_rate_limit_status",
                 hashmap! {"author" => author.as_str() },
             )
@@ -277,7 +279,6 @@ async fn counter_check_and_bump<'a>(
     counter: BoxGlobalTimeWindowCounter,
     max_value: f64,
     interval: u32,
-    timeout_dur: Duration,
     bump: f64,
     enforced: bool,
     rate_limit_name: &'a str,
@@ -289,7 +290,7 @@ async fn counter_check_and_bump<'a>(
         scuba.add(key, val);
     }
 
-    match timeout(timeout_dur, counter.get(interval)).await {
+    match timeout(RATELIM_FETCH_TIMEOUT, counter.get(interval)).await {
         Ok(Ok(count)) => {
             // NOTE: We only bump after we've allowed a response. This is reasonable for
             // this kind of limit.

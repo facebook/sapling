@@ -17,10 +17,10 @@ use edenapi_types::{
 use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
 };
-use load_limiter::Metric;
 use manifest::Entry;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext, HgTreeContext};
+use rate_limiting::Metric;
 use types::{Key, RepoPathBuf};
 
 use crate::context::ServerContext;
@@ -48,7 +48,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressTotalManifests).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
 
     // Sample trivial requests
@@ -78,7 +78,7 @@ fn fetch_all_trees(
     stream::iter(fetches)
         .buffer_unordered(MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST)
         .inspect_ok(move |_| {
-            ctx.session().bump_load(Metric::EgressTotalManifests, 1.0);
+            ctx.session().bump_load(Metric::TotalManifests, 1.0);
         })
 }
 
