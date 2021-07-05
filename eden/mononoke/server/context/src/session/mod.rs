@@ -96,6 +96,13 @@ impl SessionContainer {
         }
     }
 
+    pub fn check_load_shed(&self) -> Result<(), RateLimitReason> {
+        match &self.inner.rate_limiter {
+            Some(limiter) => limiter.check_load_shed(self.metadata().identities()),
+            None => Ok(()),
+        }
+    }
+
     pub async fn check_rate_limit(&self, metric: Metric) -> Result<(), RateLimitReason> {
         match &self.inner.rate_limiter {
             Some(limiter) => limiter

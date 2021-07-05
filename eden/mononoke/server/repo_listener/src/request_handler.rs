@@ -100,6 +100,16 @@ pub async fn request_handler(
 
     let reponame = repo.reponame();
 
+    let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
+    if let Some(ref rate_limiter) = rate_limiter {
+        if let Err(err) = rate_limiter.check_load_shed(&metadata.identities()) {
+            scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));
+            error!(conn_log, "Request rejected due to load shedding: {}", err; "remote" => "true");
+
+            return Err(err.into());
+        }
+    }
+
     if !metadata.is_trusted_client() {
         let is_allowed_to_repo = security_checker
             .check_if_repo_access_allowed(reponame, metadata.identities())
@@ -131,7 +141,7 @@ pub async fn request_handler(
 
     let mut session_builder = SessionContainer::builder(fb)
         .metadata(metadata.clone())
-        .rate_limiter(rate_limiter.map(|r| r.get_rate_limiter()));
+        .rate_limiter(rate_limiter);
 
     if priority == &Priority::Wishlist {
         session_builder = session_builder

@@ -34,6 +34,8 @@ pub async fn get_repo(
     name: impl AsRef<str>,
     throttle_metric: impl Into<Option<Metric>>,
 ) -> Result<HgRepoContext, HttpError> {
+    rctx.ctx.session().check_load_shed()?;
+
     if let Some(throttle_metric) = throttle_metric.into() {
         rctx.ctx.session().check_rate_limit(throttle_metric).await?;
     }
