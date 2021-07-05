@@ -21,6 +21,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
+use tunables::tunables;
 
 const SYNC_QUEUE: &str = "mysql_sync_queue";
 
@@ -170,6 +171,11 @@ impl Blobstore for MultiplexedBlobstore {
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
         let result = self.blobstore.is_present(ctx, key).await?;
+        if !tunables().get_multiplex_blobstore_is_present_do_queue_lookup() {
+            // trust the first lookup, don't check the sync-queue
+            return Ok(result);
+        }
+
         match &result {
             BlobstoreIsPresent::Present | BlobstoreIsPresent::Absent => Ok(result),
             BlobstoreIsPresent::ProbablyNotPresent(_) => {

@@ -39,6 +39,7 @@ use futures::{
     task::{Context, Poll},
 };
 use lock_ext::LockExt;
+use maplit::hashmap;
 use memblob::Memblob;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -46,6 +47,7 @@ use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
+use tunables::{with_tunables_async, MononokeTunables};
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,
@@ -490,6 +492,15 @@ async fn multiplexed(fb: FacebookInit) {
         nonzero!(1u64),
     );
 
+    // enable new `is_present` semantics
+    let get_tunables = || {
+        let tunables = MononokeTunables::default();
+        tunables.update_bools(
+            &hashmap! {"multiplex_blobstore_is_present_do_queue_lookup".to_string() => true},
+        );
+        tunables
+    };
+
     // non-existing key when one blobstore failing
     {
         let k0 = "k0";
@@ -507,7 +518,9 @@ async fn multiplexed(fb: FacebookInit) {
 
         // test `is_present`
 
-        let mut present_fut = bs.is_present(ctx, k0).map_err(|_| ()).boxed();
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k0).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
 
         bs0.tick(None);
@@ -558,7 +571,9 @@ async fn multiplexed(fb: FacebookInit) {
         assert!(get_fut.await.is_err());
 
         // test `is_present`
-        let mut present_fut = bs.is_present(ctx, k1).map_err(|_| ()).boxed();
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k1).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
@@ -592,7 +607,125 @@ async fn multiplexed(fb: FacebookInit) {
         assert!(get_fut.await.is_err());
 
         // test `is_present`
-        let mut present_fut = bs.is_present(ctx, k2).map_err(|_| ()).boxed();
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k2).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
+        bs0.tick(Some("case 3: bs0 failed"));
+        bs1.tick(Some("case 3: bs1 failed"));
+        assert!(present_fut.await.is_err());
+    }
+}
+
+#[fbinit::test]
+async fn multiplexed_new_semantics(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
+    let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
+
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(Tickable::new());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Tickable::new());
+    let bs = MultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![],
+        nonzero!(1usize),
+        queue.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    // enable new `is_present` semantics
+    let get_tunables = || {
+        let tunables = MononokeTunables::default();
+        tunables.update_bools(
+            &hashmap! {"multiplex_blobstore_is_present_do_queue_lookup".to_string() => false},
+        );
+        tunables
+    };
+
+    // non-existing key when one blobstore failing
+    {
+        let k0 = "k0";
+
+        // test `is_present`
+
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k0).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
+        bs0.tick(None);
+        bs1.tick(Some("case 1: bs1 failed"));
+
+        let expected =
+            "Some blobstores failed, and other returned None: {BlobstoreId(1): case 1: bs1 failed}"
+                .to_owned();
+        match present_fut.await.unwrap() {
+            BlobstoreIsPresent::ProbablyNotPresent(er) => {
+                assert_eq!(er.to_string(), expected);
+            }
+            _ => {
+                panic!("case 1: the presence must not be determined");
+            }
+        }
+    }
+
+    // only replica containing key failed
+    {
+        let v1 = make_value("v1");
+        let k1 = "k1";
+
+        let mut put_fut = bs
+            .put(ctx, k1.to_owned(), v1.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        bs0.tick(None);
+        bs1.tick(Some("case 2: bs1 failed"));
+        put_fut.await.expect("case 2 put_fut failed");
+
+        match queue
+            .get(ctx, k1)
+            .await
+            .expect("case 2 get failed")
+            .as_slice()
+        {
+            [entry] => assert_eq!(entry.blobstore_id, bid0),
+            _ => panic!("only one entry expected"),
+        }
+
+        // test `is_present`
+        // Now we send only one blobstore request
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k1).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
+        bs0.tick(Some("case 2: bs0 failed"));
+        bs1.tick(None);
+
+        let expected =
+            "Some blobstores failed, and other returned None: {BlobstoreId(0): case 2: bs0 failed}"
+                .to_owned();
+        match present_fut.await.unwrap() {
+            BlobstoreIsPresent::ProbablyNotPresent(er) => {
+                assert_eq!(er.to_string(), expected);
+            }
+            _ => {
+                panic!("case 1: the key should be absent");
+            }
+        }
+    }
+
+    // both replicas fail
+    {
+        let k2 = "k2";
+
+        // test `is_present`
+        let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k2).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
         bs0.tick(Some("case 3: bs0 failed"));
         bs1.tick(Some("case 3: bs1 failed"));
