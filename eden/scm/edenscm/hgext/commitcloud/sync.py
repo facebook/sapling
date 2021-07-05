@@ -1008,9 +1008,11 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr, maxage):
     changes = []
     remotechanges = {}
     mindate = (time.time() - maxage * 86400) if maxage is not None else 0
-    for head in lastomittedheads:
-        if head not in repo:
-            omittedheads.add(head)
+    foundheads = repo.changelog.filternodes(
+        [nodemod.bin(n) for n in lastomittedheads], local=True
+    )
+    foundheads = {nodemod.hex(n) for n in foundheads}
+    omittedheads = lastomittedheads - foundheads
     for name in lastomittedbookmarks:
         # bookmark might be removed from cloud workspace by someone else
         if name not in lastsyncstate.bookmarks:
