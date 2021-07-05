@@ -26,6 +26,9 @@ use tokio::time::timeout;
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
 
+const COMMITS_PER_AUTHOR_KEY: &'static str = "commits_per_author";
+const TOTAL_FILE_CHANGES_KEY: &'static str = "total_file_changes";
+
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub(crate) enum RateLimitedPushKind {
     Public,
@@ -85,13 +88,12 @@ pub(crate) async fn enforce_file_changes_rate_limits<
 
     let max_value = limit.max_value as f64;
     let interval = limit.interval as u32;
-    let key = limit.prefix.to_string();
     let timeout_dur = Duration::from_secs(limit.timeout as u64);
 
     let counter = GlobalTimeWindowCounterBuilder::build(
         ctx.fb,
         category,
-        key,
+        TOTAL_FILE_CHANGES_KEY.to_string(),
         TIME_WINDOW_MIN,
         TIME_WINDOW_MAX,
     );
@@ -185,7 +187,7 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
         *groups.entry(bonsai.author()).or_insert(0) += 1;
     }
 
-    let counters = build_counters(ctx, category, limit, groups);
+    let counters = build_counters(ctx, category, groups);
     let checks = dispatch_counter_checks_and_bumps(ctx, limit, counters, enforced);
 
     match timeout(
@@ -212,13 +214,12 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
 fn build_counters(
     ctx: &CoreContext,
     category: &str,
-    limit: &RateLimit,
     groups: HashMap<&str, u64>,
 ) -> Vec<(BoxGlobalTimeWindowCounter, String, u64)> {
     groups
         .into_iter()
         .map(|(author, count)| {
-            let key = make_key(&limit.prefix, author);
+            let key = make_key(COMMITS_PER_AUTHOR_KEY, author);
             debug!(
                 ctx.logger(),
                 "Associating key {:?} with author {:?}", key, author
