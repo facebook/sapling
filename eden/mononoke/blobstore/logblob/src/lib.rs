@@ -13,7 +13,9 @@ use async_trait::async_trait;
 use futures_stats::TimedFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::BlobstoreBytes;
@@ -78,7 +80,11 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         result
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
         self.inner.is_present(ctx, key).await

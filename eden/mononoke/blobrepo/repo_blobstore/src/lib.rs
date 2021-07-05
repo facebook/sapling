@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
@@ -76,7 +76,11 @@ impl Blobstore for RepoBlobstore {
     ) -> Result<()> {
         self.0.0.put(ctx, key, value).await
     }
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.0.0.is_present(ctx, key).await
     }
 }

@@ -7,7 +7,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
@@ -113,7 +115,11 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     }
 
     #[inline]
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         let is_present = self.blobstore.is_present(ctx, key);
         if should_error {
@@ -198,7 +204,12 @@ mod test {
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(!base_present);
     }
 
@@ -219,7 +230,12 @@ mod test {
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(!base_present);
     }
 
@@ -240,7 +256,12 @@ mod test {
             )
             .await;
         assert!(r.is_ok());
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(base_present);
         let r = wrapper.get(ctx, key).await;
         assert!(!r.is_ok());

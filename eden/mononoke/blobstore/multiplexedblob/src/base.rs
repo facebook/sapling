@@ -7,7 +7,9 @@
 
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
@@ -484,7 +486,11 @@ impl Blobstore for MultiplexedBlobstoreBase {
         blobstore_get(ctx, blobstores, write_mostly_blobstores, key, scuba).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
 
         let main_requests: FuturesUnordered<_> = self
@@ -515,21 +521,35 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     .increment_counter(PerfCounterType::BlobPresenceChecks);
                 while let Some(result) = requests.next().await {
                     match result {
-                        (_, Ok(true)) => {
-                            return Ok(true);
+                        (_, Ok(BlobstoreIsPresent::Present)) => {
+                            return Ok(BlobstoreIsPresent::Present);
                         }
+                        (_, Ok(BlobstoreIsPresent::Absent)) => {}
+                        // is_present failed for the underlying blobstore
                         (blobstore_id, Err(error)) => {
                             errors.insert(blobstore_id, error);
                         }
-                        (_, Ok(false)) => {}
+                        (blobstore_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
+                            let err = err.context(format!(
+                                "Received 'ProbablyNotPresent' from the underlying blobstore"
+                            ));
+                            errors.insert(blobstore_id, err);
+                        }
                     }
                 }
+
                 if errors.is_empty() {
-                    Ok(false)
+                    Ok(BlobstoreIsPresent::Absent)
                 } else if errors.len() == blobstores_count {
                     Err(ErrorKind::AllFailed(Arc::new(errors)))
                 } else {
-                    Err(write_mostly_error(&blobstores, errors))
+                    let write_mostly_err = write_mostly_error(&blobstores, errors);
+                    if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
+                        let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
+                        Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
+                    } else {
+                        Err(write_mostly_err)
+                    }
                 }
             }
             .timed()

@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
@@ -67,7 +67,11 @@ impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
         }
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         if thread_rng().gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key).await
         } else {

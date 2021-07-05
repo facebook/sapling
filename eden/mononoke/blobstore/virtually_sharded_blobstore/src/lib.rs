@@ -10,7 +10,7 @@ mod shard;
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use cacheblob::CachelibBlobstoreOptions;
 use cachelib::VolatileLruCachePool;
@@ -484,25 +484,28 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         tokio::spawn(fut).await?
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         cloned!(self.inner);
 
         let cache_key = CacheKey::from_key(key);
         let presence = PresenceData::Get;
 
         if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
-            return Ok(true);
+            return Ok(BlobstoreIsPresent::Present);
         }
 
         Ticket::new(ctx, AccessReason::Read).finish().await?;
 
-        let exists = inner.blobstore.is_present(ctx, key).await?;
-
-        if exists {
+        let result = inner.blobstore.is_present(ctx, key).await?;
+        if let BlobstoreIsPresent::Present = &result {
             let _ = inner.cache.set_is_present(&cache_key, presence);
         }
 
-        Ok(exists)
+        Ok(result)
     }
 }
 
@@ -1110,8 +1113,8 @@ mod test {
                 &'a self,
                 _ctx: &'a CoreContext,
                 _key: &'a str,
-            ) -> Result<bool> {
-                Ok(true)
+            ) -> Result<BlobstoreIsPresent> {
+                Ok(BlobstoreIsPresent::Present)
             }
         }
 

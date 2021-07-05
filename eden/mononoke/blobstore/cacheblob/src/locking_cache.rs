@@ -8,7 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent, CountedBlobstore};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::{BoxFuture, FutureExt};
@@ -233,11 +233,15 @@ where
         Ok(())
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         let present = self.cache.check_present(key).await;
         if present {
             STATS::presence_hit.add_value(1, (C::CACHE_NAME,));
-            Ok(true)
+            Ok(BlobstoreIsPresent::Present)
         } else {
             STATS::presence_miss.add_value(1, (C::CACHE_NAME,));
             self.blobstore.is_present(ctx, key).await

@@ -214,7 +214,10 @@ pub async fn exists<B: Blobstore>(
         })?;
 
     match maybe_id {
-        Some(id) => blobstore.is_present(ctx, &id.blobstore_key()).await,
+        Some(id) => blobstore
+            .is_present(ctx, &id.blobstore_key())
+            .await?
+            .fail_if_unsure(),
         None => Ok(false),
     }
 }

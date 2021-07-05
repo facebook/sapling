@@ -19,8 +19,9 @@ use async_trait::async_trait;
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::{
-    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
-    BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
+    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    PutBehaviour,
 };
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
@@ -165,15 +166,23 @@ impl Blobstore for Fileblob {
         Ok(ret)
     }
 
-    async fn is_present<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         let p = self.path(key);
 
-        let ret = match File::open(&p).await {
+        let present = match File::open(&p).await {
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => false,
             Err(e) => return Err(e.into()),
             Ok(_) => true,
         };
-        Ok(ret)
+        Ok(if present {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
     }
 
     async fn put<'a>(

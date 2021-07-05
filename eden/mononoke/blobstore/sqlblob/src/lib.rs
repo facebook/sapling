@@ -25,8 +25,8 @@ use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{bail, format_err, Error, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
-    CountedBlobstore, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
+    BlobstoreWithLink, CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::{Bytes, BytesMut};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
@@ -449,8 +449,17 @@ impl Blobstore for Sqlblob {
         }
     }
 
-    async fn is_present<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        self.data_store.is_present(&key).await
+    async fn is_present<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let present = self.data_store.is_present(&key).await?;
+        Ok(if present {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
     }
 
     async fn put<'a>(

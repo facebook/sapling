@@ -11,8 +11,9 @@ use crate::pack;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
-    BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
+    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    PutBehaviour,
 };
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
@@ -83,7 +84,11 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         Ok(Some(BlobstoreGetData::new(meta, decoded)))
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.inner
             .is_present(ctx, &[key, ENVELOPE_SUFFIX].concat())
             .await
@@ -322,11 +327,17 @@ mod tests {
         assert_ne!(value, fetched_value.into_bytes());
 
         // Check is_present matches
-        let is_present = inner_blobstore.is_present(ctx, inner_key).await?;
+        let is_present = inner_blobstore
+            .is_present(ctx, inner_key)
+            .await?
+            .fail_if_unsure()?;
         assert!(is_present);
 
         // Check the key without suffix is not there
-        let is_not_present = !inner_blobstore.is_present(ctx, outer_key).await?;
+        let is_not_present = !inner_blobstore
+            .is_present(ctx, outer_key)
+            .await?
+            .fail_if_unsure()?;
         assert!(is_not_present);
 
         Ok(inner_key.to_owned())
@@ -369,7 +380,10 @@ mod tests {
             .await?;
 
         // Check the inner key is not visible, the pack operation unlinks it
-        let is_present = inner_blobstore.is_present(ctx, &inner_key).await?;
+        let is_present = inner_blobstore
+            .is_present(ctx, &inner_key)
+            .await?
+            .fail_if_unsure()?;
         assert!(!is_present);
 
         for (expected, i) in input_values.into_iter().zip(0..3usize) {

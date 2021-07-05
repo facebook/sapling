@@ -13,7 +13,8 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
+    OverwriteStatus, PutBehaviour,
 };
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
@@ -387,7 +388,11 @@ impl Blobstore for ScrubBlobstore {
         .await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
 

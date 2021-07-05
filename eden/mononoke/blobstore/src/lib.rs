@@ -267,6 +267,35 @@ impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
     }
 }
 
+#[derive(Debug)]
+pub enum BlobstoreIsPresent {
+    // The blob is definitely present in the blobstore
+    Present,
+    /// The blob is definitely not present
+    Absent,
+    /// The blobstore has no evidence that the blob is present,
+    /// however some of the operations resulted in errors.
+    ProbablyNotPresent(Error),
+}
+
+impl BlobstoreIsPresent {
+    pub fn assume_not_found_if_unsure(self) -> bool {
+        match self {
+            BlobstoreIsPresent::Present => true,
+            BlobstoreIsPresent::Absent => false,
+            BlobstoreIsPresent::ProbablyNotPresent(_) => false,
+        }
+    }
+
+    pub fn fail_if_unsure(self) -> Result<bool, Error> {
+        match self {
+            BlobstoreIsPresent::Present => Ok(true),
+            BlobstoreIsPresent::Absent => Ok(false),
+            BlobstoreIsPresent::ProbablyNotPresent(err) => Err(err),
+        }
+    }
+}
+
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:
 /// 1. `get` and `put` are atomic with respect to each other; a put will either put the entire
@@ -312,9 +341,20 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
-    /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        Ok(self.get(ctx, key).await?.is_some())
+    /// `BlobstoreIsPresent::Absent` if `get` would return `None`, and `BlobstoreIsPresent::Present`
+    /// if `get` would return `Some(_)`.
+    /// In some cases, when it couldn't determine whether the key exists or not, it would
+    /// return `BlobstoreIsPresent::ProbablyNotPresent`.
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        Ok(if self.get(ctx, key).await?.is_some() {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
     }
 }
 

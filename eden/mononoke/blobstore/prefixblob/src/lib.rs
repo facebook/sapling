@@ -14,7 +14,8 @@ use inlinable_string::InlinableString;
 use context::CoreContext;
 
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, BlobstoreWithLink,
+    OverwriteStatus, PutBehaviour,
 };
 use mononoke_types::BlobstoreBytes;
 
@@ -76,7 +77,11 @@ impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     }
 
     #[inline]
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, &self.prepend(key)).await
     }
 }
@@ -178,10 +183,14 @@ mod test {
                 .is_present(ctx, &unprefixed_key)
                 .await
                 .expect("is_present should succeed")
+                .fail_if_unsure()
+                .expect("is_present should succeed")
         );
         assert!(
             base.is_present(ctx, &prefixed_key)
                 .await
+                .expect("is_present should succeed")
+                .fail_if_unsure()
                 .expect("is_present should succeed")
         );
     }

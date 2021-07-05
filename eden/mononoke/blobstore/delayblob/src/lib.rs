@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use rand::Rng;
 use rand_distr::Distribution;
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -64,7 +64,11 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         self.inner.put(ctx, key, value).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         delay(self.get_dist).await;
         self.inner.is_present(ctx, key).await
     }

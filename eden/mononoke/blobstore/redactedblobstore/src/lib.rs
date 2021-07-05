@@ -13,7 +13,7 @@ pub mod store;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -210,7 +210,11 @@ impl<T: Blobstore> Blobstore for RedactedBlobstoreInner<T> {
         blobstore.put(ctx, key, value).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, key).await
     }
 }
@@ -232,7 +236,11 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
     ) -> Result<()> {
         self.inner.put(ctx, key, value).await
     }
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
 }

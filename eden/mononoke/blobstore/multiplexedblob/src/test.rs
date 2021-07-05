@@ -22,7 +22,8 @@ use crate::scrub::{
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
+    OverwriteStatus, PutBehaviour,
 };
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
@@ -513,7 +514,12 @@ async fn multiplexed(fb: FacebookInit) {
         assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
 
         bs1.tick(Some("case 1: bs1 failed"));
-        assert!(!present_fut.await.unwrap());
+        match present_fut.await.unwrap() {
+            BlobstoreIsPresent::Absent => {}
+            _ => {
+                panic!("case 1: the key should be absent");
+            }
+        }
     }
 
     // only replica containing key failed
@@ -560,7 +566,18 @@ async fn multiplexed(fb: FacebookInit) {
         assert!(PollOnce::new(Pin::new(&mut present_fut)).await.is_pending());
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
-        assert!(present_fut.await.is_err());
+
+        let expected =
+            "Some blobstores failed, and other returned None: {BlobstoreId(0): case 2: bs0 failed}"
+                .to_owned();
+        match present_fut.await.unwrap() {
+            BlobstoreIsPresent::ProbablyNotPresent(er) => {
+                assert_eq!(er.to_string(), expected);
+            }
+            _ => {
+                panic!("case 1: the key should be absent");
+            }
+        }
     }
 
     // both replicas fail

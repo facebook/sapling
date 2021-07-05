@@ -7,7 +7,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 mod errors;
@@ -53,7 +55,11 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     }
 
     #[inline]
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, key).await
     }
 }
@@ -104,7 +110,12 @@ mod test {
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(!base_present);
     }
 
@@ -124,7 +135,12 @@ mod test {
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(!base_present);
     }
 }

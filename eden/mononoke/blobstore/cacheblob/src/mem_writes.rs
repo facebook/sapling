@@ -116,6 +116,8 @@ mod test {
                 .is_present(ctx, foo_key)
                 .await
                 .expect("is_present to inner should work")
+                .fail_if_unsure()
+                .expect("is_present to inner should work")
         );
 
         assert_eq!(
@@ -150,6 +152,8 @@ mod test {
             !inner
                 .is_present(ctx, foo_key)
                 .await
+                .expect("is_present on inner should work")
+                .fail_if_unsure()
                 .expect("is_present on inner should work"),
             "foo should not be present in inner",
         );
@@ -158,7 +162,9 @@ mod test {
             outer
                 .is_present(ctx, foo_key)
                 .await
-                .expect("is_present on outer should work"),
+                .expect("is_present on outer should work")
+                .fail_if_unsure()
+                .expect("is_present on inner should work"),
             "foo should be present in outer",
         );
 

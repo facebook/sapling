@@ -85,11 +85,19 @@ impl HgRepoContext {
 
     async fn is_key_present_in_blobstore(&self, key: &str) -> Result<bool, MononokeError> {
         // TODO (liubovd): check in all multiplexes blobstores
-        self.blob_repo()
-            .blobstore()
-            .is_present(self.ctx(), &key)
-            .await
-            .map_err(MononokeError::from)
+        async move {
+            self.blob_repo()
+                .blobstore()
+                .is_present(self.ctx(), &key)
+                .await
+                .map(|is_present| {
+                    // if we can't resolve the presence (some blobstores failed, some returned None)
+                    // we can re-upload the blob
+                    is_present.assume_not_found_if_unsure()
+                })
+        }
+        .await
+        .map_err(MononokeError::from)
     }
 
     /// Look up in blobstore by `ContentId`

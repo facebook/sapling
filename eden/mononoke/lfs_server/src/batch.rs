@@ -268,7 +268,8 @@ async fn resolve_internal_object(
     let exists = blobstore
         .is_present(&ctx.ctx, &content_id.blobstore_key())
         .await
-        .with_context(|| format!("Failed to check for existence of: {:?}", content_id))?;
+        .with_context(|| format!("Failed to check for existence of: {:?}", content_id))?
+        .assume_not_found_if_unsure();
 
     if exists {
         return Ok(Some(InternalObject::new(content_id, oid, None)));

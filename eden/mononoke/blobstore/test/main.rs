@@ -129,13 +129,13 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
     assert_eq!(orig_ctime, new_ctime);
     assert_eq!(value, newvalue.into_bytes());
 
-    let newkey_is_present = blobstore.is_present(ctx, newkey).await?;
+    let newkey_is_present = blobstore.is_present(ctx, newkey).await?.fail_if_unsure()?;
 
     assert!(newkey_is_present);
 
     // Try unlink
     blobstore.unlink(ctx, newkey).await?;
-    let newkey_is_present2 = blobstore.is_present(ctx, newkey).await?;
+    let newkey_is_present2 = blobstore.is_present(ctx, newkey).await?.fail_if_unsure()?;
     assert!(!newkey_is_present2);
 
     // Check we get error when unlinking an unknown key

@@ -255,7 +255,11 @@ impl UploadEntries {
                 }
 
                 let key = mfid.blobstore_key();
-                if !blobstore.is_present(ctx, &key).await? {
+                if !blobstore
+                    .is_present(ctx, &key)
+                    .await?
+                    .assume_not_found_if_unsure()
+                {
                     return Err(BlobstoreError::NotFound(key).into());
                 }
             }
@@ -267,7 +271,7 @@ impl UploadEntries {
                 let envelope = fnid.load(ctx, &blobstore).await?;
 
                 let key = envelope.content_id().blobstore_key();
-                if !blobstore.is_present(ctx, &key).await? {
+                if !blobstore.is_present(ctx, &key).await?.fail_if_unsure()? {
                     return Err(BlobstoreError::NotFound(key).into());
                 }
             }

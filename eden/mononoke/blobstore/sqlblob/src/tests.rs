@@ -55,7 +55,7 @@ async fn read_write_size(
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
         assert!(
-            !bs.is_present(ctx, &key).await?,
+            !bs.is_present(ctx, &key).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 
@@ -65,7 +65,10 @@ async fn read_write_size(
         let bytes_out = bs.get(ctx, &key).await?;
         assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
 
-        assert!(bs.is_present(ctx, &key).await?, "Blob should exist now");
+        assert!(
+            bs.is_present(ctx, &key).await?.fail_if_unsure()?,
+            "Blob should exist now"
+        );
         Ok(())
     })
     .await
@@ -98,7 +101,7 @@ async fn double_put(fb: FacebookInit) -> Result<(), Error> {
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
         assert!(
-            !bs.is_present(ctx, &key).await?,
+            !bs.is_present(ctx, &key).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 
@@ -107,7 +110,10 @@ async fn double_put(fb: FacebookInit) -> Result<(), Error> {
         // Write it again
         bs.put(ctx, key.clone(), blobstore_bytes.clone()).await?;
 
-        assert!(bs.is_present(ctx, &key).await?, "Blob should exist now");
+        assert!(
+            bs.is_present(ctx, &key).await?.fail_if_unsure()?,
+            "Blob should exist now"
+        );
         Ok(())
     })
     .await
@@ -159,12 +165,12 @@ async fn dedup(fb: FacebookInit) -> Result<(), Error> {
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
         assert!(
-            !bs.is_present(ctx, &key1).await?,
+            !bs.is_present(ctx, &key1).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 
         assert!(
-            !bs.is_present(ctx, &key2).await?,
+            !bs.is_present(ctx, &key2).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 
@@ -204,12 +210,12 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
         assert!(
-            !bs.is_present(ctx, &key1).await?,
+            !bs.is_present(ctx, &key1).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 
         assert!(
-            !bs.is_present(ctx, &key2).await?,
+            !bs.is_present(ctx, &key2).await?.fail_if_unsure()?,
             "Blob should not exist yet"
         );
 

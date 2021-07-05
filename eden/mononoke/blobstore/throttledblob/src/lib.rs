@@ -22,7 +22,9 @@ use std::{
     time::Duration,
 };
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -174,7 +176,11 @@ impl<T: Blobstore> Blobstore for ThrottledBlob<T> {
         self.blobstore.put(ctx, key, value).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         if let Some(limiter) = self.read_qps_limiter.as_ref() {
             limiter.until_ready_with_jitter(jitter()).await;
         }

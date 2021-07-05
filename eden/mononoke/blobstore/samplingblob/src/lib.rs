@@ -9,7 +9,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use context::CoreContext;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
@@ -27,7 +29,12 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
         Ok(())
     }
 
-    fn sample_is_present(&self, _ctx: &CoreContext, _key: &str, _value: bool) -> Result<()> {
+    fn sample_is_present(
+        &self,
+        _ctx: &CoreContext,
+        _key: &str,
+        _value: &BlobstoreIsPresent,
+    ) -> Result<()> {
         Ok(())
     }
 }
@@ -78,10 +85,15 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
     }
 
     #[inline]
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        let is_present = self.inner.is_present(ctx, key).await?;
-        self.handler.sample_is_present(ctx, key, is_present)?;
-        Ok(is_present)
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let result = self.inner.is_present(ctx, key).await?;
+        self.handler.sample_is_present(ctx, key, &result)?;
+
+        Ok(result)
     }
 }
 
@@ -109,7 +121,7 @@ pub trait ComponentSamplingHandler: std::fmt::Debug + Send + Sync {
         &self,
         _ctx: &CoreContext,
         _key: &str,
-        _value: bool,
+        _value: &BlobstoreIsPresent,
         _inner_id: Option<BlobstoreId>,
     ) -> Result<()> {
         Ok(())
@@ -175,11 +187,16 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstorePutOps<T> {
     }
 
     #[inline]
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        let is_present = self.inner.is_present(ctx, key).await?;
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let result = self.inner.is_present(ctx, key).await?;
         self.handler
-            .sample_is_present(ctx, key, is_present, self.inner_id)?;
-        Ok(is_present)
+            .sample_is_present(ctx, key, &result, self.inner_id)?;
+
+        Ok(result)
     }
 }
 
@@ -248,7 +265,12 @@ mod test {
         fn sample_put(&self, ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) -> Result<()> {
             self.check_sample(ctx)
         }
-        fn sample_is_present(&self, ctx: &CoreContext, _key: &str, _value: bool) -> Result<()> {
+        fn sample_is_present(
+            &self,
+            ctx: &CoreContext,
+            _key: &str,
+            _value: &BlobstoreIsPresent,
+        ) -> Result<()> {
             self.check_sample(ctx)
         }
     }
@@ -279,11 +301,21 @@ mod test {
         assert!(!was_sampled);
         let ctx = ctx.clone_and_sample(sample_this);
         borrowed!(ctx);
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
-        let wrapper_present = wrapper.is_present(ctx, key).await.unwrap();
+        let wrapper_present = wrapper
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);
@@ -312,7 +344,7 @@ mod test {
             &self,
             ctx: &CoreContext,
             _key: &str,
-            _value: bool,
+            _value: &BlobstoreIsPresent,
             _inner_id: Option<BlobstoreId>,
         ) -> Result<()> {
             self.check_sample(ctx)
@@ -348,11 +380,21 @@ mod test {
         assert!(!was_sampled);
         let ctx = ctx.clone_and_sample(sample_this);
         borrowed!(ctx);
-        let base_present = base.is_present(ctx, key).await.unwrap();
+        let base_present = base
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
-        let wrapper_present = wrapper.is_present(ctx, key).await.unwrap();
+        let wrapper_present = wrapper
+            .is_present(ctx, key)
+            .await
+            .unwrap()
+            .fail_if_unsure()
+            .unwrap();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);

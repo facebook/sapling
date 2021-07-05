@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use std::sync::{Arc, Mutex};
@@ -61,7 +61,11 @@ impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
         self.inner.put(ctx, key, value).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.inner.is_present(ctx, key).await
     }
 }

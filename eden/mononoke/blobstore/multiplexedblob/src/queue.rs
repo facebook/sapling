@@ -8,7 +8,9 @@
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use blobstore_stats::{record_queue_stats, OperationType};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use context::CoreContext;
@@ -162,14 +164,15 @@ impl Blobstore for MultiplexedBlobstore {
         self.blobstore.put(ctx, key, value).await
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        let result = self.blobstore.is_present(ctx, key).await;
-        match result {
-            Ok(value) => Ok(value),
-            Err(error) => {
-                if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
-                    return Err(error);
-                }
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let result = self.blobstore.is_present(ctx, key).await?;
+        match &result {
+            BlobstoreIsPresent::Present | BlobstoreIsPresent::Absent => Ok(result),
+            BlobstoreIsPresent::ProbablyNotPresent(_) => {
                 // If a subset of blobstores failed, then we go to the queue. This is a way to
                 // "break the tie" if we had at least one blobstore that said the content didn't
                 // exist but the others failed to give a response: if any of those failing
@@ -177,7 +180,7 @@ impl Blobstore for MultiplexedBlobstore {
                 // pruned yet because if it was, then it would be in the blobstore that succeeded).
                 let entries = self.queue.get(&ctx, &key).await?;
                 if entries.is_empty() {
-                    Ok(false)
+                    Ok(BlobstoreIsPresent::Absent)
                 } else {
                     // Oh boy. If we found this on the queue but we didn't find it in the
                     // blobstores, it's possible that the content got written to the blobstore in

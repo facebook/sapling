@@ -14,8 +14,8 @@ use stats::prelude::*;
 use context::CoreContext;
 
 use crate::{
-    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink,
-    OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps,
+    BlobstoreWithLink, OverwriteStatus, PutBehaviour,
 };
 
 define_stats_struct! {
@@ -101,7 +101,11 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         res
     }
 
-    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
         self.stats.is_present.add_value(1);
         let res = self.blobstore.is_present(ctx, key).await;
         match res {
