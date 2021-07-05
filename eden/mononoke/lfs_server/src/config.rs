@@ -228,13 +228,6 @@ impl Limit {
     pub fn limit(&self) -> i64 {
         self.raw_limit.limit
     }
-    pub fn sleep_ms(&self) -> i64 {
-        self.raw_limit.sleep_ms
-    }
-    pub fn max_jitter_ms(&self) -> i64 {
-        self.raw_limit.max_jitter_ms
-    }
-
     pub fn client_identity_sets(&self) -> &Vec<MononokeIdentitySet> {
         &self.client_identity_sets
     }

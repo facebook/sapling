@@ -19,9 +19,7 @@ use hyper::Uri;
 use permission_checker::MononokeIdentitySet;
 use rand::Rng;
 use stats::prelude::*;
-use std::convert::TryInto;
 use std::pin::Pin;
-use std::time::Duration;
 
 use crate::config::{Limit, ServerConfig};
 use crate::errors::ErrorKind;
@@ -81,24 +79,8 @@ impl Middleware for ThrottleMiddleware {
             if let Some(err) = is_limit_exceeded(self.fb, &limit.counter(), limit.limit()) {
                 let err = HttpError::e429(err);
 
-                let sleep_ms: u64 = limit.sleep_ms().try_into().unwrap_or(0);
-                let max_jitter_ms: u64 = limit.max_jitter_ms().try_into().unwrap_or(0);
-                let mut jitter: u64 = 0;
-
-                if max_jitter_ms > 0 {
-                    jitter = rand::thread_rng().gen_range(0, max_jitter_ms);
-                }
-
-                let total_sleep_ms = sleep_ms + jitter;
-
-                let res = async move {
-                    if total_sleep_ms > 0 {
-                        tokio::time::sleep(Duration::from_millis(total_sleep_ms)).await;
-                    }
-
-                    build_error_response(err, state, &LfsErrorFormatter)
-                }
-                .boxed();
+                let res =
+                    async move { build_error_response(err, state, &LfsErrorFormatter) }.boxed();
 
                 return res;
             }
@@ -135,6 +117,7 @@ mod test {
     use super::*;
     use permission_checker::MononokeIdentity;
     use std::collections::BTreeSet;
+    use std::convert::TryInto;
 
     #[test]
     fn test_limit_applies_to_client() {
