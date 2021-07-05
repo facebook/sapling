@@ -19,6 +19,7 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 once_cell = "1.4"
+rate_limiting_config = { version = "0.1.0", path = "../ratelimiting" }
 ref-cast = "1.0.2"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"

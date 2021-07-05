@@ -35,6 +35,7 @@
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
     "enforce_authentication": false,
+    "loadshedding_limits": [],
     "object_popularity": null,
     "object_popularity_category": "",
     "object_popularity_threshold": 0,

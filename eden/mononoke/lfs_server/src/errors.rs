@@ -60,8 +60,6 @@ pub enum ErrorKind {
     FilestoreReadFailure,
     #[error("Could not access Filestore for writes")]
     FilestoreWriteFailure,
-    #[error("Throttled by counter: {0} (value: {1}, limit: {2})")]
-    Throttled(String, i64, i64),
     #[error("Object size ({0}) exceeds max allowed size ({1})")]
     UploadTooLarge(u64, u64),
     #[error("Object is not internally available, and upstream is not available: {0}")]

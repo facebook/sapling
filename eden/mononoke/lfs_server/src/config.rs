@@ -8,6 +8,7 @@
 use anyhow::{Context, Error};
 use gotham_ext::middleware::PostResponseConfig;
 use permission_checker::MononokeIdentitySet;
+use rate_limiting::LoadShedLimit;
 use serde::de::{Deserializer, Error as _};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
@@ -52,35 +53,9 @@ impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
 }
 
 #[derive(Debug, Clone)]
-pub struct Limit {
-    raw_limit: lfs_server_config::ThrottleLimit,
-    client_identity_sets: Vec<MononokeIdentitySet>,
-}
-
-impl TryFrom<lfs_server_config::ThrottleLimit> for Limit {
-    type Error = Error;
-
-    fn try_from(value: lfs_server_config::ThrottleLimit) -> Result<Self, Self::Error> {
-        let mut client_identity_sets: Vec<MononokeIdentitySet> = Vec::new();
-        for list in value.client_identity_sets.iter() {
-            let is = list
-                .iter()
-                .map(|x| FromStr::from_str(&x))
-                .collect::<Result<BTreeSet<_>, _>>()?;
-            client_identity_sets.push(is);
-        }
-
-        Ok(Self {
-            raw_limit: value,
-            client_identity_sets,
-        })
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct ServerConfig {
     pub raw_server_config: lfs_server_config::LfsServerConfig,
-    throttle_limits: Vec<Limit>,
+    loadshedding_limits: Vec<LoadShedLimit>,
     object_popularity: Option<ObjectPopularity>,
     tasks_per_content: NonZeroU16,
     disable_compression_identities: Vec<MononokeIdentitySet>,
@@ -90,13 +65,13 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
     type Error = Error;
 
     fn try_from(value: lfs_server_config::LfsServerConfig) -> Result<Self, Error> {
-        let throttle_limits = value
-            .throttle_limits
-            .iter()
-            .cloned()
-            .map(Limit::try_from)
+        let loadshedding_limits = value
+            .loadshedding_limits
+            .clone()
+            .into_iter()
+            .map(|l| l.try_into())
             .collect::<Result<Vec<_>, _>>()
-            .with_context(|| "Invalid throttle limits")?;
+            .context("Invalid loadshedding config")?;
 
         let object_popularity = value
             .object_popularity
@@ -124,7 +99,7 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
 
         Ok(Self {
             raw_server_config: value,
-            throttle_limits,
+            loadshedding_limits,
             object_popularity,
             tasks_per_content,
             disable_compression_identities,
@@ -160,6 +135,7 @@ impl Default for ServerConfig {
             disable_hostname_logging: false,
             enforce_acl_check: false,
             throttle_limits: vec![],
+            loadshedding_limits: vec![],
             object_popularity: None,
             // TODO: Remove those once they're gone from Thrift configs.
             object_popularity_category: Default::default(),
@@ -172,7 +148,7 @@ impl Default for ServerConfig {
 
         Self {
             raw_server_config,
-            throttle_limits: vec![],
+            loadshedding_limits: vec![],
             object_popularity: None,
             tasks_per_content: NonZeroU16::new(1).unwrap(),
             disable_compression_identities: vec![],
@@ -190,8 +166,8 @@ impl ServerConfig {
     pub fn disable_hostname_logging(&self) -> bool {
         self.raw_server_config.disable_hostname_logging
     }
-    pub fn throttle_limits(&self) -> Vec<Limit> {
-        self.throttle_limits.clone()
+    pub fn loadshedding_limits(&self) -> Vec<LoadShedLimit> {
+        self.loadshedding_limits.clone()
     }
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
@@ -218,22 +194,6 @@ impl ServerConfig {
     #[cfg(test)]
     pub fn disable_compression_identities_mut(&mut self) -> &mut Vec<MononokeIdentitySet> {
         &mut self.disable_compression_identities
-    }
-}
-
-impl Limit {
-    pub fn counter(&self) -> String {
-        self.raw_limit.counter.clone()
-    }
-    pub fn limit(&self) -> i64 {
-        self.raw_limit.limit
-    }
-    pub fn client_identity_sets(&self) -> &Vec<MononokeIdentitySet> {
-        &self.client_identity_sets
-    }
-
-    pub fn probability_pct(&self) -> i64 {
-        self.raw_limit.probability_pct
     }
 }
 
