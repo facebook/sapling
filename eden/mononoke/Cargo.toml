@@ -322,6 +322,7 @@ members = [
   "pushrebase/pushrebase_hook",
   "pushrebase_mutation_mapping",
   "quiet_stream",
+  "rate_limiting",
   "reachabilityindex",
   "reachabilityindex/common",
   "reachabilityindex/if",
