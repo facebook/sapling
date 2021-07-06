@@ -85,7 +85,8 @@ impl<'a> AddSyncTarget<'a> {
                 ctx,
                 repo.blob_repo(),
                 moved_commits,
-                &sync_target_config,
+                true, /* write_commit_remapping_state */
+                sync_target_config.version.clone(),
                 message,
             )
             .await?;

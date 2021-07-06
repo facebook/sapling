@@ -342,12 +342,16 @@ pub trait MegarepoOp {
     //  Merge_n-2
     //    |    \
     //          Move_n-2
+    //
+    // write_commit_remapping_state controls whether the top merge commit
+    // should contain the commit remapping state file.
     async fn create_merge_commits(
         &self,
         ctx: &CoreContext,
         repo: &BlobRepo,
         moved_commits: Vec<(SourceName, SourceAndMovedChangesets)>,
-        sync_target_config: &SyncTargetConfig,
+        write_commit_remapping_state: bool,
+        sync_config_version: SyncConfigVersion,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         // Now let's create a merge commit that merges all moved changesets
@@ -355,13 +359,17 @@ pub trait MegarepoOp {
         // We need to create a file with the latest commits that were synced from
         // sources to target repo. Note that we are writing non-moved commits to the
         // state file, since state file the latest synced commit
-        let state = CommitRemappingState::new(
-            moved_commits
-                .iter()
-                .map(|(source, css)| (source.0.clone(), css.source))
-                .collect(),
-            sync_target_config.version.clone(),
-        );
+        let state = if write_commit_remapping_state {
+            Some(CommitRemappingState::new(
+                moved_commits
+                    .iter()
+                    .map(|(source, css)| (source.0.clone(), css.source))
+                    .collect(),
+                sync_config_version.clone(),
+            ))
+        } else {
+            None
+        };
 
         let (last_moved_commit, first_moved_commits) = match moved_commits.split_last() {
             Some((last_moved_commit, first_moved_commits)) => {
@@ -382,7 +390,7 @@ pub trait MegarepoOp {
                 let bcs = self.create_merge_commit(
                     message.clone(),
                     cur_parents,
-                    sync_target_config.version.clone(),
+                    sync_config_version.clone(),
                     &source_name,
                 )?;
                 let merge = bcs.freeze()?;
@@ -393,13 +401,11 @@ pub trait MegarepoOp {
 
         let (last_source_name, last_moved_commit) = last_moved_commit;
         cur_parents.push(last_moved_commit.moved.get_changeset_id());
-        let mut final_merge = self.create_merge_commit(
-            message,
-            cur_parents,
-            sync_target_config.version.clone(),
-            &last_source_name,
-        )?;
-        state.save_in_changeset(ctx, repo, &mut final_merge).await?;
+        let mut final_merge =
+            self.create_merge_commit(message, cur_parents, sync_config_version, &last_source_name)?;
+        if let Some(state) = state {
+            state.save_in_changeset(ctx, repo, &mut final_merge).await?;
+        }
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
         save_bonsai_changesets(merges, ctx.clone(), repo.clone()).await?;
