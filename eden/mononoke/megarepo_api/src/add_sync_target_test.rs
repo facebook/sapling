@@ -6,17 +6,16 @@
  */
 
 use crate::add_sync_target::AddSyncTarget;
-use crate::common::SourceName;
 use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
 use crate::sync_changeset::SyncChangeset;
 use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
-use megarepo_mapping::{CommitRemappingState, REMAPPING_STATE_FILE};
+use megarepo_mapping::{CommitRemappingState, SourceName, REMAPPING_STATE_FILE};
 use mononoke_types::{FileType, MPath};
 use std::sync::Arc;
 use tests_utils::{
@@ -30,8 +29,8 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -48,7 +47,7 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -57,7 +56,7 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -71,9 +70,9 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -111,7 +110,7 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(cs_id)
         .await?;
 
@@ -144,8 +143,8 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -164,7 +163,7 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -173,7 +172,7 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -187,9 +186,9 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -220,8 +219,8 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     // Use the same prefix so that files from different repos collided
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
@@ -241,7 +240,7 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -250,7 +249,7 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -264,9 +263,9 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -283,8 +282,8 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -301,7 +300,7 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -310,7 +309,7 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -324,9 +323,9 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -367,8 +366,8 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -387,7 +386,7 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -396,7 +395,7 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -410,9 +409,9 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -429,8 +428,8 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -447,7 +446,7 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -467,9 +466,9 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
         .run(
             &ctx,
             sync_target_config.clone(),
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -478,7 +477,7 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
     assert!(res.is_err());
 
     // Now bookmark exists, but it is not a descendant of a commit we are merging
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -493,9 +492,9 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
         .run(
             &ctx,
             sync_target_config,
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => one_more_second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => one_more_second_source_cs_id,
             },
             None,
         )
@@ -524,7 +523,7 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
             .commit()
             .await?;
 
-    let first_source_name = "source_1".to_string();
+    let first_source_name = SourceName::new("source_1");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -545,8 +544,8 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
         .run(
             &ctx,
             sync_target_config.clone(),
-            hashmap! {
-                SourceName(first_source_name.clone()) => second_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => second_source_cs_id,
             },
             None,
         )
@@ -563,9 +562,9 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     let mut test = MegarepoTest::new(&ctx).await?;
     let target: Target = test.target("target".to_string());
 
-    let first_source_name = "source_1".to_string();
-    let second_source_name = "source_2".to_string();
-    let third_source_name = "source_3".to_string();
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
+    let third_source_name = SourceName::new("source_3");
     let version = "version_1".to_string();
     SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
         .source_builder(first_source_name.clone())
@@ -585,7 +584,7 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, first_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
         .set_to(first_source_cs_id)
         .await?;
 
@@ -594,7 +593,7 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, second_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
         .set_to(second_source_cs_id)
         .await?;
 
@@ -603,7 +602,7 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         .commit()
         .await?;
 
-    bookmark(&ctx, &test.blobrepo, third_source_name.clone())
+    bookmark(&ctx, &test.blobrepo, third_source_name.to_string())
         .set_to(third_source_cs_id)
         .await?;
 
@@ -617,10 +616,10 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
         .run(
             &ctx,
             sync_target_config.clone(),
-            hashmap! {
-                SourceName(first_source_name.clone()) => first_source_cs_id,
-                SourceName(second_source_name.clone()) => second_source_cs_id,
-                SourceName(third_source_name.clone()) => third_source_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
+                third_source_name.clone() => third_source_cs_id,
             },
             None,
         )

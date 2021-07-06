@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use crate::common::SourceName;
 use add_sync_target::AddSyncTarget;
 use anyhow::{bail, Error};
 use async_once_cell::AsyncOnceCell;
@@ -21,7 +20,7 @@ use megarepo_config::{
     SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
 };
 use megarepo_error::MegarepoError;
-use megarepo_mapping::MegarepoMapping;
+use megarepo_mapping::{MegarepoMapping, SourceName};
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_api::Mononoke;
@@ -328,7 +327,7 @@ impl MegarepoApi {
             &self.mononoke,
             &target_megarepo_mapping,
         )
-        .sync(ctx, source_cs_id, &source_name, &target)
+        .sync(ctx, source_cs_id, &SourceName::new(source_name), &target)
         .await
     }
 }

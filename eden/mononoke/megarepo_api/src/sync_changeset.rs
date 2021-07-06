@@ -7,7 +7,7 @@
 
 use crate::common::{
     find_bookmark_and_value, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
-    SourceAndMovedChangesets, SourceName,
+    SourceAndMovedChangesets,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -21,7 +21,7 @@ use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
-use megarepo_mapping::{CommitRemappingState, MegarepoMapping};
+use megarepo_mapping::{CommitRemappingState, MegarepoMapping, SourceName};
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -61,7 +61,7 @@ impl<'a> SyncChangeset<'a> {
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        source_name: &String,
+        source_name: &SourceName,
         target: &Target,
     ) -> Result<ChangesetId, MegarepoError> {
         let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
@@ -133,7 +133,7 @@ impl<'a> SyncChangeset<'a> {
         self.target_megarepo_mapping
             .insert_source_target_cs_mapping(
                 &ctx,
-                &source_name,
+                source_name,
                 &target,
                 source_cs_id,
                 new_target_cs_id,
@@ -172,7 +172,7 @@ impl<'a> SyncChangeset<'a> {
         source_cs: &BonsaiChangeset,
         commit_remapping_state: &CommitRemappingState,
         target_repo: &RepoContext,
-        source_name: &str,
+        source_name: &SourceName,
         source: &Source,
     ) -> Result<Vec<SourceAndMovedChangesets>, MegarepoError> {
         let latest_synced_cs_id =
@@ -182,7 +182,6 @@ impl<'a> SyncChangeset<'a> {
         let side_parents = source_cs.parents().filter(|p| *p != latest_synced_cs_id);
         let mover = create_source_to_target_multi_mover(source.mapping.clone())
             .map_err(MegarepoError::request)?;
-        let soruce_name_struct = SourceName(source_name.to_string());
         let moved_commits = stream::iter(side_parents)
             .map(|parent| {
                 self.create_single_move_commit(
@@ -191,7 +190,7 @@ impl<'a> SyncChangeset<'a> {
                     parent.clone(),
                     &mover,
                     Default::default(),
-                    &soruce_name_struct,
+                    &source_name,
                 )
             })
             .buffer_unordered(MERGE_COMMIT_MOVES_CONCURRENCY)
@@ -209,12 +208,12 @@ impl<'a> SyncChangeset<'a> {
 }
 
 fn find_source_config<'a, 'b>(
-    source_name: &'a str,
+    source_name: &'a SourceName,
     target_config: &'b SyncTargetConfig,
 ) -> Result<&'b Source, MegarepoError> {
     let mut maybe_source_config = None;
     for source in &target_config.sources {
-        if source_name == source.source_name {
+        if source_name.as_str() == source.source_name {
             maybe_source_config = Some(source);
             break;
         }
@@ -275,8 +274,11 @@ async fn validate_can_sync_changeset(
         }
     };
 
-    let latest_synced_cs_id =
-        find_latest_synced_cs_id(&commit_remapping_state, &source.source_name, target)?;
+    let latest_synced_cs_id = find_latest_synced_cs_id(
+        &commit_remapping_state,
+        &SourceName::new(&source.source_name),
+        target,
+    )?;
 
     let found = source_cs.parents().find(|p| *p == latest_synced_cs_id);
     if found.is_none() {
@@ -293,7 +295,7 @@ async fn validate_can_sync_changeset(
 async fn sync_changeset_to_target(
     ctx: &CoreContext,
     mapping: &SourceMappingRules,
-    source: &str,
+    source: &SourceName,
     source_repo: &BlobRepo,
     source_cs: BonsaiChangeset,
     target_repo: &BlobRepo,
@@ -337,7 +339,7 @@ async fn sync_changeset_to_target(
         ))
     })?;
 
-    state.set_source_changeset(source, source_cs_id);
+    state.set_source_changeset(source.clone(), source_cs_id);
     state
         .save_in_changeset(ctx, target_repo, &mut rewritten_commit)
         .await?;
@@ -380,7 +382,7 @@ async fn update_target_bookmark(
 
 fn find_latest_synced_cs_id(
     commit_remapping_state: &CommitRemappingState,
-    source_name: &str,
+    source_name: &SourceName,
     target: &Target,
 ) -> Result<ChangesetId, MegarepoError> {
     let maybe_latest_synced_cs_id =
@@ -413,7 +415,7 @@ mod test {
         let mut test = MegarepoTest::new(&ctx).await?;
         let target: Target = test.target("target".to_string());
 
-        let source_name = "source_1".to_string();
+        let source_name = SourceName::new("source_1");
         let version = "version_1".to_string();
         SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
             .source_builder(source_name.clone())
@@ -427,7 +429,7 @@ mod test {
             .commit()
             .await?;
 
-        bookmark(&ctx, &test.blobrepo, source_name.clone())
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(init_source_cs_id)
             .await?;
 
@@ -454,7 +456,7 @@ mod test {
             .await;
         assert!(res.is_err());
 
-        bookmark(&ctx, &test.blobrepo, source_name.clone())
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(source_cs_id)
             .await?;
 
@@ -486,7 +488,7 @@ mod test {
         let mut test = MegarepoTest::new(&ctx).await?;
         let target: Target = test.target("target".to_string());
 
-        let source_name = "source_1".to_string();
+        let source_name = SourceName::new("source_1");
         let version = "version_1".to_string();
         SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
             .source_builder(source_name.clone())
@@ -501,7 +503,7 @@ mod test {
             .commit()
             .await?;
 
-        bookmark(&ctx, &test.blobrepo, source_name.clone())
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(init_source_cs_id)
             .await?;
 
@@ -553,7 +555,7 @@ mod test {
         .commit()
         .await?;
 
-        bookmark(&ctx, &test.blobrepo, source_name.clone())
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(merge_parent_1_source)
             .await?;
         println!("Syncing first merge parent");
@@ -561,7 +563,7 @@ mod test {
             .sync(&ctx, merge_parent_1_source, &source_name, &target)
             .await?;
 
-        bookmark(&ctx, &test.blobrepo, source_name.clone())
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(merge_source)
             .await?;
         println!("Syncing merge commit parent");
@@ -620,8 +622,8 @@ mod test {
         let mut test = MegarepoTest::new(&ctx).await?;
         let target: Target = test.target("target".to_string());
 
-        let source1_name = "source_1".to_string();
-        let source2_name = "source_2".to_string();
+        let source1_name = SourceName::new("source_1");
+        let source2_name = SourceName::new("source_2");
         let version = "version_1".to_string();
         SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
             .source_builder(source1_name.clone())
@@ -638,7 +640,7 @@ mod test {
             .commit()
             .await?;
 
-        bookmark(&ctx, &test.blobrepo, source1_name.clone())
+        bookmark(&ctx, &test.blobrepo, source1_name.to_string())
             .set_to(init_source1_cs_id)
             .await?;
 
@@ -648,7 +650,7 @@ mod test {
             .commit()
             .await?;
 
-        bookmark(&ctx, &test.blobrepo, source2_name.clone())
+        bookmark(&ctx, &test.blobrepo, source2_name.to_string())
             .set_to(init_source2_cs_id)
             .await?;
 
@@ -664,7 +666,7 @@ mod test {
                 .add_file("anotherfile1", "anothercontent")
                 .commit()
                 .await?;
-        bookmark(&ctx, &test.blobrepo, source1_name.clone())
+        bookmark(&ctx, &test.blobrepo, source1_name.to_string())
             .set_to(source1_cs_id)
             .await?;
         let _source1_cs_synced = sync_changeset
@@ -677,7 +679,7 @@ mod test {
                 .add_file("anotherfile2", "anothercontent")
                 .commit()
                 .await?;
-        bookmark(&ctx, &test.blobrepo, source2_name.clone())
+        bookmark(&ctx, &test.blobrepo, source2_name.to_string())
             .set_to(source2_cs_id)
             .await?;
         let _source2_cs_synced = sync_changeset
@@ -699,7 +701,7 @@ mod test {
         .add_file("anotherfile1", "content_from_diamond_merge")
         .commit()
         .await?;
-        bookmark(&ctx, &test.blobrepo, source1_name.clone())
+        bookmark(&ctx, &test.blobrepo, source1_name.to_string())
             .set_to(source1_diamond_merge_cs_id)
             .await?;
         let _diamond_merge_synced = sync_changeset

@@ -22,6 +22,7 @@ use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use std::collections::BTreeMap;
+use std::fmt;
 
 queries! {
     read GetTargetConfigVersion(
@@ -38,7 +39,7 @@ queries! {
     }
 
     write InsertMapping(values: (
-        source_name: String,
+        source_name: str,
         target_repo_id: i64,
         target_bookmark: String,
         source_bcs_id: ChangesetId,
@@ -58,17 +59,46 @@ pub struct MegarepoMapping {
 
 pub const REMAPPING_STATE_FILE: &str = ".megarepo/remapping_state";
 
+#[derive(
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    Ord,
+    PartialOrd,
+    PartialEq,
+    Serialize,
+    Deserialize
+)]
+#[serde(transparent)]
+pub struct SourceName(pub String);
+impl SourceName {
+    pub fn new<T: ToString>(name: T) -> Self {
+        SourceName(name.to_string())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for SourceName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommitRemappingState {
     /// Mapping from source to a changeset id
-    latest_synced_changesets: BTreeMap<String, ChangesetId>,
+    latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
     /// Config version that was used to create this commit
     sync_config_version: SyncConfigVersion,
 }
 
 impl CommitRemappingState {
     pub fn new(
-        latest_synced_changesets: BTreeMap<String, ChangesetId>,
+        latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
         sync_config_version: SyncConfigVersion,
     ) -> Self {
         Self {
@@ -126,12 +156,11 @@ impl CommitRemappingState {
         Ok(())
     }
 
-    pub fn set_source_changeset(&mut self, source: &str, cs_id: ChangesetId) {
-        self.latest_synced_changesets
-            .insert(source.to_string(), cs_id);
+    pub fn set_source_changeset(&mut self, source: SourceName, cs_id: ChangesetId) {
+        self.latest_synced_changesets.insert(source, cs_id);
     }
 
-    pub fn get_latest_synced_changeset(&self, source: &str) -> Option<&ChangesetId> {
+    pub fn get_latest_synced_changeset(&self, source: &SourceName) -> Option<&ChangesetId> {
         self.latest_synced_changesets.get(source)
     }
 
@@ -221,7 +250,7 @@ impl MegarepoMapping {
     pub async fn insert_source_target_cs_mapping(
         &self,
         ctx: &CoreContext,
-        source_name: &String,
+        source_name: &SourceName,
         target: &Target,
         source_cs_id: ChangesetId,
         target_cs_id: ChangesetId,
@@ -233,7 +262,7 @@ impl MegarepoMapping {
         InsertMapping::query(
             &self.connections.write_connection,
             &[(
-                source_name,
+                source_name.as_str(),
                 &target.repo_id,
                 &target.bookmark,
                 &source_cs_id,
@@ -283,7 +312,7 @@ mod test {
         mapping
             .insert_source_target_cs_mapping(
                 &ctx,
-                &"source_name".to_string(),
+                &SourceName::new("source_name"),
                 &target,
                 source_csid,
                 target_csid,
@@ -304,8 +333,8 @@ mod test {
     async fn test_serialize(_fb: FacebookInit) -> Result<(), Error> {
         let state = CommitRemappingState::new(
             btreemap! {
-                "source_1".to_string() => ONES_CSID,
-                "source_2".to_string() => TWOS_CSID,
+                SourceName::new("source_1") => ONES_CSID,
+                SourceName::new("source_2") => TWOS_CSID,
             },
             "version_1".to_string(),
         );

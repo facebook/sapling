@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{MegarepoOp, SourceName};
+use crate::common::MegarepoOp;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
 use futures::{future, stream::FuturesUnordered, TryStreamExt};
 use megarepo_config::{verify_config, MononokeMegarepoConfigs, SyncTargetConfig};
 use megarepo_error::MegarepoError;
+use megarepo_mapping::SourceName;
 use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 // Create a new sync target given a config.
 // After this command finishes it creates
@@ -59,7 +60,7 @@ impl<'a> AddSyncTarget<'a> {
         self,
         ctx: &CoreContext,
         sync_target_config: SyncTargetConfig,
-        changesets_to_merge: HashMap<SourceName, ChangesetId>,
+        changesets_to_merge: BTreeMap<SourceName, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         verify_config(ctx, &sync_target_config).map_err(MegarepoError::request)?;

@@ -20,7 +20,7 @@ use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
-use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::{CommitRemappingState, SourceName};
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
@@ -30,9 +30,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashMap};
 use std::{convert::TryInto, sync::Arc};
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct SourceName(pub String);
 
 pub struct SourceAndMovedChangesets {
     pub source: ChangesetId,
@@ -127,7 +124,7 @@ pub trait MegarepoOp {
         ctx: &'b CoreContext,
         repo: &'b BlobRepo,
         sources: &[Source],
-        changesets_to_merge: &'b HashMap<SourceName, ChangesetId>,
+        changesets_to_merge: &'b BTreeMap<SourceName, ChangesetId>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
         let moved_commits = stream::iter(sources.iter().cloned().map(Ok))
             .map_ok(|source_config| {
@@ -204,7 +201,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         source_repo: &RepoContext,
         source_config: &Source,
-        changesets_to_merge: &HashMap<SourceName, ChangesetId>,
+        changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
     ) -> Result<ChangesetId, MegarepoError> {
         let changeset_id = changesets_to_merge
             .get(&SourceName(source_config.source_name.clone()))
@@ -363,7 +360,7 @@ pub trait MegarepoOp {
             Some(CommitRemappingState::new(
                 moved_commits
                     .iter()
-                    .map(|(source, css)| (source.0.clone(), css.source))
+                    .map(|(source, css)| (source.clone(), css.source))
                     .collect(),
                 sync_config_version.clone(),
             ))

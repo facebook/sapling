@@ -14,7 +14,7 @@ use megarepo_config::{
     MononokeMegarepoConfigs, SourceRevision, SyncConfigVersion, Target, TestMononokeMegarepoConfigs,
 };
 use megarepo_mapping::{
-    CommitRemappingState, MegarepoMapping, Source, SourceMappingRules, SyncTargetConfig,
+    CommitRemappingState, MegarepoMapping, Source, SourceMappingRules, SourceName, SyncTargetConfig,
 };
 use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -97,7 +97,7 @@ impl MegarepoTest {
                     init_target_cs = init_target_cs.add_file(target_file, content.clone());
                 }
             }
-            remapping_state.insert(source.source_name, init_source_cs_id);
+            remapping_state.insert(SourceName::new(source.source_name), init_source_cs_id);
         }
 
         let mut init_target_cs = init_target_cs.create_commit_object().await?;
@@ -135,7 +135,7 @@ impl SyncTargetConfigBuilder {
         }
     }
 
-    pub fn source_builder(self, source_name: String) -> SourceVersionBuilder {
+    pub fn source_builder(self, source_name: SourceName) -> SourceVersionBuilder {
         SourceVersionBuilder::new(source_name, self.repo_id, self)
     }
 
@@ -155,7 +155,7 @@ impl SyncTargetConfigBuilder {
 }
 
 pub struct SourceVersionBuilder {
-    source_name: String,
+    source_name: SourceName,
     git_repo_name: String,
     default_prefix: Option<String>,
     source_bookmark: Option<String>,
@@ -168,7 +168,7 @@ pub struct SourceVersionBuilder {
 
 impl SourceVersionBuilder {
     pub fn new(
-        source_name: String,
+        source_name: SourceName,
         repo_id: RepositoryId,
         config_builder: SyncTargetConfigBuilder,
     ) -> Self {
@@ -176,7 +176,7 @@ impl SourceVersionBuilder {
             source_name: source_name.clone(),
             // This field won't be used much in tests, so just set to the same
             // value as source_name
-            git_repo_name: source_name,
+            git_repo_name: source_name.to_string(),
             default_prefix: None,
             source_bookmark: None,
             source_changeset: None,
@@ -188,8 +188,8 @@ impl SourceVersionBuilder {
     }
 
     pub fn set_prefix_bookmark_to_source_name(mut self) -> Self {
-        self.default_prefix = Some(self.source_name.clone());
-        self.source_bookmark = Some(self.source_name.clone());
+        self.default_prefix = Some(self.source_name.0.clone());
+        self.source_bookmark = Some(self.source_name.0.clone());
         self
     }
 
@@ -250,7 +250,7 @@ impl SourceVersionBuilder {
             );
         }
         let source = Source {
-            source_name: self.source_name,
+            source_name: self.source_name.to_string(),
             repo_id: self.repo_id.id() as i64,
             name: self.git_repo_name,
             revision: source_revision,
