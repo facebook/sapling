@@ -124,10 +124,8 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   imported commit graph for 2 commits (1 segment)
   abort: injected error by tests: transaction-metalog-commit
   transaction abort!
-  rollback failed - please run hg recover
+  rollback completed
   [255]
-  $ hg recover
-  rolling back interrupted transaction
 
 Fast path can still be used with stale remotenames:
 

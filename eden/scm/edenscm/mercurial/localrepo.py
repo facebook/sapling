@@ -1783,7 +1783,11 @@ class localrepository(object):
 
         def txnaborthook(tr2):
             """To be run if transaction is aborted"""
-            reporef().hook("txnabort", throw=False, txnname=desc, **tr2.hookargs)
+            repo = reporef()
+            if repo is None:
+                # repo was released (by __del__)
+                return
+            repo.hook("txnabort", throw=False, txnname=desc, **tr2.hookargs)
 
         tr.addabort("txnabort-hook", txnaborthook)
         # avoid eager cache invalidation. in-memory data should be identical
