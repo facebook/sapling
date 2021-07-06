@@ -13,8 +13,8 @@ use anyhow::{format_err, Result};
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::convert::BytesLike;
-use cpython_ext::pycell;
 use cpython_ext::ExtractInner;
+use cpython_ext::PyCell;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
@@ -127,9 +127,9 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// Import pull data(inside pycell) and flush.
+    /// Import pull data(inside PyCell) and flush.
     /// Returns (commit_count, segment_count) on success.
-    def importpulldata(&self, data: pycell) -> PyResult<(u64, usize)> {
+    def importpulldata(&self, data: PyCell) -> PyResult<(u64, usize)> {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or(format_err!("Data is not CloneData")).map_pyerr(py)?;
         let commits = data.flat_segments.vertex_count();
         let segments = data.flat_segments.segment_count();

@@ -15,7 +15,7 @@ use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
-use cpython_ext::pycell;
+use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
@@ -403,7 +403,7 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         old_master: PyBytes,
         new_master: PyBytes,
-    ) -> PyResult<pycell> {
+    ) -> PyResult<PyCell> {
         let old_master = to_hgid(py, &old_master);
         let new_master = to_hgid(py, &new_master);
         let data = {
@@ -423,7 +423,7 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?
         };
-        pycell::new(py, data)
+        PyCell::new(py, data)
     }
 
     fn lookup_file_contents(

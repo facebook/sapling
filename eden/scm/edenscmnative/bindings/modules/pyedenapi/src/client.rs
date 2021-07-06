@@ -12,7 +12,7 @@ use cpython::*;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
-use cpython_ext::pycell;
+use cpython_ext::PyCell;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use edenapi_types::CommitGraphEntry;
@@ -231,9 +231,9 @@ py_class!(pub class client |py| {
         self.inner(py).clone().clone_data_py(py, repo)
     }
 
-    /// pullfastforwardmaster(repo: str, old_master: Bytes, new_master: Bytes) -> pycell
+    /// pullfastforwardmaster(repo: str, old_master: Bytes, new_master: Bytes) -> PyCell
     def pullfastforwardmaster(&self, repo: String, old_master: PyBytes, new_master: PyBytes)
-        -> PyResult<pycell>
+        -> PyResult<PyCell>
     {
         self.inner(py).clone().pull_fast_forward_master_py(py, repo, old_master, new_master)
     }
