@@ -124,7 +124,7 @@ Pull:
    DEBUG eagerepo::api: commit_known 23d30dc6b70380b2d939023947578ae0e0198999
    TRACE edenscm::mercurial::eagerpeer: known 23d30dc6b70380b2d939023947578ae0e0198999: True
   searching for changes
-   DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999, 99dac869f01e09fe3d501fa645ea524af80d498f 23d30dc6b70380b2d939023947578ae0e0198999
+   DEBUG eagerepo::api: commit_graph 99dac869f01e09fe3d501fa645ea524af80d498f 23d30dc6b70380b2d939023947578ae0e0198999
    TRACE edenscm::mercurial::eagerpeer: graph node 99dac869f01e09fe3d501fa645ea524af80d498f ['748104bd5058bf2c386d074d8dcf2704855380f6']
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
@@ -163,8 +163,6 @@ Clone (using edenapi clonedata, bypassing peer interface):
   fetching selected remote bookmarks
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
-   DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
 
 Clone:
 
@@ -174,8 +172,6 @@ Clone:
   populating main commit graph
   tip commit: 23d30dc6b70380b2d939023947578ae0e0198999
   fetching selected remote bookmarks
-   DEBUG eagerepo::api: bookmarks master
-   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
    DEBUG eagerepo::api: bookmarks master
    DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
 

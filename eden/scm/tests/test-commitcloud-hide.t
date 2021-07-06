@@ -34,7 +34,6 @@ manually.
   $ hg update -q 'desc(Y)'
   $ hg pull -B other
   pulling from ssh://user@dummy/server
-  no changes found
   $ hg up -qC other
 
   $ drawdag <<EOS

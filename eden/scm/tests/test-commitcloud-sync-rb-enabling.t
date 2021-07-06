@@ -180,7 +180,6 @@ had been deleted on the server.
 Pull in client 2, base bookmark is now deleted
   $ hg pull
   pulling from ssh://user@dummy/server
-  no changes found
 
 Sync again, and this time it gets deleted.
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true

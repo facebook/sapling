@@ -1010,6 +1010,10 @@ class localrepository(object):
                 fastpathsegments=fastpathsegments,
             )
 
+            # Filter out heads that exist in the repo.
+            if pullheads:
+                pullheads -= set(self.changelog.filternodes(list(pullheads)))
+
             # Only perform a pull if heads are not empty.
             if pullheads:
                 # Bypass the bookmarks logic as remotenames are updated here.

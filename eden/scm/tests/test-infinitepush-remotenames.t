@@ -205,19 +205,6 @@ Test hiding of a bookmark
   1 remote bookmark unsubscribed
   $ hg pull -B scratch/branchtoupdateto2
   pulling from ssh://user@dummy/repo
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 2 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 2 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
   $ hg hide -B remote/scratch/branchtoupdateto2
   hiding commit 1f558bd20eaa "newcommittoupdate2"
   hiding commit 36667a3f76e4 "newscratch"

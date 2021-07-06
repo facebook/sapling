@@ -68,7 +68,6 @@ Pull the other bookmark so we have a subscription.
   $ cd $TESTTMP/client1
   $ hg pull -B other
   pulling from ssh://user@dummy/server
-  no changes found
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/other              4c8ee072cf16
@@ -103,7 +102,6 @@ BUG! public3 is draft and 'created' is not subscribed to
 Workaround this bug by pulling created
   $ hg pull -B created
   pulling from ssh://user@dummy/server
-  no changes found
   $ showgraph
   @  public3: public  remote/created
   │
@@ -160,11 +158,6 @@ Create a draft commit and push it to a scratch branch
 Pull in this repo
   $ hg pull
   pulling from ssh://user@dummy/server
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 1 changes to 1 files
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
   │
@@ -247,7 +240,6 @@ Sync in the third repo again
 Bookmark "remote/scratch/draft1" shoudn't come back after a pull
   $ hg pull
   pulling from ssh://user@dummy/server
-  no changes found
   $ hg book --list-subs
      remote/master             9da34b1aa207
   $ showgraph

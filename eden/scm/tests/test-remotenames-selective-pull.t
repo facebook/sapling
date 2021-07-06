@@ -45,7 +45,6 @@ Do not pull new boookmark from local repo
   $ cd ../localrepo
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
-  no changes found
   $ hg bookmarks --list-subscriptions
      default/master            1449e7934ec1
 
@@ -57,7 +56,6 @@ Do not pull new bookmark even if it on the same commit as old bookmark
   $ cd ../localrepo
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
-  no changes found
   $ hg bookmarks --list-subscriptions
      default/master            1449e7934ec1
 
@@ -102,7 +100,6 @@ Add second remote repo path in localrepo
   $ setglobalconfig paths.secondremote="ssh://user@dummy/secondremoterepo"
   $ hg pull secondremote
   pulling from ssh://user@dummy/secondremoterepo
-  no changes found
   $ hg book --list-subscriptions
      default/master            0238718db2b1
      default/secondbook        ed7a9fd254d1
@@ -116,7 +113,6 @@ Move bookmark in second remote, pull and make sure it doesn't move in local repo
   $ cd ../localrepo
   $ hg pull secondremote
   pulling from ssh://user@dummy/secondremoterepo
-  no changes found
 
 Move bookmark in first remote, pull and make sure it moves in local repo
   $ cd ../remoterepo
@@ -142,7 +138,6 @@ Delete bookmark on the server
   $ cd ../localrepo
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
-  no changes found
   $ hg bookmarks --list-subscriptions
      default/master            0238718db2b1
      secondremote/master       0238718db2b1
@@ -208,7 +203,6 @@ Clean the repo and make a fresh clone with right configuration.
   $ setconfig remotenames.selectivepulldefault=master
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
-  no changes found
   $ hg book --list-subscriptions
      default/master            0238718db2b1
 
