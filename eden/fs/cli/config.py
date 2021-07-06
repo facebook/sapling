@@ -114,13 +114,13 @@ NOT_MOUNTED_SITE_SPECIFIC_README_PATH = "NOT_MOUNTED_README.txt"
 # The default contents for the not-mounted README if a site-specific template
 # is not found.
 NOT_MOUNTED_DEFAULT_TEXT = """\
-This directory is the mount point for a virtual checkout managed by Eden.
+This directory is the mount point for a virtual checkout managed by EdenFS.
 
 If you are seeing this file that means that your repository checkout is not
 currently mounted.  This could either be because the edenfs daemon is not
 currently running, or it simply does not have this checkout mounted yet.
 
-You can run "eden doctor" to check for problems with Eden and try to have it
+You can run "eden doctor" to check for problems with EdenFS and try to have it
 automatically remount your checkouts.
 """
 
@@ -132,7 +132,7 @@ class UsageError(Exception):
 
 
 class CheckoutConfig(typing.NamedTuple):
-    """Configuration for an Eden checkout. A checkout stores its config in config.toml
+    """Configuration for an EdenFS checkout. A checkout stores its config in config.toml
     it its state directory (.eden/clients/<checkout_name>/config.toml)
 
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
@@ -625,7 +625,7 @@ Do you want to run `eden mount %s` instead?"""
             target = readlink_retry_estale(root)
             if Path(target) == path:
                 print_stderr(
-                    f"ERROR: Mount point in use! {path} is already mounted by Eden."
+                    f"ERROR: Mount point in use! {path} is already mounted by EdenFS."
                 )
                 return 1
             else:
@@ -637,7 +637,7 @@ Do you want to run `eden mount %s` instead?"""
                 # case.
                 print_stderr(
                     f"ERROR: Mount point in use! "
-                    f"{path} is already mounted by Eden as part of {root}."
+                    f"{path} is already mounted by EdenFS as part of {root}."
                 )
                 return 1
         except OSError as ex:
@@ -664,7 +664,7 @@ Do you want to run `eden mount %s` instead?"""
         except eden_ttypes.EdenError as ex:
             if "already mounted" in str(ex):
                 print_stderr(
-                    f"ERROR: Mount point in use! {path} is already mounted by Eden."
+                    f"ERROR: Mount point in use! {path} is already mounted by EdenFS."
                 )
                 return 1
 
@@ -759,7 +759,7 @@ Do you want to run `eden mount %s` instead?"""
         return checkout.get_config()
 
     def get_checkouts(self) -> List["EdenCheckout"]:
-        """Return information about all configured checkouts defined in Eden's
+        """Return information about all configured checkouts defined in EdenFS's
         configuration file."""
         dir_map = self._get_directory_map()
         checkouts: List[EdenCheckout] = []
@@ -883,7 +883,7 @@ Do you want to run `eden mount %s` instead?"""
 
 
 class EdenCheckout:
-    """Information about a particular Eden checkout."""
+    """Information about a particular EdenFS checkout."""
 
     def __init__(self, instance: EdenInstance, path: Path, state_dir: Path) -> None:
         self.instance = instance
@@ -895,7 +895,7 @@ class EdenCheckout:
         return f"EdenCheckout({self.instance!r}, {self.path!r}, {self.state_dir!r})"
 
     def get_relative_path(self, path: Path, already_resolved: bool = False) -> Path:
-        """Compute the relative path to a given location inside an eden checkout.
+        """Compute the relative path to a given location inside an EdenFS checkout.
 
         If the checkout is currently mounted this function is able to correctly resolve
         paths that refer into the checkout via alternative bind mount locations.

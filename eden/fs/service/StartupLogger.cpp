@@ -87,7 +87,7 @@ void StartupLogger::success(uint64_t startTimeInSeconds) {
   writeMessage(
       folly::LogLevel::INFO,
       folly::to<string>(
-          "Started edenfs (pid ",
+          "Started EdenFS (pid ",
           getpid(),
           ", session_id ",
           getSessionId(),
@@ -305,7 +305,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
   if (readResult.hasException()) {
     return ParentResult(
         EX_SOFTWARE,
-        "error reading status of edenfs initialization: ",
+        "error reading status of EdenFS initialization: ",
         folly::exceptionStr(readResult.exception()));
   }
 
@@ -316,7 +316,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
     // Check to see if the child process has died.
     auto result = handleChildCrash(proc);
     result.errorMessage += folly::to<string>(
-        "\nCheck the edenfs log file at ", logPath, " for more details");
+        "\nCheck the EdenFS log file at ", logPath, " for more details");
     return result;
   }
 
@@ -337,7 +337,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
       if (status.killSignal() != 0) {
         return ParentResult(
             EX_SOFTWARE,
-            "error: edenfs crashed with status ",
+            "error: EdenFS crashed with status ",
             status.str(),
             " before it finished initializing");
       }
@@ -349,7 +349,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
       }
       return ParentResult(
           exitCode,
-          "error: edenfs ",
+          "error: EdenFS ",
           status.str(),
           " before it finished initializing");
     }
@@ -369,7 +369,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
     // This should only happen if there is a bug somehow.
     return ParentResult(
         EX_SOFTWARE,
-        "error: edenfs is still running but did not report "
+        "error: EdenFS is still running but did not report "
         "its initialization status");
   }
 }

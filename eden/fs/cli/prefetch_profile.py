@@ -168,7 +168,7 @@ def prefetch_profiles(
             print(
                 "Skipping Prefetch Profiles fetch due to global kill switch. "
                 "This means prefetch-profiles.prefetching-enabled is not set in "
-                "the eden configs."
+                "the EdenFS configs."
             )
         return None
 
@@ -177,7 +177,7 @@ def prefetch_profiles(
             print(
                 "Prefetching file metadata due to global eden config. "
                 "This means prefetch-profiles.prefetch_metadata is set in the "
-                "eden configs."
+                "EdenFS configs."
             )
         prefetch_metadata = True
 
@@ -284,7 +284,7 @@ class ListProfileCmd(Subcmd):
 @prefetch_profile_cmd(
     "activate",
     "Tell EdenFS to smart prefetch the files specified by the prefetch profile."
-    " (Eden will prefetch the files in this profile immediately, when checking "
+    " (EdenFS will prefetch the files in this profile immediately, when checking "
     " out a new commit and for some commits on pull).",
 )
 class ActivateProfileCmd(Subcmd):

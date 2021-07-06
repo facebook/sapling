@@ -132,7 +132,7 @@ class RemountTest(testcase.EdenRepoTest):
             self.eden.run_cmd("mount", mount_destination)
         self.assertIn(
             (
-                "ERROR: Mount point in use! %s is already mounted by Eden.\n"
+                "ERROR: Mount point in use! %s is already mounted by EdenFS.\n"
                 % mount_destination
             ),
             context.exception.stderr,

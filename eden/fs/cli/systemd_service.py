@@ -60,7 +60,7 @@ async def start_systemd_service(
                     service_name_bytes
                 )
                 if active_state == b"active":
-                    print_stderr("error: edenfs systemd service is already running")
+                    print_stderr("error: EdenFS systemd service is already running")
                     await print_service_status_using_systemctl_for_diagnostics_async(
                         service_name=service_name, xdg_runtime_dir=xdg_runtime_dir
                     )

@@ -484,7 +484,7 @@ def get_counter_table(counters: DiagInfoCounters, prefix: List, suffix: List) ->
 
 class StatsCmd(Subcmd):
     NAME = "stats"
-    HELP = "Prints statistics information for eden"
+    HELP = "Prints statistics information for EdenFS"
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.add_subcommands(parser, stats_cmd.commands)

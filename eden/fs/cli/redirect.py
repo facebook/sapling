@@ -272,7 +272,7 @@ class Redirection:
                     "-fs",
                     "HFS+",
                     "-volname",
-                    f"Eden redirection for {mount_path}",
+                    f"EdenFS redirection for {mount_path}",
                     image_file_name,
                 ]
             )
@@ -653,7 +653,9 @@ def create_redirection_configs(
 @redirect_cmd("list", "List redirections")
 class ListCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
         parser.add_argument(
             "--json",
             help="output in json rather than human readable text",
@@ -678,7 +680,9 @@ class ListCmd(Subcmd):
 )
 class UnmountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
@@ -708,7 +712,9 @@ class UnmountCmd(Subcmd):
 )
 class FixupCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
         parser.add_argument(
             "--force-remount-bind-mounts",
             help=(
@@ -809,7 +815,9 @@ def resolve_repo_relative_path(checkout_path: Path, repo_rel_path: Path) -> Path
 @redirect_cmd("add", "Add or change a redirection")
 class AddCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
         parser.add_argument(
             "repo_path", help="The path in the repo which should be redirected"
         )
@@ -893,7 +901,9 @@ class AddCmd(Subcmd):
 @redirect_cmd("del", "Delete a redirection")
 class DelCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--mount", help="The eden mount point path.", default=None)
+        parser.add_argument(
+            "--mount", help="The EdenFS mount point path.", default=None
+        )
         parser.add_argument(
             "repo_path",
             help="The path in the repo which should no longer be redirected",

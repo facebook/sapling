@@ -32,7 +32,7 @@ class DebugGetParentsTest(EdenHgTestCase):
         self.assertEqual(output, self.commit2)
 
         output_hg = self.eden.run_cmd("debug", "parents", "--hg", cwd=self.mount)
-        expected = "Mercurial p0: %s\nEden snapshot: %s\n" % (
+        expected = "Mercurial p0: %s\nEdenFS snapshot: %s\n" % (
             self.commit2,
             self.commit2,
         )
@@ -51,7 +51,7 @@ class DebugGetParentsTest(EdenHgTestCase):
         self.assertEqual(output, self.commit1)
 
         output_hg = self.eden.run_cmd("debug", "parents", "--hg", cwd=self.mount)
-        expected = "Mercurial p0: %s\nEden snapshot: %s\n" % (
+        expected = "Mercurial p0: %s\nEdenFS snapshot: %s\n" % (
             self.commit2,
             self.commit1,
         )

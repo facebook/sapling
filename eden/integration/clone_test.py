@@ -265,8 +265,8 @@ class CloneTest(testcase.EdenRepoTest):
             *extra_daemon_args,
         )
         self.exit_stack.callback(self.eden.run_cmd, "stop")
-        self.assertIn("Starting edenfs", clone_output)
-        self.assertTrue(self.eden.is_healthy(), msg="clone should start Eden.")
+        self.assertIn("Starting...", clone_output)
+        self.assertTrue(self.eden.is_healthy(), msg="clone should start EdenFS.")
         mount_points = {self.mount: "RUNNING", str(tmp): "RUNNING"}
         self.assertEqual(
             mount_points,
@@ -394,8 +394,8 @@ class CloneFakeEdenFSWithSystemdTest(SystemdServiceTest, CloneFakeEdenFSTestBase
             repo_path=Path(repo.path), mount_path=mount_path
         )
         self.assertIn(
-            "edenfs daemon is not currently running.  Starting edenfs...",
+            "edenfs daemon is not currently running. Starting...",
             clone_process.stdout,
         )
-        self.assertIn("Started edenfs", clone_process.stderr)
+        self.assertIn("Started EdenFS", clone_process.stderr)
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)

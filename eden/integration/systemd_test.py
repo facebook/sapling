@@ -43,7 +43,7 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
                     encoding="utf-8",
                     logfile=sys.stderr,
                 )
-                start_process.expect_exact("Started edenfs")
+                start_process.expect_exact("Started EdenFS")
                 self.assertNotIn(
                     "Running in experimental systemd mode", start_process.before
                 )
@@ -150,7 +150,7 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
             f"warning: The XDG_RUNTIME_DIR environment variable is not set; "
             f"using fallback: '{fallback_xdg_runtime_dir}'"
         )
-        start_process.expect_exact("Started edenfs")
+        start_process.expect_exact("Started EdenFS")
         self.assert_process_succeeds(start_process)
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 

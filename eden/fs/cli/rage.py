@@ -190,17 +190,17 @@ def print_expanded_log_file(path: Path, processor: str, out: IO[bytes]) -> None:
         match = pattern.match(stdout)
 
         if not match:
-            out.write(b"Verbose Eden logs: %s\n" % stdout.encode())
+            out.write(b"Verbose EdenFS logs: %s\n" % stdout.encode())
         else:
             paste, _ = stdout.split("\n")[1].split(": ")
-            out.write(b"Verbose Eden logs: %s\n" % paste.encode())
+            out.write(b"Verbose EdenFS logs: %s\n" % paste.encode())
     except Exception as e:
-        out.write(b"Error generating expanded Eden logs: %s\n" % str(e).encode())
+        out.write(b"Error generating expanded EdenFS logs: %s\n" % str(e).encode())
 
 
 def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
     try:
-        out.write(b"\nMost recent Eden logs:\n")
+        out.write(b"\nMost recent EdenFS logs:\n")
         LOG_AMOUNT = 20 * 1024
         with path.open("rb") as logfile:
             size = logfile.seek(0, io.SEEK_END)
@@ -238,7 +238,7 @@ def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, s
 
 def print_running_eden_process(out: IO[bytes]) -> None:
     try:
-        out.write(b"\nList of running Eden processes:\n")
+        out.write(b"\nList of running EdenFS processes:\n")
         if sys.platform == "win32":
             lines = _get_running_eden_process_windows()
         else:
@@ -262,7 +262,7 @@ def print_running_eden_process(out: IO[bytes]) -> None:
         for line in lines:
             out.write(format_str.format(*line).encode())
     except Exception as e:
-        out.write(b"Error getting the eden processes: %s\n" % str(e).encode())
+        out.write(b"Error getting the EdenFS processes: %s\n" % str(e).encode())
         out.write(traceback.format_exc().encode() + b"\n")
 
 

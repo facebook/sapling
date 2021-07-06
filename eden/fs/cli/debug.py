@@ -103,13 +103,13 @@ def parse_object_id(value: str) -> bytes:
     return binary
 
 
-@debug_cmd("parents", "Show Eden's current working copy parent")
+@debug_cmd("parents", "Show EdenFS's current working copy parent")
 class ParentsCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
         parser.add_argument(
@@ -127,7 +127,7 @@ class ParentsCmd(Subcmd):
         try:
             snapshot_hex = checkout.get_snapshot()
         except Exception as ex:
-            print(f"error parsing Eden snapshot : {ex}")
+            print(f"error parsing EdenFS snapshot : {ex}")
             return 1
 
         if args.hg:
@@ -136,14 +136,14 @@ class ParentsCmd(Subcmd):
             print("Mercurial p0: {}".format(self._commit_hex(hg_parents[0])))
             if hg_parents[1] != null_commit_id:
                 print("Mercurial p1: {}".format(self._commit_hex(hg_parents[1])))
-            print("Eden snapshot: {}".format(snapshot_hex))
+            print("EdenFS snapshot: {}".format(snapshot_hex))
         else:
             print(snapshot_hex)
 
         return 0
 
 
-@debug_cmd("tree", "Show eden's data for a source control tree")
+@debug_cmd("tree", "Show EdenFS's data for a source control tree")
 class TreeCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -153,7 +153,7 @@ class TreeCmd(Subcmd):
             default=False,
             help="Load data from the backing store if necessary",
         )
-        parser.add_argument("mount", help="The eden mount point path.")
+        parser.add_argument("mount", help="The EdenFS mount point path.")
         parser.add_argument("id", help="The tree ID")
 
     def run(self, args: argparse.Namespace) -> int:
@@ -271,7 +271,7 @@ class ProcessFetchCmd(Subcmd):
         return 0
 
 
-@debug_cmd("blob", "Show eden's data for a source control blob")
+@debug_cmd("blob", "Show EdenFS's data for a source control blob")
 class BlobCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -281,7 +281,7 @@ class BlobCmd(Subcmd):
             default=False,
             help="Load data from the backing store if necessary",
         )
-        parser.add_argument("mount", help="The eden mount point path.")
+        parser.add_argument("mount", help="The EdenFS mount point path.")
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
@@ -298,7 +298,7 @@ class BlobCmd(Subcmd):
         return 0
 
 
-@debug_cmd("blobmeta", "Show eden's metadata about a source control blob")
+@debug_cmd("blobmeta", "Show EdenFS's metadata about a source control blob")
 class BlobMetaCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -308,7 +308,7 @@ class BlobMetaCmd(Subcmd):
             default=False,
             help="Load data from the backing store if necessary",
         )
-        parser.add_argument("mount", help="The eden mount point path.")
+        parser.add_argument("mount", help="The EdenFS mount point path.")
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
@@ -345,7 +345,7 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
     return file_type_str, perms
 
 
-@debug_cmd("buildinfo", "Show the build info for the Eden server")
+@debug_cmd("buildinfo", "Show the build info for the EdenFS server")
 class BuildInfoCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
@@ -411,7 +411,7 @@ class HgCopyMapGetAllCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -435,7 +435,7 @@ class HgDirstateCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -508,7 +508,7 @@ class InodeCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            help="The path to the eden mount point.  If a subdirectory inside "
+            help="The path to the EdenFS mount point.  If a subdirectory inside "
             "a mount point is specified, only data about inodes under the "
             "specified subdirectory will be reported.",
         )
@@ -538,7 +538,7 @@ class MaterializedCmd(Subcmd):
             "path",
             default=None,
             nargs="?",
-            help="The path to the eden mount point.  If a subdirectory inside "
+            help="The path to the EdenFS mount point.  If a subdirectory inside "
             "a mount point is specified, only data about inodes under the "
             "specified subdirectory will be reported.",
         )
@@ -579,7 +579,7 @@ class MaterializedCmd(Subcmd):
 @debug_cmd("file_stats", "Show data about loaded and written files")
 class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("path", help="The path to the eden mount point")
+        parser.add_argument("path", help="The path to the EdenFS mount point")
         parser.add_argument(
             "--external-logging-name",
             default=None,
@@ -688,7 +688,7 @@ class FileStatsCMD(Subcmd):
 @debug_cmd("fuse_calls", "Show data about outstanding fuse calls")
 class FuseCallsCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("path", help="The path to the eden mount point.")
+        parser.add_argument("path", help="The path to the EdenFS mount point.")
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
@@ -734,13 +734,13 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
         out.write(line.encode())
 
 
-@debug_cmd("getpath", "Get the eden path that corresponds to an inode number")
+@debug_cmd("getpath", "Get the EdenFS path that corresponds to an inode number")
 class GetPathCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
         parser.add_argument(
             "number",
@@ -770,7 +770,7 @@ class UnloadInodesCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            help="The path to the eden mount point.  If a subdirectory inside "
+            help="The path to the EdenFS mount point.  If a subdirectory inside "
             "a mount point is specified, only inodes under the "
             "specified subdirectory will be unloaded.",
         )
@@ -804,7 +804,7 @@ class UnloadInodesCmd(Subcmd):
 class FlushCacheCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "path", help="Path to a directory/file inside an eden mount."
+            "path", help="Path to a directory/file inside an EdenFS mount."
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -816,7 +816,7 @@ class FlushCacheCmd(Subcmd):
         return 0
 
 
-@debug_cmd("log", "Display the eden log file")
+@debug_cmd("log", "Display the EdenFS log file")
 class LogCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         # Display eden's log with the system pager if possible.  We could
@@ -949,7 +949,7 @@ class DebugJournalSetMemoryLimitCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -970,7 +970,7 @@ class DebugJournalGetMemoryLimitCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -995,7 +995,7 @@ class DebugFlushJournalCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -1044,7 +1044,7 @@ class DebugJournalCmd(Subcmd):
         parser.add_argument(
             "path",
             nargs="?",
-            help="The path to an Eden mount point. Uses `pwd` by default.",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -1299,7 +1299,7 @@ class DebugThriftCmd(Subcmd):
                 print(f"  {fn_info}")
 
 
-@subcmd_mod.subcmd("debug", "Internal commands for examining eden state")
+@subcmd_mod.subcmd("debug", "Internal commands for examining EdenFS state")
 # pyre-fixme[13]: Attribute `parser` is never initialized.
 class DebugCmd(Subcmd):
     parser: argparse.ArgumentParser

@@ -37,7 +37,7 @@ class StartTest(testcase.EdenTestCase):
 
         # `eden start --if-necessary` should not start eden
         output = self.eden.run_cmd("start", "--if-necessary")
-        self.assertEqual("No Eden mount points configured.\n", output)
+        self.assertEqual("No EdenFS mount points configured.\n", output)
         self.assertFalse(self.eden.is_healthy())
 
         # Restart eden and create a checkout
@@ -78,7 +78,7 @@ class StartTest(testcase.EdenTestCase):
                 *self.edenfs_args(),
                 capture_stderr=True,
             )
-        self.assertIn("Started edenfs", output)
+        self.assertIn("Started EdenFS", output)
         self.assertTrue(self.eden.is_healthy())
 
         # Stop edenfs.  We didn't start it through self.eden.start()
@@ -176,7 +176,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
 
 class DirectInvokeTest(testcase.IntegrationTestCase):
     def test_eden_cmd_arg(self) -> None:
-        """Directly invoking edenfs with an edenfsctl subcommand should fail."""
+        """Directly invoking EdenFS with an edenfsctl subcommand should fail."""
         cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]
 
         privhelper = FindExe.EDEN_PRIVHELPER
@@ -272,7 +272,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         self.assertEqual(
             instance_1_health.status,
             fb303_status.ALIVE,
-            f"First edenfs process should be healthy, but it isn't: "
+            f"First EdenFS process should be healthy, but it isn't: "
             f"{instance_1_health}",
         )
 
@@ -282,14 +282,14 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         self.assertEqual(
             instance_2_health.status,
             fb303_status.ALIVE,
-            f"Second edenfs process should be healthy, but it isn't: "
+            f"Second EdenFS process should be healthy, but it isn't: "
             f"{instance_2_health}",
         )
 
         self.assertNotEqual(
             instance_1_health.pid,
             instance_2_health.pid,
-            "The edenfs process should have separate process IDs",
+            "The EdenFS process should have separate process IDs",
         )
 
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
@@ -440,7 +440,7 @@ class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
             self.assertEqual(service.query_active_state(), "active")
 
             proc = self.expect_start_failure(
-                "error: edenfs systemd service is already running"
+                "error: EdenFS systemd service is already running"
             )
             # edenfsctl should show the output of 'systemctl status'.
             self.assertRegex(proc.stdout, r"\bfb-edenfs@.*?\.service\b")

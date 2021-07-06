@@ -810,7 +810,7 @@ class Top:
             "of all the current fuse requests. 'total pending' refers to "
             "all the current FUSE requests that are queued or live from the "
             "kernels view. 'live' only refers to FUSE requests that are "
-            "currently being processed by eden."
+            "currently being processed by EdenFS."
         )
         fuse_why = (
             "This indicates of for the health of the communication with FUSE, "
@@ -839,7 +839,8 @@ class Top:
         fuse_fetch_header = "FUSE FETCH:"
         fuse_what = (
             "This column contains the total number of imports cause by "
-            "fuse requests for each process listed since eden daemon started."
+            "fuse requests for each process listed since the edenfs daemon "
+            "started."
         )
         fuse_why = (
             "This indicates which recently running processes are causing a lot of "
@@ -848,7 +849,7 @@ class Top:
         )
         fuse_concern = (
             "When this number becomes large, the corresponding process "
-            "is very likely to be causing Eden running slow. (Those slow processes "
+            "is very likely to be causing EdenFS running slow. (Those slow processes "
             "will be detected and de-prioritized in our future releases.) "
         )
         window.write_line(
@@ -900,11 +901,11 @@ class Top:
         process_table_header = "Process table:"
         process_what = (
             "This section contains a list of all the process that have accessed "
-            "eden through FUSE since eden top started. The columns in order are  "
-            "the process id of the accessing process, the name of the eden  "
-            "checkout accessed, number of FUSE reads, FUSE writes, total FUSE  "
+            "EdenFS through FUSE since eden top started. The columns in order are  "
+            "the process id of the accessing process, the name of the EdenFS "
+            "checkout accessed, number of FUSE reads, FUSE writes, total FUSE "
             "requests, total number of imports cause by fuse requests since this "
-            "eden daemon started (see FUSE FETCH section below for more info), "
+            "edenfs daemon started (see FUSE FETCH section below for more info), "
             "number of imports from the backing store, sum of the duration "
             "of all the FUSE requests, how long ago the last FUSE request "
             "was, and the command that was run. Use left and right arrow "
@@ -913,9 +914,9 @@ class Top:
             "the list."
         )
         process_why = (
-            "This can be used to see what work loads eden is processing, to see "
+            "This can be used to see what work loads EdenFS is processing, to see "
             "that it is making progress, and give more details on what might have "
-            "caused eden issues when summary metrics are concerning."
+            "caused EdenFS issues when summary metrics are concerning."
         )
         process_concern = (
             "If the summary stats show something concerning this can tell you "

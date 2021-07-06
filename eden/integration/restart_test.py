@@ -47,7 +47,7 @@ class RestartTestBase(ServiceTestCaseBase):
         )
         restart_cmd.extend(args)
 
-        print("Retarting eden: %r" % (restart_cmd,))
+        print("Retarting EdenFS: %r" % (restart_cmd,))
         return pexpect_spawn(
             restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=30
         )
@@ -65,13 +65,13 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
     def test_restart_starts_edenfs_if_not_running(self) -> None:
         """
-        Run "eden restart".  It should start it without prompting since edenfs
+        Run "eden restart".  It should start it without prompting since EdenFS
         is not already running.
         """
         p = self._spawn_restart()
-        p.expect_exact("Eden is not currently running.  Starting it...")
+        p.expect_exact("edenfs daemon is not currently running. Starting...")
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
         p.wait()
         self.assertEqual(p.exitstatus, 0)
 
@@ -84,18 +84,18 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         # Run "eden restart"
         # It should prompt since we are about to do a non-graceful restart.
         p = self._spawn_restart()
-        p.expect_exact("About to perform a full restart of Eden")
+        p.expect_exact("About to perform a full restart of EdenFS")
         p.expect_exact(
-            "Note: this will temporarily disrupt access to your Eden-managed "
+            "Note: this will temporarily disrupt access to your EdenFS-managed "
             "repositories"
         )
         p.expect_exact("Proceed? [y/N] ")
         p.sendline("y")
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -105,7 +105,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         old_pid = self._start_fake_edenfs()
 
         p = self._spawn_restart("--force")
-        p.expect(r"Started edenfs \(pid (?P<pid>\d+), session_id [0-9]+\)")
+        p.expect(r"Started EdenFS \(pid (?P<pid>\d+), session_id [0-9]+\)")
         match = typing.cast(Optional[typing.Match], p.match)
         assert match is not None
         new_pid_from_restart: int = int(match.group("pid"))
@@ -134,9 +134,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         # Explicitly pass in a shorter than normal shutdown timeout just to reduce the
         # amount of time required for the test.
         p = self._spawn_restart("--shutdown-timeout=1")
-        p.expect_exact("About to perform a full restart of Eden")
+        p.expect_exact("About to perform a full restart of EdenFS")
         p.expect_exact(
-            "Note: this will temporarily disrupt access to your Eden-managed "
+            "Note: this will temporarily disrupt access to your EdenFS-managed "
             "repositories"
         )
         p.expect_exact("Proceed? [y/N] ")
@@ -146,10 +146,10 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
             r"[.0-9]+ seconds. Attempting SIGKILL."
         )
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -160,16 +160,16 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
         # "eden restart --force" should not prompt if the user wants to proceed
         p = self._spawn_restart("--force")
-        p.expect_exact("About to perform a full restart of Eden")
+        p.expect_exact("About to perform a full restart of EdenFS")
         p.expect_exact(
-            "Note: this will temporarily disrupt access to your Eden-managed "
+            "Note: this will temporarily disrupt access to your EdenFS-managed "
             "repositories"
         )
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -196,10 +196,10 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.expect_exact(f"The current edenfs daemon (pid {orig_pid}) is still starting")
         p.expect_exact("Forcing a full restart...")
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -233,10 +233,11 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         p.expect_exact("Forcing a full restart...")
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
+
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -270,10 +271,10 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         p.expect_exact("Forcing a full restart...")
         p.expect_exact("Starting fake edenfs daemon")
-        p.expect(r"Started edenfs \(pid [0-9]+, session_id [0-9]+\)")
-        p.expect_exact("Successfully restarted edenfs.")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
         p.expect_exact(
-            "Note: any programs running inside of an Eden-managed "
+            "Note: any programs running inside of an EdenFS-managed "
             "directory will need to cd"
         )
         p.wait()
@@ -294,8 +295,10 @@ class RestartWithSystemdTest(
 ):
     def test_eden_restart_starts_service_if_not_running(self) -> None:
         restart_process = self._spawn_restart()
-        restart_process.expect_exact("Eden is not currently running.  Starting it...")
-        restart_process.expect_exact("Started edenfs")
+        restart_process.expect_exact(
+            "edenfs daemon is not currently running. Starting..."
+        )
+        restart_process.expect_exact("Started EdenFS")
         self.assert_process_succeeds(restart_process)
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 

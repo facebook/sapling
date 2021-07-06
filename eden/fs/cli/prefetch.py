@@ -43,7 +43,7 @@ def find_checkout_and_patterns(
 ) -> CheckoutAndPatterns:
     instance, checkout, rel_path = require_checkout(args, args.repo)
     if args.repo and rel_path != Path("."):
-        print(f"{args.repo} is not the root of an eden repo", file=sys.stderr)
+        print(f"{args.repo} is not the root of an EdenFS repo", file=sys.stderr)
         raise SystemExit(1)
 
     patterns = list(args.PATTERN)

@@ -286,7 +286,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
           DaemonStart{startTimeInSeconds, FLAGS_takeover, false /*success*/});
     }
     startupLogger->exitUnsuccessfully(
-        kExitCodeError, "error starting edenfs: ", folly::exceptionStr(ex));
+        kExitCodeError, "error starting EdenFS: ", folly::exceptionStr(ex));
   }
 
   std::move(prepareFuture)
@@ -332,7 +332,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     // failed.  Continue and re-run the server in this case.
   }
 
-  XLOG(INFO) << "edenfs exiting successfully";
+  XLOG(INFO) << "EdenFS exiting successfully";
   return kExitCodeSuccess;
 }
 

@@ -17,7 +17,7 @@ from .config import EdenInstance
 from .util import ShutdownError, poll_until, print_stderr
 
 
-# The amount of time to wait for the EdenFS process to exit after we send SIGKILL.
+# The amount of time to wait for the edenfs process to exit after we send SIGKILL.
 # We normally expect the process to be killed and reaped fairly quickly in this
 # situation.  However, in rare cases on very heavily loaded systems it can take a while
 # for init/systemd to wait on the process and for everything to be fully cleaned up.
@@ -94,8 +94,8 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
         proc_utils.kill_process(pid)
     except PermissionError:
         raise ShutdownError(
-            "Received a permissions when attempting to kill EdenFS. "
-            "Perhaps EdenFS failed to drop root privileges properly?"
+            "Received a permissions when attempting to kill edenfs. "
+            "Perhaps edenfs failed to drop root privileges properly?"
         )
 
     if timeout <= 0:

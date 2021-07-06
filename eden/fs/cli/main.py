@@ -96,13 +96,13 @@ def do_version(args: argparse.Namespace) -> int:
         rv = instance.get_running_version()
         print("Running:   %s" % rv)
         if rv.startswith("-") or rv.endswith("-"):
-            print("(Dev version of eden seems to be running)")
+            print("(Dev version of edenfs seems to be running)")
     except EdenNotRunningError:
         print("Running:   Unknown (edenfs does not appear to be running)")
     return 0
 
 
-@subcmd("version", "Print Eden's version information.")
+@subcmd("version", "Print EdenFS's version information.")
 class VersionCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         return do_version(args)
@@ -170,10 +170,10 @@ class DiskUsageCmd(Subcmd):
         if not mounts:
             instance = get_eden_instance(args)
             if not instance:
-                raise subcmd_mod.CmdError("no Eden instance found\n")
+                raise subcmd_mod.CmdError("no EdenFS instance found\n")
             mounts = list(instance.get_mount_paths())
             if not mounts:
-                raise subcmd_mod.CmdError("no Eden mount found\n")
+                raise subcmd_mod.CmdError("no EdenFS mount found\n")
 
         if clean:
             self.write_ui(
@@ -526,7 +526,7 @@ class PidCmd(Subcmd):
         return 1
 
 
-@subcmd("status", "Check the health of the Eden service", aliases=["health"])
+@subcmd("status", "Check the health of the EdenFS service", aliases=["health"])
 class StatusCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -541,7 +541,7 @@ class StatusCmd(Subcmd):
         instance = get_eden_instance(args)
         health_info = instance.check_health(timeout=args.timeout)
         if health_info.is_healthy():
-            print("eden running normally (pid {})".format(health_info.pid))
+            print("edenfs running normally (pid {})".format(health_info.pid))
             return 0
 
         print("edenfs not healthy: {}".format(health_info.detail))
@@ -801,7 +801,7 @@ re-run `eden clone` with --allow-empty-repo"""
         # Attempt to start the daemon if it is not already running.
         health_info = instance.check_health()
         if not health_info.is_healthy():
-            print("edenfs daemon is not currently running.  Starting edenfs...")
+            print("edenfs daemon is not currently running. Starting...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             exit_code = await daemon.start_edenfs_service(
@@ -853,7 +853,7 @@ re-run `eden clone` with --allow-empty-repo"""
             repo = util.get_repo(str(checkout_config.backing_repo))
             if repo is None:
                 raise RepoError(
-                    "eden mount is configured to use repository "
+                    "EdenFS mount is configured to use repository "
                     f"{checkout_config.backing_repo} but unable to find a "
                     "repository at that location"
                 )
@@ -896,7 +896,7 @@ re-run `eden clone` with --allow-empty-repo"""
         return repo, repo_type, repo_config
 
 
-@subcmd("config", "Query Eden configuration")
+@subcmd("config", "Query EdenFS configuration")
 class ConfigCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -904,7 +904,7 @@ class ConfigCmd(Subcmd):
         return 0
 
 
-@subcmd("doctor", "Debug and fix issues with Eden")
+@subcmd("doctor", "Debug and fix issues with EdenFS")
 class DoctorCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -1043,7 +1043,7 @@ class StraceCmd(Subcmd):
         return "{:.3f} µs".format(ns / 1000.0)
 
 
-@subcmd("top", "Monitor Eden accesses by process.")
+@subcmd("top", "Monitor EdenFS accesses by process.")
 class TopCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -1068,7 +1068,7 @@ class TopCmd(Subcmd):
         return top.start(args)
 
 
-@subcmd("fsck", "Perform a filesystem check for Eden")
+@subcmd("fsck", "Perform a filesystem check for EdenFS")
 class FsckCmd(Subcmd):
     EXIT_OK = 0
     EXIT_SKIPPED = 1
@@ -1102,7 +1102,7 @@ class FsckCmd(Subcmd):
             "path",
             metavar="CHECKOUT_PATH",
             nargs="*",
-            help="The path to an Eden checkout to verify.",
+            help="The path to an EdenFS checkout to verify.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -1116,7 +1116,7 @@ class FsckCmd(Subcmd):
         if not args.path:
             return_codes = self.check_all(args)
             if not return_codes:
-                print_stderr("No Eden checkouts are configured.  Nothing to check.")
+                print_stderr("No EdenFS checkouts are configured.  Nothing to check.")
                 return 0
         else:
             return_codes = self.check_explicit_paths(args)
@@ -1216,10 +1216,10 @@ class GcCmd(Subcmd):
         return 0
 
 
-@subcmd("chown", "Chown an entire eden repository")
+@subcmd("chown", "Chown an entire EdenFS repository")
 class ChownCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("path", metavar="path", help="The Eden checkout to chown")
+        parser.add_argument("path", metavar="path", help="The EdenFS checkout to chown")
         parser.add_argument(
             "uid", metavar="uid", help="The uid or unix username to chown to"
         )
@@ -1249,7 +1249,7 @@ class ChownCmd(Subcmd):
 
         instance, checkout, _rel_path = require_checkout(args, args.path)
         with instance.get_thrift_client_legacy() as client:
-            print("Chowning Eden repository...", end="", flush=True)
+            print("Chowning EdenFS repository...", end="", flush=True)
             client.chown(args.path, uid, gid)
             print("done")
 
@@ -1293,7 +1293,7 @@ class MountCmd(Subcmd):
         return 0
 
 
-@subcmd("remove", "Remove an eden checkout", aliases=["rm"])
+@subcmd("remove", "Remove an EdenFS checkout", aliases=["rm"])
 class RemoveCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -1312,7 +1312,7 @@ class RemoveCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
         parser.add_argument(
-            "paths", nargs="+", metavar="path", help="The Eden checkout(s) to remove"
+            "paths", nargs="+", metavar="path", help="The EdenFS checkout(s) to remove"
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -1441,27 +1441,27 @@ class UnmountCmd(Subcmd):
         return 0
 
 
-@subcmd("start", "Start the edenfs daemon", aliases=["daemon"])
+@subcmd("start", "Start the EdenFS service", aliases=["daemon"])
 class StartCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--daemon-binary", help="Path to the binary for the Eden daemon."
+            "--daemon-binary", help="Path to the binary for the edenfs daemon."
         )
         parser.add_argument(
             "--if-necessary",
             action="store_true",
-            help="Only start edenfs if there are Eden checkouts configured.",
+            help="Only start edenfs daemon if there are EdenFS checkouts configured.",
         )
         parser.add_argument(
             "--if-not-running",
             action="store_true",
-            help="Exit successfully if EdenFS is already running.",
+            help="Exit successfully if edenfs daemon is already running.",
         )
         parser.add_argument(
             "--foreground",
             "-F",
             action="store_true",
-            help="Run eden in the foreground, rather than daemonizing",
+            help="Run edenfs in the foreground, rather than daemonizing",
         )
 
         if sys.platform != "win32":
@@ -1485,7 +1485,7 @@ class StartCmd(Subcmd):
                 "--strace",
                 "-s",
                 metavar="FILE",
-                help="Run eden under strace, and write strace output to FILE",
+                help="Run edenfs under strace, and write strace output to FILE",
             )
 
         parser.add_argument(
@@ -1520,7 +1520,7 @@ class StartCmd(Subcmd):
 
         instance = get_eden_instance(args)
         if args.if_necessary and not instance.get_mount_paths():
-            print("No Eden mount points configured.")
+            print("No EdenFS mount points configured.")
             return 0
 
         daemon_binary = daemon_util.find_daemon_binary(args.daemon_binary)
@@ -1616,7 +1616,7 @@ RESTART_MODE_GRACEFUL = "graceful"
 RESTART_MODE_FORCE = "force"
 
 
-@subcmd("restart", "Restart the edenfs daemon")
+@subcmd("restart", "Restart the EdenFS service")
 # pyre-fixme[13]: Attribute `args` is never initialized.
 class RestartCmd(Subcmd):
     args: argparse.Namespace
@@ -1628,8 +1628,8 @@ class RestartCmd(Subcmd):
             action="store_const",
             const=RESTART_MODE_FULL,
             dest="restart_type",
-            help="Completely shut down edenfs before restarting it.  This "
-            "will unmount and remount the edenfs mounts, requiring processes "
+            help="Completely shut down edenfs daemon before restarting it.  This "
+            "will unmount and remount the EdenFS mounts, requiring processes "
             "using them to re-open any files and directories they are using.",
         )
         mode_group.add_argument(
@@ -1637,9 +1637,9 @@ class RestartCmd(Subcmd):
             action="store_const",
             const=RESTART_MODE_GRACEFUL,
             dest="restart_type",
-            help="Perform a graceful restart.  The new edenfs daemon will "
-            "take over the existing edenfs mount points with minimal "
-            "disruption to clients.  Open file handles will continue to work "
+            help="Perform a graceful restart. The new edenfs daemon will "
+            "take over the existing mount points with minimal "
+            "disruption to clients. Open file handles will continue to work "
             "across the restart.",
         )
 
@@ -1652,7 +1652,7 @@ class RestartCmd(Subcmd):
             "still in the middle of starting or stopping.",
         )
         parser.add_argument(
-            "--daemon-binary", help="Path to the binary for the Eden daemon."
+            "--daemon-binary", help="Path to the binary for the edenfs daemon."
         )
         parser.add_argument(
             "--shutdown-timeout",
@@ -1763,7 +1763,7 @@ class RestartCmd(Subcmd):
             )
             print(
                 "error: failed to perform graceful restart. The old "
-                "EdenFS daemon has resumed processing and was not restarted.",
+                "edenfs daemon has resumed processing and was not restarted.",
                 file=sys.stderr,
             )
             return 1
@@ -1825,7 +1825,7 @@ class RestartCmd(Subcmd):
                 )
 
     async def _start(self, instance: EdenInstance) -> int:
-        print("Eden is not currently running.  Starting it...")
+        print("edenfs daemon is not currently running. Starting...")
         return await daemon.start_edenfs_service(
             instance, daemon_binary=self.args.daemon_binary
         )
@@ -1833,10 +1833,10 @@ class RestartCmd(Subcmd):
     async def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(
             """\
-About to perform a full restart of Eden.
-Note: this will temporarily disrupt access to your Eden-managed repositories.
-Any programs using files or directories inside the Eden mounts will need to
-re-open these files after Eden is restarted.
+About to perform a full restart of EdenFS.
+Note: this will temporarily disrupt access to your EdenFS-managed repositories.
+Any programs using files or directories inside the EdenFS mounts will need to
+re-open these files after EdenFS is restarted.
 """
         )
         if not self.args.force_restart and sys.stdin.isatty():
@@ -1888,24 +1888,24 @@ re-open these files after Eden is restarted.
             instance, daemon_binary=self.args.daemon_binary
         )
         if exit_code != 0:
-            print("Failed to start edenfs!", file=sys.stderr)
+            print("Failed to start edenfs daemon!", file=sys.stderr)
             return exit_code
 
         print(
             """\
 
-Successfully restarted edenfs.
-Note: any programs running inside of an Eden-managed directory will need to cd
+Successfully restarted EdenFS.
+Note: any programs running inside of an EdenFS-managed directory will need to cd
 out of and back into the repository to pick up the new working directory state.
 If you see "Transport endpoint not connected" errors from any program this
-means it is still attempting to use the old mount point from the previous Eden
+means it is still attempting to use the old mount point from the previous edenfs
 process, and if you see this in your terminal, you should run "cd / && cd -" to
 update your shell's working directory."""
         )
         return 0
 
 
-@subcmd("logs", "Gather logs from eden")
+@subcmd("logs", "Gather logs from EdenFS")
 class LogsCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -1952,7 +1952,7 @@ class LogsCmd(Subcmd):
         return 0
 
 
-@subcmd("rage", "Gather diagnostic information about eden")
+@subcmd("rage", "Gather diagnostic information about EdenFS")
 class RageCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -2000,7 +2000,7 @@ class RageCmd(Subcmd):
         return 0
 
 
-@subcmd("uptime", "Determine uptime of running edenfs daemon")
+@subcmd("uptime", "Determine uptime of the EdenFS service")
 class UptimeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -2015,7 +2015,7 @@ SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 SHUTDOWN_EXIT_CODE_ERROR = 4
 
 
-@subcmd("stop", "Shutdown the daemon", aliases=["shutdown"])
+@subcmd("stop", "Shutdown the EdenFS service", aliases=["shutdown"])
 class StopCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -2032,9 +2032,9 @@ class StopCmd(Subcmd):
             "--kill",
             action="store_true",
             default=False,
-            help="Forcibly kill edenfs with SIGKILL, rather than attempting to "
-            "shut down cleanly.  Not that Eden will normally need to re-scan its "
-            "data the next time it starts after an unclean shutdown.",
+            help="Forcibly kill edenfs daemon with SIGKILL, rather than attempting to "
+            "shut down cleanly.  Not that EdenFS will normally need to re-scan its "
+            "data the next time the daemon starts after an unclean shutdown.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -2061,7 +2061,7 @@ class StopCmd(Subcmd):
                         request_info += f" uid={os.getuid()}"
                     client.initiateShutdown(f"`eden stop` requested by {request_info}")
             except thrift.transport.TTransport.TTransportException as e:
-                print_stderr(f"warning: edenfs is not responding: {e}")
+                print_stderr(f"warning: edenfs daemon is not responding: {e}")
                 if pid is None:
                     pid = check_health_using_lockfile(instance.state_dir).pid
                     if pid is None:
@@ -2115,14 +2115,14 @@ class StopCmd(Subcmd):
 def create_parser() -> argparse.ArgumentParser:
     """Returns a parser"""
     parser = argparse.ArgumentParser(
-        prog="edenfsctl", description="Manage Eden checkouts."
+        prog="edenfsctl", description="Manage EdenFS checkouts."
     )
     # TODO: We should probably rename this argument to --state-dir.
     # This directory contains materialized file state and the list of managed checkouts,
     # but doesn't really contain configuration.
     parser.add_argument(
         "--config-dir",
-        help="The path to the directory where edenfs stores its internal state.",
+        help="The path to the directory where EdenFS stores its internal state.",
     )
     parser.add_argument(
         "--etc-eden-dir",
@@ -2132,7 +2132,7 @@ def create_parser() -> argparse.ArgumentParser:
         "--home-dir", help="Path to directory where .edenrc config file is stored."
     )
     parser.add_argument(
-        "--version", "-v", action="store_true", help="Print eden version."
+        "--version", "-v", action="store_true", help="Print EdenFS version."
     )
 
     subcmd_add_list: List[Type[Subcmd]] = [
@@ -2225,8 +2225,8 @@ def check_for_stale_working_directory() -> Optional[int]:
             pass
 
     msg = """\
-Your current working directory appears to be a stale Eden
-mount point from a previous Eden daemon instance.
+Your current working directory appears to be a stale EdenFS
+mount point from a previous edenfs daemon instance.
 Please run "cd / && cd -" to update your shell's working directory."""
     if not can_continue:
         print(f"Error: {msg}", file=sys.stderr)

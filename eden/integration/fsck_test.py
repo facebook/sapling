@@ -162,7 +162,7 @@ class FsckTestNoEdenfs(testcase.IntegrationTestCase, TemporaryDirectoryMixin):
             errors="replace",
         )
         self.assertIn(
-            "No Eden checkouts are configured.  Nothing to check.", cmd_result.stderr
+            "No EdenFS checkouts are configured.  Nothing to check.", cmd_result.stderr
         )
         self.assertEqual("", cmd_result.stdout)
         self.assertEqual(0, cmd_result.returncode)

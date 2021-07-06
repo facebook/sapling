@@ -153,10 +153,10 @@ TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
       folly::to<string>(
-          "error: edenfs crashed with status killed by signal ",
+          "error: EdenFS crashed with status killed by signal ",
           SIGKILL,
           " before it finished initializing\n"
-          "Check the edenfs log file at ",
+          "Check the EdenFS log file at ",
           logPath(),
           " for more details"),
       result.errorMessage);
@@ -170,7 +170,7 @@ TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardError) {
       "successWritesStartedMessageToStandardErrorDaemonChild");
   EXPECT_THAT(
       result.standardError,
-      ContainsRegex("Started edenfs \\(pid [0-9]+, session_id [0-9]+\\)"));
+      ContainsRegex("Started EdenFS \\(pid [0-9]+, session_id [0-9]+\\)"));
   EXPECT_THAT(result.standardError, HasSubstr("Logs available at "));
 }
 
@@ -220,8 +220,8 @@ TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
   EXPECT_EQ(19, result.exitCode);
   EXPECT_EQ(
       folly::to<string>(
-          "error: edenfs exited with status 19 before it finished initializing\n"
-          "Check the edenfs log file at ",
+          "error: EdenFS exited with status 19 before it finished initializing\n"
+          "Check the EdenFS log file at ",
           logPath(),
           " for more details"),
       result.errorMessage);
@@ -243,8 +243,8 @@ TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
       folly::to<string>(
-          "error: edenfs exited with status 0 before it finished initializing\n"
-          "Check the edenfs log file at ",
+          "error: EdenFS exited with status 0 before it finished initializing\n"
+          "Check the EdenFS log file at ",
           logPath(),
           " for more details"),
       result.errorMessage);
@@ -270,9 +270,9 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
       folly::to<std::string>(
-          "error: edenfs is still running but "
+          "error: EdenFS is still running but "
           "did not report its initialization status\n"
-          "Check the edenfs log file at ",
+          "Check the EdenFS log file at ",
           logPath(),
           " for more details"),
       result.errorMessage);
@@ -290,8 +290,8 @@ TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
 
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
-      "error: edenfs exited with status 0 before it finished initializing\n"
-      "Check the edenfs log file at /var/log/edenfs.log for more details",
+      "error: EdenFS exited with status 0 before it finished initializing\n"
+      "Check the EdenFS log file at /var/log/edenfs.log for more details",
       result.errorMessage);
 }
 
@@ -424,7 +424,7 @@ TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
   EXPECT_THAT(
       result.standardError,
       ContainsRegex(
-          "Started edenfs \\(pid [0-9]+, session_id [0-9]+\\) in [0-9]+s$\n"));
+          "Started EdenFS \\(pid [0-9]+, session_id [0-9]+\\) in [0-9]+s$\n"));
 }
 
 void successWritesStartedMessageToStandardErrorForegroundChild() {
@@ -461,7 +461,7 @@ TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
   logger.success(41);
   EXPECT_EQ(
       folly::to<std::string>(
-          "Started edenfs (pid ",
+          "Started EdenFS (pid ",
           getpid(),
           ", session_id ",
           getSessionId(),

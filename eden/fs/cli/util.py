@@ -51,7 +51,7 @@ class NotAnEdenMountError(Exception):
         self.path = path
 
     def __str__(self) -> str:
-        return f"{self.path} does not appear to be inside an Eden checkout"
+        return f"{self.path} does not appear to be inside an EdenFS checkout"
 
 
 class HealthStatus(object):
@@ -114,7 +114,7 @@ def poll_until(
 
 
 def get_pid_using_lockfile(config_dir: Path) -> int:
-    """Read the pid from the Eden lockfile, throwing an exception upon failure."""
+    """Read the pid from the EdenFS lockfile, throwing an exception upon failure."""
     if sys.platform == "win32":
         # On Windows read the separate pid file.  We will not be able to read the
         # lock file if EdenFS is running and holding the lock.
@@ -150,7 +150,7 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
             fb303_status.STOPPED,
             pid,
             uptime=None,
-            detail="Eden's Thrift server does not appear to be "
+            detail="EdenFS's Thrift server does not appear to be "
             "running, but the process is still alive (PID=%s)." % pid,
         )
     else:
@@ -159,7 +159,7 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
 
 def _create_dead_health_status() -> HealthStatus:
     return HealthStatus(
-        fb303_status.DEAD, pid=None, uptime=None, detail="edenfs not running"
+        fb303_status.DEAD, pid=None, uptime=None, detail="EdenFS not running"
     )
 
 

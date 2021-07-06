@@ -40,6 +40,6 @@ def require_checkout(
     instance, checkout, rel_path = find_checkout(args, path)
     if checkout is None:
         msg_path = path if path is not None else os.getcwd()
-        raise subcmd_mod.CmdError(f"no Eden checkout found at {msg_path}\n")
+        raise subcmd_mod.CmdError(f"no EdenFS checkout found at {msg_path}\n")
     assert rel_path is not None
     return instance, checkout, rel_path
