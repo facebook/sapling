@@ -144,13 +144,17 @@ impl SyncTargetConfigBuilder {
     }
 
     pub fn build(self, configs_storage: &mut TestMononokeMegarepoConfigs) {
-        let config = SyncTargetConfig {
-            target: self.target.clone(),
-            sources: self.sources,
-            version: self.version.clone(),
-        };
+        let (target, version) = (self.target.clone(), self.version.clone());
+        let config = self.no_storage_build();
+        configs_storage.add((target, version), config);
+    }
 
-        configs_storage.add((self.target, self.version), config);
+    pub fn no_storage_build(self) -> SyncTargetConfig {
+        SyncTargetConfig {
+            target: self.target,
+            sources: self.sources,
+            version: self.version,
+        }
     }
 }
 

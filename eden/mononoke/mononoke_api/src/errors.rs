@@ -8,6 +8,7 @@
 use blobstore::LoadableError;
 use bookmarks_movement::{describe_hook_rejections, BookmarkMovementError, HookRejection};
 use derived_data::DeriveError;
+use megarepo_error::MegarepoError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -132,5 +133,11 @@ impl From<&MononokeError> for edenapi_types::ServerError {
             _ => 0,
         };
         Self::new(message, code)
+    }
+}
+
+impl From<MononokeError> for MegarepoError {
+    fn from(e: MononokeError) -> Self {
+        MegarepoError::internal(e)
     }
 }

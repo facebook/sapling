@@ -54,6 +54,33 @@ async fn megarepo_add_sync_target(
     Ok(thrift::MegarepoAddTargetResponse { cs_id })
 }
 
+async fn megarepo_change_target_config(
+    ctx: &CoreContext,
+    megarepo_api: &MegarepoApi,
+    params: thrift::MegarepoChangeTargetConfigParams,
+) -> Result<thrift::MegarepoChangeTargetConfigResponse, MegarepoError> {
+    let mut changesets_to_merge = HashMap::new();
+    for (s, cs_id) in params.changesets_to_merge {
+        let cs_id = ChangesetId::from_bytes(cs_id).map_err(MegarepoError::request)?;
+        changesets_to_merge.insert(s, cs_id);
+    }
+    let target_location =
+        ChangesetId::from_bytes(params.target_location).map_err(MegarepoError::request)?;
+    let cs_id = megarepo_api
+        .change_target_config(
+            &ctx,
+            params.target,
+            params.new_version,
+            target_location,
+            changesets_to_merge,
+            params.message,
+        )
+        .await?
+        .as_ref()
+        .into();
+    Ok(thrift::MegarepoChangeTargetConfigResponse { cs_id })
+}
+
 /// Given the request params dispatches the request to the right processing
 /// funtion and returns the computation result. This function doesn't return
 /// `Result` as both successfull computation and error are part of
@@ -70,11 +97,10 @@ pub(crate) async fn megarepo_async_request_compute(
                 .await
                 .into()
         }
-        megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_change_target_params(_params) => {
-            Err::<thrift::MegarepoChangeTargetConfigResponse, _>(MegarepoError::internal(anyhow!(
-                "change_target is not implemented yet!",
-            )))
-            .into()
+        megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
+            megarepo_change_target_config(ctx, megarepo_api, params)
+                .await
+                .into()
         }
         megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_remerge_source_params(_params) => {
             Err::<thrift::MegarepoRemergeSourceResponse, _>(MegarepoError::internal(anyhow!(

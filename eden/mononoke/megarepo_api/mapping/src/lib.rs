@@ -91,7 +91,7 @@ impl fmt::Display for SourceName {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommitRemappingState {
     /// Mapping from source to a changeset id
-    latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
+    pub latest_synced_changesets: BTreeMap<SourceName, ChangesetId>,
     /// Config version that was used to create this commit
     sync_config_version: SyncConfigVersion,
 }

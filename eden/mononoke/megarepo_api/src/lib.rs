@@ -6,18 +6,20 @@
  */
 
 #![deny(warnings)]
+#![feature(async_closure)]
 
 use add_sync_target::AddSyncTarget;
 use anyhow::{bail, Error};
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
+use change_target_config::ChangeTargetConfig;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use futures::future::try_join_all;
 use megarepo_config::{
     CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
-    SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
+    SyncConfigVersion, SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{MegarepoMapping, SourceName};
@@ -39,6 +41,9 @@ use std::sync::Arc;
 mod add_sync_target;
 #[cfg(test)]
 mod add_sync_target_test;
+mod change_target_config;
+#[cfg(test)]
+mod change_target_config_test;
 mod common;
 #[cfg(test)]
 mod megarepo_test_utils;
@@ -329,5 +334,34 @@ impl MegarepoApi {
         )
         .sync(ctx, source_cs_id, &SourceName::new(source_name), &target)
         .await
+    }
+
+    /// Adds new sync target. Returs the commit hash of newly created target's head.
+    pub async fn change_target_config(
+        &self,
+        ctx: &CoreContext,
+        target: Target,
+        new_version: SyncConfigVersion,
+        target_location: ChangesetId,
+        changesets_to_merge: HashMap<String, ChangesetId>,
+        message: Option<String>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let change_target_config = ChangeTargetConfig::new(&self.megarepo_configs, &self.mononoke);
+        let changesets_to_merge = changesets_to_merge
+            .into_iter()
+            .map(|(source, cs_id)| (SourceName(source), cs_id))
+            .collect();
+
+
+        Ok(change_target_config
+            .run(
+                ctx,
+                &target,
+                new_version,
+                target_location,
+                changesets_to_merge,
+                message,
+            )
+            .await?)
     }
 }
