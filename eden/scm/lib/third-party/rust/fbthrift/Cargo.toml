@@ -8,7 +8,4 @@ include = ["lib.rs"]
 path = "lib.rs"
 
 [dependencies]
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-
-[patch."https://github.com/facebook/fbthrift.git"]
 fbthrift = { path = "../../../../../../thrift/lib/rust" }

@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-rust_static_library(rust_backingstore CRATE backingstore)
+rust_static_library(rust_backingstore CRATE backingstore FEATURES fb)
 install_rust_static_library(
   rust_backingstore
   EXPORT mercurial
