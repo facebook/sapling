@@ -118,6 +118,7 @@ pub trait MegarepoOp {
         };
         Ok(source_and_moved_changeset)
     }
+
     // Creates move commits on top of source changesets that we want to merge
     // into the target. These move commits put all source files into a correct place
     // in a target.
@@ -125,11 +126,10 @@ pub trait MegarepoOp {
         &'b self,
         ctx: &'b CoreContext,
         repo: &'b BlobRepo,
-        sync_target_config: &'b SyncTargetConfig,
+        sources: &[Source],
         changesets_to_merge: &'b HashMap<SourceName, ChangesetId>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error> {
-        let moved_commits = stream::iter(sync_target_config.sources.clone())
-            .map(Ok)
+        let moved_commits = stream::iter(sources.iter().cloned().map(Ok))
             .map_ok(|source_config| {
                 async move {
                     let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
@@ -161,7 +161,10 @@ pub trait MegarepoOp {
                         )
                         .await?;
 
-                    Result::<_, Error>::Ok((source_name, moved))
+                    Result::<(SourceName, SourceAndMovedChangesets), Error>::Ok((
+                        source_name,
+                        moved,
+                    ))
                 }
             })
             .try_buffer_unordered(10)

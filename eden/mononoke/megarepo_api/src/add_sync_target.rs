@@ -74,7 +74,7 @@ impl<'a> AddSyncTarget<'a> {
             .create_move_commits(
                 ctx,
                 repo.blob_repo(),
-                &sync_target_config,
+                &sync_target_config.sources,
                 &changesets_to_merge,
             )
             .await?;
