@@ -128,6 +128,8 @@ Test prefetching when a draft commit is marked public
   1 trees fetched over 0.00s
   M dir/x
   $ hg debugstrip -r 3
+  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd (?)
+  1 trees fetched over 0.00s (?)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ clearcache
@@ -196,6 +198,7 @@ Test auto prefetch during pull
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
   $ hg debugstrip -q -r 'draft()'
+  2 trees fetched over 0.00s (?)
 
 - Prefetch just the top manifest (but the full one)
   $ rm -rf $CACHEDIR/master
