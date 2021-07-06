@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{find_bookmark_and_value, MegarepoOp, SourceAndMovedChangesets, SourceName};
+use crate::common::{
+    find_bookmark_and_value, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
+    SourceAndMovedChangesets, SourceName,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
@@ -203,34 +206,6 @@ impl<'a> SyncChangeset<'a> {
         .await?;
         Ok(moved_commits)
     }
-}
-
-async fn find_target_bookmark_and_value(
-    ctx: &CoreContext,
-    target_repo: &RepoContext,
-    target: &Target,
-) -> Result<(BookmarkName, ChangesetId), MegarepoError> {
-    find_bookmark_and_value(ctx, target_repo, &target.bookmark).await
-}
-
-async fn find_target_sync_config<'a>(
-    ctx: &'a CoreContext,
-    target_repo: &'a BlobRepo,
-    target_cs_id: ChangesetId,
-    target: &Target,
-    megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
-) -> Result<(CommitRemappingState, SyncTargetConfig), MegarepoError> {
-    let state =
-        CommitRemappingState::read_state_from_commit(ctx, target_repo, target_cs_id).await?;
-
-    // We have a target config version - let's fetch target config itself.
-    let target_config = megarepo_configs.get_config_by_version(
-        ctx.clone(),
-        target.clone(),
-        state.sync_config_version().clone(),
-    )?;
-
-    Ok((state, target_config))
 }
 
 fn find_source_config<'a, 'b>(
