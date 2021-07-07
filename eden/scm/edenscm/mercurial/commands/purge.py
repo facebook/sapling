@@ -92,10 +92,8 @@ def purge(ui, repo, *dirs, **opts):
 
     match = scmutil.match(repo[None], dirs, opts)
 
-    status = repo.dirstate.status(match, removeignored, False, True)
-    keepfiles = status.added + status.modified
     files, dirs, errors = repo.dirstate._fs.purge(
-        match, keepfiles, removefiles, removedirs, removeignored, not act
+        match, removefiles, removedirs, removeignored, not act
     )
     if act:
         for f in files:

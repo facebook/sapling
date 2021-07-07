@@ -410,13 +410,9 @@ class physicalfilesystem(object):
                             if nf in explicitfiles:
                                 badfn(nf, badtype(kind))
 
-    def purge(self, match, keepfiles, removefiles, removedirs, removeignored, dryrun):
+    def purge(self, match, removefiles, removedirs, removeignored, dryrun):
         """Deletes untracked files and directories from the filesystem.
 
-          keepfiles: The list of files that should not be deleted. This is
-            generally added files, or modified files from a second parent. It's
-            useful for filesystems which don't have direct access to the working
-            copy data.
           removefiles: Whether to delete untracked files.
           removedirs: Whether to delete empty directories.
           removeignored: Whether to delete ignored files and directories.
