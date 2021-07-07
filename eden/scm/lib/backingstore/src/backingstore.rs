@@ -10,13 +10,11 @@ use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
 use edenapi::{Builder as EdenApiBuilder, EdenApi};
-use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
-use progress::null::NullProgressFactory;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
-    LegacyStore, LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
+    LegacyStore, LocalStore, RemoteDataStore, StoreKey, StoreResult,
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -33,6 +31,7 @@ impl BackingStore {
         let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
 
         let store_path = hg.join("store");
+        #[allow(unused_mut)]
         let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
         let treestore = ContentStoreBuilder::new(&config)
             .local_path(&store_path)
@@ -41,12 +40,17 @@ impl BackingStore {
         // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
         // not even try to initialize it then.
         #[cfg(not(debug_assertions))]
-        match MemcacheStore::new(&config, NullProgressFactory::arc()) {
-            Ok(memcache) => {
-                // XXX: Add the memcachestore for the treestore.
-                blobstore = blobstore.memcachestore(Arc::new(memcache));
+        {
+            use log::warn;
+            use progress::null::NullProgressFactory;
+            use revisionstore::MemcacheStore;
+            match MemcacheStore::new(&config, NullProgressFactory::arc()) {
+                Ok(memcache) => {
+                    // XXX: Add the memcachestore for the treestore.
+                    blobstore = blobstore.memcachestore(Arc::new(memcache));
+                }
+                Err(e) => warn!("couldn't initialize Memcache: {}", e),
             }
-            Err(e) => warn!("couldn't initialize Memcache: {}", e),
         }
 
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
