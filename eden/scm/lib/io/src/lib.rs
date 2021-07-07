@@ -428,6 +428,10 @@ impl IO {
             pipe.pretend_stdout = out_is_stdout;
             Box::new(pipe)
         };
+        pager
+            .add_stream(out_read, "")
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+
         // Only use the pager for error stream if error stream is a tty.
         // This makes `hg 2>foo` works as expected.
         if err_is_tty {
@@ -435,13 +439,16 @@ impl IO {
             let separate =
                 config.get_opt::<bool>("pager", "separate-stderr").ok() == Some(Some(true));
             inner.redirect_err_to_out = !separate;
+            if separate {
+                pager
+                    .add_error_stream(err_read, "stderr")
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+            }
         }
         inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
+        pager.set_progress_stream(prg_read);
 
         inner.pager_handle = Some(spawn(|| {
-            pager.add_stream(out_read, "")?;
-            pager.add_error_stream(err_read, "")?;
-            pager.set_progress_stream(prg_read);
             pager.run()?;
             Ok(())
         }));
