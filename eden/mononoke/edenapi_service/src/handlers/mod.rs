@@ -241,7 +241,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<files::UploadFileParams>()
             .to(upload_file_handler);
         route
-            .put("/:repo/upload/filenodes")
+            .post("/:repo/upload/filenodes")
             .with_path_extractor::<files::UploadHgFilenodesParams>()
             .to(upload_hg_filenodes_handler);
     })

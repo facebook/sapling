@@ -15,8 +15,8 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
-    UploadToken,
+    EdenApiServerError, FileEntry, HgFilenodeData, HistoryEntry, LookupResponse, TreeAttributes,
+    TreeEntry, UploadHgFilenodeResponse, UploadToken,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -151,6 +151,14 @@ pub trait EdenApi: Send + Sync + 'static {
         data: Vec<(AnyFileContentId, Bytes)>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError>;
+
+    /// Upload list of hg filenodes
+    async fn upload_filenodes_batch(
+        &self,
+        repo: String,
+        items: Vec<HgFilenodeData>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -326,6 +334,18 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .process_files_upload(repo, data, progress)
+            .await
+    }
+
+
+    async fn upload_filenodes_batch(
+        &self,
+        repo: String,
+        items: Vec<HgFilenodeData>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .upload_filenodes_batch(repo, items, progress)
             .await
     }
 }

@@ -95,15 +95,12 @@ pub struct WireHgFilenodeData {
     pub node_id: WireHgId,
 
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub p1: Option<WireHgId>,
+    pub parents: WireParents,
 
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    pub p2: Option<WireHgId>,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     pub file_content_upload_token: WireUploadToken,
 
-    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     pub metadata: Vec<u8>,
 }
 
@@ -128,8 +125,7 @@ impl ToWire for HgFilenodeData {
     fn to_wire(self) -> Self::Wire {
         WireHgFilenodeData {
             node_id: self.node_id.to_wire(),
-            p1: self.p1.to_wire(),
-            p2: self.p2.to_wire(),
+            parents: self.parents.to_wire(),
             file_content_upload_token: self.file_content_upload_token.to_wire(),
             metadata: self.metadata.to_wire(),
         }
@@ -143,8 +139,7 @@ impl ToApi for WireHgFilenodeData {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(HgFilenodeData {
             node_id: self.node_id.to_api()?,
-            p1: self.p1.to_api()?,
-            p2: self.p2.to_api()?,
+            parents: self.parents.to_api()?,
             file_content_upload_token: self.file_content_upload_token.to_api()?,
             metadata: self.metadata.to_api()?,
         })
@@ -231,8 +226,7 @@ impl Arbitrary for WireHgFilenodeData {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             node_id: Arbitrary::arbitrary(g),
-            p1: Arbitrary::arbitrary(g),
-            p2: Arbitrary::arbitrary(g),
+            parents: Arbitrary::arbitrary(g),
             file_content_upload_token: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
         }

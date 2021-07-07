@@ -16,7 +16,7 @@ use edenapi_types::{ContentId, TreeAttributes, CONTENT_ID_HASH_LENGTH_BYTES};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use std::io::Write;
-use types::{HgId, Key, RepoPathBuf};
+use types::{HgId, Key, Parents, RepoPathBuf};
 
 pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
     name.to_repo_path()
@@ -83,12 +83,35 @@ pub fn to_key(py: Python, path: &PyPath, hgid: &PyBytes) -> PyResult<Key> {
     Ok(Key::new(path, hgid))
 }
 
+pub fn to_key_with_parents(
+    py: Python,
+    path: &PyPath,
+    hgid: &PyBytes,
+    p1: &PyBytes,
+    p2: &PyBytes,
+) -> PyResult<(Key, Parents)> {
+    let hgid = to_hgid(py, hgid);
+    let path = to_path(py, path)?;
+    let p1 = to_hgid(py, p1);
+    let p2 = to_hgid(py, p2);
+    Ok((Key::new(path, hgid), Parents::new(p1, p2)))
+}
+
 pub fn to_keys<'a>(
     py: Python,
     keys: impl IntoIterator<Item = &'a (PyPathBuf, PyBytes)>,
 ) -> PyResult<Vec<Key>> {
     keys.into_iter()
         .map(|(path, hgid)| to_key(py, path, hgid))
+        .collect()
+}
+
+pub fn to_keys_with_parents<'a>(
+    py: Python,
+    keys: impl IntoIterator<Item = &'a (PyPathBuf, PyBytes, PyBytes, PyBytes)>,
+) -> PyResult<Vec<(Key, Parents)>> {
+    keys.into_iter()
+        .map(|(path, hgid, p1, p2)| to_key_with_parents(py, path, hgid, p1, p2))
         .collect()
 }
 

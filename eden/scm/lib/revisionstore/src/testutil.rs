@@ -14,8 +14,8 @@ use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stat
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
-    UploadToken,
+    EdenApiServerError, FileEntry, HgFilenodeData, HistoryEntry, LookupResponse, TreeAttributes,
+    TreeEntry, UploadHgFilenodeResponse, UploadToken,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -429,6 +429,15 @@ impl EdenApi for FakeEdenApi {
         _data: Vec<(AnyFileContentId, Bytes)>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        unimplemented!();
+    }
+
+    async fn upload_filenodes_batch(
+        &self,
+        _repo: String,
+        _items: Vec<HgFilenodeData>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         unimplemented!();
     }
 }

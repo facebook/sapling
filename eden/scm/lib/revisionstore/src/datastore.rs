@@ -203,23 +203,17 @@ impl<T: ContentDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> ContentDa
 ///
 /// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
 pub fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
-    let slice = data.as_ref();
-    if !slice.starts_with(b"\x01\n") {
-        return Ok((data.clone(), None));
-    }
-
-    let slice = &slice[2..];
-
-    if let Some(pos) = slice.windows(2).position(|needle| needle == b"\x01\n") {
-        let slice = &slice[..pos];
-
+    let (blob, copy_from) = separate_metadata(&data)?;
+    if copy_from.len() > 0 {
+        let slice = copy_from.as_ref();
+        let slice = &slice[2..copy_from.len() - 2];
         let mut path = None;
         let mut hgid = None;
+
         for line in slice.split(|c| c == &b'\n') {
             if line.is_empty() {
                 continue;
             }
-
             if line.starts_with(b"copy: ") {
                 path = Some(RepoPath::from_str(str::from_utf8(&line[6..])?)?.to_owned());
             } else if line.starts_with(b"copyrev: ") {
@@ -237,9 +231,23 @@ pub fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
             (Some(path), Some(hgid)) => Some(Key::new(path, hgid)),
         };
 
-        Ok((data.slice(2 + pos + 2..), key))
+        Ok((blob, key))
     } else {
-        Ok((data.clone(), None))
+        Ok((blob, None))
+    }
+}
+
+pub fn separate_metadata(data: &Bytes) -> Result<(Bytes, Bytes)> {
+    let slice = data.as_ref();
+    if !slice.starts_with(b"\x01\n") {
+        return Ok((data.clone(), Bytes::new()));
+    }
+    let slice = &slice[2..];
+    if let Some(pos) = slice.windows(2).position(|needle| needle == b"\x01\n") {
+        let split_pos = 2 + pos + 2;
+        Ok((data.slice(split_pos..), data.slice(..split_pos)))
+    } else {
+        Ok((data.clone(), Bytes::new()))
     }
 }
 
@@ -337,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn test_strip_metadata() -> Result<()> {
+    fn test_strip_separate_metadata() -> Result<()> {
         let key = key("foo/bar/baz", "1234");
         let data = Bytes::copy_from_slice(
             format!(
@@ -348,17 +356,34 @@ mod tests {
         );
         let (split_data, path) = strip_metadata(&data)?;
         assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
-        assert_eq!(path, Some(key));
+        assert_eq!(path, Some(key.clone()));
+
+        let (blob, copy_from) = separate_metadata(&data)?;
+        assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
+        assert_eq!(
+            copy_from,
+            Bytes::copy_from_slice(
+                format!("\x01\ncopy: {}\ncopyrev: {}\n\x01\n", key.path, key.hgid).as_bytes(),
+            )
+        );
 
         let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
         let (split_data, path) = strip_metadata(&data)?;
         assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(path, None);
 
+        let (blob, copy_from) = separate_metadata(&data)?;
+        assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
+        assert_eq!(copy_from, &b"\x01\n\x01\n"[..]);
+
         let data = Bytes::from(&b"\x01\nthis is a blob"[..]);
         let (split_data, path) = strip_metadata(&data)?;
         assert_eq!(split_data, data);
         assert_eq!(path, None);
+
+        let (blob, copy_from) = separate_metadata(&data)?;
+        assert_eq!(blob, data);
+        assert_eq!(copy_from, Bytes::new());
 
         Ok(())
     }

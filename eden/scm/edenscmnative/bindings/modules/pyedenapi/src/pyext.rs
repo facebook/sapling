@@ -9,8 +9,9 @@ use std::sync::Arc;
 
 use cpython::*;
 use futures::prelude::*;
+use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::format_err;
+use anyhow::{bail, format_err};
 use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -23,18 +24,21 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    LookupResponse, TreeEntry, UploadToken,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HgFilenodeData,
+    HistoryEntry, LookupResponse, TreeEntry, UploadHgFilenodeResponse,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
-use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
+use revisionstore::{
+    datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
+    StoreResult,
+};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
     as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid, to_hgid, to_hgids,
-    to_keys, to_path, to_tree_attrs, wrap_callback,
+    to_keys, to_keys_with_parents, to_path, to_tree_attrs, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -516,38 +520,94 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         store: PyObject,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(
+            PyPathBuf, /* path */
+            PyBytes,   /* hgid */
+            PyBytes,   /* p1 */
+            PyBytes,   /* p2 */
+        )>,
         callback: Option<PyObject>,
         _progress: Arc<dyn ProgressFactory>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        let keys = to_keys(py, &keys)?;
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>,
+        PyFuture,
+    )> {
+        let keys = to_keys_with_parents(py, &keys)?;
         let store = as_legacystore(py, store)?;
         let callback = callback.map(wrap_callback);
 
-        let data = keys
+        let (mut upload_data, filenodes_data): (Vec<_>, Vec<_>) = keys
             .into_iter()
-            .map(|key| {
-                let content = store.get_file_content(&key).map_pyerr(py)?;
+            .map(|(key, parents)| {
+                let content = store.get(StoreKey::hgid(key.clone())).map_pyerr(py)?;
                 match content {
-                    Some(v) => {
-                        // TODO: store the hashes that have been already calculated (key -> content_id mapping)
-                        let content_id = calc_contentid(&v);
-                        Ok((AnyFileContentId::ContentId(content_id), v))
+                    StoreResult::Found(raw_content) => {
+                        let raw_content = raw_content.into();
+                        let (raw_data, copy_from) =
+                            separate_metadata(&raw_content).map_pyerr(py)?;
+                        let content_id = calc_contentid(&raw_data);
+                        Ok((
+                            (content_id, raw_data),
+                            (key.hgid, content_id, parents, copy_from),
+                        ))
                     }
-                    None => Err(format_err!(
+                    _ => Err(EdenApiError::Other(format_err!(
                         "failed to fetch file content for the key '{}'",
                         key
-                    ))
+                    )))
                     .map_pyerr(py),
                 }
             })
-            // fail the entire operation if content is missing for some key because this is unexpected
-            .collect::<Result<Vec<_>, _>>()?;
+            // fail the entire operation if content is missing for some key (filenode) because this is unexpected
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .unzip();
+
+        // Deduplicate upload data
+        let mut uniques = BTreeSet::new();
+        upload_data.retain(|(content_id, _)| uniques.insert(*content_id));
+        let upload_data = upload_data
+            .into_iter()
+            .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
+            .collect();
 
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.process_files_upload(repo, data, callback).await?;
+                    let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
+                    // upload file contents first, receiving upload tokens
+                    let file_content_tokens = self
+                        .process_files_upload(repo.clone(), upload_data, callback)
+                        .await?
+                        .entries
+                        .try_collect::<Vec<_>>()
+                        .await?
+                        .into_iter()
+                        .map(|token| {
+                            let content_id = match token.data.id {
+                                AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                                _ => bail!(EdenApiError::Other(format_err!(downcast_error))),
+                            };
+                            Ok((content_id, token))
+                        })
+                        .collect::<Result<BTreeMap<_, _>, _>>()?;
+
+                    // build the list of HgFilenodeData for upload
+                    let filenodes_data = filenodes_data.into_iter().map(|(node_id, content_id, parents, copy_from)| {
+                        let file_content_upload_token = file_content_tokens.get(&content_id).ok_or_else(|| EdenApiError::Other(format_err!("unexpected error: upload token is missing for ContentId({})", content_id)))?.clone();
+                        Ok(HgFilenodeData {
+                            node_id,
+                            parents,
+                            file_content_upload_token,
+                            metadata: copy_from.to_vec(),
+                        })
+                    }).collect::<Result<Vec<_>, EdenApiError>>()?;
+
+                    // upload hg filenodes
+                    let response = self
+                        .upload_filenodes_batch(repo, filenodes_data, None)
+                        .await?;
+
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

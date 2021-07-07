@@ -146,7 +146,17 @@ impl FromStr for Sha256 {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize
+)]
 pub struct ContentId(pub [u8; CONTENT_ID_HASH_LENGTH_BYTES]);
 
 impl fmt::Display for ContentId {

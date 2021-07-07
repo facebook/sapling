@@ -201,13 +201,17 @@ async fn store_hg_filenode(
 
     let p1: Option<HgFileNodeId> = item
         .data
-        .p1
+        .parents
+        .p1()
+        .cloned()
         .map(HgNodeHash::from)
         .map(HgFileNodeId::from_node_hash);
 
     let p2: Option<HgFileNodeId> = item
         .data
-        .p2
+        .parents
+        .p2()
+        .cloned()
         .map(HgNodeHash::from)
         .map(HgFileNodeId::from_node_hash);
 

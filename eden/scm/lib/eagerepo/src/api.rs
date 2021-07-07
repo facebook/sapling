@@ -25,6 +25,7 @@ use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
 use edenapi::types::FileEntry;
+use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
@@ -34,6 +35,7 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadHgFilenodeResponse;
 use edenapi::types::UploadToken;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
@@ -428,6 +430,17 @@ impl EdenApi for EagerRepo {
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support process_file_upload endpoint".to_string(),
+        ))
+    }
+
+    async fn upload_filenodes_batch(
+        &self,
+        _repo: String,
+        _items: Vec<HgFilenodeData>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
         ))
     }
 }

@@ -166,8 +166,7 @@ impl Arbitrary for FileRequest {
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct HgFilenodeData {
     pub node_id: HgId,
-    pub p1: Option<HgId>,
-    pub p2: Option<HgId>,
+    pub parents: Parents,
     pub file_content_upload_token: UploadToken,
     pub metadata: Vec<u8>,
 }
@@ -197,8 +196,7 @@ impl Arbitrary for HgFilenodeData {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             node_id: Arbitrary::arbitrary(g),
-            p1: Arbitrary::arbitrary(g),
-            p2: Arbitrary::arbitrary(g),
+            parents: Arbitrary::arbitrary(g),
             file_content_upload_token: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
         }

@@ -29,14 +29,16 @@ use edenapi_types::{
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadToken,
+        WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadHgFilenodeResponse,
+        WireUploadToken,
     },
     AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
-    HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError, ToApi, ToWire,
-    TreeAttributes, TreeEntry, TreeRequest, UploadToken,
+    HgFilenodeData, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError,
+    ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest, UploadHgFilenodeRequest,
+    UploadHgFilenodeResponse, UploadToken,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -53,6 +55,7 @@ use crate::types::wire::pull::PullFastForwardRequest;
 const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').remove(b'.');
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
+const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
 
 mod paths {
@@ -70,6 +73,7 @@ mod paths {
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
+    pub const UPLOAD_FILENODES: &str = "upload/filenodes";
 }
 
 pub struct Client {
@@ -379,7 +383,7 @@ impl EdenApi for Client {
         attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        let msg = format!("Requesting {} trees(s)", keys.len());
+        let msg = format!("Requesting {} tree(s)", keys.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
             eprintln!("{}", &msg);
@@ -798,6 +802,9 @@ impl EdenApi for Client {
         // currently unused
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
+        if data.is_empty() {
+            return Ok(Fetch::empty());
+        }
         // Filter already uploaded file contents first
 
         let mut uploaded_indices = HashSet::<usize>::new();
@@ -866,6 +873,44 @@ impl EdenApi for Client {
             stats: Box::pin(async { Ok(Default::default()) }),
             entries: Box::pin(futures::stream::iter(all_tokens)),
         })
+    }
+
+
+    async fn upload_filenodes_batch(
+        &self,
+        repo: String,
+        items: Vec<HgFilenodeData>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+        let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if items.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::UPLOAD_FILENODES, Some(&repo))?;
+        let requests = self.prepare(
+            &url,
+            items,
+            Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
+            |ids| {
+                let req = Batch::<_> {
+                    batch: ids
+                        .into_iter()
+                        .map(|item| UploadHgFilenodeRequest { data: item })
+                        .collect(),
+                };
+                req.to_wire()
+            },
+        )?;
+
+        Ok(self
+            .fetch::<WireUploadHgFilenodeResponse>(requests, progress)
+            .await?)
     }
 }
 
