@@ -411,14 +411,9 @@ async fn sync_single_combined_entry(
     retry_num: usize,
     globalrev_syncer: &GlobalrevSyncer,
 ) -> Result<RetryAttemptsCount, Error> {
-    if let Some((cs_id, _hg_cs_id)) = combined_entry.cs_id {
+    if combined_entry.cs_id.is_some() {
         globalrev_syncer
-            .sync(
-                ctx,
-                &combined_entry.bookmark,
-                cs_id,
-                &combined_entry.commits,
-            )
+            .sync(ctx, &combined_entry.commits)
             .watched(ctx.logger())
             .await?
     }
@@ -748,15 +743,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         None
     };
 
-    let hgsql_use_sqlite = matches.is_present(HGSQL_GLOBALREVS_USE_SQLITE);
-    let hgsql_db_addr = matches
-        .value_of(HGSQL_GLOBALREVS_DB_ADDR)
-        .map(|a| a.to_string());
-
     let (repo, repo_parts) = {
-        let fb = ctx.fb;
-        let hgsql_globalrevs_name = repo_config.hgsql_globalrevs_name.clone();
-
         borrowed!(ctx);
         // FIXME: this cloned! will go away once HgRepo is asyncified
         cloned!(hg_repo_path);
@@ -842,12 +829,12 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             .pushrebase
             .globalrevs_publishing_bookmark
             .as_ref();
-        borrowed!(mysql_options, maybe_darkstorm_backup_repo);
+        borrowed!(maybe_darkstorm_backup_repo);
         let globalrev_syncer = {
             cloned!(repo);
             async move {
                 let globalrev_syncer = match globalrevs_publishing_bookmark {
-                    Some(bookmark) => {
+                    Some(_) => {
                         if !generate_bundles {
                             return Err(format_err!(
                                 "Syncing globalrevs ({}) requires generating bundles ({})",
@@ -856,34 +843,11 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                             ));
                         }
 
-                        match (hgsql_db_addr.as_ref(), maybe_darkstorm_backup_repo) {
-                            (Some(addr), None) => {
-                                GlobalrevSyncer::new(
-                                    fb,
-                                    // FIXME: this clone should go away once GlobalrevSyncer is asyncified
-                                    repo.clone(),
-                                    hgsql_use_sqlite,
-                                    Some((addr.as_str(), bookmark.clone())),
-                                    &mysql_options,
-                                    readonly_storage.0,
-                                    hgsql_globalrevs_name,
-                                )
-                                .await
-                            }
-                            (None, Some(darkstorm_backup_repo)) => {
+                        match maybe_darkstorm_backup_repo {
+                            Some(darkstorm_backup_repo) => {
                                 Ok(GlobalrevSyncer::darkstorm(&repo, &darkstorm_backup_repo))
                             }
-                            (Some(_), Some(_)) => {
-                                return Err(format_err!(
-                                    "This repository has both hgsql and darkstorm repo specified - this is unsupported",
-                                ));
-                            }
-                            (None, None) => {
-                                return Err(format_err!(
-                                    "This repository has Globalrevs enabled but syncing ({}) is not enabled",
-                                    HGSQL_GLOBALREVS_DB_ADDR,
-                                ));
-                            }
+                            None => Ok(GlobalrevSyncer::Noop),
                         }
                     }
                     None => Ok(GlobalrevSyncer::Noop),
@@ -1255,7 +1219,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .long(HGSQL_GLOBALREVS_DB_ADDR)
                 .takes_value(true)
                 .required(false)
-                .help("Sync globalrevs to this database prior to syncing bundles."),
+                .help("unused"),
         )
         .arg(
             Arg::with_name(GENERATE_BUNDLES)
