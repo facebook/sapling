@@ -17,7 +17,11 @@ use fbinit::FacebookInit;
 
 use anyhow::Error;
 use clap::{value_t, Arg};
-use cmdlib::{args, helpers::serve_forever};
+use cmdlib::{
+    args,
+    helpers::serve_forever,
+    monitoring::{start_fb303_server, AliveService},
+};
 use context::SessionContainer;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
@@ -28,6 +32,7 @@ use repo_factory::RepoFactory;
 
 const ARG_REQUEST_LIMIT: &str = "request-limit";
 const ARG_CONCURRENT_JOBS_LIMIT: &str = "jobs-limit";
+const SERVICE_NAME: &str = "megarepo_async_requests_worker";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -38,6 +43,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_scuba_logging_args()
         .with_disabled_hooks_args()
         .with_scribe_args()
+        .with_fb303_args()
         .build()
         .arg(
             Arg::with_name(ARG_REQUEST_LIMIT)
@@ -101,6 +107,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
     serve_forever(
         runtime,
         {
