@@ -11,8 +11,8 @@
 use super::MetadataEntry;
 use crate::chunk::Chunk;
 use anyhow::{Error, Result};
-use byteorder::ByteOrder;
-use bytes_old::{BigEndian, BufMut};
+use byteorder::{BigEndian, ByteOrder};
+use bytes_old::BufMut;
 use futures_old::stream::iter_result;
 use futures_old::Stream;
 use mercurial_types::HgChangesetId;

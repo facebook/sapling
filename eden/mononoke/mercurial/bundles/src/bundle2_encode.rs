@@ -11,8 +11,8 @@ use std::mem;
 use std::vec::IntoIter;
 
 use anyhow::{bail, Context, Error, Result};
-use byteorder::ByteOrder;
-use bytes_old::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
+use byteorder::{BigEndian, ByteOrder};
+use bytes_old::{Buf, BufMut, Bytes, IntoBuf};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use futures_old::stream::Forward;
 use futures_old::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};

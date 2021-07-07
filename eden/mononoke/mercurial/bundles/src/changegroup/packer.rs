@@ -10,8 +10,8 @@ use std::convert::From;
 use futures_old::{try_ready, Async, Poll, Stream};
 
 use anyhow::{Error, Result};
-use byteorder::ByteOrder;
-use bytes_old::{BigEndian, BufMut};
+use byteorder::{BigEndian, ByteOrder};
+use bytes_old::BufMut;
 
 use crate::chunk::Chunk;
 use crate::delta;
