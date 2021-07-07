@@ -12,6 +12,7 @@ import inspect
 import json
 import os
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -150,7 +151,16 @@ class DiskUsageCmd(Subcmd):
             "mounts", default=[], nargs="*", help="Names of the mount points"
         )
         group = parser.add_mutually_exclusive_group()
-        group.add_argument("--clean", action="store_true")
+        group.add_argument(
+            "--clean", action="store_true", help="Performs automated cleanup"
+        )
+        group.add_argument(
+            "--deep-clean",
+            action="store_true",
+            help="(Mac and Linux only) Performs automated cleanup (--clean) and removes fsck dirs. "
+            "Unlike --clean this will destroy unrecoverable data. If you have any local changes you "
+            "hope to recover, recover them before you run this command.",
+        )
         group.add_argument(
             "--json",
             action="store_true",
@@ -161,6 +171,10 @@ class DiskUsageCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         mounts = args.mounts
         clean = args.clean
+        deep_clean = args.deep_clean
+        if deep_clean:
+            clean = True
+
         self.json_mode = args.json
 
         color_out = self.color_out
@@ -203,7 +217,7 @@ files outside the repo rather than to ignore and clean them up.\n""",
             config = checkout.get_config()
             backing_repos.add(config.backing_repo)
 
-            self.usage_for_mount(mount, args, clean)
+            self.usage_for_mount(mount, args, clean, deep_clean)
 
         self.underlined("Redirections")
 
@@ -278,14 +292,14 @@ space by running:
         if instance:
             self.shared_usage(instance, clean)
 
-        self.make_summary(clean)
+        self.make_summary(clean, deep_clean)
 
         if self.json_mode:
             print(json.dumps(self.aggregated_usage_counts))
 
         return 0
 
-    def make_summary(self, clean):
+    def make_summary(self, clean, deep_clean):
         self.underlined("Summary")
         type_labels = {
             "materialized": "Materialized files",
@@ -307,6 +321,9 @@ space by running:
             "fsck": "Not cleaned. Directories listed above."
             + " Check and remove manually",
         }
+
+        if deep_clean:
+            clean_labels["fsck"] = "Cleaned"
 
         # align colons. type_label for fsck is long, so
         # space for left align is longer when fsck usage
@@ -472,7 +489,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
             )
 
     def usage_for_mount(
-        self, mount: str, args: argparse.Namespace, clean: bool
+        self, mount: str, args: argparse.Namespace, clean: bool, deep_clean: bool
     ) -> None:
 
         instance, checkout, _rel_path = require_checkout(args, mount)
@@ -502,7 +519,15 @@ Legacy bind mount dirs listed above are unused and can be removed!
         fsck_dir = os.path.join(client_dir, "fsck")
         if os.path.exists(fsck_dir):
             self.usage_for_dir(fsck_dir, "fsck")
-            if clean:
+            if deep_clean and sys.platform != "win32":
+                self.writeln_ui(f"\nReclaiming space from directory: {fsck_dir}")
+                try:
+                    shutil.rmtree(fsck_dir)
+                    self.writeln_ui("Space reclaimed. Directory removed.\n")
+                except Exception as ex:
+                    self.writeln_ui(f"Failed to remove {fsck_dir} : {ex} \n")
+
+            elif clean:
                 self.writeln_ui(
                     f"""
 A filesytem check recovered data and stored it at:
@@ -511,6 +536,10 @@ If you have recovered all that you need from it, you can remove that
 directory to reclaim the disk space.
 """
                 )
+                if sys.platform != "win32":
+                    self.writeln_ui(
+                        "To automatically remove this directory, run `eden du --deep-clean`."
+                    )
 
 
 @subcmd("pid", "Print the daemon's process ID if running")
