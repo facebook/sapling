@@ -46,3 +46,25 @@
    a
   (commit, shelve, update --clean to discard them, or update --merge to merge them)
   [255]
+#if no-windows
+Replacing symlink with content
+  $ mkdir x
+  $ echo zzz > x/a
+  $ ln -s x y
+  $ hg add x/a y
+  $ hg commit -m 'D'
+  $ rm y
+  $ hg rm y
+  $ mkdir y
+  $ echo yyy > y/a
+  $ hg add y/a
+  $ hg commit -m 'E'
+  $ hg up 'desc(D)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat y/a
+  zzz
+  $ hg up 'desc(E)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat y/a
+  yyy
+#endif

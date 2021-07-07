@@ -424,7 +424,7 @@ impl CheckoutPlan {
                     StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT,
                 ),
             };
-            if unknown && vfs.is_file(file)? {
+            if unknown && matches!(vfs.is_file(file), Ok(true)) {
                 let repo_path = file.as_repo_path();
                 let hgid = match manifest.get_file(repo_path)? {
                     Some(m) => m.hgid,
