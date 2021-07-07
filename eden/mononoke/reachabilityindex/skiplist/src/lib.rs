@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use arc_swap::ArcSwap;
-use futures_ext::future::{spawn_controlled, ControlledHandle};
+use reloader::{Loader, Reloader};
 use std::cmp::min;
 #[deny(warnings)]
 use std::collections::{HashMap, HashSet};
@@ -25,7 +24,7 @@ use futures::future::try_join_all;
 use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
-use slog::{info, warn, Logger};
+use slog::{info, Logger};
 use tokio::task;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -332,9 +331,7 @@ pub struct SkiplistIndex {
     // - If the enum type is ParentEdges, then we couldn't safely add skip edges
     //   from this node (which is always the case for a merge node), so we must
     //   recurse on all the children.
-    skip_list_edges: Arc<ArcSwap<SkiplistEdgeMapping>>,
-    /// Handle of the background task reloading the index, if it exists
-    _maybe_handle: Option<ControlledHandle>,
+    skip_list_edges: Reloader<SkiplistEdgeMapping>,
 }
 
 // Find nodes to index during lazy indexing
@@ -442,8 +439,12 @@ struct SkiplistLoader {
     blobstore_without_cache: Arc<dyn Blobstore>,
 }
 
-impl SkiplistLoader {
-    async fn load(&self) -> Result<SkiplistEdgeMapping> {
+#[async_trait]
+impl Loader<SkiplistEdgeMapping> for SkiplistLoader {
+    async fn load(&mut self) -> Result<Option<SkiplistEdgeMapping>> {
+        if tunables::tunables().get_skiplist_reload_disabled() {
+            return Ok(None);
+        }
         info!(self.ctx.logger(), "Fetching skiplist");
         let mapping_fut = task::spawn({
             cloned!(self.ctx, self.blobstore_without_cache, self.blobstore_key);
@@ -458,11 +459,11 @@ impl SkiplistLoader {
                         })
                         .await??;
                         info!(ctx.logger(), "Built skiplist");
-                        Ok(mapping)
+                        Ok(Some(mapping))
                     }
                     None => {
                         info!(ctx.logger(), "Skiplist is empty!");
-                        Ok(SkiplistEdgeMapping::new())
+                        Ok(Some(SkiplistEdgeMapping::new()))
                     }
                 }
             }
@@ -479,8 +480,7 @@ impl SkiplistIndex {
 
     fn from_edges(mapping: SkiplistEdgeMapping) -> Self {
         Self {
-            skip_list_edges: Arc::new(ArcSwap::from_pointee(mapping)),
-            _maybe_handle: None,
+            skip_list_edges: Reloader::fixed(mapping),
         }
     }
 
@@ -497,38 +497,21 @@ impl SkiplistIndex {
                     blobstore_key,
                     blobstore_without_cache,
                 };
-                let skip_list_edges = Arc::new(ArcSwap::from_pointee(loader.load().await?));
-                let maybe_handle = Some(spawn_controlled({
-                    cloned!(skip_list_edges);
-                    let tunables = tunables::tunables();
-                    async move {
-                        loop {
-                            let interval = std::time::Duration::from_secs(
-                                NonZeroI64::new(tunables.get_skiplist_reload_interval())
-                                    .and_then(|n| u64::try_from(n.get()).ok())
-                                    .unwrap_or(60 * 15),
-                            );
-                            if !tunables.get_skiplist_reload_disabled() {
-                                info!(
-                                    ctx.logger(),
-                                    "Waiting {:?} before reloading skip list", interval
-                                );
-                            }
-                            tokio::time::sleep(interval).await;
-                            if !tunables.get_skiplist_reload_disabled() {
-                                match loader.load().await {
-                                    Ok(new_edges) => skip_list_edges.store(Arc::new(new_edges)),
-                                    Err(err) => {
-                                        warn!(ctx.logger(), "Failed to reload skiplists: {:?}", err)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }));
+                let tunables = tunables::tunables();
+                let reloader = Reloader::reload_periodically(
+                    ctx.clone(),
+                    move || {
+                        std::time::Duration::from_secs(
+                            NonZeroI64::new(tunables.get_skiplist_reload_interval())
+                                .and_then(|n| u64::try_from(n.get()).ok())
+                                .unwrap_or(60 * 15),
+                        )
+                    },
+                    loader,
+                )
+                .await?;
                 Ok(Arc::new(Self {
-                    skip_list_edges,
-                    _maybe_handle: maybe_handle,
+                    skip_list_edges: reloader,
                 }))
             }
             None => Ok(Arc::new(SkiplistIndex::new())),

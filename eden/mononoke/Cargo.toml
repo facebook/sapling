@@ -235,6 +235,7 @@ members = [
   "common/dedupmap",
   "common/futures_watchdog",
   "common/iterhelpers",
+  "common/reloader",
   "common/rendezvous",
   "common/rust/caching_ext",
   "common/rust/slog_ext",

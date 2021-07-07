@@ -1,5 +1,5 @@
 [package]
-name = "skiplist"
+name = "reloader"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
@@ -9,38 +9,15 @@ license = "GPLv2+"
 anyhow = "1.0"
 arc-swap = "1.1"
 async-trait = "0.1.45"
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-bytes = { version = "1.0", features = ["serde"] }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
-chashmap = "2.2"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-common = { version = "0.1.0", path = "../common" }
 context = { version = "0.1.0", path = "../../server/context" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-util = "0.3.7"
-maplit = "1.0"
-mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-reachabilityindex = { version = "0.1.0", path = ".." }
-reloader = { version = "0.1.0", path = "../../common/reloader" }
-skiplist_thrift = { version = "0.1.0", path = "../if" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
-futures-old = { package = "futures", version = "0.1.31" }
-futures_ext_compat = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-revset = { version = "0.1.0", path = "../../revset" }
-test-helpers = { version = "0.1.0", path = "../test-helpers" }
-test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 
 [patch.crates-io]
 addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
