@@ -30,7 +30,7 @@ use edenapi_types::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
         WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadHgFilenodeResponse,
-        WireUploadToken,
+        WireUploadToken, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
@@ -38,7 +38,7 @@ use edenapi_types::{
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
     HgFilenodeData, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError,
     ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest, UploadHgFilenodeRequest,
-    UploadHgFilenodeResponse, UploadToken,
+    UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -56,6 +56,7 @@ const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').re
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
+const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
 
 mod paths {
@@ -74,6 +75,7 @@ mod paths {
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
+    pub const UPLOAD_TREES: &str = "upload/trees";
 }
 
 pub struct Client {
@@ -910,6 +912,43 @@ impl EdenApi for Client {
 
         Ok(self
             .fetch::<WireUploadHgFilenodeResponse>(requests, progress)
+            .await?)
+    }
+
+    async fn upload_trees_batch(
+        &self,
+        repo: String,
+        items: Vec<UploadTreeEntry>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
+        let msg = format!("Requesting trees upload for {} item(s)", items.len());
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if items.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::UPLOAD_TREES, Some(&repo))?;
+        let requests = self.prepare(
+            &url,
+            items,
+            Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
+            |ids| {
+                let req = Batch::<_> {
+                    batch: ids
+                        .into_iter()
+                        .map(|item| UploadTreeRequest { data: item })
+                        .collect(),
+                };
+                req.to_wire()
+            },
+        )?;
+
+        Ok(self
+            .fetch::<WireUploadTreeResponse>(requests, progress)
             .await?)
     }
 }

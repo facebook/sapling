@@ -5,10 +5,15 @@
 
 from __future__ import absolute_import
 
+import bindings
 from edenscm.mercurial import node as nodemod, error
 from edenscm.mercurial.i18n import _, _n
 
 from . import util as ccutil
+
+
+TOKEN_KEY = "token"
+INDEX_KEY = "index"
 
 
 def lookupcommits(repo, nodes):
@@ -26,18 +31,34 @@ def lookupfilenodes(repo, keys):
         stream, _stats = repo.edenapi.lookup_filenodes(
             ccutil.getreponame(repo), [key[1] for key in keys]
         )
-        foundindices = {item["index"] for item in stream if item["token"]}
+        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
     return [fnode for index, fnode in enumerate(keys) if index not in foundindices]
 
 
+def lookuptrees(repo, keys):
+    """Returns list of missing trees"""
+    try:
+        stream, _stats = repo.edenapi.lookup_trees(
+            ccutil.getreponame(repo), [key[0] for key in keys]
+        )
+        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+    except (error.RustError, error.HttpError) as e:
+        raise error.Abort(e)
+
+    return [tree for index, tree in enumerate(keys) if index not in foundindices]
+
+
 def uploadfiles(repo, keys):
+    """Upload file content and filenodes"""
+    if not keys:
+        return
     dpack, _hpack = repo.fileslog.getmutablelocalpacks()
     try:
         stream, _stats = repo.edenapi.uploadfiles(dpack, ccutil.getreponame(repo), keys)
-        foundindices = {item["index"] for item in stream if item["token"]}
+        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
         repo.ui.status(
             _n(
                 "uploaded %d file\n",
@@ -51,9 +72,30 @@ def uploadfiles(repo, keys):
         raise error.Abort(e)
 
 
-def uploadblobs(repo, nodes):
+def uploadtrees(repo, trees):
+    """Upload trees"""
+    if not trees:
+        return
+    try:
+        stream, _stats = repo.edenapi.uploadtrees(ccutil.getreponame(repo), trees)
+        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+        repo.ui.status(
+            _n(
+                "uploaded %d tree\n",
+                "uploaded %d trees\n",
+                len(foundindices),
+            )
+            % len(foundindices),
+            component="commitcloud",
+        )
+    except (error.RustError, error.HttpError) as e:
+        raise error.Abort(e)
+
+
+def getblobs(repo, nodes):
+    """Get changed files"""
     toupload = set()
-    for node in nodes:
+    for node in nodes.iterrev():
         ctx = repo[node]
         for f in ctx.files():
             if f not in ctx:
@@ -64,7 +106,26 @@ def uploadblobs(repo, nodes):
     return toupload
 
 
-def upload(repo, revs):
+def gettrees(repo, nodes):
+    """Get changed trees"""
+    treedepth = 1 << 15
+    for node in nodes.iterrev():
+        parentnodes = repo.changelog.dag.parentnames(node)
+        mfnode = repo.changelog.changelogrevision(node).manifest
+        basemfnodes = [
+            repo.changelog.changelogrevision(p).manifest for p in parentnodes
+        ]
+        difftrees = bindings.manifest.subdirdiff(
+            repo.manifestlog.datastore, "", mfnode, basemfnodes, treedepth
+        )
+        for subdir, treenode, treetext, _x, _x, _x in difftrees:
+            p1, p2, _link, _copy = repo.manifestlog.historystore.getnodeinfo(
+                subdir, treenode
+            )
+            yield treenode, p1, p2, treetext
+
+
+def upload(repo, revs, force=False):
     """upload commits to commit cloud using EdenApi
 
     Commits that have already been uploaded will be skipped.
@@ -94,7 +155,7 @@ def upload(repo, revs):
         return
 
     # Check what heads have been already uploaded and what heads are missing
-    missingheads = lookupcommits(repo, heads)
+    missingheads = heads if force else lookupcommits(repo, heads)
 
     if not missingheads:
         ui.status(_("nothing to upload\n"), component="commitcloud")
@@ -115,7 +176,7 @@ def upload(repo, revs):
             )
             break
         ui.status(
-            _("head %s haven't been uploaded yet\n") % nodemod.hex(node)[:12],
+            _("head '%s' hasn't been uploaded yet\n") % nodemod.hex(node)[:12],
             component="commitcloud",
         )
 
@@ -125,7 +186,7 @@ def upload(repo, revs):
     )
     draftnodes = [repo[r].node() for r in draftrevs]
 
-    uploadcommitqueue = lookupcommits(repo, draftnodes)
+    uploadcommitqueue = draftnodes if force else lookupcommits(repo, draftnodes)
     repo.ui.status(
         _n(
             "queue %d commit for upload\n",
@@ -136,12 +197,16 @@ def upload(repo, revs):
         component="commitcloud",
     )
 
-    # Build a queue of filenodes to upload
-    uploadblobqueue = lookupfilenodes(repo, list(uploadblobs(repo, uploadcommitqueue)))
+    # Sort uploadcommitqueue in topological order (use iterrev() to iterate from parents to children)
+    uploadcommitqueue = repo.changelog.dag.sort(uploadcommitqueue)
+
+    # Build a queue of missing filenodes to upload
+    blobs = list(getblobs(repo, uploadcommitqueue))
+    uploadblobqueue = blobs if force else lookupfilenodes(repo, blobs)
     repo.ui.status(
         _n(
-            "queue %d blob for upload\n",
-            "queue %d blobs for upload\n",
+            "queue %d file for upload\n",
+            "queue %d files for upload\n",
             len(uploadblobqueue),
         )
         % len(uploadblobqueue),
@@ -151,6 +216,25 @@ def upload(repo, revs):
     # Upload missing files and filenodes for the selected set of filenodes
     uploadfiles(repo, uploadblobqueue)
 
-    # TODO (liubovd): next: implement upload of trees
+    # Build a queue of missing trees to upload
+    trees = list(gettrees(repo, uploadcommitqueue))
+    uploadtreesqueue = trees if force else lookuptrees(repo, trees)
+    repo.ui.status(
+        _n(
+            "queue %d tree for upload\n",
+            "queue %d trees for upload\n",
+            len(uploadtreesqueue),
+        )
+        % len(uploadtreesqueue),
+        component="commitcloud",
+    )
+
+    # Upload missing trees
+    uploadtrees(repo, uploadtreesqueue)
 
     # TODO (liubovd): finally: implement upload of hg changesets
+    for node in uploadcommitqueue.iterrev():
+        ui.status(
+            _("uploading commit '%s'...\n") % nodemod.hex(node),
+            component="commitcloud",
+        )
