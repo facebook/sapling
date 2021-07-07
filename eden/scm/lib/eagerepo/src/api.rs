@@ -37,8 +37,6 @@ use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
 use edenapi::types::UploadHgFilenodeResponse;
 use edenapi::types::UploadToken;
-use edenapi::types::UploadTreeEntry;
-use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Fetch;
@@ -443,17 +441,6 @@ impl EdenApi for EagerRepo {
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
-        ))
-    }
-
-    async fn upload_trees_batch(
-        &self,
-        _repo: String,
-        _items: Vec<UploadTreeEntry>,
-        _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support upload_trees_batch endpoint".to_string(),
         ))
     }
 }

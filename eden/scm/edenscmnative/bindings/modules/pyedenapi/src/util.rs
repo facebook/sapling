@@ -12,7 +12,7 @@ use cpython::*;
 use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::{Progress, ProgressCallback, ResponseMeta};
-use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry, CONTENT_ID_HASH_LENGTH_BYTES};
+use edenapi_types::{ContentId, TreeAttributes, CONTENT_ID_HASH_LENGTH_BYTES};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use std::io::Write;
@@ -97,23 +97,6 @@ pub fn to_key_with_parents(
     Ok((Key::new(path, hgid), Parents::new(p1, p2)))
 }
 
-pub fn to_trees_upload_item(
-    py: Python,
-    hgid: &PyBytes,
-    p1: &PyBytes,
-    p2: &PyBytes,
-    data: &PyBytes,
-) -> PyResult<UploadTreeEntry> {
-    let hgid = to_hgid(py, hgid);
-    let p1 = to_hgid(py, p1);
-    let p2 = to_hgid(py, p2);
-    Ok(UploadTreeEntry {
-        node_id: hgid,
-        data: data.data(py).to_vec(),
-        parents: Parents::new(p1, p2),
-    })
-}
-
 pub fn to_keys<'a>(
     py: Python,
     keys: impl IntoIterator<Item = &'a (PyPathBuf, PyBytes)>,
@@ -129,16 +112,6 @@ pub fn to_keys_with_parents<'a>(
 ) -> PyResult<Vec<(Key, Parents)>> {
     keys.into_iter()
         .map(|(path, hgid, p1, p2)| to_key_with_parents(py, path, hgid, p1, p2))
-        .collect()
-}
-
-pub fn to_trees_upload_items<'a>(
-    py: Python,
-    items: impl IntoIterator<Item = &'a (PyBytes, PyBytes, PyBytes, PyBytes)>,
-) -> PyResult<Vec<UploadTreeEntry>> {
-    items
-        .into_iter()
-        .map(|(hgid, p1, p2, data)| to_trees_upload_item(py, hgid, p1, p2, data))
         .collect()
 }
 

@@ -20,7 +20,7 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData, LookupResponse,
-    UploadHgFilenodeResponse, UploadTreeResponse,
+    UploadHgFilenodeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -282,22 +282,6 @@ py_class!(pub class client |py| {
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>, PyFuture)> {
         let progress = self.progress(py).clone();
         self.inner(py).clone().uploadfiles_py(py, store, repo, keys, callback, progress)
-    }
-
-    /// Upload trees
-    def uploadtrees(
-        &self,
-        repo: String,
-        items: Vec<(
-            PyBytes,   /* hgid */
-            PyBytes,   /* p1 */
-            PyBytes,   /* p2 */
-            PyBytes,   /* data */
-        )>,
-        callback: Option<PyObject> = None
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().uploadtrees_py(py, repo, items, callback, progress)
     }
 });
 

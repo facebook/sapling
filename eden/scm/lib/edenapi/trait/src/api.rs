@@ -16,7 +16,7 @@ use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     EdenApiServerError, FileEntry, HgFilenodeData, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeResponse,
+    TreeEntry, UploadHgFilenodeResponse, UploadToken,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -159,14 +159,6 @@ pub trait EdenApi: Send + Sync + 'static {
         items: Vec<HgFilenodeData>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError>;
-
-    /// Upload list of trees
-    async fn upload_trees_batch(
-        &self,
-        repo: String,
-        items: Vec<UploadTreeEntry>,
-        progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -354,17 +346,6 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_filenodes_batch(repo, items, progress)
-            .await
-    }
-
-    async fn upload_trees_batch(
-        &self,
-        repo: String,
-        items: Vec<UploadTreeEntry>,
-        progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
-        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_trees_batch(repo, items, progress)
             .await
     }
 }

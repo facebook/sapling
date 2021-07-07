@@ -1820,12 +1820,6 @@ def getfrombackup(ui, repo, **opts):
     "upload",
     [
         ("r", "rev", [], _("revisions to upload to Commit Cloud")),
-        (
-            "f",
-            "force",
-            None,
-            "reupload commits without checking what is present on the server",
-        ),
     ]
     + remoteopts,
 )
@@ -1848,4 +1842,4 @@ def cloudupload(ui, repo, **opts):
     else:
         revs = None
 
-    upload.upload(repo, revs, force=opts.get("force"))
+    upload.upload(repo, revs)
