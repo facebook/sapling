@@ -37,8 +37,8 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <gmock/gmock.h>
 #include <signal.h>
 #include <sysexits.h>
 #include <cerrno>

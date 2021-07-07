@@ -8,8 +8,8 @@
 #include "eden/fs/store/ImportPriority.h"
 
 #include <folly/logging/xlog.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <gmock/gmock.h>
 
 using namespace facebook::eden;
 

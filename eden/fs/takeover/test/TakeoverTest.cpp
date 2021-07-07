@@ -9,9 +9,9 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gmock/gmock.h>
 
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"

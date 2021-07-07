@@ -7,9 +7,9 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gmock/gmock.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/FileInode.h"

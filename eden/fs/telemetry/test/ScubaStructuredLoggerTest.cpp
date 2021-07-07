@@ -7,8 +7,8 @@
 
 #include "eden/fs/telemetry/ScubaStructuredLogger.h"
 #include <folly/json.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <gmock/gmock.h>
 #include "eden/fs/telemetry/ScribeLogger.h"
 
 using namespace facebook::eden;
