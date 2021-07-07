@@ -8,16 +8,14 @@
 #![deny(warnings)]
 use crate::RedactionConfigBlobstore;
 use anyhow::{Context, Error, Result};
-use arc_swap::ArcSwap;
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable};
 use cached_config::{ConfigHandle, ConfigStore};
-use cloned::cloned;
 use context::CoreContext;
-use derivative::*;
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures_ext::future::{spawn_controlled, ControlledHandle};
 use mononoke_types::{typed_hash::RedactionKeyListId, RedactionKeyList, Timestamp};
 use redaction_set::RedactionSets;
+use reloader::{Loader, Reloader};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -115,17 +113,45 @@ struct InnerConfig {
     map: Arc<HashMap<String, RedactedMetadata>>,
 }
 
-#[derive(Derivative)]
-#[derivative(Debug)]
-pub struct ConfigeratorRedactedBlobs {
-    #[derivative(Debug = "ignore")]
+#[derive(Debug)]
+pub struct ConfigeratorRedactedBlobs(Reloader<InnerConfig>);
+
+struct InnerConfigLoader {
     ctx: CoreContext,
-    #[derivative(Debug = "ignore")]
     handle: ConfigHandle<RedactionSets>,
     blobstore: Arc<RedactionConfigBlobstore>,
-    inner_config: Arc<ArcSwap<InnerConfig>>,
-    /// Handle of the background task reloading the redacted config
-    _controlled_handle: ControlledHandle,
+    last_config: Option<Arc<RedactionSets>>,
+}
+impl InnerConfigLoader {
+    fn new(
+        ctx: CoreContext,
+        handle: ConfigHandle<RedactionSets>,
+        blobstore: Arc<RedactionConfigBlobstore>,
+    ) -> Self {
+        Self {
+            ctx,
+            handle,
+            blobstore,
+            last_config: None,
+        }
+    }
+}
+
+#[async_trait]
+impl Loader<InnerConfig> for InnerConfigLoader {
+    async fn load(&mut self) -> Result<Option<InnerConfig>> {
+        let new_config = self.handle.get();
+        if match &self.last_config {
+            Some(old) => !Arc::ptr_eq(old, &new_config) && *old != new_config,
+            None => true,
+        } {
+            Ok(Some(
+                InnerConfig::new(new_config, &self.ctx, &self.blobstore).await?,
+            ))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl ConfigeratorRedactedBlobs {
@@ -134,46 +160,16 @@ impl ConfigeratorRedactedBlobs {
         handle: ConfigHandle<RedactionSets>,
         blobstore: Arc<RedactionConfigBlobstore>,
     ) -> Result<Self> {
-        let inner_config = Arc::new(ArcSwap::from_pointee(
-            InnerConfig::new(handle.get(), &ctx, &blobstore).await?,
-        ));
+        let loader = InnerConfigLoader::new(ctx.clone(), handle, blobstore);
+        let reloader =
+            Reloader::reload_periodically(ctx, || std::time::Duration::from_secs(60), loader)
+                .await?;
 
-        let controlled_handle = spawn_controlled({
-            cloned!(ctx, blobstore, handle, inner_config);
-            async move {
-                loop {
-                    let interval = std::time::Duration::from_secs(60);
-                    tokio::time::sleep(interval).await;
-                    let new_config = handle.get();
-                    let cur_config = &inner_config.load().raw_config;
-                    // Checking ptr_eq first as an optimization
-                    if !Arc::ptr_eq(&new_config, cur_config) && new_config != *cur_config {
-                        match InnerConfig::new(new_config, &ctx, &blobstore).await {
-                            Ok(new_inner_config) => inner_config.store(Arc::new(new_inner_config)),
-                            Err(err) => {
-                                slog::warn!(
-                                    ctx.logger(),
-                                    "Failed to reload redaction config: {:?}",
-                                    err
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        Ok(ConfigeratorRedactedBlobs {
-            ctx,
-            handle,
-            blobstore,
-            inner_config,
-            _controlled_handle: controlled_handle,
-        })
+        Ok(ConfigeratorRedactedBlobs(reloader))
     }
 
     fn get_map(&self) -> Arc<HashMap<String, RedactedMetadata>> {
-        self.inner_config.load().map.clone()
+        self.0.load().map.clone()
     }
 }
 
