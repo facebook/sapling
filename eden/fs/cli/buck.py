@@ -59,7 +59,9 @@ def run_buck_command(
     if sys.platform != "win32":
         buckversion = "last"
     else:
-        buckversion = subprocess.run(["buck", "--version-fast"])
+        buckversion = subprocess.run(
+            ["buck", "--version-fast"], stdout=subprocess.PIPE, encoding="utf-8"
+        ).stdout.strip()
 
     env = get_environment_suitable_for_subprocess()
 
