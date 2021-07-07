@@ -86,7 +86,7 @@ def _cleanuplanded(repo, dryrun=False):
     for diffid, draftnodes in sorted(difftodraft.items()):
         publicnode = difftopublic.get(diffid)
         if checklocalversions:
-            draftnodes = draftnodes & difftolocal.get(diffid)
+            draftnodes = draftnodes & difftolocal.get(diffid, set())
         if publicnode is None or publicnode not in unfi:
             continue
         # skip it if the local repo does not think it's a public commit.
