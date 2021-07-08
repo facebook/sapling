@@ -222,6 +222,7 @@ class HgRepository(repobase.Repository):
             if system_hgrc_path:
                 f.write("%%include %s\n" % system_hgrc_path)
             hgrc.write(f)
+            f.write("[hooks]\npost-pull.changelo-migrate=")
 
     def get_type(self) -> str:
         return "hg"
