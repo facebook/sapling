@@ -1359,7 +1359,12 @@ impl FetchState {
             tracing::warn!("contentstore fallback returned serialized lfs pointer");
         } else {
             tracing::warn!(
-                "contentstore fetched a file scmstore couldn't, this indicates a bug or unsupported configuration"
+                "contentstore fetched a file scmstore couldn't, \
+                this indicates a bug or unsupported configuration: \
+                fetched key '{}', found {} bytes of content with metadata {:?}.",
+                key,
+                bytes.len(),
+                meta,
             );
             self.fallbacks.fetch_hit_content(&key);
             self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
