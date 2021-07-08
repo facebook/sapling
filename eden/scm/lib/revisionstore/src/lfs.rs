@@ -1525,9 +1525,11 @@ impl LfsRemote {
             }
             let proxy_unix_socket = get_auth_proxy_socket_path(config)?;
 
-            let use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
+            let mut use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
+
             let auth = if proxy_unix_socket.is_some() {
                 url.set_scheme("http").expect("Couldn't change url scheme");
+                use_client_certs = false;
                 None
             } else if use_client_certs {
                 AuthSection::from_config(config).best_match_for(&url)?
