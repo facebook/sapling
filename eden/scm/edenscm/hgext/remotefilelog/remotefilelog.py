@@ -638,8 +638,12 @@ class remotefileslog(filelog.fileslog):
             self.logfetches()
 
         if self.filescmstore:
-            self.filescmstore.flush()
-            self.logfetches()
+            if (
+                not self.contentstore
+                or type(self.contentstore) is not revisionstore.filescmstore
+            ):
+                self.filescmstore.flush()
+                self.logfetches()
 
         if self.metadatastore:
             self.metadatastore.flush()

@@ -17,8 +17,8 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { fallback : { fetch : 2,
-                             fetchhitcontent : 2,
+  { metrics : { fallback : { fetch : 1,
+                             fetchhitcontent : 1,
                              fetchhitptr : 0,
                              fetchmiss : 0,
                              writeptr : 0},
@@ -72,8 +72,8 @@ the server supports our custom getfiles method.
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  { metrics : { fallback : { fetch : 2,
-                             fetchhitcontent : 2,
+  { metrics : { fallback : { fetch : 1,
+                             fetchhitcontent : 1,
                              fetchhitptr : 0,
                              fetchmiss : 0,
                              writeptr : 0},
@@ -115,8 +115,8 @@ the server supports our custom getfiles method.
   adding file changes
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
   added 3 changesets with 4 changes to 3 files
-  { metrics : { fallback : { fetch : 2,
-                             fetchhitcontent : 2,
+  { metrics : { fallback : { fetch : 1,
+                             fetchhitcontent : 1,
                              fetchhitptr : 0,
                              fetchmiss : 0,
                              writeptr : 0},
@@ -141,8 +141,8 @@ the server supports our custom getfiles method.
   adding file changes
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   added 3 changesets with 4 changes to 3 files
-  remote: { metrics : { fallback : { fetch : 2,
-  remote:                            fetchhitcontent : 2,
+  remote: { metrics : { fallback : { fetch : 1,
+  remote:                            fetchhitcontent : 1,
   remote:                            fetchhitptr : 0,
   remote:                            fetchmiss : 0,
   remote:                            writeptr : 0},
@@ -150,8 +150,8 @@ the server supports our custom getfiles method.
   remote:                       getpack : { calls : 1,  revs : 1},
   remote:                       read : { bytes : 625},
   remote:                       write : { bytes : 147}}}}
-  { metrics : { fallback : { fetch : 2,
-                             fetchhitcontent : 2,
+  { metrics : { fallback : { fetch : 1,
+                             fetchhitcontent : 1,
                              fetchhitptr : 0,
                              fetchmiss : 0,
                              writeptr : 0},

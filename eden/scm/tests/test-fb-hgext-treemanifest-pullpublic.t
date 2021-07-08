@@ -24,8 +24,8 @@ Clone it
   fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  { metrics : { fallback : { fetch : 4,
-                             fetchhitcontent : 4,
+  { metrics : { fallback : { fetch : 2,
+                             fetchhitcontent : 2,
                              fetchhitptr : 0,
                              fetchmiss : 0,
                              writeptr : 0},
