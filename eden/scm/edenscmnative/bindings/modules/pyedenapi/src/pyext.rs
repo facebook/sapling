@@ -25,7 +25,7 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HgFilenodeData,
-    HistoryEntry, LookupResponse, TreeEntry, UploadHgFilenodeResponse,
+    HistoryEntry, LookupResponse, TreeEntry, UploadHgFilenodeResponse, UploadTreeResponse,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
@@ -38,7 +38,7 @@ use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
     as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid, to_hgid, to_hgids,
-    to_keys, to_keys_with_parents, to_path, to_tree_attrs, wrap_callback,
+    to_keys, to_keys_with_parents, to_path, to_tree_attrs, to_trees_upload_items, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -608,6 +608,38 @@ pub trait EdenApiPyExt: EdenApi {
                         .upload_filenodes_batch(repo, filenodes_data, None)
                         .await?;
 
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+
+    /// Upload trees
+    fn uploadtrees_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        items: Vec<(
+            PyBytes, /* hgid */
+            PyBytes, /* p1 */
+            PyBytes, /* p2 */
+            PyBytes, /* data */
+        )>,
+        callback: Option<PyObject>,
+        _progress: Arc<dyn ProgressFactory>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
+        let items = to_trees_upload_items(py, &items)?;
+        let callback = callback.map(wrap_callback);
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self.upload_trees_batch(repo, items, callback).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
