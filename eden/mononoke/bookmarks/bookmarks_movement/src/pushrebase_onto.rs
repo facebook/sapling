@@ -167,7 +167,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             flags.rewritedates = rewritedates;
         }
 
-        ctx.scuba().clone().log_with_msg("Pushrebase started", None);
+        ctx.scuba()
+            .clone()
+            .add("bookmark", self.bookmark.to_string())
+            .log_with_msg("Pushrebase started", None);
         let (stats, result) = pushrebase::do_pushrebase_bonsai(
             ctx,
             repo,
@@ -186,6 +189,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             Ok(outcome) => scuba_logger
                 .add("pushrebase_retry_num", outcome.retry_num.0)
                 .add("pushrebase_distance", outcome.pushrebase_distance.0)
+                .add("bookmark", self.bookmark.to_string())
                 .add("changeset_id", format!("{}", outcome.head))
                 .log_with_msg("Pushrebase finished", None),
             Err(err) => scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err))),

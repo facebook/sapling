@@ -175,6 +175,12 @@ impl<'op> CreateBookmarkOp<'op> {
                 {
                     txn_hook = None;
                 }
+
+                ctx.scuba()
+                    .clone()
+                    .add("bookmark", self.bookmark.to_string())
+                    .log_with_msg("Creating scratch bookmark", None);
+
                 txn.create_scratch(self.bookmark, self.target)?;
                 vec![]
             }
@@ -217,6 +223,11 @@ impl<'op> CreateBookmarkOp<'op> {
 
                 let (txn_hook_res, to_log) = futures::join!(txn_hook_fut, to_log);
                 txn_hook = txn_hook_res?;
+
+                ctx.scuba()
+                    .clone()
+                    .add("bookmark", self.bookmark.to_string())
+                    .log_with_msg("Creating public bookmark", None);
 
                 txn.create(self.bookmark, self.target, self.reason, self.bundle_replay)?;
                 to_log

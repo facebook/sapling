@@ -242,6 +242,11 @@ impl<'op> UpdateBookmarkOp<'op> {
                 {
                     txn_hook = None;
                 }
+
+                ctx.scuba()
+                    .clone()
+                    .add("bookmark", self.bookmark.to_string())
+                    .log_with_msg("Updating scratch bookmark", None);
                 txn.update_scratch(self.bookmark, self.targets.new, self.targets.old)?;
 
                 vec![]
@@ -285,6 +290,11 @@ impl<'op> UpdateBookmarkOp<'op> {
 
                 let (txn_hook_res, to_log) = futures::join!(txn_hook_fut, to_log);
                 txn_hook = txn_hook_res?;
+
+                ctx.scuba()
+                    .clone()
+                    .add("bookmark", self.bookmark.to_string())
+                    .log_with_msg("Updating public bookmark", None);
 
                 txn.update(
                     self.bookmark,

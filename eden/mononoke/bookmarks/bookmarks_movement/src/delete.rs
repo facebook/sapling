@@ -104,6 +104,10 @@ impl<'op> DeleteBookmarkOp<'op> {
 
         check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
 
+        ctx.scuba()
+            .clone()
+            .add("bookmark", self.bookmark.to_string())
+            .log_with_msg("Deleting bookmark", None);
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         txn.delete(
             self.bookmark,
