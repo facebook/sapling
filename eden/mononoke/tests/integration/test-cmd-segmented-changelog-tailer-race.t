@@ -119,7 +119,7 @@ Run many Segmented Changelog Tailer processes.
   $ hgedenapi debugsegmentclone repo segmentrepo  --traceback
   $ cd segmentrepo
 
-  $ hgedenapi log -r "all()" -G -T "{node|short} {desc} {remotenames}" --config "remotefilelog.reponame=repo" | sed 's/^[ \t]*$/$/'
+  $ hgedenapi log -r "all()" -G -T "{node|short} {desc} {remotenames}" | sed 's/^[ \t]*$/$/'
   o    bbb42bb653ac Z: merge branch 3 remote/master
   ├─╮
   │ o    b8e3096285c8 Z: merge branch 2
@@ -179,7 +179,7 @@ Run many Segmented Changelog Tailer processes.
   o  426bada5c675 A
   $
 
-  $ hgedenapi log -r "ancestors('remote/master')" -T "{node}: {p1node}, {p2node}\n" --config "remotefilelog.reponame=repo" | sort > "${TESTTMP}/parents.out"
+  $ hgedenapi log -r "ancestors('remote/master')" -T "{node}: {p1node}, {p2node}\n" | sort > "${TESTTMP}/parents.out"
 
   $ diff "${TESTTMP}/parents.in" "${TESTTMP}/parents.out"
 
