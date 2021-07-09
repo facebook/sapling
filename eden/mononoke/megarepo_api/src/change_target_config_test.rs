@@ -9,7 +9,7 @@ use crate::add_sync_target::AddSyncTarget;
 use crate::change_target_config::ChangeTargetConfig;
 use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
 use anyhow::Error;
-// use blobstore::Loadable;
+use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::{btreemap, hashmap};
@@ -86,19 +86,19 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
         }
     );
 
-    // let target_bonsai = target_cs_id.load(&ctx, &test.blobrepo.blobstore()).await?;
-    // assert_eq!(
-    //     target_bonsai
-    //         .file_changes()
-    //         .map(|(a, _b)| a.clone())
-    //         .collect::<Vec<_>>(),
-    //     vec![
-    //         MPath::new(".megarepo/remapping_state")?,
-    //         MPath::new("linkfiles/first")?,
-    //         MPath::new("linkfiles/second")?,
-    //         MPath::new("source_2/second")?
-    //     ],
-    // );
+    let target_bonsai = target_cs_id.load(&ctx, &test.blobrepo.blobstore()).await?;
+    assert_eq!(
+        target_bonsai
+            .file_changes()
+            .map(|(a, _b)| a.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            MPath::new(".megarepo/remapping_state")?,
+            MPath::new("linkfiles/first")?,
+            MPath::new("linkfiles/second")?,
+            MPath::new("source_2/second")?
+        ],
+    );
 
     Ok(())
 }

@@ -6,22 +6,30 @@
  */
 
 use crate::common::{find_target_bookmark_and_value, find_target_sync_config, MegarepoOp};
-use anyhow::anyhow;
+use anyhow::{anyhow, Error};
 use blobrepo::save_bonsai_changesets;
+use blobrepo_hg::BlobRepoHg;
+use blobstore::Loadable;
 use commit_transformation::create_source_to_target_multi_mover;
 use context::CoreContext;
 use core::cmp::Ordering;
 use derived_data_utils::derived_data_utils;
 use futures::future;
-use futures::{stream::FuturesUnordered, TryStreamExt};
+use futures::{
+    future::{try_join, try_join_all},
+    stream::FuturesUnordered,
+    TryStreamExt,
+};
 use itertools::{EitherOrBoth, Itertools};
+use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, SourceName};
+use mercurial_types::HgFileNodeId;
 use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, MPath};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath};
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
@@ -328,6 +336,30 @@ impl<'a> ChangeTargetConfig<'a> {
         ))
     }
 
+    // In this diff we want to apply all file removals and add all the new
+    // file additions from additions_merge commit.
+    // The easiest way to do it is to create a deletion commit on top of
+    // target commit and then merge it with `additions_merge` commit.
+    // The problem is that deletion commit would be a broken commit
+    // on the mainline, which can affect things like bisects.
+    // To avoid having this deletion commit in the main line of development
+    // we do the following:
+    // 1) Produce a merge commit whose parents are additions_merge and deletion commit
+    //
+    //     M1
+    //     | \
+    //    Del  Adds
+    //     |
+    //   Old target
+    //
+    // 2) Use merge commit's manifest to produce a new bonsai commit merge whose parent is not
+    //    a deletion commit.
+    //
+    //     M2
+    //     | \
+    //     |  Adds
+    //     |
+    //    Old target
     async fn create_final_merge_commit_with_removals(
         &self,
         ctx: &CoreContext,
@@ -384,7 +416,9 @@ impl<'a> ChangeTargetConfig<'a> {
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: message.unwrap_or("target config change".to_string()),
+            message: message
+                .clone()
+                .unwrap_or("target config change".to_string()),
             extra: SortedVectorMap::new(),
             file_changes: SortedVectorMap::new(),
         };
@@ -393,7 +427,28 @@ impl<'a> ChangeTargetConfig<'a> {
             .await?;
         let merge = bcs.freeze()?;
         save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
-        Ok(merge.get_changeset_id())
+
+        // We don't want to have deletion commit on our mainline. So we'd like to create a new
+        // merge commit whose parent is not a deletion commit. For that we take the manifest
+        // from the merge commit we already have, and use bonsai_diff function to create a new
+        // merge commit, whose parent is not an old_target changeset, not a deletion commit.
+
+        let mut new_parents = vec![old_target_cs.id()];
+        if let Some(additions_merge) = additions_merge {
+            new_parents.push(additions_merge.id());
+        }
+
+        let result = self
+            .create_new_changeset_using_parents(
+                ctx,
+                repo,
+                merge.get_changeset_id(),
+                new_parents,
+                message,
+            )
+            .await?;
+
+        Ok(result)
     }
 
     // Return all paths from the given source as seen in target.
@@ -531,6 +586,77 @@ impl<'a> ChangeTargetConfig<'a> {
             .await?;
 
         Ok(())
+    }
+
+    async fn create_new_changeset_using_parents(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        merge_commit: ChangesetId,
+        new_parent_commits: Vec<ChangesetId>,
+        message: Option<String>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let blob_repo = repo.blob_repo();
+        let hg_cs_merge = async {
+            let hg_cs_id = blob_repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), merge_commit)
+                .await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            Ok(hg_cs.manifestid())
+        };
+        let parent_hg_css = try_join_all(new_parent_commits.iter().map(|p| async move {
+            let hg_cs_id = blob_repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), *p)
+                .await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            Result::<_, Error>::Ok(hg_cs.manifestid())
+        }));
+
+        let (hg_cs_merge, parent_hg_css) = try_join(hg_cs_merge, parent_hg_css)
+            .await
+            .map_err(Error::from)?;
+
+        let file_changes = bonsai_diff(
+            ctx.clone(),
+            blob_repo.get_blobstore(),
+            hg_cs_merge,
+            parent_hg_css.into_iter().collect(),
+        )
+        .map_ok(|diff| async move {
+            match diff {
+                BonsaiDiffFileChange::Changed(path, ty, entry_id)
+                | BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
+                    let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                    let envelope = file_node_id.load(ctx, blob_repo.blobstore()).await?;
+                    let size = envelope.content_size();
+                    let content_id = envelope.content_id();
+
+                    Ok((
+                        path,
+                        Some(FileChange::new(content_id, ty, size as u64, None)),
+                    ))
+                }
+                BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
+            }
+        })
+        .try_buffer_unordered(100)
+        .try_collect::<std::collections::BTreeMap<_, _>>()
+        .await?;
+
+        let bcs = BonsaiChangesetMut {
+            parents: new_parent_commits,
+            author: "svcscm".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: message.unwrap_or("target config change".to_string()),
+            extra: SortedVectorMap::new(),
+            file_changes: file_changes.into_iter().collect(),
+        };
+        let merge = bcs.freeze()?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
+
+        Ok(merge.get_changeset_id())
     }
 }
 
