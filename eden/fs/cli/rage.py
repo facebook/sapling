@@ -271,8 +271,10 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
         return
     try:
         out.write(b"\nedenfs process tree:\n")
+        output = subprocess.check_output(["ps", "-o", "sid=", "-p", str(pid)])
+        sid = output.decode("utf-8").strip()
         output = subprocess.check_output(
-            ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", str(pid)]
+            ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", sid]
         )
         out.write(output)
     except Exception as e:
