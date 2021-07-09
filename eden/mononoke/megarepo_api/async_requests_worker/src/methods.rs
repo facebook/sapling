@@ -97,6 +97,12 @@ pub(crate) async fn megarepo_async_request_compute(
                 .await
                 .into()
         }
+        megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(_params) => {
+            Err::<thrift::MegarepoChangeTargetConfigResponse, _>(MegarepoError::internal(anyhow!(
+                "add_branching_sync_target is not implemented yet!",
+            )))
+            .into()
+        }
         megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
             megarepo_change_target_config(ctx, megarepo_api, params)
                 .await

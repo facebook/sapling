@@ -20,30 +20,35 @@ use megarepo_types_thrift::{
 use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context};
 use requests_table::RowId;
 use source_control::{
+    MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
     MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
     MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams,
     MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams,
     MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams,
 };
 use source_control::{
+    MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse,
     MegarepoAddTargetPollResponse as ThriftMegarepoAddTargetPollResponse,
     MegarepoChangeTargetConfigPollResponse as ThriftMegarepoChangeTargetConfigPollResponse,
     MegarepoRemergeSourcePollResponse as ThriftMegarepoRemergeSourcePollResponse,
     MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChangesetPollResponse,
 };
 use source_control::{
+    MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse,
     MegarepoAddTargetResponse as ThriftMegarepoAddTargetResponse,
     MegarepoChangeTargetConfigResponse as ThriftMegarepoChangeTargetConfigResponse,
     MegarepoRemergeSourceResponse as ThriftMegarepoRemergeSourceResponse,
     MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse,
 };
 use source_control::{
+    MegarepoAddBranchingTargetResult as ThriftMegarepoAddBranchingTargetResult,
     MegarepoAddTargetResult as ThriftMegarepoAddTargetResult,
     MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult,
     MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult,
     MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult,
 };
 use source_control::{
+    MegarepoAddBranchingTargetToken as ThriftMegarepoAddBranchingTargetToken,
     MegarepoAddTargetToken as ThriftMegarepoAddTargetToken,
     MegarepoChangeConfigToken as ThriftMegarepoChangeConfigToken,
     MegarepoRemergeSourceToken as ThriftMegarepoRemergeSourceToken,
@@ -425,6 +430,28 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for megarepo_add_sync_target
+
+impl_async_svc_method_types! {
+    method_name => "megarepo_add_branching_sync_target",
+    request_struct => MegarepoAddBranchingSyncTarget,
+
+    params_value_thrift_type => ThriftMegarepoAddBranchingTargetParams,
+    params_union_variant => megarepo_add_branching_target_params,
+
+    result_value_thrift_type => ThriftMegarepoAddBranchingTargetResult,
+    result_union_variant => megarepo_add_branching_target_result,
+
+    response_type => ThriftMegarepoAddBranchingTargetResponse,
+    poll_response_type => ThriftMegarepoAddBranchingTargetPollResponse,
+    token_type => MegarepoAddBranchingTargetToken,
+    token_thrift_type => ThriftMegarepoAddBranchingTargetToken,
+
+    fn target(&self: ThriftParams) -> &Target {
+        &self.target
+    }
+}
+
 // Params and result types for megarepo_change_target_config
 
 impl_async_svc_method_types! {
@@ -513,6 +540,9 @@ impl MegarepoAsynchronousRequestParams {
             ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(params) => {
                 Ok(params.target())
             }
+            ThriftMegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(
+                params,
+            ) => Ok(params.target()),
             ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
                 Ok(params.target())
             }

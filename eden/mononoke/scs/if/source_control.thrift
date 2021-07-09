@@ -945,6 +945,13 @@ struct MegarepoAddTargetToken {
     2: i64 id,
 }
 
+struct MegarepoAddBranchingTargetToken {
+    // A target this token relates to
+    1: megarepo_configs.Target target,
+    // An actual token payload
+    2: i64 id,
+}
+
 // Params for the megarepo_add_sync_target_config method
 struct MegarepoAddConfigParams {
     // New config to be added to the config library
@@ -977,6 +984,16 @@ struct MegarepoAddTargetParams {
     // A message to be used in the commit description
     // If not provided, service will generate commit description
     3: optional string message,
+}
+
+// Params for megarepo_add_sync_target method
+struct MegarepoAddBranchingTargetParams {
+    // A new target to be created
+    1: megarepo_configs.Target target,
+    // The specified commit will be used as parent of the first commit in the
+    // newly created target. The megarepo config used to create the branching
+    // point will be used as the base for the new target config.
+    2: megarepo_configs.ChangesetId branching_point,
 }
 
 // Params for megarepo_change_target_config method
@@ -1248,6 +1265,21 @@ union MegarepoAddTargetResult {
 struct MegarepoAddTargetPollResponse {
     // Maybe a response to an underlying call, if it is ready
     1: optional MegarepoAddTargetResult result,
+}
+
+struct MegarepoAddBranchingTargetResponse {
+    // A new position of the target bookmark
+    1: megarepo_configs.ChangesetId cs_id
+}
+
+union MegarepoAddBranchingTargetResult {
+    1: MegarepoAddBranchingTargetResponse success,
+    2: MegarepoAsynchronousRequestError error,
+}
+
+struct MegarepoAddBranchingTargetPollResponse {
+    // Maybe a response to an underlying call, if it is ready
+    1: optional MegarepoAddBranchingTargetResult result,
 }
 
 struct MegarepoChangeTargetConfigResponse {
@@ -1659,6 +1691,22 @@ service SourceControlService extends fb303.FacebookService {
     /// Poll the execution of megarepo_add_sync_target request
     MegarepoAddTargetPollResponse megarepo_add_sync_target_poll(
         1: MegarepoAddTargetToken token
+    ) throws (
+        1: RequestError request_error,
+        2: InternalError internal_error,
+    )
+
+    // Add a new target that branches off existing target.
+    MegarepoAddBranchingTargetToken megarepo_add_branching_sync_target(
+        1: MegarepoAddBranchingTargetParams params
+    ) throws (
+        1: RequestError request_error,
+        2: InternalError internal_error,
+    ),
+
+    /// Poll the execution of megarepo_add_sync_target request
+    MegarepoAddBranchingTargetPollResponse megarepo_add_branching_sync_target_poll(
+        1: MegarepoAddBranchingTargetToken token
     ) throws (
         1: RequestError request_error,
         2: InternalError internal_error,
