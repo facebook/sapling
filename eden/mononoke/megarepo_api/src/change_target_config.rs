@@ -21,9 +21,9 @@ use megarepo_config::{
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, SourceName};
 use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, MPath};
 use sorted_vector_map::SortedVectorMap;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 use std::sync::Arc;
 
@@ -248,6 +248,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 &additions_merge,
                 &old_target_cs,
                 &new_remapping_state,
+                new_config.version,
             )
             .await?;
         let mut scuba = ctx.scuba().clone();
@@ -336,128 +337,44 @@ impl<'a> ChangeTargetConfig<'a> {
         additions_merge: &Option<ChangesetContext>,
         old_target_cs: &ChangesetContext,
         state: &CommitRemappingState,
+        new_version: String,
     ) -> Result<ChangesetId, MegarepoError> {
-        let mut file_changes = HashMap::new();
-        let mut seen_paths = HashSet::new();
-        // For each file in each removed source, map it paths in Target it's
-        // mapped to and:
-        //  * stage it for removal if it's missing in the new target.
-        //  * set it's content to the one from additions_cs if it's present there
-        //    and different from the one in additions changeset.
-        //  * ignore it if it's the same as in additions changeset.
+        let mut all_removed_files = HashSet::new();
         for (source, source_cs_id) in &diff.removed {
             let paths_in_target_belonging_to_source = self
                 .paths_in_target_belonging_to_source(ctx, source, *source_cs_id)
                 .await?;
-
-            if let Some(additions_merge) = additions_merge {
-                // None means no file change added to bonsai. Some(None) means
-                // file deletion will be logged in bosai.
-                let changes_for_source: Vec<(MononokePath, Option<Option<FileChange>>)> = additions_merge
-                    .paths_with_content(paths_in_target_belonging_to_source.clone().into_iter())
-                    .await
-                    .map_err(MegarepoError::internal)?
-                    .map_err(MegarepoError::internal)
-                    .and_then(async move |path_ctx| {
-                        let file_type = path_ctx.file_type().await.map_err(MegarepoError::internal)?;
-                        let change = if let Some(file) =
-                            path_ctx.file().await.map_err(MegarepoError::internal)?
-                        {
-                            let cs_path_in_old_target = old_target_cs.path_with_content(path_ctx.path().clone())?;
-                            let file_id_in_old_target = cs_path_in_old_target.file().await?.ok_or_else(|| {
-                                MegarepoError::internal(anyhow!(
-                                    "programming error - the path {} should be present in target", path_ctx.path()
-                                ))
-                            })?.id().await?;
-                            let file_type_in_old_target = cs_path_in_old_target.file_type().await?;
-
-                            let content_id = file.id().await?;
-                            if content_id == file_id_in_old_target && file_type == file_type_in_old_target {
-                                // The content hash is the same on both sides of
-                                // the merge, no need to include it in bonsai.
-                                return Ok((path_ctx.path().clone(), None));
-                            }
-                            // File is present in additions and different, let's
-                            // resolve the conflict.
-                            let change = FileChange::new(
-                                content_id,
-                                path_ctx.file_type().await?.ok_or_else(|| {
-                                    MegarepoError::internal(anyhow!(
-                                        "programming error - file type is missing"
-                                    ))
-                                })?,
-                                file.metadata().await?.total_size,
-                                None,
-                            );
-                            Ok::<_, MegarepoError>(Some(change))
-                        } else {
-                            // Path is present in additions but it is not a file,
-                            // let's mark the file it as removed.
-                            Ok(None)
-                        }?;
-                        Ok((path_ctx.path().clone(), Some(change)))
-                    })
-                    .try_collect()
-                    .await?;
-
-                for (path, maybe_change) in changes_for_source {
-                    seen_paths.insert(path.clone());
-                    if let Some(change) = maybe_change {
-                        file_changes.insert(
-                            path.into_mpath().ok_or_else(|| {
-                                MegarepoError::internal(anyhow!(
-                                    "programming error - file mpath can't be None"
-                                ))
-                            })?,
-                            change,
-                        );
-                    }
-                }
-            }
-            // Mark the paths missing from additions as removed.
-            for path in paths_in_target_belonging_to_source {
-                if !seen_paths.contains(&path) {
-                    file_changes.insert(
-                        path.into_mpath().ok_or_else(|| {
-                            MegarepoError::internal(anyhow!(
-                                "programming error - file mpath can't be None"
-                            ))
-                        })?,
-                        None,
-                    );
+            for path in &paths_in_target_belonging_to_source {
+                if let Some(path) = path.clone().into_mpath() {
+                    all_removed_files.insert(path);
                 }
             }
         }
 
-        let mut parents = vec![old_target_cs.id()];
+        let maybe_deletion_commit = if !all_removed_files.is_empty() {
+            Some(
+                self.create_deletion_commit(
+                    ctx,
+                    repo,
+                    old_target_cs,
+                    all_removed_files.clone(),
+                    new_version,
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
 
+        let p1 = maybe_deletion_commit.unwrap_or(old_target_cs.id());
+
+        let mut parents = vec![p1];
         // Verify that none of the files that will be merged in collides
         // with what's already in the target.
         if let Some(additions_merge) = additions_merge {
-            additions_merge
-                .find_files(None, None)
-                .await?
-                .map_err(MegarepoError::internal)
-                .try_for_each({
-                    let seen_paths = &seen_paths;
-                    async move |path| {
-                        if seen_paths.contains(&path) {
-                            Ok(())
-                        } else if old_target_cs
-                            .path_with_content(path.clone())?
-                            .exists()
-                            .await?
-                        {
-                            Err(MegarepoError::request(anyhow!(
-                                "path {} cannot be added to the target - it's already present",
-                                &path
-                            )))
-                        } else {
-                            Ok(())
-                        }
-                    }
-                })
+            self.verify_no_file_conflicts(repo, additions_merge, p1)
                 .await?;
+
             parents.push(additions_merge.id())
         }
 
@@ -469,7 +386,7 @@ impl<'a> ChangeTargetConfig<'a> {
             committer_date: None,
             message: message.unwrap_or("target config change".to_string()),
             extra: SortedVectorMap::new(),
-            file_changes: file_changes.into_iter().collect(),
+            file_changes: SortedVectorMap::new(),
         };
         state
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
@@ -517,6 +434,103 @@ impl<'a> ChangeTargetConfig<'a> {
             .try_collect()?;
         all_paths.extend(linkfiles.into_iter());
         Ok(all_paths)
+    }
+
+    async fn create_deletion_commit(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        old_target_cs: &ChangesetContext,
+        removed_files: HashSet<MPath>,
+        new_version: String,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let file_changes = removed_files.into_iter().map(|path| (path, None)).collect();
+        let old_target_with_removed_files = BonsaiChangesetMut {
+            parents: vec![old_target_cs.id()],
+            author: "svcscm".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: format!("Deletion commit for {}", new_version),
+            extra: SortedVectorMap::new(),
+            file_changes,
+        };
+        let old_target_with_removed_files = old_target_with_removed_files.freeze()?;
+        save_bonsai_changesets(
+            vec![old_target_with_removed_files.clone()],
+            ctx.clone(),
+            repo.blob_repo().clone(),
+        )
+        .await?;
+
+        Ok(old_target_with_removed_files.get_changeset_id())
+    }
+
+    async fn verify_no_file_conflicts(
+        &self,
+        repo: &RepoContext,
+        additions_merge: &ChangesetContext,
+        p1: ChangesetId,
+    ) -> Result<(), MegarepoError> {
+        let p1 = repo
+            .changeset(p1)
+            .await?
+            .ok_or_else(|| anyhow!("p1 commit {} not found", p1))?;
+
+        // First find if any of the files from additions merge conflict
+        // with a file or a directory from the target - if target commit
+        // has these entries then we have a conflict
+        let additions = additions_merge
+            .find_files(None, None)
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        p1.paths(additions.clone().into_iter())
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_for_each({
+                async move |path_context| {
+                    Result::<(), _>::Err(MegarepoError::request(anyhow!(
+                        "path {} cannot be added to the target - it's already present",
+                        &path_context.path()
+                    )))
+                }
+            })
+            .await?;
+
+        // Now check if we have a file in target which has the same path
+        // as a directory in additions_merge i.e. detect file-dir conflit
+        // where file is from target and dir from additions_merge
+        let mut addition_prefixes = vec![];
+        for addition in additions {
+            for dir in addition.prefixes() {
+                addition_prefixes.push(dir);
+            }
+        }
+
+        p1.paths(addition_prefixes.into_iter())
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_for_each({
+                |path_context| async move {
+                    // We got file/dir conflict - old target has a file
+                    // with the same path as a directory in merge commit with additions
+                    if path_context.is_file().await? {
+                        // TODO(stash): it would be good to show which file it conflicts with
+                        Result::<(), _>::Err(MegarepoError::request(anyhow!(
+                            "File in target path {} conflicts with newly added files",
+                            &path_context.path()
+                        )))
+                    } else {
+                        Ok(())
+                    }
+                }
+            })
+            .await?;
+
+        Ok(())
     }
 }
 
