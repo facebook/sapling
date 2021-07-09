@@ -14,7 +14,7 @@ use quickcheck::Arbitrary;
 
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{DirectoryMetadata, EdenApiServerError, FileMetadata, InvalidHgId};
+use crate::{DirectoryMetadata, EdenApiServerError, FileMetadata, InvalidHgId, UploadToken};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -48,7 +48,7 @@ impl TreeError {
 /// Structure representing source control tree entry on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
@@ -259,4 +259,22 @@ impl Arbitrary for TreeRequest {
             attributes: Arbitrary::arbitrary(g),
         }
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UploadTreeEntry {
+    pub node_id: HgId,
+    pub data: Vec<u8>,
+    pub parents: Parents,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadTreeRequest {
+    pub entry: UploadTreeEntry,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadTreeResponse {
+    pub index: usize,
+    pub token: UploadToken,
 }

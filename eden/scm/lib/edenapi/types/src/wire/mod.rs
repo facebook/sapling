@@ -83,7 +83,10 @@ pub use crate::wire::{
         WireFileMetadata, WireFileMetadataRequest, WireSha1, WireSha256,
     },
     token::{WireUploadToken, WireUploadTokenData, WireUploadTokenSignature},
-    tree::{WireTreeEntry, WireTreeRequest},
+    tree::{
+        WireTreeEntry, WireTreeRequest, WireUploadTreeEntry, WireUploadTreeRequest,
+        WireUploadTreeResponse,
+    },
 };
 
 use std::convert::Infallible;

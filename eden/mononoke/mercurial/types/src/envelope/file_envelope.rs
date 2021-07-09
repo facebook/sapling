@@ -91,12 +91,6 @@ impl HgFileEnvelope {
         })?)
     }
 
-    pub fn from_mut(mut_envelope: HgFileEnvelopeMut) -> Self {
-        Self {
-            inner: mut_envelope,
-        }
-    }
-
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
             .with_context(|| ErrorKind::BlobDeserializeError("HgFileEnvelope".into()))?;

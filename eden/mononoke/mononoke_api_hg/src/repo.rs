@@ -15,21 +15,20 @@ use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::compat::Stream01CompatExt;
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
-use mercurial_types::blobs::RevlogChangeset;
-use mercurial_types::{
-    HgChangesetId, HgFileEnvelope, HgFileEnvelopeMut, HgFileNodeId, HgManifestId,
-};
+use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
+use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifestId, HgNodeHash};
 use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{
     hash::{Sha1, Sha256},
-    ChangesetId, ContentId, MPath, MononokeId,
+    ChangesetId, ContentId, MPath, MononokeId, RepoPath,
 };
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
+use std::sync::Arc;
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -252,20 +251,49 @@ impl HgRepoContext {
         content_size: u64,
         metadata: Bytes,
     ) -> Result<(), MononokeError> {
-        let envelope = HgFileEnvelope::from_mut(HgFileEnvelopeMut {
+        let envelope = HgFileEnvelopeMut {
             node_id: filenode_id,
             p1,
             p2,
             content_id,
             content_size,
             metadata,
-        })
-        .into_blob();
+        };
+
         self.blob_repo()
             .blobstore()
-            .put(self.ctx(), filenode_id.blobstore_key(), envelope.into())
+            .put(
+                self.ctx(),
+                filenode_id.blobstore_key(),
+                envelope.freeze().into_blob().into(),
+            )
             .await
             .map_err(MononokeError::from)?;
+        Ok(())
+    }
+
+    /// Store Tree into blobstore
+    pub async fn store_tree(
+        &self,
+        upload_node_id: HgNodeHash,
+        p1: Option<HgNodeHash>,
+        p2: Option<HgNodeHash>,
+        contents: Bytes,
+    ) -> Result<(), MononokeError> {
+        let entry = UploadHgTreeEntry {
+            upload_node_id: UploadHgNodeHash::Checked(upload_node_id),
+            contents,
+            p1,
+            p2,
+            path: RepoPath::RootPath, // only used for logging
+        };
+        let (_, upload_future) = entry.upload(
+            self.ctx().clone(),
+            Arc::new(self.blob_repo().blobstore().clone()),
+        )?;
+
+        upload_future.compat().await.map_err(MononokeError::from)?;
+
         Ok(())
     }
 

@@ -13,11 +13,11 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{
     tree::{
         TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
-        TreeRequest,
+        TreeRequest, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
     },
     wire::{
         is_default, ToApi, ToWire, WireDirectoryMetadata, WireEdenApiServerError, WireFileMetadata,
-        WireKey, WireParents, WireToApiConversionError,
+        WireHgId, WireKey, WireParents, WireToApiConversionError, WireUploadToken,
     },
     EdenApiServerError,
 };
@@ -253,6 +253,102 @@ impl ToApi for WireTreeRequest {
                 }
             },
             attributes: self.attributes.to_api()?.unwrap_or_default(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WireUploadTreeEntry {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    node_id: WireHgId,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    data: Vec<u8>,
+
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    parents: WireParents,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireUploadTreeRequest {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    pub entry: WireUploadTreeEntry,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireUploadTreeResponse {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    pub index: usize,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub token: WireUploadToken,
+}
+
+impl ToWire for UploadTreeEntry {
+    type Wire = WireUploadTreeEntry;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadTreeEntry {
+            node_id: self.node_id.to_wire(),
+            data: self.data.to_wire(),
+            parents: self.parents.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadTreeEntry {
+    type Api = UploadTreeEntry;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadTreeEntry {
+            node_id: self.node_id.to_api()?,
+            data: self.data.to_api()?,
+            parents: self.parents.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadTreeRequest {
+    type Wire = WireUploadTreeRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadTreeRequest {
+            entry: self.entry.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadTreeRequest {
+    type Api = UploadTreeRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadTreeRequest {
+            entry: self.entry.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadTreeResponse {
+    type Wire = WireUploadTreeResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadTreeResponse {
+            index: self.index,
+            token: self.token.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadTreeResponse {
+    type Api = UploadTreeResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadTreeResponse {
+            index: self.index,
+            token: self.token.to_api()?,
         })
     }
 }

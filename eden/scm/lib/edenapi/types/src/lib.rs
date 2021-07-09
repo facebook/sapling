@@ -66,7 +66,7 @@ pub use crate::token::{
 };
 pub use crate::tree::{
     TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
-    TreeError, TreeRequest,
+    TreeError, TreeRequest, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 

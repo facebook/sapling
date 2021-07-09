@@ -6,13 +6,16 @@
  */
 
 use anyhow::{Context, Error};
+use bytes::Bytes;
 use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::WireTreeRequest, EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
+    wire::WireBatch, wire::WireTreeRequest, wire::WireUploadTreeRequest, AnyId, EdenApiServerError,
+    FileMetadata, ToWire, TreeChildEntry, TreeEntry, TreeRequest, UploadToken, UploadTreeRequest,
+    UploadTreeResponse,
 };
 use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
@@ -26,16 +29,22 @@ use types::{Key, RepoPathBuf};
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{custom_cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream, custom_cbor_stream, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
 const MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH: usize = 100;
+const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 100;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct TreeParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadTreesParams {
     repo: String,
 }
 
@@ -168,5 +177,48 @@ async fn fetch_child_file_metadata(
             content_id: Some((*fsnode.content_id()).into()),
             ..Default::default()
         },
+    ))
+}
+
+/// Store the content of a single tree
+async fn store_tree(
+    repo: HgRepoContext,
+    item: UploadTreeRequest,
+    index: usize,
+) -> Result<UploadTreeResponse, Error> {
+    let upload_node_id = HgNodeHash::from(item.entry.node_id);
+    let contents = item.entry.data;
+    let p1 = item.entry.parents.p1().cloned().map(HgNodeHash::from);
+    let p2 = item.entry.parents.p2().cloned().map(HgNodeHash::from);
+    repo.store_tree(upload_node_id, p1, p2, Bytes::from(contents))
+        .await?;
+    Ok(UploadTreeResponse {
+        index,
+        token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id)),
+    })
+}
+
+/// Upload list of trees requested by the client (batch request).
+pub async fn upload_trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = UploadTreesParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::UploadTrees));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let request = parse_wire_request::<WireBatch<WireUploadTreeRequest>>(state).await?;
+
+    let tokens = request
+        .batch
+        .into_iter()
+        .enumerate()
+        .map(move |(i, item)| store_tree(repo.clone(), item, i));
+
+    Ok(cbor_stream(
+        stream::iter(tokens)
+            .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
+            .map(|r| r.map(|v| v.to_wire())),
     ))
 }

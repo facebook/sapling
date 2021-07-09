@@ -35,6 +35,7 @@ define_stats! {
     upload_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     pull_fast_forward_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_hg_filenodes_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    upload_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -77,6 +78,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 UploadFile => STATS::upload_file_duration_ms.add_value(dur_ms),
                 PullFastForwardMaster => STATS::pull_fast_forward_duration_ms.add_value(dur_ms),
                 UploadHgFilenodes => STATS::upload_hg_filenodes_duration_ms.add_value(dur_ms),
+                UploadTrees => STATS::upload_trees_duration_ms.add_value(dur_ms),
             }
         }
 
