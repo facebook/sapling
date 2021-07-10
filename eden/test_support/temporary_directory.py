@@ -60,7 +60,11 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
 
         try:
             # func() is the function that failed.
-            # This is usually os.unlink() or os.rmdir().
+            # This is usually os.unlink() or os.rmdir(). I have started to see
+            # open fail as well. We don't have all the right arguments to retry
+            # the call, so we just have to deal with the failure. If you are
+            # debugging failures here, this is probably not the root cause of
+            # the problem, but a error cleaning up a broken test.
             if func not in (os.unlink, os.rmdir):
                 raise ex
 

@@ -78,21 +78,31 @@ class BaseSystemdUserServiceManager:
     ) -> None:
         service = SystemdService(unit_name=unit_name, systemd=self)
         actual_unit_file = service.query_fragment_path()
-        if actual_unit_file != expected_unit_file:
+        resolved_actual_unit_file = os.path.realpath(actual_unit_file)
+        resolved_expected_unit_file = os.path.realpath(expected_unit_file)
+        if resolved_actual_unit_file != resolved_expected_unit_file:
             raise Exception(
                 f"Enabled unit's FragmentPath does not match unit file\n"
-                f"Expected: {expected_unit_file}\n"
-                f"Actual:   {actual_unit_file}"
+                f"Expected: {expected_unit_file} "
+                f"which resolves to: {resolved_expected_unit_file}\n"
+                f"Actual:   {actual_unit_file} "
+                f"which resolves to: {resolved_actual_unit_file}"
             )
 
     def sanity_check_enabled_unit_sources(
         self, unit_name: SystemdUnitName, expected_unit_file: pathlib.Path
     ) -> None:
         actual_unit_sources = self._systemctl.check_output(["cat", "--", unit_name])
+        service = SystemdService(unit_name=unit_name, systemd=self)
+        actual_unit_file = service.query_fragment_path()
 
         expected_unit_sources = b""
         for file in [expected_unit_file]:
-            expected_unit_sources += b"# " + bytes(file) + b"\n"
+            # One would expect the `file` name to be used here. We do not
+            # because the actual file might be a symlink to the expected file
+            # so the name of the actual file might look different. We use the
+            # `actual_unit_file` name to handle these symlinks.
+            expected_unit_sources += b"# " + bytes(actual_unit_file) + b"\n"
             expected_unit_sources += file.read_bytes()
 
         if actual_unit_sources != expected_unit_sources:
