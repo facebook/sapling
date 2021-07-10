@@ -5,7 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Once;
+use parking_lot::Mutex;
+use std::env;
+use std::sync::{Arc, Once};
+use tracing::Level;
+use tracing_collector::TracingData;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::fmt::Layer as FmtLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::{EnvFilter, Layer};
 
 static RUST_INIT: Once = Once::new();
 
@@ -14,6 +22,16 @@ static RUST_INIT: Once = Once::new();
 /// `edenapi` and other crates. In longer term we should bridge the logs to folly logging.
 pub(crate) fn backingstore_global_init() {
     RUST_INIT.call_once(|| {
+        if env::var("EDENSCM_LOG").is_ok() {
+            let data = Arc::new(Mutex::new(TracingData::new()));
+            let collector = tracing_collector::default_collector(data, Level::TRACE);
+            let env_filter = EnvFilter::from_env("EDENSCM_LOG");
+            let env_logger = FmtLayer::new().with_span_events(FmtSpan::ACTIVE);
+            let collector = collector.with(env_filter.and_then(env_logger));
+            if let Err(e) = tracing::subscriber::set_global_default(collector) {
+                eprintln!("Failed to set rust tracing subscriber: {:?}", e);
+            }
+        }
         env_logger::init();
     });
 }
