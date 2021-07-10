@@ -940,6 +940,7 @@ class localrepository(object):
                 for name in bookmarknames:
                     if name in remotebookmarks:
                         hexnode = remotebookmarks[name]
+                        newnode = bin(hexnode)
                         if (
                             name == bookmarks.mainbookmark(self)
                             and self.ui.configbool("pull", "master-fastpath")
@@ -950,14 +951,19 @@ class localrepository(object):
                             dag = self.changelog.dag
                             mastergroup = dag.mastergroup()
                             masterheads = dag.heads(mastergroup)
-                            old = masterheads.first()
-                            if old:
+                            oldnode = masterheads.first()
+                            if oldnode == newnode:
                                 tracing.debug(
-                                    "master: %s => %s" % (hex(old), hexnode),
+                                    "master: %s (unchanged)" % (hexnode,),
                                     target="pull::fastpath",
                                 )
-                                fastpath.append((old, bin(hexnode)))
-                        heads.add(bin(hexnode))
+                            elif oldnode is not None:
+                                tracing.debug(
+                                    "master: %s => %s" % (hex(oldnode), hexnode),
+                                    target="pull::fastpath",
+                                )
+                                fastpath.append((oldnode, newnode))
+                        heads.add(newnode)
                         remotenamechanges[name] = hexnode  # update it
                     else:
                         remotenamechanges[name] = nullhex  # delete it

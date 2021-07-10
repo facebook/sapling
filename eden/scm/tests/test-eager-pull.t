@@ -67,6 +67,10 @@ Pull:
   │
   o  A
   
+(pull again does not trigger pull fast path API)
+  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  pulling from test:e2
+   DEBUG pull::fastpath: master: 9bc730a19041f9ec7cb33c626e811aa233efb18c (unchanged)
 
 Test fallback to slow path:
 
