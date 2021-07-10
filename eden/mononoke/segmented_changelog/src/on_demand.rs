@@ -271,7 +271,13 @@ impl OnDemandUpdateSegmentedChangelog {
     async fn are_heads_assigned(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
         let dag_id_map = self.idmap.find_many_dag_ids(ctx, heads.to_vec()).await?;
         if dag_id_map.len() != heads.len() {
-            return Ok(false);
+            // Maybe heads have duplicated items? Double check.
+            let mut heads = heads.to_vec();
+            heads.sort_unstable();
+            heads.dedup();
+            if dag_id_map.len() != heads.len() {
+                return Ok(false);
+            }
         }
         // It is safer to check that the dag_ids we got are also in the iddag.
         let iddag = self.iddag.read().await;
