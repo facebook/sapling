@@ -269,6 +269,12 @@ def get_edenfs_environment() -> Dict[str, str]:
         # C2P Secure Thrift to fetch metadata from SCS).
         "THRIFT_TLS_CL_CERT_PATH",
         "THRIFT_TLS_CL_KEY_PATH",
+        # This helps with rust debugging
+        "MISSING_FILES",
+        "EDENSCM_LOG",
+        "EDENSCM_EDENAPI",
+        "RUST_BACKTRACE",
+        "RUST_LIB_BACKTRACE",
     ]
 
     if sys.platform == "win32":
