@@ -1130,6 +1130,68 @@ Checking {mount}
             if old_pwd is not None:
                 os.environ["PWD"] = old_pwd
 
+    @patch(
+        "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
+        return_value=False,
+    )
+    def test_privhelper_check_not_accessible(self, mock_check_privhelper_connection):
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        mount = instance.create_test_mount("path1").path
+        dry_run = False
+        out = TestOutput()
+        exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            out=out,
+        )
+
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+The PrivHelper process is not accessible.
+To restore the connection to the PrivHelper, run `eden restart`
+
+Checking {mount}
+<yellow>1 issue requires manual attention.<reset>
+Ask in the Eden Users group if you need help fixing issues with Eden:
+https://fb.facebook.com/groups/eden.users/
+""",
+            out.getvalue(),
+        )
+        self.assertEqual(1, exit_code)
+
+    @patch(
+        "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
+        return_value=True,
+    )
+    def test_privhelper_check_accessible(self, mock_check_privhelper_connection):
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        mount = instance.create_test_mount("path1").path
+        dry_run = False
+        out = TestOutput()
+        exit_code = doctor.cure_what_ails_you(
+            instance,
+            dry_run,
+            instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            out=out,
+        )
+
+        self.assertEqual(
+            f"""\
+Checking {mount}
+<green>No issues detected.<reset>
+""",
+            out.getvalue(),
+        )
+        self.assertEqual(0, exit_code)
+
 
 def _create_watchman_subscription(
     filewatcher_subscriptions: Optional[List[str]] = None,

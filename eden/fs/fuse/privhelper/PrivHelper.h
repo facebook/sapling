@@ -175,6 +175,13 @@ class PrivHelper {
    * to a child process and it must not to used for general reading/writing.
    */
   virtual int getRawClientFd() const = 0;
+
+  /**
+   * Checks whether the PrivHelper client can talk to the server by checking
+   * if the connection is open and able to take new requests.
+   * Returns true if so, false if not.
+   */
+  virtual bool checkConnection() = 0;
 };
 
 #else // _WIN32

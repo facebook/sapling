@@ -2201,6 +2201,15 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.uptime_ref() = uptime.count();
 }
 
+void EdenServiceHandler::checkPrivHelper(PrivHelperInfo& result) {
+#ifndef _WIN32
+  auto privhelper = server_->getServerState()->getPrivHelper();
+  result.connected_ref() = privhelper->checkConnection();
+#else
+  result.connected_ref() = true;
+#endif
+}
+
 int64_t EdenServiceHandler::getPid() {
   return getpid();
 }

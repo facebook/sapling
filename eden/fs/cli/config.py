@@ -745,6 +745,15 @@ Do you want to run `eden mount %s` instead?"""
             self.get_thrift_client_legacy, self._config_dir, timeout=timeout
         )
 
+    def check_privhelper_connection(self) -> bool:
+        """
+        Check if the PrivHelper is accessible.
+
+        Returns True if so, False if not.
+        """
+        with self.get_thrift_client_legacy() as client:
+            return client.checkPrivHelper().connected
+
     def get_log_path(self) -> Path:
         return self._config_dir / "logs" / "edenfs.log"
 

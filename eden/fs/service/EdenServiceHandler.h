@@ -221,6 +221,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void getDaemonInfo(DaemonInfo& result) override;
 
+  /**
+   * Checks the PrivHelper connection.
+   * For Windows, result.connected will always be set to true.
+   */
+  void checkPrivHelper(PrivHelperInfo& result) override;
+
   int64_t getPid() override;
 
   /**

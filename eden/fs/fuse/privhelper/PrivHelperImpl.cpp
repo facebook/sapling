@@ -73,7 +73,10 @@ class PrivHelperClientImpl : public PrivHelper,
  public:
   PrivHelperClientImpl(File&& conn, std::optional<SpawnedProcess> proc)
       : helperProc_(std::move(proc)),
-        conn_(UnixSocket::makeUnique(nullptr, std::move(conn))) {}
+        state_{ThreadSafeData{
+            Status::NOT_STARTED,
+            nullptr,
+            UnixSocket::makeUnique(nullptr, std::move(conn))}} {}
   ~PrivHelperClientImpl() override {
     cleanup();
     XDCHECK_EQ(sendPending_, 0ul);
@@ -89,10 +92,10 @@ class PrivHelperClientImpl : public PrivHelper,
       }
       state->eventBase = eventBase;
       state->status = Status::RUNNING;
+      eventBase->runOnDestruction(*this);
+      state->conn_->attachEventBase(eventBase);
+      state->conn_->setReceiveCallback(this);
     }
-    eventBase->runOnDestruction(*this);
-    conn_->attachEventBase(eventBase);
-    conn_->setReceiveCallback(this);
   }
 
   void detachEventBase() override {
@@ -122,8 +125,10 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   int stop() override;
   int getRawClientFd() const override {
-    return conn_->getRawFd();
+    auto state = state_.rlock();
+    return state->conn_->getRawFd();
   }
+  bool checkConnection() override;
 
  private:
   using PendingRequestMap =
@@ -135,8 +140,9 @@ class PrivHelperClientImpl : public PrivHelper,
     WAITED,
   };
   struct ThreadSafeData {
-    Status status{Status::NOT_STARTED};
-    EventBase* eventBase{nullptr};
+    Status status;
+    EventBase* eventBase;
+    UnixSocket::UniquePtr conn_;
   };
 
   uint32_t getNextXid() {
@@ -166,8 +172,9 @@ class PrivHelperClientImpl : public PrivHelper,
     // If the state was still RUNNING detach from the EventBase.
     if (eventBase) {
       eventBase->runImmediatelyOrRunInEventBaseThreadAndWait([this] {
-        conn_->clearReceiveCallback();
-        conn_->detachEventBase();
+        auto state = state_.wlock();
+        state->conn_->clearReceiveCallback();
+        state->conn_->detachEventBase();
         cancel();
       });
     }
@@ -216,15 +223,20 @@ class PrivHelperClientImpl : public PrivHelper,
                                      msg = std::move(msg),
                                      promise = std::move(promise)]() mutable {
       // Double check that the connection is still open
-      if (!conn_) {
-        promise.setException(std::runtime_error(
-            "cannot send new requests on closed privhelper connection"));
-        return;
+      {
+        auto state = state_.rlock();
+        if (!state->conn_) {
+          promise.setException(std::runtime_error(
+              "cannot send new requests on closed privhelper connection"));
+          return;
+        }
       }
-
       pendingRequests_.emplace(xid, std::move(promise));
       ++sendPending_;
-      conn_->send(std::move(msg), this);
+      {
+        auto state = state_.wlock();
+        state->conn_->send(std::move(msg), this);
+      }
     });
     return future;
   }
@@ -316,7 +328,10 @@ class PrivHelperClientImpl : public PrivHelper,
   void closeSocket(const std::exception& ex) {
     PendingRequestMap pending;
     pending.swap(pendingRequests_);
-    conn_.reset();
+    {
+      auto state = state_.wlock();
+      state->conn_.reset();
+    }
     XDCHECK_EQ(sendPending_, 0ul);
 
     for (auto& entry : pending) {
@@ -334,20 +349,19 @@ class PrivHelperClientImpl : public PrivHelper,
       }
       state->status = Status::NOT_STARTED;
       state->eventBase = nullptr;
+      state->conn_->clearReceiveCallback();
+      state->conn_->detachEventBase();
     }
-    conn_->clearReceiveCallback();
-    conn_->detachEventBase();
   }
 
   std::optional<SpawnedProcess> helperProc_;
   std::atomic<uint32_t> nextXid_{1};
   folly::Synchronized<ThreadSafeData> state_;
 
-  // sendPending_, pendingRequests_, and conn_ are only accessed from the
+  // sendPending_, and pendingRequests_ are only accessed from the
   // EventBase thread.
   size_t sendPending_{0};
   PendingRequestMap pendingRequests_;
-  UnixSocket::UniquePtr conn_;
 };
 
 Future<File> PrivHelperClientImpl::fuseMount(
@@ -506,6 +520,11 @@ int PrivHelperClientImpl::stop() {
     return -status.killSignal();
   }
   return status.exitStatus();
+}
+
+bool PrivHelperClientImpl::checkConnection() {
+  auto state = state_.rlock();
+  return state->status == Status::RUNNING && state->conn_;
 }
 
 } // unnamed namespace

@@ -79,6 +79,9 @@ class FakePrivHelper : public PrivHelper {
   int getRawClientFd() const override {
     return -1;
   }
+  bool checkConnection() override {
+    return true;
+  }
 
  private:
   FakePrivHelper(FakePrivHelper const&) = delete;

@@ -222,9 +222,25 @@ class EdenDoctorChecker:
 
         return checkouts
 
+    def check_privhelper(self) -> None:
+        try:
+            connected = self.instance.check_privhelper_connection()
+            if not connected:
+                self.tracker.add_problem(EdenfsPrivHelperNotHealthy())
+        except Exception as ex:
+            # This check is only reached after we've determined that the EdenFS
+            # daemon is healthy, so any error thrown while calling into Thrift
+            # would be unexpected.
+            self.tracker.add_problem(
+                Problem(f"Unexpected error while checking PrivHelper: {ex}")
+            )
+
     def run_normal_checks(self) -> None:
         check_edenfs_version(self.tracker, self.instance)
         checkouts = self._get_checkouts_info()
+
+        if sys.platform != "win32":
+            self.check_privhelper()
 
         if self.run_system_wide_checks:
             check_filesystems.check_eden_directory(self.tracker, self.instance)
@@ -350,6 +366,14 @@ class EdenfsNotHealthy(Problem):
     def __init__(self) -> None:
         super().__init__(
             "Eden is not running.", remediation="To start Eden, run:\n\n    eden start"
+        )
+
+
+class EdenfsPrivHelperNotHealthy(Problem):
+    def __init__(self) -> None:
+        super().__init__(
+            "The PrivHelper process is not accessible.",
+            remediation="To restore the connection to the PrivHelper, run `eden restart`",
         )
 
 
