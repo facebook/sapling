@@ -48,6 +48,7 @@ pub enum EdenApiMethod {
     UploadFile,
     UploadHgFilenodes,
     UploadTrees,
+    UploadHgChangesets,
     Trees,
     CompleteTrees,
     History,
@@ -80,6 +81,7 @@ impl fmt::Display for EdenApiMethod {
             Self::PullFastForwardMaster => "pull_fast_forward_master",
             Self::UploadHgFilenodes => "upload_filenodes",
             Self::UploadTrees => "upload_trees",
+            Self::UploadHgChangesets => "upload_hg_changesets",
         };
         write!(f, "{}", name)
     }
@@ -171,6 +173,7 @@ define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
 define_handler!(upload_trees_handler, trees::upload_trees);
+define_handler!(upload_hg_changesets_handler, commit::upload_hg_changesets);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -251,5 +254,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/upload/trees")
             .with_path_extractor::<trees::UploadTreesParams>()
             .to(upload_trees_handler);
+        route
+            .post("/:repo/upload/changesets")
+            .with_path_extractor::<commit::UploadHgChangesetsParams>()
+            .to(upload_hg_changesets_handler);
     })
 }

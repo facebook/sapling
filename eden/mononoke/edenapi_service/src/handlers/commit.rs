@@ -10,26 +10,31 @@ use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
+use std::collections::BTreeMap;
 
 use edenapi_types::{
     wire::{
         WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
-        WireCommitLocationToHashRequestBatch,
+        WireCommitLocationToHashRequestBatch, WireUploadHgChangesetsRequest,
     },
-    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
+    AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, ToWire,
+    CommitRevlogDataRequest, ToWire, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
+    UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::HgChangesetId;
+use mercurial_types::{
+    blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
+};
 use mononoke_api_hg::HgRepoContext;
+use mononoke_types::DateTime;
 use types::HgId;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
-    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request,
+    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request, to_mpath,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -55,6 +60,11 @@ pub struct RevlogDataParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HashLookupParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadHgChangesetsParams {
     repo: String,
 }
 
@@ -234,4 +244,87 @@ async fn commit_revlog_data(
         .ok_or_else(|| ErrorKind::HgIdNotFound(hg_id))?;
     let answer = CommitRevlogData::new(hg_id, bytes);
     Ok(answer)
+}
+
+/// Store list of HgChangesets
+async fn store_hg_changesets(
+    repo: HgRepoContext,
+    request: UploadHgChangesetsRequest,
+) -> Result<Vec<Result<UploadHgChangesetsResponse, Error>>, Error> {
+    let changesets = request.changesets;
+    let indexes = changesets
+        .iter()
+        .enumerate()
+        .map(|(index, cs)| (cs.node_id.clone(), index))
+        .collect::<BTreeMap<_, _>>();
+    let changesets_data = changesets
+        .into_iter()
+        .map(|changeset| {
+            let cs_data = changeset.changeset_content;
+            Ok((
+                HgChangesetId::new(HgNodeHash::from(changeset.node_id)),
+                RevlogChangeset {
+                    p1: cs_data.parents.p1().cloned().map(HgNodeHash::from),
+                    p2: cs_data.parents.p2().cloned().map(HgNodeHash::from),
+                    manifestid: HgManifestId::new(HgNodeHash::from(cs_data.manifestid)),
+                    extra: Extra::new(
+                        cs_data
+                            .extras
+                            .into_iter()
+                            .map(|extra| (extra.key, extra.value))
+                            .collect::<BTreeMap<_, _>>(),
+                    ),
+                    files: cs_data
+                        .files
+                        .into_iter()
+                        .map(|file| to_mpath(&file)?.context(ErrorKind::UnexpectedEmptyPath))
+                        .collect::<Result<_, _>>()?,
+                    message: cs_data.message,
+                    time: DateTime::from_timestamp(cs_data.time, cs_data.tz)?,
+                    user: cs_data.user,
+                },
+            ))
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let results = repo
+        .store_hg_changesets(changesets_data)
+        .await?
+        .into_iter()
+        .map(|r| {
+            r.map(|(hg_cs_id, _bonsai_cs_id)| {
+                let hgid = HgId::from(hg_cs_id.into_nodehash());
+                UploadHgChangesetsResponse {
+                    index: indexes.get(&hgid).cloned().unwrap(), // always present
+                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
+                }
+            })
+            .map_err(Error::from)
+        })
+        .collect();
+
+    Ok(results)
+}
+
+/// Upload list of HgChangesets requested by the client
+pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = UploadHgChangesetsParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::UploadHgChangesets,
+    ));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let request = parse_wire_request::<WireUploadHgChangesetsRequest>(state).await?;
+    let responses = store_hg_changesets(repo, request)
+        .await
+        .map_err(HttpError::e500)?;
+
+    Ok(cbor_stream(
+        stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
+    ))
 }
