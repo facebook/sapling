@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use blame::{fetch_blame, BlameError};
+use blame::{fetch_blame_compat, fetch_content_for_blame, BlameError, CompatBlame};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -27,8 +27,9 @@ use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use manifest::{Entry, ManifestOps};
+use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::{
-    fsnode::FsnodeFile, Blame, ChangesetId, FileType, FsnodeId, Generation, SkeletonManifestId,
+    ChangesetId, FileType, FileUnodeId, FsnodeId, Generation, SkeletonManifestId,
 };
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
@@ -293,15 +294,15 @@ impl ChangesetPathHistoryContext {
         &self.path
     }
 
-    pub async fn blame(&self) -> Result<(Bytes, Blame), MononokeError> {
-        let ctx = self.changeset.ctx().clone();
-        let repo = self.changeset.repo().blob_repo().clone();
+    async fn blame_impl(&self) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
+        let ctx = self.changeset.ctx();
+        let repo = self.changeset.repo().blob_repo();
         let csid = self.changeset.id();
         let mpath = self.path.as_mpath().ok_or_else(|| {
             MononokeError::InvalidRequest(format!("Blame is not available for directory: `/`"))
         })?;
 
-        fetch_blame(&ctx, &repo, csid, mpath.clone())
+        fetch_blame_compat(ctx, repo, csid, mpath.clone())
             .map_err(|error| match error {
                 BlameError::NoSuchPath(_)
                 | BlameError::IsDirectory(_)
@@ -310,6 +311,24 @@ impl ChangesetPathHistoryContext {
                 _ => MononokeError::from(Error::from(error)),
             })
             .await
+    }
+
+    /// Blame metadata for this path.
+    pub async fn blame(&self) -> Result<CompatBlame, MononokeError> {
+        let (blame, _) = self.blame_impl().await?;
+        Ok(blame)
+    }
+
+    /// Blame metadata for this path, and the content that was blamed.
+    pub async fn blame_with_content(&self) -> Result<(CompatBlame, Bytes), MononokeError> {
+        let (blame, file_unode_id) = self.blame_impl().await?;
+        let ctx = self.changeset.ctx();
+        let repo = self.changeset.repo().blob_repo();
+        let content = fetch_content_for_blame(ctx, repo, file_unode_id, None)
+            .await?
+            .into_bytes()
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
+        Ok((blame, content))
     }
 
     /// Returns a list of `ChangesetContext` for the file at this path that represents

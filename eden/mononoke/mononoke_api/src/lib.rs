@@ -63,6 +63,7 @@ pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
 // Re-export types that are useful for clients.
+pub use blame::CompatBlame;
 pub use context::{CoreContext, LoggingContainer, SessionContainer};
 
 /// An instance of Mononoke, which may manage multiple repositories.

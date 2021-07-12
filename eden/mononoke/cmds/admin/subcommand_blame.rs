@@ -204,18 +204,7 @@ async fn subcommand_show_blame(
     path: MPath,
     line_number: bool,
 ) -> Result<(), Error> {
-    let blame = fetch_blame_compat(&ctx, &repo, csid, path.clone()).await?;
-    let blobstore = repo.get_blobstore();
-    // The path must exist for us to have found the blame.
-    let unode_id = RootUnodeManifestId::derive(&ctx, &repo, csid)
-        .await?
-        .manifest_unode_id()
-        .clone()
-        .find_entry(ctx.clone(), blobstore.clone(), Some(path.clone()))
-        .await?
-        .expect("path must exist")
-        .into_leaf()
-        .expect("path must be a file");
+    let (blame, unode_id) = fetch_blame_compat(&ctx, &repo, csid, path.clone()).await?;
     let content = fetch_content_for_blame(&ctx, &repo, unode_id, None)
         .await?
         .into_bytes()?;

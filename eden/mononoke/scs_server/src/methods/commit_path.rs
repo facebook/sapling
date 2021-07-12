@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use bytes::Bytes;
 use context::CoreContext;
 use dedupmap::DedupMap;
 use futures::stream::TryStreamExt;
@@ -14,7 +15,7 @@ use mononoke_api::MononokePath;
 use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
 use crate::commit_id::map_commit_identities;
@@ -184,18 +185,19 @@ impl SourceControlServiceImpl {
         let mut titles = DedupMap::new();
         let mut messages = DedupMap::new();
 
+        // Fetch the blame, and optionally its associated content.
+        let (blame, content) = if option_include_contents {
+            path.blame_with_content().await?
+        } else {
+            (path.blame().await?, Bytes::new())
+        };
+
         // Map all the changeset IDs into the requested identity schemes.  Keep a mapping of
         // which bonsai changeset ID corresponds to which mapped commit ID index, so we can look
         // them up later.
-        let (content, blame) = path.blame().await?;
         let csids: Vec<_> = blame
-            .ranges()
-            .iter()
-            .map(|range| range.csid)
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect();
-
+            .changeset_ids()
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
         for (id, mapped_ids) in
             map_commit_identities(&repo, csids.clone(), &params.identity_schemes)
                 .await?
@@ -234,42 +236,54 @@ impl SourceControlServiceImpl {
         .into_iter()
         .collect();
 
-        let lines = content
-            .as_ref()
-            .split(|c| *c == b'\n')
-            .zip(blame.lines())
+        let mut content_iter = content.as_ref().split(|c| *c == b'\n');
+
+        let lines = blame
+            .lines()
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?
             .enumerate()
-            .map(
-                |(line, (contents, (csid, path, origin_line)))| -> Result<_, thrift::RequestError> {
-                    let commit_id_index = commit_id_indexes.get(&csid).ok_or_else(|| {
-                        errors::commit_not_found(format!("failed to resolve commit: {}", csid))
+            .map(|(line, blame_line)| -> Result<_, thrift::RequestError> {
+                let commit_id_index =
+                    commit_id_indexes
+                        .get(&blame_line.changeset_id)
+                        .ok_or_else(|| {
+                            errors::commit_not_found(format!(
+                                "failed to resolve commit: {}",
+                                blame_line.changeset_id
+                            ))
+                        })?;
+                let (author, date, message, title) =
+                    info.get(&blame_line.changeset_id).ok_or_else(|| {
+                        errors::commit_not_found(format!(
+                            "failed to resolve commit: {}",
+                            blame_line.changeset_id
+                        ))
                     })?;
-                    let (author, date, message, title) = info.get(&csid).ok_or_else(|| {
-                        errors::commit_not_found(format!("failed to resolve commit: {}", csid))
-                    })?;
-                    let mut blame_line = thrift::BlameCompactLine {
-                        line: (line + 1) as i32,
-                        contents: None,
-                        commit_id_index: *commit_id_index as i32,
-                        path_index: paths.insert(&path.to_string()) as i32,
-                        author_index: authors.insert(author) as i32,
-                        date_index: dates.insert(Cow::Borrowed(date)) as i32,
-                        origin_line: (origin_line + 1) as i32,
-                        title_index: None,
-                        message_index: None,
-                    };
-                    if option_include_contents {
-                        blame_line.contents = Some(String::from_utf8_lossy(contents).into_owned());
+                let mut blame_line = thrift::BlameCompactLine {
+                    line: (line + 1) as i32,
+                    contents: None,
+                    commit_id_index: *commit_id_index as i32,
+                    path_index: paths.insert(&blame_line.path.to_string()) as i32,
+                    author_index: authors.insert(author) as i32,
+                    date_index: dates.insert(Cow::Borrowed(date)) as i32,
+                    origin_line: (blame_line.origin_offset + 1) as i32,
+                    title_index: None,
+                    message_index: None,
+                };
+                if option_include_contents {
+                    if let Some(content_line) = content_iter.next() {
+                        blame_line.contents =
+                            Some(String::from_utf8_lossy(content_line).into_owned());
                     }
-                    if option_include_title {
-                        blame_line.title_index = Some(titles.insert(title) as i32);
-                    }
-                    if option_include_message {
-                        blame_line.message_index = Some(messages.insert(message) as i32);
-                    }
-                    Ok(blame_line)
-                },
-            )
+                }
+                if option_include_title {
+                    blame_line.title_index = Some(titles.insert(title) as i32);
+                }
+                if option_include_message {
+                    blame_line.message_index = Some(messages.insert(message) as i32);
+                }
+                Ok(blame_line)
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         let paths = paths.into_items();

@@ -15,7 +15,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _, Error};
-use blame::BlameRoot;
+use blame::{BlameRoot, RootBlameV2};
 use bookmarks::{BookmarkName, BookmarksSubscription, Freshness};
 use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
@@ -37,6 +37,7 @@ use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
+use metaconfig_types::BlameVersion;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, Timestamp};
 use skeleton_manifest::RootSkeletonManifestId;
@@ -166,8 +167,16 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
                 ));
         }
         if types.contains(BlameRoot::NAME) {
-            self.warmers
-                .push(create_derived_data_warmer::<BlameRoot>(&self.ctx));
+            match config.enabled.blame_version {
+                BlameVersion::V1 => {
+                    self.warmers
+                        .push(create_derived_data_warmer::<BlameRoot>(&self.ctx));
+                }
+                BlameVersion::V2 => {
+                    self.warmers
+                        .push(create_derived_data_warmer::<RootBlameV2>(&self.ctx));
+                }
+            }
         }
         if types.contains(ChangesetInfo::NAME) {
             self.warmers
