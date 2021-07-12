@@ -5,8 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::blame::{BlameMaybeRejected, BlameRange as BlameRangeV1, BlameRejected};
-use mononoke_types::blame_v2::{BlameRange as BlameRangeV2, BlameRanges as BlameRangesV2, BlameV2};
+use std::collections::BTreeSet;
+
+use mononoke_types::blame::{
+    BlameLines as BlameLinesV1, BlameMaybeRejected, BlameRange as BlameRangeV1, BlameRejected,
+};
+use mononoke_types::blame_v2::{
+    BlameLine as BlameLineV2, BlameLines as BlameLinesV2, BlameRange as BlameRangeV2,
+    BlameRanges as BlameRangesV2, BlameV2,
+};
 use mononoke_types::{ChangesetId, MPath};
 
 pub enum CompatBlame {
@@ -22,6 +29,30 @@ impl CompatBlame {
                 Ok(CompatBlameRanges::V1(blame.ranges().iter()))
             }
             CompatBlame::V2(blame) => Ok(CompatBlameRanges::V2(blame.ranges()?)),
+        }
+    }
+
+    pub fn lines(&self) -> Result<CompatBlameLines<'_>, BlameRejected> {
+        match self {
+            CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
+            CompatBlame::V1(BlameMaybeRejected::Blame(blame)) => {
+                Ok(CompatBlameLines::V1(blame.lines()))
+            }
+            CompatBlame::V2(blame) => Ok(CompatBlameLines::V2(blame.lines()?)),
+        }
+    }
+
+    pub fn changeset_ids(&self) -> Result<Vec<ChangesetId>, BlameRejected> {
+        match self {
+            CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
+            CompatBlame::V1(BlameMaybeRejected::Blame(blame)) => Ok(blame
+                .ranges()
+                .iter()
+                .map(|range| range.csid)
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect()),
+            CompatBlame::V2(blame) => Ok(blame.changeset_ids()?.collect()),
         }
     }
 }
@@ -70,6 +101,51 @@ impl<'a> Iterator for CompatBlameRanges<'a> {
         match self {
             CompatBlameRanges::V1(iter) => iter.next().map(CompatBlameRange::from),
             CompatBlameRanges::V2(ranges) => ranges.next().map(CompatBlameRange::from),
+        }
+    }
+}
+
+pub enum CompatBlameLines<'a> {
+    V1(BlameLinesV1<'a>),
+    V2(BlameLinesV2<'a>),
+}
+
+pub struct CompatBlameLine<'a> {
+    pub changeset_id: ChangesetId,
+    pub path: &'a MPath,
+    pub origin_offset: u32,
+    pub changeset_index: Option<u32>,
+}
+
+impl<'a> From<(ChangesetId, &'a MPath, u32)> for CompatBlameLine<'a> {
+    fn from((changeset_id, path, origin_offset): (ChangesetId, &'a MPath, u32)) -> Self {
+        CompatBlameLine {
+            changeset_id,
+            path,
+            origin_offset,
+            changeset_index: None,
+        }
+    }
+}
+
+impl<'a> From<BlameLineV2<'a>> for CompatBlameLine<'a> {
+    fn from(blame_line: BlameLineV2<'a>) -> Self {
+        CompatBlameLine {
+            changeset_id: *blame_line.changeset_id,
+            path: blame_line.path,
+            origin_offset: blame_line.origin_offset,
+            changeset_index: Some(blame_line.changeset_index),
+        }
+    }
+}
+
+impl<'a> Iterator for CompatBlameLines<'a> {
+    type Item = CompatBlameLine<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            CompatBlameLines::V1(lines) => lines.next().map(CompatBlameLine::from),
+            CompatBlameLines::V2(lines) => lines.next().map(CompatBlameLine::from),
         }
     }
 }

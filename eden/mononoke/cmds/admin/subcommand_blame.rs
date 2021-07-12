@@ -8,7 +8,7 @@
 use crate::error::SubcommandError;
 
 use anyhow::{format_err, Error};
-use blame::{fetch_blame, fetch_content_for_blame, BlameRoot, FetchOutcome};
+use blame::{fetch_blame_compat, fetch_content_for_blame, CompatBlame, FetchOutcome};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -20,7 +20,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -49,12 +49,6 @@ const ARG_PATH: &str = "path";
 const ARG_PRINT_ERRORS: &str = "print-errors";
 const ARG_LINE: &str = "line";
 const ARG_BLAME_V2: &str = "blame-v2";
-
-#[derive(Clone, Debug)]
-enum EitherBlame {
-    V1(Blame),
-    V2(BlameV2),
-}
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
@@ -210,9 +204,22 @@ async fn subcommand_show_blame(
     path: MPath,
     line_number: bool,
 ) -> Result<(), Error> {
-    let (content, blame) = fetch_blame(&ctx, &repo, csid, path).await?;
-    let annotate =
-        blame_hg_annotate(ctx, repo, content, EitherBlame::V1(blame), line_number).await?;
+    let blame = fetch_blame_compat(&ctx, &repo, csid, path.clone()).await?;
+    let blobstore = repo.get_blobstore();
+    // The path must exist for us to have found the blame.
+    let unode_id = RootUnodeManifestId::derive(&ctx, &repo, csid)
+        .await?
+        .manifest_unode_id()
+        .clone()
+        .find_entry(ctx.clone(), blobstore.clone(), Some(path.clone()))
+        .await?
+        .expect("path must exist")
+        .into_leaf()
+        .expect("path must be a file");
+    let content = fetch_content_for_blame(&ctx, &repo, unode_id, None)
+        .await?
+        .into_bytes()?;
+    let annotate = blame_hg_annotate(ctx, repo, content, blame, line_number).await?;
     println!("{}", annotate);
     Ok(())
 }
@@ -282,9 +289,8 @@ async fn diff(
     new: FileUnodeId,
     old: FileUnodeId,
 ) -> Result<String, Error> {
-    let options = BlameRoot::default_mapping(&ctx, &repo)?.options();
-    let f1 = fetch_content_for_blame(&ctx, &repo, new, options);
-    let f2 = fetch_content_for_blame(&ctx, &repo, old, options);
+    let f1 = fetch_content_for_blame(&ctx, &repo, new, None);
+    let f2 = fetch_content_for_blame(&ctx, &repo, old, None);
     let (new, old) = try_join(f1, f2).await?;
     let new = xdiff::DiffFile {
         path: "new",
@@ -307,6 +313,21 @@ async fn diff(
     Ok(String::from_utf8_lossy(&diff).into_owned())
 }
 
+#[derive(Clone, Debug)]
+enum EitherBlame {
+    V1(Blame),
+    V2(BlameV2),
+}
+
+impl EitherBlame {
+    fn compat(self) -> CompatBlame {
+        match self {
+            EitherBlame::V1(blame) => CompatBlame::V1(BlameMaybeRejected::Blame(blame)),
+            EitherBlame::V2(blame) => CompatBlame::V2(blame),
+        }
+    }
+}
+
 /// Recalculate blame by going through whole history of a file
 async fn subcommand_compute_blame(
     ctx: CoreContext,
@@ -317,9 +338,7 @@ async fn subcommand_compute_blame(
     blame_v2: bool,
 ) -> Result<(), Error> {
     let blobstore = repo.get_blobstore().boxed();
-    let blame_mapping = BlameRoot::default_mapping(&ctx, &repo)?;
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path.clone()).await?;
-    let blame_options = blame_mapping.options();
     let (_, _, content, blame) = bounded_traversal_dag(
         256,
         (None, path.clone(), file_unode_id),
@@ -394,8 +413,7 @@ async fn subcommand_compute_blame(
             | {
                 cloned!(ctx, repo);
                 async move {
-                    match fetch_content_for_blame(&ctx, &repo, file_unode_id, blame_options).await?
-                    {
+                    match fetch_content_for_blame(&ctx, &repo, file_unode_id, None).await? {
                         FetchOutcome::Rejected(rejected) => Ok(Err(rejected)),
                         FetchOutcome::Fetched(content) => if blame_v2 {
                             let parents = parents
@@ -447,7 +465,7 @@ async fn subcommand_compute_blame(
     )
     .await?
     .ok_or_else(|| Error::msg("cycle found"))??;
-    let annotate = blame_hg_annotate(ctx, repo, content, blame, line_number).await?;
+    let annotate = blame_hg_annotate(ctx, repo, content, blame.compat(), line_number).await?;
     println!("{}", annotate);
     Ok(())
 }
@@ -457,7 +475,7 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     ctx: CoreContext,
     repo: BlobRepo,
     content: C,
-    blame: EitherBlame,
+    blame: CompatBlame,
     show_line_number: bool,
 ) -> Result<String, Error> {
     if content.as_ref().is_empty() {
@@ -465,51 +483,25 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     }
     let content = String::from_utf8_lossy(content.as_ref());
     let mut result = String::new();
+    let csids: Vec<_> = blame.changeset_ids()?;
+    let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
+    let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
 
-    match blame {
-        EitherBlame::V1(blame) => {
-            let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
-            let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
-            let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
-
-            for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
-                let hg_csid = mapping
-                    .get(&csid)
-                    .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
-                result.push_str(&hg_csid.to_string()[..12]);
-                result.push(':');
-                if show_line_number {
-                    write!(&mut result, "{:>4}:", line_number + 1)?;
-                }
-                result.push(' ');
-                result.push_str(line);
-                result.push('\n');
-            }
+    for (line, blame_line) in content.lines().zip(blame.lines()?) {
+        let hg_csid = mapping
+            .get(&blame_line.changeset_id)
+            .ok_or_else(|| format_err!("unresolved bonsai csid: {}", blame_line.changeset_id))?;
+        if let Some(changeset_index) = blame_line.changeset_index {
+            write!(result, "{:>5} ", format!("#{}", changeset_index + 1))?;
         }
-        EitherBlame::V2(blame) => {
-            let csids: Vec<_> = blame.changeset_ids()?.collect();
-            let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
-            let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
-
-            for (line, blame_line) in content.lines().zip(blame.lines()?) {
-                let hg_csid = mapping.get(blame_line.changeset_id).ok_or_else(|| {
-                    format_err!("unresolved bonsai csid: {}", blame_line.changeset_id)
-                })?;
-                write!(
-                    result,
-                    "{:>5} ",
-                    format!("#{}", blame_line.changeset_index + 1)
-                )?;
-                result.push_str(&hg_csid.to_string()[..12]);
-                result.push(':');
-                if show_line_number {
-                    write!(&mut result, "{:>4}:", blame_line.origin_offset + 1)?;
-                }
-                result.push(' ');
-                result.push_str(line);
-                result.push('\n');
-            }
+        result.push_str(&hg_csid.to_string()[..12]);
+        result.push(':');
+        if show_line_number {
+            write!(&mut result, "{:>4}:", blame_line.origin_offset + 1)?;
         }
+        result.push(' ');
+        result.push_str(line);
+        result.push('\n');
     }
 
     Ok(result)

@@ -999,6 +999,12 @@ types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "f
 CONFIG
 fi
 
+if [[ -n "${BLAME_VERSION}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+blame_version = $BLAME_VERSION
+CONFIG
+fi
+
 if [[ -n "${HG_SET_COMMITTER_EXTRA}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 hg_set_committer_extra = true
