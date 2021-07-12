@@ -20,12 +20,12 @@ use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::CommitGraphEntry;
-use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    AnyFileContentId, AnyId, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HgFilenodeData,
-    HistoryEntry, LookupResponse, TreeEntry, UploadHgFilenodeResponse, UploadTreeResponse,
+    AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HistoryEntry,
+    LookupResponse, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
+    UploadHgFilenodeResponse, UploadTreeResponse,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
@@ -640,6 +640,44 @@ pub trait EdenApiPyExt: EdenApi {
             .allow_threads(|| {
                 block_unless_interrupted(async move {
                     let response = self.upload_trees_batch(repo, items, callback).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    /// Upload changesets
+    fn uploadchangesets_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        changesets: Vec<(
+            PyBytes,                   /* hgid (node_id) */
+            Serde<HgChangesetContent>, /* changeset content */
+        )>,
+        callback: Option<PyObject>,
+        _progress: Arc<dyn ProgressFactory>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>,
+        PyFuture,
+    )> {
+        let callback = callback.map(wrap_callback);
+        let changesets = changesets
+            .into_iter()
+            .map(|(node_id, content)| UploadHgChangeset {
+                node_id: to_hgid(py, &node_id),
+                changeset_content: content.0,
+            })
+            .collect();
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self.upload_changesets(repo, changesets, callback).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

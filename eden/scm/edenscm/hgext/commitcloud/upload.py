@@ -92,6 +92,28 @@ def uploadtrees(repo, trees):
         raise error.Abort(e)
 
 
+def uploadchangesets(repo, changesets):
+    """Upload changesets"""
+    if not changesets:
+        return
+    try:
+        stream, _stats = repo.edenapi.uploadchangesets(
+            ccutil.getreponame(repo), changesets
+        )
+        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+        repo.ui.status(
+            _n(
+                "uploaded %d changeset\n",
+                "uploaded %d changesets\n",
+                len(foundindices),
+            )
+            % len(foundindices),
+            component="commitcloud",
+        )
+    except (error.RustError, error.HttpError) as e:
+        raise error.Abort(e)
+
+
 def getblobs(repo, nodes):
     """Get changed files"""
     toupload = set()
@@ -232,9 +254,41 @@ def upload(repo, revs, force=False):
     # Upload missing trees
     uploadtrees(repo, uploadtreesqueue)
 
-    # TODO (liubovd): finally: implement upload of hg changesets
+    # Uploading changesets
+    changesets = []
     for node in uploadcommitqueue.iterrev():
         ui.status(
-            _("uploading commit '%s'...\n") % nodemod.hex(node),
-            component="commitcloud",
+            _("uploading commit '%s'...\n") % nodemod.hex(node), component="commitcloud"
         )
+        ctx = repo[node]
+        extras = [
+            {"key": key.encode(), "value": value.encode()}
+            for key, value in ctx.extra().items()
+            if key != "branch"
+        ]
+        (time, timezone) = ctx.date()
+        p1 = ctx.p1().node()
+        p2 = ctx.p2().node()
+        if p1 != nodemod.nullid and p2 != nodemod.nullid:
+            parents = (p1, p2)
+        elif p1 != nodemod.nullid:
+            parents = p1
+        else:
+            parents = None
+        changesets.append(
+            (
+                node,
+                {
+                    "parents": parents,
+                    "manifestid": ctx.manifestnode(),
+                    "user": ctx.user().encode(),
+                    "time": int(time),
+                    "tz": timezone,
+                    "extras": extras,
+                    "files": ctx.files(),
+                    "message": ctx.description().encode(),
+                },
+            )
+        )
+
+    uploadchangesets(repo, changesets)

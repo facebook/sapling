@@ -120,11 +120,11 @@ This test also checks file content deduplication. We upload 1 file content and 1
     INFO edenapi::client: Requesting trees upload for 2 item(s)
   commitcloud: uploaded 2 trees
   commitcloud: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
+    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+  commitcloud: uploaded 1 changeset
  
  
 Make another commit in the first client and upload it
-(It will try to upload the first commit again because uploading of changesets haven't been implemented yet
-but it shouldn't try to reupload any trees or filenodes for the first commit)
 The files of the second commit are identical to the files of the first commit, so we don't expect any new content uploads
   $ hgedenapi prev -q
   [8b2dca] base_commit
@@ -133,16 +133,19 @@ The files of the second commit are identical to the files of the first commit, s
   $ hgedenapi commit -m "New files Dir2"
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
     INFO edenapi::client: Requesting lookup for 2 item(s)
-  commitcloud: head '536d3fb3929e' hasn't been uploaded yet
   commitcloud: head '65289540f44d' hasn't been uploaded yet
-    INFO edenapi::client: Requesting lookup for 2 item(s)
-  commitcloud: queue 2 commits for upload
-    INFO edenapi::client: Requesting lookup for 200 item(s)
+    INFO edenapi::client: Requesting lookup for 1 item(s)
+  commitcloud: queue 1 commit for upload
+    INFO edenapi::client: Requesting lookup for 100 item(s)
   commitcloud: queue 0 files for upload
-    INFO edenapi::client: Requesting lookup for 4 item(s)
+    INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: queue 1 tree for upload
     INFO edenapi::client: Requesting trees upload for 1 item(s)
   commitcloud: uploaded 1 tree
-  commitcloud: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
   commitcloud: uploading commit '65289540f44d80cecffca8a3fd655c0ca6243cd9'...
- 
+    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+  commitcloud: uploaded 1 changeset
+
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
+    INFO edenapi::client: Requesting lookup for 2 item(s)
+  commitcloud: nothing to upload
