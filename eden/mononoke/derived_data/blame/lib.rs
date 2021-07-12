@@ -8,10 +8,9 @@
 #![deny(warnings)]
 #![type_length_limit = "1441792"]
 
-mod derived;
+mod derive_v1;
 mod fetch;
-
-pub use derived::{BlameRoot, BlameRootMapping, BLAME_FILESIZE_LIMIT};
+mod mapping_v1;
 
 #[cfg(test)]
 mod tests;
@@ -31,6 +30,9 @@ use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 pub use fetch::{fetch_content_for_blame, FetchOutcome};
+pub use mapping_v1::{BlameRoot, BlameRootMapping};
+
+pub const DEFAULT_BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BlameDeriveOptions {
@@ -40,7 +42,7 @@ pub struct BlameDeriveOptions {
 impl Default for BlameDeriveOptions {
     fn default() -> Self {
         BlameDeriveOptions {
-            filesize_limit: BLAME_FILESIZE_LIMIT,
+            filesize_limit: DEFAULT_BLAME_FILESIZE_LIMIT,
         }
     }
 }

@@ -261,7 +261,7 @@ pub struct DerivedDataTypesConfig {
     pub unode_version: UnodeVersion,
 
     /// Override the file size limit for blame. Blame won't be derived for files which
-    /// size is above the limit. Default: `blame::BLAME_FILESIZE_LIMIT`.
+    /// size is above the limit. Default: `blame::DEFAULT_BLAME_FILESIZE_LIMIT`.
     pub blame_filesize_limit: Option<u64>,
 
     /// Whether to save committer field in commit extras when generating
