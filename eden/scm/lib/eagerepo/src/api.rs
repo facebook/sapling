@@ -35,6 +35,8 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadHgChangeset;
+use edenapi::types::UploadHgChangesetsResponse;
 use edenapi::types::UploadHgFilenodeResponse;
 use edenapi::types::UploadToken;
 use edenapi::types::UploadTreeEntry;
@@ -454,6 +456,17 @@ impl EdenApi for EagerRepo {
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_trees_batch endpoint".to_string(),
+        ))
+    }
+
+    async fn upload_changesets(
+        &self,
+        _repo: String,
+        _changesets: Vec<UploadHgChangeset>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support upload_changesets endpoint".to_string(),
         ))
     }
 }

@@ -29,15 +29,17 @@ use edenapi_types::{
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadHgFilenodeResponse,
-        WireUploadToken, WireUploadTreeResponse,
+        WireLookupResponse, WireToApiConversionError, WireTreeEntry,
+        WireUploadHgChangesetsResponse, WireUploadHgFilenodeResponse, WireUploadToken,
+        WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
     HgFilenodeData, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError,
-    ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest, UploadHgFilenodeRequest,
+    ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest, UploadHgChangeset,
+    UploadHgChangesetsRequest, UploadHgChangesetsResponse, UploadHgFilenodeRequest,
     UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
@@ -58,6 +60,7 @@ const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
+const MAX_CONCURRENT_CHANGESETS_UPLOADS: usize = 1000;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -76,6 +79,7 @@ mod paths {
     pub const UPLOAD: &str = "upload/";
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
     pub const UPLOAD_TREES: &str = "upload/trees";
+    pub const UPLOAD_CHANGESETS: &str = "upload/changesets";
 }
 
 pub struct Client {
@@ -949,6 +953,41 @@ impl EdenApi for Client {
 
         Ok(self
             .fetch::<WireUploadTreeResponse>(requests, progress)
+            .await?)
+    }
+
+    async fn upload_changesets(
+        &self,
+        repo: String,
+        changesets: Vec<UploadHgChangeset>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+        let msg = format!(
+            "Requesting changesets upload for {} item(s)",
+            changesets.len()
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if changesets.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::UPLOAD_CHANGESETS, Some(&repo))?;
+        let requests = self.prepare(
+            &url,
+            changesets,
+            Some(MAX_CONCURRENT_CHANGESETS_UPLOADS),
+            |changesets| {
+                let req = UploadHgChangesetsRequest { changesets };
+                req.to_wire()
+            },
+        )?;
+
+        Ok(self
+            .fetch::<WireUploadHgChangesetsResponse>(requests, progress)
             .await?)
     }
 }
