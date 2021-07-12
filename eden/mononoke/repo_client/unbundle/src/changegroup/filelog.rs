@@ -30,19 +30,19 @@ use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct FilelogDeltaed {
+pub struct FilelogDeltaed {
     pub path: MPath,
     pub chunk: CgDeltaChunk,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) enum FilelogData {
+pub enum FilelogData {
     RawBytes(Bytes),
     LfsMetaData(ContentBlobMeta),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct Filelog {
+pub struct Filelog {
     pub node_key: HgNodeKey,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,

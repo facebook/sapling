@@ -27,6 +27,7 @@ remotefilelog = { version = "0.1.0", path = "../repo_client/remotefilelog" }
 repo_client = { version = "0.1.0", path = "../repo_client" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
+unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

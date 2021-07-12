@@ -22,7 +22,7 @@ use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 
 /// Represents data that is Mercurial-encoded and can be uploaded to the blobstore.
-pub(crate) trait UploadableHgBlob {
+pub trait UploadableHgBlob {
     type Value: Send + 'static;
 
     fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;

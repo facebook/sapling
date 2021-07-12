@@ -37,3 +37,4 @@ pub use response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
 };
+pub use upload_changesets::upload_changeset;

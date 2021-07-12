@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::{self, format_err, Context};
+use anyhow::{self, format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::{BlobRepoHg, ChangesetHandle};
 use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
@@ -24,11 +24,12 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{
     hash::{Sha1, Sha256},
-    ChangesetId, ContentId, MPath, MononokeId, RepoPath,
+    BonsaiChangeset, ChangesetId, ContentId, MPath, MononokeId, RepoPath,
 };
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 use std::sync::Arc;
+use unbundle::upload_changeset;
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -295,6 +296,44 @@ impl HgRepoContext {
         upload_future.compat().await.map_err(MononokeError::from)?;
 
         Ok(())
+    }
+
+
+    /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.
+    pub async fn store_hg_changesets(
+        &self,
+        changesets: Vec<(HgChangesetId, RevlogChangeset)>,
+    ) -> Result<Vec<Result<(HgChangesetId, BonsaiChangeset), MononokeError>>, MononokeError> {
+        let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
+        let filelogs = HashMap::new();
+        let manifests = HashMap::new();
+        for (node, revlog_cs) in changesets {
+            uploaded_changesets = upload_changeset(
+                self.ctx().clone(),
+                self.blob_repo().clone(),
+                self.ctx().scuba().clone(),
+                node,
+                &revlog_cs,
+                uploaded_changesets,
+                &filelogs,
+                &manifests,
+                None, /* maybe_backup_repo_source (unsupported here) */
+            )
+            .await
+            .map_err(MononokeError::from)?;
+        }
+        let mut results = vec![];
+        for (hg_cs_id, handle) in uploaded_changesets {
+            results.push(
+                handle
+                    .get_completed_changeset()
+                    .await
+                    .map_err(Error::from)
+                    .map_err(MononokeError::from)
+                    .map(|(bonsai, _)| (hg_cs_id, bonsai)),
+            )
+        }
+        Ok(results)
     }
 
     /// Request all of the tree nodes in the repo under a given path.

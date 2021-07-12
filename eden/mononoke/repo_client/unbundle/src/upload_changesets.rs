@@ -32,9 +32,9 @@ use crate::changegroup::Filelog;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 
-pub(crate) type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
-pub(crate) type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
-type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
+pub type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
+pub type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
+pub type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
 type HgBlobFuture = BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>;
 type HgBlobStream = BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>;
@@ -266,7 +266,7 @@ fn get_parent(
     }
 }
 
-pub(crate) async fn upload_changeset(
+pub async fn upload_changeset(
     ctx: CoreContext,
     repo: BlobRepo,
     scuba_logger: MononokeScubaSampleBuilder,
