@@ -279,6 +279,12 @@ Revlog -> Lazy:
 
   $ cd $TESTTMP/revlogrepo
   $ setconfig paths.default=test:server1
+
+(Migration requires EdenAPI)
+
+  $ hg debugchangelog --migrate lazy -v --config paths.default=$TESTTMP/a
+  cannot migrate to lazy backend without edenapi
+
   $ hg debugchangelog --migrate lazy
   $ hg debugchangelog
   The changelog is backed by Rust. More backend information:

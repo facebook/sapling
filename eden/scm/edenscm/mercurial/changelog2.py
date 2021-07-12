@@ -749,6 +749,11 @@ def migratetolazy(repo):
         # No need to migrate.
         return
 
+    if repo.nullableedenapi is None:
+        # Require EdenAPI to migrate.
+        repo.ui.note(_("cannot migrate to lazy backend without edenapi\n"))
+        return
+
     # Migrate revlog to segments on demand.
     if repo.changelog.algorithmbackend == "revlog":
         migratetodoublewrite(repo)
