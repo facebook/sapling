@@ -8,7 +8,7 @@
 use crate::error::SubcommandError;
 
 use anyhow::{format_err, Error};
-use blame::{fetch_blame, fetch_file_full_content, BlameRoot};
+use blame::{fetch_blame, fetch_content_for_blame, BlameRoot, FetchOutcome};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -24,7 +24,7 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{ready, try_join, try_join_all},
+    future::{try_join, try_join_all},
     Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
 use manifest::ManifestOps;
@@ -283,19 +283,17 @@ async fn diff(
     old: FileUnodeId,
 ) -> Result<String, Error> {
     let options = BlameRoot::default_mapping(&ctx, &repo)?.options();
-    let f1 = fetch_file_full_content(&ctx, &repo, new, options)
-        .and_then(|result| ready(result.map_err(Error::from)));
-    let f2 = fetch_file_full_content(&ctx, &repo, old, options)
-        .and_then(|result| ready(result.map_err(Error::from)));
+    let f1 = fetch_content_for_blame(&ctx, &repo, new, options);
+    let f2 = fetch_content_for_blame(&ctx, &repo, old, options);
     let (new, old) = try_join(f1, f2).await?;
     let new = xdiff::DiffFile {
         path: "new",
-        contents: xdiff::FileContent::Inline(new),
+        contents: xdiff::FileContent::Inline(new.into_bytes()?),
         file_type: xdiff::FileType::Regular,
     };
     let old = xdiff::DiffFile {
         path: "old",
-        contents: xdiff::FileContent::Inline(old),
+        contents: xdiff::FileContent::Inline(old.into_bytes()?),
         file_type: xdiff::FileType::Regular,
     };
     let diff = xdiff::diff_unified(
@@ -396,11 +394,10 @@ async fn subcommand_compute_blame(
             | {
                 cloned!(ctx, repo);
                 async move {
-                    let content =
-                        fetch_file_full_content(&ctx, &repo, file_unode_id, blame_options).await?;
-                    match content {
-                        Err(rejected) => Ok(Err(rejected)),
-                        Ok(content) => if blame_v2 {
+                    match fetch_content_for_blame(&ctx, &repo, file_unode_id, blame_options).await?
+                    {
+                        FetchOutcome::Rejected(rejected) => Ok(Err(rejected)),
+                        FetchOutcome::Fetched(content) => if blame_v2 {
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {

@@ -9,7 +9,9 @@
 #![type_length_limit = "1441792"]
 
 mod derived;
-pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping, BLAME_FILESIZE_LIMIT};
+mod fetch;
+
+pub use derived::{BlameRoot, BlameRootMapping, BLAME_FILESIZE_LIMIT};
 
 #[cfg(test)]
 mod tests;
@@ -27,6 +29,21 @@ use mononoke_types::{
 };
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
+
+pub use fetch::{fetch_content_for_blame, FetchOutcome};
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct BlameDeriveOptions {
+    filesize_limit: u64,
+}
+
+impl Default for BlameDeriveOptions {
+    fn default() -> Self {
+        BlameDeriveOptions {
+            filesize_limit: BLAME_FILESIZE_LIMIT,
+        }
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum BlameError {
@@ -68,9 +85,10 @@ pub async fn fetch_blame(
     let mapping = BlameRoot::default_mapping(ctx, repo)?;
     // TODO(mbthomas): remove file content fetching - the caller can fetch the
     // content if they want it.
-    let content = derived::fetch_file_full_content(ctx, repo, blame_id.into(), mapping.options())
+    let content = fetch_content_for_blame(ctx, repo, blame_id.into(), mapping.options())
         .await
         .map_err(BlameError::Error)?
+        .into_bytes()
         .map_err(BlameError::Rejected)?;
     Ok((content, blame))
 }

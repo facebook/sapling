@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blame::{fetch_file_full_content, BlameRoot};
+use blame::{fetch_content_for_blame, BlameRoot};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
@@ -172,12 +172,12 @@ async fn prefetch_content(
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_file_full_content(ctx, repo, file_unode_id, options))
+            .map(|file_unode_id| fetch_content_for_blame(ctx, repo, file_unode_id, options))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_file_full_content(ctx, repo, file_unode_id, options),
+            fetch_content_for_blame(ctx, repo, file_unode_id, options),
             future::try_join_all(parents_content),
         )
         .await?;

@@ -5,27 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
-use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
     DerivedDataTypesConfig,
 };
-use filestore::{self, FetchKey};
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
-    blame::{store_blame, Blame, BlameId, BlameRejected},
-    BonsaiChangeset, ChangesetId, ContentId, FileUnodeId, MPath,
+    blame::{store_blame, Blame, BlameId},
+    BonsaiChangeset, ChangesetId, FileUnodeId, MPath,
 };
 use std::{collections::HashMap, sync::Arc};
-use thiserror::Error;
 use unodes::{find_unode_renames_incorrect_for_blame_v1, RootUnodeManifestId};
+
+use crate::fetch::{fetch_content_for_blame, FetchOutcome};
+use crate::BlameDeriveOptions;
 
 pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
@@ -35,19 +35,6 @@ pub struct BlameRoot(ChangesetId);
 impl From<ChangesetId> for BlameRoot {
     fn from(csid: ChangesetId) -> BlameRoot {
         BlameRoot(csid)
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct BlameDeriveOptions {
-    filesize_limit: u64,
-}
-
-impl Default for BlameDeriveOptions {
-    fn default() -> Self {
-        BlameDeriveOptions {
-            filesize_limit: BLAME_FILESIZE_LIMIT,
-        }
     }
 }
 
@@ -174,25 +161,28 @@ async fn create_blame(
         .chain(renames.get(&path).cloned())
         .map(|file_unode_id| {
             future::try_join(
-                fetch_file_full_content(ctx, repo, file_unode_id, options),
+                fetch_content_for_blame(ctx, repo, file_unode_id, options),
                 async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into(),
             )
         })
         .collect();
 
     let (content, parents_content) = future::try_join(
-        fetch_file_full_content(ctx, repo, file_unode_id, options),
+        fetch_content_for_blame(ctx, repo, file_unode_id, options),
         future::try_join_all(parents_content_and_blame),
     )
     .await?;
 
     let blame_maybe_rejected = match content {
-        Err(rejected) => rejected.into(),
-        Ok(content) => {
+        FetchOutcome::Rejected(rejected) => rejected.into(),
+        FetchOutcome::Fetched(content) => {
             let parents_content = parents_content
                 .into_iter()
                 .filter_map(|(content, blame_maybe_rejected)| {
-                    Some((content.ok()?, blame_maybe_rejected.into_blame().ok()?))
+                    Some((
+                        content.into_bytes().ok()?,
+                        blame_maybe_rejected.into_blame().ok()?,
+                    ))
                 })
                 .collect();
             Blame::from_parents(csid, content, path, parents_content)?.into()
@@ -200,79 +190,4 @@ async fn create_blame(
     };
 
     store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected).await
-}
-
-pub async fn fetch_file_full_content(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    file_unode_id: FileUnodeId,
-    options: BlameDeriveOptions,
-) -> Result<Result<Bytes, BlameRejected>, Error> {
-    let blobstore = repo.blobstore();
-    let file_unode = file_unode_id
-        .load(ctx, blobstore)
-        .map_err(|error| FetchError::Error(error.into()))
-        .await?;
-
-    let content_id = *file_unode.content_id();
-    let result = fetch_from_filestore(ctx, repo, content_id, options).await;
-
-    match result {
-        Err(FetchError::Error(error)) => Err(error),
-        Err(FetchError::Rejected(rejected)) => Ok(Err(rejected)),
-        Ok(content) => Ok(Ok(content)),
-    }
-}
-
-#[derive(Error, Debug)]
-enum FetchError {
-    #[error("FetchError::Rejected")]
-    Rejected(#[source] BlameRejected),
-    #[error("FetchError::Error")]
-    Error(#[source] Error),
-}
-
-fn check_binary(content: &[u8]) -> Result<&[u8], FetchError> {
-    if content.contains(&0u8) {
-        Err(FetchError::Rejected(BlameRejected::Binary))
-    } else {
-        Ok(content)
-    }
-}
-
-async fn fetch_from_filestore(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    content_id: ContentId,
-    options: BlameDeriveOptions,
-) -> Result<Bytes, FetchError> {
-    let result = filestore::fetch_with_size(
-        repo.get_blobstore(),
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    )
-    .map_err(FetchError::Error)
-    .await?;
-
-    match result {
-        None => {
-            let error = FetchError::Error(format_err!("Missing content: {}", content_id));
-            Err(error)
-        }
-        Some((stream, size)) => {
-            if size > options.filesize_limit {
-                return Err(FetchError::Rejected(BlameRejected::TooBig));
-            }
-            let v = Vec::with_capacity(size as usize);
-            let bytes = stream
-                .map_err(FetchError::Error)
-                .try_fold(v, |mut acc, bytes| async move {
-                    acc.extend(check_binary(bytes.as_ref())?);
-                    Ok(acc)
-                })
-                .map_ok(Bytes::from)
-                .await?;
-            Ok(bytes)
-        }
-    }
 }
