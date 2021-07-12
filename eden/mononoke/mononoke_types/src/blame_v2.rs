@@ -159,24 +159,24 @@ impl BlameV2 {
         }
     }
 
-    pub fn ranges(&self) -> Result<BlameRanges<'_>> {
+    pub fn ranges(&self) -> Result<BlameRanges<'_>, BlameRejected> {
         match self {
             BlameV2::Blame(blame_data) => Ok(BlameRanges::new(blame_data)),
-            BlameV2::Rejected(rejected) => Err(rejected.clone().into()),
+            BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }
 
-    pub fn lines(&self) -> Result<BlameLines<'_>> {
+    pub fn lines(&self) -> Result<BlameLines<'_>, BlameRejected> {
         match self {
             BlameV2::Blame(blame_data) => Ok(BlameLines::new(blame_data)),
-            BlameV2::Rejected(rejected) => Err(rejected.clone().into()),
+            BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }
 
-    pub fn changeset_ids(&self) -> Result<impl Iterator<Item = ChangesetId> + '_> {
+    pub fn changeset_ids(&self) -> Result<impl Iterator<Item = ChangesetId> + '_, BlameRejected> {
         match self {
             BlameV2::Blame(blame_data) => Ok(blame_data.csids.values().cloned()),
-            BlameV2::Rejected(rejected) => Err(rejected.clone().into()),
+            BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }
 

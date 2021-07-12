@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::{fetch_blame, BlameError};
+use crate::{fetch_blame_compat, CompatBlame};
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use borrowed::borrowed;
-use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::{btreemap, hashmap};
-use mononoke_types::{Blame, ChangesetId, MPath};
+use metaconfig_types::BlameVersion;
+use mononoke_types::blame::BlameRejected;
+use mononoke_types::{ChangesetId, MPath};
 use std::collections::HashMap;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
@@ -128,7 +129,16 @@ c0: 1 1
 "#;
 
 #[fbinit::test]
-async fn test_blame(fb: FacebookInit) -> Result<(), Error> {
+async fn test_blame_v1(fb: FacebookInit) -> Result<(), Error> {
+    test_blame_version(fb, BlameVersion::V1).await
+}
+
+#[fbinit::test]
+async fn test_blame_v2(fb: FacebookInit) -> Result<(), Error> {
+    test_blame_version(fb, BlameVersion::V2).await
+}
+
+async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(), Error> {
     // Commits structure
     //
     //   0
@@ -140,7 +150,9 @@ async fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     //   4
     //
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_config_override(|config| config.derived_data_config.enabled.blame_version = version)
+        .build()?;
     borrowed!(ctx, repo);
 
     let c0 = create_commit(
@@ -215,20 +227,32 @@ async fn test_blame(fb: FacebookInit) -> Result<(), Error> {
         c4 => "c4",
     };
 
-    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f0")?).await?;
-    assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
+    let blame = fetch_blame_compat(ctx, repo, c4, MPath::new("f0")?).await?;
+    assert_eq!(annotate(F0[4], blame, &names)?, F0_AT_C4);
 
-    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f1")?).await?;
-    assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
+    let blame = fetch_blame_compat(ctx, repo, c4, MPath::new("f1")?).await?;
+    assert_eq!(annotate(F1[1], blame, &names)?, F1_AT_C4);
 
-    let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f2")?).await?;
-    assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
+    let blame = fetch_blame_compat(ctx, repo, c4, MPath::new("f2")?).await?;
+    assert_eq!(annotate(F2[3], blame, &names)?, F2_AT_C4);
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Error> {
+async fn test_blame_size_rejected_v1(fb: FacebookInit) -> Result<(), Error> {
+    test_blame_size_rejected_version(fb, BlameVersion::V1).await
+}
+
+#[fbinit::test]
+async fn test_blame_size_rejected_v2(fb: FacebookInit) -> Result<(), Error> {
+    test_blame_size_rejected_version(fb, BlameVersion::V2).await
+}
+
+async fn test_blame_size_rejected_version(
+    fb: FacebookInit,
+    version: BlameVersion,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
     borrowed!(ctx, repo);
@@ -239,12 +263,15 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
         .commit()
         .await?;
 
-    // Default file size is 10Mb, so blame should be computed
+    // Default file size is 10MiB, so blame should be computed
     // without problems.
-    fetch_blame(ctx, repo, c1, MPath::new(file1)?).await?;
+    let _ = fetch_blame_compat(ctx, repo, c1, MPath::new(file1)?)
+        .await?
+        .ranges()?;
 
     let repo: BlobRepo = TestRepoFactory::new()?
         .with_config_override(|config| {
+            config.derived_data_config.enabled.blame_version = version;
             config.derived_data_config.enabled.blame_filesize_limit = Some(4);
         })
         .build()?;
@@ -256,12 +283,12 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
         .await?;
 
     // This repo has a decreased limit, so derivation should fail now
-    let res = fetch_blame(ctx, &repo, c2, MPath::new(file2)?).await;
+    let blame = fetch_blame_compat(ctx, &repo, c2, MPath::new(file2)?).await?;
 
-    match res {
-        Err(BlameError::Rejected(_)) => {}
+    match blame.ranges() {
+        Err(BlameRejected::TooBig) => {}
         _ => {
-            return Err(anyhow!("unexpected result: {:?}", res));
+            return Err(anyhow!("unexpected result"));
         }
     }
 
@@ -269,13 +296,12 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
 }
 
 fn annotate(
-    content: Bytes,
-    blame: Blame,
+    content: &str,
+    blame: CompatBlame,
     names: &HashMap<ChangesetId, &'static str>,
 ) -> Result<String, Error> {
-    let content = std::str::from_utf8(content.as_ref())?;
     let mut result = String::new();
-    let mut ranges = blame.ranges().iter();
+    let mut ranges = blame.ranges()?;
     let mut range = ranges
         .next()
         .ok_or_else(|| Error::msg("empty blame for non empty content"))?;

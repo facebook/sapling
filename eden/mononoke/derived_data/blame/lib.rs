@@ -8,6 +8,7 @@
 #![deny(warnings)]
 #![type_length_limit = "1441792"]
 
+mod compat;
 mod derive_v1;
 mod derive_v2;
 mod fetch;
@@ -26,10 +27,12 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use manifest::ManifestOps;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected};
+use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::{ChangesetId, MPath};
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
+pub use compat::CompatBlame;
 pub use fetch::{fetch_content_for_blame, FetchOutcome};
 pub use mapping_v1::{BlameRoot, BlameRootMapping};
 pub use mapping_v2::{RootBlameV2, RootBlameV2Mapping};
@@ -62,7 +65,48 @@ pub enum BlameError {
     #[error(transparent)]
     DeriveError(#[from] DeriveError),
     #[error(transparent)]
+    LoadableError(#[from] LoadableError),
+    #[error(transparent)]
     Error(#[from] Error),
+}
+
+/// Fetch the blame for a file.  Blame will be derived if necessary.
+pub async fn fetch_blame_compat(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    csid: ChangesetId,
+    path: MPath,
+) -> Result<CompatBlame, BlameError> {
+    let blame_version = repo.get_derived_data_config().enabled.blame_version;
+    let root_unode = match blame_version {
+        BlameVersion::V1 => {
+            BlameRoot::derive(ctx, repo, csid).await?;
+            RootUnodeManifestId::derive(&ctx, &repo, csid).await?
+        }
+        BlameVersion::V2 => {
+            let root_blame = RootBlameV2::derive(ctx, repo, csid).await?;
+            root_blame.root_manifest()
+        }
+    };
+    let blobstore = repo.get_blobstore();
+    let file_unode_id = root_unode
+        .manifest_unode_id()
+        .clone()
+        .find_entry(ctx.clone(), blobstore.clone(), Some(path.clone()))
+        .await?
+        .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
+        .into_leaf()
+        .ok_or_else(|| BlameError::IsDirectory(path))?;
+    match blame_version {
+        BlameVersion::V1 => {
+            let blame = BlameId::from(file_unode_id).load(ctx, &blobstore).await?;
+            Ok(CompatBlame::V1(blame))
+        }
+        BlameVersion::V2 => {
+            let blame = BlameV2Id::from(file_unode_id).load(ctx, &blobstore).await?;
+            Ok(CompatBlame::V2(blame))
+        }
+    }
 }
 
 /// Fetch content and blame for a file with specified file path
