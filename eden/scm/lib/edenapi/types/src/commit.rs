@@ -12,9 +12,9 @@ use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use dag_types::Location;
-use types::hgid::HgId;
+use types::{hgid::HgId, Parents, RepoPathBuf};
 
-use crate::ServerError;
+use crate::{ServerError, UploadToken};
 
 /// Given a graph location, return `count` hashes following first parent links.
 ///
@@ -196,4 +196,39 @@ impl Arbitrary for CommitHashLookupResponse {
             hgids: Arbitrary::arbitrary(g),
         }
     }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct Extra {
+    pub key: Vec<u8>,
+    pub value: Vec<u8>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct HgChangesetContent {
+    pub parents: Parents,
+    pub manifestid: HgId,
+    pub user: Vec<u8>,
+    pub time: i64,
+    pub tz: i32,
+    pub extras: Vec<Extra>,
+    pub files: Vec<RepoPathBuf>,
+    pub message: Vec<u8>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadHgChangeset {
+    pub node_id: HgId,
+    pub changeset_content: HgChangesetContent,
+}
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadHgChangesetsRequest {
+    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
+    pub changesets: Vec<UploadHgChangeset>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadHgChangesetsResponse {
+    pub index: usize,
+    pub token: UploadToken,
 }

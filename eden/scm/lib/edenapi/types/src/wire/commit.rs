@@ -15,9 +15,13 @@ use types::HgId;
 use crate::commit::{
     CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse,
+    CommitLocationToHashResponse, Extra, HgChangesetContent, UploadHgChangeset,
+    UploadHgChangesetsRequest, UploadHgChangesetsResponse,
 };
-use crate::wire::{is_default, ToApi, ToWire, WireHgId, WireResult, WireToApiConversionError};
+use crate::wire::{
+    is_default, ToApi, ToWire, WireHgId, WireParents, WireRepoPathBuf, WireResult,
+    WireToApiConversionError, WireUploadToken,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {
@@ -368,6 +372,192 @@ impl ToApi for WireCommitHashLookupResponse {
 impl Arbitrary for WireCommitHashLookupResponse {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         CommitHashLookupResponse::arbitrary(g).to_wire()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireExtra {
+    #[serde(rename = "1")]
+    pub key: Vec<u8>,
+
+    #[serde(rename = "2")]
+    pub value: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireHgChangesetContent {
+    #[serde(rename = "1")]
+    pub parents: WireParents,
+
+    #[serde(rename = "2")]
+    pub manifestid: WireHgId,
+
+    #[serde(rename = "3")]
+    pub user: Vec<u8>,
+
+    #[serde(rename = "4")]
+    pub time: i64,
+
+    #[serde(rename = "5")]
+    pub tz: i32,
+
+    #[serde(rename = "6")]
+    pub extras: Vec<WireExtra>,
+
+    #[serde(rename = "7")]
+    pub files: Vec<WireRepoPathBuf>,
+
+    #[serde(rename = "8")]
+    pub message: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadHgChangeset {
+    #[serde(rename = "1")]
+    pub node_id: WireHgId,
+
+    #[serde(rename = "2")]
+    pub changeset_content: WireHgChangesetContent,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadHgChangesetsRequest {
+    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
+    #[serde(rename = "1")]
+    pub changesets: Vec<WireUploadHgChangeset>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadHgChangesetsResponse {
+    #[serde(rename = "1")]
+    pub index: usize,
+
+    #[serde(rename = "2")]
+    pub token: WireUploadToken,
+}
+
+impl ToWire for Extra {
+    type Wire = WireExtra;
+
+    fn to_wire(self) -> Self::Wire {
+        WireExtra {
+            key: self.key.to_wire(),
+            value: self.value.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireExtra {
+    type Api = Extra;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(Extra {
+            key: self.key.to_api()?,
+            value: self.value.to_api()?,
+        })
+    }
+}
+
+impl ToWire for HgChangesetContent {
+    type Wire = WireHgChangesetContent;
+
+    fn to_wire(self) -> Self::Wire {
+        WireHgChangesetContent {
+            parents: self.parents.to_wire(),
+            manifestid: self.manifestid.to_wire(),
+            user: self.user.to_wire(),
+            time: self.time,
+            tz: self.tz,
+            extras: self.extras.to_wire(),
+            files: self.files.to_wire(),
+            message: self.message.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireHgChangesetContent {
+    type Api = HgChangesetContent;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(HgChangesetContent {
+            parents: self.parents.to_api()?,
+            manifestid: self.manifestid.to_api()?,
+            user: self.user.to_api()?,
+            time: self.time,
+            tz: self.tz,
+            extras: self.extras.to_api()?,
+            files: self.files.to_api()?,
+            message: self.message.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadHgChangeset {
+    type Wire = WireUploadHgChangeset;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadHgChangeset {
+            node_id: self.node_id.to_wire(),
+            changeset_content: self.changeset_content.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadHgChangeset {
+    type Api = UploadHgChangeset;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadHgChangeset {
+            node_id: self.node_id.to_api()?,
+            changeset_content: self.changeset_content.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadHgChangesetsRequest {
+    type Wire = WireUploadHgChangesetsRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadHgChangesetsRequest {
+            changesets: self.changesets.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadHgChangesetsRequest {
+    type Api = UploadHgChangesetsRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadHgChangesetsRequest {
+            changesets: self.changesets.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadHgChangesetsResponse {
+    type Wire = WireUploadHgChangesetsResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadHgChangesetsResponse {
+            index: self.index,
+            token: self.token.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadHgChangesetsResponse {
+    type Api = UploadHgChangesetsResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadHgChangesetsResponse {
+            index: self.index,
+            token: self.token.to_api()?,
+        })
     }
 }
 
