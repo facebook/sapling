@@ -102,7 +102,9 @@ pub mod logging;
 pub mod mapping_impl;
 
 pub use derive_impl::enabled_type_config;
-pub use mapping_impl::{BlobstoreExistsMapping, BlobstoreRootIdMapping};
+pub use mapping_impl::{
+    BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
+};
 pub use metaconfig_types::DerivedDataTypesConfig;
 
 #[derive(Debug, Error)]

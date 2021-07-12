@@ -20,6 +20,7 @@ derived_data = { version = "0.1.0", path = ".." }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "1.0"
 tokio = { version = "1.7.1", features = ["full", "test-util"] }

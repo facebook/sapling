@@ -23,7 +23,7 @@ use mononoke_types::{
 use repo_blobstore::RepoBlobstore;
 use std::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(ManifestUnodeId);
 
 impl RootUnodeManifestId {

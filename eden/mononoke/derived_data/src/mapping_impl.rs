@@ -162,6 +162,79 @@ pub trait BlobstoreExistsMapping {
     fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
 }
 
+/// Implementation of a derived data mapping where the fact that derivation
+/// has occurred is stored by the existence of a blob, and the blob can
+/// also contain associated data.
+#[async_trait]
+pub trait BlobstoreExistsWithDataMapping {
+    /// The mapped type that is stored in the blobstore.
+    type Value: BonsaiDerived + Send + Sync + Sized;
+
+    /// Create a new instance of this mapping.
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
+    where
+        Self: Sized;
+
+    /// Returns the blobstore prefix to use for the mapping.
+    fn prefix(&self) -> &'static str;
+
+    /// Returns the blobstore that backs this mapping.
+    fn blobstore(&self) -> &dyn Blobstore;
+
+    /// Name of the repository
+    fn repo_name(&self) -> &str;
+
+    /// Name of the scuba table used for logging
+    fn derived_data_scuba_table(&self) -> &Option<String>;
+
+    /// Create a key for this mapping for a particular changeset.
+    fn format_key(&self, cs_id: ChangesetId) -> String {
+        format!("{}{}", self.prefix(), cs_id)
+    }
+
+    /// Fetch the corresponding value for a single changeset.
+    async fn fetch(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Self::Value>> {
+        match self.blobstore().get(ctx, &self.format_key(cs_id)).await? {
+            Some(blob) => Ok(Some(self.deserialize_value(cs_id, blob)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Fetch the corresponding value for a batch of changesets.
+    async fn fetch_batch(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Self::Value>> {
+        stream::iter(cs_ids.into_iter().map(|cs_id| async move {
+            match self.fetch(ctx, cs_id).await? {
+                Some(value) => Ok(Some((cs_id, value))),
+                None => Ok(None),
+            }
+        }))
+        .buffer_unordered(64)
+        .try_filter_map(|maybe_value| async move { Ok(maybe_value) })
+        .try_collect()
+        .await
+    }
+
+    /// Store a new mapping value.
+    async fn store(&self, ctx: &CoreContext, cs_id: ChangesetId, value: Self::Value) -> Result<()> {
+        self.blobstore()
+            .put(ctx, self.format_key(cs_id), self.serialize_value(value)?)
+            .await
+    }
+
+    /// Fetch the options for this mapping implementation.
+    fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
+
+    /// Serialize a value with additional data.
+    fn serialize_value(&self, value: Self::Value) -> Result<BlobstoreBytes>;
+
+    /// Deserialize a value with additional data.
+    fn deserialize_value(&self, cs_id: ChangesetId, data: BlobstoreGetData) -> Result<Self::Value>;
+}
+
 /// Macro to implement a bonsai derived mapping using a mapping implementation
 /// type.
 ///

@@ -9,8 +9,10 @@
 #![type_length_limit = "1441792"]
 
 mod derive_v1;
+mod derive_v2;
 mod fetch;
 mod mapping_v1;
+mod mapping_v2;
 
 #[cfg(test)]
 mod tests;
@@ -22,27 +24,29 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use manifest::ManifestOps;
-use mononoke_types::{
-    blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected},
-    ChangesetId, MPath,
-};
+use metaconfig_types::BlameVersion;
+use mononoke_types::blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected};
+use mononoke_types::{ChangesetId, MPath};
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 pub use fetch::{fetch_content_for_blame, FetchOutcome};
 pub use mapping_v1::{BlameRoot, BlameRootMapping};
+pub use mapping_v2::{RootBlameV2, RootBlameV2Mapping};
 
 pub const DEFAULT_BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct BlameDeriveOptions {
     filesize_limit: u64,
+    blame_version: BlameVersion,
 }
 
 impl Default for BlameDeriveOptions {
     fn default() -> Self {
         BlameDeriveOptions {
             filesize_limit: DEFAULT_BLAME_FILESIZE_LIMIT,
+            blame_version: BlameVersion::default(),
         }
     }
 }

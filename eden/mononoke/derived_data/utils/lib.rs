@@ -9,7 +9,7 @@
 
 use anyhow::{anyhow, format_err, Error};
 use async_trait::async_trait;
-use blame::{BlameRoot, BlameRootMapping};
+use blame::{BlameRoot, BlameRootMapping, RootBlameV2Mapping};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
@@ -19,8 +19,8 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerivedMapping, DerivedDataTypesConfig, RegenerateMapping,
+    derive_impl, BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
+    BonsaiDerivable, BonsaiDerivedMapping, DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -34,6 +34,7 @@ use git_types::{TreeHandle, TreeMapping};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
+use metaconfig_types::BlameVersion;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
@@ -520,13 +521,22 @@ fn derived_data_utils_impl(
                 repo.clone(),
             )))
         }
-        BlameRoot::NAME => {
-            let mapping = BlameRootMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                mapping,
-                repo.clone(),
-            )))
-        }
+        BlameRoot::NAME => match config.blame_version {
+            BlameVersion::V1 => {
+                let mapping = BlameRootMapping::new(repo, config)?;
+                Ok(Arc::new(DerivedUtilsFromMapping::new(
+                    mapping,
+                    repo.clone(),
+                )))
+            }
+            BlameVersion::V2 => {
+                let mapping = RootBlameV2Mapping::new(repo, config)?;
+                Ok(Arc::new(DerivedUtilsFromMapping::new(
+                    mapping,
+                    repo.clone(),
+                )))
+            }
+        },
         ChangesetInfo::NAME => {
             let mapping = ChangesetInfoMapping::new(repo, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(

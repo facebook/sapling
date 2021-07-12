@@ -192,12 +192,18 @@ impl BlameV2 {
 pub struct BlameParent<C: AsRef<[u8]>> {
     parent_index: usize,
     path: MPath,
-    content: C,
+    content: Option<C>,
     blame: BlameV2,
 }
 
 impl<C: AsRef<[u8]>> BlameParent<C> {
-    pub fn new(parent_index: usize, path: MPath, content: C, blame: BlameV2) -> BlameParent<C> {
+    pub fn new(
+        parent_index: usize,
+        path: MPath,
+        content: impl Into<Option<C>>,
+        blame: BlameV2,
+    ) -> BlameParent<C> {
+        let content = content.into();
         BlameParent {
             parent_index,
             path,
@@ -207,14 +213,14 @@ impl<C: AsRef<[u8]>> BlameParent<C> {
     }
 
     fn into_blame_parent_data(self) -> Option<BlameParentData<C>> {
-        match self.blame {
-            BlameV2::Rejected(_) => None,
-            BlameV2::Blame(blame) => Some(BlameParentData {
+        match (self.blame, self.content) {
+            (BlameV2::Blame(blame), Some(content)) => Some(BlameParentData {
                 parent_index: self.parent_index as u32,
                 path: self.path,
-                content: self.content,
+                content,
                 blame,
             }),
+            _ => None,
         }
     }
 }
