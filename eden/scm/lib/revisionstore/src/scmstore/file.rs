@@ -9,7 +9,7 @@
 #![allow(dead_code)]
 use std::collections::{hash_map, HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ops::{BitAnd, BitOr, Not, Sub};
+use std::ops::{AddAssign, BitAnd, BitOr, Not, Sub};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -36,6 +36,135 @@ use crate::{
     ExtStoredPolicy, LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore,
     RepackLocation, StoreKey, StoreResult,
 };
+
+#[derive(Clone, Debug, Default)]
+struct FetchMetrics {
+    /// Number of requests / batches
+    requests: usize,
+
+    /// Numbers of entities requested
+    keys: usize,
+
+    /// Number of successfully fetched entities
+    hits: usize,
+
+    /// Number of entities which were not found
+    misses: usize,
+
+    /// Number of entities which returned a fetch error (including batch errors)
+    errors: usize,
+}
+
+impl AddAssign for FetchMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.requests += rhs.requests;
+        self.keys += rhs.keys;
+        self.hits += rhs.hits;
+        self.misses += rhs.misses;
+        self.errors += rhs.errors;
+    }
+}
+
+impl FetchMetrics {
+    fn fetch(&mut self, keys: usize) {
+        self.requests += 1;
+        self.keys += keys;
+    }
+
+    fn hit(&mut self, keys: usize) {
+        self.hits += keys;
+    }
+
+    fn miss(&mut self, keys: usize) {
+        self.misses += keys;
+    }
+
+    fn err(&mut self, keys: usize) {
+        self.errors += keys;
+    }
+
+    fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+        std::array::IntoIter::new([
+            ("requests", self.requests),
+            ("keys", self.keys),
+            ("hits", self.hits),
+            ("misses", self.misses),
+            ("errors", self.errors),
+        ])
+        .filter(|&(_, v)| v != 0)
+    }
+}
+
+fn namespaced(
+    namespace: &'static str,
+    metrics: impl Iterator<Item = (impl AsRef<str>, usize)>,
+) -> impl Iterator<Item = (String, usize)> {
+    metrics.map(move |(k, v)| (namespace.to_string() + "." + k.as_ref(), v))
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct LocalAndCacheFetchMetrics {
+    local: FetchMetrics,
+    cache: FetchMetrics,
+}
+
+impl LocalAndCacheFetchMetrics {
+    fn store(&mut self, typ: LocalStoreType) -> &mut FetchMetrics {
+        match typ {
+            LocalStoreType::Local => &mut self.local,
+            LocalStoreType::Cache => &mut self.cache,
+        }
+    }
+
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+        namespaced("local", self.local.metrics()).chain(namespaced("cache", self.cache.metrics()))
+    }
+}
+
+impl AddAssign for LocalAndCacheFetchMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.local += rhs.local;
+        self.cache += rhs.cache;
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct FileStoreFetchMetrics {
+    indexedlog: LocalAndCacheFetchMetrics,
+    lfs: LocalAndCacheFetchMetrics,
+    contentstore: FetchMetrics,
+}
+
+impl AddAssign for FileStoreFetchMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.indexedlog += rhs.indexedlog;
+        self.lfs += rhs.lfs;
+        self.contentstore += rhs.contentstore;
+    }
+}
+
+impl FileStoreFetchMetrics {
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+        namespaced("indexedlog", self.indexedlog.metrics())
+            .chain(namespaced("lfs", self.lfs.metrics()))
+            .chain(namespaced("contentstore", self.contentstore.metrics()))
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct FileStoreMetrics {
+    fetch: FileStoreFetchMetrics,
+}
+
+impl FileStoreMetrics {
+    pub fn new() -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(FileStoreMetrics::default()))
+    }
+
+    pub fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+        namespaced("scmstore.file.fetch", self.fetch.metrics())
+    }
+}
 
 pub struct FileStore {
     // Config
@@ -75,6 +204,9 @@ pub struct FileStore {
     // Aux Data Stores
     pub(crate) aux_local: Option<Arc<IndexedLogHgIdDataStore>>,
     pub(crate) aux_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+
+    // Metrics, statistics, debugging
+    pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
 }
 
 impl Drop for FileStore {
@@ -156,6 +288,7 @@ pub struct FileStoreFetch {
     pub complete: HashMap<Key, StoreFile>,
     pub incomplete: HashMap<Key, Vec<Error>>,
     other_errors: Vec<Error>,
+    metrics: FileStoreFetchMetrics,
 }
 
 impl FileStoreFetch {
@@ -297,7 +430,9 @@ impl FileStore {
             self.aux_local.as_ref().map(|s| s.as_ref()),
         );
 
-        state.finish()
+        let fetched = state.finish();
+        self.metrics.write().fetch += fetched.metrics.clone();
+        fetched
     }
 
     #[instrument(skip(self, entries))]
@@ -380,6 +515,7 @@ impl FileStore {
             contentstore: None,
             fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
+            metrics: self.metrics.clone(),
 
             aux_local: self.aux_local.clone(),
             aux_cache: self.aux_cache.clone(),
@@ -438,6 +574,10 @@ impl FileStore {
         self.fallbacks.clone()
     }
 
+    pub fn metrics(&self) -> Vec<(String, usize)> {
+        self.metrics.read().metrics().collect()
+    }
+
     pub fn empty() -> Self {
         FileStore {
             extstored_policy: ExtStoredPolicy::Ignore,
@@ -461,6 +601,7 @@ impl FileStore {
             contentstore: None,
             fallbacks: Arc::new(ContentStoreFallbacks::new()),
             fetch_logger: None,
+            metrics: FileStoreMetrics::new(),
 
             aux_local: None,
             aux_cache: None,
@@ -500,6 +641,7 @@ impl LegacyStore for FileStore {
             contentstore: None,
             fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
+            metrics: self.metrics.clone(),
 
             aux_local: None,
             aux_cache: None,
@@ -968,6 +1110,9 @@ pub struct FetchState {
     /// Track ContentStore Fallbacks
     fallbacks: Arc<ContentStoreFallbacks>,
 
+    /// Track fetch metrics,
+    metrics: FileStoreFetchMetrics,
+
     // Config
     extstored_policy: ExtStoredPolicy,
     compute_aux_data: bool,
@@ -995,6 +1140,7 @@ impl FetchState {
             fallbacks: file_store.fallbacks.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
+            metrics: FileStoreFetchMetrics::default(),
         }
     }
 
@@ -1133,13 +1279,22 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+        self.metrics.indexedlog.store(typ).fetch(pending.len());
         let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
             match res {
-                Ok(Some(entry)) => self.found_indexedlog(key, entry, typ),
-                Ok(None) => {}
-                Err(err) => self.errors.keyed_error(key, err),
+                Ok(Some(entry)) => {
+                    self.metrics.indexedlog.store(typ).hit(1);
+                    self.found_indexedlog(key, entry, typ)
+                }
+                Ok(None) => {
+                    self.metrics.indexedlog.store(typ).miss(1);
+                }
+                Err(err) => {
+                    self.metrics.indexedlog.store(typ).err(1);
+                    self.errors.keyed_error(key, err)
+                }
             }
         }
     }
@@ -1193,14 +1348,24 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+        self.metrics.lfs.store(typ).fetch(pending.len());
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
             );
             match store.fetch_available(&store_key) {
-                Ok(Some(entry)) => self.found_lfs(key, entry, typ),
-                Ok(None) => {}
-                Err(err) => self.errors.keyed_error(key, err),
+                Ok(Some(entry)) => {
+                    // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
+                    self.metrics.lfs.store(typ).hit(1);
+                    self.found_lfs(key, entry, typ)
+                }
+                Ok(None) => {
+                    self.metrics.lfs.store(typ).miss(1);
+                }
+                Err(err) => {
+                    self.metrics.lfs.store(typ).err(1);
+                    self.errors.keyed_error(key, err)
+                }
             }
         }
     }
@@ -1376,6 +1541,7 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+        self.metrics.contentstore.fetch(pending.len());
         store.prefetch(&pending)?;
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
@@ -1401,12 +1567,17 @@ impl FetchState {
                 });
 
             match res {
-                Ok((Some(blob), Some(meta))) => self.found_contentstore(key, blob, meta),
+                Ok((Some(blob), Some(meta))) => {
+                    self.metrics.contentstore.hit(1);
+                    self.found_contentstore(key, blob, meta)
+                }
                 Err(err) => {
+                    self.metrics.contentstore.err(1);
                     self.fallbacks.fetch_miss(&key);
                     self.errors.keyed_error(key, err)
                 }
                 _ => {
+                    self.metrics.contentstore.miss(1);
                     self.fallbacks.fetch_miss(&key);
                 }
             }
@@ -1556,6 +1727,7 @@ impl FetchState {
             complete: self.found,
             incomplete,
             other_errors: self.errors.other_errors,
+            metrics: self.metrics,
         }
     }
 }

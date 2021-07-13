@@ -1363,6 +1363,19 @@ py_class!(pub class filescmstore |py| {
         Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
     }
 
+    def getmetrics(&self) -> PyResult<Vec<PyTuple>> {
+        let store = self.store(py);
+        Ok(store.metrics().into_iter().map(|(k, v)| {
+            PyTuple::new(
+                py,
+                &[
+                    k.to_py_object(py).into_object(),
+                    v.to_py_object(py).into_object(),
+                ],
+            )
+        }).collect::<Vec<PyTuple>>())
+    }
+
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
         let store = self.store(py);
         mutabledeltastore::create_instance(py, store.get_shared_mutable())

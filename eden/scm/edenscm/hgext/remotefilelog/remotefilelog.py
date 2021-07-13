@@ -659,6 +659,7 @@ class remotefileslog(filelog.fileslog):
         self._memcachestore = None
 
     def logfetches(self):
+        # TODO(meyer): Rename this function
         ui = self.repo.ui
         if self.contentstore:
             fetched = self.contentstore.getloggedfetches()
@@ -687,3 +688,6 @@ class remotefileslog(filelog.fileslog):
             ui.metrics.gauge("fallback_fetchhitptr", fetchhitptr)
             ui.metrics.gauge("fallback_fetchhitcontent", fetchhitcontent)
             ui.metrics.gauge("fallback_writeptr", writeptr)
+            metrics = self.filescmstore.getmetrics()
+            for (metric, value) in metrics:
+                ui.metrics.gauge(metric, value)

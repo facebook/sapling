@@ -1,7 +1,7 @@
   $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig devel.print-metrics=1
+  $ setconfig devel.print-metrics=1 devel.skip-metrics=scmstore
   $ setconfig scmstore.enableshim=True scmstore.contentstorefallback=True
 
   $ hginit master
