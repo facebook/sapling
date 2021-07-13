@@ -12,12 +12,12 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     file::{
-        FileAttributes, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
+        FileAttributes, FileAuxData, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
         UploadHgFilenodeRequest, UploadHgFilenodeResponse,
     },
     wire::{
-        is_default, ToApi, ToWire, WireHgId, WireKey, WireParents, WireRevisionstoreMetadata,
-        WireToApiConversionError, WireUploadToken,
+        is_default, ToApi, ToWire, WireContentId, WireHgId, WireKey, WireParents,
+        WireRevisionstoreMetadata, WireSha1, WireSha256, WireToApiConversionError, WireUploadToken,
     },
 };
 
@@ -34,6 +34,9 @@ pub struct WireFileEntry {
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     metadata: Option<WireRevisionstoreMetadata>,
+
+    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    aux_data: Option<WireFileAuxData>,
 }
 
 impl ToWire for FileEntry {
@@ -48,6 +51,7 @@ impl ToWire for FileEntry {
             parents: self.parents.to_wire(),
             data,
             metadata: metadata.to_wire(),
+            aux_data: self.aux_data.to_wire(),
         }
     }
 }
@@ -74,7 +78,52 @@ impl ToApi for WireFileEntry {
             key: self.key.to_api()?,
             // if content is present, metadata must be also
             content,
+
+            aux_data: self.aux_data.to_api()?,
             parents: self.parents.to_api()?,
+        })
+    }
+}
+
+/// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireFileAuxData {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    pub total_size: u64,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub content_id: WireContentId,
+
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    pub sha1: WireSha1,
+
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
+    pub sha256: WireSha256,
+}
+
+impl ToWire for FileAuxData {
+    type Wire = WireFileAuxData;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFileAuxData {
+            total_size: self.total_size,
+            content_id: self.content_id.to_wire(),
+            sha1: self.sha1.to_wire(),
+            sha256: self.sha256.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireFileAuxData {
+    type Api = FileAuxData;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FileAuxData {
+            total_size: self.total_size,
+            content_id: self.content_id.to_api()?,
+            sha1: self.sha1.to_api()?,
+            sha256: self.sha256.to_api()?,
         })
     }
 }
@@ -83,6 +132,9 @@ impl ToApi for WireFileEntry {
 pub struct WireFileAttributes {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     pub content: bool,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub aux_data: bool,
 }
 
 impl ToWire for FileAttributes {
@@ -91,6 +143,7 @@ impl ToWire for FileAttributes {
     fn to_wire(self) -> Self::Wire {
         WireFileAttributes {
             content: self.content,
+            aux_data: self.aux_data,
         }
     }
 }
@@ -102,6 +155,7 @@ impl ToApi for WireFileAttributes {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(FileAttributes {
             content: self.content,
+            aux_data: self.aux_data,
         })
     }
 }
@@ -111,6 +165,7 @@ impl Arbitrary for WireFileAttributes {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             content: Arbitrary::arbitrary(g),
+            aux_data: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -299,6 +354,19 @@ impl Arbitrary for WireFileEntry {
             data: bytes.map(Bytes::from),
             parents: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
+            aux_data: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireFileAuxData {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            total_size: Arbitrary::arbitrary(g),
+            content_id: Arbitrary::arbitrary(g),
+            sha1: Arbitrary::arbitrary(g),
+            sha256: Arbitrary::arbitrary(g),
         }
     }
 }

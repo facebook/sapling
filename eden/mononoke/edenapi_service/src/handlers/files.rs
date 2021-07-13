@@ -15,9 +15,9 @@ use std::str::FromStr;
 
 use edenapi_types::{
     wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
-    AnyFileContentId, AnyId, FileAttributes, FileContent, FileContentTokenMetadata, FileEntry,
-    FileRequest, FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken,
-    UploadTokenMetadata,
+    AnyFileContentId, AnyId, FileAttributes, FileAuxData, FileContent, FileContentTokenMetadata,
+    FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse,
+    UploadToken, UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
@@ -83,7 +83,10 @@ fn fetch_all_files(
         .into_iter()
         .map(|key| FileSpec {
             key,
-            attrs: FileAttributes { content: true },
+            attrs: FileAttributes {
+                content: true,
+                aux_data: false,
+            },
         })
         .chain(request.reqs.into_iter());
     let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
@@ -123,6 +126,20 @@ async fn fetch_file(
         file = file.with_content(FileContent {
             hg_file_blob: data,
             metadata,
+        });
+    }
+
+    if attrs.aux_data {
+        let content_metadata = ctx
+            .content_metadata()
+            .await
+            .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
+
+        file = file.with_aux_data(FileAuxData {
+            total_size: content_metadata.total_size,
+            content_id: content_metadata.content_id.into(),
+            sha1: content_metadata.sha1.into(),
+            sha256: content_metadata.sha256.into(),
         });
     }
 

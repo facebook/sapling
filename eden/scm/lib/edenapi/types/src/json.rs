@@ -170,14 +170,16 @@ pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLoc
 /// ```json
 /// {
 ///   "content": true,
+///   "aux_data": true,
 /// }
 /// ```
 ///
 pub fn parse_file_attrs(json: &Value) -> Result<FileAttributes> {
     let json = json.as_object().context("input must be a JSON object")?;
     let content = optional_bool_field(json, "content")?;
+    let aux_data = optional_bool_field(json, "aux_data")?;
 
-    Ok(FileAttributes { content })
+    Ok(FileAttributes { content, aux_data })
 }
 
 /// Parse a `FileRequest` from JSON.
@@ -683,6 +685,7 @@ impl ToJson for FileAttributes {
     fn to_json(&self) -> Value {
         json!({
             "content": self.content,
+            "aux_data": self.aux_data,
         })
     }
 }

@@ -87,6 +87,7 @@ impl EdenApi for EagerRepo {
                     hg_file_blob: extract_body(&data).to_vec().into(),
                     metadata: Default::default(),
                 }),
+                aux_data: None,
             };
             values.push(Ok(entry));
         }

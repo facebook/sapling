@@ -15,7 +15,7 @@ use quickcheck::Arbitrary;
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{InvalidHgId, UploadToken};
+use crate::{ContentId, InvalidHgId, Sha1, Sha256, UploadToken};
 
 /// Tombstone string that replaces the content of redacted files.
 /// TODO(T48685378): Handle redacted content in a less hacky way.
@@ -50,6 +50,15 @@ impl FileError {
     }
 }
 
+/// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FileAuxData {
+    pub total_size: u64,
+    pub content_id: ContentId,
+    pub sha1: Sha1,
+    pub sha256: Sha256,
+}
+
 /// File content
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileContent {
@@ -65,6 +74,7 @@ pub struct FileEntry {
     pub key: Key,
     pub parents: Parents,
     pub content: Option<FileContent>,
+    pub aux_data: Option<FileAuxData>,
 }
 
 impl FileEntry {
@@ -78,6 +88,11 @@ impl FileEntry {
 
     pub fn with_content(mut self, content: FileContent) -> Self {
         self.content = Some(content);
+        self
+    }
+
+    pub fn with_aux_data(mut self, aux_data: FileAuxData) -> Self {
+        self.aux_data = Some(aux_data);
         self
     }
 
@@ -168,6 +183,7 @@ impl Arbitrary for FileEntry {
             key: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),
             content: Arbitrary::arbitrary(g),
+            aux_data: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -175,6 +191,7 @@ impl Arbitrary for FileEntry {
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileAttributes {
     pub content: bool,
+    pub aux_data: bool,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -182,6 +199,7 @@ impl Arbitrary for FileAttributes {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             content: Arbitrary::arbitrary(g),
+            aux_data: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -215,6 +233,18 @@ impl Arbitrary for FileRequest {
         Self {
             keys: Arbitrary::arbitrary(g),
             reqs: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileAuxData {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            total_size: Arbitrary::arbitrary(g),
+            content_id: Arbitrary::arbitrary(g),
+            sha1: Arbitrary::arbitrary(g),
+            sha256: Arbitrary::arbitrary(g),
         }
     }
 }
