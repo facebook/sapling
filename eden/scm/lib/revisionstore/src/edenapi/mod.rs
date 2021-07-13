@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use edenapi::{BlockingFetch, EdenApi, EdenApiBlocking, EdenApiError, Fetch, ProgressCallback};
-use edenapi_types::{EdenApiServerError, FileEntry, TreeAttributes, TreeEntry};
+use edenapi_types::{EdenApiServerError, FileEntry, FileSpec, TreeAttributes, TreeEntry};
 use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
 
@@ -129,6 +129,15 @@ impl EdenApiFileStore {
     ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
         self.client
             .files_blocking(self.repo.clone(), keys, progress)
+    }
+
+    pub fn files_attrs_blocking(
+        &self,
+        reqs: Vec<FileSpec>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
+        self.client
+            .files_attrs_blocking(self.repo.clone(), reqs, progress)
     }
 }
 

@@ -26,6 +26,7 @@ use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
+use edenapi::types::FileSpec;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
 use edenapi::types::HgMutationEntryContent;
@@ -79,6 +80,36 @@ impl EdenApi for EagerRepo {
             let data = self.get_sha1_blob_for_api(id)?;
             let (p1, p2) = extract_p1_p2(&data);
             let parents = Parents::new(p1, p2);
+            let entry = FileEntry {
+                key,
+                parents,
+                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
+                content: Some(FileContent {
+                    hg_file_blob: extract_body(&data).to_vec().into(),
+                    metadata: Default::default(),
+                }),
+                aux_data: None,
+            };
+            values.push(Ok(entry));
+        }
+        Ok(convert_to_fetch(values))
+    }
+
+    async fn files_attrs(
+        &self,
+        _repo: String,
+        reqs: Vec<FileSpec>,
+        _progress: Option<ProgressCallback>,
+    ) -> edenapi::Result<Fetch<FileEntry>> {
+        debug!("files {}", debug_spec_list(&reqs));
+        let mut values = Vec::with_capacity(reqs.len());
+        for spec in reqs {
+            let key = spec.key;
+            let id = key.hgid;
+            let data = self.get_sha1_blob_for_api(id)?;
+            let (p1, p2) = extract_p1_p2(&data);
+            let parents = Parents::new(p1, p2);
+            // TODO(meyer): Actually implement aux data here.
             let entry = FileEntry {
                 key,
                 parents,
@@ -615,6 +646,10 @@ fn map_crate_err(e: crate::Error) -> EdenApiError {
 
 fn debug_key_list(keys: &[Key]) -> String {
     debug_list(keys, |k| k.hgid.to_hex())
+}
+
+fn debug_spec_list(reqs: &[FileSpec]) -> String {
+    debug_list(reqs, |s| s.key.hgid.to_hex())
 }
 
 fn debug_hgid_list(ids: &[HgId]) -> String {

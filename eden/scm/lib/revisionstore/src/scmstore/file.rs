@@ -18,7 +18,7 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use edenapi_types::{ContentId, FileEntry, Sha1};
+use edenapi_types::{ContentId, FileAuxData as EdenApiFileAuxData, FileEntry, Sha1};
 
 use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf, Sha256};
@@ -731,6 +731,28 @@ impl From<FileAuxData> for AuxDataEntry {
     }
 }
 
+impl From<EdenApiFileAuxData> for FileAuxData {
+    fn from(v: EdenApiFileAuxData) -> Self {
+        FileAuxData {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            content_sha1: v.sha1,
+            content_sha256: Sha256::from_byte_array(v.sha256.0),
+        }
+    }
+}
+
+impl From<FileAuxData> for EdenApiFileAuxData {
+    fn from(v: FileAuxData) -> Self {
+        EdenApiFileAuxData {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            sha1: v.content_sha1,
+            sha256: v.content_sha256.into_inner().into(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct StoreFile {
     // TODO(meyer): We'll probably eventually need a better "canonical lazy file" abstraction, since EdenApi FileEntry won't always carry content
@@ -914,7 +936,7 @@ impl Sub for FileAttributes {
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)
 #[derive(Debug)]
-enum LazyFile {
+pub(crate) enum LazyFile {
     /// A response from calling into the legacy storage API
     ContentStore(Bytes, Metadata),
 
@@ -945,7 +967,7 @@ impl LazyFile {
 
     /// Compute's the aux data associated with this file from the content.
     #[instrument(level = "debug", skip(self))]
-    fn aux_data(&mut self) -> Result<FileAuxData> {
+    pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         Ok(if let LazyFile::Lfs(content, ref ptr) = self {
             FileAuxData {

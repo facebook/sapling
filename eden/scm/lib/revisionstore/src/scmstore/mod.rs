@@ -7,7 +7,7 @@
 
 pub use self::{
     builder::{FileStoreBuilder, TreeStoreBuilder},
-    file::{ContentStoreFallbacks, FileAttributes, FileStore, StoreFile},
+    file::{ContentStoreFallbacks, FileAttributes, FileAuxData, FileStore, StoreFile},
     tree::TreeStore,
     util::file_to_async_key_stream,
 };

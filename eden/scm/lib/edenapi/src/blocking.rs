@@ -8,8 +8,8 @@
 use async_runtime::block_on;
 use edenapi_types::{
     BookmarkEntry, CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
-    TreeAttributes, TreeEntry,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, FileSpec,
+    HistoryEntry, TreeAttributes, TreeEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -29,6 +29,15 @@ pub trait EdenApiBlocking: EdenApi {
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
         BlockingFetch::from_async(self.files(repo, keys, progress))
+    }
+
+    fn files_attrs_blocking(
+        &self,
+        repo: String,
+        reqs: Vec<FileSpec>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
+        BlockingFetch::from_async(self.files_attrs(repo, reqs, progress))
     }
 
     fn history_blocking(

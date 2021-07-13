@@ -174,6 +174,10 @@ impl FileEntry {
     pub fn parents(&self) -> &Parents {
         &self.parents
     }
+
+    pub fn aux_data(&self) -> Option<&FileAuxData> {
+        self.aux_data.as_ref()
+    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]

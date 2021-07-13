@@ -15,7 +15,7 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
+    EdenApiServerError, FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
     LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
     UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeResponse,
 };
@@ -36,6 +36,13 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         keys: Vec<Key>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<FileEntry>, EdenApiError>;
+
+    async fn files_attrs(
+        &self,
+        repo: String,
+        reqs: Vec<FileSpec>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<FileEntry>, EdenApiError>;
 
@@ -195,6 +202,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .files(repo, keys, progress)
+            .await
+    }
+
+    async fn files_attrs(
+        &self,
+        repo: String,
+        reqs: Vec<FileSpec>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .files_attrs(repo, reqs, progress)
             .await
     }
 

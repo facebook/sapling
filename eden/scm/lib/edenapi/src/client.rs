@@ -37,7 +37,7 @@ use edenapi_types::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
+    FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
     LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
     UploadHgChangeset, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
     UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
@@ -338,6 +338,32 @@ impl EdenApi for Client {
         let url = self.url(paths::FILES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
+            self.log_request(&req, "files");
+            req.to_wire()
+        })?;
+
+        Ok(self.fetch::<WireFileEntry>(requests, progress).await?)
+    }
+
+    async fn files_attrs(
+        &self,
+        repo: String,
+        reqs: Vec<FileSpec>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        let msg = format!("Requesting attributes for {} file(s)", reqs.len());
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if reqs.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::FILES, Some(&repo))?;
+        let requests = self.prepare(&url, reqs, self.config.max_files, |reqs| {
+            let req = FileRequest { reqs, keys: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
         })?;

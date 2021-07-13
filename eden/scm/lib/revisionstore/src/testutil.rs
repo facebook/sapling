@@ -14,10 +14,10 @@ use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stat
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileContent, FileEntry, HgFilenodeData, HgMutationEntryContent,
-    HistoryEntry, LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset,
-    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
-    UploadTreeResponse,
+    EdenApiServerError, FileAttributes, FileAuxData, FileContent, FileEntry, FileSpec,
+    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
+    TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse, UploadHgFilenodeResponse,
+    UploadToken, UploadTreeEntry, UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -30,6 +30,7 @@ use crate::{
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::LocalStore,
     remotestore::HgIdRemoteStore,
+    scmstore::file::LazyFile,
     types::StoreKey,
 };
 
@@ -236,22 +237,36 @@ impl FakeEdenApi {
 
     fn get_files(
         map: &HashMap<Key, (Bytes, Option<u64>)>,
-        keys: Vec<Key>,
+        reqs: impl Iterator<Item = FileSpec>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
-        let entries = keys
-            .into_iter()
-            .filter_map(|key| {
-                let (data, flags) = map.get(&key)?.clone();
+        let entries = reqs
+            .filter_map(|spec| {
                 let parents = Parents::default();
+                let mut entry = FileEntry::new(spec.key.clone(), parents);
+
+                let (data, flags) = map.get(&spec.key)?.clone();
                 let metadata = Metadata {
                     flags,
                     size: Some(data.len() as u64),
                 };
                 let data = data.to_vec().into();
-                Some(Ok(FileEntry::new(key, parents).with_content(FileContent {
+                let content = FileContent {
                     hg_file_blob: data,
                     metadata,
-                })))
+                };
+
+                if spec.attrs.aux_data {
+                    // TODO(meyer): Compute aux data directly.
+                    let mut file = LazyFile::EdenApi(entry.clone().with_content(content.clone()));
+                    let aux = file.aux_data().ok()?;
+                    entry = entry.with_aux_data(aux.into());
+                }
+
+                if spec.attrs.content {
+                    entry = entry.with_content(content);
+                }
+
+                Some(Ok(entry))
             })
             .collect::<Vec<_>>();
 
@@ -294,7 +309,25 @@ impl EdenApi for FakeEdenApi {
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
-        Self::get_files(&self.files, keys)
+        Self::get_files(
+            &self.files,
+            keys.into_iter().map(|key| FileSpec {
+                key,
+                attrs: FileAttributes {
+                    content: true,
+                    aux_data: false,
+                },
+            }),
+        )
+    }
+
+    async fn files_attrs(
+        &self,
+        _repo: String,
+        reqs: Vec<FileSpec>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        Self::get_files(&self.files, reqs.into_iter())
     }
 
     async fn history(
