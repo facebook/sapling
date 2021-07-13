@@ -428,27 +428,38 @@ def dispatch(req):
             ui.log("measuredtimes", **(ui._measuredtimes))
         hgmetrics = bindings.hgmetrics.summarize()
         if hgmetrics:
+            # Comma-separated list of metric prefixes to skip
+            # TODO(meyer): Just skip printing metrics, rather than skipping logging them entirely.
+            skip = ui.configlist("devel", "skip-metrics", [])
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
             metrics = {}
             splitre = re.compile(r"_|/|\.")
             for key, value in hgmetrics.items():
-                cur = metrics
-                names = splitre.split(key)
-                for name in names[:-1]:
-                    cur = cur.setdefault(name, {})
-                cur[names[-1]] = value
+                for prefix in skip:
+                    if key.startswith(prefix):
+                        break
+                else:
+                    cur = metrics
+                    names = splitre.split(key)
+                    for name in names[:-1]:
+                        cur = cur.setdefault(name, {})
+                    cur[names[-1]] = value
             # pprint.pformat stablizes the output
             from pprint import pformat
 
-            # developer config: devel.print-metrics
-            if ui.configbool("devel", "print-metrics"):
-                # Print it out.
-                msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
-                ui.flush()
-                ui.write_err(msg, label="hgmetrics")
-            # Write to blackbox, and sampling
-            ui.log("metrics", pformat({"metrics": metrics}, width=1024), **hgmetrics)
+            if metrics:
+                # developer config: devel.print-metrics
+                if ui.configbool("devel", "print-metrics"):
+                    # Print it out.
+                    msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
+                    ui.flush()
+                    ui.write_err(msg, label="hgmetrics")
+
+                # Write to blackbox, and sampling
+                ui.log(
+                    "metrics", pformat({"metrics": metrics}, width=1024), **hgmetrics
+                )
         blackbox.sync()
 
     if util.isoldversion():
