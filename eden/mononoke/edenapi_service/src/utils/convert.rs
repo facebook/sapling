@@ -19,8 +19,18 @@
 //! in implentation, it is possible that conversion failures may occur
 //! in practice.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
+use smallvec::SmallVec;
+use std::collections::BTreeMap;
+use std::str;
+
+use edenapi_types::{HgChangesetContent, HgMutationEntryContent};
+use mercurial_mutation::HgMutationEntry;
+use mercurial_types::{
+    blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
+};
 use mononoke_api::path::MononokePath;
+use mononoke_types::DateTime;
 use mononoke_types::MPath;
 use types::{RepoPath, RepoPathBuf};
 
@@ -47,4 +57,66 @@ pub fn to_hg_path(path: &MononokePath) -> Result<RepoPathBuf> {
         None => return Ok(RepoPathBuf::new()),
     };
     RepoPathBuf::from_utf8(path_bytes.clone()).context(ErrorKind::InvalidPath(path_bytes))
+}
+
+pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
+    Ok(RevlogChangeset {
+        p1: cs.parents.p1().cloned().map(HgNodeHash::from),
+        p2: cs.parents.p2().cloned().map(HgNodeHash::from),
+        manifestid: HgManifestId::new(HgNodeHash::from(cs.manifestid)),
+        extra: Extra::new(
+            cs.extras
+                .into_iter()
+                .map(|extra| (extra.key, extra.value))
+                .collect::<BTreeMap<_, _>>(),
+        ),
+        files: cs
+            .files
+            .into_iter()
+            .map(|file| to_mpath(&file)?.context(ErrorKind::UnexpectedEmptyPath))
+            .collect::<Result<_, _>>()?,
+        message: cs.message,
+        time: DateTime::from_timestamp(cs.time, cs.tz)?,
+        user: cs.user,
+    })
+}
+
+pub fn to_mutation_entry(mutation: HgMutationEntryContent) -> Result<HgMutationEntry> {
+    let successor = HgChangesetId::new(HgNodeHash::from(mutation.successor));
+    let predecessors = mutation
+        .predecessors
+        .into_iter()
+        .map(HgNodeHash::from)
+        .map(HgChangesetId::new)
+        .collect::<Vec<_>>();
+    let predecessors: SmallVec<[_; 1]> = SmallVec::from_vec(predecessors);
+    let split = mutation
+        .split
+        .into_iter()
+        .map(HgNodeHash::from)
+        .map(HgChangesetId::new)
+        .collect::<Vec<_>>();
+    let op = mutation.op;
+    let user = str::from_utf8(&mutation.user)?.to_string();
+    let time = DateTime::from_timestamp(mutation.time, mutation.tz)?;
+    let exta = mutation
+        .extras
+        .into_iter()
+        .map(|extra| {
+            Ok((
+                str::from_utf8(&extra.key)?.to_string(),
+                str::from_utf8(&extra.value)?.to_string(),
+            ))
+        })
+        .collect::<Result<_, Error>>()?;
+
+    Ok(HgMutationEntry::new(
+        successor,
+        predecessors,
+        split,
+        op,
+        user,
+        time,
+        exta,
+    ))
 }

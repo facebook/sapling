@@ -15,9 +15,9 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HgFilenodeData, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse, UploadHgFilenodeResponse,
-    UploadToken, UploadTreeEntry, UploadTreeResponse,
+    EdenApiServerError, FileEntry, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
+    LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
+    UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeResponse,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -174,6 +174,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError>;
 }
@@ -381,10 +382,11 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_changesets(repo, changesets, progress)
+            .upload_changesets(repo, changesets, mutations, progress)
             .await
     }
 }

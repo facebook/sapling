@@ -221,10 +221,25 @@ pub struct UploadHgChangeset {
     pub node_id: HgId,
     pub changeset_content: HgChangesetContent,
 }
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct HgMutationEntryContent {
+    pub successor: HgId,
+    pub predecessors: Vec<HgId>,
+    pub split: Vec<HgId>,
+    pub op: String,
+    pub user: Vec<u8>,
+    pub time: i64,
+    pub tz: i32,
+    pub extras: Vec<Extra>,
+}
+
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadHgChangesetsRequest {
     /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
     pub changesets: Vec<UploadHgChangeset>,
+    /// list of mutation entries for the uploading changesets
+    pub mutations: Vec<HgMutationEntryContent>,
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]

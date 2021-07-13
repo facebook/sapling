@@ -6,7 +6,7 @@
 from __future__ import absolute_import
 
 import bindings
-from edenscm.mercurial import node as nodemod, error
+from edenscm.mercurial import node as nodemod, error, mutation
 from edenscm.mercurial.i18n import _, _n
 
 from . import util as ccutil
@@ -92,13 +92,13 @@ def uploadtrees(repo, trees):
         raise error.Abort(e)
 
 
-def uploadchangesets(repo, changesets):
+def uploadchangesets(repo, changesets, mutations):
     """Upload changesets"""
     if not changesets:
         return
     try:
         stream, _stats = repo.edenapi.uploadchangesets(
-            ccutil.getreponame(repo), changesets
+            ccutil.getreponame(repo), changesets, mutations
         )
         foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
         repo.ui.status(
@@ -291,4 +291,19 @@ def upload(repo, revs, force=False):
             )
         )
 
-    uploadchangesets(repo, changesets)
+    mutations = mutation.entriesfornodes(repo, uploadcommitqueue)
+    mutations = [
+        {
+            "successor": mut.succ(),
+            "predecessors": mut.preds(),
+            "split": mut.split(),
+            "op": mut.op(),
+            "user": mut.user().encode(),
+            "time": mut.time(),
+            "tz": mut.tz(),
+            "extras": [{"key": key, "value": value} for key, value in mut.extra()],
+        }
+        for mut in mutations
+    ]
+
+    uploadchangesets(repo, changesets, mutations)

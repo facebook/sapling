@@ -37,10 +37,11 @@ use edenapi_types::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
-    HgFilenodeData, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse, ServerError,
-    ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest, UploadHgChangeset,
-    UploadHgChangesetsRequest, UploadHgChangesetsResponse, UploadHgFilenodeRequest,
-    UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
+    HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
+    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    UploadHgChangeset, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
+    UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
+    UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -60,7 +61,6 @@ const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
-const MAX_CONCURRENT_CHANGESETS_UPLOADS: usize = 1000;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -956,15 +956,17 @@ impl EdenApi for Client {
             .await?)
     }
 
+    // the request isn't batched, batching should be done outside if needed
     async fn upload_changesets(
         &self,
         repo: String,
         changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         let msg = format!(
             "Requesting changesets upload for {} item(s)",
-            changesets.len()
+            changesets.len(),
         );
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -976,18 +978,19 @@ impl EdenApi for Client {
         }
 
         let url = self.url(paths::UPLOAD_CHANGESETS, Some(&repo))?;
-        let requests = self.prepare(
-            &url,
+        let req = UploadHgChangesetsRequest {
             changesets,
-            Some(MAX_CONCURRENT_CHANGESETS_UPLOADS),
-            |changesets| {
-                let req = UploadHgChangesetsRequest { changesets };
-                req.to_wire()
-            },
-        )?;
+            mutations,
+        }
+        .to_wire();
+
+        let request = self
+            .configure(Request::post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self
-            .fetch::<WireUploadHgChangesetsResponse>(requests, progress)
+            .fetch::<WireUploadHgChangesetsResponse>(vec![request], progress)
             .await?)
     }
 }

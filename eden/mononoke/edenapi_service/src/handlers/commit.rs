@@ -23,18 +23,16 @@ use edenapi_types::{
     UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::{
-    blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
-};
+use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
-use mononoke_types::DateTime;
 use types::HgId;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
-    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request, to_mpath,
+    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request,
+    to_mutation_entry, to_revlog_changeset,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -252,6 +250,7 @@ async fn store_hg_changesets(
     request: UploadHgChangesetsRequest,
 ) -> Result<Vec<Result<UploadHgChangesetsResponse, Error>>, Error> {
     let changesets = request.changesets;
+    let mutations = request.mutations;
     let indexes = changesets
         .iter()
         .enumerate()
@@ -260,35 +259,20 @@ async fn store_hg_changesets(
     let changesets_data = changesets
         .into_iter()
         .map(|changeset| {
-            let cs_data = changeset.changeset_content;
             Ok((
                 HgChangesetId::new(HgNodeHash::from(changeset.node_id)),
-                RevlogChangeset {
-                    p1: cs_data.parents.p1().cloned().map(HgNodeHash::from),
-                    p2: cs_data.parents.p2().cloned().map(HgNodeHash::from),
-                    manifestid: HgManifestId::new(HgNodeHash::from(cs_data.manifestid)),
-                    extra: Extra::new(
-                        cs_data
-                            .extras
-                            .into_iter()
-                            .map(|extra| (extra.key, extra.value))
-                            .collect::<BTreeMap<_, _>>(),
-                    ),
-                    files: cs_data
-                        .files
-                        .into_iter()
-                        .map(|file| to_mpath(&file)?.context(ErrorKind::UnexpectedEmptyPath))
-                        .collect::<Result<_, _>>()?,
-                    message: cs_data.message,
-                    time: DateTime::from_timestamp(cs_data.time, cs_data.tz)?,
-                    user: cs_data.user,
-                },
+                to_revlog_changeset(changeset.changeset_content)?,
             ))
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
+    let mutation_data = mutations
+        .into_iter()
+        .map(to_mutation_entry)
+        .collect::<Result<Vec<_>, Error>>()?;
+
     let results = repo
-        .store_hg_changesets(changesets_data)
+        .store_hg_changesets(changesets_data, mutation_data)
         .await?
         .into_iter()
         .map(|r| {

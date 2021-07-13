@@ -23,8 +23,8 @@ use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HistoryEntry,
-    LookupResponse, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
+    EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
+    HistoryEntry, LookupResponse, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
     UploadHgFilenodeResponse, UploadTreeResponse,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -652,6 +652,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     /// Upload changesets
+    /// This method sends a single request, batching should be done outside.
     fn uploadchangesets_py(
         self: Arc<Self>,
         py: Python,
@@ -660,6 +661,7 @@ pub trait EdenApiPyExt: EdenApi {
             PyBytes,                   /* hgid (node_id) */
             Serde<HgChangesetContent>, /* changeset content */
         )>,
+        mutations: Vec<Serde<HgMutationEntryContent>>,
         callback: Option<PyObject>,
         _progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<(
@@ -674,10 +676,13 @@ pub trait EdenApiPyExt: EdenApi {
                 changeset_content: content.0,
             })
             .collect();
+        let mutations = mutations.into_iter().map(|m| m.0).collect();
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.upload_changesets(repo, changesets, callback).await?;
+                    let response = self
+                        .upload_changesets(repo, changesets, mutations, callback)
+                        .await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

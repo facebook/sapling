@@ -27,6 +27,7 @@ use edenapi::types::CommitRevlogData;
 use edenapi::types::FileEntry;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
+use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
 use edenapi::types::LookupResponse;
@@ -463,6 +464,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
+        _mutations: Vec<HgMutationEntryContent>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         Err(not_implemented_error(

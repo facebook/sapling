@@ -18,6 +18,7 @@ use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
+use mercurial_mutation::HgMutationEntry;
 use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifestId, HgNodeHash};
 use metaconfig_types::RepoConfig;
@@ -28,6 +29,7 @@ use mononoke_types::{
 };
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
+use std::collections::HashSet;
 use std::sync::Arc;
 use unbundle::upload_changeset;
 
@@ -303,6 +305,7 @@ impl HgRepoContext {
     pub async fn store_hg_changesets(
         &self,
         changesets: Vec<(HgChangesetId, RevlogChangeset)>,
+        mutations: Vec<HgMutationEntry>,
     ) -> Result<Vec<Result<(HgChangesetId, BonsaiChangeset), MononokeError>>, MononokeError> {
         let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
         let filelogs = HashMap::new();
@@ -323,16 +326,25 @@ impl HgRepoContext {
             .map_err(MononokeError::from)?;
         }
         let mut results = vec![];
+        let mut hg_changesets = HashSet::new();
         for (hg_cs_id, handle) in uploaded_changesets {
-            results.push(
-                handle
-                    .get_completed_changeset()
-                    .await
-                    .map_err(Error::from)
-                    .map_err(MononokeError::from)
-                    .map(|(bonsai, _)| (hg_cs_id, bonsai)),
-            )
+            let result = handle
+                .get_completed_changeset()
+                .await
+                .map_err(Error::from)
+                .map_err(MononokeError::from)
+                .map(|(bonsai, _)| (hg_cs_id, bonsai));
+            if result.is_ok() {
+                hg_changesets.insert(hg_cs_id);
+            }
+            results.push(result);
         }
+        self.blob_repo()
+            .hg_mutation_store()
+            .add_entries(&self.ctx(), hg_changesets, mutations)
+            .await
+            .map_err(MononokeError::from)?;
+
         Ok(results)
     }
 

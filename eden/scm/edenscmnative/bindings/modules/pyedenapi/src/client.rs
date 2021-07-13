@@ -20,8 +20,8 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData,
-    HgChangesetContent, LookupResponse, UploadHgChangesetsResponse, UploadHgFilenodeResponse,
-    UploadTreeResponse,
+    HgChangesetContent, HgMutationEntryContent, LookupResponse, UploadHgChangesetsResponse,
+    UploadHgFilenodeResponse, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -302,6 +302,7 @@ py_class!(pub class client |py| {
     }
 
     /// Upload changesets
+    /// This method sends a single request, batching should be done outside.
     def uploadchangesets(
         &self,
         repo: String,
@@ -309,10 +310,11 @@ py_class!(pub class client |py| {
             PyBytes,                   /* hgid (node_id) */
             Serde<HgChangesetContent>  /* changeset content */
         )>,
+        mutations: Vec<Serde<HgMutationEntryContent>>,
         callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>, PyFuture)> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().uploadchangesets_py(py, repo, changesets, callback, progress)
+        self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations, callback, progress)
     }
 });
 
