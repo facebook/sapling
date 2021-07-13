@@ -138,6 +138,7 @@ impl AddAssign for LocalAndCacheFetchMetrics {
 pub struct FileStoreFetchMetrics {
     indexedlog: LocalAndCacheFetchMetrics,
     lfs: LocalAndCacheFetchMetrics,
+    aux: LocalAndCacheFetchMetrics,
     contentstore: FetchMetrics,
 }
 
@@ -145,6 +146,7 @@ impl AddAssign for FileStoreFetchMetrics {
     fn add_assign(&mut self, rhs: Self) {
         self.indexedlog += rhs.indexedlog;
         self.lfs += rhs.lfs;
+        self.aux += rhs.aux;
         self.contentstore += rhs.contentstore;
     }
 }
@@ -153,6 +155,7 @@ impl FileStoreFetchMetrics {
     fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
         namespaced("indexedlog", self.indexedlog.metrics())
             .chain(namespaced("lfs", self.lfs.metrics()))
+            .chain(namespaced("aux", self.aux.metrics()))
             .chain(namespaced("contentstore", self.contentstore.metrics()))
     }
 }
@@ -1380,13 +1383,23 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+        self.metrics.aux.store(typ).fetch(pending.len());
+
         let store = store.read();
         for key in pending.into_iter() {
             let res = store.get(key.hgid);
             match res {
-                Ok(Some(aux)) => self.found_aux_indexedlog(key, aux, typ),
-                Ok(None) => {}
-                Err(err) => self.errors.keyed_error(key, err),
+                Ok(Some(aux)) => {
+                    self.metrics.aux.store(typ).hit(1);
+                    self.found_aux_indexedlog(key, aux, typ)
+                }
+                Ok(None) => {
+                    self.metrics.aux.store(typ).miss(1);
+                }
+                Err(err) => {
+                    self.metrics.aux.store(typ).err(1);
+                    self.errors.keyed_error(key, err)
+                }
             }
         }
     }
