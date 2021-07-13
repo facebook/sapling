@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server
@@ -432,7 +431,6 @@ Test pushing from a treeonly client to a treeonly server
   treemanifest.treeonly=True
   treemanifest.rustmanifest=True
   treemanifest.useruststore=True
-  treemanifest.flatcompat=False
   treemanifest.demanddownload=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'

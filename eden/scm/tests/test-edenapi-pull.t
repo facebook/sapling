@@ -3,7 +3,6 @@
   $ configure modern
 
   $ setconfig paths.default=test:e1 ui.traceback=1
-  $ setconfig treemanifest.flatcompat=0
   $ setconfig infinitepush.httpbookmarks=1
   $ setconfig pull.httpbookmarks=1
   $ setconfig exchange.httpcommitlookup=1

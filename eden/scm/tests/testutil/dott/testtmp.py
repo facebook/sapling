@@ -88,7 +88,6 @@ address = localhost
 treemanifest=
 
 [treemanifest]
-flatcompat=True
 rustmanifest=True
 
 [remotefilelog]

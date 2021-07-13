@@ -3,7 +3,6 @@
   $ configure modern
 
   $ setconfig paths.default=test:e1 ui.traceback=1
-  $ setconfig treemanifest.flatcompat=0
   $ export LOG=edenscm::mercurial::eagerpeer=trace,eagerepo=trace
 
 Disable SSH:

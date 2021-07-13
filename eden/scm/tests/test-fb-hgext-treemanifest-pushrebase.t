@@ -1,4 +1,3 @@
-  $ setconfig treemanifest.flatcompat=False
   $ configure mutation-norecord
 
   $ . "$TESTDIR/library.sh"

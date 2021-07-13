@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure mutation-norecord
-  $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server

@@ -8,8 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig treemanifest.flatcompat=0"
-
 sh % "enable amend rebase"
 sh % "setconfig 'rebase.singletransaction=True'"
 sh % "setconfig 'experimental.copytrace=off'"

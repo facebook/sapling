@@ -2,7 +2,6 @@
 
   $ configure modern
   $ enable shelve
-  $ setconfig treemanifest.flatcompat=0
 
   $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ setconfig treemanifest.server=true extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py

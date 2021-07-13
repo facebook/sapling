@@ -485,15 +485,10 @@ class basetreemanifestlog(object):
         p1node,
         p2node,
         linknode,
-        overridenode=None,
-        overridep1node=None,
         tr=None,
         linkrev=None,
     ):
-        """Writes the given tree into the manifestlog. If `overridenode` is
-        specified, the tree root is written with that node instead of its actual
-        node. If `overridep1node` is specified, the the p1 node for the root
-        tree is also overridden.
+        """Writes the given tree into the manifestlog.
         """
         return self._addtopack(
             ui,
@@ -501,8 +496,6 @@ class basetreemanifestlog(object):
             p1node,
             p2node,
             linknode,
-            overridenode=overridenode,
-            overridep1node=overridep1node,
             linkrev=linkrev,
         )
 
@@ -533,19 +526,13 @@ class basetreemanifestlog(object):
         p1node,
         p2node,
         linknode,
-        overridenode=None,
-        overridep1node=None,
         linkrev=None,
     ):
         dpack, hpack = self._getmutablelocalpacks()
 
         newtreeiter = _finalize(self, newtree, p1node, p2node)
 
-        if overridenode is not None:
-            dpack = InterceptedMutableDataPack(dpack, overridenode, overridep1node)
-            hpack = InterceptedMutableHistoryPack(hpack, overridenode, overridep1node)
-
-        node = overridenode
+        node = None
         for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
             self._addtreeentry(
                 dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev
@@ -782,15 +769,6 @@ class memtreemanifestctx(object):
 
         newtree = self._treemanifest
 
-        # For test migration purposes it is convienent to use the flat manifest
-        # hash.
-        # developer config: treemanifest.flatcompat
-        overridenode = None
-        overridep1node = None
-        if mfl.ui.configbool("treemanifest", "flatcompat"):
-            overridenode = revlog.hash(newtree.text(), p1, p2)
-            overridep1node = p1
-
         # linknode=None because the linkrev is provided
         node = mfl.add(
             mfl.ui,
@@ -798,8 +776,6 @@ class memtreemanifestctx(object):
             p1,
             p2,
             None,
-            overridenode=overridenode,
-            overridep1node=overridep1node,
             tr=tr,
             linkrev=linkrev,
         )
@@ -852,8 +828,6 @@ def getbundlemanifestlog(orig, self):
             p1node,
             p2node,
             linknode,
-            overridenode=None,
-            overridep1node=None,
             tr=None,
             linkrev=None,
         ):
@@ -863,8 +837,6 @@ def getbundlemanifestlog(orig, self):
                 p1node,
                 p2node,
                 linknode,
-                overridenode=overridenode,
-                overridep1node=overridep1node,
                 linkrev=linkrev,
             )
 
@@ -932,47 +904,6 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
         raise error.ProgrammingError(
             "manifest deltas are not supported in a changegroup"
         )
-
-
-class InterceptedMutableDataPack(object):
-    """This classes intercepts data pack writes and replaces the node for the
-    root with the provided node. This is useful for forcing a tree manifest to
-    be referencable via its flat hash.
-    """
-
-    def __init__(self, pack, node, p1node):
-        self._pack = pack
-        self._node = node
-        self._p1node = p1node
-
-    def add(self, name, node, deltabasenode, delta):
-        # For the root node, provide the flat manifest as the key
-        if name == "":
-            node = self._node
-            if deltabasenode != nullid:
-                deltabasenode = self._p1node
-        return self._pack.add(name, node, deltabasenode, delta)
-
-
-class InterceptedMutableHistoryPack(object):
-    """This classes intercepts history pack writes and replaces the node for the
-    root with the provided node. This is useful for forcing a tree manifest to
-    be referencable via its flat hash.
-    """
-
-    def __init__(self, pack, node, p1node):
-        self._pack = pack
-        self._node = node
-        self._p1node = p1node
-        self.entries = []
-
-    def add(self, filename, node, p1, *args, **kwargs):
-        # For the root node, provide the flat manifest as the key
-        if filename == "":
-            node = self._node
-            if p1 != nullid:
-                p1 = self._p1node
-        self._pack.add(filename, node, p1, *args, **kwargs)
 
 
 def _checkhash(orig, self, *args, **kwargs):

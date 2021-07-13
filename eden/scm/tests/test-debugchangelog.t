@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure modern
-  $ setconfig treemanifest.flatcompat=0
 
   $ newrepo
   $ drawdag << 'EOS'

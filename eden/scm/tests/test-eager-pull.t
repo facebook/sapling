@@ -3,7 +3,6 @@
   $ configure modern
 
   $ setconfig paths.default=test:e1
-  $ setconfig treemanifest.flatcompat=0
 
 Disable SSH:
 

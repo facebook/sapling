@@ -1274,15 +1274,8 @@ class memtreemanifestctx(object):
 
         newtree = self._treemanifest
 
-        # For test migration purposes it is convienent to use the flat manifest
-        # hash.
-        # developer config: treemanifest.flatcompat
         overridenode = None
         overridep1node = None
-        if mfl.ui.configbool("treemanifest", "flatcompat"):
-            overridenode = revlog.hash(newtree.text(), p1, p2)
-            overridep1node = p1
-
         # linknode=None because the linkrev is provided
         node = mfl.add(
             mfl.ui,

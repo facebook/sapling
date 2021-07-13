@@ -51,9 +51,6 @@ def collectprefetch(command):
 sh % "setconfig experimental.copytrace=off copytrace.fastcopytrace=true perftweaks.disablecasecheck=true"
 sh % "enable sparse treemanifest rebase copytrace"
 
-# flatcompat calls '.text()' which invalidates fast paths. So disable it.
-sh % "setconfig treemanifest.flatcompat=0"
-
 sh % "newrepo"
 (
     sh % "drawdag"

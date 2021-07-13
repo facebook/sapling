@@ -4,7 +4,6 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig format.aggressivemergedeltas=True
-  $ setconfig treemanifest.flatcompat=False
   $ configure dummyssh
 
   $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py

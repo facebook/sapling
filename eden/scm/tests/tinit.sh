@@ -61,7 +61,7 @@ newserver() {
     enable lz4revlog remotefilelog remotenames
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
-       treemanifest.flatcompat=False treemanifest.rustmanifest=True \
+       treemanifest.rustmanifest=True \
        treemanifest.server=True treemanifest.treeonly=True \
        infinitepush.server=yes infinitepush.reponame="$reponame" \
        infinitepush.indextype=disk infinitepush.storetype=disk \
@@ -104,7 +104,6 @@ publish=False
 reponame=$servername
 
 [treemanifest]
-flatcompat=False
 rustmanifest=True
 sendtrees=True
 treeonly=True

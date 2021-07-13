@@ -2,7 +2,6 @@
 
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig treemanifest.flatcompat=False
 
   $ enable lfs treemanifest pushrebase
   $ hginit master --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py

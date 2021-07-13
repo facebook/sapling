@@ -540,9 +540,6 @@ def _findblobs(pushop):
     mfget = repo.manifestlog.get
     treedepth = 1 << 15
 
-    # flatcompat breaks SHA1 checks.
-    assert not repo.ui.configbool("treemanifest", "flatcompat")
-
     def mfread(node, get=repo.manifestlog.get):
         # subdir does not matter here - use ""
         return get("", node).read()
