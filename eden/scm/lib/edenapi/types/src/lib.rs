@@ -61,6 +61,7 @@ pub use crate::history::{
 pub use crate::metadata::{
     AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
     FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, CONTENT_ID_HASH_LENGTH_BYTES,
+    SHA1_HASH_LENGTH_BYTES,
 };
 pub use crate::token::{
     FileContentTokenMetadata, UploadToken, UploadTokenData, UploadTokenMetadata,

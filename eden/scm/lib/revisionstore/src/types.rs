@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
+
 use minibytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
-use sha2::Digest;
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::Rng;
 
+use edenapi_types::{ContentId, Sha1, CONTENT_ID_HASH_LENGTH_BYTES, SHA1_HASH_LENGTH_BYTES};
 use types::{Key, Sha256};
 
 /// Kind of content hash stored in the LFS pointer. Adding new types is acceptable, re-ordering or
@@ -41,11 +43,41 @@ pub enum StoreKey {
 
 impl ContentHash {
     pub fn sha256(data: &Bytes) -> Self {
+        use sha2::Digest;
+
         let mut hash = sha2::Sha256::new();
         hash.input(data);
 
         let bytes: [u8; Sha256::len()] = hash.result().into();
         ContentHash::Sha256(Sha256::from(bytes))
+    }
+
+    pub(crate) fn content_id(data: &Bytes) -> ContentId {
+        use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
+
+        // cribbed from pyedenapi
+        let mut hash = VarBlake2b::new_keyed(b"content", CONTENT_ID_HASH_LENGTH_BYTES);
+        hash.input(data);
+        let mut ret = [0u8; CONTENT_ID_HASH_LENGTH_BYTES];
+        hash.variable_result(|res| {
+            if let Err(e) = ret.as_mut().write_all(res) {
+                panic!(
+                    "{}-byte array must work with {}-byte blake2b: {:?}",
+                    CONTENT_ID_HASH_LENGTH_BYTES, CONTENT_ID_HASH_LENGTH_BYTES, e
+                );
+            }
+        });
+        ContentId(ret)
+    }
+
+    pub(crate) fn sha1(data: &Bytes) -> Sha1 {
+        use sha1::Digest;
+
+        let mut hash = sha1::Sha1::new();
+        hash.input(data);
+
+        let bytes: [u8; SHA1_HASH_LENGTH_BYTES] = hash.result().into();
+        Sha1::from(bytes)
     }
 
     pub fn unwrap_sha256(self) -> Sha256 {
