@@ -15,8 +15,8 @@ use std::str::FromStr;
 
 use edenapi_types::{
     wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
-    AnyFileContentId, AnyId, FileContentTokenMetadata, FileEntry, FileRequest,
-    UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTokenMetadata,
+    AnyFileContentId, AnyId, FileAttributes, FileContentTokenMetadata, FileEntry, FileRequest,
+    FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
@@ -77,10 +77,15 @@ fn fetch_all_files(
 ) -> impl Stream<Item = Result<FileEntry, Error>> {
     let ctx = repo.ctx().clone();
 
-    let fetches = request
+    let reqs = request
         .keys
         .into_iter()
-        .map(move |key| fetch_file(repo.clone(), key));
+        .map(|key| FileSpec {
+            key,
+            attrs: FileAttributes { content: true },
+        })
+        .chain(request.reqs.into_iter());
+    let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
 
     stream::iter(fetches)
         .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
@@ -92,7 +97,11 @@ fn fetch_all_files(
 /// Fetch requested file for a single key.
 /// Note that this function consumes the repo context in order
 /// to construct a file context for the requested blob.
-async fn fetch_file(repo: HgRepoContext, key: Key) -> Result<FileEntry, Error> {
+async fn fetch_file(
+    repo: HgRepoContext,
+    key: Key,
+    _attrs: FileAttributes,
+) -> Result<FileEntry, Error> {
     let id = HgFileNodeId::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id

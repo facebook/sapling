@@ -35,7 +35,7 @@ use crate::commit::{
     CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
 };
 use crate::complete_tree::CompleteTreeRequest;
-use crate::file::FileRequest;
+use crate::file::{FileAttributes, FileRequest, FileSpec};
 use crate::history::HistoryRequest;
 use crate::metadata::{DirectoryMetadataRequest, FileMetadataRequest};
 use crate::tree::{TreeAttributes, TreeRequest};
@@ -162,6 +162,24 @@ pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLoc
         unfiltered,
     })
 }
+
+/// Parse a `FileAttributes` from JSON.
+///
+/// Example:
+///
+/// ```json
+/// {
+///   "content": true,
+/// }
+/// ```
+///
+pub fn parse_file_attrs(json: &Value) -> Result<FileAttributes> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let content = optional_bool_field(json, "content")?;
+
+    Ok(FileAttributes { content })
+}
+
 /// Parse a `FileRequest` from JSON.
 ///
 /// The request is represented as a JSON object containing a "keys" field
@@ -174,18 +192,27 @@ pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLoc
 ///   "keys": [
 ///     ["path/to/file_1", "48f43af456d770b6a78e1ace628319847e05cc24"],
 ///     ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
-///     ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
-///   ]
+///   ],
+///   "reqs": [
+///     [["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"], {"content": true}],
+///   ],
 /// }
 /// ```
 ///
 pub fn parse_file_req(json: &Value) -> Result<FileRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
-    let keys = json.get("keys").context("missing field: keys")?;
+    let keys = json
+        .get("keys")
+        .map(parse_keys)
+        .transpose()?
+        .unwrap_or_default();
+    let reqs = json
+        .get("reqs")
+        .map(parse_reqs)
+        .transpose()?
+        .unwrap_or_default();
 
-    Ok(FileRequest {
-        keys: parse_keys(keys)?,
-    })
+    Ok(FileRequest { keys, reqs })
 }
 
 /// Parse a `TreeRequest` from JSON.
@@ -422,6 +449,29 @@ fn parse_keys(value: &Value) -> Result<Vec<Key>> {
     Ok(keys)
 }
 
+fn parse_reqs(value: &Value) -> Result<Vec<FileSpec>> {
+    let arr = value.as_array().context("input must be a JSON array")?;
+
+    let mut reqs = Vec::new();
+    for i in arr.iter() {
+        let json = i
+            .as_array()
+            .context("array items must be [key, attrs] arrays")?;
+
+        ensure!(json.len() == 2, "array items must be [key, attrs] arrays");
+
+        // Cast slice into 2-element array reference so we can destructure it.
+        let [key, attrs] = <&[_; 2]>::try_from(&json[..2])?;
+
+        let key = parse_key(key)?;
+        let attrs = parse_file_attrs(attrs)?;
+
+        reqs.push(FileSpec { key, attrs });
+    }
+
+    Ok(reqs)
+}
+
 fn parse_hashes(value: &Value) -> Result<Vec<HgId>> {
     let array = value
         .as_array()
@@ -629,9 +679,26 @@ impl ToJson for TreeAttributes {
     }
 }
 
+impl ToJson for FileAttributes {
+    fn to_json(&self) -> Value {
+        json!({
+            "content": self.content,
+        })
+    }
+}
+
+impl ToJson for FileSpec {
+    fn to_json(&self) -> Value {
+        json!([self.key.to_json(), self.attrs.to_json()])
+    }
+}
+
 impl ToJson for FileRequest {
     fn to_json(&self) -> Value {
-        json!({ "keys": self.keys.to_json() })
+        json!({
+            "keys": self.keys.to_json(),
+            "reqs": self.reqs.to_json(),
+        })
     }
 }
 

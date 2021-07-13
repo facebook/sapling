@@ -40,6 +40,7 @@ Send a request
               hgid: WireHgId("2222222222222222222222222222222222222222"),
           },
       ],
+      reqs: [],
   }
 
   $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor

@@ -150,8 +150,40 @@ impl Arbitrary for FileEntry {
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FileAttributes {
+    pub content: bool,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileAttributes {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            content: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FileSpec {
+    pub key: Key,
+    pub attrs: FileAttributes,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileSpec {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            attrs: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileRequest {
+    // TODO(meyer): Deprecate keys field
     pub keys: Vec<Key>,
+    pub reqs: Vec<FileSpec>,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -159,6 +191,7 @@ impl Arbitrary for FileRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
+            reqs: Arbitrary::arbitrary(g),
         }
     }
 }

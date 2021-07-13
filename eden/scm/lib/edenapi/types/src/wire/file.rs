@@ -12,7 +12,8 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     file::{
-        FileEntry, FileRequest, HgFilenodeData, UploadHgFilenodeRequest, UploadHgFilenodeResponse,
+        FileAttributes, FileEntry, FileRequest, FileSpec, HgFilenodeData, UploadHgFilenodeRequest,
+        UploadHgFilenodeResponse,
     },
     wire::{
         is_default, ToApi, ToWire, WireHgId, WireKey, WireParents, WireRevisionstoreMetadata,
@@ -62,10 +63,91 @@ impl ToApi for WireFileEntry {
     }
 }
 
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireFileAttributes {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    pub content: bool,
+}
+
+impl ToWire for FileAttributes {
+    type Wire = WireFileAttributes;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFileAttributes {
+            content: self.content,
+        }
+    }
+}
+
+impl ToApi for WireFileAttributes {
+    type Api = FileAttributes;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FileAttributes {
+            content: self.content,
+        })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireFileAttributes {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            content: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireFileSpec {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    pub key: WireKey,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub attrs: WireFileAttributes,
+}
+
+impl ToWire for FileSpec {
+    type Wire = WireFileSpec;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFileSpec {
+            key: self.key.to_wire(),
+            attrs: self.attrs.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireFileSpec {
+    type Api = FileSpec;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FileSpec {
+            key: self.key.to_api()?,
+            attrs: self.attrs.to_api()?,
+        })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireFileSpec {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            attrs: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireFileRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     pub keys: Vec<WireKey>,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub reqs: Vec<WireFileSpec>,
 }
 
 impl ToWire for FileRequest {
@@ -74,6 +156,7 @@ impl ToWire for FileRequest {
     fn to_wire(self) -> Self::Wire {
         WireFileRequest {
             keys: self.keys.to_wire(),
+            reqs: self.reqs.to_wire(),
         }
     }
 }
@@ -85,6 +168,7 @@ impl ToApi for WireFileRequest {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(FileRequest {
             keys: self.keys.to_api()?,
+            reqs: self.reqs.to_api()?,
         })
     }
 }
@@ -208,6 +292,7 @@ impl Arbitrary for WireFileRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
+            reqs: Arbitrary::arbitrary(g),
         }
     }
 }

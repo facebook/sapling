@@ -57,6 +57,7 @@ Create and send file request.
               hgid: WireHgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
           },
       ],
+      reqs: [],
   }
   $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor
 

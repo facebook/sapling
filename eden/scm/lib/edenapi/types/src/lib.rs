@@ -52,8 +52,8 @@ pub use crate::commit::{
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;
 pub use crate::file::{
-    FileEntry, FileError, FileRequest, HgFilenodeData, UploadHgFilenodeRequest,
-    UploadHgFilenodeResponse,
+    FileAttributes, FileEntry, FileError, FileRequest, FileSpec, HgFilenodeData,
+    UploadHgFilenodeRequest, UploadHgFilenodeResponse,
 };
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,

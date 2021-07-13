@@ -337,7 +337,7 @@ impl EdenApi for Client {
 
         let url = self.url(paths::FILES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
-            let req = FileRequest { keys };
+            let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
         })?;
