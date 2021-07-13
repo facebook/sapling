@@ -409,7 +409,7 @@ fn case_sensitive(root: &Path, fs_type: &FsType) -> Result<bool> {
     // For some FS we know they are case (in)sensitive, so we just return based on fs type
     // For rest of the FS we see if lstat on the upper/lower case variant differs
     match *fs_type {
-        FsType::EDENFS => return Ok(cfg!(linux)),
+        FsType::EDENFS => return Ok(cfg!(target_os = "linux")),
         FsType::BTRFS => return Ok(true),
         FsType::EXT4 => return Ok(true),
         FsType::XFS => return Ok(true),
