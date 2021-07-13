@@ -581,8 +581,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     """Sending trees has the following rules:
 
     Clients:
-    - If sendtrees is False, send no trees
-    - else send draft trees
+    - Send draft trees
 
     Server:
     - Only send local trees (i.e. infinitepush trees only)
@@ -595,7 +594,6 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         b2caps = {}
     if bundlecaps is None:
         bundlecaps = set()
-    sendtrees = repo.ui.configbool("treemanifest", "sendtrees")
 
     def clienthascap(cap):
         return cap in bundlecaps or "True" in b2caps.get(cap, [])
@@ -610,13 +608,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
             return NoTrees
 
     # Else, is a client
-    if not sendtrees:
-        result = NoTrees
-        # If we're not in treeonly mode, we will consult the manifests when
-        # getting ready to send the flat manifests. This will cause tree
-        # manifest lookups, so let's go ahead and bulk prefetch them.
-        prefetch = AllTrees
-    elif clienthascap("treemanifestserver"):
+    if clienthascap("treemanifestserver"):
         # If we're talking to the main server, always send everything.
         result = AllTrees
         prefetch = AllTrees

@@ -11,11 +11,6 @@ tree manifests side-by-side normal flat manifests.
 
 Configs:
 
-    ``treemanifest.server`` is used to indicate that this repo can serve
-    treemanifests
-
-allows using and migrating to tree manifests
-
 Setting `treemanifest.pullprefetchcount` to an integer N will cause the latest N
 commits' manifests to be downloaded (if they aren't already).
 
@@ -154,8 +149,6 @@ TREE_DEPTH_MAX = 2 ** 16
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("treemanifest", "sendtrees", default=False)
-configitem("treemanifest", "server", default=False)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
