@@ -147,6 +147,7 @@ pub mod edenapi;
 pub mod error;
 pub mod historypack;
 pub mod historystore;
+pub mod indexedlogauxstore;
 pub mod indexedlogdatastore;
 pub mod localstore;
 pub mod multiplexstore;
@@ -169,6 +170,7 @@ pub use crate::datastore::{
 pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
+pub use crate::indexedlogauxstore::AuxStore;
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::indexedlogutil::StoreType;

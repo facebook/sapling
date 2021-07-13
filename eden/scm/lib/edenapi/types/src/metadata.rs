@@ -73,6 +73,18 @@ pub struct FileMetadataRequest {
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha1(pub [u8; SHA1_HASH_LENGTH_BYTES]);
 
+impl From<[u8; SHA1_HASH_LENGTH_BYTES]> for Sha1 {
+    fn from(v: [u8; SHA1_HASH_LENGTH_BYTES]) -> Self {
+        Sha1(v)
+    }
+}
+
+impl AsRef<[u8]> for Sha1 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl fmt::Display for Sha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         for d in &self.0 {
@@ -110,6 +122,18 @@ impl FromStr for Sha1 {
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha256(pub [u8; SHA256_HASH_LENGTH_BYTES]);
+
+impl From<[u8; SHA256_HASH_LENGTH_BYTES]> for Sha256 {
+    fn from(v: [u8; SHA256_HASH_LENGTH_BYTES]) -> Self {
+        Sha256(v)
+    }
+}
+
+impl AsRef<[u8]> for Sha256 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 impl fmt::Display for Sha256 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -158,6 +182,18 @@ impl FromStr for Sha256 {
     Deserialize
 )]
 pub struct ContentId(pub [u8; CONTENT_ID_HASH_LENGTH_BYTES]);
+
+impl From<[u8; CONTENT_ID_HASH_LENGTH_BYTES]> for ContentId {
+    fn from(v: [u8; CONTENT_ID_HASH_LENGTH_BYTES]) -> Self {
+        ContentId(v)
+    }
+}
+
+impl AsRef<[u8]> for ContentId {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 impl fmt::Display for ContentId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
