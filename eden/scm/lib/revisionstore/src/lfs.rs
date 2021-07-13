@@ -2002,7 +2002,8 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+        indexedlogdatastore::IndexedLogHgIdDataStore,
+        indexedlogutil::StoreType,
         localstore::ExtStoredPolicy,
         testutil::{
             example_blob, example_blob2, get_lfs_batch_mock, get_lfs_download_mock,
@@ -2320,7 +2321,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
@@ -2352,7 +2353,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2387,7 +2388,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2459,7 +2460,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2534,7 +2535,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);

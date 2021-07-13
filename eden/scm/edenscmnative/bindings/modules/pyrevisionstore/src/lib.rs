@@ -39,10 +39,10 @@ use revisionstore::{
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
     Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
     HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
-    HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
-    IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType, LegacyStore, LocalStore, MemcacheStore,
-    Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack,
-    RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
+    HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, LegacyStore,
+    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
+    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
+    StoreResult, StoreType,
 };
 use types::{Key, NodeInfo};
 
@@ -408,7 +408,7 @@ py_class!(class indexedlogdatastore |py| {
         let config = config.get_cfg(py);
         indexedlogdatastore::create_instance(
             py,
-            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config, IndexedLogDataStoreType::Local).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config, StoreType::Local).map_pyerr(py)?),
         )
     }
 
@@ -451,7 +451,7 @@ py_class!(class indexedloghistorystore |py| {
         let config = config.get_cfg(py);
         indexedloghistorystore::create_instance(
             py,
-            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config, IndexedLogHistoryStoreType::Local).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config, StoreType::Local).map_pyerr(py)?),
         )
     }
 
@@ -492,7 +492,7 @@ fn make_mutabledeltastore(
             indexedlogpath.as_path(),
             ExtStoredPolicy::Ignore,
             &config,
-            IndexedLogDataStoreType::Local,
+            StoreType::Local,
         )?)
     } else {
         return Err(format_err!("Foo"));

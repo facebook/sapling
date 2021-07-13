@@ -17,7 +17,8 @@ use types::{Key, NodeInfo};
 
 use crate::{
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    indexedloghistorystore::{IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType},
+    indexedloghistorystore::IndexedLogHgIdHistoryStore,
+    indexedlogutil::StoreType,
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexHgIdHistoryStore,
@@ -72,13 +73,13 @@ impl MetadataStore {
         repair_str += &IndexedLogHgIdHistoryStore::repair(
             get_indexedloghistorystore_path(&shared_path)?,
             config,
-            IndexedLogHistoryStoreType::Shared,
+            StoreType::Shared,
         )?;
         if let Some(local_path) = local_path {
             repair_str += &IndexedLogHgIdHistoryStore::repair(
                 get_indexedloghistorystore_path(local_path)?,
                 config,
-                IndexedLogHistoryStoreType::Local,
+                StoreType::Local,
             )?;
         }
         Ok(repair_str)
@@ -249,7 +250,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
             get_indexedloghistorystore_path(&cache_path)?,
             &self.config,
-            IndexedLogHistoryStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         // The shared store should precede the local one for 2 reasons:
@@ -284,7 +285,7 @@ impl<'a> MetadataStoreBuilder<'a> {
                 let local_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
                     get_indexedloghistorystore_path(&local_path.unwrap())?,
                     &self.config,
-                    IndexedLogHistoryStoreType::Local,
+                    StoreType::Local,
                 )?);
                 let primary: Arc<dyn HgIdMutableHistoryStore> =
                     if self
@@ -643,7 +644,7 @@ mod tests {
         let store = IndexedLogHgIdHistoryStore::new(
             get_indexedloghistorystore_path(&localdir)?,
             &config,
-            IndexedLogHistoryStoreType::Local,
+            StoreType::Local,
         )?;
         assert_eq!(store.get_node_info(&k1)?, Some(nodeinfo));
         Ok(())

@@ -27,7 +27,8 @@ use crate::{
         HgIdMutableDeltaStore, LegacyStore, Metadata, RemoteDataStore, ReportingRemoteDataStore,
         StoreResult,
     },
-    indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+    indexedlogdatastore::IndexedLogHgIdDataStore,
+    indexedlogutil::StoreType,
     lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
     localstore::{ExtStoredPolicy, LocalStore},
     memcache::MemcacheStore,
@@ -85,13 +86,13 @@ impl ContentStore {
         repair_str += &IndexedLogHgIdDataStore::repair(
             get_indexedlogdatastore_path(&shared_path)?,
             config,
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
         if let Some(local_path) = local_path {
             repair_str += &IndexedLogHgIdDataStore::repair(
                 get_indexedlogdatastore_path(local_path)?,
                 config,
-                IndexedLogDataStoreType::Local,
+                StoreType::Local,
             )?;
         }
         repair_str += &LfsStore::repair(shared_path)?;
@@ -389,7 +390,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     get_indexedlogdatastore_path(&cache_path)?,
                     extstored_policy,
                     self.config,
-                    IndexedLogDataStoreType::Shared,
+                    StoreType::Shared,
                 )?)
             };
 
@@ -456,7 +457,7 @@ impl<'a> ContentStoreBuilder<'a> {
                             get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
                             extstored_policy,
                             self.config,
-                            IndexedLogDataStoreType::Local,
+                            StoreType::Local,
                         )?)
                     };
 
@@ -866,7 +867,7 @@ mod tests {
             get_indexedlogdatastore_path(&localdir)?,
             ExtStoredPolicy::Use,
             &config,
-            IndexedLogDataStoreType::Local,
+            StoreType::Local,
         )?;
         assert_eq!(
             store.get(StoreKey::hgid(k1))?,

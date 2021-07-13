@@ -152,7 +152,8 @@ mod tests {
 
     use crate::{
         edenapi::{File, Tree},
-        indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+        indexedlogdatastore::IndexedLogHgIdDataStore,
+        indexedlogutil::StoreType,
         localstore::ExtStoredPolicy,
         scmstore::{FileAttributes, FileStore, TreeStore},
         testutil::*,
@@ -176,7 +177,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_files);
@@ -213,7 +214,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_trees);

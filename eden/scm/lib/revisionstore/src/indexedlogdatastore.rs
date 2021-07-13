@@ -23,18 +23,12 @@ use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    indexedlogutil::{Store, StoreOpenOptions},
+    indexedlogutil::{Store, StoreOpenOptions, StoreType},
     localstore::{ExtStoredPolicy, LocalStore},
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
 };
-
-#[derive(Clone, Copy)]
-pub enum IndexedLogDataStoreType {
-    Local,
-    Shared,
-}
 
 struct IndexedLogHgIdDataStoreInner {
     log: Store,
@@ -204,13 +198,13 @@ impl IndexedLogHgIdDataStore {
         path: impl AsRef<Path>,
         extstored_policy: ExtStoredPolicy,
         config: &ConfigSet,
-        store_type: IndexedLogDataStoreType,
+        store_type: StoreType,
     ) -> Result<Self> {
         let open_options = IndexedLogHgIdDataStore::open_options(config)?;
 
         let log = match store_type {
-            IndexedLogDataStoreType::Local => open_options.local(&path),
-            IndexedLogDataStoreType::Shared => open_options.shared(&path),
+            StoreType::Local => open_options.local(&path),
+            StoreType::Shared => open_options.shared(&path),
         }?;
 
         Ok(IndexedLogHgIdDataStore {
@@ -247,18 +241,10 @@ impl IndexedLogHgIdDataStore {
         Ok(open_options)
     }
 
-    pub fn repair(
-        path: PathBuf,
-        config: &ConfigSet,
-        store_type: IndexedLogDataStoreType,
-    ) -> Result<String> {
+    pub fn repair(path: PathBuf, config: &ConfigSet, store_type: StoreType) -> Result<String> {
         match store_type {
-            IndexedLogDataStoreType::Local => {
-                IndexedLogHgIdDataStore::open_options(config)?.repair_local(path)
-            }
-            IndexedLogDataStoreType::Shared => {
-                IndexedLogHgIdDataStore::open_options(config)?.repair_shared(path)
-            }
+            StoreType::Local => IndexedLogHgIdDataStore::open_options(config)?.repair_local(path),
+            StoreType::Shared => IndexedLogHgIdDataStore::open_options(config)?.repair_shared(path),
         }
     }
 
@@ -501,7 +487,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
         log.flush().unwrap();
@@ -514,7 +500,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
 
@@ -536,7 +522,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
 
@@ -554,7 +540,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
@@ -568,7 +554,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
 
@@ -583,7 +569,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
 
         let delta = Delta {
@@ -604,7 +590,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
 
         let k = key("a", "2");
@@ -627,7 +613,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
 
         let k = key("a", "2");
@@ -652,7 +638,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
         let k = key("a", "3");
         let delta = Delta {
@@ -676,7 +662,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
 
@@ -707,7 +693,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )
         .unwrap();
 
@@ -746,7 +732,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         local.add(&d, &meta).unwrap();
@@ -778,7 +764,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         // Set up local-only FileStore
@@ -805,7 +791,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Use,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
 
         let lfs_key = key("a", "1");
@@ -859,7 +845,7 @@ mod tests {
             &tempdir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?;
 
         let lfs_key = key("a", "1");

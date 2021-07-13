@@ -101,7 +101,8 @@ mod tests {
 
     use crate::{
         edenapi::{File, Tree},
-        indexedloghistorystore::{IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType},
+        indexedloghistorystore::IndexedLogHgIdHistoryStore,
+        indexedlogutil::StoreType,
         remotestore::HgIdRemoteStore,
         testutil::*,
     };
@@ -124,7 +125,7 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdHistoryStore::new(
             &tmp,
             &ConfigSet::new(),
-            IndexedLogHistoryStoreType::Shared,
+            StoreType::Shared,
         )?);
 
         // Set up `EdenApiHistoryStore`.
@@ -150,12 +151,7 @@ mod tests {
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();
         let local = Arc::new(
-            IndexedLogHgIdHistoryStore::new(
-                &tmp,
-                &ConfigSet::new(),
-                IndexedLogHistoryStoreType::Shared,
-            )
-            .unwrap(),
+            IndexedLogHgIdHistoryStore::new(&tmp, &ConfigSet::new(), StoreType::Shared).unwrap(),
         );
 
         // EdenAPI does not support fetching tree history, so it should

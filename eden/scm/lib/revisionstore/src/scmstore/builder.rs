@@ -17,7 +17,8 @@ use edenapi::Builder;
 use crate::{
     contentstore::check_cache_buster,
     fetch_logger::FetchLogger,
-    indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+    indexedlogdatastore::IndexedLogHgIdDataStore,
+    indexedlogutil::StoreType,
     lfs::{LfsRemote, LfsStore},
     scmstore::{file::FileStoreMetrics, ContentStoreFallbacks, FileStore, TreeStore},
     util::{
@@ -176,7 +177,7 @@ impl<'a> FileStoreBuilder<'a> {
                 get_indexedlogdatastore_path(&local_path)?,
                 self.get_extstored_policy()?,
                 self.config,
-                IndexedLogDataStoreType::Local,
+                StoreType::Local,
             )?))
         } else {
             None
@@ -189,7 +190,7 @@ impl<'a> FileStoreBuilder<'a> {
             get_indexedlogdatastore_path(&cache_path)?,
             self.get_extstored_policy()?,
             self.config,
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?))
     }
 
@@ -201,7 +202,7 @@ impl<'a> FileStoreBuilder<'a> {
                 local_path,
                 ExtStoredPolicy::Use,
                 self.config,
-                IndexedLogDataStoreType::Local,
+                StoreType::Local,
             )?))
         } else {
             None
@@ -215,7 +216,7 @@ impl<'a> FileStoreBuilder<'a> {
             cache_path,
             ExtStoredPolicy::Use,
             self.config,
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?))
     }
 
@@ -448,7 +449,7 @@ impl<'a> TreeStoreBuilder<'a> {
                 get_indexedlogdatastore_path(&local_path)?,
                 ExtStoredPolicy::Use,
                 self.config,
-                IndexedLogDataStoreType::Local,
+                StoreType::Local,
             )?))
         } else {
             None
@@ -461,7 +462,7 @@ impl<'a> TreeStoreBuilder<'a> {
             get_indexedlogdatastore_path(&cache_path)?,
             ExtStoredPolicy::Use,
             self.config,
-            IndexedLogDataStoreType::Shared,
+            StoreType::Shared,
         )?))
     }
 

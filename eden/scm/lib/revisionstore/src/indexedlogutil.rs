@@ -25,6 +25,12 @@ pub enum Store {
     Shared(RotateLog),
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum StoreType {
+    Local,
+    Shared,
+}
+
 impl Store {
     pub fn is_local(&self) -> bool {
         match self {

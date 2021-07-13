@@ -26,6 +26,7 @@ use crate::{
     datastore::{strip_metadata, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
     fetch_logger::FetchLogger,
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
+    indexedlogutil::StoreType,
     lfs::{
         lfs_from_hg_file_blob, rebuild_metadata, LfsPointersEntry, LfsRemote, LfsRemoteInner,
         LfsStore, LfsStoreEntry,
@@ -109,10 +110,10 @@ pub struct LocalAndCacheFetchMetrics {
 }
 
 impl LocalAndCacheFetchMetrics {
-    fn store(&mut self, typ: LocalStoreType) -> &mut FetchMetrics {
+    fn store(&mut self, typ: StoreType) -> &mut FetchMetrics {
         match typ {
-            LocalStoreType::Local => &mut self.local,
-            LocalStoreType::Cache => &mut self.cache,
+            StoreType::Local => &mut self.local,
+            StoreType::Shared => &mut self.cache,
         }
     }
 
@@ -374,19 +375,19 @@ impl FileStore {
         }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            state.fetch_indexedlog(indexedlog_cache, LocalStoreType::Cache);
+            state.fetch_indexedlog(indexedlog_cache, StoreType::Shared);
         }
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            state.fetch_indexedlog(indexedlog_local, LocalStoreType::Local);
+            state.fetch_indexedlog(indexedlog_local, StoreType::Local);
         }
 
         if let Some(ref lfs_cache) = self.lfs_cache {
-            state.fetch_lfs(lfs_cache, LocalStoreType::Cache);
+            state.fetch_lfs(lfs_cache, StoreType::Shared);
         }
 
         if let Some(ref lfs_local) = self.lfs_local {
-            state.fetch_lfs(lfs_local, LocalStoreType::Local);
+            state.fetch_lfs(lfs_local, StoreType::Local);
         }
 
         if let Some(ref memcache) = self.memcache {
@@ -1037,12 +1038,6 @@ impl TryFrom<FileEntry> for LfsPointersEntry {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-enum LocalStoreType {
-    Local,
-    Cache,
-}
-
 pub struct FetchErrors {
     /// Errors encountered for specific keys
     fetch_errors: HashMap<Key, Vec<Error>>,
@@ -1087,10 +1082,10 @@ pub struct FetchState {
     lfs_pointers: HashMap<Key, LfsPointersEntry>,
 
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
-    pointer_origin: Arc<RwLock<HashMap<Sha256, LocalStoreType>>>,
+    pointer_origin: Arc<RwLock<HashMap<Sha256, StoreType>>>,
 
     /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
-    key_origin: HashMap<Key, LocalStoreType>,
+    key_origin: HashMap<Key, StoreType>,
 
     /// Errors encountered during fetching.
     errors: FetchErrors,
@@ -1102,7 +1097,7 @@ pub struct FetchState {
     found_in_edenapi: HashSet<Key>,
 
     /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
-    computed_aux_data: HashMap<Key, LocalStoreType>,
+    computed_aux_data: HashMap<Key, StoreType>,
 
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
@@ -1220,14 +1215,14 @@ impl FetchState {
     }
 
     #[instrument(level = "debug", skip(self, ptr))]
-    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: LocalStoreType) {
+    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: StoreType) {
         let sha256 = ptr.sha256();
-        // Overwrite LocalStoreType::Local with LocalStoreType::Cache, but not vice versa
+        // Overwrite StoreType::Local with StoreType::Shared, but not vice versa
         match typ {
-            LocalStoreType::Cache => {
+            StoreType::Shared => {
                 self.pointer_origin.write().insert(sha256, typ);
             }
-            LocalStoreType::Local => {
+            StoreType::Local => {
                 self.pointer_origin.write().entry(sha256).or_insert(typ);
             }
         }
@@ -1235,9 +1230,9 @@ impl FetchState {
     }
 
     #[instrument(level = "debug", skip(self, sf))]
-    fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<LocalStoreType>) {
+    fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<StoreType>) {
         self.key_origin
-            .insert(key.clone(), typ.unwrap_or(LocalStoreType::Cache));
+            .insert(key.clone(), typ.unwrap_or(StoreType::Shared));
         use hash_map::Entry::*;
         match self.found.entry(key.clone()) {
             Occupied(mut entry) => {
@@ -1260,7 +1255,7 @@ impl FetchState {
     }
 
     #[instrument(level = "debug", skip(self, entry))]
-    fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: LocalStoreType) {
+    fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: StoreType) {
         if entry.metadata().is_lfs() {
             if self.extstored_policy == ExtStoredPolicy::Use {
                 match entry.try_into() {
@@ -1274,7 +1269,7 @@ impl FetchState {
     }
 
     #[instrument(skip(self, store))]
-    fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: LocalStoreType) {
+    fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: StoreType) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
@@ -1333,7 +1328,7 @@ impl FetchState {
     }
 
     #[instrument(level = "debug", skip(self, entry))]
-    fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: LocalStoreType) {
+    fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: StoreType) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
                 self.found_attributes(key, LazyFile::Lfs(blob, ptr).into(), Some(typ))
@@ -1343,7 +1338,7 @@ impl FetchState {
     }
 
     #[instrument(skip(self, store))]
-    fn fetch_lfs(&mut self, store: &LfsStore, typ: LocalStoreType) {
+    fn fetch_lfs(&mut self, store: &LfsStore, typ: StoreType) {
         let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;
@@ -1375,7 +1370,7 @@ impl FetchState {
         let key = entry.key.clone();
         if entry.metadata.is_lfs() {
             match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, LocalStoreType::Cache),
+                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
                 Err(err) => self.errors.keyed_error(key, err),
             }
         } else {
@@ -1414,7 +1409,7 @@ impl FetchState {
         let key = entry.key.clone();
         if entry.metadata().is_lfs() {
             match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, LocalStoreType::Cache),
+                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
                 Err(err) => self.errors.keyed_error(key, err),
             }
         } else {
@@ -1475,11 +1470,11 @@ impl FetchState {
                         "no source found for Sha256; received unexpected Sha256 from LFS server"
                     )
                 })? {
-                    LocalStoreType::Local => lfs_local
+                    StoreType::Local => lfs_local
                         .as_ref()
                         .expect("no lfs_local present when handling local LFS pointer")
                         .add_blob(&sha256, data),
-                    LocalStoreType::Cache => lfs_cache
+                    StoreType::Shared => lfs_cache
                         .as_ref()
                         .expect("no lfs_cache present when handling cache LFS pointer")
                         .add_blob(&sha256, data),
@@ -1492,11 +1487,11 @@ impl FetchState {
         // TODO(meyer): We probably want to intermingle this with the remote fetch handler to avoid files being evicted between there
         // and here, rather than just retrying the local fetches.
         if let Some(ref lfs_cache) = cache {
-            self.fetch_lfs(lfs_cache, LocalStoreType::Cache)
+            self.fetch_lfs(lfs_cache, StoreType::Shared)
         }
 
         if let Some(ref lfs_local) = local {
-            self.fetch_lfs(lfs_local, LocalStoreType::Local)
+            self.fetch_lfs(lfs_local, StoreType::Local)
         }
 
         Ok(())
@@ -1690,12 +1685,12 @@ impl FetchState {
                 if let Ok(blob) = serde_json::to_vec(self.found[&key].aux_data.as_ref().unwrap()) {
                     let entry = Entry::new(key, blob.into(), Metadata::default());
                     match origin {
-                        LocalStoreType::Cache => {
+                        StoreType::Shared => {
                             if let Some(ref mut aux_cache) = aux_cache {
                                 let _ = aux_cache.put_entry(entry);
                             }
                         }
-                        LocalStoreType::Local => {
+                        StoreType::Local => {
                             if let Some(ref mut aux_local) = aux_local {
                                 let _ = aux_local.put_entry(entry);
                             }

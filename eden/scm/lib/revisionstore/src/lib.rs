@@ -169,8 +169,9 @@ pub use crate::datastore::{
 pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
-pub use crate::indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore};
-pub use crate::indexedloghistorystore::{IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType};
+pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
+pub use crate::indexedlogutil::StoreType;
 pub use crate::localstore::{ExtStoredPolicy, LocalStore};
 pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
