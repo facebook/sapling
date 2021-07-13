@@ -334,11 +334,16 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or_default::<bool>("scmstore", "lfsptrwrites")?;
 
+        let prefer_computing_aux_data = self
+            .config
+            .get_or_default::<bool>("scmstore", "prefercomputingauxdata")?;
+
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
             edenapi_retries,
             allow_write_lfs_ptrs,
+            prefer_computing_aux_data,
 
             indexedlog_local,
             lfs_local,
