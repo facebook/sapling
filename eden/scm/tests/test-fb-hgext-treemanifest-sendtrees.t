@@ -36,7 +36,7 @@ sends them during a push and during bundle operations.
 Create flat manifest clients
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client1 -q
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   1 trees fetched over 0.00s
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0

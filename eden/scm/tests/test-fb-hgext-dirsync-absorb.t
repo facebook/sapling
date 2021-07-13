@@ -54,29 +54,29 @@ Absorb triggers mirroring
   $ LOG=edenscm::hgext::dirsync=debug hg absorb -a
   showing changes for dir1/B
           @@ -0,1 +0,1 @@
-  381099a -B
-  381099a +B1
+  * -B (glob)
+  * +B1 (glob)
   showing changes for dir1/C
           @@ -0,2 +0,2 @@
-  67b1ae4 -C1
-  381099a -C2
-  67b1ae4 +C10
-  381099a +C20
+  * -C1 (glob)
+  * -C2 (glob)
+  * +C10 (glob)
+  * +C20 (glob)
   showing changes for dir1/D
           @@ -0,0 +0,1 @@
-  67b1ae4 +D0
+  * +D0 (glob)
           @@ -1,0 +2,1 @@
           +D1.5
           @@ -2,0 +4,1 @@
-  381099a +D3
+  * +D3 (glob)
   showing changes for dir2/A
           @@ -0,1 +0,1 @@
-  67b1ae4 -A
-  67b1ae4 +A1
+  * -A (glob)
+  * +A1 (glob)
   
   2 changesets affected
-  381099a B
-  67b1ae4 A
+  * B (glob)
+  * A (glob)
   mirrored changes in 'dir1/C' to 'dir2/C'
   mirrored changes in 'dir1/D' to 'dir2/D'
   mirrored changes in 'dir2/A' to 'dir1/A'
@@ -199,11 +199,11 @@ Only changes the 1st commit:
   $ LOG=edenscm::hgext::dirsync=debug hg absorb
   showing changes for dir1/A
           @@ -0,1 +0,1 @@
-  7af874e -A1
-  7af874e +A2
+  * -A1 (glob)
+  * +A2 (glob)
   
   1 changeset affected
-  7af874e A
+  * A (glob)
   apply changes (yn)?  y
   mirrored changes in 'dir1/A' to 'dir2/A'
   mirrored changes in 'dir1/A' to 'dir2/A'
@@ -228,9 +228,9 @@ Only changes the 1st commit:
   
 
   $ hg debugmutation -r .
-   *  7e2ee81dd3761942df016136210e6e29dbcc4ee5 absorb by test at 1970-01-01T00:00:00 from:
-      01a6dd29992748f163688f53a168a05ffaf6251d absorb by test at 1970-01-01T00:00:00 from:
-      381099a6b6660a3545bf879fc8c22c2f7b79b405
+   *  * absorb by test at 1970-01-01T00:00:00 from: (glob)
+      * absorb by test at 1970-01-01T00:00:00 from: (glob)
+      * (glob)
   
 Changes the 1st commit but restores at the top:
 
@@ -259,9 +259,9 @@ Changes the 1st commit but restores at the top:
   HG: editing dir1/A
   HG: "y" means the line to the right exists in the changeset to the top
   HG:
-  HG: /---- 8d589b28b739 A1
-  HG: |/--- f8d88f94cd8b A2
-  HG: ||/-- 850463235b30 A3
+  HG: /---- * A1 (glob)
+  HG: |/--- * A2 (glob)
+  HG: ||/-- * A3 (glob)
   HG: |||
         y : 3
        y  : 2

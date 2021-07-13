@@ -47,7 +47,7 @@ sh % "hg commit -Am 'Adding a and b'" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed 32bc2a06fd26"""
+    committed * (glob)"""
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
     new file mode 100644
@@ -78,7 +78,7 @@ sh % "hg diff --git -r null -r ." == r"""
 sh % "echo a" >> "dir1/a"
 sh % "echo b" >> "dir1/b"
 sh % "hg commit --amend -I dir1/a" == r"""
-    amending changeset 32bc2a06fd26
+    amending changeset * (glob)
     mirrored changes in 'dir1/a' to 'dir2/subdir/a'
     committing files:
     dir1/a
@@ -87,7 +87,7 @@ sh % "hg commit --amend -I dir1/a" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed e9cce3b53a7c"""
+    committed * (glob)"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
@@ -119,7 +119,7 @@ sh % "hg diff --git -r null -r ." == r"""
 
 sh % "echo a" >> "dir1/a"
 sh % "hg commit --amend dir1/b" == r"""
-    amending changeset e9cce3b53a7c
+    amending changeset * (glob)
     mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     committing files:
     dir1/a
@@ -128,7 +128,7 @@ sh % "hg commit --amend dir1/b" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed a70e8a6cacdd"""
+    committed * (glob)"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
@@ -163,7 +163,7 @@ sh % "hg diff --git -r null -r ." == r"""
 # Exclude changes to particular file
 sh % "echo b" >> "dir1/b"
 sh % "hg commit --amend -X dir1/a" == r"""
-    amending changeset a70e8a6cacdd
+    amending changeset * (glob)
     mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     committing files:
     dir1/a
@@ -172,7 +172,7 @@ sh % "hg commit --amend -X dir1/a" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed 4af805a433df"""
+    committed * (glob)"""
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
     new file mode 100644
@@ -209,7 +209,7 @@ sh % "hg diff --git -r null -r ." == r"""
 sh % "echo c" > "dir1/c"
 sh % "rm dir1/a"
 sh % "hg commit --amend -A" == r"""
-    amending changeset 4af805a433df
+    amending changeset * (glob)
     removing dir1/a
     adding dir1/c
     mirrored adding 'dir1/c' to 'dir2/subdir/c'
@@ -221,7 +221,7 @@ sh % "hg commit --amend -A" == r"""
     dir2/subdir/c
     committing manifest
     committing changelog
-    committed 55c6a18e7d57"""
+    committed * (glob)"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/b b/dir1/b

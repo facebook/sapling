@@ -32,16 +32,16 @@ Check filename heuristics (same dirname and same basename)
   $ echo b > dir/file.txt
   $ hg ci -qm 'mod a, mod dir/file.txt'
 
-  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
-  @  changeset: 557f403c0afd2a3cf15d7e2fb1f1001a8b85e081
-  │   desc: mod a, mod dir/file.txt, phase: draft
-  │ o  changeset: 928d74bc9110681920854d845c06959f6dfc9547
-  ├─╯   desc: mv a b, mv dir/ dir2/, phase: public
-  o  changeset: 3c482b16e54596fed340d05ffaf155f156cda7ee
-      desc: initial, phase: public
+  $ hg log -G -T 'desc: {desc}, phase: {phase}\n'
+  @  desc: mod a, mod dir/file.txt, phase: draft
+  │
+  │ o  desc: mv a b, mv dir/ dir2/, phase: public
+  ├─╯
+  o  desc: initial, phase: public
+  
 
   $ hg rebase -s . -d 'desc(mv)'
-  rebasing 557f403c0afd "mod a, mod dir/file.txt"
+  rebasing * "mod a, mod dir/file.txt" (glob)
   merging b and a to b
   merging dir2/file.txt and dir/file.txt to dir2/file.txt
   $ cd ..
@@ -211,18 +211,18 @@ Check a few potential move candidates
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
 
-  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
-  @  changeset: 6b2f4cece40fd320f41229f23821256ffc08efea
-  │   desc: mod dir/a, phase: draft
-  │ o  changeset: 4494bf7efd2e0dfdd388e767fb913a8a3731e3fa
-  │ │   desc: create dir2/a, phase: public
-  │ o  changeset: b1784dfab6ea6bfafeb11c0ac50a2981b0fe6ade
-  ├─╯   desc: mv dir/a dir/b, phase: public
-  o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
-      desc: initial, phase: public
+  $ hg log -G -T 'desc: {desc}, phase: {phase}\n'
+  @  desc: mod dir/a, phase: draft
+  │
+  │ o  desc: create dir2/a, phase: public
+  │ │
+  │ o  desc: mv dir/a dir/b, phase: public
+  ├─╯
+  o  desc: initial, phase: public
+  
 
   $ hg rebase -s . -d 'desc(create)'
-  rebasing 6b2f4cece40f "mod dir/a"
+  rebasing * "mod dir/a" (glob)
   merging dir/b and dir/a to dir/b
   $ cd ..
   $ rm -rf server
@@ -331,16 +331,16 @@ Move a directory in draft branch
   $ hg mv -q dir/ dir2
   $ hg ci -qm 'mv dir/ dir2/'
 
-  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
-  @  changeset: a33d80b6e352591dfd82784e1ad6cdd86b25a239
-  │   desc: mv dir/ dir2/, phase: draft
-  │ o  changeset: 6b2f4cece40fd320f41229f23821256ffc08efea
-  ├─╯   desc: mod dir/a, phase: draft
-  o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
-      desc: initial, phase: public
+  $ hg log -G -T 'desc: {desc}, phase: {phase}\n'
+  @  desc: mv dir/ dir2/, phase: draft
+  │
+  │ o  desc: mod dir/a, phase: draft
+  ├─╯
+  o  desc: initial, phase: public
+  
 
   $ hg rebase -s . -d 'desc(mod)'
-  rebasing a33d80b6e352 "mv dir/ dir2/"
+  rebasing * "mv dir/ dir2/" (glob)
   merging dir/a and dir2/a to dir2/a
   $ cd ..
   $ rm -rf server
@@ -648,16 +648,16 @@ changed in same move
   $ cd ..
   $ hg ci -qm 'mod a'
 
-  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
-  @  changeset 6207d2d318e710b882e3d5ada2a89770efc42c96
-  │   desc mod a, phase: draft
-  │ o  changeset abffdd4e3dfc04bc375034b970299b2a309a1cce
-  ├─╯   desc mv a b; mv dir1 dir2, phase: draft
-  o  changeset 81973cd24b58db2fdf18ce3d64fb2cc3284e9ab3
-      desc initial, phase: draft
+  $ hg log -G -T 'desc {desc}, phase: {phase}\n'
+  @  desc mod a, phase: draft
+  │
+  │ o  desc mv a b; mv dir1 dir2, phase: draft
+  ├─╯
+  o  desc initial, phase: draft
+  
 
   $ hg rebase -s . -d 'desc(mv)' --config=experimental.copytrace=on
-  rebasing 6207d2d318e7 "mod a"
+  rebasing * "mod a" (glob)
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
   a
@@ -685,16 +685,16 @@ while adding file to original directory in other merge parent. File moved on reb
   $ hg mv -q dir1 dir2
   $ hg ci -qm 'mv dir1 dir2'
 
-  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
-  @  changeset e8919e7df8d036e07b906045eddcd4a42ff1915f
-  │   desc mv dir1 dir2, phase: draft
-  │ o  changeset 7c7c6f339be00f849c3cb2df738ca91db78b32c8
-  ├─╯   desc hg add dir1/a, phase: draft
-  o  changeset a235dcce55dcf42034c4e374cb200662d0bb4a13
-      desc initial, phase: draft
+  $ hg log -G -T 'desc {desc}, phase: {phase}\n'
+  @  desc mv dir1 dir2, phase: draft
+  │
+  │ o  desc hg add dir1/a, phase: draft
+  ├─╯
+  o  desc initial, phase: draft
+  
 
   $ hg rebase -s . -d 'desc(hg)' --config=experimental.copytrace=on
-  rebasing e8919e7df8d0 "mv dir1 dir2"
+  rebasing * "mv dir1 dir2" (glob)
   $ ls dir2
   a
   dummy

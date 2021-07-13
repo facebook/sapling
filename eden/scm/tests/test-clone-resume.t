@@ -45,7 +45,7 @@ Verify the checkout resumes where it left off
   $ chmod -R a+w dir2
   $ EDENSCM_LOG=checkout=debug hg checkout --continue
   warning: this repository appears to have not finished cloning - run 'hg checkout --continue' to resume the clone
-  continuing checkout to '185c975eb20e8e95b3b30bdf745d83263817832c'
+  continuing checkout to '*' (glob)
    DEBUG checkout: Skipping checking out [^0].* files since they're already written (re)
   5002 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

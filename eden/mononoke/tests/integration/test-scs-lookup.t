@@ -131,15 +131,15 @@ lookup using globalrev needed resolving to identify commit
 lookup using hg needed resolving to identify commit
   $ scsc lookup --repo repo -i "$COMMIT_E" -S bonsai,hg,globalrev
   bonsai=29c11c4d7a26279ad9a90edac504ac6599c0b62cb55455fbed0b7abe125086bb
-  hg=82d5da62960d05281995c370fd083299ff66ba16
+  hg=07cf1236206b262d4138a9344dca08fdbae930aa
 
 lookup using hg prefix needed resolving to identify commit
-  $ scsc lookup --repo repo -i 82d5da6 -S bonsai,hg,globalrev
+  $ scsc lookup --repo repo -i 07cf1236 -S bonsai,hg,globalrev
   bonsai=29c11c4d7a26279ad9a90edac504ac6599c0b62cb55455fbed0b7abe125086bb
-  hg=82d5da62960d05281995c370fd083299ff66ba16
+  hg=07cf1236206b262d4138a9344dca08fdbae930aa
 
 lookup using hg prefix needed resolving to identify commit (ambiguous case)
-  $ scsc lookup --repo repo -i 8 -S bonsai,hg,globalrev
-  note: several hg commits with the prefix '8' exist
-  error: commit not found: 8
+  $ scsc lookup --repo repo -i 2 -S bonsai,hg,globalrev
+  note: several bonsai commits with the prefix '2' exist
+  error: commit not found: 2
   [1]

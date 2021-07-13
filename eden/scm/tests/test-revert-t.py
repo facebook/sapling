@@ -409,9 +409,9 @@ sh % "hg merge" == r"""
     2 files updated, 0 files merged, 1 files removed, 0 files unresolved
     (branch merge, don't forget to commit)"""
 sh % "hg summary" == r"""
-    parent: b8ec310b2d4e 
+    parent: 68b989552c4a 
      other adds
-    parent: f6180deb8fbe 
+    parent: 2b80f4f4fe72 
      rename
     commit: 2 modified, 1 removed (merge)
     phases: 3 draft"""

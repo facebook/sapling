@@ -478,7 +478,7 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   │  affected: file
   │  deleted:
   │
-  │ o  (ed93aeac6b3ccfb747e62017791e7996f20106d3) source
+  │ o  (8679c40703d2db639fc4f0a9409ed58f0e6f0809) source
   ├─╯  affected: file file/subfile
   │    deleted: file
   │
@@ -488,7 +488,7 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   
 
   $ hg rebase -d 'desc(dest)' -s 'desc(source)'
-  rebasing ed93aeac6b3c "source"
+  rebasing * "source" (glob)
   abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
   (current process runs with uid 42) (?)
   ($TESTTMP/cornercases/foo/foo/foo/foo/file: mode 0o52, uid 42, gid 42) (?)
@@ -512,7 +512,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 'desc(dest)'
   $ logg
-  @  (c7fd9e6dc48312b276e2cea6edc92fb1fbd24cf3) dest
+  @  (1803169f37a9243ff3ba460d0cc4b95347fa0d82) dest
   │  affected: file file/subfile
   │  deleted: file
   │

@@ -51,7 +51,7 @@ sh % "hg merge" == r"""
     (branch merge, don't forget to commit)"""
 sh % "hg stat" == "M testdir/subdir/a"
 sh % "hg diff --nodates" == r"""
-    diff -r bc21c9773bfa testdir/subdir/a
+    diff -r * testdir/subdir/a (glob)
     --- a/testdir/subdir/a
     +++ b/testdir/subdir/a
     @@ -1,1 +1,1 @@

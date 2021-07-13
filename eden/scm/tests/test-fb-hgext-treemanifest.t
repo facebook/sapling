@@ -39,7 +39,7 @@ Test autocreatetrees
   adding file changes
   added 1 changesets with 0 changes to 0 files
   $ hg up -r tip
-  fetching tree '' 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66
+  fetching tree '' 3171d1d9315ec883e4028e787f617120bd06cfa8
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   1 trees fetched over 0.00s
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
@@ -66,13 +66,13 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ echo >> subdir/y
   $ hg commit -Am 'modify subdir/y again'
   $ hg rebase -d 085784c01c08984ae3b6f4e4a6e553035d58380b -s '.^'
-  rebasing 6a2476258ba5 "modify subdir/y"
+  rebasing * "modify subdir/y" (glob)
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
-  rebasing f096b21e165f "modify subdir/y again"
+  rebasing * "modify subdir/y again" (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
-  0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
-  8289b85c6a307a5a64ffe3bd80bd7998775c787a
+  0e5087e257eeb8a1418a1ec5f4395fb17b8c1b4f
+  ba4fcc53f7c9ac6201325aed3e64b83905bd5784
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test treemanifest with sparse enabled
@@ -101,7 +101,7 @@ Test rebase two commits with same changes
   $ echo >> noop
   $ hg add noop
   $ hg commit -Am 'rebase destination'
-  $ hg rebase -d 'desc(rebase)' -r 6052526a0d67 -r 79a69a1547d7 --config rebase.singletransaction=True
-  rebasing 6052526a0d67 "modify subdir/y #1"
-  rebasing 79a69a1547d7 "modify subdir/y #2"
+  $ hg rebase -d 'desc(rebase)' -r 'desc("#1")' -r 'desc("#2")' --config rebase.singletransaction=True
+  rebasing * "modify subdir/y #1" (glob)
+  rebasing * "modify subdir/y #2" (glob)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.

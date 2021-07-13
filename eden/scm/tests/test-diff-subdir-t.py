@@ -25,12 +25,12 @@ sh % "echo 2" > "beta/two"
 # everything
 
 sh % "hg diff --nodates" == r"""
-    diff -r 7d5ef1aea329 alpha/one
+    diff -r * alpha/one (glob)
     --- a/alpha/one
     +++ b/alpha/one
     @@ -0,0 +1,1 @@
     +1
-    diff -r 7d5ef1aea329 beta/two
+    diff -r * beta/two (glob)
     --- a/beta/two
     +++ b/beta/two
     @@ -0,0 +1,1 @@
@@ -39,7 +39,7 @@ sh % "hg diff --nodates" == r"""
 # beta only
 
 sh % "hg diff --nodates beta" == r"""
-    diff -r 7d5ef1aea329 beta/two
+    diff -r * beta/two (glob)
     --- a/beta/two
     +++ b/beta/two
     @@ -0,0 +1,1 @@
@@ -49,7 +49,7 @@ sh % "hg diff --nodates beta" == r"""
 
 sh % "cd beta"
 sh % "hg diff --nodates ." == r"""
-    diff -r 7d5ef1aea329 beta/two
+    diff -r * beta/two (glob)
     --- a/beta/two
     +++ b/beta/two
     @@ -0,0 +1,1 @@
@@ -59,7 +59,7 @@ sh % "hg diff --nodates ." == r"""
 
 sh % "cd .."
 sh % "hg diff --nodates --root beta" == r"""
-    diff -r 7d5ef1aea329 two
+    diff -r * two (glob)
     --- a/two
     +++ b/two
     @@ -0,0 +1,1 @@
@@ -69,7 +69,7 @@ sh % "hg diff --nodates --root beta" == r"""
 
 sh % "cd beta"
 sh % "hg diff --nodates --root ." == r"""
-    diff -r 7d5ef1aea329 two
+    diff -r * two (glob)
     --- a/two
     +++ b/two
     @@ -0,0 +1,1 @@

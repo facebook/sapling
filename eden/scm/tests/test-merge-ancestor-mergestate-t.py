@@ -54,23 +54,23 @@ sh % "hg rebase -s A -d 0" == r"""
     rebasing dc7f2675f9ab "D" (D)
     rebasing 5eb863826611 "E" (E)"""
 sh % "showgraph" == r"""
-    o  e71547946f82 E
+    o  17085bf4ec19 E
     │
-    o  264c021e8fc6 D
+    o  50e74e386d1a D
     │
-    o  34e41e21cd9d C
+    o  68805fc8068c C
     │
-    │ o  aa431a9572c1 F
+    │ o  25a05a650d8b F
     ├─╯
-    o  01ba3ad89eb7 B
+    o  0b21084cb212 B
     │
-    o  622e2d864a27 A
+    o  57315db76057 A
     │
     │ o  520a9f665f6e b
     │
-    @  9309aa3b805a driver"""
-sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
-    rebasing aa431a9572c1 "F" (F)
-    ancestor nodes = ['01ba3ad89eb70070d81f052c0c40a3877c2ba5d8']
+    @  2563cf1728bf driver"""
+sh % "hg rebase -r 25a05a650d8b -d 17085bf4ec19" == r"""
+    rebasing 25a05a650d8b "F" (F)
+    ancestor nodes = ['0b21084cb21221e8ac6138fc5e92460d37525d21']
     ancestor revs = [9]
     merging file"""

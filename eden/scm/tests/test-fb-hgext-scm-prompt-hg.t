@@ -194,40 +194,40 @@ Test with symlinks to inside of subdir of repo
   $ echo contents > subdir/file
   $ hg add subdir/file
   $ cmd hg commit -m subdir
-  (ced0c431a)
+  (4c449fd97)
   $ cd ..
   $ cmd ln -s repo/subdir
   $ cmd cd subdir
-  (ced0c431a)
+  (4c449fd97)
   $ cd ../repo
 
 Test formatting options
   $ _scm_prompt ' %s \n'
-   ced0c431a 
+   4c449fd97 
   $ _scm_prompt ':%s:'
-  :ced0c431a: (no-eol)
+  :4c449fd97: (no-eol)
 
 Test locked repo states (generally due to concurrency so tests are kinda fake)
   $ cmd ln -s "${HOSTNAME}:12345" .hg/wlock
-  (ced0c431a|WDIR-LOCKED)
+  (4c449fd97|WDIR-LOCKED)
   $ cmd ln -s "${HOSTNAME}:12345" .hg/store/lock
-  (ced0c431a|STORE-LOCKED)
+  (4c449fd97|STORE-LOCKED)
   $ cmd rm .hg/wlock
-  (ced0c431a|STORE-LOCKED)
+  (4c449fd97|STORE-LOCKED)
   $ cmd rm .hg/store/lock
-  (ced0c431a)
+  (4c449fd97)
 
 Test many remotenames
   $ hg log -r . -T '{node}\n'
-  ced0c431a4731a9d5048efdb60a3535f5450167e
+  4c449fd97125b3e1dafad3e702a521194c14672a
   $ for i in `$PYTHON $TESTDIR/seq.py 1 10`; do
-  > echo ced0c431a4731a9d5048efdb60a3535f5450167e bookmarks remote/remote$i >> .hg/store/remotenames
+  > echo 4c449fd97125b3e1dafad3e702a521194c14672a bookmarks remote/remote$i >> .hg/store/remotenames
   > done
   $ cmd
-  (ced0c431a|remote/remote9...)
+  (4c449fd97|remote/remote9...)
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/abc/master >> .hg/store/remotenames
   $ cmd
-  (ced0c431a|remote/remote9...)
+  (4c449fd97|remote/remote9...)
   $ echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/@ >> .hg/store/remotenames
   $ cmd
-  (ced0c431a|remote/remote9...)
+  (4c449fd97|remote/remote9...)

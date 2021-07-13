@@ -55,7 +55,7 @@ sh % "'HGEDITOR=cat' hg --cwd b import ../exported-tip.patch" == "applying ../ex
 # message and committer and date should be same
 
 sh % "hg --cwd b tip" == r"""
-    commit:      1d4bd90af0e4
+    commit:      * (glob)
     user:        someone
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     second change"""
@@ -112,12 +112,12 @@ sh % "'HGEDITOR=cat' hg --cwd b1 import ../diffed-tip.patch" == r"""
 
 sh % "echo a" >> "b1/a"
 sh % "hg --cwd b1 commit -m ' '"
-sh % "hg --cwd b1 tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
+sh % "hg --cwd b1 tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
 sh % "hg --cwd b1 export -o ../empty-log.diff ."
 sh % "hg --cwd b1 update -q -C '.^1'"
 sh % "hg --cwd b1 debugstrip -q tip"
 sh % "'HGEDITOR=cat' hg --cwd b1 import --exact ../empty-log.diff" == "applying ../empty-log.diff"
-sh % "hg --cwd b1 tip -T '{node}\\n'" == "d8804f3f5396d800812f579c8452796a5993bdb2"
+sh % "hg --cwd b1 tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
 
 
 # import of plain diff should be ok with message
@@ -133,7 +133,7 @@ sh % "hg --cwd b2 import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip
 sh % "hg clone -qr0 a b3"
 sh % "hg --cwd b3 import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 sh % "hg -R b3 tip -pv" == r"""
-    commit:      ca68f19f3a40
+    commit:      * (glob)
     user:        user@nowhere.net
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a
@@ -141,7 +141,7 @@ sh % "hg -R b3 tip -pv" == r"""
     patch
 
 
-    diff -r 80971e65b431 -r ca68f19f3a40 a
+    diff -r * -r * a (glob)
     --- a/a Thu Jan 01 00:00:00 1970 +0000
     +++ b/a Thu Jan 01 00:00:01 1970 +0000
     @@ -1,1 +1,2 @@
@@ -156,7 +156,7 @@ sh % "hg -R b3 tip -pv" == r"""
 sh % "hg clone -qr0 a b4"
 sh % "'HGEDITOR=cat' hg --cwd b4 import --no-commit --edit ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 sh % "hg --cwd b4 diff --nodates" == r"""
-    diff -r 80971e65b431 a
+    diff -r * a (glob)
     --- a/a
     +++ b/a
     @@ -1,1 +1,2 @@
@@ -200,8 +200,8 @@ sh % "hg --cwd b6 import -" << open(
 
 sh % "hg init b7"
 sh % "hg --cwd a export '0:tip'" | "hg --cwd b7 import -" == "applying patch from stdin"
-sh % "hg --cwd a id" == "1d4bd90af0e4"
-sh % "hg --cwd b7 id" == "1d4bd90af0e4"
+sh % "hg --cwd a id" == "da4d12908167"
+sh % "hg --cwd b7 id" == "da4d12908167"
 
 
 # override commit message
@@ -293,14 +293,14 @@ sh % "hg --cwd b12 import -v ../patch1 ../patch2" == r"""
     a
     committing manifest
     committing changelog
-    created 1d4bd90af0e4
+    created * (glob)
     applying ../patch2
     patching file a
     committing files:
     a
     committing manifest
     committing changelog
-    created 6d019af21222"""
+    created * (glob)"""
 sh % "hg --cwd b12 hide -q tip" == ""
 sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 1"
 
@@ -329,7 +329,7 @@ sh % "cd ../../.."
 # committer should be 'someoneelse'
 
 sh % "hg --cwd b13 tip" == r"""
-    commit:      3577f5aea227
+    commit:      * (glob)
     user:        someoneelse
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     subdir change"""
@@ -811,7 +811,7 @@ new mode 100755
 if feature.check(["execbit"]):
 
     sh % "hg sum" == r"""
-        parent: d59915696727 
+        parent: 95f91ee3332c 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""
@@ -838,7 +838,7 @@ if feature.check(["execbit"]):
 else:
 
     sh % "hg sum" == r"""
-        parent: 28f089cc9ccc 
+        parent: * (glob) 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""

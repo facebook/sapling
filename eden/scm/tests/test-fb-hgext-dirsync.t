@@ -24,7 +24,7 @@ Test mirroring a simple add
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed c1796664bada
+  committed * (glob)
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -48,7 +48,7 @@ Test mirroring a simple modification
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed c84f345b5796
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
@@ -71,7 +71,7 @@ Test mirroring a simple delete
   committing files:
   committing manifest
   committing changelog
-  committed 3cc3197052c1
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -111,7 +111,7 @@ Test non-conflicting edits
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed 787a1ee839ea
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -136,7 +136,7 @@ Test non-conflicting deletes
   committing files:
   committing manifest
   committing changelog
-  committed 20868a046ae1
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -162,7 +162,7 @@ Test non-conflicting deletes
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed 4cc69952853e
+  committed * (glob)
 
 Test syncing a edit + rename
   $ echo b > dir1/a
@@ -176,7 +176,7 @@ Test syncing a edit + rename
   dir2/subdir/b
   committing manifest
   committing changelog
-  committed a6e4f018e982
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -198,14 +198,14 @@ Test syncing a edit + rename
 Test amending a change where there has already been a sync before
   $ echo c > dir1/b
   $ hg commit --amend -m "amend b in dir1"
-  amending changeset a6e4f018e982
+  amending changeset * (glob)
   mirrored changes in 'dir1/b' to 'dir2/subdir/b'
   committing files:
   dir1/b
   dir2/subdir/b
   committing manifest
   committing changelog
-  committed a9fa97a5457f
+  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -298,13 +298,13 @@ Test that rebasing applies the same change to both
   $ echo x > unrelated
   $ hg commit -Am "add unrelated"
   adding unrelated
-  $ hg up 9eb46ceb8af3f2dc30310f918cfd0f963439f382
+  $ hg up .^
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > dir1/a
   $ hg commit --config extensions.dirsync=! -m "edit dir1/a with sync on"
   $ cp -R . ../repo1
   $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
-  rebasing 70b4edc7f658 "edit dir1/a with sync on"
+  rebasing * "edit dir1/a with sync on" (glob)
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
@@ -326,7 +326,7 @@ The same test as the above. But uses in-memory rebase
   $ cd repo1
   $ setconfig rebase.experimental.inmemory=True
   $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
-  rebasing 70b4edc7f658 "edit dir1/a with sync on"
+  rebasing * "edit dir1/a with sync on" (glob)
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
@@ -364,7 +364,7 @@ Test committing part of the working copy
   $ hg status
   A dir1/b
   $ hg log -r . --stat
-  commit:      9eb46ceb8af3
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -380,7 +380,7 @@ Test committing part of the working copy
   $ hg status
   A dir1/b
   $ hg log -r . --stat
-  commit:      50bf2325c501
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -400,7 +400,7 @@ Test committing part of the working copy
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg status
   $ hg log -r . --stat
-  commit:      5245011388b8
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -428,7 +428,7 @@ Test quiet non-conflicting edits
   dir2/a
   committing manifest
   committing changelog
-  committed 10f8197f7e02
+  committed * (glob)
   $ echo aaa > dir1/a
   $ echo aaa > dir2/a
   $ hg commit -m "add non-conflicting changes" --config ui.verbose=False
@@ -603,32 +603,32 @@ Test .hgdirsync in the working copy
   mirrored adding 'dir2/a' to 'dir3/a'
   mirrored adding 'dir5/b' to 'dir4/b'
   $ hg log -p -r .
-  commit:      1cde422b6101
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
   
-  diff -r 000000000000 -r 1cde422b6101 dir1/a
+  diff -r 000000000000 -r * dir1/a (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/dir1/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a
-  diff -r 000000000000 -r 1cde422b6101 dir2/a
+  diff -r 000000000000 -r * dir2/a (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/dir2/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a
-  diff -r 000000000000 -r 1cde422b6101 dir3/a
+  diff -r 000000000000 -r * dir3/a (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/dir3/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a
-  diff -r 000000000000 -r 1cde422b6101 dir4/b
+  diff -r 000000000000 -r * dir4/b (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/dir4/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +b
-  diff -r 000000000000 -r 1cde422b6101 dir5/b
+  diff -r 000000000000 -r * dir5/b (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/dir5/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@

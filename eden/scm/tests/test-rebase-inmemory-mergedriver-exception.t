@@ -38,7 +38,7 @@ Now make two conflicting commits:
 
 Without IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing fc2212436a6e "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -52,14 +52,14 @@ Without IMM:
 With IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing fc2212436a6e "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing fc2212436a6e "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -95,13 +95,13 @@ have to try it both ways. (It might be nice to change that.)
   > EOF
   $ hg commit -m "new base"
   $ hg rebase -r A+B -d .
-  rebasing 93f95d9ff88f "A" (A)
-  rebasing fc2212436a6e "B" (B)
+  rebasing * "A" (A) (glob)
+  rebasing * "B" (B) (glob)
 
 Without IMM, you can see we try to merge FILE twice (once in preprocess() and once later),
 and it fails:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing 20a5af1b69ab "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -110,25 +110,25 @@ and it fails:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE
-  <<<<<<< dest:   07aeb7042f36 A - test: A
+  <<<<<<< dest:   * A - test: A (glob)
   v1
   =======
   conflict
-  >>>>>>> source: 20a5af1b69ab B - test: B
+  >>>>>>> source: * B - test: B (glob)
   $ hg rebase --abort
   rebase aborted
 
 With IMM, it's *very* noisy, but we do eventually get to the same place:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing 20a5af1b69ab "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing 20a5af1b69ab "B" (B)
+  rebasing * "B" (B) (glob)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -137,8 +137,8 @@ With IMM, it's *very* noisy, but we do eventually get to the same place:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE
-  <<<<<<< dest:   07aeb7042f36 A - test: A
+  <<<<<<< dest:   * A - test: A (glob)
   v1
   =======
   conflict
-  >>>>>>> source: 20a5af1b69ab B - test: B
+  >>>>>>> source: * B - test: B (glob)

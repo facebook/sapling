@@ -92,10 +92,10 @@ rename them afterwards.
   No errors detected in compressed data of test.zip.
 
   $ hg archive -t tar - | tar tf - 2>/dev/null
-  test-2c0277f05ed4/.hg_archival.txt
-  test-2c0277f05ed4/bar
-  test-2c0277f05ed4/baz/bletch
-  test-2c0277f05ed4/foo
+  test-*/.hg_archival.txt (glob)
+  test-*/bar (glob)
+  test-*/baz/bletch (glob)
+  test-*/foo (glob)
 
   $ hg archive -r 'desc(1)' -t tar rev-%r.tar
   $ [ -f rev-0.tar ]
@@ -104,13 +104,13 @@ test .hg_archival.txt
 
   $ hg archive ../test-tags
   $ cat ../test-tags/.hg_archival.txt
-  repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
-  node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
+  repo: * (glob)
+  node: * (glob)
   branch: default
   $ hg archive -r 'desc(3)' ../test-lasttag
   $ cat ../test-lasttag/.hg_archival.txt
-  repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
-  node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
+  repo: * (glob)
+  node: * (glob)
   branch: default
 
   $ hg archive -t bogus test.bogus

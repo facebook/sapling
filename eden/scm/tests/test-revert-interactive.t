@@ -30,12 +30,12 @@ Revert interactive tests
   >>> _ = open('folder2/h', 'wb').write(b"e\n1\n2\n3\n4\n5\nf\n")
   $ hg commit -m "modifying folder2/h"
   $ hg tip
-  commit:      59dd6e4ab63a
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modifying folder2/h
   
-  $ hg revert -i -r 89ac3d72e4a40dddb2b309da933c539e8c7d1d4d --all -- << EOF
+  $ hg revert -i -r .^^^^ --all -- << EOF
   > y
   > y
   > y
@@ -134,7 +134,7 @@ Revert interactive tests
 
 Test that --interactive lift the need for --all
 
-  $ echo q | hg revert -i -r 89ac3d72e4a40dddb2b309da933c539e8c7d1d4d
+  $ echo q | hg revert -i -r .~4
   reverting folder1/g
   reverting folder2/h
   diff --git a/folder1/g b/folder1/g
@@ -147,7 +147,7 @@ Test that --interactive lift the need for --all
   g
 
 Test that a noop revert doesn't do an unnecessary backup
-  $ (echo y; echo n) | hg revert -i -r 89ac3d72e4a40dddb2b309da933c539e8c7d1d4d folder1/g
+  $ (echo y; echo n) | hg revert -i -r .~4 folder1/g
   diff --git a/folder1/g b/folder1/g
   1 hunks, 1 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
@@ -163,7 +163,7 @@ Test that a noop revert doesn't do an unnecessary backup
   g
 
 Test --no-backup
-  $ (echo y; echo y) | hg revert -i -C -r 89ac3d72e4a40dddb2b309da933c539e8c7d1d4d folder1/g
+  $ (echo y; echo y) | hg revert -i -C -r .~4 folder1/g
   diff --git a/folder1/g b/folder1/g
   1 hunks, 1 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
@@ -182,7 +182,7 @@ Test --no-backup
 
   $ hg update -C 'max(desc(modifying))'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg revert -i -r 89ac3d72e4a40dddb2b309da933c539e8c7d1d4d --all -- << EOF
+  $ hg revert -i -r .~4 --all -- << EOF
   > n
   > y
   > y

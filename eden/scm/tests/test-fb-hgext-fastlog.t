@@ -243,6 +243,6 @@ Globbing with public parent
 Multi-path queries
 
   $ hg log parent/dir parent/dir2 -T '{node}\n'
-  11c9870ffc4024fab11bf166a00b2852ea36bcf6
-  5946a2427fdfcb068a8aec1a59227d0d76062b43
-  728676e01661ccc3d7e39de054ca3a7288d7e7b6
+  ccec33f0cb143a839f88ced542f4e5079ff8a6ed
+  52fcfe491094f3404c867884d06bab8dbcb7dd54
+  6c8e10c74f4e7e01343e2dcdc5652e361a52951d

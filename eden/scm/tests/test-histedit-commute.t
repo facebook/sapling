@@ -372,9 +372,9 @@ Now, let's try to fold the second commit into the first:
   $ cat > editor.sh <<EOF
   > #!/bin/sh
   > cat > \$1 <<ENDOF
-  > pick b0f4233702ca 0 initial commit
-  > fold 5e8704a8f2d2 1 moved and changed
-  > pick 40e7299e8fa7 2 renamed
+  > pick 1d3a289dd962 0 initial commit
+  > fold 53b73a71a9f7 1 moved and changed
+  > pick aaec4f5b603a 2 renamed
   > ENDOF
   > EOF
 
@@ -385,11 +385,11 @@ Now, let's try to fold the second commit into the first:
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID fffadc26f8f85623ce60b028a3f1ccc3730f8530
+  # Node ID * (glob)
   # Parent  0000000000000000000000000000000000000000
-  pick b0f4233702ca 0 initial commit
-  fold 5e8704a8f2d2 1 moved and changed
-  pick 40e7299e8fa7 2 renamed
+  pick 1d3a289dd962 0 initial commit
+  fold 53b73a71a9f7 1 moved and changed
+  pick aaec4f5b603a 2 renamed
   
   diff --git a/another-dir/initial-file b/another-dir/initial-file
   new file mode 100644
@@ -403,8 +403,8 @@ Now, let's try to fold the second commit into the first:
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 9b730d82b00af8a2766facebfa47cc124405a118
-  # Parent  fffadc26f8f85623ce60b028a3f1ccc3730f8530
+  # Node ID * (glob)
+  # Parent  * (glob)
   renamed
   
   diff --git a/another-dir/initial-file b/another-dir/renamed-file

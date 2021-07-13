@@ -488,16 +488,16 @@ because directory existence prevents 'dirstate.walk()' from showing
 warning message about such pattern.
 
   $ test ! -d 1
-  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3/4/5/b.txt
+  $ hg status -A --rev 'desc("#1")' 1/2/3/4/5/b.txt
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3/4/5
+  $ hg status -A --rev 'desc("#1")' 1/2/3/4/5
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3
+  $ hg status -A --rev 'desc("#1")' 1/2/3
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1
+  $ hg status -A --rev 'desc("#1")' 1
   R 1/2/3/4/5/b.txt
 
-  $ hg status --config ui.formatdebug=True --rev ee72294a8de6a26660665d7de06754da195b361c 1
+  $ hg status --config ui.formatdebug=True --rev 'desc("#1")' 1
   status = [
       {*'path': '1/2/3/4/5/b.txt'*}, (glob)
   ]

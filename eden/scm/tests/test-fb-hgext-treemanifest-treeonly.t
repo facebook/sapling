@@ -428,11 +428,11 @@ Test pulling to a treeonly client from a treeonly server
 
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
-  treemanifest.flatcompat=False
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
   treemanifest.rustmanifest=True
   treemanifest.useruststore=True
+  treemanifest.flatcompat=False
   treemanifest.demanddownload=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'

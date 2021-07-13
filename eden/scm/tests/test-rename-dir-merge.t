@@ -25,7 +25,7 @@
   $ hg ci -m "2 add a/c"
 
   $ hg merge --debug 'desc(1)'
-    searching for copies back to 397f8b00a740
+    searching for copies back to * (glob)
     unmatched files in local:
      a/c
     unmatched files in other:
@@ -39,7 +39,7 @@
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
    branchmerge: True, force: False, partial: False
-   ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
+   ancestor: *, local: *+, remote: * (glob)
    a/a: other deleted -> r
   removing a/a
    a/b: other deleted -> r
@@ -68,10 +68,10 @@
   $ hg debugrename b/c
   b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 
-  $ hg co -C 397f8b00a740232a6f2e63d649be60d17ecb4162
+  $ hg co -C 'desc("1 mv a/ b/")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge --debug ce36d17b18fb966cd0791a8fe289abfe7dc298bc
-    searching for copies back to 397f8b00a740
+  $ hg merge --debug 'desc("2 add a/c")'
+    searching for copies back to * (glob)
     unmatched files in local:
      b/a
      b/b
@@ -85,7 +85,7 @@
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
    branchmerge: True, force: False, partial: False
-   ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb
+   ancestor: *, local: *+, remote: * (glob)
    b/c: local directory rename - get from a/c -> dg
   getting a/c to b/c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -104,17 +104,17 @@
 Local directory rename with conflicting file added in remote source directory
 and untracked in local target directory.
 
-  $ hg co -qC 397f8b00a740232a6f2e63d649be60d17ecb4162
+  $ hg co -qC 'desc("1 mv a/ b/")'
   $ echo target > b/c
-  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
+  $ hg merge 'desc("2 add a/c")'
   b/c: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
   $ cat b/c
   target
 but it should succeed if the content matches
-  $ hg cat -r ce36d17b18fb966cd0791a8fe289abfe7dc298bc a/c > b/c
-  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
+  $ hg cat -r 'desc("2 add a/c")' a/c > b/c
+  $ hg merge 'desc("2 add a/c")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg st -C
@@ -125,11 +125,11 @@ but it should succeed if the content matches
 Local directory rename with conflicting file added in remote source directory
 and committed in local target directory.
 
-  $ hg co -qC 397f8b00a740232a6f2e63d649be60d17ecb4162
+  $ hg co -qC 'desc("1 mv a/ b/")'
   $ echo target > b/c
   $ hg add b/c
   $ hg commit -qm 'new file in target directory'
-  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
+  $ hg merge 'desc("2 add a/c")'
   merging b/c and a/c to b/c
   warning: 1 conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -143,17 +143,17 @@ and committed in local target directory.
   C b/a
   C b/b
   $ cat b/c
-  <<<<<<< working copy: f1c50ca4f127 - test: new file in target directory
+  <<<<<<< working copy: * - test: new file in target directory (glob)
   target
   =======
   baz
-  >>>>>>> merge rev:    ce36d17b18fb - test: 2 add a/c
+  >>>>>>> merge rev:    * - test: 2 add a/c (glob)
   $ rm b/c.orig
 
 Remote directory rename with conflicting file added in remote target directory
 and committed in local source directory.
 
-  $ hg co -qC ce36d17b18fb966cd0791a8fe289abfe7dc298bc
+  $ hg co -qC 'desc("2 add a/c")'
   $ hg st -A
   ? a/d
   C a/a
@@ -176,11 +176,11 @@ and committed in local source directory.
   ? a/d
   ? b/c.orig
   $ cat b/c
-  <<<<<<< working copy: ce36d17b18fb - test: 2 add a/c
+  <<<<<<< working copy: * - test: 2 add a/c (glob)
   baz
   =======
   target
-  >>>>>>> merge rev:    f1c50ca4f127 - test: new file in target directory
+  >>>>>>> merge rev:    * - test: new file in target directory (glob)
 
 Second scenario with two repos:
 

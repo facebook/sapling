@@ -23,7 +23,7 @@
   moving d/b to d-renamed/b
   $ hg ci -m 'rename B'
 
-  $ hg up -q -C 3ab5da9a5c01faa02c20f2ec4870a4f689c92da6
+  $ hg up -q -C .^
 
   $ hg mv a a-renamed
   $ echo x > d/x
@@ -32,19 +32,19 @@
   $ hg ci -m 'rename A'
 
   $ tglog
-  @  73a3ee40125d 'rename A'
+  @  * 'rename A' (glob)
   │
-  │ o  220d0626d185 'rename B'
+  │ o  * 'rename B' (glob)
   ├─╯
-  o  3ab5da9a5c01 'B'
+  o  * 'B' (glob)
   │
-  o  1994f17a630e 'A'
+  o  * 'A' (glob)
   
 
 Rename is tracked:
 
   $ hg tlog -p --git -r tip
-  73a3ee40125d 'rename A' 
+  7685b59c7478 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -57,23 +57,23 @@ Rename is tracked:
   
 Rebase the revision containing the rename:
 
-  $ hg rebase -s 'max(desc(rename))' -d 220d0626d185f372d9d8f69d9c73b0811d7725f7
-  rebasing 73a3ee40125d "rename A"
+  $ hg rebase -s 'max(desc(rename))' -d 'desc("rename B")'
+  rebasing * "rename A" (glob)
 
   $ tglog
-  @  032a9b75e83b 'rename A'
+  @  * 'rename A' (glob)
   │
-  o  220d0626d185 'rename B'
+  o  * 'rename B' (glob)
   │
-  o  3ab5da9a5c01 'B'
+  o  * 'B' (glob)
   │
-  o  1994f17a630e 'A'
+  o  * 'A' (glob)
   
 
 Rename is not lost:
 
   $ hg tlog -p --git -r tip
-  032a9b75e83b 'rename A' 
+  590329d80e55 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -88,15 +88,15 @@ Rename is not lost:
 Rebased revision does not contain information about b (issue3739)
 
   $ hg log -r 'max(desc(rename))' --debug
-  commit:      032a9b75e83bff1dcfb6cbfa4ef50a704bf1b569
+  commit:      * (glob)
   phase:       draft
-  manifest:    035d66b27a1b06b2d12b46d41a39adb7a200c370
+  manifest:    * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      a-renamed d-renamed/x
   files-:      a
   extra:       branch=default
-  extra:       rebase_source=73a3ee40125d6f0f347082e5831ceccb3f005f8a
+  extra:       rebase_source=* (glob)
   description:
   rename A
   

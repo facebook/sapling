@@ -98,11 +98,11 @@ setup repo2
   ├─╯
   o  af6aa0dfdf3d A
    (re)
-  @  28468743616e rename
+  @  9f8e7242d9fa rename
   │
-  o  329b10223740 modify file
+  o  586ef37a04f7 modify file
   │
-  o  a42a44555d7c new directory
+  o  e343d2f326cf new directory
   │
   o  3e19bf519e9a c
   │
@@ -114,7 +114,7 @@ setup repo2
 setup master bookmarks
 
   $ hg bookmark master_bookmark -r e635b24c95f7
-  $ hg bookmark master_bookmark2 -r 28468743616e
+  $ hg bookmark master_bookmark2 -r 9f8e7242d9fa
 
 blobimport
 
@@ -139,10 +139,10 @@ Test a pull of one specific revision
 Pull the rest
   $ hgmn pull -q
 
-  $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
-  o  329b10223740 modify file
+  $ hg log -r '3903775176ed::586ef37a04f7' --graph  -T '{node|short} {desc}'
+  o  586ef37a04f7 modify file
   │
-  o  a42a44555d7c new directory
+  o  e343d2f326cf new directory
   │
   o  3e19bf519e9a c
   │
@@ -152,7 +152,7 @@ Pull the rest
    (re)
   $ ls
   a
-  $ hgmn up 28468743616e -q
+  $ hgmn up 9f8e7242d9fa -q
   $ ls
   a
   b
@@ -160,19 +160,19 @@ Pull the rest
   dir
   $ cat c
   cc
-  $ hgmn up 28468743616e -q
+  $ hgmn up 9f8e7242d9fa -q
   $ hg log c -T '{node|short} {desc}\n'
   warning: file log can be slow on large repos - use -f to speed it up
-  329b10223740 modify file
+  586ef37a04f7 modify file
   3e19bf519e9a c
   $ cat dir/rename
   1
   $ cat dir/2
   2
   $ hg log dir/rename -f -T '{node|short} {desc}\n'
-  28468743616e rename
-  a42a44555d7c new directory
-  $ hg st --change 28468743616e -C
+  9f8e7242d9fa rename
+  e343d2f326cf new directory
+  $ hg st --change 9f8e7242d9fa -C
   A dir/rename
     dir/1
   R dir/1

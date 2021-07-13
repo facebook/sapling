@@ -22,7 +22,7 @@ sh % "hg -v commit -m 'add 1'" == r"""
     foo
     committing manifest
     committing changelog
-    committed 6f7f953567a2"""
+    committed * (glob)"""
 sh % "cd dir/"
 sh % "touch ../foo_2 bar_2"
 sh % "hg -v addremove" == r"""
@@ -34,7 +34,7 @@ sh % "hg -v commit -m 'add 2'" == r"""
     foo_2
     committing manifest
     committing changelog
-    committed e65414bf35c5"""
+    committed * (glob)"""
 sh % "cd .."
 sh % "hg forget foo"
 sh % "hg -v addremove" == "adding foo"

@@ -883,11 +883,11 @@ File count and size data for hg explain is cached in the simplecache extension:
   > EOF
   $ hg sparse explain profiles/bar/eggs profiles/bar/ham > /dev/null
   $ ls -1 $TESTTMP/cache
-  sparseprofile:profiles__bar__eggs:07b307002dae98240fe64a42df9598263f69d925:v2
-  sparseprofile:profiles__bar__ham:07b307002dae98240fe64a42df9598263f69d925:v2
-  sparseprofilestats:sparseprofiles:profiles__bar__eggs:ab56132ffe9320163b73f769a0a32d84c6869949:0:07b307002dae98240fe64a42df9598263f69d925:False:v2
-  sparseprofilestats:sparseprofiles:profiles__bar__ham:07b4880e6fcb1f6b13998b0c6bc47f256a0f6d33:0:07b307002dae98240fe64a42df9598263f69d925:False:v2
-  sparseprofilestats:sparseprofiles:unfiltered:07b307002dae98240fe64a42df9598263f69d925:v2
+  sparseprofile:profiles__bar__eggs:*:v2 (glob)
+  sparseprofile:profiles__bar__ham:*:v2 (glob)
+  sparseprofilestats:sparseprofiles:profiles__bar__eggs:*:0:*:False:v2 (glob)
+  sparseprofilestats:sparseprofiles:profiles__bar__ham:*:0:*:False:v2 (glob)
+  sparseprofilestats:sparseprofiles:unfiltered:*:v2 (glob)
 
 
 Test non-existing profiles are properly reported

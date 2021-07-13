@@ -97,7 +97,7 @@ Test --strip with --bypass
   adding dir/dir2/b
   adding dir/dir2/c
   $ shortlog
-  @  d805bc8236b6 test 0 0 - addabcd
+  @  8a9cc7e88ada test 0 0 - addabcd
   │
   │ o  540395c44225 test 0 0 - changea
   ├─╯
@@ -134,9 +134,9 @@ Test --strip with --bypass
   applying patch from stdin
 
   $ shortlog
-  o  5bd46886ca3e test 0 0 - changeabcd
+  o  dded091def5d test 0 0 - changeabcd
   │
-  @  d805bc8236b6 test 0 0 - addabcd
+  @  8a9cc7e88ada test 0 0 - addabcd
   │
   │ o  540395c44225 test 0 0 - changea
   ├─╯

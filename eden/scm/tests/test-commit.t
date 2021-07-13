@@ -73,7 +73,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed 1957363f1ced
+  committed * (glob)
 
   $ echo > dir.file
   $ hg add
@@ -97,7 +97,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed a31d8f87544a
+  committed * (glob)
   $ cd ..
 
   $ hg commit -m commit-14 does-not-exist
@@ -122,7 +122,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed 32d054c9d085
+  committed * (glob)
 
 An empty date was interpreted as epoch origin
 
@@ -205,7 +205,7 @@ partial subdir commit test
 subdir log 1
 
   $ hg log -v foo
-  commit:      f97e73a25882
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
@@ -217,7 +217,7 @@ subdir log 1
 subdir log 2
 
   $ hg log -v bar
-  commit:      aa809156d50d
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -229,7 +229,7 @@ subdir log 2
 full log
 
   $ hg log -v
-  commit:      aa809156d50d
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -237,7 +237,7 @@ full log
   commit-subdir-2
   
   
-  commit:      f97e73a25882
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
@@ -274,7 +274,7 @@ dot and subdir commit test
 full log
 
   $ hg log -v
-  commit:      95b38e3a5b2e
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
@@ -282,7 +282,7 @@ full log
   commit-foo-dot
   
   
-  commit:      65d4e9386227
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
@@ -295,12 +295,12 @@ subdir log
 
   $ cd foo
   $ hg log .
-  commit:      95b38e3a5b2e
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-dot
   
-  commit:      65d4e9386227
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-subdir
@@ -636,7 +636,7 @@ commit copy
 Test making empty commits
   $ hg commit --config ui.allowemptycommit=True -m "empty commit"
   $ hg log -r . -v --stat
-  commit:      d809f3644287
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:

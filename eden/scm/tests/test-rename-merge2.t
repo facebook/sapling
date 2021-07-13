@@ -976,7 +976,7 @@ Expected result:
   $ echo m > 7/f
   $ echo m > 8/f
   $ hg merge -f --tool internal:dump -v --debug -r'desc(m2)' 2>&1 | sed '/^resolving manifests/,$d' 2> /dev/null
-    searching for copies back to ec44bf929ab5
+    searching for copies back to * (glob)
     unmatched files in local:
      5/g
      6/g

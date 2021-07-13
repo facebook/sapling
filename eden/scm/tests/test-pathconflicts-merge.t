@@ -45,20 +45,20 @@ Merge - local file conflicts with remote directory
   $ hg merge --verbose dir
   resolving manifests
   a/b: path conflict - a file or link has the same name as a directory
-  the local file has been renamed to a/b~0ed027b96f31
+  the local file has been renamed to a/b~029c48e05f7e
   resolve manually then use 'hg resolve --mark a/b'
-  moving a/b to a/b~0ed027b96f31
+  moving a/b to a/b~029c48e05f7e
   getting a/b/c/d
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg status
   M a/b/c/d
-  A a/b~0ed027b96f31
+  A a/b~029c48e05f7e
   R a/b
   $ hg resolve --all
   a/b: path conflict must be resolved manually
-  $ hg forget a/b~0ed027b96f31 && rm a/b~0ed027b96f31
+  $ hg forget a/b~029c48e05f7e && rm a/b~029c48e05f7e
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg commit -m "merge file and dir (deleted file)"
@@ -71,20 +71,20 @@ Merge - local symlink conflicts with remote directory
   $ hg bookmark -i
   $ hg merge dir
   a/b: path conflict - a file or link has the same name as a directory
-  the local file has been renamed to a/b~2ea68033e3be
+  the local file has been renamed to a/b~f02dc228b64d
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg status
   M a/b/c/d
-  A a/b~2ea68033e3be
+  A a/b~f02dc228b64d
   R a/b
   $ hg resolve --list
   P a/b
   $ hg resolve --all
   a/b: path conflict must be resolved manually
-  $ hg mv a/b~2ea68033e3be a/b.old
+  $ hg mv a/b~f02dc228b64d a/b.old
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg resolve --list
@@ -99,16 +99,16 @@ Merge - local directory conflicts with remote file or link
   $ hg bookmark -i
   $ hg merge file
   a/b: path conflict - a file or link has the same name as a directory
-  the remote file has been renamed to a/b~0ed027b96f31
+  the remote file has been renamed to a/b~029c48e05f7e
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg status
-  A a/b~0ed027b96f31
+  A a/b~029c48e05f7e
   $ hg resolve --all
   a/b: path conflict must be resolved manually
-  $ hg mv a/b~0ed027b96f31 a/b/old-b
+  $ hg mv a/b~029c48e05f7e a/b/old-b
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg commit -m "merge dir and file (move file into dir)"
@@ -121,12 +121,12 @@ Merge - local directory conflicts with remote file or link
   $ hg commit -m "merge file2 (copytrace tracked rename)"
   $ hg merge link
   a/b: path conflict - a file or link has the same name as a directory
-  the remote file has been renamed to a/b~2ea68033e3be
+  the remote file has been renamed to a/b~f02dc228b64d
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-  $ hg mv a/b~2ea68033e3be a/b.old
+  $ hg mv a/b~f02dc228b64d a/b.old
   $ readlink.py a/b.old
   a/b.old -> c
   $ hg resolve --mark a/b

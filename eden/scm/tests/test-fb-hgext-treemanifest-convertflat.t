@@ -65,7 +65,7 @@ The following will simulate the transition from flat to tree-only
 Create flat manifest client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  fetching tree '' * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   1 trees fetched over 0.00s
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
@@ -106,7 +106,7 @@ Test working with flat-only draft commits.
 - Viewing flat draft commit would fail when 'treemanifest.demandgenerate' is
 False in treeonly mode because there is no tree manifest.
 
-  $ hg log -vpr 'b9b574be2f5d' --config treemanifest.demandgenerate=False \
+  $ hg log -vpr 'desc("flat only commit 1 over flat only commit 1 at level 1")' --config treemanifest.demandgenerate=False \
   > 2>&1 > /dev/null | tail -1
 
 - Viewing a flat draft commit in treeonly mode will generate a tree manifest
@@ -114,8 +114,8 @@ for all the commits in the path from the flat draft commit to an ancestor which
 has tree manifest. In this case, this implies that tree manifest will be
 generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
 
-  $ hg log -vpr 'b9b574be2f5d'
-  commit:      b9b574be2f5d
+  $ hg log -vpr 'desc("flat only commit 1 over flat only commit 1 at level 1")' 
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -123,7 +123,7 @@ generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
   flat only commit 1 over flat only commit 1 at level 1
   
   
-  diff -r 9055b56f3916 -r b9b574be2f5d subdir/x
+  diff -r * -r * subdir/x (glob)
   --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,3 @@
@@ -134,8 +134,8 @@ generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
 - Now that we have the tree manifest for commit 'b9b574be2f5d', we should be
 able to view it even with 'treemanifest.demandgenerate' being False.
 
-  $ hg log -vpr 'b9b574be2f5d' --config treemanifest.demandgenerate=False
-  commit:      b9b574be2f5d
+  $ hg log -vpr 'desc("flat only commit 1 over flat only commit 1 at level 1")' --config treemanifest.demandgenerate=False
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -143,7 +143,7 @@ able to view it even with 'treemanifest.demandgenerate' being False.
   flat only commit 1 over flat only commit 1 at level 1
   
   
-  diff -r 9055b56f3916 -r b9b574be2f5d subdir/x
+  diff -r * -r * subdir/x (glob)
   --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,3 @@
@@ -151,11 +151,11 @@ able to view it even with 'treemanifest.demandgenerate' being False.
    f1
   +f11
   
-- We should be able to also view the parent of commit 'b9b574be2f5d' i.e. commit
-'9055b56f3916' because we now have the tree manifest for it.
+- We should be able to also view the parent of the commit
+i.e. because we now have the tree manifest for it.
 
-  $ hg log -vpr '9055b56f3916' --config treemanifest.demandgenerate=False
-  commit:      9055b56f3916
+  $ hg log -vpr 'desc("re:^flat only commit 1 at level 1$")' --config treemanifest.demandgenerate=False
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -163,7 +163,7 @@ able to view it even with 'treemanifest.demandgenerate' being False.
   flat only commit 1 at level 1
   
   
-  diff -r 2278cc8c6ce6 -r 9055b56f3916 subdir/x
+  diff -r * -r * subdir/x (glob)
   --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -174,10 +174,10 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 # TODO(meyer): Replace packfile inspection with indexedlog inspection
 
 - Again, this would generate the tree manifest from the corresponding flat
-manifest for commit 'f7febcf0f689'.
+manifest for commit.
 
-  $ hg log -vpr 'f7febcf0f689'
-  commit:      f7febcf0f689
+  $ hg log -vpr 'desc("flat only commit 2 over flat only commit 1 at level 1")'
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -185,7 +185,7 @@ manifest for commit 'f7febcf0f689'.
   flat only commit 2 over flat only commit 1 at level 1
   
   
-  diff -r 9055b56f3916 -r f7febcf0f689 subdir/x
+  diff -r * -r * subdir/x (glob)
   --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,3 @@
@@ -204,11 +204,11 @@ manifest for commit 'f7febcf0f689'.
 
 - Test rebasing of the flat ony commits works as expected.
 
-  $ hg rebase -d '9055b56f3916' -s '3795bd66ca70'
-  rebasing 3795bd66ca70 "flat only commit 1 over flat only commit 2 at level 2"
-  fetching tree '' 40f43426c87ba597f0d9553077c72fe06d4e2acb
+  $ hg rebase -d 'desc("re:^flat only commit 1 at level 1$")' -s 'desc("flat only commit 1 over flat only commit 2 at level 2")'
+  rebasing * "flat only commit 1 over flat only commit 2 at level 2" (glob)
+  fetching tree '' * (glob)
   transaction abort!
   rollback completed
-  abort: "unable to find the following nodes locally or on the server: ('', 40f43426c87ba597f0d9553077c72fe06d4e2acb)"
-  (commit: 9055b56f3916d097dba77e37b128b78e1908bca2)
+  abort: "unable to find the following nodes locally or on the server: ('', *)" (glob)
+  (commit: *) (glob)
   [255]

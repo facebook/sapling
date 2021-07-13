@@ -262,7 +262,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
     # Parent  0000000000000000000000000000000000000000
     A
 
@@ -276,8 +276,8 @@ sh % "hg export -r 'all()' --pattern 'path:foo'" == r"""
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
-    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
+    # Parent  * (glob)
     B
 
     diff --git a/foo/1 b/foo/1
@@ -310,7 +310,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
     # Parent  0000000000000000000000000000000000000000
     A
 
@@ -318,8 +318,8 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
-    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
+    # Parent  * (glob)
     B
 
     diff --git a/bar/1 b/foo/3
@@ -336,7 +336,7 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
     # Parent  0000000000000000000000000000000000000000
     A
 
@@ -344,8 +344,8 @@ sh % "hg export -r 'all()' --pattern 'path:foo/3' --config diff.filtercopysource
     # User test
     # Date 0 0
     #      Thu Jan 01 00:00:00 1970 +0000
-    # Node ID cb7f9f1d5ead31d80e237c8dbfc093f43aaaac9b
-    # Parent  fb76e11a34f68e6d45150c9bb1f54f85326f08ec
+    # Node ID * (glob)
+    # Parent  * (glob)
     B
 
     diff --git a/foo/3 b/foo/3

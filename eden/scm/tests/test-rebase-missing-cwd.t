@@ -21,7 +21,7 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   $ cd dir
 
   $ hg rebase -s . -d $delete
-  rebasing 6f52fdb3a577 "change"
+  rebasing * "change" (glob)
   current directory was removed
   (consider changing to repo root: $TESTTMP/repo1)
 
@@ -30,11 +30,11 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   $ hg status
 
   $ hg log -Gr "all()" -T "{node|short} {desc}"
-  @  74e7da63e173 change
+  @  * change (glob)
   │
-  o  5f45087392e8 delete
+  o  * delete (glob)
   │
-  o  aa6caddcd04f base
+  o  * base (glob)
   
   $ hg rebase --abort
   abort: no rebase in progress

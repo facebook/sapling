@@ -1613,7 +1613,6 @@ class Test(unittest.TestCase):
             hgrc.write("[extensions]\n")
             hgrc.write("treemanifest=\n")
             hgrc.write("[treemanifest]\n")
-            hgrc.write("flatcompat=True\n")
             hgrc.write("sendtrees=True\n")
             hgrc.write("treeonly=True\n")
             hgrc.write("rustmanifest=True\n")

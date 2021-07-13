@@ -150,7 +150,7 @@ again, it's ok to push this to a scratch branch
 
 we can't move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
   $ hgmn push -r other --to main --pushvar NON_FAST_FORWARD=true
-  pushing rev 6c96a55eca9d to destination ssh://user@dummy/repo bookmark main
+  pushing rev 2b2f2fedc926 to destination ssh://user@dummy/repo bookmark main
   searching for changes
   no changes found
   remote: Command failed
@@ -190,7 +190,7 @@ we can't land to the other if we introduce a new case conflict
   warning: possible case-folding collision for testfile
   $ hg commit -qm conflict3
   $ hgmn push -r . --to other
-  pushing rev f68266b60b0e to destination ssh://user@dummy/repo bookmark other
+  pushing rev 379371c4bd8a to destination ssh://user@dummy/repo bookmark other
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -216,7 +216,7 @@ we can land something that doesn't introduce a new case conflict
   $ hg add testfile
   $ hg commit -qm nonewconflict
   $ hgmn push -r . --to other
-  pushing rev f7457d858a4a to destination ssh://user@dummy/repo bookmark other
+  pushing rev 951a1a92f401 to destination ssh://user@dummy/repo bookmark other
   searching for changes
   adding changesets
   adding manifests
@@ -230,7 +230,7 @@ we can't land if we try to make an existing case conflict worse
   warning: possible case-folding collision for existing/CASECONFLICT
   $ hg commit -qm conflict4
   $ hgmn push -r . --to other
-  pushing rev e3670f5cf0ff to destination ssh://user@dummy/repo bookmark other
+  pushing rev 13488940ae4f to destination ssh://user@dummy/repo bookmark other
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -255,7 +255,7 @@ we can land it if we also fix all of the related case conflicts
   $ hg rm existing/caseconflict
   $ hg amend -q
   $ hgmn push -r . --to other
-  pushing rev d28b31dd21bb to destination ssh://user@dummy/repo bookmark other
+  pushing rev f53c362f9b2d to destination ssh://user@dummy/repo bookmark other
   searching for changes
   adding changesets
   adding manifests

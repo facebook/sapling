@@ -789,7 +789,7 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   rebasing 779a07b1b7a0 "first source commit"
   current directory was removed (rmcwd !)
   (consider changing to repo root: $TESTTMP/cwd-vanish) (rmcwd !)
-  rebasing a7d6f3a00bf3 "second source with subdir"
+  rebasing * "second source with subdir" (glob)
 
 Get back to the root of cwd-vanish. Note that even though `cd ..`
 works on most systems, it does not work on FreeBSD 10, so we use an
@@ -873,7 +873,7 @@ Make the repo a bit more interesting
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     aaa
   │
-  │ o  commit:      1910d5ff34ea
+  │ o  commit:      * (glob)
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     second source with subdir
@@ -908,7 +908,7 @@ Testing from lower head
 Testing from upper head
 
   $ hg log -r '_destrebase(desc(aaa))'
-  commit:      1910d5ff34ea
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir
@@ -916,7 +916,7 @@ Testing from upper head
   $ hg up 'desc(aaa)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  commit:      1910d5ff34ea
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir

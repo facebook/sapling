@@ -24,8 +24,8 @@ Create server
 Create client2 - it will have only the first commit, so client1 will be pushing
 two server and one local commits later.
   $ hgcloneshallow ssh://user@dummy/master client2 -q
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   1 trees fetched over 0.00s
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over 0.00s
@@ -46,7 +46,7 @@ Create create two more server commits
 Create client1 - it will have both server commits
   $ hgcloneshallow ssh://user@dummy/master client1 -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338
+  fetching tree '' 8f1968f7671d1a929c43fd5a36b00a6a44ab849f
   1 trees fetched over 0.00s
   fetching tree 'subdir' 143a95c22d775432b9bdc0d78803b3657c140a80
   1 trees fetched over 0.00s
@@ -73,7 +73,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 # already has.
   $ hg -R ../client2 prefetch -r 'all()'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   1 trees fetched over 0.00s
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over 0.00s
@@ -87,31 +87,31 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ hg push -q ssh://user@dummy/client2
   remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' d9920715ba88cbc7962c4dac9f20004aafd94ac8
+  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949
   1 trees fetched over 0.00s
   fetching tree 'subdir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
   1 trees fetched over 0.00s
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338
+  fetching tree '' 8f1968f7671d1a929c43fd5a36b00a6a44ab849f
   1 trees fetched over 0.00s
   fetching tree 'subdir' 143a95c22d775432b9bdc0d78803b3657c140a80
   1 trees fetched over 0.00s
   $ hg log
-  commit:      54609f68e211
+  commit:      dba4eeec7e63
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     initial commit
   
-  commit:      b8ff91c925b4
+  commit:      c24ce1f3eb31
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify subdir/x again
   
-  commit:      2937cde31c19
+  commit:      098a163f13ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify subdir/x
   
-  commit:      2278cc8c6ce6
+  commit:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add subdir/x

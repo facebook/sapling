@@ -119,7 +119,7 @@ hg-git issue103 -- directories can lose information at hg-git export time
   added 1 commits with 2 trees and 0 blobs
   updating reference refs/heads/master
   $ hg log -r master
-  commit:      e4281e9db8f8
+  commit:      * (glob)
   bookmark:    master
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000
@@ -133,7 +133,7 @@ hg-git issue103 -- directories can lose information at hg-git export time
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-test log -r master
-  commit:      8df619e46009
+  commit:      * (glob)
   bookmark:    master
   user:        test
   date:        Mon Jan 01 00:00:15 2007 +0000

@@ -40,10 +40,10 @@ profile.
 The case collision is ignored when the sparse profile is enabled:
 
   $ setconfig extensions.force_case_insensitivity=../force_case_insensitivity.py
-  $ hg up -r 70dc3770a2619f9854b7393a41daaaaab8e64da1
+  $ hg up -r .~-1
   abort: case-folding collision between colliding_dir/[Aa] and colliding_dir/[aA] (re)
   [255]
   $ hg sparse --enable-profile profiles/sparse_profile
-  $ hg up -r 70dc3770a2619f9854b7393a41daaaaab8e64da1
+  $ hg up -r .~-1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

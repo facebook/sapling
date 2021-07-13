@@ -80,7 +80,7 @@ Empty rebase fails
   abort: you must specify a destination (-d) for the rebase
   [255]
   $ hg rebase -d 'desc(a2)'
-  rebasing 7b4cb4e1674c "b"
+  rebasing * "b" (glob)
 
 Empty rebase returns exit code 0:
 

@@ -71,12 +71,12 @@ A  # A/x/a=a
 eq(
     listcommitandmanifesthashes("$A::"),
     [
-        ("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f"),
-        ("B", "329658f81fe4", "02e01983feb89482571eb285cdf95791d5d5004c"),
-        ("C", "8f7b309be719", "7630040f028fe48237216dd272521b72cbc9fdd4"),
-        ("D", "4739f43fec6e", "241b1b1a0c626f74c431fea9a19f8d41babf6d66"),
-        ("E", "25624926a6f6", "536621fb22888a57188bdb3fb7524956e9eea571"),
-        ("F", "7d6ade338bd7", "f597a49b2fb7de2f6ccc8daea22210cc762f463f"),
+        ("A", "8080f180998f", "47968cf0bfa76dd552b0c468487e0b2e58dd067a"),
+        ("B", "f3631cd323b7", "2e67f334fe3b408e0657bd93b6b0799d8e4bffbf"),
+        ("C", "ab6f17cbfcbc", "9f7dac017ac942faf4c03e81b078194f95a4e042"),
+        ("D", "d55de8a18953", "e6e729a4a441b3c48a20a19e6696a33428e8824b"),
+        ("E", "02d26f311e24", "c618b8195031a0c6874a557ee7445f6567af4dd7"),
+        ("F", "c431bfe62c4c", "c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46"),
     ],
 )
 sh % "hg files -r $F" == r"""
@@ -114,18 +114,18 @@ A  # A/x/a=a
 sh % "hg bookmark master -r $A"
 eq(
     listcommitandmanifesthashes("$A::"),
-    [("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f")],
+    [("A", "8080f180998f", "47968cf0bfa76dd552b0c468487e0b2e58dd067a")],
 )
 sh % "hg push -r $A --to master --create" == r"""
-pushing rev bd99ff0a074c to destination ssh://user@dummy/serverpushrebasemerge bookmark master
+pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
 searching for changes
 remote: pushing 1 changeset:
-remote:     bd99ff0a074c  A
+remote:     *  A (glob)
 exporting bookmark master
 """
 
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q" == r"""
-    fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f
+    fetching tree '' 47968cf0bfa76dd552b0c468487e0b2e58dd067a
     1 trees fetched over 0.00s
     fetching tree 'x' 4f20beec050d22de4f11003f4cdadd266b59be20
     1 trees fetched over 0.00s"""
@@ -155,23 +155,23 @@ desc(A)
 eq(
     listcommitandmanifesthashes("$A::"),
     [
-        ("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f"),
-        ("B", "329658f81fe4", "02e01983feb89482571eb285cdf95791d5d5004c"),
-        ("C", "8f7b309be719", "7630040f028fe48237216dd272521b72cbc9fdd4"),
-        ("D", "4739f43fec6e", "241b1b1a0c626f74c431fea9a19f8d41babf6d66"),
-        ("E", "25624926a6f6", "536621fb22888a57188bdb3fb7524956e9eea571"),
-        ("F", "7d6ade338bd7", "f597a49b2fb7de2f6ccc8daea22210cc762f463f"),
+        ('A', '8080f180998f', '47968cf0bfa76dd552b0c468487e0b2e58dd067a'),
+        ('B', 'f3631cd323b7', '2e67f334fe3b408e0657bd93b6b0799d8e4bffbf'),
+        ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
+        ('D', 'd55de8a18953', 'e6e729a4a441b3c48a20a19e6696a33428e8824b'),
+        ('E', '02d26f311e24', 'c618b8195031a0c6874a557ee7445f6567af4dd7'),
+        ('F', 'c431bfe62c4c', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
     ],
 )
 sh % "hg push --to=master -r $F" == r"""
-    pushing rev 7d6ade338bd7 to destination ssh://user@dummy/serverpushrebasemerge bookmark master
+    pushing rev c431bfe62c4c to destination ssh://user@dummy/serverpushrebasemerge bookmark master
     searching for changes
     remote: pushing 5 changesets:
-    remote:     329658f81fe4  B
-    remote:     8f7b309be719  C
-    remote:     4739f43fec6e  D
-    remote:     25624926a6f6  E
-    remote:     7d6ade338bd7  F
+    remote:     *  B (glob)
+    remote:     *  C (glob)
+    remote:     *  D (glob)
+    remote:     *  E (glob)
+    remote:     *  F (glob)
     remote: 5 new changesets from the server will be downloaded
     adding changesets
     adding manifests
@@ -186,19 +186,19 @@ sh % "hg files -r master" == r"""
 
 # Check that a secondary client will pull a consistent view of the repository
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/pullingclient -q" == r"""
-    fetching tree '' f597a49b2fb7de2f6ccc8daea22210cc762f463f
+    fetching tree '' c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46
     1 trees fetched over 0.00s
     2 trees fetched over 0.00s"""
 sh % "cd $TESTTMP/pullingclient"
 eq(
     listcommitandmanifesthashes("$A::"),
     [
-        ("A", "bd99ff0a074c", "7607ba5a97e3117540bbb7525093678eb26e374f"),
-        ("B", "329658f81fe4", "02e01983feb89482571eb285cdf95791d5d5004c"),
-        ("C", "8f7b309be719", "7630040f028fe48237216dd272521b72cbc9fdd4"),
-        ("D", "4739f43fec6e", "241b1b1a0c626f74c431fea9a19f8d41babf6d66"),
-        ("E", "a932a3c05d51", "536621fb22888a57188bdb3fb7524956e9eea571"),
-        ("F", "38d281aaf22d", "f597a49b2fb7de2f6ccc8daea22210cc762f463f"),
+        ('A', '8080f180998f', '47968cf0bfa76dd552b0c468487e0b2e58dd067a'),
+        ('B', 'f3631cd323b7', '2e67f334fe3b408e0657bd93b6b0799d8e4bffbf'),
+        ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
+        ('D', 'd55de8a18953', 'e6e729a4a441b3c48a20a19e6696a33428e8824b'),
+        ('E', 'ce93848c2534', 'c618b8195031a0c6874a557ee7445f6567af4dd7'),
+        ('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
     ],
 )
 
@@ -217,13 +217,13 @@ G   # G/y/d=g
 desc(E)
 """ == ""
 sh % "hg push --to=master -r $J" == r"""
-    pushing rev d82619755335 to destination ssh://user@dummy/serverpushrebasemerge bookmark master
+    pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
     searching for changes
     remote: pushing 4 changesets:
-    remote:     e06c993545b9  G
-    remote:     02c1e8fb563f  H
-    remote:     1017689b7b56  I
-    remote:     d82619755335  J
+    remote:     *  G (glob)
+    remote:     *  H (glob)
+    remote:     *  I (glob)
+    remote:     *  J (glob)
     remote: 4 new changesets from the server will be downloaded
     adding changesets
     adding manifests
@@ -254,12 +254,12 @@ sh % "hg log -G -T '{desc} {bookmarks}'" == r"""
     │
     o  A"""
 eq(
-    listcommitandmanifesthashes("38d281aaf22d::"),
+    listcommitandmanifesthashes("desc(F)::"),
     [
-        ("F", "38d281aaf22d", "f597a49b2fb7de2f6ccc8daea22210cc762f463f"),
-        ("G", "497c401919aa", "ca20659db942b8ea320f881b49e68e21e45864f1"),
-        ("H", "3bd0ec8704f8", "ae9b2352116ef794826314dc2ee7409936e1c371"),
-        ("I", "006310844558", "d3600921b015507d29c92e9f7ffa7c78c42e67db"),
-        ("J", "3a19854876d1", "24ab094f699834d0b27ccc5b4c59066b3dd06438"),
+        ('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
+        ('G', 'f90743172206', '5d26e08806c5cdc3e7f3fba1d7fcf50cd224960e'),
+        ('H', '3c5d22b367fc', '41a7c2a088eb3a436987339e5e73f08afa7da8e8'),
+        ('I', 'ae1644484ec9', 'b151de3f04de862dfdbaa23c68a297f225951044'),
+        ('J', 'ec18dc54c59a', 'ae0f3f86d8bf6dfb032cfc903794783ca8752437'),
     ],
 )

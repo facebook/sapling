@@ -154,7 +154,7 @@ sh % "hg unshelve --keep" == r"""
     unshelving change 'default-01'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 4893561a85b4 "shelve changes to: second"
+    rebasing * "shelve changes to: second" (glob)
     merging a/a"""
 
 sh % "hg revert --all -q"
@@ -262,7 +262,7 @@ sh % "hg unshelve" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing 4893561a85b4 "shelve changes to: second"
+    rebasing * "shelve changes to: second" (glob)
     merging a/a
     warning: 1 conflicts while merging a/a! (edit, then use 'hg resolve --mark')
     unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
@@ -287,11 +287,11 @@ sh % "hg diff" == r"""
     +++ b/a/a
     @@ -1,2 +1,6 @@
      a
-    +<<<<<<< dest:   83ed350dc2d6 - test: pending changes temporary commit
+    +<<<<<<< dest:   * - test: pending changes temporary commit (glob)
      c
     +=======
     +a
-    +>>>>>>> source: 4893561a85b4 - test: shelve changes to: second
+    +>>>>>>> source: * - test: shelve changes to: second (glob)
     diff --git a/b/b b/b.rename/b
     rename from b/b
     rename to b.rename/b
@@ -315,8 +315,8 @@ sh % "hg status" == r"""
 sh % "hg unshelve -a" == r"""
     rebase aborted
     unshelve of 'default' aborted"""
-sh % "hg heads -q" == "ceefc37abe1e"
-sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
+sh % "hg heads -q" == "c2e78cacc5ac"
+sh % "hg parents -T '{node|short}'" == "c2e78cacc5ac"
 sh % "hg resolve -l"
 sh % "hg status" == r"""
     A foo/foo
@@ -354,12 +354,12 @@ sh % "hg graft --continue" == r"""
     (continue: hg unshelve --continue)
     [255]"""
 sh % "hg unshelve -c --trace" == r"""
-    rebasing 4893561a85b4 "shelve changes to: second"
+    rebasing * "shelve changes to: second" (glob)
     unshelve of 'default' complete"""
 
 # Ensure the repo is as we hope
-sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
-sh % "hg heads -q" == "83ed350dc2d6"
+sh % "hg parents -T '{node|short}'" == "c2e78cacc5ac"
+sh % "hg heads -q" == "201e9c39b40b"
 sh % "hg status -C" == r"""
     A b.rename/b
       b/b
@@ -714,8 +714,8 @@ sh % "hg resolve -m a/a" == r"""
     (no more unresolved files)
     continue: hg unshelve --continue"""
 sh % "hg unshelve -c" == r"""
-    rebasing f3b9a2b33e15 "shelve changes to: second"
-    note: rebase of f3b9a2b33e15 created no changes to commit
+    rebasing * "shelve changes to: second" (glob)
+    note: rebase of * created no changes to commit (glob)
     unshelve of 'default' complete"""
 sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg diff"
@@ -1087,29 +1087,29 @@ evolution=createmarkers
 """
     >> "$HGRCPATH"
 )
-sh % "hg bookmarks -R obsrepo" == "   test                      a72d63c69876"
+sh % "hg bookmarks -R obsrepo" == "   test                      * (glob)"
 sh % "hg share -B obsrepo obsshare" == r"""
     updating working directory
     6 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd obsshare"
 
-sh % "hg bookmarks" == "   test                      a72d63c69876"
+sh % "hg bookmarks" == "   test                      * (glob)"
 sh % "hg bookmarks foo"
 sh % "hg bookmarks" == r"""
-    * foo                       47f190a8b2e0
-      test                      a72d63c69876"""
+    * foo                       * (glob)
+      test                      * (glob)"""
 sh % "echo x" >> "x"
 sh % "hg shelve" == r"""
     shelved as foo
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bookmarks" == r"""
-    * foo                       47f190a8b2e0
-      test                      a72d63c69876"""
+    * foo                       * (glob)
+      test                      * (glob)"""
 
 sh % "hg unshelve" == "unshelving change 'foo'"
 sh % "hg bookmarks" == r"""
-    * foo                       47f190a8b2e0
-      test                      a72d63c69876"""
+    * foo                       * (glob)
+      test                      * (glob)"""
 
 sh % "cd .."
 
