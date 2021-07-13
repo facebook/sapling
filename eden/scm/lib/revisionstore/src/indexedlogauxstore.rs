@@ -24,12 +24,12 @@ use vlqencoding::{VLQDecode, VLQEncode};
 use crate::indexedlogutil::{Store, StoreOpenOptions, StoreType};
 
 /// See edenapi_types::FileAuxData and mononoke_types::ContentMetadata
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Entry {
-    total_size: u64,
-    content_id: ContentId,
-    content_sha1: Sha1,
-    content_sha256: Sha256,
+    pub(crate) total_size: u64,
+    pub(crate) content_id: ContentId,
+    pub(crate) content_sha1: Sha1,
+    pub(crate) content_sha256: Sha256,
 }
 
 impl From<FileAuxData> for Entry {
@@ -248,10 +248,18 @@ mod tests {
     use super::*;
 
     use std::fs::remove_file;
+    use std::str::FromStr;
+    use std::sync::Arc;
 
     use tempfile::TempDir;
 
     use types::testutil::*;
+
+    use crate::{
+        scmstore::{FileAttributes, FileStore},
+        testutil::*,
+        ExtStoredPolicy, HgIdMutableDeltaStore, IndexedLogHgIdDataStore,
+    };
 
     #[test]
     fn test_empty() -> Result<()> {
@@ -333,6 +341,82 @@ mod tests {
 
         // There should be only one key in the store.
         assert_eq!(store.read().hgids().into_iter().count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_scmstore_read() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let aux = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+
+        let mut entry = Entry::default();
+        entry.total_size = 1;
+        entry.content_sha1.0[0] = 1;
+
+        let k = key("a", "1");
+
+        aux.write().put(k.hgid, &entry)?;
+        aux.write().flush()?;
+
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.aux_local = Some(aux.clone());
+
+        // Attempt fetch.
+        let fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .single()?
+            .expect("key not found");
+        assert_eq!(Some(entry), fetched.aux_data().map(|a| a.into()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_scmstore_compute_read() -> Result<()> {
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let meta = Default::default();
+
+        // Setup local indexedlog
+        let tmp = TempDir::new()?;
+        let content = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            StoreType::Shared,
+        )?);
+
+        content.add(&d, &meta).unwrap();
+        content.flush().unwrap();
+
+        let tmp = TempDir::new()?;
+        let aux = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+
+        // Set up local-only FileStore
+        let mut store = FileStore::empty();
+        store.cache_to_local_cache = true;
+        store.indexedlog_local = Some(content.clone());
+        store.aux_local = Some(aux.clone());
+
+        let mut expected = Entry::default();
+        expected.total_size = 4;
+        expected.content_id = ContentId::from_str(
+            "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
+        )?;
+        expected.content_sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
+        expected.content_sha256 =
+            Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?;
+
+        // Attempt fetch.
+        let fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .single()?
+            .expect("key not found");
+        assert_eq!(Some(expected), fetched.aux_data().map(|a| a.into()));
+
+        // Verify we can read it directly too
+        let found = aux.read().get(k.hgid)?;
+        assert_eq!(Some(expected), found);
         Ok(())
     }
 }

@@ -17,6 +17,7 @@ use edenapi::Builder;
 use crate::{
     contentstore::check_cache_buster,
     fetch_logger::FetchLogger,
+    indexedlogauxstore::AuxStore,
     indexedlogdatastore::IndexedLogHgIdDataStore,
     indexedlogutil::StoreType,
     lfs::{LfsRemote, LfsStore},
@@ -194,13 +195,12 @@ impl<'a> FileStoreBuilder<'a> {
         )?))
     }
 
-    pub fn build_aux_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+    pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
             let local_path = get_indexedlogdatastore_aux_path(&local_path)?;
-            Some(Arc::new(IndexedLogHgIdDataStore::new(
+            Some(Arc::new(AuxStore::new(
                 local_path,
-                ExtStoredPolicy::Use,
                 self.config,
                 StoreType::Local,
             )?))
@@ -209,12 +209,11 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
-    pub fn build_aux_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
+    pub fn build_aux_cache(&self) -> Result<Arc<AuxStore>> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         let cache_path = get_indexedlogdatastore_aux_path(&cache_path)?;
-        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+        Ok(Arc::new(AuxStore::new(
             cache_path,
-            ExtStoredPolicy::Use,
             self.config,
             StoreType::Shared,
         )?))

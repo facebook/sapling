@@ -18,13 +18,15 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use edenapi_types::FileEntry;
+use edenapi_types::{ContentId, FileEntry, Sha1};
+
 use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf, Sha256};
 
 use crate::{
     datastore::{strip_metadata, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
     fetch_logger::FetchLogger,
+    indexedlogauxstore::{AuxStore, Entry as AuxDataEntry},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     indexedlogutil::StoreType,
     lfs::{
@@ -203,8 +205,8 @@ pub struct FileStore {
     pub(crate) fallbacks: Arc<ContentStoreFallbacks>,
 
     // Aux Data Stores
-    pub(crate) aux_local: Option<Arc<IndexedLogHgIdDataStore>>,
-    pub(crate) aux_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+    pub(crate) aux_local: Option<Arc<AuxStore>>,
+    pub(crate) aux_cache: Option<Arc<AuxStore>>,
 
     // Metrics, statistics, debugging
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
@@ -362,16 +364,11 @@ impl FileStore {
         let mut state = FetchState::new(keys, attrs, &self);
 
         if let Some(ref aux_cache) = self.aux_cache {
-            // TODO(meyer): Update tracing crate so we can do `span!("fetch_aux_cache").entered()`.
-            let span = tracing::info_span!("aux_cache");
-            let _guard = span.enter();
-            state.fetch_aux_indexedlog(aux_cache);
+            state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
         }
 
         if let Some(ref aux_local) = self.aux_local {
-            let span = tracing::info_span!("aux_local");
-            let _guard = span.enter();
-            state.fetch_aux_indexedlog(aux_local);
+            state.fetch_aux_indexedlog(aux_local, StoreType::Local);
         }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
@@ -559,13 +556,13 @@ impl FileStore {
         if let Some(ref aux_local) = self.aux_local {
             let span = tracing::info_span!("aux_local");
             let _guard = span.enter();
-            aux_local.flush_log().map_err(&mut handle_error);
+            aux_local.write().flush().map_err(&mut handle_error);
         }
 
         if let Some(ref aux_cache) = self.aux_cache {
             let span = tracing::info_span!("aux_cache");
             let _guard = span.enter();
-            aux_cache.flush_log().map_err(&mut handle_error);
+            aux_cache.write().flush().map_err(&mut handle_error);
         }
 
         result
@@ -704,9 +701,34 @@ impl LegacyStore for FileStore {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct FileAuxData {
+    pub total_size: u64,
+    pub content_id: ContentId,
+    pub content_sha1: Sha1,
     pub content_sha256: Sha256,
+}
+
+impl From<AuxDataEntry> for FileAuxData {
+    fn from(v: AuxDataEntry) -> Self {
+        FileAuxData {
+            total_size: v.total_size() as u64,
+            content_id: v.content_id(),
+            content_sha1: v.content_sha1(),
+            content_sha256: Sha256::from_byte_array(v.content_sha256().0),
+        }
+    }
+}
+
+impl From<FileAuxData> for AuxDataEntry {
+    fn from(v: FileAuxData) -> Self {
+        AuxDataEntry {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            content_sha1: v.content_sha1,
+            content_sha256: v.content_sha256.into_inner().into(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -925,13 +947,20 @@ impl LazyFile {
     #[instrument(level = "debug", skip(self))]
     fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
-        Ok(if let LazyFile::Lfs(_, ref ptr) = self {
+        Ok(if let LazyFile::Lfs(content, ref ptr) = self {
             FileAuxData {
+                total_size: content.len() as u64,
+                content_id: ContentHash::content_id(&content),
+                content_sha1: ContentHash::sha1(&content),
                 content_sha256: ptr.sha256(),
             }
         } else {
+            let content = self.file_content()?;
             FileAuxData {
-                content_sha256: ContentHash::sha256(&self.file_content()?).unwrap_sha256(),
+                total_size: content.len() as u64,
+                content_id: ContentHash::content_id(&content),
+                content_sha1: ContentHash::sha1(&content),
+                content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
             }
         })
     }
@@ -1295,35 +1324,25 @@ impl FetchState {
     }
 
     #[instrument(level = "debug", skip(self, entry))]
-    fn found_aux_indexedlog(&mut self, key: Key, mut entry: Entry) -> Result<()> {
-        // TODO(meyer): We could make aux data lazy too.
-        let aux_data: FileAuxData = serde_json::from_slice(&entry.content()?)?;
-        self.found_attributes(key, aux_data.into(), None);
-        Ok(())
-    }
-
-    fn fetch_aux_indexedlog_inner(&mut self, store: &IndexedLogHgIdDataStore) -> Result<()> {
-        let pending = self.pending_all(FileAttributes::AUX);
-        if pending.is_empty() {
-            return Ok(());
-        }
-        let store = store.read_lock();
-        for key in pending.into_iter() {
-            let res = store.get_raw_entry(&key);
-            match res {
-                Ok(Some(aux)) => self.found_aux_indexedlog(key, aux)?,
-                Ok(None) => {}
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        }
-
-        Ok(())
+    fn found_aux_indexedlog(&mut self, key: Key, entry: AuxDataEntry, typ: StoreType) {
+        let aux_data: FileAuxData = entry.into();
+        self.found_attributes(key, aux_data.into(), Some(typ));
     }
 
     #[instrument(skip(self, store))]
-    fn fetch_aux_indexedlog(&mut self, store: &IndexedLogHgIdDataStore) {
-        if let Err(err) = self.fetch_aux_indexedlog_inner(store) {
-            self.errors.other_error(err);
+    fn fetch_aux_indexedlog(&mut self, store: &AuxStore, typ: StoreType) {
+        let pending = self.pending_all(FileAttributes::AUX);
+        if pending.is_empty() {
+            return;
+        }
+        let store = store.read();
+        for key in pending.into_iter() {
+            let res = store.get(key.hgid);
+            match res {
+                Ok(Some(aux)) => self.found_aux_indexedlog(key, aux, typ),
+                Ok(None) => {}
+                Err(err) => self.errors.keyed_error(key, err),
+            }
         }
     }
 
@@ -1638,12 +1657,12 @@ impl FetchState {
         &mut self,
         indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
         memcache: Option<&MemcacheStore>,
-        aux_cache: Option<&IndexedLogHgIdDataStore>,
-        aux_local: Option<&IndexedLogHgIdDataStore>,
+        aux_cache: Option<&AuxStore>,
+        aux_local: Option<&AuxStore>,
     ) {
         let mut indexedlog_cache = indexedlog_cache.map(|s| s.write_lock());
-        let mut aux_cache = aux_cache.map(|s| s.write_lock());
-        let mut aux_local = aux_local.map(|s| s.write_lock());
+        let mut aux_cache = aux_cache.map(|s| s.write());
+        let mut aux_local = aux_local.map(|s| s.write());
 
         {
             let span = tracing::trace_span!("edenapi");
@@ -1682,18 +1701,16 @@ impl FetchState {
             let span = tracing::trace_span!("computed");
             let _guard = span.enter();
             for (key, origin) in self.computed_aux_data.drain() {
-                if let Ok(blob) = serde_json::to_vec(self.found[&key].aux_data.as_ref().unwrap()) {
-                    let entry = Entry::new(key, blob.into(), Metadata::default());
-                    match origin {
-                        StoreType::Shared => {
-                            if let Some(ref mut aux_cache) = aux_cache {
-                                let _ = aux_cache.put_entry(entry);
-                            }
+                let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
+                match origin {
+                    StoreType::Shared => {
+                        if let Some(ref mut aux_cache) = aux_cache {
+                            let _ = aux_cache.put(key.hgid, &entry);
                         }
-                        StoreType::Local => {
-                            if let Some(ref mut aux_local) = aux_local {
-                                let _ = aux_local.put_entry(entry);
-                            }
+                    }
+                    StoreType::Local => {
+                        if let Some(ref mut aux_local) = aux_local {
+                            let _ = aux_local.put(key.hgid, &entry);
                         }
                     }
                 }
