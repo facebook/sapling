@@ -355,6 +355,7 @@ impl std::convert::TryFrom<Entry> for crate::memcache::McData {
     }
 }
 
+// TODO(meyer): Remove these infallible conversions, replace with fallible or inherent in LazyFile.
 impl std::convert::From<TreeEntry> for Entry {
     fn from(v: TreeEntry) -> Self {
         Entry::new(
@@ -370,8 +371,12 @@ impl std::convert::From<FileEntry> for Entry {
     fn from(v: FileEntry) -> Self {
         Entry::new(
             v.key().clone(),
-            v.data_unchecked().into(),
-            v.metadata().clone(),
+            v.content()
+                .expect("missing content")
+                .data_unchecked()
+                .clone()
+                .into(),
+            v.metadata().expect("missing content").clone(),
         )
     }
 }

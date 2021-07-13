@@ -340,6 +340,9 @@ fn cmd_file_check(args: DataCheckArgs) -> Result<()> {
             Err(FileError::Lfs(..)) => {
                 println!("{} [LFS pointer]", entry.key());
             }
+            Err(FileError::MissingContent(..)) => {
+                println!("{} [Missing content]", entry.key());
+            }
         }
     }
     Ok(())

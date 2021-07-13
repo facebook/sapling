@@ -1047,7 +1047,7 @@ impl LazyFile {
                 flags: None,
             },
             ContentStore(_, ref meta) => meta.clone(),
-            EdenApi(ref entry) => entry.metadata().clone(),
+            EdenApi(ref entry) => entry.metadata()?.clone(),
             Memcache(ref entry) => entry.metadata.clone(),
         })
     }
@@ -1061,7 +1061,7 @@ impl LazyFile {
             EdenApi(ref entry) => Some(Entry::new(
                 key,
                 entry.data()?.into(),
-                entry.metadata().clone(),
+                entry.metadata()?.clone(),
             )),
             // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
             Memcache(ref entry) => Some({
@@ -1104,7 +1104,7 @@ impl TryFrom<FileEntry> for LfsPointersEntry {
     type Error = Error;
 
     fn try_from(e: FileEntry) -> Result<Self, Self::Error> {
-        if e.metadata().is_lfs() {
+        if e.metadata()?.is_lfs() {
             Ok(LfsPointersEntry::from_bytes(e.data()?, e.key().hgid)?)
         } else {
             bail!("failed to convert EdenApi FileEntry to LFS pointer, but is_lfs is false")
@@ -1489,8 +1489,8 @@ impl FetchState {
             let aux_data: FileAuxData = aux_data.clone().into();
             self.found_attributes(key.clone(), aux_data.into(), None);
         }
-        if entry.content.is_some() {
-            if entry.metadata().is_lfs() {
+        if let Some(content) = entry.content() {
+            if content.metadata().is_lfs() {
                 match entry.try_into() {
                     Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
                     Err(err) => self.errors.keyed_error(key, err),

@@ -35,6 +35,8 @@ pub enum FileError {
     Redacted(Key, Bytes),
     #[error("Can't validate filenode hash for {0} because it is an LFS pointer")]
     Lfs(Key, Bytes),
+    #[error("Content for {0} is unavailable")]
+    MissingContent(Key),
 }
 
 impl FileError {
@@ -45,6 +47,7 @@ impl FileError {
             Corrupt(InvalidHgId { data, .. }) => data,
             Redacted(_, data) => data,
             Lfs(_, data) => data,
+            MissingContent(_) => panic!("no content attribute available for FileEntry"),
         }
         .clone()
     }
@@ -64,6 +67,68 @@ pub struct FileAuxData {
 pub struct FileContent {
     pub hg_file_blob: Bytes,
     pub metadata: Metadata,
+}
+
+impl FileContent {
+    /// Get this entry's data. Checks data integrity but allows hash mismatches
+    /// if the content is redacted or contains an LFS pointer.
+    pub fn data(&self, key: &Key, parents: Parents) -> Result<Bytes, FileError> {
+        use FileError::*;
+        self.data_checked(key, parents).or_else(|e| match e {
+            Corrupt(_) => Err(e),
+            Redacted(..) => Ok(e.data()),
+            Lfs(..) => Ok(e.data()),
+            MissingContent(_) => Err(e),
+        })
+    }
+
+    /// Get this entry's data after verifying the hgid hash.
+    ///
+    /// This method will return an error if the computed hash doesn't match
+    /// the provided hash, regardless of the reason. Such mismatches are
+    /// sometimes expected (e.g., for redacted files or LFS pointers), so most
+    /// application logic should call `FileEntry::data` instead, which allows
+    /// these exceptions. `FileEntry::data_checked` should only be used when
+    /// strict filenode validation is required.
+    pub fn data_checked(&self, key: &Key, parents: Parents) -> Result<Bytes, FileError> {
+        // TODO(meyer): Clean this up, make LFS Pointers and redaction strongly typed all the way from here through scmstore
+        let data = &self.hg_file_blob;
+
+        // TODO(T48685378): Handle redacted content in a less hacky way.
+        if data.len() == REDACTED_TOMBSTONE.len() && data == REDACTED_TOMBSTONE {
+            return Err(FileError::Redacted(key.clone(), data.clone()));
+        }
+
+        // We can't check the hash of an LFS blob since it is computed using the
+        // full file content, but the file entry only contains the LFS pointer.
+        if self.metadata().is_lfs() {
+            return Err(FileError::Lfs(key.clone(), data.clone()));
+        }
+
+        let computed = HgId::from_content(&data, parents);
+        if computed != key.hgid {
+            let err = InvalidHgId {
+                expected: key.hgid,
+                computed,
+                parents,
+                data: data.clone(),
+            };
+
+            return Err(FileError::Corrupt(err));
+        }
+
+        Ok(data.clone())
+    }
+
+    /// Get this entry's data without verifying the hgid hash.
+    pub fn data_unchecked(&self) -> &Bytes {
+        &self.hg_file_blob
+    }
+
+    /// Get this entry's metadata.
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
 }
 
 /// Structure representing source control file content on the wire.
@@ -100,83 +165,31 @@ impl FileEntry {
         &self.key
     }
 
-    /// Get this entry's data. Checks data integrity but allows hash mismatches
-    /// if the content is redacted or contains an LFS pointer.
-    pub fn data(&self) -> Result<Bytes, FileError> {
-        use FileError::*;
-        self.data_checked().or_else(|e| match e {
-            Corrupt(_) => Err(e),
-            Redacted(..) => Ok(e.data()),
-            Lfs(..) => Ok(e.data()),
-        })
-    }
-
-    /// Get this entry's data after verifying the hgid hash.
-    ///
-    /// This method will return an error if the computed hash doesn't match
-    /// the provided hash, regardless of the reason. Such mismatches are
-    /// sometimes expected (e.g., for redacted files or LFS pointers), so most
-    /// application logic should call `FileEntry::data` instead, which allows
-    /// these exceptions. `FileEntry::data_checked` should only be used when
-    /// strict filenode validation is required.
-    pub fn data_checked(&self) -> Result<Bytes, FileError> {
-        // TODO(meyer): Clean this up, make LFS Pointers and redaction strongly typed all the way from here through scmstore
-        let data = self
-            .content
-            .as_ref()
-            .map(|c| &c.hg_file_blob)
-            .expect("no content available");
-
-        // TODO(T48685378): Handle redacted content in a less hacky way.
-        if data.len() == REDACTED_TOMBSTONE.len() && data == REDACTED_TOMBSTONE {
-            return Err(FileError::Redacted(self.key.clone(), data.clone()));
-        }
-
-        // We can't check the hash of an LFS blob since it is computed using the
-        // full file content, but the file entry only contains the LFS pointer.
-        if self.metadata().is_lfs() {
-            return Err(FileError::Lfs(self.key.clone(), data.clone()));
-        }
-
-        let computed = HgId::from_content(&data, self.parents);
-        if computed != self.key.hgid {
-            let err = InvalidHgId {
-                expected: self.key.hgid,
-                computed,
-                parents: self.parents,
-                data: data.clone(),
-            };
-
-            return Err(FileError::Corrupt(err));
-        }
-
-        Ok(data.clone())
-    }
-
-    /// Get this entry's data without verifying the hgid hash.
-    pub fn data_unchecked(&self) -> Bytes {
-        self.content
-            .as_ref()
-            .map(|c| c.hg_file_blob.clone())
-            .expect("no content available")
-    }
-
-    /// Get this entry's metadata.
-    pub fn metadata(&self) -> &Metadata {
-        // TODO(meyer): Does this differ from the content in the envelope?
-        &self
-            .content
-            .as_ref()
-            .map(|c| &c.metadata)
-            .expect("no content available")
-    }
-
     pub fn parents(&self) -> &Parents {
         &self.parents
     }
 
     pub fn aux_data(&self) -> Option<&FileAuxData> {
         self.aux_data.as_ref()
+    }
+
+    pub fn content(&self) -> Option<&FileContent> {
+        self.content.as_ref()
+    }
+
+    pub fn data(&self) -> Result<Bytes, FileError> {
+        self.content
+            .as_ref()
+            .ok_or_else(|| FileError::MissingContent(self.key().clone()))?
+            .data(self.key(), *self.parents())
+    }
+
+    pub fn metadata(&self) -> Result<&Metadata, FileError> {
+        Ok(self
+            .content
+            .as_ref()
+            .ok_or_else(|| FileError::MissingContent(self.key().clone()))?
+            .metadata())
     }
 }
 
