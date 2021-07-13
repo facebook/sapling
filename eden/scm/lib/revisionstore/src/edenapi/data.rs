@@ -144,18 +144,22 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 mod tests {
     use super::*;
 
+    use std::str::FromStr;
+
     use maplit::hashmap;
     use tempfile::TempDir;
 
     use configparser::config::ConfigSet;
-    use types::testutil::*;
+    use edenapi_types::{ContentId, FileAuxData as EdenApiAux, Sha1};
+    use types::{testutil::*, Sha256};
 
     use crate::{
         edenapi::{File, Tree},
+        indexedlogauxstore::AuxStore,
         indexedlogdatastore::IndexedLogHgIdDataStore,
         indexedlogutil::StoreType,
         localstore::ExtStoredPolicy,
-        scmstore::{FileAttributes, FileStore, TreeStore},
+        scmstore::{FileAttributes, FileAuxData, FileStore, TreeStore},
         testutil::*,
     };
 
@@ -249,6 +253,71 @@ mod tests {
         let fetched = store.fetch_batch(std::iter::once(k.clone()))?;
         assert_eq!(fetched.complete.len(), 0);
         assert_eq!(fetched.incomplete, vec![k]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_aux_cache() -> Result<()> {
+        // Set up mocked EdenAPI file and tree stores.
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let d = delta("1234", None, k.clone());
+        let files = hashmap! { k.clone() => d.data.clone() };
+
+        let client = FakeEdenApi::new().files(files).into_arc();
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
+
+        // Set up local cache store to write received data.
+        let mut store = FileStore::empty();
+        store.edenapi = Some(remote_files);
+
+        // Empty aux cache
+        let tmp = TempDir::new()?;
+        let aux_cache = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+        store.aux_cache = Some(aux_cache.clone());
+
+        // Empty content cache
+        let tmp = TempDir::new()?;
+        let cache = Arc::new(IndexedLogHgIdDataStore::new(
+            &tmp,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            StoreType::Shared,
+        )?);
+        store.indexedlog_cache = Some(cache.clone());
+
+        store.cache_to_local_cache = false;
+
+        let expected = FileAuxData {
+            total_size: 4,
+            content_id: ContentId::from_str(
+                "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
+            )?,
+            content_sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            content_sha256: Sha256::from_str(
+                "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+            )?,
+        };
+
+        // Test that we can read aux data from EdenApi
+        let mut fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .single()?
+            .expect("key not found");
+        assert_eq!(fetched.aux_data(), Some(expected));
+
+        // Disable EdenApi and local cache, make sure we can read from aux cache.
+        store.edenapi = None;
+        store.indexedlog_cache = None;
+        let mut fetched = store
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .single()?
+            .expect("key not found");
+        assert_eq!(fetched.aux_data(), Some(expected));
+
+
+        // Content shouldn't have been cached
+        assert_eq!(cache.get_entry(k.clone())?, None);
 
         Ok(())
     }

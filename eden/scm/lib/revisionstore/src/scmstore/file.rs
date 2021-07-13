@@ -18,7 +18,10 @@ use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use edenapi_types::{ContentId, FileAuxData as EdenApiFileAuxData, FileEntry, Sha1};
+use edenapi_types::{
+    ContentId, FileAttributes as EdenApiFileAttributes, FileAuxData as EdenApiFileAuxData,
+    FileEntry, FileSpec, Sha1,
+};
 
 use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf, Sha256};
@@ -701,7 +704,7 @@ impl LegacyStore for FileStore {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct FileAuxData {
     pub total_size: u64,
     pub content_id: ContentId,
@@ -843,6 +846,15 @@ impl From<LazyFile> for StoreFile {
 pub struct FileAttributes {
     pub content: bool,
     pub aux_data: bool,
+}
+
+impl From<FileAttributes> for EdenApiFileAttributes {
+    fn from(v: FileAttributes) -> Self {
+        EdenApiFileAttributes {
+            content: v.content,
+            aux_data: v.aux_data,
+        }
+    }
 }
 
 impl FileAttributes {
@@ -1147,6 +1159,8 @@ pub struct FetchState {
     /// Attributes found in EdenApi, may be cached locally (currently only content may be found in EdenApi)
     found_in_edenapi: HashSet<Key>,
 
+    found_remote_aux: HashSet<Key>,
+
     /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
     computed_aux_data: HashMap<Key, StoreType>,
 
@@ -1180,6 +1194,7 @@ impl FetchState {
 
             found_in_memcache: HashSet::new(),
             found_in_edenapi: HashSet::new(),
+            found_remote_aux: HashSet::new(),
             computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
@@ -1197,7 +1212,7 @@ impl FetchState {
         }
         self.pending
             .iter()
-            .filter(|k| self.pending(k, fetchable))
+            .filter(|k| self.actionable(k, fetchable).any())
             .cloned()
             .collect()
     }
@@ -1210,7 +1225,7 @@ impl FetchState {
         self.pending
             .iter()
             .filter(|k| !self.lfs_pointers.contains_key(k))
-            .filter(|k| self.pending(k, fetchable))
+            .filter(|k| self.actionable(k, fetchable).any())
             .cloned()
             .collect()
     }
@@ -1222,16 +1237,16 @@ impl FetchState {
         }
         self.pending
             .iter()
-            .filter(|k| self.pending(k, fetchable))
+            .filter(|k| self.actionable(k, fetchable).any())
             .map(|k| self.storekey(k))
             .collect()
     }
 
-    /// A key is pending with respect to a store if we can "make progress" on it by requesting from that store.
+    /// A key is actionable with respect to a store if we can fetch something that is or allows us to compute a missing attribute.
     #[instrument(level = "trace", skip(self))]
-    fn pending(&self, key: &Key, fetchable: FileAttributes) -> bool {
+    fn actionable(&self, key: &Key, fetchable: FileAttributes) -> FileAttributes {
         if fetchable.none() {
-            return false;
+            return FileAttributes::NONE;
         }
 
         let available = self
@@ -1245,7 +1260,7 @@ impl FetchState {
         };
         let missing = self.request_attrs - available;
         let actionable = missing & fetchable;
-        actionable.any()
+        actionable
     }
 
     /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
@@ -1448,20 +1463,28 @@ impl FetchState {
     #[instrument(level = "debug", skip(self, entry))]
     fn found_edenapi(&mut self, entry: FileEntry) {
         let key = entry.key.clone();
-        if entry.metadata().is_lfs() {
-            match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
-                Err(err) => self.errors.keyed_error(key, err),
+        if let Some(aux_data) = entry.aux_data() {
+            self.found_remote_aux.insert(key.clone());
+            let aux_data: FileAuxData = aux_data.clone().into();
+            self.found_attributes(key.clone(), aux_data.into(), None);
+        }
+        if entry.content.is_some() {
+            if entry.metadata().is_lfs() {
+                match entry.try_into() {
+                    Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
+                    Err(err) => self.errors.keyed_error(key, err),
+                }
+            } else {
+                self.found_in_edenapi.insert(key.clone());
+                // TODO(meyer): Refactor LazyFile to hold a FileContent instead of FileEntry
+                self.found_attributes(key, LazyFile::EdenApi(entry).into(), None);
             }
-        } else {
-            self.found_in_edenapi.insert(key.clone());
-            self.found_attributes(key, LazyFile::EdenApi(entry).into(), None);
         }
     }
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
-        // TODO(meyer): Implement aux data fetching for EdenApi Files
-        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
+        let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
+        let pending = self.pending_nonlfs(fetchable);
         if pending.is_empty() {
             return Ok(());
         }
@@ -1469,7 +1492,23 @@ impl FetchState {
             .as_ref()
             .map(|fl| fl.report_keys(pending.iter()));
 
-        for entry in store.files_blocking(pending, None)?.entries.into_iter() {
+        // TODO(meyer): Iterators or otherwise clean this up
+        let pending_attrs: Vec<_> = pending
+            .into_iter()
+            .map(|k| {
+                let actionable = self.actionable(&k, fetchable);
+                FileSpec {
+                    key: k,
+                    attrs: actionable.into(),
+                }
+            })
+            .collect();
+
+        for entry in store
+            .files_attrs_blocking(pending_attrs, None)?
+            .entries
+            .into_iter()
+        {
             self.found_edenapi(entry);
         }
         Ok(())
@@ -1715,6 +1754,18 @@ impl FetchState {
                             let _ = indexedlog_cache.put_entry(cache_entry);
                         }
                     }
+                }
+            }
+        }
+
+        {
+            let span = tracing::trace_span!("remote_aux");
+            let _guard = span.enter();
+            for key in self.found_remote_aux.drain() {
+                let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
+
+                if let Some(ref mut aux_cache) = aux_cache {
+                    let _ = aux_cache.put(key.hgid, &entry);
                 }
             }
         }

@@ -24,7 +24,8 @@ use serde_derive::{Deserialize, Serialize};
     PartialEq,
     PartialOrd,
     Serialize,
-    Deserialize
+    Deserialize,
+    Default
 )]
 pub struct Sha256([u8; Sha256::len()]);
 
