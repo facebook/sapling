@@ -1,205 +1,488 @@
 #chg-compatible
 
-Set up test environment.
-  $ configure mutation-norecord
-  $ enable amend directaccess histedit rebase
-Test that amend --to option
-  $ newrepo repo
-  $ mkcommit() {
-  >    echo "$1" > "$1"
-  >    hg add "$1"
-  >    hg ci -m "$1"
-  > }
-  $ mkcommit "ROOT"
-  $ hg debugmakepublic "desc(ROOT)"
-  $ mkcommit "SIDE"
-  $ hg debugmakepublic "desc(SIDE)"
-  $ hg update -r "desc(ROOT)"
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ mkcommit "A"
-  $ mkcommit "B"
-  $ mkcommit "C"
-Test
-----
+  $ configure modern
+  $ configure mutation
+  $ setconfig diff.git=True
 
-  $ hg log -G -vp -T "{desc} {node|short}"
-  @  C a8df460dbbfediff -r c473644ee0e9 -r a8df460dbbfe C
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/C	Thu Jan 01 00:00:00 1970 +0000
+Test adding, modifying, removing, and renaming files in amend.
+  $ newrepo
+  $ echo foo > foo
+  $ echo bar > bar
+  $ echo baz > baz
+  $ hg ci -m "one" -Aq
+  $ echo qux > qux
+  $ hg ci -m "two" -Aq
+  $ hg mv foo foo_renamed
+  $ hg rm bar
+  $ echo morebaz >> baz
+  $ echo new > new
+  $ hg add new
+  $ hg amend --to .^
+  $ hg log -G -vp -T "{desc} {join(extras, ' ')} {mutations} {node|short}"
+  @  two branch=default mutdate=0 0 mutop=rebase mutpred=hg/7d3606fd19e3e6bb309681ed5af095d173314ab5 mutuser=test rebase_source=7d3606fd19e3e6bb309681ed5af095d173314ab5  01f78cddc939diff --git a/qux b/qux
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/qux
   │  @@ -0,0 +1,1 @@
-  │  +C
+  │  +qux
   │
-  o  B c473644ee0e9diff -r 2a34000d3544 -r c473644ee0e9 B
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/B	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +B
-  │
-  o  A 2a34000d3544diff -r ea207398892e -r 2a34000d3544 A
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/A	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +A
-  │
-  │ o  SIDE 3c489f4f07a6diff -r ea207398892e -r 3c489f4f07a6 SIDE
-  ├─╯  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │    +++ b/SIDE	Thu Jan 01 00:00:00 1970 +0000
-  │    @@ -0,0 +1,1 @@
-  │    +SIDE
-  │
-  o  ROOT ea207398892ediff -r 000000000000 -r ea207398892e ROOT
-     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-     +++ b/ROOT	Thu Jan 01 00:00:00 1970 +0000
+  o  one amend_source=c5580d2879b81dcc2465e5dde5f0ee86218c0dc0 branch=default mutdate=0 0 mutop=amend mutpred=hg/c5580d2879b81dcc2465e5dde5f0ee86218c0dc0 mutuser=test  a48652e46d72diff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,2 @@
+     +baz
+     +morebaz
+     diff --git a/foo_renamed b/foo_renamed
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo_renamed
      @@ -0,0 +1,1 @@
-     +ROOT
-  
-  $ cat > testFile << EOF
-  > line1
-  > line2
-  > line3
-  > EOF
-  $ hg add testFile
-  $ hg amend --to dorito
-  abort: revision 'dorito' cannot be found
-  [255]
-  $ hg amend --to c473644
-  $ hg amend --to 3c489f4f07a6
-  abort: revision '3c489f4f07a6' is not a parent of the working copy
-  [255]
-  $ hg amend --to 'children(ea207398892e)'
-  abort: 'children(ea207398892e)' refers to multiple changesets
-  [255]
-  $ hg amend --to 'min(children(ea207398892e))'
-  abort: revision 'min(children(ea207398892e))' is not a parent of the working copy
-  [255]
-  $ hg log -G -vp -T "{desc} {node|short}"
-  @  C 86de924a3b95diff -r ce91eb673f02 -r 86de924a3b95 C
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/C	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +C
-  │
-  o  B ce91eb673f02diff -r 2a34000d3544 -r ce91eb673f02 B
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/B	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +B
-  │  diff -r 2a34000d3544 -r ce91eb673f02 testFile
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/testFile	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,3 @@
-  │  +line1
-  │  +line2
-  │  +line3
-  │
-  o  A 2a34000d3544diff -r ea207398892e -r 2a34000d3544 A
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/A	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +A
-  │
-  │ o  SIDE 3c489f4f07a6diff -r ea207398892e -r 3c489f4f07a6 SIDE
-  ├─╯  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │    +++ b/SIDE	Thu Jan 01 00:00:00 1970 +0000
-  │    @@ -0,0 +1,1 @@
-  │    +SIDE
-  │
-  o  ROOT ea207398892ediff -r 000000000000 -r ea207398892e ROOT
-     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-     +++ b/ROOT	Thu Jan 01 00:00:00 1970 +0000
+     +foo
+     diff --git a/new b/new
+     new file mode 100644
+     --- /dev/null
+     +++ b/new
      @@ -0,0 +1,1 @@
-     +ROOT
+     +new
   
+
+
+
+
+
+
+Test removing, modifying and renaming files in subsequent commit.
+  $ newrepo
+  $ echo foo > foo
+  $ echo bar > bar
+  $ echo baz > baz
+  $ hg ci -m "one" -Aq
+  $ echo two > two
+  $ hg ci -m "two" -Aq
+  $ echo three > three
+  $ hg ci -m "three" -Aq
+  $ hg mv foo foo_renamed
+  $ hg rm bar
+  $ echo morebaz >> baz
+  $ hg amend --to 'desc(two)'
+  $ hg log -G -vp -T "{desc} {join(extras, ' ')} {mutations} {node|short}"
+  @  three branch=default mutdate=0 0 mutop=rebase mutpred=hg/0b73272bdcf2bf38c71192959d0e3f750de85ea0 mutuser=test rebase_source=0b73272bdcf2bf38c71192959d0e3f750de85ea0  7b8c275b5725diff --git a/three b/three
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/three
+  │  @@ -0,0 +1,1 @@
+  │  +three
+  │
+  o  two amend_source=fbe2abd632c8512c5496e98dedd5cddb43126c37 branch=default mutdate=0 0 mutop=amend mutpred=hg/fbe2abd632c8512c5496e98dedd5cddb43126c37 mutuser=test  9c63fb016abfdiff --git a/bar b/bar
+  │  deleted file mode 100644
+  │  --- a/bar
+  │  +++ /dev/null
+  │  @@ -1,1 +0,0 @@
+  │  -bar
+  │  diff --git a/baz b/baz
+  │  --- a/baz
+  │  +++ b/baz
+  │  @@ -1,1 +1,2 @@
+  │   baz
+  │  +morebaz
+  │  diff --git a/foo b/foo_renamed
+  │  rename from foo
+  │  rename to foo_renamed
+  │  diff --git a/two b/two
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/two
+  │  @@ -0,0 +1,1 @@
+  │  +two
+  │
+  o  one branch=default  c5580d2879b8diff --git a/bar b/bar
+     new file mode 100644
+     --- /dev/null
+     +++ b/bar
+     @@ -0,0 +1,1 @@
+     +bar
+     diff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,1 @@
+     +baz
+     diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+
+Test three way merge during rebase.
+  $ newrepo
+  $ printf "one\n\ntwo\n\nthree\n" > foo
+  $ hg ci -m "one" -Aq
+  $ printf "one\n\ntwo\n\nfour\n" > foo
+  $ hg ci -m "two"
+  $ printf "five\n\ntwo\n\nfour\n" > foo
+  $ hg amend --to .^
+  merging foo
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 706f867d1a33diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -2,4 +2,4 @@
+  │
+  │   two
+  │
+  │  -three
+  │  +four
+  │
+  o  one 997db81b26b2diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,5 @@
+     +five
+     +
+     +two
+     +
+     +three
+  
+
+
+
+
+
+
+
+
+Test replacing file with directory.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ hg rm foo
+  $ mkdir foo
+  $ echo foo > foo/foo
+  $ hg add foo/foo
+  $ hg amend --to .^
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 3b1456dbf553diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  o  one 59fa10ae0edbdiff --git a/foo/foo b/foo/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+
+
+
+Test replacing file with symlink.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ ln -sf bar foo
+  $ hg amend --to .^
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 6e7cc816fa6fdiff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  o  one 7b9a757afa3cdiff --git a/foo b/foo
+     new file mode 120000
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +bar
+     \ No newline at end of file
+  
+
+
+
+
+Test replacing file with symlink in subsequent commit.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ ln -sf bar foo
+  $ hg amend --to .
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two d17906564d89diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │  diff --git a/foo b/foo
+  │  old mode 100644
+  │  new mode 120000
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,1 @@
+  │  -foo
+  │  +bar
+  │  \ No newline at end of file
+  │
+  o  one 0174aede5e86diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+Test renaming a file modified by later commit (not supported).
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar >> foo
+  $ hg ci -m "two"
+  $ hg mv foo bar
+  $ hg amend --to .^
+  abort: amend would conflict in foo
+  [255]
   $ hg status
-  $ echo "line4" >> testFile
-  $ hg ci -m "line4"
-  $ echo "line5" >> testFile
-  $ hg amend --to ce91eb673f02
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  merging testFile
-  warning: 1 conflicts while merging testFile! (edit, then use 'hg resolve --mark')
-  amend --to encountered an issue - use hg histedit to continue or abortFix up the change (roll 8a18ce6b4d69)
-  (hg histedit --continue to resume)
-  [1]
-  $ hg histedit --abort > /dev/null
-  $ hg hide .  > /dev/null
-
-Test amending to commit when side branch is present
-  $ hg update -q ce91eb67
-  $ mkcommit "SIDE2"
-  $ hg update -q 75f11a3d
-  $ echo EXTRA >> A
-  $ hg amend --to 2a34000
+  A bar
+  R foo
   $ hg log -G -vp -T "{desc} {node|short}"
-  @  line4 19b94b1dc3f8diff -r 66a8a892708f -r 19b94b1dc3f8 testFile
-  │  --- a/testFile	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/testFile	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -1,3 +1,4 @@
-  │   line1
-  │   line2
-  │   line3
-  │  +line4
+  @  two 7fa82f87fe73diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,2 @@
+  │   foo
+  │  +bar
   │
-  o  C 66a8a892708fdiff -r 33635c2e36d9 -r 66a8a892708f C
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/C	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +C
-  │
-  o  B 33635c2e36d9diff -r 4cc5b3966b69 -r 33635c2e36d9 B
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/B	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,1 @@
-  │  +B
-  │  diff -r 4cc5b3966b69 -r 33635c2e36d9 testFile
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/testFile	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,3 @@
-  │  +line1
-  │  +line2
-  │  +line3
-  │
-  o  A 4cc5b3966b69diff -r ea207398892e -r 4cc5b3966b69 A
-  │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │  +++ b/A	Thu Jan 01 00:00:00 1970 +0000
-  │  @@ -0,0 +1,2 @@
-  │  +A
-  │  +EXTRA
-  │
-  │ o  SIDE2 059ea8bdb89ediff -r ce91eb673f02 -r 059ea8bdb89e SIDE2
-  │ │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │ │  +++ b/SIDE2	Thu Jan 01 00:00:00 1970 +0000
-  │ │  @@ -0,0 +1,1 @@
-  │ │  +SIDE2
-  │ │
-  │ x  B ce91eb673f02diff -r 2a34000d3544 -r ce91eb673f02 B
-  │ │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │ │  +++ b/B	Thu Jan 01 00:00:00 1970 +0000
-  │ │  @@ -0,0 +1,1 @@
-  │ │  +B
-  │ │  diff -r 2a34000d3544 -r ce91eb673f02 testFile
-  │ │  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │ │  +++ b/testFile	Thu Jan 01 00:00:00 1970 +0000
-  │ │  @@ -0,0 +1,3 @@
-  │ │  +line1
-  │ │  +line2
-  │ │  +line3
-  │ │
-  │ x  A 2a34000d3544diff -r ea207398892e -r 2a34000d3544 A
-  ├─╯  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │    +++ b/A	Thu Jan 01 00:00:00 1970 +0000
-  │    @@ -0,0 +1,1 @@
-  │    +A
-  │
-  │ o  SIDE 3c489f4f07a6diff -r ea207398892e -r 3c489f4f07a6 SIDE
-  ├─╯  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  │    +++ b/SIDE	Thu Jan 01 00:00:00 1970 +0000
-  │    @@ -0,0 +1,1 @@
-  │    +SIDE
-  │
-  o  ROOT ea207398892ediff -r 000000000000 -r ea207398892e ROOT
-     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-     +++ b/ROOT	Thu Jan 01 00:00:00 1970 +0000
+  o  one 0174aede5e86diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
      @@ -0,0 +1,1 @@
-     +ROOT
+     +foo
   
+
+
+
+
+
+
+
+
+Test conflict during initial patch.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > foo
+  $ hg ci -m "two"
+  $ echo baz > foo
+  $ hg amend --to .^
+  patching file foo
+  Hunk #1 FAILED at 0
+  abort: amend would conflict in foo
+  [255]
+  $ hg status
+  M foo
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 171ec227cf58diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,1 @@
+  │  -foo
+  │  +bar
+  │
+  o  one 0174aede5e86diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+
+
+
+Test conflict during rebase.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > foo
+  $ hg ci -m "two"
+  $ echo foo > foo
+  $ hg ci -m "three"
+  $ echo baz > foo
+  $ hg amend --to 'desc(one)'
+  merging foo
+  abort: amend would conflict in foo
+  [255]
+  $ hg status
+  M foo
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  three f2c76c6d797ediff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,1 @@
+  │  -bar
+  │  +foo
+  │
+  o  two 171ec227cf58diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,1 @@
+  │  -foo
+  │  +bar
+  │
+  o  one 0174aede5e86diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+Test amending when target commit has other children.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "root" -Aq
+  $ echo bar > bar
+  $ hg ci -m "a" -Aq
+  $ hg up 'desc(root)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo baz > baz
+  $ hg ci -m "b" -Aq
+  $ echo more >> foo
+  $ hg amend --to 'desc(root)'
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  b 016648f10c01diff --git a/baz b/baz
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/baz
+  │  @@ -0,0 +1,1 @@
+  │  +baz
+  │
+  o  root 41500d1b8742diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,2 @@
+     +foo
+     +more
+  
+  o  a 07a119ce0bd1diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  x  root e1062ec6bdfadiff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+
+
+
+Test amending a renamed file (don't lose copysource).
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ hg mv foo bar
+  $ hg ci -m "two"
+  $ echo foo >> bar
+  $ hg amend --to .
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 1560771da02ediff --git a/foo b/bar
+  │  rename from foo
+  │  rename to bar
+  │  --- a/foo
+  │  +++ b/bar
+  │  @@ -1,1 +1,2 @@
+  │   foo
+  │  +foo
+  │
+  o  one 0174aede5e86diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+
+
+
+Test various error cases.
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ hg debugmakepublic .
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ echo more >> bar
+  $ hg amend --to .^
+  abort: cannot amend public changesets
+  [255]
+  $ hg amend --to banana
+  abort: unknown revision 'banana'!
+  [255]
+  $ hg revert bar
+  $ hg up .^
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo fork > fork
+  $ hg ci -m "fork" -Aq
+  $ echo more >> bar
+  $ hg amend --to 'desc(two)'
+  abort: revision 'desc(two)' is not an ancestor of the working copy
+  [255]
+  $ hg amend --to '::.'
+  abort: '::.' must refer to a single changeset
+  [255]
+  $ hg amend --to '.' -i
+  abort: --to cannot be used with any other options
+  [255]
+  $ hg amend --to '.' bar
+  abort: --to cannot be used with any other options
+  [255]

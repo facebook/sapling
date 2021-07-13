@@ -49,25 +49,27 @@ following advice for resolution will be shown::
 
 from __future__ import absolute_import
 
-import tempfile
+import io
 
+from bindings import checkout as nativecheckout
 from edenscm.mercurial import (
-    bookmarks,
+    context,
     cmdutil,
     commands,
     error,
     extensions,
     hintutil,
     lock as lockmod,
+    mutation,
+    patch,
     phases,
-    pycompat,
     registrar,
     scmutil,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, short
+from edenscm.mercurial.node import short, nullid
 
-from .. import histedit, rebase as rebasemod
+from .. import rebase as rebasemod
 from . import (
     common,
     fold,
@@ -351,7 +353,7 @@ def amend(ui, repo, *pats, **opts):
         "template",
     ]
 
-    if to and any(opts.get(flag, None) for flag in badtoflags):
+    if to and (any(opts.get(flag, None) for flag in badtoflags) or pats):
         raise error.Abort(_("--to cannot be used with any other options"))
 
     if fixup:
@@ -518,53 +520,116 @@ def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
 
 
 def amendtocommit(ui, repo, commitspec):
-    """amend to a specific commit"""
-    with repo.wlock(), repo.lock():
-        originalcommits = list(repo.set("::. - public()"))
-        try:
-            revs = scmutil.revrange(repo, [commitspec])
-        except error.RepoLookupError:
-            raise error.Abort(_("revision '%s' cannot be found") % commitspec)
-        if len(revs) > 1:
-            raise error.Abort(_("'%s' refers to multiple changesets") % commitspec)
-        targetcommit = repo[revs.first()]
-        if targetcommit not in originalcommits:
+    """amend to a specific commit
+
+    This works by patching the working diff on to the specified commit
+    and then performing a simplified rebase of the stack's tail on to
+    the amended ancestor.
+
+    commitspec must refer to a single commit that is a linear ancestor
+    of ".".
+    """
+    with repo.wlock(), repo.lock(), repo.transaction("amend"):
+        revs = list(scmutil.revrange(repo, [commitspec]))
+        if len(revs) != 1:
+            raise error.Abort(_("'%s' must refer to a single changeset") % commitspec)
+
+        draftctxs = list(repo.revs("(%d)::.", revs[0]).iterctx())
+        if len(draftctxs) == 0:
             raise error.Abort(
-                _("revision '%s' is not a parent of the working copy") % commitspec
+                _("revision '%s' is not an ancestor of the working copy") % commitspec
             )
 
-        tempcommit = repo.commit(text="tempCommit")
+        if repo.revs("%ld & merge()", draftctxs):
+            raise error.Abort(_("cannot amend non-linear stack"))
 
-        if not tempcommit:
-            raise error.Abort(_("no pending changes to amend"))
+        dest = draftctxs.pop(0)
+        if dest.phase() == phases.public:
+            raise error.Abort(_("cannot amend public changesets"))
 
-        tempcommithex = hex(tempcommit)
+        # Generate patch from wctx and apply to dest commit.
+        mergedctx = mirrorwithmetadata(dest, "amend")
+        wctx = repo[None]
+        store = patch.mempatchstore(mergedctx)
+        backend = patch.mempatchbackend(ui, mergedctx, store)
+        ret = patch.applydiff(
+            ui,
+            io.BytesIO(b"".join(list(wctx.diff()))),
+            backend,
+            store,
+        )
+        if ret < 0:
+            raise error.Abort(_("amend would conflict in %s") % ", ".join(backend.rejs))
 
-        fp = tempfile.NamedTemporaryFile()
-        try:
-            found = False
-            for curcommit in originalcommits:
-                fp.write(b"pick %s\n" % bytes(curcommit))
-                if curcommit == targetcommit:
-                    fp.write(b"roll %s\n" % pycompat.encodeutf8(tempcommithex[:12]))
-                    found = True
-            if not found:
-                raise error.Abort(_("revision '%s' cannot be found") % commitspec)
-            fp.flush()
-            try:
-                histedit.histedit(
-                    ui, repo, rev=[originalcommits[0].hex()], commands=fp.name
-                )
-            except error.InterventionRequired:
-                ui.warn(
-                    _(
-                        "amend --to encountered an issue - "
-                        "use hg histedit to continue or abort"
-                    )
-                )
-                raise
-        finally:
-            fp.close()
+        memctxs = [mergedctx]
+        mappednodes = [dest.node()]
+
+        # Perform mini-rebase of our stack.
+        for ctx in draftctxs:
+            memctxs.append(inmemorymerge(ui, repo, ctx, memctxs[-1], ctx.p1()))
+            mappednodes.append(ctx.node())
+
+        parentnode = None
+        mapping = {}
+        # Execute our list of in-memory commits, updating descendants'
+        # parent as we go.
+        for i, memctx in enumerate(memctxs):
+            if i > 0:
+                memctx = context.memctx.mirror(memctx, parentnodes=(parentnode, nullid))
+            parentnode = memctx.commit()
+            mapping[mappednodes[i]] = (parentnode,)
+
+        scmutil.cleanupnodes(repo, {dest.node(): mapping.pop(dest.node())}, "amend")
+        scmutil.cleanupnodes(repo, mapping, "rebase")
+
+        with repo.dirstate.parentchange():
+            # Update dirstate status of amended files.
+            repo.dirstate.rebuild(
+                parentnode, repo[parentnode].manifest(), wctx.files(), exact=True
+            )
+
+
+def inmemorymerge(ui, repo, src, dest, base):
+    """Return memctx representing three way merge of src, dest, and base
+
+    src is "remote" and dest is "local".
+    """
+    mergeresult = nativecheckout.mergeresult(
+        src.manifest(), dest.manifest(), base.manifest()
+    )
+
+    manifestbuilder = mergeresult.manifestbuilder()
+    if manifestbuilder is None:
+        raise error.Abort(
+            _("amend would conflict in %s") % ", ".join(mergeresult.conflict_paths())
+        )
+
+    try:
+        resolved = rebasemod._simplemerge(ui, base, src, dest, manifestbuilder)
+    except error.InMemoryMergeConflictsError as ex:
+        raise error.Abort(_("amend would conflict in %s") % ", ".join(ex.paths))
+
+    mergedctx = mirrorwithmetadata(src, "rebase")
+
+    for path in manifestbuilder.removed():
+        mergedctx[path] = None
+
+    for path, merged in resolved.items():
+        mergedctx[path] = context.overlayfilectx(
+            src[path],
+            datafunc=lambda: merged,
+            ctx=mergedctx,
+        )
+
+    return mergedctx
+
+
+def mirrorwithmetadata(ctx, op):
+    extra = ctx.extra().copy()
+    extra[op + "_source"] = ctx.hex()
+    mutinfo = mutation.record(ctx.repo(), extra, [ctx.node()], op)
+    loginfo = {"predecessors": ctx.hex(), "mutation": op}
+    return context.memctx.mirror(ctx, mutinfo=mutinfo, loginfo=loginfo, extra=extra)
 
 
 def wraprebase(orig, ui, repo, *pats, **opts):

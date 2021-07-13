@@ -1503,7 +1503,6 @@ sh % "hg init repo"
 sh % "cd repo"
 sh % "printf 'diff --git a/a b/b\\nrename from a\\nrename to b'" | "hg import -" == r"""
     applying patch from stdin
-    a not tracked!
     abort: source file 'a' does not exist
     [255]"""
 

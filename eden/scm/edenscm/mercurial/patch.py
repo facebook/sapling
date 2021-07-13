@@ -669,6 +669,72 @@ class repobackend(abstractbackend):
         return self.changed | self.removed
 
 
+class mempatchbackend(abstractbackend):
+    """implements patch backend interface on top of context.memctx"""
+
+    def __init__(self, ui, ctx, store):
+        super(mempatchbackend, self).__init__(ui)
+        self.ctx = ctx
+        self.repo = ctx.repo()
+        self.store = store
+        self.rejs = []
+
+    def unlink(self, fname):
+        self.ctx[fname] = None
+
+    def writerej(self, fname, failed, total, lines):
+        self.rejs.append(fname)
+
+    def getfile(self, fname):
+        return self.store.getfile(fname)
+
+    def exists(self, fname):
+        return fname in self.ctx
+
+    def setfile(self, fname, data, mode, copysource):
+        self.store.setfile(fname, data, mode, copysource)
+
+
+class mempatchstore(object):
+    """implements patch store interface on top of context.memctx"""
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def getfile(self, fname):
+        fctx = self.ctx[fname]
+        if fctx is None:
+            return None, None
+        return fctx.data(), (fctx.islink(), fctx.isexec())
+
+    def setfile(self, fname, data, mode, copysource=None):
+        # Don't lose copy info when patching a copied file.
+        if copysource is None and fname in self.ctx:
+            copysource = self.ctx[fname].renamed()
+            if copysource:
+                copysource = copysource[0]
+
+        # Avoid "can't find ancestor for <file>" warning when renaming
+        # a file in the commit it was added.
+        if copysource and copysource not in self.ctx.p1():
+            copysource = None
+
+        from . import context  # avoid circular import
+
+        self.ctx[fname] = context.memfilectx(
+            self.ctx.repo(),
+            self.ctx,
+            fname,
+            data,
+            islink=mode[0],
+            isexec=mode[1],
+            copied=copysource,
+        )
+
+    def close(self):
+        pass
+
+
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile(b"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 contextdesc = re.compile(b"(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
@@ -2195,8 +2261,6 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix="", eolmode="str
                     gp.oldpath = pstrip(gp.oldpath)
             else:
                 gp = makepatchmeta(backend, afile, bfile, first_hunk, strip, prefix)
-            if gp.op == "RENAME":
-                backend.unlink(gp.oldpath)
             if not first_hunk:
                 if gp.op == "DELETE":
                     backend.unlink(gp.path)
@@ -2222,14 +2286,16 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix="", eolmode="str
                             % gp.path
                         )
                     backend.setfile(gp.path, data, mode, gp.oldpath)
-                continue
-            try:
-                current_file = patcher(ui, gp, backend, store, eolmode=eolmode)
-            except PatchError as inst:
-                ui.warn(str(inst) + "\n")
-                current_file = None
-                rejects += 1
-                continue
+            else:
+                try:
+                    current_file = patcher(ui, gp, backend, store, eolmode=eolmode)
+                except PatchError as inst:
+                    ui.warn(str(inst) + "\n")
+                    current_file = None
+                    rejects += 1
+
+            if gp.op == "RENAME":
+                backend.unlink(gp.oldpath)
         elif state == "git":
             for gp in values:
                 path = pstrip(gp.oldpath)
