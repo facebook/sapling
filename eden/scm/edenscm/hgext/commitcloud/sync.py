@@ -31,7 +31,6 @@ from edenscm.mercurial.pycompat import encodeutf8
 
 from . import (
     backup,
-    backupbookmarks,
     backuplock,
     backupstate,
     error as ccerror,
@@ -303,11 +302,6 @@ def _sync(
                 synced, cloudrefs = _submitlocalchanges(
                     repo, reponame, workspacename, lastsyncstate, failed, serv, tr
                 )
-
-    # Update the backup bookmarks with any changes we have made by syncing.
-    # developer config: commitcloud.pushbackupbookmarks
-    if repo.ui.configbool("commitcloud", "pushbackupbookmarks", False):
-        backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 
     backuplock.progresscomplete(repo)
 

@@ -643,11 +643,6 @@ More sophisticated test for phases
 
   $ cd ../repo-pull
 
-  $ hgmn cloud restorebackup
-  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
-  abort: 'listkeyspatterns' command is not supported for the server ssh://user@dummy/repo
-  [255]
-
   $ hgmn pull -r b  # test ambiguous prefix
   pulling from ssh://user@dummy/repo
   abort: ambiguous identifier

@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, perftrace, smartset
 from edenscm.mercurial.i18n import _, _n
 
-from . import backupbookmarks, backuplock, backupstate, dependencies, util as ccutil
+from . import backuplock, backupstate, dependencies, util as ccutil
 
 
 def backup(
@@ -29,13 +29,6 @@ def backup(
             revs,
             backupsnapshots=backupsnapshots,
         )
-
-        # developer config: commitcloud.pushbackupbookmarks
-        if revs is None and repo.ui.configbool(
-            "commitcloud", "pushbackupbookmarks", False
-        ):
-            # For a full backup, also update the backup bookmarks.
-            backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)
 
     return backedup, failed
 

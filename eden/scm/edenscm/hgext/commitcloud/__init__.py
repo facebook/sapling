@@ -161,7 +161,6 @@ from edenscm.mercurial.i18n import _
 
 from . import (
     background,
-    backupbookmarks,
     backuplock,
     backupstate,
     checkoutlocations,
@@ -214,7 +213,6 @@ def extsetup(ui):
     dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
-    localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.directory)
     localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
     localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
