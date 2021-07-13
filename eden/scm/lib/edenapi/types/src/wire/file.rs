@@ -12,8 +12,8 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     file::{
-        FileAttributes, FileEntry, FileRequest, FileSpec, HgFilenodeData, UploadHgFilenodeRequest,
-        UploadHgFilenodeResponse,
+        FileAttributes, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
+        UploadHgFilenodeRequest, UploadHgFilenodeResponse,
     },
     wire::{
         is_default, ToApi, ToWire, WireHgId, WireKey, WireParents, WireRevisionstoreMetadata,
@@ -27,24 +27,27 @@ pub struct WireFileEntry {
     key: WireKey,
 
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    data: Bytes,
+    data: Option<Bytes>,
 
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
     parents: WireParents,
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    metadata: WireRevisionstoreMetadata,
+    metadata: Option<WireRevisionstoreMetadata>,
 }
 
 impl ToWire for FileEntry {
     type Wire = WireFileEntry;
 
     fn to_wire(self) -> Self::Wire {
+        let (data, metadata) = self
+            .content
+            .map_or((None, None), |c| (Some(c.hg_file_blob), Some(c.metadata)));
         WireFileEntry {
             key: self.key.to_wire(),
-            data: self.data,
             parents: self.parents.to_wire(),
-            metadata: self.metadata.to_wire(),
+            data,
+            metadata: metadata.to_wire(),
         }
     }
 }
@@ -54,11 +57,24 @@ impl ToApi for WireFileEntry {
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let content = if let Some(hg_file_blob) = self.data {
+            Some(FileContent {
+                hg_file_blob,
+                metadata: self
+                    .metadata
+                    .ok_or(WireToApiConversionError::CannotPopulateRequiredField(
+                        "content.metadata",
+                    ))?
+                    .to_api()?,
+            })
+        } else {
+            None
+        };
         Ok(FileEntry {
             key: self.key.to_api()?,
-            data: self.data,
+            // if content is present, metadata must be also
+            content,
             parents: self.parents.to_api()?,
-            metadata: self.metadata.to_api()?,
         })
     }
 }
@@ -277,10 +293,10 @@ impl ToApi for WireUploadHgFilenodeRequest {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
+        let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
-            data: Bytes::from(bytes),
+            data: bytes.map(Bytes::from),
             parents: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
         }

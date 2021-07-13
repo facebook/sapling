@@ -15,8 +15,9 @@ use std::str::FromStr;
 
 use edenapi_types::{
     wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
-    AnyFileContentId, AnyId, FileAttributes, FileContentTokenMetadata, FileEntry, FileRequest,
-    FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTokenMetadata,
+    AnyFileContentId, AnyId, FileAttributes, FileContent, FileContentTokenMetadata, FileEntry,
+    FileRequest, FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken,
+    UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
@@ -100,7 +101,7 @@ fn fetch_all_files(
 async fn fetch_file(
     repo: HgRepoContext,
     key: Key,
-    _attrs: FileAttributes,
+    attrs: FileAttributes,
 ) -> Result<FileEntry, Error> {
     let id = HgFileNodeId::from_node_hash(HgNodeHash::from(key.hgid));
 
@@ -110,13 +111,22 @@ async fn fetch_file(
         .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-    let (data, metadata) = ctx
-        .content()
-        .await
-        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
     let parents = ctx.hg_parents().into();
+    let mut file = FileEntry::new(key.clone(), parents);
 
-    Ok(FileEntry::new(key, data, parents, metadata))
+    if attrs.content {
+        let (data, metadata) = ctx
+            .content()
+            .await
+            .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
+
+        file = file.with_content(FileContent {
+            hg_file_blob: data,
+            metadata,
+        });
+    }
+
+    Ok(file)
 }
 
 /// Generate an upload token for alredy uploaded content

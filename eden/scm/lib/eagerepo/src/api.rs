@@ -24,6 +24,7 @@ use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
+use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
@@ -82,8 +83,10 @@ impl EdenApi for EagerRepo {
                 key,
                 parents,
                 // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
-                data: extract_body(&data).to_vec().into(),
-                metadata: Default::default(),
+                content: Some(FileContent {
+                    hg_file_blob: extract_body(&data).to_vec().into(),
+                    metadata: Default::default(),
+                }),
             };
             values.push(Ok(entry));
         }

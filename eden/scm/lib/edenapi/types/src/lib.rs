@@ -52,7 +52,7 @@ pub use crate::commit::{
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;
 pub use crate::file::{
-    FileAttributes, FileEntry, FileError, FileRequest, FileSpec, HgFilenodeData,
+    FileAttributes, FileContent, FileEntry, FileError, FileRequest, FileSpec, HgFilenodeData,
     UploadHgFilenodeRequest, UploadHgFilenodeResponse,
 };
 pub use crate::history::{

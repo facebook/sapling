@@ -50,25 +50,35 @@ impl FileError {
     }
 }
 
+/// File content
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FileContent {
+    pub hg_file_blob: Bytes,
+    pub metadata: Metadata,
+}
+
 /// Structure representing source control file content on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileEntry {
     pub key: Key,
-    pub data: Bytes,
     pub parents: Parents,
-    pub metadata: Metadata,
+    pub content: Option<FileContent>,
 }
 
 impl FileEntry {
-    pub fn new(key: Key, data: Bytes, parents: Parents, metadata: Metadata) -> Self {
+    pub fn new(key: Key, parents: Parents) -> Self {
         Self {
             key,
-            data,
             parents,
-            metadata,
+            ..Default::default()
         }
+    }
+
+    pub fn with_content(mut self, content: FileContent) -> Self {
+        self.content = Some(content);
+        self
     }
 
     pub fn key(&self) -> &Key {
@@ -95,40 +105,55 @@ impl FileEntry {
     /// these exceptions. `FileEntry::data_checked` should only be used when
     /// strict filenode validation is required.
     pub fn data_checked(&self) -> Result<Bytes, FileError> {
+        // TODO(meyer): Clean this up, make LFS Pointers and redaction strongly typed all the way from here through scmstore
+        let data = self
+            .content
+            .as_ref()
+            .map(|c| &c.hg_file_blob)
+            .expect("no content available");
+
         // TODO(T48685378): Handle redacted content in a less hacky way.
-        if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
-            return Err(FileError::Redacted(self.key.clone(), self.data.clone()));
+        if data.len() == REDACTED_TOMBSTONE.len() && data == REDACTED_TOMBSTONE {
+            return Err(FileError::Redacted(self.key.clone(), data.clone()));
         }
 
         // We can't check the hash of an LFS blob since it is computed using the
         // full file content, but the file entry only contains the LFS pointer.
-        if self.metadata.is_lfs() {
-            return Err(FileError::Lfs(self.key.clone(), self.data.clone()));
+        if self.metadata().is_lfs() {
+            return Err(FileError::Lfs(self.key.clone(), data.clone()));
         }
 
-        let computed = HgId::from_content(&self.data, self.parents);
+        let computed = HgId::from_content(&data, self.parents);
         if computed != self.key.hgid {
             let err = InvalidHgId {
                 expected: self.key.hgid,
                 computed,
-                data: self.data.clone(),
                 parents: self.parents,
+                data: data.clone(),
             };
 
             return Err(FileError::Corrupt(err));
         }
 
-        Ok(self.data.clone())
+        Ok(data.clone())
     }
 
     /// Get this entry's data without verifying the hgid hash.
     pub fn data_unchecked(&self) -> Bytes {
-        self.data.clone()
+        self.content
+            .as_ref()
+            .map(|c| c.hg_file_blob.clone())
+            .expect("no content available")
     }
 
     /// Get this entry's metadata.
     pub fn metadata(&self) -> &Metadata {
-        &self.metadata
+        // TODO(meyer): Does this differ from the content in the envelope?
+        &self
+            .content
+            .as_ref()
+            .map(|c| &c.metadata)
+            .expect("no content available")
     }
 
     pub fn parents(&self) -> &Parents {
@@ -139,12 +164,10 @@ impl FileEntry {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
-            data: Bytes::from(bytes),
             parents: Arbitrary::arbitrary(g),
-            metadata: Arbitrary::arbitrary(g),
+            content: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -192,6 +215,17 @@ impl Arbitrary for FileRequest {
         Self {
             keys: Arbitrary::arbitrary(g),
             reqs: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileContent {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
+        Self {
+            hg_file_blob: Bytes::from(bytes),
+            metadata: Arbitrary::arbitrary(g),
         }
     }
 }

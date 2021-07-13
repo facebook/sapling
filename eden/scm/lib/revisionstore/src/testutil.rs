@@ -14,9 +14,10 @@ use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stat
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
-    LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
-    UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeResponse,
+    EdenApiServerError, FileContent, FileEntry, HgFilenodeData, HgMutationEntryContent,
+    HistoryEntry, LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset,
+    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
+    UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -247,7 +248,10 @@ impl FakeEdenApi {
                     size: Some(data.len() as u64),
                 };
                 let data = data.to_vec().into();
-                Some(Ok(FileEntry::new(key, data, parents, metadata)))
+                Some(Ok(FileEntry::new(key, parents).with_content(FileContent {
+                    hg_file_blob: data,
+                    metadata,
+                })))
             })
             .collect::<Vec<_>>();
 
