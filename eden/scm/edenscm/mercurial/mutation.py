@@ -677,7 +677,7 @@ def unbundle(repo, bundledata):
         recordentries(repo, entries, skipexisting=True, raw=True)
 
 
-def entriesforbundle(repo, nodes):
+def entriesfornodes(repo, nodes):
     """Generate mutation entries for the given nodes"""
     nodes = set(nodes)
     remaining = set(nodes)
@@ -705,7 +705,7 @@ def bundleentries(entries):
 
 def bundle(repo, nodes):
     """Generate bundled mutation data for bundling alongside the given nodes."""
-    entries = entriesforbundle(repo, nodes)
+    entries = entriesfornodes(repo, nodes)
     return bundleentries(entries)
 
 

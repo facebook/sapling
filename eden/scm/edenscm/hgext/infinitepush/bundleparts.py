@@ -145,7 +145,7 @@ def _getscratchbranchpartsimpl(
     )
 
     if mutation.enabled(repo):
-        entries = mutation.entriesforbundle(repo, outgoing.missing)
+        entries = mutation.entriesfornodes(repo, outgoing.missing)
         if entries:
             if constants.scratchmutationparttype not in bundle2.bundle2caps(peer):
                 repo.ui.warn(
