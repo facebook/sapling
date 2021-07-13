@@ -391,28 +391,32 @@ pub fn parse_directory_metadata_req(json: &Value) -> Result<DirectoryMetadataReq
     })
 }
 
+fn parse_key(value: &Value) -> Result<Key> {
+    let json_key = value
+        .as_array()
+        .context("array items must be [path, hash] arrays")?;
+
+    ensure!(
+        json_key.len() == 2,
+        "array items must be [path, hash] arrays"
+    );
+
+    // Cast slice into 2-element array reference so we can destructure it.
+    let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
+
+    let path = path.as_str().context("path must be a string")?;
+    let hash = hash.as_str().context("hash must be a string")?;
+
+    let key = make_key(&path, hash)?;
+    Ok(key)
+}
+
 fn parse_keys(value: &Value) -> Result<Vec<Key>> {
     let arr = value.as_array().context("input must be a JSON array")?;
 
     let mut keys = Vec::new();
     for i in arr.iter() {
-        let json_key = i
-            .as_array()
-            .context("array items must be [path, hash] arrays")?;
-
-        ensure!(
-            json_key.len() == 2,
-            "array items must be [path, hash] arrays"
-        );
-
-        // Cast slice into 2-element array reference so we can destructure it.
-        let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
-
-        let path = path.as_str().context("path must be a string")?;
-        let hash = hash.as_str().context("hash must be a string")?;
-
-        let key = make_key(&path, hash)?;
-        keys.push(key);
+        keys.push(parse_key(i)?);
     }
 
     Ok(keys)
