@@ -150,24 +150,6 @@ def _transaction(orig, self, *args, **kwargs):
     return orig(self, *args, **kwargs)
 
 
-def backgroundbackupother(repo, dest=None):
-    """start background backup for the other remote
-
-    Commit cloud can be configured to back up to a secondary backup server by
-    setting the 'infinitepush-other' remote to the path to the secondary server.
-    If this is set, and it differs from the main 'infinitepush' remote, start
-    background backup for the other remote.
-    """
-    other = "infinitepush-other"
-    try:
-        remotepath = repo.ui.paths.getpath(other)
-    except error.RepoError:
-        remotepath = None
-    if remotepath and remotepath.loc != ccutil.getremotepath(repo, dest):
-        repo.ui.debug("starting background backup to %s\n" % remotepath.loc)
-        backgroundbackup(repo, ["hg", "cloud", "backup"], dest=other)
-
-
 def backgroundbackup(repo, command=None, dest=None):
     """start background backup"""
     ui = repo.ui

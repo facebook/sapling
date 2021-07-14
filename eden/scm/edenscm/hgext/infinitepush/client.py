@@ -111,27 +111,23 @@ def extsetup(ui):
 def preparepush(ui, dest):
     # If the user is saying they want to push to "default", and this is a
     # scratch push, then we're going to go to the infinitepush destination
-    # instead, if it exists. This ensures that as long as infinitepush and
-    # infinitepush-other (see below) route to different places (respectively
-    # Mercurial and Mononoke), then infinite pushes without a path OR with a
-    # path of "default" will be routed to both of them. Put it another way: when
-    # you do a scratch push, "default" means the infinitepush path.
+    # instead, if it exists. When you do a scratch push, "default" means the infinitepush path.
     if dest == pathname.default:
         try:
-            return (True, ui.paths.getpath(pathname.infinitepushwrite))
+            return ui.paths.getpath(pathname.infinitepushwrite)
         except error.RepoError:
             # Fallthrough to the next block.
             pass
 
         try:
-            return (True, ui.paths.getpath(pathname.infinitepush))
+            return ui.paths.getpath(pathname.infinitepush)
         except error.RepoError:
             # Fallthrough to the next block.
             pass
 
     if dest == pathname.infinitepush:
         try:
-            return (True, ui.paths.getpath(pathname.infinitepushwrite))
+            return ui.paths.getpath(pathname.infinitepushwrite)
         except error.RepoError:
             # Fallthrough to the next block.
             pass
@@ -146,9 +142,9 @@ def preparepush(ui, dest):
                 pathname.default,
             ),
         )
-        return (True, path)
+        return path
 
-    return (False, ui.paths.getpath(dest))
+    return ui.paths.getpath(dest)
 
 
 def _push(orig, ui, repo, dest=None, *args, **opts):
@@ -221,15 +217,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 exchange, "_localphasemove", _phasemove
             )
 
-            replicate, path = preparepush(ui, dest)
-
-            # We'll replicate the push if the user intended their push to go to
-            # the default infinitepush destination.
-            if replicate:
-                try:
-                    otherpath = repo.ui.paths.getpath(pathname.infinitepushother)
-                except error.RepoError:
-                    pass
+            path = preparepush(ui, dest)
         else:
             path = ui.paths.getpath(
                 dest, default=(pathname.defaultpush, pathname.default)

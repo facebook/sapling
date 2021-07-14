@@ -1311,7 +1311,6 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
         dest=dest,
         connect_opts=opts,
     )
-    background.backgroundbackupother(repo, dest=dest)
     return ret
 
 
