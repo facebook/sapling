@@ -155,12 +155,12 @@ desc(A)
 eq(
     listcommitandmanifesthashes("$A::"),
     [
-        ('A', '8080f180998f', '47968cf0bfa76dd552b0c468487e0b2e58dd067a'),
-        ('B', 'f3631cd323b7', '2e67f334fe3b408e0657bd93b6b0799d8e4bffbf'),
-        ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
-        ('D', 'd55de8a18953', 'e6e729a4a441b3c48a20a19e6696a33428e8824b'),
-        ('E', '02d26f311e24', 'c618b8195031a0c6874a557ee7445f6567af4dd7'),
-        ('F', 'c431bfe62c4c', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
+        ("A", "8080f180998f", "47968cf0bfa76dd552b0c468487e0b2e58dd067a"),
+        ("B", "f3631cd323b7", "2e67f334fe3b408e0657bd93b6b0799d8e4bffbf"),
+        ("C", "ab6f17cbfcbc", "9f7dac017ac942faf4c03e81b078194f95a4e042"),
+        ("D", "d55de8a18953", "e6e729a4a441b3c48a20a19e6696a33428e8824b"),
+        ("E", "02d26f311e24", "c618b8195031a0c6874a557ee7445f6567af4dd7"),
+        ("F", "c431bfe62c4c", "c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46"),
     ],
 )
 sh % "hg push --to=master -r $F" == r"""
@@ -193,12 +193,12 @@ sh % "cd $TESTTMP/pullingclient"
 eq(
     listcommitandmanifesthashes("$A::"),
     [
-        ('A', '8080f180998f', '47968cf0bfa76dd552b0c468487e0b2e58dd067a'),
-        ('B', 'f3631cd323b7', '2e67f334fe3b408e0657bd93b6b0799d8e4bffbf'),
-        ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
-        ('D', 'd55de8a18953', 'e6e729a4a441b3c48a20a19e6696a33428e8824b'),
-        ('E', 'ce93848c2534', 'c618b8195031a0c6874a557ee7445f6567af4dd7'),
-        ('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
+        ("A", "8080f180998f", "47968cf0bfa76dd552b0c468487e0b2e58dd067a"),
+        ("B", "f3631cd323b7", "2e67f334fe3b408e0657bd93b6b0799d8e4bffbf"),
+        ("C", "ab6f17cbfcbc", "9f7dac017ac942faf4c03e81b078194f95a4e042"),
+        ("D", "d55de8a18953", "e6e729a4a441b3c48a20a19e6696a33428e8824b"),
+        ("E", "ce93848c2534", "c618b8195031a0c6874a557ee7445f6567af4dd7"),
+        ("F", "2ce21aadf6a7", "c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46"),
     ],
 )
 
@@ -256,10 +256,10 @@ sh % "hg log -G -T '{desc} {bookmarks}'" == r"""
 eq(
     listcommitandmanifesthashes("desc(F)::"),
     [
-        ('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
-        ('G', 'f90743172206', '5d26e08806c5cdc3e7f3fba1d7fcf50cd224960e'),
-        ('H', '3c5d22b367fc', '41a7c2a088eb3a436987339e5e73f08afa7da8e8'),
-        ('I', 'ae1644484ec9', 'b151de3f04de862dfdbaa23c68a297f225951044'),
-        ('J', 'ec18dc54c59a', 'ae0f3f86d8bf6dfb032cfc903794783ca8752437'),
+        ("F", "2ce21aadf6a7", "c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46"),
+        ("G", "f90743172206", "5d26e08806c5cdc3e7f3fba1d7fcf50cd224960e"),
+        ("H", "3c5d22b367fc", "41a7c2a088eb3a436987339e5e73f08afa7da8e8"),
+        ("I", "ae1644484ec9", "b151de3f04de862dfdbaa23c68a297f225951044"),
+        ("J", "ec18dc54c59a", "ae0f3f86d8bf6dfb032cfc903794783ca8752437"),
     ],
 )

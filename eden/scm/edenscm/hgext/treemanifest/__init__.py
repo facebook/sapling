@@ -488,8 +488,7 @@ class basetreemanifestlog(object):
         tr=None,
         linkrev=None,
     ):
-        """Writes the given tree into the manifestlog.
-        """
+        """Writes the given tree into the manifestlog."""
         return self._addtopack(
             ui,
             newtree,
