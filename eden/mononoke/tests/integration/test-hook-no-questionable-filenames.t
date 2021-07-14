@@ -92,6 +92,6 @@ Attempt to add a filename with an apostrophe in it
   remote:     no_questionable_filenames for 11ee725a331757675c477522b172ab35967903ef: ABORT: Illegal filename: test'file
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nno_questionable_filenames for 11ee725a331757675c477522b172ab35967903ef: ABORT: Illegal filename: test\'file"
+  remote:     "hooks failed:\nno_questionable_filenames for 11ee725a331757675c477522b172ab35967903ef: ABORT: Illegal filename: test'file"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

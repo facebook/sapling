@@ -88,7 +88,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   remote:     deny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename \'smallrepofolder/f/.git/HEAD\' matched name pattern \'/[.]git/\'. Rename or remove this file and try again."
+  remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

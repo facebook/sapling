@@ -52,7 +52,7 @@ Positive testing
   remote:     conflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file '1'
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nconflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file \'1\'"
+  remote:     "hooks failed:\nconflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file '1'"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -71,7 +71,7 @@ Positive testing
   remote:     conflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file '1'
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nconflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file \'1\'"
+  remote:     "hooks failed:\nconflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file '1'"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -137,6 +137,6 @@ Test markers not on the first line
   remote:     conflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file 'notfirstline'
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nconflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file \'notfirstline\'"
+  remote:     "hooks failed:\nconflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file 'notfirstline'"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

@@ -244,7 +244,7 @@ advancing trunk over a commit with a git mapping populates the git mapping
 
 write restrictions prevent creating a bookmark over a path that is not allowed (relative to trunk)
   $ scsc create-bookmark -R repo --name other -i $G --service-id restricted-service
-  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'restricted-service\' is not permitted to modify path \'G\'" }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service 'restricted-service' is not permitted to modify path 'G'" }
   [1]
 
 write restrictions don't prevent creating a bookmark that is an ancestor of trunk
@@ -252,7 +252,7 @@ write restrictions don't prevent creating a bookmark that is an ancestor of trun
 
 write restrictions do prevent moving a bookmark over a path that is not allowed
   $ scsc move-bookmark -R repo --name other -i $G --service-id restricted-service
-  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'restricted-service\' is not permitted to modify path \'G\'" }
+  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service 'restricted-service' is not permitted to modify path 'G'" }
   [1]
 
 write restrictions don't prevent moving a bookmark over a path that is permitted
@@ -261,17 +261,17 @@ this time we also use another bookmark as the target
 
 a service with no permitted paths can't create a bookmark that touches anything
   $ scsc create-bookmark -R repo --name nopaths -i $J --service-id no-paths-service
-  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'no-paths-service\' is not permitted to modify path \'J\'" }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service 'no-paths-service' is not permitted to modify path 'J'" }
   [1]
 
 trunk can't be deleted
   $ scsc delete-bookmark -R repo --name trunk
-  error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Deletion of \'trunk\' is prohibited" }
+  error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Deletion of 'trunk' is prohibited" }
   [1]
 
 nor can scratch bookmarks
   $ scsc delete-bookmark -R repo --name scratch/indigo
-  error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Deletion of \'scratch/indigo\' is prohibited" }
+  error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Deletion of 'scratch/indigo' is prohibited" }
   [1]
 
 but other bookmarks can be deleted

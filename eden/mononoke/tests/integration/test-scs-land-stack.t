@@ -163,12 +163,12 @@ try to land something that conflicts, it should fail for services, too
 
 a service with no permitted paths can't land anything
   $ scsc land-stack -R repo --name trunk -i $J -i $B --service-id no-paths-service
-  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'no-paths-service\' is not permitted to modify path \'J\'" }
+  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service 'no-paths-service' is not permitted to modify path 'J'" }
   [1]
 
 try to land J-L via the restricted service.  it's not permitted to land L
   $ scsc land-stack -R repo --name trunk -i $L -i $B --service-id restricted-service
-  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'restricted-service\' is not permitted to modify path \'L\'" }
+  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service 'restricted-service' is not permitted to modify path 'L'" }
   [1]
 
 but it can land J-K

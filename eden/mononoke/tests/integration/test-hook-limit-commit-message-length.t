@@ -48,7 +48,7 @@ Commit message too long - should fail
   remote:     limit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for \'foo\' (10) exceeds length limit (>= 10)"
+  remote:     "hooks failed:\nlimit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -70,6 +70,6 @@ Commit message too long (UTF-8 multibyte characters) - should fail
   remote:     limit_commit_message_length for 0531ec5874870ef2b56c302d7844038e71efce54: Commit message length for 'foo' (11) exceeds length limit (>= 10)
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_message_length for 0531ec5874870ef2b56c302d7844038e71efce54: Commit message length for \'foo\' (11) exceeds length limit (>= 10)"
+  remote:     "hooks failed:\nlimit_commit_message_length for 0531ec5874870ef2b56c302d7844038e71efce54: Commit message length for 'foo' (11) exceeds length limit (>= 10)"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
