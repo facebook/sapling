@@ -1093,6 +1093,7 @@ impl LfsRemoteInner {
 
                 if http_options.proxy_unix_socket.is_some() {
                     req.set_auth_proxy_socket_path(http_options.proxy_unix_socket.clone());
+                    req.set_header("x-x2pagentd-ws-over-h1", "1");
                     req.set_verify_tls_cert(false)
                         .set_verify_tls_host(false)
                         .set_verbose(true)

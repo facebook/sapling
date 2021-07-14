@@ -312,6 +312,8 @@ class mononokepeer(stdiopeer.stdiopeer):
                         )
                     )
                 )
+                if self._unix_socket_proxy:
+                    headers.append(b"x-x2pagentd-ws-over-h1: 1")
 
                 if self._compression:
                     headers.append(b"X-Client-Compression: zstd=stdin")
