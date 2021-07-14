@@ -92,10 +92,10 @@ class PrivHelperClientImpl : public PrivHelper,
       }
       state->eventBase = eventBase;
       state->status = Status::RUNNING;
-      eventBase->runOnDestruction(*this);
       state->conn_->attachEventBase(eventBase);
       state->conn_->setReceiveCallback(this);
     }
+    eventBase->runOnDestruction(*this);
   }
 
   void detachEventBase() override {
@@ -172,9 +172,11 @@ class PrivHelperClientImpl : public PrivHelper,
     // If the state was still RUNNING detach from the EventBase.
     if (eventBase) {
       eventBase->runImmediatelyOrRunInEventBaseThreadAndWait([this] {
-        auto state = state_.wlock();
-        state->conn_->clearReceiveCallback();
-        state->conn_->detachEventBase();
+        {
+          auto state = state_.wlock();
+          state->conn_->clearReceiveCallback();
+          state->conn_->detachEventBase();
+        }
         cancel();
       });
     }
