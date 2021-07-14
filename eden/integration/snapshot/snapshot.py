@@ -10,6 +10,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import socket
 import stat
 import subprocess
@@ -154,6 +155,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         and recreates any transient state needed for the snapshot.
         """
         self.create_transient_dir()
+        self._update_hg_state(self.base_dir)
         self._update_eden_state(self.base_dir, uid=os.getuid(), gid=os.getgid())
         self.prep_resume()
 
@@ -205,6 +207,15 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
     def _read_metadata(self) -> Dict[str, Any]:
         with self._metadata_path.open("r") as f:
             return typing.cast(Dict[str, Any], json.load(f))
+
+    def _update_hg_state(self, base_dir: Path) -> None:
+        """Update hgrc so that it matches the location of the unpacked snapshot."""
+        hgrc_dir = self.data_dir / "repo/.hg/hgrc"
+        with hgrc_dir.open("r") as f:
+            match = re.search(r"\/tmp/eden_data\.\w+", f.read())
+            old_dir = match.group(0) if match is not None else None
+        if old_dir is not None:
+            self._replace_file_contents(hgrc_dir, bytes(Path(old_dir)), bytes(base_dir))
 
     def _update_eden_state(self, base_dir: Path, uid: int, gid: int) -> None:
         """Update Eden's stored state for the snapshot so it will work in a new
