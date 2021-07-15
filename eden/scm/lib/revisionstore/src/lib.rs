@@ -134,6 +134,7 @@ mod indexedlogutil;
 mod lfs;
 mod memcache;
 mod metadatastore;
+mod missing;
 mod redacted;
 mod remotestore;
 mod repack;

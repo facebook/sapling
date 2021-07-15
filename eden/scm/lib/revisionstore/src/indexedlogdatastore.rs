@@ -19,8 +19,10 @@ use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi_types::{FileEntry, TreeEntry};
 use indexedlog::log::IndexOutput;
 use lz4_pyframe::{compress, decompress};
+use tracing::warn;
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
+use crate::missing::MissingInjection;
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     indexedlogutil::{Store, StoreOpenOptions, StoreType},
@@ -31,12 +33,13 @@ use crate::{
 };
 
 struct IndexedLogHgIdDataStoreInner {
-    log: Store,
+    pub log: Store,
 }
 
 pub struct IndexedLogHgIdDataStore {
     inner: RwLock<IndexedLogHgIdDataStoreInner>,
     extstored_policy: ExtStoredPolicy,
+    missing: MissingInjection,
 }
 
 pub struct IndexedLogHgIdDataStoreReadGuard<'a>(RwLockReadGuard<'a, IndexedLogHgIdDataStoreInner>);
@@ -210,6 +213,7 @@ impl IndexedLogHgIdDataStore {
         Ok(IndexedLogHgIdDataStore {
             inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
             extstored_policy,
+            missing: MissingInjection::new_from_env("MISSING_FILES"),
         })
     }
 
@@ -397,17 +401,24 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
 impl LocalStore for IndexedLogHgIdDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.read();
-        Ok(keys
+        let missing: Vec<StoreKey> = keys
             .iter()
             .filter(|k| match k {
-                StoreKey::HgId(k) => match Entry::from_log(k, &inner.log) {
-                    Ok(None) | Err(_) => true,
-                    Ok(Some(_)) => false,
-                },
+                StoreKey::HgId(k) => {
+                    if self.missing.is_missing(&k.path) {
+                        warn!("Force missing: {}", k.path);
+                        return true;
+                    }
+                    match Entry::from_log(k, &inner.log) {
+                        Ok(None) | Err(_) => true,
+                        Ok(Some(_)) => false,
+                    }
+                }
                 StoreKey::Content(_, _) => true,
             })
             .cloned()
-            .collect())
+            .collect();
+        Ok(missing)
     }
 }
 
