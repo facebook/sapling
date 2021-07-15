@@ -14,4 +14,3 @@ class pathname(object):
     defaultpush = "default-push"
     infinitepush = "infinitepush"
     infinitepushbookmark = "infinitepushbookmark"
-    infinitepushwrite = "infinitepush-write"

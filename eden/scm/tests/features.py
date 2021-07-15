@@ -526,7 +526,6 @@ segmentedchangelogcompatiblelist = """
     test-infinitepush-remotefilelog.t
     test-infinitepush-remotenames.t
     test-infinitepush-scratchbookmark-commands.t
-    test-infinitepush-write.t
     test-init.t
     test-issue1502.t
     test-issue522.t

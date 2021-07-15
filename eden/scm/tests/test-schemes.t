@@ -18,7 +18,6 @@
   > default = dotdot://server
   > default-push = push://server
   > infinitepush = i://server
-  > infinitepush-write = iw://server
   > normal-path = mononoke://mononoke.internal.tfbnw.net/server
   > [remotefilelog]
   > fallbackpath = fallback://server
@@ -39,7 +38,6 @@ test converting debug output for all paths
   paths.default=ssh://user@dummy/server (expanded from dotdot://server)
   paths.default-push=ssh://user@dummy/server (expanded from push://server)
   paths.infinitepush=ssh://user@dummy/server (expanded from i://server)
-  paths.infinitepush-write=ssh://user@dummy/server (expanded from iw://server)
   paths.normal-path=mononoke://mononoke.internal.tfbnw.net/server (not expanded)
 
 check that paths are expanded
@@ -70,7 +68,7 @@ expanding an unknown scheme emits the input
 
   $ mkcommit something
   $ hg push -r . --to scratch/test123 --create
-  pushing to iw://server/
+  pushing to i://server/
   searching for changes
   remote: pushing 1 commit:
   remote:     6e16a5f9c216  something

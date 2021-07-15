@@ -308,7 +308,7 @@ Pushbackup to mononoke peer with compression enabled
 (a larger file is needed to repro problems with zstd compression)
   $ dd if=/dev/zero of=aa bs=4048 count=1024 2> /dev/null
   $ hg amend -m "xxx"
-  $ MONONOKE_DIRECT_PEER=1 hgmn cloud backup --config paths.infinitepush-write=mononoke://$(mononoke_address)/repo  --dest mononoke://$(mononoke_address)/repo --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
+  $ MONONOKE_DIRECT_PEER=1 hgmn cloud backup --dest mononoke://$(mononoke_address)/repo --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
   backing up stack rooted at 47da8b81097c
   commitcloud: backed up 1 commit
 

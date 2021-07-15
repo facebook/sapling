@@ -220,12 +220,8 @@ def _sync(
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
 
-    readonly = not origheads and not origbookmarks
-    remotepath = (
-        ccutil.getremotereadpath(repo, dest)
-        if readonly
-        else ccutil.getremotepath(repo, dest)
-    )
+    remotepath = ccutil.getremotepath(repo, dest)
+
     getconnection = lambda: repo.connectionpool.get(
         remotepath, connect_opts, reason="cloudsync"
     )

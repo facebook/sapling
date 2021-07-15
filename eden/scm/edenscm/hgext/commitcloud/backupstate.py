@@ -31,7 +31,7 @@ class BackupState(object):
     Use `readheadsfromall` class method to get the union of what heads has been backed up at different paths.
 
     After the migration, we should deprecate the current filename convention for the backup cache files.
-    They shouldn't depend on the remotepath and move the whole extension to always use infinitepushwrite path.
+    They shouldn't depend on the remotepath and move the whole extension to always use infinitepush path (infinitepushwrite path should be deprecated).
     """
 
     prefix = "backedupheads."
@@ -63,9 +63,9 @@ class BackupState(object):
         # return the cached backedup heads in found
         if heads:
             return heads
-        # if no cache found - rebuild it based on the infinitepushwrite remote path
+        # if no cache found - rebuild it based on the infinitepush remote path
         return BackupState(
-            repo, ccutil.getremotewritepath(repo, None), resetlocalstate=True
+            repo, ccutil.getremotepath(repo, None), resetlocalstate=True
         ).heads
 
     def __init__(self, repo, remotepath, resetlocalstate=False):

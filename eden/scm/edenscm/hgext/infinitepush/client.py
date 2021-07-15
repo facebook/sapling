@@ -114,20 +114,7 @@ def preparepush(ui, dest):
     # instead, if it exists. When you do a scratch push, "default" means the infinitepush path.
     if dest == pathname.default:
         try:
-            return ui.paths.getpath(pathname.infinitepushwrite)
-        except error.RepoError:
-            # Fallthrough to the next block.
-            pass
-
-        try:
             return ui.paths.getpath(pathname.infinitepush)
-        except error.RepoError:
-            # Fallthrough to the next block.
-            pass
-
-    if dest == pathname.infinitepush:
-        try:
-            return ui.paths.getpath(pathname.infinitepushwrite)
         except error.RepoError:
             # Fallthrough to the next block.
             pass
@@ -136,7 +123,6 @@ def preparepush(ui, dest):
         path = ui.paths.getpath(
             dest,
             default=(
-                pathname.infinitepushwrite,
                 pathname.infinitepush,
                 pathname.defaultpush,
                 pathname.default,
@@ -388,7 +374,6 @@ def _resetinfinitepushpath(repo, ui, **opts):
     overrides = {}
     defaultpath = pathname.default
     infinitepushpath = pathname.infinitepush
-    infinitepushwritepath = pathname.infinitepushwrite
     infinitepushbookmarkpath = pathname.infinitepushbookmark
 
     if opts.get("bookmark"):
@@ -418,7 +403,6 @@ def _resetinfinitepushpath(repo, ui, **opts):
     if path is not None:
         overrides[("paths", defaultpath)] = ui.paths[path].loc
         overrides[("paths", infinitepushpath)] = "!"
-        overrides[("paths", infinitepushwritepath)] = "!"
         overrides[("paths", infinitepushbookmarkpath)] = "!"
         with ui.configoverride(overrides, "infinitepush"):
             loc, sub = ui.configsuboptions("paths", defaultpath)
@@ -428,7 +412,6 @@ def _resetinfinitepushpath(repo, ui, **opts):
             for p in [
                 infinitepushpath,
                 infinitepushbookmarkpath,
-                infinitepushwritepath,
             ]:
                 if p not in ui.paths:
                     continue

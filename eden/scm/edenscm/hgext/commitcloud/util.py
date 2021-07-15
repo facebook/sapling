@@ -65,33 +65,8 @@ def getreponame(repo):
     return reponame
 
 
-def getremotewritepath(repo, dest):
-    """Select an appopriate remote repository to connect to for read/write commit cloud operations.
-
-    If dest is empty, pass in None to get the default path.
-    Priorities: 'infinitepushwrite', 'infinitepush', 'default'
-    """
-    pathname = dependencies.infinitepush.constants.pathname
-    path = repo.ui.paths.getpath(
-        dest or None,
-        default=(pathname.infinitepushwrite, pathname.infinitepush, pathname.default),
-    )
-    if not path:
-        raise error.Abort(
-            _(
-                "none of 'infinitepushwrite', 'infinitepush', 'default' repositories configured!"
-            ),
-            hint=_("see 'hg help config.paths'"),
-        )
-    return path.pushloc or path.loc
-
-
-# alias
-getremotepath = getremotewritepath
-
-
-def getremotereadpath(repo, dest):
-    """Select an appopriate remote repository to connect to for readonly commit cloud operations.
+def getremotepath(repo, dest):
+    """Select an appopriate remote repository to connect to for commit cloud operations.
 
     If dest is empty, pass in None to get the default path.
     Priorities: 'infinitepush', 'default'
