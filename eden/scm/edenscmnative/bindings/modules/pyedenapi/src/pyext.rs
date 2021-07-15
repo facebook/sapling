@@ -502,7 +502,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.lookup_batch(repo, ids, None).await?;
+                    let response = self.lookup_batch(repo, ids).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
@@ -526,15 +526,12 @@ pub trait EdenApiPyExt: EdenApi {
             PyBytes,   /* p1 */
             PyBytes,   /* p2 */
         )>,
-        callback: Option<PyObject>,
-        _progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<(
         TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>,
         PyFuture,
     )> {
         let keys = to_keys_with_parents(py, &keys)?;
         let store = as_legacystore(py, store)?;
-        let callback = callback.map(wrap_callback);
 
         let (mut upload_data, filenodes_data): (Vec<_>, Vec<_>) = keys
             .into_iter()
@@ -577,7 +574,7 @@ pub trait EdenApiPyExt: EdenApi {
                     let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                     // upload file contents first, receiving upload tokens
                     let file_content_tokens = self
-                        .process_files_upload(repo.clone(), upload_data, callback)
+                        .process_files_upload(repo.clone(), upload_data)
                         .await?
                         .entries
                         .try_collect::<Vec<_>>()
@@ -605,7 +602,7 @@ pub trait EdenApiPyExt: EdenApi {
 
                     // upload hg filenodes
                     let response = self
-                        .upload_filenodes_batch(repo, filenodes_data, None)
+                        .upload_filenodes_batch(repo, filenodes_data)
                         .await?;
 
                     Ok::<_, EdenApiError>((response.entries, response.stats))
@@ -631,15 +628,12 @@ pub trait EdenApiPyExt: EdenApi {
             PyBytes, /* p2 */
             PyBytes, /* data */
         )>,
-        callback: Option<PyObject>,
-        _progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
         let items = to_trees_upload_items(py, &items)?;
-        let callback = callback.map(wrap_callback);
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.upload_trees_batch(repo, items, callback).await?;
+                    let response = self.upload_trees_batch(repo, items).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
@@ -662,13 +656,10 @@ pub trait EdenApiPyExt: EdenApi {
             Serde<HgChangesetContent>, /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-        callback: Option<PyObject>,
-        _progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<(
         TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>,
         PyFuture,
     )> {
-        let callback = callback.map(wrap_callback);
         let changesets = changesets
             .into_iter()
             .map(|(node_id, content)| UploadHgChangeset {
@@ -680,9 +671,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self
-                        .upload_changesets(repo, changesets, mutations, callback)
-                        .await?;
+                    let response = self.upload_changesets(repo, changesets, mutations).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

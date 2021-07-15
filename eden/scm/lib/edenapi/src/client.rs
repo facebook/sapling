@@ -714,7 +714,6 @@ impl EdenApi for Client {
                     .into_iter()
                     .map(|hgid| AnyId::HgChangesetId(hgid))
                     .collect(),
-                None,
             )
             .await?;
 
@@ -799,7 +798,6 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<AnyId>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         let msg = format!("Requesting lookup for {} item(s)", items.len());
         tracing::info!("{}", &msg);
@@ -824,15 +822,13 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self.fetch::<WireLookupResponse>(requests, progress).await?)
+        Ok(self.fetch::<WireLookupResponse>(requests, None).await?)
     }
 
     async fn process_files_upload(
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
-        // currently unused
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         if data.is_empty() {
             return Ok(Fetch::empty());
@@ -847,7 +843,7 @@ impl EdenApi for Client {
             .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
             .collect();
 
-        let mut entries = self.lookup_batch(repo.clone(), anyids, None).await?.entries;
+        let mut entries = self.lookup_batch(repo.clone(), anyids).await?.entries;
         while let Some(entry) = entries.next().await {
             if let Ok(entry) = entry {
                 if let Some(token) = entry.token {
@@ -912,7 +908,6 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
@@ -941,7 +936,7 @@ impl EdenApi for Client {
         )?;
 
         Ok(self
-            .fetch::<WireUploadHgFilenodeResponse>(requests, progress)
+            .fetch::<WireUploadHgFilenodeResponse>(requests, None)
             .await?)
     }
 
@@ -949,7 +944,6 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
         let msg = format!("Requesting trees upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
@@ -977,9 +971,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self
-            .fetch::<WireUploadTreeResponse>(requests, progress)
-            .await?)
+        Ok(self.fetch::<WireUploadTreeResponse>(requests, None).await?)
     }
 
     // the request isn't batched, batching should be done outside if needed
@@ -988,7 +980,6 @@ impl EdenApi for Client {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         let msg = format!(
             "Requesting changesets upload for {} item(s)",
@@ -1016,7 +1007,7 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self
-            .fetch::<WireUploadHgChangesetsResponse>(vec![request], progress)
+            .fetch::<WireUploadHgChangesetsResponse>(vec![request], None)
             .await?)
     }
 }

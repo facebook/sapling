@@ -456,7 +456,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<AnyId>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         unimplemented!();
     }
@@ -465,7 +464,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         unimplemented!();
     }
@@ -474,7 +472,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         unimplemented!();
     }
@@ -483,7 +480,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<UploadTreeEntry>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
         unimplemented!();
     }
@@ -493,7 +489,6 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         unimplemented!();
     }

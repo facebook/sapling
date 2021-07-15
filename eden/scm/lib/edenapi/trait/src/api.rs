@@ -149,7 +149,6 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         items: Vec<AnyId>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError>;
 
     /// Upload files content
@@ -157,7 +156,6 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError>;
 
     /// Upload list of hg filenodes
@@ -165,7 +163,6 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError>;
 
     /// Upload list of trees
@@ -173,7 +170,6 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError>;
 
     /// Upload list of changesets
@@ -182,7 +178,6 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError>;
 }
 
@@ -355,10 +350,9 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<AnyId>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .lookup_batch(repo, items, progress)
+            .lookup_batch(repo, items)
             .await
     }
 
@@ -366,10 +360,9 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .process_files_upload(repo, data, progress)
+            .process_files_upload(repo, data)
             .await
     }
 
@@ -378,10 +371,9 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_filenodes_batch(repo, items, progress)
+            .upload_filenodes_batch(repo, items)
             .await
     }
 
@@ -389,10 +381,9 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_trees_batch(repo, items, progress)
+            .upload_trees_batch(repo, items)
             .await
     }
 
@@ -401,10 +392,9 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_changesets(repo, changesets, mutations, progress)
+            .upload_changesets(repo, changesets, mutations)
             .await
     }
 }

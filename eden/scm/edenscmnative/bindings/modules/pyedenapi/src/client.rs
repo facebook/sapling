@@ -279,10 +279,8 @@ py_class!(pub class client |py| {
             PyBytes,   /* p1 */
             PyBytes,   /* p2 */
         )>,
-        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>, PyFuture)> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().uploadfiles_py(py, store, repo, keys, callback, progress)
+        self.inner(py).clone().uploadfiles_py(py, store, repo, keys)
     }
 
     /// Upload trees
@@ -295,10 +293,8 @@ py_class!(pub class client |py| {
             PyBytes,   /* p2 */
             PyBytes,   /* data */
         )>,
-        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().uploadtrees_py(py, repo, items, callback, progress)
+        self.inner(py).clone().uploadtrees_py(py, repo, items)
     }
 
     /// Upload changesets
@@ -311,10 +307,8 @@ py_class!(pub class client |py| {
             Serde<HgChangesetContent>  /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>, PyFuture)> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations, callback, progress)
+        self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations)
     }
 });
 

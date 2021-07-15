@@ -455,7 +455,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<AnyId>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support lookup_batch endpoint".to_string(),
@@ -466,7 +465,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support process_file_upload endpoint".to_string(),
@@ -477,7 +475,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
@@ -488,7 +485,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<UploadTreeEntry>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_trees_batch endpoint".to_string(),
@@ -500,7 +496,6 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
