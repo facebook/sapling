@@ -15,8 +15,9 @@ use types::HgId;
 use crate::commit::{
     CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, Extra, HgChangesetContent, HgMutationEntryContent,
-    UploadHgChangeset, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
+    CommitLocationToHashResponse, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
+    HgChangesetContent, HgMutationEntryContent, UploadHgChangeset, UploadHgChangesetsRequest,
+    UploadHgChangesetsResponse,
 };
 use crate::wire::{
     is_default, ToApi, ToWire, WireHgId, WireParents, WireRepoPathBuf, WireResult,
@@ -625,6 +626,53 @@ impl ToApi for WireUploadHgChangesetsResponse {
         Ok(UploadHgChangesetsResponse {
             index: self.index,
             token: self.token.to_api()?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireEphemeralPrepareRequest {}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireEphemeralPrepareResponse {
+    #[serde(rename = "1")]
+    pub bubble_id: u64,
+}
+
+impl ToWire for EphemeralPrepareRequest {
+    type Wire = WireEphemeralPrepareRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {}
+    }
+}
+
+impl ToApi for WireEphemeralPrepareRequest {
+    type Api = EphemeralPrepareRequest;
+    type Error = std::convert::Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(Self::Api {})
+    }
+}
+
+impl ToWire for EphemeralPrepareResponse {
+    type Wire = WireEphemeralPrepareResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            bubble_id: self.bubble_id,
+        }
+    }
+}
+
+impl ToApi for WireEphemeralPrepareResponse {
+    type Api = EphemeralPrepareResponse;
+    type Error = std::convert::Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(Self::Api {
+            bubble_id: self.bubble_id,
         })
     }
 }

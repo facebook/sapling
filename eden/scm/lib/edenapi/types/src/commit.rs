@@ -247,3 +247,11 @@ pub struct UploadHgChangesetsResponse {
     pub index: usize,
     pub token: UploadToken,
 }
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct EphemeralPrepareRequest {}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct EphemeralPrepareResponse {
+    pub bubble_id: u64,
+}

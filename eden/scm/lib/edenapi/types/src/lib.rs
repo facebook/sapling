@@ -45,8 +45,9 @@ pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
     CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, Extra,
-    HgChangesetContent, HgMutationEntryContent, UploadHgChangeset, UploadHgChangesetsRequest,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
+    HgMutationEntryContent, UploadHgChangeset, UploadHgChangesetsRequest,
     UploadHgChangesetsResponse,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
