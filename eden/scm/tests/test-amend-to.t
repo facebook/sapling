@@ -171,15 +171,17 @@ Test replacing file with directory.
   $ echo foo > foo/foo
   $ hg add foo/foo
   $ hg amend --to .^
-  $ hg log -G -vp -T "{desc} {node|short}"
-  @  two 3b1456dbf553diff --git a/bar b/bar
+  $ hg log -G -vp -T "{desc}\n"
+  @  two
+  │  diff --git a/bar b/bar
   │  new file mode 100644
   │  --- /dev/null
   │  +++ b/bar
   │  @@ -0,0 +1,1 @@
   │  +bar
   │
-  o  one 59fa10ae0edbdiff --git a/foo/foo b/foo/foo
+  o  one
+     diff --git a/foo/foo b/foo/foo
      new file mode 100644
      --- /dev/null
      +++ b/foo/foo
