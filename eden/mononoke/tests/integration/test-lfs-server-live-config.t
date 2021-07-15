@@ -15,7 +15,6 @@
   >   "track_bytes_sent": true,
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
-  >   "throttle_limits": [],
   >   "enforce_acl_check": false,
   >   "tasks_per_content": 1
   > }
@@ -39,7 +38,6 @@
     "object_popularity_category": "",
     "object_popularity_threshold": 0,
     "tasks_per_content": 1,
-    "throttle_limits": [],
     "track_bytes_sent": true
   }
 
@@ -49,7 +47,6 @@
   >   "track_bytes_sent": false,
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
-  >   "throttle_limits": [],
   >   "enforce_acl_check": false,
   >   "tasks_per_content": 1
   > }
@@ -74,6 +71,5 @@
     "object_popularity_category": "",
     "object_popularity_threshold": 0,
     "tasks_per_content": 1,
-    "throttle_limits": [],
     "track_bytes_sent": false
   }

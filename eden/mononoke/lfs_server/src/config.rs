@@ -134,7 +134,6 @@ impl Default for ServerConfig {
             enable_consistent_routing: false,
             disable_hostname_logging: false,
             enforce_acl_check: false,
-            throttle_limits: vec![],
             loadshedding_limits: vec![],
             object_popularity: None,
             // TODO: Remove those once they're gone from Thrift configs.
