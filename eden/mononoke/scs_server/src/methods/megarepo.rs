@@ -14,8 +14,9 @@ use async_requests::types::{ThriftParams, Token};
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_types::RepositoryId;
+use slog::warn;
 use source_control as thrift;
-use std::{collections::HashSet, convert::TryInto};
+use std::{collections::HashSet, convert::TryInto, time::Duration};
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -75,7 +76,40 @@ impl SourceControlServiceImpl {
         let new_config = params.new_config;
         self.verify_repos_by_config(&new_config)?;
         let megarepo_configs = self.megarepo_api.configs();
-        megarepo_configs.add_config_version(ctx, new_config).await?;
+        megarepo_configs
+            .add_config_version(ctx.clone(), new_config.clone())
+            .await?;
+
+        // We've seen cases where config is not readable immediately after
+        // it was written. Let's try reading a few times before returning
+        let mut successful_read = false;
+        for _ in 0..10 {
+            let res = megarepo_configs.get_config_by_version(
+                ctx.clone(),
+                new_config.target.clone(),
+                new_config.version.clone(),
+            );
+            if res.is_ok() {
+                successful_read = true;
+                break;
+            } else {
+                warn!(
+                    ctx.logger(),
+                    "failed to read just written config version {}, retrying...",
+                    new_config.version
+                );
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+        }
+
+        if !successful_read {
+            return Err(errors::internal_error(format!(
+                "Failed to read just written config version {}",
+                new_config.version
+            ))
+            .into());
+        }
+
         Ok(thrift::MegarepoAddConfigResponse {})
     }
 
