@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/config/ReloadableConfig.h"
 
 #include <folly/futures/Future.h>
 #include <algorithm>
@@ -86,8 +87,7 @@ void HgImportRequestQueue::enqueue(HgImportRequest request) {
   queueCV_.notify_one();
 }
 
-std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
-    size_t count) {
+std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
   auto state = state_.lock();
 
   while (state->running && state->queue.empty()) {
@@ -103,7 +103,12 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
 
   std::vector<std::shared_ptr<HgImportRequest>> result;
   std::vector<std::shared_ptr<HgImportRequest>> putback;
-  std::optional<size_t> type;
+
+  // The highest-pri request is the first element of the queue (a heap).
+  size_t type = queue.front()->getType();
+  size_t count = queue.front()->isType<HgImportRequest::TreeImport>()
+      ? config_->getEdenConfig()->importBatchSizeTree.getValue()
+      : config_->getEdenConfig()->importBatchSize.getValue();
 
   for (size_t i = 0; i < count * 3; i++) {
     if (queue.empty() || result.size() == count) {
@@ -121,15 +126,10 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
     auto request = std::move(queue.back());
     queue.pop_back();
 
-    if (!type) {
-      type = request->getType();
+    if (type == request->getType()) {
       result.emplace_back(std::move(request));
     } else {
-      if (*type == request->getType()) {
-        result.emplace_back(std::move(request));
-      } else {
-        putback.emplace_back(std::move(request));
-      }
+      putback.emplace_back(std::move(request));
     }
   }
 

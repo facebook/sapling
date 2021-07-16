@@ -74,8 +74,9 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     uint8_t numberThreads)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
-      config_(std::move(config)),
+      config_(config),
       backingStore_(std::move(backingStore)),
+      queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
@@ -243,8 +244,7 @@ void HgQueuedBackingStore::processPrefetchRequests(
 void HgQueuedBackingStore::processRequest() {
   folly::setThreadName("hgqueue");
   for (;;) {
-    auto requests =
-        queue_.dequeue(config_->getEdenConfig()->importBatchSize.getValue());
+    auto requests = queue_.dequeue();
 
     if (requests.empty()) {
       break;

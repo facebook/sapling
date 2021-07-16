@@ -19,9 +19,12 @@
 
 namespace facebook::eden {
 
+class ReloadableConfig;
+
 class HgImportRequestQueue {
  public:
-  explicit HgImportRequestQueue() {}
+  explicit HgImportRequestQueue(std::shared_ptr<ReloadableConfig> config)
+      : config_(std::move(config)) {}
 
   /*
    * Puts an item into the queue.
@@ -33,10 +36,11 @@ class HgImportRequestQueue {
    * the queue is being destructed. This function will block when there is no
    * item available in the queue.
    *
-   * The returned vector may have fewer requests than it requested, and all
-   * requests in the vector are guaranteed to be the same type.
+   * All requests in the vector are guaranteed to be the same type.
+   * The number of the returned requests is controlled by `import-batch-size*`
+   * options in the config. It may have fewer requests than configured.
    */
-  std::vector<std::shared_ptr<HgImportRequest>> dequeue(size_t count);
+  std::vector<std::shared_ptr<HgImportRequest>> dequeue();
 
   void stop();
 
@@ -173,7 +177,7 @@ class HgImportRequestQueue {
     std::unordered_map<HgProxyHash, std::shared_ptr<HgImportRequest>>
         requestTracker;
   };
-
+  std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<State, std::mutex> state_;
   std::condition_variable queueCV_;
 };
