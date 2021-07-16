@@ -7,7 +7,7 @@
 import csv
 import getpass
 import io
-import os.path
+import os
 import platform
 import re
 import shlex
@@ -83,6 +83,8 @@ def print_diagnostic_info(
         with io.StringIO() as stats_stream:
             stats_mod.do_stats_general(instance, out=stats_stream)
             out.write(stats_stream.getvalue().encode())
+
+    print_env_variables(out)
 
 
 def print_rpm_version(out: IO[bytes]) -> None:
@@ -297,3 +299,12 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
     except Exception as e:
         out.write(b"Error getting edenfs redirections %s\n" % str(e).encode())
         out.write(traceback.format_exc().encode() + b"\n")
+
+
+def print_env_variables(out: IO[bytes]) -> None:
+    try:
+        out.write(b"\nEnvironment Variables:\n")
+        for k, v in os.environ.items():
+            out.write(f"{k}={v}\n".encode())
+    except Exception as e:
+        out.write(f"Error getting environment variables: {e}\n".encode())
