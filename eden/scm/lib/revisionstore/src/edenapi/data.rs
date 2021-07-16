@@ -12,11 +12,13 @@ use futures::prelude::*;
 
 use async_runtime::block_on;
 use progress::Unit;
+use tracing::field;
 
 use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult},
     localstore::LocalStore,
     types::StoreKey,
+    util,
 };
 
 use super::{hgid_keys, EdenApiRemoteStore, EdenApiStoreKind, File, Tree};
@@ -59,10 +61,26 @@ impl RemoteDataStore for EdenApiDataStore<File> {
                 self.store.add_file(&entry)?;
                 prog.increment(1)?;
             }
-            self.store.get_missing(keys)
+            // Explicitly force the result type here, since otherwise it can't infer the error
+            // type.
+            let result: Result<_> = Ok((self.store.get_missing(keys)?, response.stats.await?));
+            result
         };
 
-        block_on(fetch)
+        let span = tracing::info_span!(
+            "fetch_edenapi",
+            downloaded = field::Empty,
+            uploaded = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+            latency = field::Empty,
+            download_speed = field::Empty,
+            scmstore = false,
+        );
+        let _enter = span.enter();
+        let (keys, stats) = block_on(fetch)?;
+        util::record_edenapi_stats(&span, &stats);
+        Ok(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -90,10 +108,26 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
                 self.store.add_tree(&entry)?;
                 prog.increment(1)?;
             }
-            self.store.get_missing(keys)
+            // Explicitly force the result type here, since otherwise it can't infer the error
+            // type.
+            let result: Result<_> = Ok((self.store.get_missing(keys)?, response.stats.await?));
+            result
         };
 
-        block_on(fetch)
+        let span = tracing::info_span!(
+            "fetch_edenapi",
+            downloaded = field::Empty,
+            uploaded = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+            latency = field::Empty,
+            download_speed = field::Empty,
+            scmstore = false,
+        );
+        let _enter = span.enter();
+        let (keys, stats) = block_on(fetch)?;
+        util::record_edenapi_stats(&span, &stats);
+        Ok(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
