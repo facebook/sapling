@@ -138,6 +138,9 @@ Configs::
     # of smartlog.
     enablestatus = False
 
+    # Use EdenApi Uploads for uploading commit cloud commits during sync
+    usehttpupload = True
+
     # The command to download bundles from a backup bundle store
     # the command has to be a formatted string with params: 'filename' and 'handle'
     get_command = bundlefetcher -h {handle} -o {filename}
@@ -197,6 +200,7 @@ configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "unhydratedpullsizelimit", 5000)
 configitem("commitcloud", "sl_showremotebookmarks", False)
 configitem("commitcloud", "sl_showallbookmarks", False)
+configitem("commitcloud", "usehttpupload", False)
 configitem(
     "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
 )

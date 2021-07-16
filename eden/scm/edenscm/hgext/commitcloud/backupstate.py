@@ -12,7 +12,7 @@ import time
 from edenscm.mercurial import error, node as nodemod, util
 from edenscm.mercurial.pycompat import encodeutf8
 
-from . import dependencies
+from . import dependencies, util as ccutil
 
 FORMAT_VERSION = "v1"
 
@@ -26,9 +26,10 @@ class BackupState(object):
     prefix = "backedupheads."
     directory = "commitcloud"
 
-    def __init__(self, repo, remotepath, resetlocalstate=False):
+    def __init__(self, repo, remotepath, resetlocalstate=False, usehttp=False):
         self.repo = repo
         self.remotepath = remotepath
+        self.usehttp = usehttp
         repo.sharedvfs.makedirs(self.directory)
         self.filename = os.path.join(
             self.directory,
@@ -69,12 +70,26 @@ class BackupState(object):
                 "not public() - hidden() - (not public() & ::%ln)", self.heads
             )
         ]
+        if not unknown:
+            return
 
-        def getconnection():
-            return repo.connectionpool.get(remotepath)
+        if self.usehttp:
+            try:
+                unknown = [nodemod.bin(node) for node in unknown]
+                stream, _stats = repo.edenapi.commitknown(
+                    ccutil.getreponame(repo), unknown
+                )
+                nodes = {
+                    item["hgid"] for item in stream if item["known"].get("Ok") is True
+                }
+            except (error.RustError, error.HttpError) as e:
+                raise error.Abort(e)
+        else:
 
-        nodes = {}
-        if unknown:
+            def getconnection():
+                return repo.connectionpool.get(remotepath)
+
+            nodes = {}
             try:
                 nodes = {
                     nodemod.bin(hexnode)
@@ -88,6 +103,7 @@ class BackupState(object):
                 }
             except error.RepoError:
                 pass
+
         self.update(nodes)
 
     @util.propertycache

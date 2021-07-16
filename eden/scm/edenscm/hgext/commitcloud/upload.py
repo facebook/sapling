@@ -94,8 +94,9 @@ def uploadtrees(repo, trees):
 
 def uploadchangesets(repo, changesets, mutations):
     """Upload changesets"""
+    uploaded, failed = [], []
     if not changesets:
-        return
+        return uploaded, failed
     try:
         stream, _stats = repo.edenapi.uploadchangesets(
             ccutil.getreponame(repo), changesets, mutations
@@ -110,6 +111,12 @@ def uploadchangesets(repo, changesets, mutations):
             % len(foundindices),
             component="commitcloud",
         )
+        for index, cs in enumerate(changesets):
+            if index in foundindices:
+                uploaded.append(cs[0])
+            else:
+                failed.append(cs[0])
+        return uploaded, failed
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
@@ -174,14 +181,14 @@ def upload(repo, revs, force=False):
         ]
     if not heads:
         ui.status(_("nothing to upload\n"), component="commitcloud")
-        return
+        return [], []
 
     # Check what heads have been already uploaded and what heads are missing
     missingheads = heads if force else lookupcommits(repo, heads)
 
     if not missingheads:
         ui.status(_("nothing to upload\n"), component="commitcloud")
-        return
+        return [], []
 
     # Print the heads missing on the server
     _maxoutput = 20
@@ -306,4 +313,4 @@ def upload(repo, revs, force=False):
         for mut in mutations
     ]
 
-    uploadchangesets(repo, changesets, mutations)
+    return uploadchangesets(repo, changesets, mutations)

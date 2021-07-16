@@ -39,6 +39,7 @@ from . import (
     syncstate,
     token,
     util as ccutil,
+    upload,
     workspace,
 )
 
@@ -226,13 +227,19 @@ def _sync(
         remotepath, connect_opts, reason="cloudsync"
     )
 
-    # Back up all local commits that are not already backed up.
-    # Load the backup state under the repo lock to ensure a consistent view.
-    with repo.lock():
-        state = backupstate.BackupState(repo, remotepath)
-    backedup, failed = backup._backup(
-        repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
-    )
+    if ui.configbool("commitcloud", "usehttpupload"):
+        # This upload doesn't support snapshots backup yet!
+        uploaded, failed = upload.upload(repo, None)
+        with repo.lock():
+            backupstate.BackupState(repo, remotepath, usehttp=True).update(uploaded)
+    else:
+        # Back up all local commits that are not already backed up.
+        # Load the backup state under the repo lock to ensure a consistent view.
+        with repo.lock():
+            state = backupstate.BackupState(repo, remotepath)
+        backedup, failed = backup._backup(
+            repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
+        )
 
     # Now that commits are backed up, check that visibleheads are enabled
     # locally, and only sync if visibleheads is enabled.
