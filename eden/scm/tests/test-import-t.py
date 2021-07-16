@@ -810,12 +810,6 @@ new mode 100755
 
 if feature.check(["execbit"]):
 
-    sh % "hg sum" == r"""
-        parent: 95f91ee3332c 
-         help management of empty pkg and lib directories in perforce
-        commit: (clean)
-        phases: 2 draft"""
-
     sh % "hg diff --git -c tip" == r"""
         diff --git a/lib/place-holder b/lib/place-holder
         new file mode 100644
@@ -836,12 +830,6 @@ if feature.check(["execbit"]):
         new mode 100755"""
 
 else:
-
-    sh % "hg sum" == r"""
-        parent: 95f91ee3332c 
-         help management of empty pkg and lib directories in perforce
-        commit: (clean)
-        phases: 2 draft"""
 
     sh % "hg diff --git -c tip" == r"""
         diff --git a/lib/place-holder b/lib/place-holder
