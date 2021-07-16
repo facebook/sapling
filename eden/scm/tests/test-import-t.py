@@ -838,7 +838,7 @@ if feature.check(["execbit"]):
 else:
 
     sh % "hg sum" == r"""
-        parent: * (glob) 
+        parent: 95f91ee3332c 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""
