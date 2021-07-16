@@ -15,12 +15,13 @@ use std::sync::Arc;
 use anyhow::{bail, Result};
 
 use minibytes::Bytes;
+use tracing::field;
 use types::Key;
 
 use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
-    ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
+    util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
     HgIdMutableDeltaStore, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
 };
 
@@ -119,7 +120,18 @@ impl TreeStore {
         if let Some(ref edenapi) = self.edenapi {
             let pending: Vec<_> = incomplete.iter().cloned().collect();
             if !pending.is_empty() {
-                for entry in edenapi.trees_blocking(pending, None, None)?.entries {
+                let span = tracing::info_span!(
+                    "fetch_edenapi",
+                    downloaded = field::Empty,
+                    uploaded = field::Empty,
+                    requests = field::Empty,
+                    time = field::Empty,
+                    latency = field::Empty,
+                    download_speed = field::Empty,
+                );
+                let _enter = span.enter();
+                let response = edenapi.trees_blocking(pending, None, None)?;
+                for entry in response.entries {
                     // TODO(meyer): Should probably remove the From impls and add TryFrom instead
                     // TODO(meyer): Again, handle errors better. This will turn EdenApi NotFound into failing
                     // the entire batch
@@ -133,6 +145,7 @@ impl TreeStore {
                     }
                     complete.insert(entry.key().clone(), entry);
                 }
+                util::record_edenapi_stats(&span, &response.stats);
             }
         }
 

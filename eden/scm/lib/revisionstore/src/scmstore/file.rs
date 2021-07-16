@@ -16,7 +16,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{field, instrument};
 
 use edenapi_types::{
     ContentId, FileAttributes as EdenApiFileAttributes, FileAuxData as EdenApiFileAuxData,
@@ -38,7 +38,7 @@ use crate::{
     },
     memcache::McData,
     remotestore::HgIdRemoteStore,
-    ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
+    util, ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
     ExtStoredPolicy, LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore,
     RepackLocation, StoreKey, StoreResult,
 };
@@ -341,7 +341,6 @@ impl FileStoreFetch {
                 .1,
         ))
     }
-
 
     /// Returns a stream of all successful fetches and errors, for compatibility with old scmstore
     pub fn results(self) -> impl Iterator<Item = Result<(Key, StoreFile)>> {
@@ -1505,6 +1504,18 @@ impl FetchState {
 
     fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
+        let span = tracing::info_span!(
+            "fetch_edenapi",
+            downloaded = field::Empty,
+            uploaded = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+            latency = field::Empty,
+            download_speed = field::Empty,
+            scmstore = true,
+        );
+        let _enter = span.enter();
+
         let pending = self.pending_nonlfs(fetchable);
         if pending.is_empty() {
             return Ok(());
@@ -1525,17 +1536,15 @@ impl FetchState {
             })
             .collect();
 
-        for entry in store
-            .files_attrs_blocking(pending_attrs, None)?
-            .entries
-            .into_iter()
-        {
+        let response = store.files_attrs_blocking(pending_attrs, None)?;
+        for entry in response.entries.into_iter() {
             self.found_edenapi(entry);
         }
+        util::record_edenapi_stats(&span, &response.stats);
+
         Ok(())
     }
 
-    #[instrument(skip(self, store))]
     fn fetch_edenapi(&mut self, store: &EdenApiFileStore) {
         if let Err(err) = self.fetch_edenapi_inner(store) {
             self.errors.other_error(err);

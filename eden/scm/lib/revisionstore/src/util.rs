@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::TryFrom;
 use std::fs::{read_to_string, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
@@ -12,8 +13,10 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use hgtime::HgTime;
 use thiserror::Error;
+use tracing::Span;
 
 use configparser::config::ConfigSet;
+use edenapi::Stats;
 use util::path::{create_dir, create_shared_dir};
 
 #[derive(Error, Debug)]
@@ -172,4 +175,26 @@ pub fn check_run_once(store_path: impl AsRef<Path>, key: &str, cutoff: HgTime) -
     }
 
     return false;
+}
+
+pub fn record_edenapi_stats(span: &Span, stats: &Stats) {
+    // Bytes
+    span.record("downloaded", &stats.downloaded);
+    // Bytes
+    span.record("uploaded", &stats.uploaded);
+    span.record("requests", &stats.requests);
+    // Milliseconds
+    span.record(
+        "time",
+        &u64::try_from(stats.time.as_millis()).unwrap_or(u64::MAX),
+    );
+    // Milliseconds
+    span.record(
+        "latency",
+        &u64::try_from(stats.latency.as_millis()).unwrap_or(u64::MAX),
+    );
+    // Compute the speed in MB/s
+    let time = stats.time.as_millis() as f64 / 1000.0;
+    let size = stats.downloaded as f64 / 1024.0 / 1024.0;
+    span.record("download_speed", &format!("{:.2}", size / time).as_str());
 }
