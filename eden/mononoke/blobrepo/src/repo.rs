@@ -40,7 +40,6 @@ use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutati
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use segmented_changelog_types::{ArcSegmentedChangelog, SegmentedChangelog};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -81,9 +80,6 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub changeset_fetcher: dyn ChangesetFetcher,
-
-    #[facet]
-    pub segmented_changelog: dyn SegmentedChangelog,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
@@ -130,7 +126,6 @@ pub struct BlobRepo {
         RepoBlobstore,
         dyn Changesets,
         dyn ChangesetFetcher,
-        dyn SegmentedChangelog,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
         dyn BonsaiGlobalrevMapping,
@@ -175,11 +170,6 @@ impl BlobRepo {
     #[inline]
     pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
-    }
-
-    #[inline]
-    pub fn segmented_changelog(&self) -> &ArcSegmentedChangelog {
-        &self.inner.segmented_changelog
     }
 
     /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai

@@ -6,6 +6,7 @@
  */
 
 use blobrepo::BlobRepo;
+use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
 // Eventually everything inside Repo should really be here
@@ -19,4 +20,7 @@ pub struct InnerRepo {
 
     #[facet]
     pub skiplist_index: SkiplistIndex,
+
+    #[facet]
+    pub segmented_changelog: dyn SegmentedChangelog,
 }

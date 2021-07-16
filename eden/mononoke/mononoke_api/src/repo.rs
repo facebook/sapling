@@ -54,7 +54,9 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
-use segmented_changelog::{CloneData, Location, SegmentedChangelog, StreamCloneData};
+use segmented_changelog::{
+    CloneData, DisabledSegmentedChangelog, Location, SegmentedChangelog, StreamCloneData,
+};
 use skiplist::SkiplistIndex;
 use slog::{debug, error, o};
 use sql_construct::facebook::FbSqlConstruct;
@@ -302,6 +304,7 @@ impl Repo {
         let inner = InnerRepo {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
+            segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
         };
 
         let config = RepoConfig {
@@ -384,6 +387,10 @@ impl Repo {
     /// The underlying `BlobRepo`.
     pub fn blob_repo(&self) -> &BlobRepo {
         &self.inner.blob_repo
+    }
+
+    pub fn segmented_changelog(&self) -> &dyn SegmentedChangelog {
+        &self.inner.segmented_changelog
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
@@ -1385,9 +1392,8 @@ impl RepoContext {
         location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
-        let blob_repo = self.blob_repo();
-        let ancestor = blob_repo
-            .segmented_changelog()
+        let segmented_changelog = self.repo.segmented_changelog();
+        let ancestor = segmented_changelog
             .location_to_many_changeset_ids(&self.ctx, location, count)
             .await
             .map_err(MononokeError::from)?;
@@ -1402,9 +1408,8 @@ impl RepoContext {
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>, MononokeError> {
-        let blob_repo = self.blob_repo();
-        let result = blob_repo
-            .segmented_changelog()
+        let segmented_changelog = self.repo.segmented_changelog();
+        let result = segmented_changelog
             .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
             .await
             .map_err(MononokeError::from)?;
@@ -1414,9 +1419,8 @@ impl RepoContext {
     pub async fn segmented_changelog_clone_data(
         &self,
     ) -> Result<CloneData<ChangesetId>, MononokeError> {
-        let blob_repo = self.blob_repo();
-        let clone_data = blob_repo
-            .segmented_changelog()
+        let segmented_changelog = self.repo.segmented_changelog();
+        let clone_data = segmented_changelog
             .clone_data(&self.ctx)
             .await
             .map_err(MononokeError::from)?;
@@ -1428,9 +1432,8 @@ impl RepoContext {
         old_master: ChangesetId,
         new_master: ChangesetId,
     ) -> Result<CloneData<ChangesetId>, MononokeError> {
-        let blob_repo = self.blob_repo();
-        let pull_data = blob_repo
-            .segmented_changelog()
+        let segmented_changelog = self.repo.segmented_changelog();
+        let pull_data = segmented_changelog
             .pull_fast_forward_master(&self.ctx, old_master, new_master)
             .await
             .map_err(MononokeError::from)?;
@@ -1440,9 +1443,8 @@ impl RepoContext {
     pub async fn segmented_changelog_full_idmap_clone_data(
         &self,
     ) -> Result<StreamCloneData<ChangesetId>, MononokeError> {
-        let blob_repo = self.blob_repo();
-        let clone_data = blob_repo
-            .segmented_changelog()
+        let segmented_changelog = self.repo.segmented_changelog();
+        let clone_data = segmented_changelog
             .full_idmap_clone_data(&self.ctx)
             .await
             .map_err(MononokeError::from)?;
