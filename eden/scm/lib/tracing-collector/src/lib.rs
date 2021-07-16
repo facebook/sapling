@@ -72,13 +72,17 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
 
     fn on_record(&self, span_id: &Id, values: &Record<'_>, _ctx: Context<'_, S>) {
         let mut data = self.data.lock();
-        data.record(span_id, values);
+        if let Some(espan_id) = data.get_espan_id_from_trace(span_id) {
+            data.record(&espan_id.into(), values);
+        }
     }
 
     fn on_follows_from(&self, span_id: &Id, follows: &Id, _ctx: Context<'_, S>) {
         let mut data = self.data.lock();
         if let Some(espan_id) = data.get_espan_id_from_trace(span_id) {
-            data.record_follows_from(&espan_id.into(), follows);
+            if let Some(follows_espan_id) = data.get_espan_id_from_trace(follows) {
+                data.record_follows_from(&espan_id.into(), &follows_espan_id.into());
+            }
         }
     }
 
