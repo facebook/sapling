@@ -12,8 +12,7 @@ import time
 from edenscm.mercurial import error, node as nodemod, util
 from edenscm.mercurial.pycompat import encodeutf8
 
-from . import dependencies, util as ccutil
-
+from . import dependencies
 
 FORMAT_VERSION = "v1"
 
@@ -22,51 +21,10 @@ class BackupState(object):
     """Stores what commits have been successfully backed up to the cloud.
 
     BackupState is not the source of truth, it is a local cache of what has been backed up at the given path.
-    It is stored in a different file for a different path.
-
-    Due to migration to other backend, some commit cloud traffic uses 'infinitepush' (read), other uses 'infinitepushwrite' (write) path and
-    they would update different local cache files. Also, many commands could be run with '--dest' option to specify the path and
-    as a result could write the cache to a thrird state file. So, the one or another cache could be out-of-date in some cases or both.
-
-    Use `readheadsfromall` class method to get the union of what heads has been backed up at different paths.
-
-    After the migration, we should deprecate the current filename convention for the backup cache files.
-    They shouldn't depend on the remotepath and move the whole extension to always use infinitepush path (infinitepushwrite path should be deprecated).
     """
 
     prefix = "backedupheads."
     directory = "commitcloud"
-    oldbackupcache = 604800  # 1 weeks
-
-    @classmethod
-    def readheadsfromallpaths(cls, repo):
-        repo.sharedvfs.makedirs(cls.directory)
-        files = [
-            filename
-            for filename in repo.sharedvfs.listdir(cls.directory)
-            if filename.startswith(cls.prefix)
-        ]
-        heads = set()
-        threshold = time.time() - cls.oldbackupcache
-        # union the recent cache files
-        for filename in files:
-            path = os.path.join(cls.directory, filename)
-            # skip old cache files
-            if os.path.getmtime(repo.sharedvfs.join(path)) < threshold:
-                continue
-            lines = repo.sharedvfs.readutf8(path).splitlines()
-            # skip files with unrecognised format
-            if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
-                continue
-            heads = heads.union([nodemod.bin(head.strip()) for head in lines[2:]])
-        heads = set(repo.changelog.filternodes(list(heads), local=True))
-        # return the cached backedup heads in found
-        if heads:
-            return heads
-        # if no cache found - rebuild it based on the infinitepush remote path
-        return BackupState(
-            repo, ccutil.getremotepath(repo, None), resetlocalstate=True
-        ).heads
 
     def __init__(self, repo, remotepath, resetlocalstate=False):
         self.repo = repo

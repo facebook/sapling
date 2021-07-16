@@ -333,7 +333,7 @@ def hintcommitcloudswitch(ui, active):
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState.readheadsfromallpaths(repo)
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo, None)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         backedup = repo.dageval(lambda: draft() & ancestors(heads))
@@ -346,7 +346,7 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState.readheadsfromallpaths(repo)
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo, None)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         notbackedup = repo.dageval(lambda: draft() - ancestors(heads))
