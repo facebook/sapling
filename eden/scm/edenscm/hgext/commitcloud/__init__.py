@@ -138,9 +138,6 @@ Configs::
     # of smartlog.
     enablestatus = False
 
-    # Number of backups to list by default in getavailablebackups
-    backuplistlimit = 10
-
     # The command to download bundles from a backup bundle store
     # the command has to be a formatted string with params: 'filename' and 'handle'
     get_command = bundlefetcher -h {handle} -o {filename}
@@ -203,7 +200,6 @@ configitem("commitcloud", "sl_showallbookmarks", False)
 configitem(
     "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
 )
-configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 
