@@ -67,6 +67,13 @@ def hintuncommit(command, oldhash):
     ) % (command, oldhash, command)
 
 
+@hint("undo-corrupt")
+def hintundocorrupt(path=None):
+    msg = _("undo history is corrupted\n")
+    msg += _("(try deleting %s to recover)\n") % (path or ".hg/undolog")
+    return msg
+
+
 # Setup
 
 
@@ -180,7 +187,7 @@ def safelog(repo, command):
                 repo.ui.log("undologlock", "lock acquired\n")
                 tr = lighttransaction(repo)
                 with tr:
-                    changes = log(repo, command, tr)
+                    changes = trylog(repo, command, tr)
                     if changes and not ("undo" == command[0] or "redo" == command[0]):
                         _delundoredo(repo)
         except error.LockUnavailable:  # no write permissions
@@ -208,6 +215,14 @@ def lighttransaction(repo):
         repo.ui.warn, repo.localvfs, vfsmap, "undolog/tr.journal", "undolog/tr.undo"
     )
     return tr
+
+
+def trylog(repo, command, tr):
+    try:
+        return log(repo, command, tr)
+    except error.RevlogError:
+        hintutil.trigger("undo-corrupt", repo.localvfs.join("undolog"))
+        return False
 
 
 def log(repo, command, tr):
@@ -241,6 +256,7 @@ def log(repo, command, tr):
         existingnodes = _readindex(repo, 0)
     except IndexError:
         existingnodes = {}
+
     if all(newnodes.get(x) == existingnodes.get(x) for x in newnodes.keys()):
         # no changes to record
         return False
@@ -895,7 +911,7 @@ def undo(ui, repo, *args, **opts):
         cmdutil.bailifchanged(repo)
         if not (opts.get("force") or _gapcheck(ui, repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across" " missing history"))
-        _undoto(ui, repo, reverseindex, keep=keep, branch=branch)
+        _tryundoto(ui, repo, reverseindex, keep=keep, branch=branch)
 
         # store undo data
         # for absolute undos, think of this as a reset
@@ -981,9 +997,16 @@ def redo(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock(), repo.transaction("redo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
-        _undoto(ui, repo, reverseindex)
+        _tryundoto(ui, repo, reverseindex)
         # update undredo by removing what the given undo added
         _logundoredoindex(repo, shiftedindex, branch)
+
+
+def _tryundoto(ui, repo, reverseindex, keep=False, branch=None):
+    try:
+        _undoto(ui, repo, reverseindex, keep, branch)
+    except error.RevlogError:
+        ui.write_err(_("cannot undo: undo history is corrupted\n"))
 
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):

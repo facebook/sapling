@@ -222,8 +222,12 @@ class transaction(util.transactional):
             )
 
     def __del__(self):
-        if self.journal:
-            self._abort()
+        try:
+            if self.journal:
+                self._abort()
+        except AttributeError:
+            # AttributeError: 'transaction' object has noattribute 'journal'
+            pass
 
     @active
     def startgroup(self):
