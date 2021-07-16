@@ -157,7 +157,7 @@ class DiskUsageCmd(Subcmd):
         group.add_argument(
             "--deep-clean",
             action="store_true",
-            help="(Mac and Linux only) Performs automated cleanup (--clean) and removes fsck dirs. "
+            help="Performs automated cleanup (--clean) and removes fsck dirs. "
             "Unlike --clean this will destroy unrecoverable data. If you have any local changes you "
             "hope to recover, recover them before you run this command.",
         )
@@ -519,7 +519,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
         fsck_dir = os.path.join(client_dir, "fsck")
         if os.path.exists(fsck_dir):
             self.usage_for_dir(fsck_dir, "fsck")
-            if deep_clean and sys.platform != "win32":
+            if deep_clean:
                 self.writeln_ui(f"\nReclaiming space from directory: {fsck_dir}")
                 try:
                     shutil.rmtree(fsck_dir)
@@ -534,12 +534,10 @@ A filesytem check recovered data and stored it at:
 {fsck_dir}
 If you have recovered all that you need from it, you can remove that
 directory to reclaim the disk space.
+
+To automatically remove this directory, run `eden du --deep-clean`.
 """
                 )
-                if sys.platform != "win32":
-                    self.writeln_ui(
-                        "To automatically remove this directory, run `eden du --deep-clean`."
-                    )
 
 
 @subcmd("pid", "Print the daemon's process ID if running")
