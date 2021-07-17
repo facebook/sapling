@@ -138,6 +138,12 @@ impl Blobstore for MultiplexedBlobstore {
                 if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
                     return Err(error);
                 }
+
+                if !tunables().get_multiplex_blobstore_get_do_queue_lookup() {
+                    // trust the first lookup, don't check the sync-queue and return None
+                    return Ok(None);
+                }
+
                 // This means that some underlying blobstore returned error, and
                 // other return None. To distinguish incomplete sync from true-none we
                 // check synchronization queue. If it does not contain entries with this key

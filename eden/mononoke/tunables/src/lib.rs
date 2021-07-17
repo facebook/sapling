@@ -190,6 +190,7 @@ pub struct MononokeTunables {
     derived_data_disabled_watcher_delay_secs: AtomicI64,
 
     // multiplexed blobstore is_present/get new semantics rollout
+    multiplex_blobstore_get_do_queue_lookup: AtomicBool,
     multiplex_blobstore_is_present_do_queue_lookup: AtomicBool,
 }
 

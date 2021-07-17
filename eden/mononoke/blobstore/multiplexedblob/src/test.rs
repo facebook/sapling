@@ -495,9 +495,10 @@ async fn multiplexed(fb: FacebookInit) {
     // enable new `is_present` semantics
     let get_tunables = || {
         let tunables = MononokeTunables::default();
-        tunables.update_bools(
-            &hashmap! {"multiplex_blobstore_is_present_do_queue_lookup".to_string() => true},
-        );
+        tunables.update_bools(&hashmap! {
+            "multiplex_blobstore_is_present_do_queue_lookup".to_string() => true,
+            "multiplex_blobstore_get_do_queue_lookup".to_string() => true
+        });
         tunables
     };
 
@@ -507,7 +508,9 @@ async fn multiplexed(fb: FacebookInit) {
 
         // test `get`
 
-        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k0).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
@@ -560,7 +563,9 @@ async fn multiplexed(fb: FacebookInit) {
         }
 
         // test `get`
-        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k1).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
@@ -600,7 +605,9 @@ async fn multiplexed(fb: FacebookInit) {
         let k2 = "k2";
 
         // test `get`
-        let mut get_fut = bs.get(ctx, k2).map_err(|_| ()).boxed();
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k2).boxed())
+            .map_err(|_| ())
+            .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 3: bs0 failed"));
         bs1.tick(Some("case 3: bs1 failed"));
@@ -640,15 +647,29 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
     // enable new `is_present` semantics
     let get_tunables = || {
         let tunables = MononokeTunables::default();
-        tunables.update_bools(
-            &hashmap! {"multiplex_blobstore_is_present_do_queue_lookup".to_string() => false},
-        );
+        tunables.update_bools(&hashmap! {
+            "multiplex_blobstore_is_present_do_queue_lookup".to_string() => false,
+            "multiplex_blobstore_get_do_queue_lookup".to_string() => false
+        });
         tunables
     };
 
     // non-existing key when one blobstore failing
     {
         let k0 = "k0";
+
+        // test `get`
+
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k0).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut get_fut)).await.is_pending());
+
+        bs0.tick(None);
+        assert!(PollOnce::new(Pin::new(&mut get_fut)).await.is_pending());
+
+        bs1.tick(Some("case 1: bs1 failed"));
+        assert_eq!(get_fut.await.unwrap(), None);
 
         // test `is_present`
 
@@ -681,7 +702,7 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
             .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
-        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        assert!(PollOnce::new(Pin::new(&mut put_fut)).await.is_pending());
         bs0.tick(None);
         bs1.tick(Some("case 2: bs1 failed"));
         put_fut.await.expect("case 2 put_fut failed");
@@ -695,6 +716,17 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
             [entry] => assert_eq!(entry.blobstore_id, bid0),
             _ => panic!("only one entry expected"),
         }
+
+        // test `get`
+        // Now we assume None if couldn't determine the existence for sure
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k1).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut get_fut)).await.is_pending());
+        bs0.tick(Some("case 2: bs0 failed"));
+        bs1.tick(None);
+
+        assert!(get_fut.await.unwrap().is_none());
 
         // test `is_present`
         // Now we send only one blobstore request
@@ -721,6 +753,15 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
     // both replicas fail
     {
         let k2 = "k2";
+
+        // test `get`
+        let mut get_fut = with_tunables_async(get_tunables(), bs.get(ctx, k2).boxed())
+            .map_err(|_| ())
+            .boxed();
+        assert!(PollOnce::new(Pin::new(&mut get_fut)).await.is_pending());
+        bs0.tick(Some("case 3: bs0 failed"));
+        bs1.tick(Some("case 3: bs1 failed"));
+        assert!(get_fut.await.is_err());
 
         // test `is_present`
         let mut present_fut = with_tunables_async(get_tunables(), bs.is_present(ctx, k2).boxed())
