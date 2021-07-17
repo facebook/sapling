@@ -151,15 +151,29 @@ impl LocalStore for MemcacheStore {
     }
 }
 
-impl HgIdRemoteStore for MemcacheStore {
-    fn datastore(
+impl MemcacheStore {
+    pub fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn HgIdMutableDeltaStore> {
+        Arc::new(MemcacheHgIdDataStore::new(self, store))
+    }
+
+    pub fn remote_datastore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableDeltaStore>,
     ) -> Arc<dyn RemoteDataStore> {
         Arc::new(MemcacheHgIdDataStore::new(self, store))
     }
 
-    fn historystore(
+    pub fn historystore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn HgIdMutableHistoryStore> {
+        Arc::new(MemcacheHgIdHistoryStore::new(self, store))
+    }
+
+    pub fn remote_historystore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
@@ -195,6 +209,17 @@ impl HgIdDataStore for MemcacheHgIdDataStore {
 
     fn refresh(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+impl HgIdMutableDeltaStore for MemcacheHgIdDataStore {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+        self.memcache.add_data(delta, metadata);
+        Ok(())
+    }
+
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        Ok(None)
     }
 }
 
@@ -273,6 +298,17 @@ impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
 
     fn refresh(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+impl HgIdMutableHistoryStore for MemcacheHgIdHistoryStore {
+    fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
+        self.memcache.add_hist(key, info);
+        Ok(())
+    }
+
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        Ok(None)
     }
 }
 

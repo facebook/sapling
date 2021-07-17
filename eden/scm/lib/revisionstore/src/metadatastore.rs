@@ -322,16 +322,14 @@ impl<'a> MetadataStoreBuilder<'a> {
                     // If data isn't found in the memcache store, once fetched from the remote store it
                     // will be written to the local cache, and will populate the memcache store, so
                     // other clients and future requests won't need to go to a network store.
-                    let memcachehistorystore = memcachestore.clone().historystore(primary.clone());
-
                     let mut multiplexstore: MultiplexHgIdHistoryStore<
                         Arc<dyn HgIdMutableHistoryStore>,
                     > = MultiplexHgIdHistoryStore::new();
-                    multiplexstore.add_store(memcachestore);
+                    multiplexstore.add_store(memcachestore.clone().historystore(primary.clone()));
                     multiplexstore.add_store(primary.clone());
 
                     (
-                        Some(memcachehistorystore),
+                        Some(memcachestore.clone().remote_historystore(primary.clone())),
                         Arc::new(multiplexstore) as Arc<dyn HgIdMutableHistoryStore>,
                     )
                 } else {

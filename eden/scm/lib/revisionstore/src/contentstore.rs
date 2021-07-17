@@ -518,17 +518,21 @@ impl<'a> ContentStoreBuilder<'a> {
                 // store it will be written to the local cache, and will populate the memcache
                 // store, so other clients and future requests won't need to go to a network
                 // store.
-                let memcachedatastore = memcachestore
-                    .clone()
-                    .datastore(shared_mutabledatastore.clone());
-
                 let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
                     MultiplexDeltaStore::new();
-                multiplexstore.add_store(memcachestore);
+                multiplexstore.add_store(
+                    memcachestore
+                        .clone()
+                        .datastore(shared_mutabledatastore.clone()),
+                );
                 multiplexstore.add_store(shared_mutabledatastore.clone());
 
                 (
-                    Some(memcachedatastore),
+                    Some(
+                        memcachestore
+                            .clone()
+                            .remote_datastore(shared_mutabledatastore.clone()),
+                    ),
                     Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
                 )
             } else {
