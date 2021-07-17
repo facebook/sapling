@@ -12,6 +12,7 @@ use std::convert::{TryFrom, TryInto};
 use std::ops::{AddAssign, BitAnd, BitOr, Not, Sub};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use parking_lot::{Mutex, RwLock};
@@ -175,6 +176,8 @@ impl FileStoreMetrics {
     }
 }
 
+const MEMCACHE_DELAY: Duration = Duration::from_secs(10);
+
 pub struct FileStore {
     // Config
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
@@ -200,7 +203,7 @@ pub struct FileStore {
     // Local LFS cache aka shared store
     pub(crate) lfs_cache: Option<Arc<LfsStore>>,
 
-    // Mecache
+    // Memcache
     pub(crate) memcache: Option<Arc<MemcacheStore>>,
 
     // Remote stores
@@ -217,6 +220,9 @@ pub struct FileStore {
 
     // Metrics, statistics, debugging
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
+
+    // Records the store creation time, so we can only use memcache for long running commands.
+    pub(crate) creation_time: Instant,
 }
 
 impl Drop for FileStore {
@@ -393,8 +399,10 @@ impl FileStore {
             state.fetch_lfs(lfs_local, StoreType::Local);
         }
 
-        if let Some(ref memcache) = self.memcache {
-            state.fetch_memcache(memcache);
+        if self.use_memcache() {
+            if let Some(ref memcache) = self.memcache {
+                state.fetch_memcache(memcache);
+            }
         }
 
         if self.prefer_computing_aux_data {
@@ -428,7 +436,7 @@ impl FileStore {
                 }
             }),
             self.memcache.as_ref().and_then(|s| {
-                if self.cache_to_memcache {
+                if self.cache_to_memcache && self.use_memcache() {
                     Some(s.as_ref())
                 } else {
                     None
@@ -441,6 +449,12 @@ impl FileStore {
         let fetched = state.finish();
         self.metrics.write().fetch += fetched.metrics.clone();
         fetched
+    }
+
+    fn use_memcache(&self) -> bool {
+        // Only use memcache if the process has been around a while. It takes 2s to setup, which
+        // hurts responiveness for short commands.
+        self.creation_time.elapsed() > MEMCACHE_DELAY
     }
 
     #[instrument(skip(self, entries))]
@@ -528,6 +542,8 @@ impl FileStore {
 
             aux_local: self.aux_local.clone(),
             aux_cache: self.aux_cache.clone(),
+
+            creation_time: self.creation_time,
         }
     }
 
@@ -615,6 +631,8 @@ impl FileStore {
 
             aux_local: None,
             aux_cache: None,
+
+            creation_time: Instant::now(),
         }
     }
 }
@@ -656,6 +674,8 @@ impl LegacyStore for FileStore {
 
             aux_local: None,
             aux_cache: None,
+
+            creation_time: Instant::now(),
         })
     }
 
@@ -1903,8 +1923,10 @@ impl RemoteDataStore for FileStore {
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
             multiplex.add_store(self.get_shared_mutable());
-            if let Some(ref memcache) = self.memcache {
-                multiplex.add_store(memcache.clone());
+            if self.use_memcache() {
+                if let Some(ref memcache) = self.memcache {
+                    multiplex.add_store(memcache.clone());
+                }
             }
             lfs_remote
                 .clone()

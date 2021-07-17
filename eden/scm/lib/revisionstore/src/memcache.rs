@@ -7,7 +7,12 @@
 
 //! Adapters around Memcache to be transparently used as HgIdDataStore or HgIdHistoryStore.
 
-use std::{mem::size_of, path::PathBuf, sync::Arc};
+use std::{
+    mem::size_of,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::Result;
 use minibytes::Bytes;

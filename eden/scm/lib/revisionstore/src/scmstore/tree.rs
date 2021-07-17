@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 
@@ -24,6 +25,8 @@ use crate::{
     util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
     HgIdMutableDeltaStore, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
 };
+
+const MEMCACHE_DELAY: Duration = Duration::from_secs(10);
 
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.
@@ -52,6 +55,8 @@ pub struct TreeStore {
     /// should alert / log something, as this should never happen if TreeStore is implemented
     /// correctly.
     pub contentstore: Option<Arc<ContentStore>>,
+
+    pub creation_time: Instant,
 }
 
 impl Drop for TreeStore {
@@ -102,17 +107,19 @@ impl TreeStore {
             }
         }
 
-        if let Some(ref memcache) = self.memcache {
-            let pending: Vec<_> = incomplete.iter().cloned().collect();
+        if self.use_memcache() {
+            if let Some(ref memcache) = self.memcache {
+                let pending: Vec<_> = incomplete.iter().cloned().collect();
 
-            if !pending.is_empty() {
-                for entry in memcache.get_data_iter(&pending)? {
-                    let entry: Entry = entry?.into();
-                    incomplete.remove(entry.key());
-                    if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
-                        write_to_local_cache.insert(entry.key().clone());
+                if !pending.is_empty() {
+                    for entry in memcache.get_data_iter(&pending)? {
+                        let entry: Entry = entry?.into();
+                        incomplete.remove(entry.key());
+                        if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
+                            write_to_local_cache.insert(entry.key().clone());
+                        }
+                        complete.insert(entry.key().clone(), entry);
                     }
-                    complete.insert(entry.key().clone(), entry);
                 }
             }
         }
@@ -140,7 +147,7 @@ impl TreeStore {
                     if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
                         write_to_local_cache.insert(entry.key().clone());
                     }
-                    if self.memcache.is_some() && self.cache_to_memcache {
+                    if self.memcache.is_some() && self.cache_to_memcache && self.use_memcache() {
                         write_to_memcache.insert(entry.key().clone());
                     }
                     complete.insert(entry.key().clone(), entry);
@@ -208,6 +215,12 @@ impl TreeStore {
         })
     }
 
+    fn use_memcache(&self) -> bool {
+        // Only use memcache if the process has been around a while. It takes 2s to setup, which
+        // hurts responiveness for short commands.
+        self.creation_time.elapsed() > MEMCACHE_DELAY
+    }
+
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         if let Some(ref indexedlog_local) = self.indexedlog_local {
             let mut indexedlog_local = indexedlog_local.write_lock();
@@ -229,6 +242,7 @@ impl TreeStore {
             cache_to_memcache: false,
             edenapi: None,
             contentstore: None,
+            creation_time: Instant::now(),
         }))
     }
 
@@ -245,6 +259,8 @@ impl TreeStore {
             edenapi: None,
 
             contentstore: None,
+
+            creation_time: Instant::now(),
         }
     }
 }

@@ -7,6 +7,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Result;
 use regex::Regex;
@@ -276,7 +277,6 @@ impl<'a> FileStoreBuilder<'a> {
             self.build_lfs_cache()?
         };
 
-
         let (aux_local, aux_cache) = if self.store_aux_data {
             let aux_local = self.build_aux_local()?;
             let aux_cache = Some(self.build_aux_cache()?);
@@ -365,6 +365,8 @@ impl<'a> FileStoreBuilder<'a> {
 
             aux_local,
             aux_cache,
+
+            creation_time: Instant::now(),
         })
     }
 }
@@ -523,6 +525,8 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi,
 
             contentstore,
+
+            creation_time: Instant::now(),
         })
     }
 }
