@@ -184,13 +184,27 @@ impl MemcacheStore {
 struct MemcacheHgIdDataStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
     memcache: Arc<MemcacheStore>,
+    creation_time: Instant,
 }
 
 impl MemcacheHgIdDataStore {
     pub fn new(memcache: Arc<MemcacheStore>, store: Arc<dyn HgIdMutableDeltaStore>) -> Self {
-        Self { memcache, store }
+        Self {
+            memcache,
+            store,
+            creation_time: Instant::now(),
+        }
+    }
+
+    fn use_memcache(&self) -> bool {
+        self.creation_time.elapsed() > MEMCACHE_DELAY
     }
 }
+
+#[cfg(test)]
+pub const MEMCACHE_DELAY: Duration = Duration::from_secs(0);
+#[cfg(not(test))]
+pub const MEMCACHE_DELAY: Duration = Duration::from_secs(10);
 
 impl HgIdDataStore for MemcacheHgIdDataStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
@@ -214,7 +228,9 @@ impl HgIdDataStore for MemcacheHgIdDataStore {
 
 impl HgIdMutableDeltaStore for MemcacheHgIdDataStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        self.memcache.add_data(delta, metadata);
+        if self.use_memcache() {
+            self.memcache.add_data(delta, metadata);
+        }
         Ok(())
     }
 
@@ -231,6 +247,10 @@ impl LocalStore for MemcacheHgIdDataStore {
 
 impl RemoteDataStore for MemcacheHgIdDataStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        if !self.use_memcache() {
+            return self.store.get_missing(keys);
+        }
+
         let span = info_span!(
             "MemcacheHgIdDataStore::prefetch",
             key_count = keys.len(),
@@ -280,11 +300,20 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
 struct MemcacheHgIdHistoryStore {
     store: Arc<dyn HgIdMutableHistoryStore>,
     memcache: Arc<MemcacheStore>,
+    creation_time: Instant,
 }
 
 impl MemcacheHgIdHistoryStore {
     pub fn new(memcache: Arc<MemcacheStore>, store: Arc<dyn HgIdMutableHistoryStore>) -> Self {
-        Self { memcache, store }
+        Self {
+            memcache,
+            store,
+            creation_time: Instant::now(),
+        }
+    }
+
+    fn use_memcache(&self) -> bool {
+        self.creation_time.elapsed() > MEMCACHE_DELAY
     }
 }
 
@@ -303,7 +332,9 @@ impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
 
 impl HgIdMutableHistoryStore for MemcacheHgIdHistoryStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        self.memcache.add_hist(key, info);
+        if self.use_memcache() {
+            self.memcache.add_hist(key, info);
+        }
         Ok(())
     }
 
@@ -320,6 +351,10 @@ impl LocalStore for MemcacheHgIdHistoryStore {
 
 impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+        if !self.use_memcache() {
+            return Ok(());
+        }
+
         let span = info_span!(
             "MemcacheHgIdHistoryStore::prefetch",
             key_count = keys.len(),

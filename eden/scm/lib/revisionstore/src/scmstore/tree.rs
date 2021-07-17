@@ -22,11 +22,10 @@ use types::Key;
 use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
+    memcache::MEMCACHE_DELAY,
     util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
     HgIdMutableDeltaStore, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
 };
-
-const MEMCACHE_DELAY: Duration = Duration::from_secs(10);
 
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.

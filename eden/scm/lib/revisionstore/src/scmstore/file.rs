@@ -37,7 +37,7 @@ use crate::{
         lfs_from_hg_file_blob, rebuild_metadata, LfsPointersEntry, LfsRemote, LfsRemoteInner,
         LfsStore, LfsStoreEntry,
     },
-    memcache::McData,
+    memcache::{McData, MEMCACHE_DELAY},
     remotestore::HgIdRemoteStore,
     util, ContentDataStore, ContentHash, ContentMetadata, ContentStore, Delta, EdenApiFileStore,
     ExtStoredPolicy, LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore,
@@ -175,8 +175,6 @@ impl FileStoreMetrics {
         namespaced("scmstore.file.fetch", self.fetch.metrics())
     }
 }
-
-const MEMCACHE_DELAY: Duration = Duration::from_secs(10);
 
 pub struct FileStore {
     // Config
