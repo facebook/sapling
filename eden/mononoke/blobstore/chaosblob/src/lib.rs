@@ -208,8 +208,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(!base_present);
     }
 
@@ -234,8 +233,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(!base_present);
     }
 
@@ -260,8 +258,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(base_present);
         let r = wrapper.get(ctx, key).await;
         assert!(!r.is_ok());

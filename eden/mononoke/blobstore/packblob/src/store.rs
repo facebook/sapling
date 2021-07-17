@@ -330,14 +330,14 @@ mod tests {
         let is_present = inner_blobstore
             .is_present(ctx, inner_key)
             .await?
-            .fail_if_unsure()?;
+            .assume_not_found_if_unsure();
         assert!(is_present);
 
         // Check the key without suffix is not there
         let is_not_present = !inner_blobstore
             .is_present(ctx, outer_key)
             .await?
-            .fail_if_unsure()?;
+            .assume_not_found_if_unsure();
         assert!(is_not_present);
 
         Ok(inner_key.to_owned())
@@ -383,7 +383,7 @@ mod tests {
         let is_present = inner_blobstore
             .is_present(ctx, &inner_key)
             .await?
-            .fail_if_unsure()?;
+            .assume_not_found_if_unsure();
         assert!(!is_present);
 
         for (expected, i) in input_values.into_iter().zip(0..3usize) {

@@ -183,15 +183,13 @@ mod test {
                 .is_present(ctx, &unprefixed_key)
                 .await
                 .expect("is_present should succeed")
-                .fail_if_unsure()
-                .expect("is_present should succeed")
+                .assume_not_found_if_unsure()
         );
         assert!(
             base.is_present(ctx, &prefixed_key)
                 .await
                 .expect("is_present should succeed")
-                .fail_if_unsure()
-                .expect("is_present should succeed")
+                .assume_not_found_if_unsure()
         );
     }
 }

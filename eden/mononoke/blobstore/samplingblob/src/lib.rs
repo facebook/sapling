@@ -305,8 +305,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
@@ -314,8 +313,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);
@@ -384,8 +382,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
@@ -393,8 +390,7 @@ mod test {
             .is_present(ctx, key)
             .await
             .unwrap()
-            .fail_if_unsure()
-            .unwrap();
+            .assume_not_found_if_unsure();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);
