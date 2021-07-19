@@ -25,7 +25,7 @@ use structopt::StructOpt;
 use edenapi_types::{
     json::FromJson, wire::ToWire, Batch, BookmarkRequest, CommitHashLookupRequest,
     CommitHashToLocationRequestBatch, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
-    CompleteTreeRequest, FileRequest, HistoryRequest, TreeRequest,
+    CompleteTreeRequest, EphemeralPrepareRequest, FileRequest, HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -40,6 +40,7 @@ enum Command {
     CommitHashToLocation(Args),
     CommitHashLookup(Args),
     Bookmark(Args),
+    EphemeralPrepare(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -61,6 +62,7 @@ fn main() -> Result<()> {
         Command::CommitHashToLocation(args) => make_req::<CommitHashToLocationRequestBatch>(args),
         Command::CommitHashLookup(args) => make_req::<Batch<CommitHashLookupRequest>>(args),
         Command::Bookmark(args) => make_req::<BookmarkRequest>(args),
+        Command::EphemeralPrepare(args) => make_req::<EphemeralPrepareRequest>(args),
     }
 }
 

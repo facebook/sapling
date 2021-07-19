@@ -255,3 +255,19 @@ pub struct EphemeralPrepareRequest {}
 pub struct EphemeralPrepareResponse {
     pub bubble_id: u64,
 }
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for EphemeralPrepareRequest {
+    fn arbitrary<G: quickcheck::Gen>(_g: &mut G) -> Self {
+        EphemeralPrepareRequest {}
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for EphemeralPrepareResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        EphemeralPrepareResponse {
+            bubble_id: Arbitrary::arbitrary(g),
+        }
+    }
+}

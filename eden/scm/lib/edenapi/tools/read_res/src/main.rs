@@ -15,7 +15,7 @@ use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use serde::de::{Deserialize, DeserializeOwned};
 use serde_cbor::Deserializer;
 use sha1::{Digest, Sha1};
@@ -24,8 +24,9 @@ use structopt::StructOpt;
 use edenapi_types::{
     wire::{
         ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
-        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse, WireFileEntry,
-        WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
+        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
+        WireEphemeralPrepareResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
+        WireTreeEntry,
     },
     CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
@@ -44,6 +45,7 @@ enum Args {
     Clone(CloneArgs),
     FullIdmapClone(CloneArgs),
     Bookmark(BookmarkArgs),
+    EphemeralPrepare(EphemeralPrepareArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -220,6 +222,15 @@ struct CommitHashLookupArgs {
     limit: Option<usize>,
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the contents of a ephemeral prepare request")]
+struct EphemeralPrepareArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
+}
+
 fn main() -> Result<()> {
     match Args::from_args() {
         Args::Tree(args) => cmd_tree(args),
@@ -232,6 +243,7 @@ fn main() -> Result<()> {
         Args::Clone(args) => cmd_clone(args),
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
         Args::Bookmark(args) => cmd_bookmark(args),
+        Args::EphemeralPrepare(args) => ephemeral_prepare(args),
     }
 }
 
@@ -589,6 +601,16 @@ fn cmd_bookmark(args: BookmarkArgs) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn ephemeral_prepare(args: EphemeralPrepareArgs) -> Result<()> {
+    let mut res: Vec<WireEphemeralPrepareResponse> = read_input(args.input, None)?;
+    if res.len() != 1 {
+        bail!("Wrong number of responses")
+    } else {
+        println!("Bubble id: {}", res.remove(0).to_api()?.bubble_id);
+        Ok(())
+    }
 }
 
 fn make_history_map(

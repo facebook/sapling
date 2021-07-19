@@ -656,6 +656,13 @@ impl ToApi for WireEphemeralPrepareRequest {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireEphemeralPrepareRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        EphemeralPrepareRequest::arbitrary(g).to_wire()
+    }
+}
+
 impl ToWire for EphemeralPrepareResponse {
     type Wire = WireEphemeralPrepareResponse;
 
@@ -674,6 +681,13 @@ impl ToApi for WireEphemeralPrepareResponse {
         Ok(Self::Api {
             bubble_id: self.bubble_id,
         })
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireEphemeralPrepareResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        EphemeralPrepareResponse::arbitrary(g).to_wire()
     }
 }
 
@@ -774,6 +788,30 @@ mod tests {
 
         fn test_roundtrip_wire_hash_lookup_response(
             v: CommitHashLookupResponse
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_ephemeral_prepare_req(
+            v: WireEphemeralPrepareRequest
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_wire_ephemeral_prepare_req(
+            v: EphemeralPrepareRequest
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_ephemeral_prepare_res(
+            v: WireEphemeralPrepareResponse
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_wire_ephemeral_prepare_res(
+            v: EphemeralPrepareResponse
         ) -> bool {
             check_wire_roundtrip(v)
         }

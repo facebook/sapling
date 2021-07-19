@@ -18,6 +18,7 @@ mod error;
 mod repo;
 mod store;
 
+pub use crate::bubble::{Bubble, BubbleId};
 pub use crate::builder::EphemeralBlobstoreBuilder;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::repo::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};

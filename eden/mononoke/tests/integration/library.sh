@@ -645,6 +645,14 @@ CONFIG
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
+[$blobstorename.ephemeral_blobstore]
+initial_bubble_lifespan_secs = 1000
+bubble_expiration_grace_secs = 1000
+blobstore = { $underlyingstorage = { path = "$blobstorepath" } }
+
+$(db_config "$blobstorename.ephemeral_blobstore")
+
+
 [$blobstorename.blobstore]
 CONFIG
     if [[ -n "${PACK_BLOB:-}" ]]; then

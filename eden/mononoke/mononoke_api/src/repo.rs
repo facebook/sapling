@@ -406,6 +406,11 @@ impl Repo {
         &self.inner.skiplist_index
     }
 
+    /// The ephemeral blobstore for the referenced repository
+    pub fn ephemeral_blobstore(&self) -> &Arc<RepoEphemeralBlobstore> {
+        &self.inner.ephemeral_blobstore
+    }
+
     /// The commit sync mapping for the referenced repository
     pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
         &self.synced_commit_mapping
@@ -753,6 +758,11 @@ impl RepoContext {
     /// The skiplist index for the referenced repository.
     pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
         self.repo.skiplist_index()
+    }
+
+    /// The ephemeral blobstore for the referenced repository
+    pub fn ephemeral_blobstore(&self) -> &Arc<RepoEphemeralBlobstore> {
+        self.repo.ephemeral_blobstore()
     }
 
     /// The commit sync mapping for the referenced repository

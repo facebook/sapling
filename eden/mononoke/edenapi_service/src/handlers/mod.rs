@@ -60,6 +60,7 @@ pub enum EdenApiMethod {
     FullIdMapClone,
     Bookmarks,
     PullFastForwardMaster,
+    EphemeralPrepare,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -82,6 +83,7 @@ impl fmt::Display for EdenApiMethod {
             Self::UploadHgFilenodes => "upload_filenodes",
             Self::UploadTrees => "upload_trees",
             Self::UploadHgChangesets => "upload_hg_changesets",
+            Self::EphemeralPrepare => "ephemeral_prepare",
         };
         write!(f, "{}", name)
     }
@@ -174,6 +176,7 @@ define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
 define_handler!(upload_trees_handler, trees::upload_trees);
 define_handler!(upload_hg_changesets_handler, commit::upload_hg_changesets);
+define_handler!(ephemeral_prepare_handler, commit::ephemeral_prepare);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -258,5 +261,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/upload/changesets")
             .with_path_extractor::<commit::UploadHgChangesetsParams>()
             .to(upload_hg_changesets_handler);
+        route
+            .post("/:repo/ephemeral/prepare")
+            .with_path_extractor::<commit::EphemeralPrepareParams>()
+            .to(ephemeral_prepare_handler);
     })
 }

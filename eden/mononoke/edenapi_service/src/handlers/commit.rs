@@ -15,12 +15,13 @@ use std::collections::BTreeMap;
 use edenapi_types::{
     wire::{
         WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
-        WireCommitLocationToHashRequestBatch, WireUploadHgChangesetsRequest,
+        WireCommitLocationToHashRequestBatch, WireEphemeralPrepareRequest,
+        WireUploadHgChangesetsRequest,
     },
     AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, ToWire, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
-    UploadToken,
+    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, ToWire,
+    UploadHgChangesetsRequest, UploadHgChangesetsResponse, UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -63,6 +64,11 @@ pub struct HashLookupParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadHgChangesetsParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct EphemeralPrepareParams {
     repo: String,
 }
 
@@ -311,4 +317,36 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
     Ok(cbor_stream(
         stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
     ))
+}
+
+async fn ephemeral_prepare_impl(
+    repo: HgRepoContext,
+    _request: EphemeralPrepareRequest,
+) -> Result<EphemeralPrepareResponse, Error> {
+    Ok(EphemeralPrepareResponse {
+        bubble_id: repo.create_bubble().await?.bubble_id().into(),
+    })
+}
+
+// Creates an ephemeral bubble and return its id
+pub async fn ephemeral_prepare(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = EphemeralPrepareParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::EphemeralPrepare,
+    ));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let request = parse_wire_request::<WireEphemeralPrepareRequest>(state).await?;
+    let response = ephemeral_prepare_impl(repo, request)
+        .await
+        .map_err(HttpError::e500)?;
+
+    Ok(cbor_stream(stream::once(
+        async move { Ok(response.to_wire()) },
+    )))
 }

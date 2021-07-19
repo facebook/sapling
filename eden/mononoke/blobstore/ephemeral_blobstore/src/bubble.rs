@@ -38,6 +38,12 @@ impl From<BubbleId> for Value {
     }
 }
 
+impl From<BubbleId> for u64 {
+    fn from(bubble_id: BubbleId) -> Self {
+        bubble_id.0
+    }
+}
+
 impl ConvIr<BubbleId> for BubbleId {
     fn new(v: Value) -> Result<Self, FromValueError> {
         match v {

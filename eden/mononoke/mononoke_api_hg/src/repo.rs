@@ -14,6 +14,7 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
+use ephemeral_blobstore::Bubble;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
@@ -63,6 +64,11 @@ impl HgRepoContext {
     /// The configuration for the repository.
     pub(crate) fn config(&self) -> &RepoConfig {
         self.repo.config()
+    }
+
+    /// Create bubble and return its id
+    pub async fn create_bubble(&self) -> Result<Bubble, MononokeError> {
+        Ok(self.repo().ephemeral_blobstore().create_bubble().await?)
     }
 
     /// Fetch file content size

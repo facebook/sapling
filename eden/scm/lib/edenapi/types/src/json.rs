@@ -32,7 +32,7 @@ use crate::batch::Batch;
 use crate::bookmark::BookmarkRequest;
 use crate::commit::{
     CommitHashLookupRequest, CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
+    CommitLocationToHashRequestBatch, CommitRevlogDataRequest, EphemeralPrepareRequest,
 };
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::{FileAttributes, FileRequest, FileSpec};
@@ -626,6 +626,12 @@ impl FromJson for CommitHashLookupRequest {
         let low = HgId::from_json(ir.get("low").context("missing field low")?)?;
         let high = HgId::from_json(ir.get("high").context("missing field high")?)?;
         Ok(CommitHashLookupRequest::InclusiveRange(low, high))
+    }
+}
+
+impl FromJson for EphemeralPrepareRequest {
+    fn from_json(_json: &Value) -> Result<Self> {
+        Ok(EphemeralPrepareRequest {})
     }
 }
 
