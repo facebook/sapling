@@ -9,7 +9,6 @@ license = "GPLv2+"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
-arc-swap = "1.1"
 async-trait = "0.1.45"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
@@ -32,6 +31,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 parking_lot = "0.10.2"
 phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.7", features = ["small_rng"] }
+reloader = { version = "0.1.0", path = "../common/reloader" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog_types = { version = "0.1.0", path = "types" }
 slog = { version = "2.5", features = ["max_level_trace"] }

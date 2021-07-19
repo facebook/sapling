@@ -905,7 +905,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
             async move {
                 let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
                     Arc::new(load_owned(&ctx, &blobrepo, &conns).await?);
-                Ok(asc)
+                Ok(Some(asc))
             }
             .boxed()
         }

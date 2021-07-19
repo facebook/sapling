@@ -5,20 +5,26 @@
  * GNU General Public License version 2.
  */
 
+#![feature(fn_traits)]
+
 use anyhow::{anyhow, Result};
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use futures_ext::future::{spawn_controlled, ControlledHandle};
+use rand::Rng;
 use slog::warn;
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Notify;
 
 #[derive(Debug, Clone)]
 pub struct Reloader<R> {
     obj: Arc<ArcSwap<R>>,
     _handle: Option<ControlledHandle>,
+    notify: Arc<Notify>,
 }
 
 impl<R> Reloader<R> {
@@ -34,13 +40,31 @@ impl<R> Reloader<R> {
         Self {
             obj: Arc::new(ArcSwap::from_pointee(r)),
             _handle: None,
+            notify: Arc::new(Notify::new()),
         }
+    }
+
+    // Only used in tests
+    #[allow(dead_code)]
+    pub async fn wait_for_update(&self) {
+        self.notify.notified().await;
     }
 }
 
 #[async_trait]
 pub trait Loader<R> {
     async fn load(&mut self) -> Result<Option<R>>;
+}
+
+#[async_trait]
+impl<R, O, F> Loader<R> for F
+where
+    O: Future<Output = Result<Option<R>>> + Send,
+    F: FnMut() -> O + Send,
+{
+    async fn load(&mut self) -> Result<Option<R>> {
+        self.call_mut(()).await
+    }
 }
 
 impl<R: 'static + Send + Sync> Reloader<R> {
@@ -58,8 +82,9 @@ impl<R: 'static + Send + Sync> Reloader<R> {
                 .await?
                 .ok_or_else(|| anyhow!("Missing initial object"))?,
         ));
+        let notify = Arc::new(Notify::new());
         let handle = spawn_controlled({
-            cloned!(obj);
+            cloned!(obj, notify);
             async move {
                 loop {
                     let interval = interval_getter();
@@ -72,13 +97,40 @@ impl<R: 'static + Send + Sync> Reloader<R> {
                             warn!(ctx.logger(), "Failed to reload: {:?}", err)
                         }
                     }
+                    notify.notify_waiters();
                 }
             }
         });
         Ok(Self {
             obj,
             _handle: Some(handle),
+            notify,
         })
+    }
+
+    /// Reload periodically with a fixed interval, but on the first wait, randomly wait
+    /// up to 10% more. Useful for preventing reloads at the same time when creating multiple
+    /// reloaders at the same time with the same interval.
+    pub async fn reload_periodically_with_skew<L: 'static + Loader<R> + Send + Sync>(
+        ctx: CoreContext,
+        period: Duration,
+        loader: L,
+    ) -> Result<Self> {
+        let mut first = true;
+        Self::reload_periodically(
+            ctx,
+            move || {
+                if first {
+                    first = false;
+                    let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period / 10);
+                    period + jitter
+                } else {
+                    period
+                }
+            },
+            loader,
+        )
+        .await
     }
 }
 
@@ -87,6 +139,7 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
     use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::Relaxed};
+    use std::time::Duration;
 
     #[test]
     fn test_fixed() {
@@ -97,6 +150,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_reload(fb: FacebookInit) {
+        tokio::time::pause();
         struct NumberLoader {
             cur: u32,
         }
@@ -111,19 +165,24 @@ mod test {
         let loader = NumberLoader { cur: 0 };
         let l = Reloader::reload_periodically(
             CoreContext::test_mock(fb),
-            || std::time::Duration::from_millis(20),
+            || Duration::from_millis(20),
             loader,
         )
         .await
         .unwrap();
 
         assert_eq!(**l.load(), 0);
-        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
-        assert!(**l.load() > 0);
+        tokio::time::advance(Duration::from_millis(21)).await;
+        l.wait_for_update().await;
+        assert_eq!(**l.load(), 1);
+        tokio::time::advance(Duration::from_millis(21)).await;
+        l.wait_for_update().await;
+        assert_eq!(**l.load(), 2);
     }
 
     #[fbinit::test]
     async fn test_reload_fail_then_succeed(fb: FacebookInit) {
+        tokio::time::pause();
         struct NumberLoader {
             cur: AtomicU32,
             failing: AtomicBool,
@@ -151,10 +210,12 @@ mod test {
         .unwrap();
         loader.failing.store(true, Relaxed);
         assert_eq!(**l.load(), 0);
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::advance(std::time::Duration::from_millis(12)).await;
+        l.wait_for_update().await;
         assert_eq!(**l.load(), 0);
         loader.failing.store(false, Relaxed);
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::advance(std::time::Duration::from_millis(10)).await;
+        l.wait_for_update().await;
         assert!(**l.load() > 0);
     }
 }
