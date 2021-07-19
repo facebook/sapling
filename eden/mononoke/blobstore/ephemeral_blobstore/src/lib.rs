@@ -20,5 +20,5 @@ mod store;
 
 pub use crate::builder::EphemeralBlobstoreBuilder;
 pub use crate::error::EphemeralBlobstoreError;
-pub use crate::repo::RepoEphemeralBlobstore;
+pub use crate::repo::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
 pub use crate::store::EphemeralBlobstore;

@@ -46,7 +46,9 @@ use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
-use ephemeral_blobstore::{EphemeralBlobstoreBuilder, RepoEphemeralBlobstore};
+use ephemeral_blobstore::{
+    ArcRepoEphemeralBlobstore, EphemeralBlobstoreBuilder, RepoEphemeralBlobstore,
+};
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
@@ -777,7 +779,7 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-    ) -> Result<RepoEphemeralBlobstore> {
+    ) -> Result<ArcRepoEphemeralBlobstore> {
         if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
             let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
             let ephemeral_blobstore = EphemeralBlobstoreBuilder::with_database_config(
@@ -791,9 +793,11 @@ impl RepoFactory {
                 ChronoDuration::from_std(ephemeral_config.initial_bubble_lifespan)?,
                 ChronoDuration::from_std(ephemeral_config.bubble_expiration_grace)?,
             );
-            Ok(ephemeral_blobstore.for_repo(repo_identity.id()))
+            Ok(Arc::new(ephemeral_blobstore.for_repo(repo_identity.id())))
         } else {
-            Ok(RepoEphemeralBlobstore::disabled(repo_identity.id()))
+            Ok(Arc::new(RepoEphemeralBlobstore::disabled(
+                repo_identity.id(),
+            )))
         }
     }
 }

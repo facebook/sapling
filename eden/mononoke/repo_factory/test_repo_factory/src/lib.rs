@@ -29,6 +29,7 @@ use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use ephemeral_blobstore::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
 use fastlog::RootFastlog;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
@@ -399,5 +400,13 @@ impl TestRepoFactory {
     /// Create empty skiplist index
     pub fn skiplist_index(&self) -> ArcSkiplistIndex {
         Arc::new(SkiplistIndex::new())
+    }
+
+    /// Disabled ephemeral repo
+    pub fn repo_ephemeral_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> ArcRepoEphemeralBlobstore {
+        Arc::new(RepoEphemeralBlobstore::disabled(repo_identity.id()))
     }
 }

@@ -6,6 +6,7 @@
  */
 
 use blobrepo::BlobRepo;
+use ephemeral_blobstore::RepoEphemeralBlobstore;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
@@ -23,4 +24,7 @@ pub struct InnerRepo {
 
     #[facet]
     pub segmented_changelog: dyn SegmentedChangelog,
+
+    #[facet]
+    pub ephemeral_blobstore: RepoEphemeralBlobstore,
 }

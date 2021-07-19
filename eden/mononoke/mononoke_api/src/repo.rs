@@ -27,6 +27,7 @@ use cross_repo_sync::{
     CommitSyncRepos, CommitSyncer,
 };
 use derived_data::BonsaiDerivable;
+use ephemeral_blobstore::RepoEphemeralBlobstore;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::Stream01CompatExt;
@@ -301,10 +302,12 @@ impl Repo {
             ),
         };
 
+        let repo_id = blob_repo.get_repoid();
         let inner = InnerRepo {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
             segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
+            ephemeral_blobstore: Arc::new(RepoEphemeralBlobstore::disabled(repo_id)),
         };
 
         let config = RepoConfig {
