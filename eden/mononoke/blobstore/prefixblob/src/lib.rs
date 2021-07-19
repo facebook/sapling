@@ -14,8 +14,9 @@ use inlinable_string::InlinableString;
 use context::CoreContext;
 
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, BlobstoreWithLink,
-    OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
+    BlobstoreKeyRange, BlobstoreKeySource, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    PutBehaviour,
 };
 use mononoke_types::BlobstoreBytes;
 
@@ -52,6 +53,11 @@ impl<T> PrefixBlobstore<T> {
     #[inline]
     pub fn prepend(&self, key: impl AsRef<str>) -> String {
         [&self.prefix, key.as_ref()].concat()
+    }
+
+    #[inline]
+    pub fn unprepend(&self, key: &str) -> String {
+        key[self.prefix.len()..].to_string()
     }
 }
 
@@ -130,6 +136,35 @@ impl<T: BlobstoreWithLink> BlobstoreWithLink for PrefixBlobstore<T> {
     }
 }
 
+#[async_trait]
+impl<T: BlobstoreKeySource> BlobstoreKeySource for PrefixBlobstore<T> {
+    async fn enumerate<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
+    ) -> Result<BlobstoreEnumerationData> {
+        let new_param = match range {
+            BlobstoreKeyParam::Start(range) => BlobstoreKeyParam::Start(BlobstoreKeyRange {
+                begin_key: if range.begin_key.is_empty() {
+                    String::new()
+                } else {
+                    self.prepend(&range.begin_key)
+                },
+                end_key: if range.end_key.is_empty() {
+                    String::new()
+                } else {
+                    self.prepend(&range.end_key)
+                },
+            }),
+            // No need to prepend Continuation as we don't unprepend it
+            p => p.clone(),
+        };
+        let mut res = self.blobstore.enumerate(ctx, &new_param).await?;
+        res.keys = res.keys.into_iter().map(|k| self.unprepend(&k)).collect();
+        Ok(res)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -137,6 +172,7 @@ mod test {
     use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
+    use maplit::hashset;
 
     use memblob::Memblob;
 
@@ -190,6 +226,31 @@ mod test {
                 .await
                 .expect("is_present should succeed")
                 .assume_not_found_if_unsure()
+        );
+
+        let enumerated = prefixed
+            .enumerate(ctx, &BlobstoreKeyParam::from(..))
+            .await
+            .unwrap();
+
+        assert_eq!(enumerated.keys, hashset! { unprefixed_key.clone() });
+
+        assert!(
+            prefixed
+                .enumerate(ctx, &BlobstoreKeyParam::from("foobar1".to_string()..))
+                .await
+                .unwrap()
+                .keys
+                .is_empty()
+        );
+
+        assert!(
+            !prefixed
+                .enumerate(ctx, &BlobstoreKeyParam::from("fooba".to_string()..))
+                .await
+                .unwrap()
+                .keys
+                .is_empty()
         );
     }
 }

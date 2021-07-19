@@ -54,6 +54,7 @@ pub enum OperationType {
     IsPresent,
     Link,
     Unlink,
+    Enumerate,
 }
 
 impl From<OperationType> for ScubaValue {

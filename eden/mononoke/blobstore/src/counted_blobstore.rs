@@ -14,8 +14,9 @@ use stats::prelude::*;
 use context::CoreContext;
 
 use crate::{
-    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps,
-    BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreBytes, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent,
+    BlobstoreKeyParam, BlobstoreKeySource, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    PutBehaviour,
 };
 
 define_stats_struct! {
@@ -39,6 +40,9 @@ define_stats_struct! {
     unlink: timeseries(Rate, Sum),
     unlink_ok: timeseries(Rate, Sum),
     unlink_err: timeseries(Rate, Sum),
+    enumerate: timeseries(Rate, Sum),
+    enumerate_ok: timeseries(Rate, Sum),
+    enumerate_err: timeseries(Rate, Sum),
 }
 
 #[derive(Debug)]
@@ -193,6 +197,23 @@ impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
         match res {
             Ok(()) => self.stats.unlink_ok.add_value(1),
             Err(_) => self.stats.unlink_err.add_value(1),
+        }
+        res
+    }
+}
+
+#[async_trait]
+impl<T: BlobstoreKeySource> BlobstoreKeySource for CountedBlobstore<T> {
+    async fn enumerate<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
+    ) -> Result<BlobstoreEnumerationData> {
+        self.stats.enumerate.add_value(1);
+        let res = self.blobstore.enumerate(ctx, range).await;
+        match res {
+            Ok(_) => self.stats.enumerate_ok.add_value(1),
+            Err(_) => self.stats.enumerate_err.add_value(1),
         }
         res
     }
