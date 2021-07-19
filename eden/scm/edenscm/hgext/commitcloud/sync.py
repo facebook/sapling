@@ -232,6 +232,9 @@ def _sync(
         uploaded, failed = upload.upload(repo, None)
         with repo.lock():
             backupstate.BackupState(repo, remotepath, usehttp=True).update(uploaded)
+        # Upload returns a list of all newly uploaded commits and failed commits (not just heads).
+        # Backup returns a revset for failed. Create a revset for compatibility.
+        failed = repo.revs("%ln", failed)
     else:
         # Back up all local commits that are not already backed up.
         # Load the backup state under the repo lock to ensure a consistent view.
@@ -310,11 +313,12 @@ def _sync(
 
     if failed:
         failedset = set(repo.nodes("%ld::", failed))
-        if len(failedset) == 1:
-            repo.ui.warn(
-                _("failed to synchronize %s\n") % nodemod.short(failedset.pop()),
-                component="commitcloud",
-            )
+        if len(failedset) < 10:
+            while failedset:
+                repo.ui.warn(
+                    _("failed to synchronize %s\n") % nodemod.short(failedset.pop()),
+                    component="commitcloud",
+                )
         else:
             repo.ui.warn(
                 _("failed to synchronize %d commits\n") % len(failedset),

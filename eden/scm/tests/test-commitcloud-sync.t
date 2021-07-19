@@ -899,7 +899,8 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   remote:     715c1454ae33  stack commit 2
   remote:     9bd68ef10d6b  toobig
   push of head 9bd68ef10d6b failed: bundle is too big: 1869 bytes. max allowed size is 0 MB
-  commitcloud: failed to synchronize 2 commits
+  commitcloud: failed to synchronize a6b97eebbf74
+  commitcloud: failed to synchronize 9bd68ef10d6b
   finished in * (glob)
 
 Run cloud status after failing to synchronize

@@ -1629,4 +1629,16 @@ def cloudupload(ui, repo, **opts):
     else:
         revs = None
 
-    upload.upload(repo, revs, force=opts.get("force"))
+    uploaded, failed = upload.upload(repo, revs, force=opts.get("force"))
+    if failed:
+        if len(failed) < 10:
+            while failed:
+                repo.ui.warn(
+                    _("failed to upload %s\n") % nodemod.short(failed.pop()),
+                    component="commitcloud",
+                )
+        else:
+            repo.ui.warn(
+                _("failed to upload %d commits\n") % len(failed),
+                component="commitcloud",
+            )
