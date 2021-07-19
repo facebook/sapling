@@ -8,8 +8,10 @@
 //! Repository factory.
 #![feature(trait_alias)]
 
+use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
+use sql_construct::SqlConstructFromDatabaseConfig;
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
@@ -44,6 +46,7 @@ use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
+use ephemeral_blobstore::{EphemeralBlobstoreBuilder, RepoEphemeralBlobstore};
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
@@ -768,5 +771,29 @@ impl RepoFactory {
     pub async fn redaction_config_blobstore(&self) -> Result<ArcRedactionConfigBlobstore> {
         self.redaction_config_blobstore_from_config(&self.redaction_config.blobstore)
             .await
+    }
+
+    pub async fn repo_ephemeral_blobstore(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<RepoEphemeralBlobstore> {
+        if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
+            let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
+            let ephemeral_blobstore = EphemeralBlobstoreBuilder::with_database_config(
+                self.env.fb,
+                &ephemeral_config.metadata,
+                &self.env.mysql_options,
+                self.env.readonly_storage.0,
+            )?
+            .build(
+                blobstore,
+                ChronoDuration::from_std(ephemeral_config.initial_bubble_lifespan)?,
+                ChronoDuration::from_std(ephemeral_config.bubble_expiration_grace)?,
+            );
+            Ok(ephemeral_blobstore.for_repo(repo_identity.id()))
+        } else {
+            Ok(RepoEphemeralBlobstore::disabled(repo_identity.id()))
+        }
     }
 }

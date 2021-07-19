@@ -17,6 +17,7 @@ use crate::store::EphemeralBlobstore;
 /// Ephemeral Blobstore for a particular repository.  This is a repo
 /// attribute.
 #[facet::facet]
+#[derive(Clone)]
 pub struct RepoEphemeralBlobstore {
     /// Repository this store is for.
     repo_id: RepositoryId,

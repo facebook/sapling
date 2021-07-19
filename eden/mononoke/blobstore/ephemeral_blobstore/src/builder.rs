@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use blobstore::{Blobstore, BlobstoreKeySource, BlobstorePutOps};
+use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
@@ -33,9 +33,9 @@ impl SqlConstruct for EphemeralBlobstoreBuilder {
 }
 
 impl EphemeralBlobstoreBuilder {
-    pub fn build<B: Blobstore + BlobstoreKeySource + BlobstorePutOps + 'static>(
+    pub fn build(
         self,
-        blobstore: Arc<B>,
+        blobstore: Arc<dyn Blobstore>,
         initial_bubble_lifespan: ChronoDuration,
         bubble_expiration_grace: ChronoDuration,
     ) -> EphemeralBlobstore {

@@ -10,7 +10,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::{Blobstore, BlobstoreKeySource, BlobstorePutOps};
+use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
 use sql::queries;
@@ -20,16 +20,10 @@ use crate::bubble::{Bubble, BubbleId};
 use crate::error::EphemeralBlobstoreError;
 use crate::repo::RepoEphemeralBlobstore;
 
-/// Trait alias for the combination of traits that ephemeral blobstore backing
-/// blobstores must implement.
-pub trait BackingBlobstore: Blobstore + BlobstorePutOps + BlobstoreKeySource {}
-
-impl<T: Blobstore + BlobstorePutOps + BlobstoreKeySource> BackingBlobstore for T {}
-
 /// Ephemeral Blobstore.
 pub struct EphemeralBlobstoreInner {
     /// The backing blobstore where blobs are stored.
-    pub(crate) blobstore: Arc<dyn BackingBlobstore>,
+    pub(crate) blobstore: Arc<dyn Blobstore>,
 
     /// Database used to manage the ephemeral blobstore.
     pub(crate) connections: SqlConnections,
@@ -73,7 +67,7 @@ queries! {
 impl EphemeralBlobstore {
     pub(crate) fn new(
         connections: SqlConnections,
-        blobstore: Arc<dyn BackingBlobstore>,
+        blobstore: Arc<dyn Blobstore>,
         initial_bubble_lifespan: ChronoDuration,
         bubble_expiration_grace: ChronoDuration,
     ) -> Self {
@@ -149,7 +143,7 @@ impl EphemeralBlobstore {
 mod test {
     use super::*;
     use crate::builder::EphemeralBlobstoreBuilder;
-    use blobstore::{BlobstoreBytes, BlobstoreKeyParam};
+    use blobstore::{BlobstoreBytes, BlobstoreKeyParam, BlobstoreKeySource};
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashset;
