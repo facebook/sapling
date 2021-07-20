@@ -339,6 +339,36 @@ class Basic20210712Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return snapshot_mod.get_snapshots_root() / "basic-20210712.tar.xz"
 
+    def _verify_fsck_and_get_log_dir(
+        self,
+        expected_files: verify_mod.ExpectedFileSet,
+        expected_errors: List[ExpectedError],
+        auto_fsck: bool,
+    ) -> Path:
+        if auto_fsck:
+            # Remove the next-inode-number file so that edenfs will
+            # automatically peform an fsck run when mounting this checkout.
+            next_inode_path = self._overlay_path() / "next-inode-number"
+            next_inode_path.unlink()
+
+            # Now call _verify_contents() without ever running fsck.
+            # edenfs should automatically perform the fsck steps.
+            self._verify_contents(expected_files)
+            log_dirs = list((self._overlay_path().parent / "fsck").iterdir())
+            if len(log_dirs) != 1:
+                raise Exception(
+                    f"unable to find fsck log directory: candidates are {log_dirs!r}"
+                )
+            return log_dirs[0]
+
+        # manual fsck
+        log_dir = self._run_fsck(expected_errors)
+        assert log_dir is not None
+        self._run_fsck([])
+        self._verify_contents(expected_files)
+
+        return log_dir
+
     def test_untracked_file_removed(self) -> None:
         self._test_file_corrupted(None)
 
@@ -365,35 +395,52 @@ class Basic20210712Test(SnapshotTestBase):
         repaired_files = self.snapshot.get_expected_files()
         repaired_files.set_file(path, b"", perms=0o644)
 
-        self._run_fsck(expected_errors)
-        self._run_fsck([])
-        self._verify_contents(repaired_files)
+        self._verify_fsck_and_get_log_dir(
+            expected_files=repaired_files,
+            expected_errors=expected_errors,
+            auto_fsck=False,
+        )
 
     def test_untracked_dir_removed(self) -> None:
-        self._test_untracked_dir_corrupted(None)
+        self._test_untracked_dir_corrupted(None, auto_fsck=False)
 
     def test_untracked_dir_truncated(self) -> None:
-        self._test_untracked_dir_corrupted(b"")
+        self._test_untracked_dir_corrupted(b"", auto_fsck=False)
 
     def test_untracked_dir_short_header(self) -> None:
-        self._test_untracked_dir_corrupted(b"OVDR\x00\x00\x00\x01")
+        self._test_untracked_dir_corrupted(b"OVDR\x00\x00\x00\x01", auto_fsck=False)
+
+    def test_untracked_dir_removed_auto_fsck(self) -> None:
+        self._test_untracked_dir_corrupted(None, auto_fsck=True)
+
+    def test_untracked_dir_truncated_auto_fsck(self) -> None:
+        self._test_untracked_dir_corrupted(b"", auto_fsck=True)
+
+    def test_untracked_dir_short_header_auto_fsck(self) -> None:
+        self._test_untracked_dir_corrupted(b"OVDR\x00\x00\x00\x01", auto_fsck=True)
+
+    _short_body_data = binascii.unhexlify(
+        (
+            # directory header
+            "4f56 4452 0000 0001 0000 0000 5bd8 fcc8"
+            "0000 0000 0031 6d28 0000 0000 5bd8 fcc8"
+            "0000 0000 0178 73a4 0000 0000 5bd8 fcc8"
+            "0000 0000 0178 73a4 0000 0000 0000 0000"
+            # partial body
+            "1b04 8c0e 6576 6572 7962 6f64 792e 736f"
+            "636b 15c8 8606 1648 000e 6578 6563 7574"
+        ).replace(" ", "")
+    )
 
     def test_untracked_dir_short_body(self) -> None:
-        data = binascii.unhexlify(
-            (
-                # directory header
-                "4f56 4452 0000 0001 0000 0000 5bd8 fcc8"
-                "0000 0000 0031 6d28 0000 0000 5bd8 fcc8"
-                "0000 0000 0178 73a4 0000 0000 5bd8 fcc8"
-                "0000 0000 0178 73a4 0000 0000 0000 0000"
-                # partial body
-                "1b04 8c0e 6576 6572 7962 6f64 792e 736f"
-                "636b 15c8 8606 1648 000e 6578 6563 7574"
-            ).replace(" ", "")
-        )
-        self._test_untracked_dir_corrupted(data)
+        self._test_untracked_dir_corrupted(self._short_body_data, auto_fsck=False)
 
-    def _test_untracked_dir_corrupted(self, data: Optional[bytes]) -> None:
+    def test_untracked_dir_short_body_auto_fsck(self) -> None:
+        self._test_untracked_dir_corrupted(self._short_body_data, auto_fsck=True)
+
+    def _test_untracked_dir_corrupted(
+        self, data: Optional[bytes], auto_fsck: bool
+    ) -> None:
         inode_number = 49  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
@@ -427,15 +474,14 @@ class Basic20210712Test(SnapshotTestBase):
         ]
         expected_errors.append(OrphanInodes(orphan_files, orphan_dirs))
 
-        log_dir = self._run_fsck(expected_errors)
-        assert log_dir is not None
-        self._run_fsck([])
-        self._verify_contents(repaired_files)
-        self._verify_orphans_extracted(log_dir, expected_errors)
+        log_dir = self._verify_fsck_and_get_log_dir(
+            expected_files=repaired_files,
+            expected_errors=expected_errors,
+            auto_fsck=auto_fsck,
+        )
+        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=auto_fsck)
 
-    def _truncate_main_dir(
-        self,
-    ) -> Tuple[verify_mod.ExpectedFileSet, List[ExpectedError]]:
+    def _test_truncate_main_dir(self, auto_fsck: bool) -> None:
         # inode 4 is main/
         bad_main_data = b""
         self._replace_overlay_inode(4, bad_main_data)
@@ -489,38 +535,18 @@ class Basic20210712Test(SnapshotTestBase):
         del repaired_files["main/loaded_dir/loaded_subdir/dir2/file2.txt"]
         del repaired_files["main/materialized_subdir/unmodified.txt"]
 
-        return repaired_files, expected_errors
+        log_dir = self._verify_fsck_and_get_log_dir(
+            expected_files=repaired_files,
+            expected_errors=expected_errors,
+            auto_fsck=auto_fsck,
+        )
+        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=auto_fsck)
 
     def test_main_dir_truncated(self) -> None:
-        repaired_files, expected_errors = self._truncate_main_dir()
-
-        log_dir = self._run_fsck(expected_errors)
-        assert log_dir is not None
-        self._run_fsck([])
-        self._verify_contents(repaired_files)
-        self._verify_orphans_extracted(log_dir, expected_errors)
+        self._test_truncate_main_dir(auto_fsck=False)
 
     def test_main_dir_truncated_auto_fsck(self) -> None:
-        repaired_files, expected_errors = self._truncate_main_dir()
-
-        # Remove the next-inode-number file so that edenfs will
-        # automatically peform an fsck run when mounting this checkout.
-        next_inode_path = self._overlay_path() / "next-inode-number"
-        next_inode_path.unlink()
-
-        # Now call _verify_contents() without ever running fsck.
-        # edenfs should automatically perform the fsck steps.
-        self._verify_contents(repaired_files)
-
-        # Find the fsck log directory that was written out
-        log_dirs = list((self._overlay_path().parent / "fsck").iterdir())
-        if len(log_dirs) != 1:
-            raise Exception(
-                f"unable to find fsck log directory: candidates are {log_dirs!r}"
-            )
-        log_dir = log_dirs[0]
-
-        self._verify_orphans_extracted(log_dir, expected_errors, new_fsck=True)
+        self._test_truncate_main_dir(auto_fsck=True)
 
     # The correct next inode number for this snapshot.
     _next_inode_number = 65
