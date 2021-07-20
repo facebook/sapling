@@ -1660,55 +1660,67 @@ using Handler = ImmediateFuture<folly::Unit> (Nfsd3ServerProcessor::*)(
  * disrupting the actual handler.
  */
 using FormatArgs = std::string (*)(folly::io::Cursor deser);
+using AccessType = ProcessAccessLog::AccessType;
 
 struct HandlerEntry {
   constexpr HandlerEntry() = default;
-  constexpr HandlerEntry(folly::StringPiece n, Handler h, FormatArgs format)
-      : name(n), handler(h), formatArgs(format) {}
+  constexpr HandlerEntry(
+      folly::StringPiece n,
+      Handler h,
+      FormatArgs format,
+      AccessType at = AccessType::FsChannelOther)
+      : name(n), handler(h), formatArgs(format), accessType(at) {}
 
   folly::StringPiece name;
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
+  AccessType accessType = AccessType::FsChannelOther;
 };
 
 constexpr auto kNfs3dHandlers = [] {
+  const auto Read = AccessType::FsChannelRead;
+  const auto Write = AccessType::FsChannelWrite;
+
   std::array<HandlerEntry, 22> handlers;
   handlers[folly::to_underlying(nfsv3Procs::null)] = {
       "NULL", &Nfsd3ServerProcessor::null, formatNull};
   handlers[folly::to_underlying(nfsv3Procs::getattr)] = {
-      "GETATTR", &Nfsd3ServerProcessor::getattr, formatGetattr};
+      "GETATTR", &Nfsd3ServerProcessor::getattr, formatGetattr, Read};
   handlers[folly::to_underlying(nfsv3Procs::setattr)] = {
-      "SETATTR", &Nfsd3ServerProcessor::setattr, formatSetattr};
+      "SETATTR", &Nfsd3ServerProcessor::setattr, formatSetattr, Write};
   handlers[folly::to_underlying(nfsv3Procs::lookup)] = {
-      "LOOKUP", &Nfsd3ServerProcessor::lookup, formatLookup};
+      "LOOKUP", &Nfsd3ServerProcessor::lookup, formatLookup, Read};
   handlers[folly::to_underlying(nfsv3Procs::access)] = {
-      "ACCESS", &Nfsd3ServerProcessor::access, formatAccess};
+      "ACCESS", &Nfsd3ServerProcessor::access, formatAccess, Read};
   handlers[folly::to_underlying(nfsv3Procs::readlink)] = {
-      "READLINK", &Nfsd3ServerProcessor::readlink, formatReadlink};
+      "READLINK", &Nfsd3ServerProcessor::readlink, formatReadlink, Read};
   handlers[folly::to_underlying(nfsv3Procs::read)] = {
-      "READ", &Nfsd3ServerProcessor::read, formatRead};
+      "READ", &Nfsd3ServerProcessor::read, formatRead, Read};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
-      "WRITE", &Nfsd3ServerProcessor::write, formatWrite};
+      "WRITE", &Nfsd3ServerProcessor::write, formatWrite, Write};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
-      "CREATE", &Nfsd3ServerProcessor::create, formatCreate};
+      "CREATE", &Nfsd3ServerProcessor::create, formatCreate, Write};
   handlers[folly::to_underlying(nfsv3Procs::mkdir)] = {
-      "MKDIR", &Nfsd3ServerProcessor::mkdir, formatMkdir};
+      "MKDIR", &Nfsd3ServerProcessor::mkdir, formatMkdir, Write};
   handlers[folly::to_underlying(nfsv3Procs::symlink)] = {
-      "SYMLINK", &Nfsd3ServerProcessor::symlink, formatSymlink};
+      "SYMLINK", &Nfsd3ServerProcessor::symlink, formatSymlink, Write};
   handlers[folly::to_underlying(nfsv3Procs::mknod)] = {
-      "MKNOD", &Nfsd3ServerProcessor::mknod, formatMknod};
+      "MKNOD", &Nfsd3ServerProcessor::mknod, formatMknod, Write};
   handlers[folly::to_underlying(nfsv3Procs::remove)] = {
-      "REMOVE", &Nfsd3ServerProcessor::remove, formatRemove};
+      "REMOVE", &Nfsd3ServerProcessor::remove, formatRemove, Write};
   handlers[folly::to_underlying(nfsv3Procs::rmdir)] = {
-      "RMDIR", &Nfsd3ServerProcessor::rmdir, formatRmdir};
+      "RMDIR", &Nfsd3ServerProcessor::rmdir, formatRmdir, Write};
   handlers[folly::to_underlying(nfsv3Procs::rename)] = {
-      "RENAME", &Nfsd3ServerProcessor::rename, formatRename};
+      "RENAME", &Nfsd3ServerProcessor::rename, formatRename, Write};
   handlers[folly::to_underlying(nfsv3Procs::link)] = {
-      "LINK", &Nfsd3ServerProcessor::link, formatLink};
+      "LINK", &Nfsd3ServerProcessor::link, formatLink, Write};
   handlers[folly::to_underlying(nfsv3Procs::readdir)] = {
-      "READDIR", &Nfsd3ServerProcessor::readdir, formatReaddir};
+      "READDIR", &Nfsd3ServerProcessor::readdir, formatReaddir, Read};
   handlers[folly::to_underlying(nfsv3Procs::readdirplus)] = {
-      "READDIRPLUS", &Nfsd3ServerProcessor::readdirplus, formatReaddirplus};
+      "READDIRPLUS",
+      &Nfsd3ServerProcessor::readdirplus,
+      formatReaddirplus,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::fsstat)] = {
       "FSSTAT", &Nfsd3ServerProcessor::fsstat, formatFsstat};
   handlers[folly::to_underlying(nfsv3Procs::fsinfo)] = {
@@ -1716,7 +1728,7 @@ constexpr auto kNfs3dHandlers = [] {
   handlers[folly::to_underlying(nfsv3Procs::pathconf)] = {
       "PATHCONF", &Nfsd3ServerProcessor::pathconf, formatPathconf};
   handlers[folly::to_underlying(nfsv3Procs::commit)] = {
-      "COMMIT", &Nfsd3ServerProcessor::commit, formatCommit};
+      "COMMIT", &Nfsd3ServerProcessor::commit, formatCommit, Write};
 
   return handlers;
 }();
@@ -1917,6 +1929,13 @@ folly::StringPiece nfsProcName(uint32_t procNumber) {
   return procNumber < kNfs3dHandlers.size() ? kNfs3dHandlers[procNumber].name
                                             : "<unknown>";
 }
+
+ProcessAccessLog::AccessType nfsProcAccessType(uint32_t procNumber) {
+  return procNumber < kNfs3dHandlers.size()
+      ? kNfs3dHandlers[procNumber].accessType
+      : ProcessAccessLog::AccessType::FsChannelOther;
+}
+
 } // namespace facebook::eden
 
 #endif

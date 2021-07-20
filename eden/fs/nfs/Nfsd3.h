@@ -209,6 +209,7 @@ class Nfsd3 {
 };
 
 folly::StringPiece nfsProcName(uint32_t procNumber);
+ProcessAccessLog::AccessType nfsProcAccessType(uint32_t procNumber);
 } // namespace facebook::eden
 
 #endif

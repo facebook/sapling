@@ -724,9 +724,12 @@ NfsCall populateNfsCall(const NfsTraceEvent& event) {
 /**
  * Returns true if event should not be traced.
  */
-bool isEventMasked(int64_t eventCategoryMask, const FuseTraceEvent& event) {
+
+bool isEventMasked(
+    int64_t eventCategoryMask,
+    ProcessAccessLog::AccessType accessType) {
   using AccessType = ProcessAccessLog::AccessType;
-  switch (fuseOpcodeAccessType(event.getRequest().opcode)) {
+  switch (accessType) {
     case AccessType::FsChannelRead:
       return 0 == (eventCategoryMask & streamingeden_constants::FS_EVENT_READ_);
     case AccessType::FsChannelWrite:
@@ -737,6 +740,16 @@ bool isEventMasked(int64_t eventCategoryMask, const FuseTraceEvent& event) {
       return 0 ==
           (eventCategoryMask & streamingeden_constants::FS_EVENT_OTHER_);
   }
+}
+
+bool isEventMasked(int64_t eventCategoryMask, const FuseTraceEvent& event) {
+  return isEventMasked(
+      eventCategoryMask, fuseOpcodeAccessType(event.getRequest().opcode));
+}
+
+bool isEventMasked(int64_t eventCategoryMask, const NfsTraceEvent& event) {
+  return isEventMasked(
+      eventCategoryMask, nfsProcAccessType(event.getProcNumber()));
 }
 
 } // namespace
@@ -852,7 +865,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
         [owner = PublisherOwner{std::move(publisher)},
-         serverState = server_->getServerState()](const NfsTraceEvent& event) {
+         serverState = server_->getServerState(),
+         eventCategoryMask](const NfsTraceEvent& event) {
+          if (isEventMasked(eventCategoryMask, event)) {
+            return;
+          }
+
           FsEvent te;
           auto times = thriftTraceEventTimes(event);
           te.times_ref() = times;
