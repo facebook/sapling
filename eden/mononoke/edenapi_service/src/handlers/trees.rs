@@ -29,7 +29,7 @@ use types::{Key, RepoPathBuf};
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, custom_cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -216,7 +216,7 @@ pub async fn upload_trees(state: &mut State) -> Result<impl TryIntoResponse, Htt
         .enumerate()
         .map(move |(i, item)| store_tree(repo.clone(), item, i));
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
             .map(|r| r.map(|v| v.to_wire())),

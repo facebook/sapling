@@ -28,7 +28,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request, to_mpath};
+use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request, to_mpath};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -53,7 +53,7 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
     let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
     let request = parse_wire_request::<WireHistoryRequest>(state).await?;
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         fetch_history(repo, request)
             .await
             .map(|r| r.map(|e| e.to_wire())),

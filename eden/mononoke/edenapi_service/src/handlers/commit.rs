@@ -32,8 +32,8 @@ use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
-    cbor_stream, custom_cbor_stream, get_repo, parse_cbor_request, parse_wire_request,
-    to_mutation_entry, to_revlog_changeset,
+    cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
+    parse_wire_request, to_mutation_entry, to_revlog_changeset,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -93,7 +93,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
     let response = stream::iter(hgid_list)
         .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
         .map_ok(|response| response.to_wire());
-    Ok(cbor_stream(response))
+    Ok(cbor_stream_filtered_errors(response))
 }
 
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -184,7 +184,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map(move |hg_id| commit_revlog_data(hg_repo_ctx.clone(), hg_id));
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
-    Ok(cbor_stream(response))
+    Ok(cbor_stream_filtered_errors(response))
 }
 
 pub async fn hash_lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -216,7 +216,7 @@ pub async fn hash_lookup(state: &mut State) -> Result<impl TryIntoResponse, Http
         }
     });
 
-    Ok(cbor_stream(stream))
+    Ok(cbor_stream_filtered_errors(stream))
 }
 
 async fn translate_location(
@@ -314,7 +314,7 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
         .await
         .map_err(HttpError::e500)?;
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
     ))
 }
@@ -346,7 +346,7 @@ pub async fn ephemeral_prepare(state: &mut State) -> Result<impl TryIntoResponse
         .await
         .map_err(HttpError::e500)?;
 
-    Ok(cbor_stream(stream::once(
-        async move { Ok(response.to_wire()) },
-    )))
+    Ok(cbor_stream_filtered_errors(stream::once(async move {
+        Ok(response.to_wire())
+    })))
 }

@@ -28,7 +28,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, get_request_body, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, get_repo, get_request_body, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -66,7 +66,7 @@ pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let repo = get_repo(&sctx, &rctx, &params.repo, Metric::GetpackFiles).await?;
     let request = parse_wire_request::<WireFileRequest>(state).await?;
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         fetch_all_files(repo, request).map(|r| r.map(|v| v.to_wire())),
     ))
 }
@@ -217,7 +217,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
         .await
         .map(|v| v.to_wire());
 
-    Ok(cbor_stream(stream::iter(vec![token])))
+    Ok(cbor_stream_filtered_errors(stream::iter(vec![token])))
 }
 
 /// Store the content of a single HgFilenode
@@ -309,7 +309,7 @@ pub async fn upload_hg_filenodes(state: &mut State) -> Result<impl TryIntoRespon
         .enumerate()
         .map(move |(i, item)| store_hg_filenode(repo.clone(), item, i));
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST)
             .map(|r| r.map(|v| v.to_wire())),

@@ -21,7 +21,7 @@ use mononoke_api_hg::{HgDataId, HgRepoContext};
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -101,7 +101,7 @@ pub async fn lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         .enumerate()
         .map(move |(i, item)| check_request_item(repo.clone(), item, i));
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_LOOKUPS_PER_REQUEST)
             .map(|r| r.map(|v| v.to_wire())),

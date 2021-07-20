@@ -25,7 +25,9 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request, to_hg_path, to_mononoke_path};
+use crate::utils::{
+    cbor_stream_filtered_errors, get_repo, parse_wire_request, to_hg_path, to_mononoke_path,
+};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -45,7 +47,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
     let repo = get_repo(&sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireCompleteTreeRequest>(state).await?;
 
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         fetch_trees_under_path(&repo, request)?.map(|r| Ok(r.to_wire())),
     ))
 }

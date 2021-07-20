@@ -18,7 +18,7 @@ use mononoke_api_hg::HgRepoContext;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -44,7 +44,7 @@ pub async fn bookmarks(state: &mut State) -> Result<impl TryIntoResponse, HttpEr
     let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let request = parse_wire_request::<WireBookmarkRequest>(state).await?;
-    Ok(cbor_stream(
+    Ok(cbor_stream_filtered_errors(
         fetch_all_bookmarks(repo, request).map(|r| r.map(|v| v.to_wire())),
     ))
 }

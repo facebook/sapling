@@ -47,7 +47,7 @@ pub fn to_cbor_bytes<S: Serialize>(s: &S) -> Result<Bytes, Error> {
 
 /// Serialize each item of the input stream as CBOR and return a streaming
 /// response. Any errors yielded by the stream will be filtered out.
-pub fn cbor_stream<S, T>(stream: S) -> impl TryIntoResponse
+pub fn cbor_stream_filtered_errors<S, T>(stream: S) -> impl TryIntoResponse
 where
     S: Stream<Item = Result<T, Error>> + Send + 'static,
     T: Serialize + Send + 'static,
