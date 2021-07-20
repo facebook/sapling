@@ -335,19 +335,37 @@ class mononokepeer(stdiopeer.stdiopeer):
                         error.BadResponseError("invalid http response: %s" % line)
                     )
 
-                if headerparts[0] != b"HTTP/1.1" or headerparts[1] != b"101":
+                if headerparts[0] != b"HTTP/1.1":
                     self._abort(
                         error.BadResponseError(
                             'unexpected server response: "{}"'.format(decodeutf8(line))
                         )
                     )
 
+                httpcode = headerparts[1]
+                httpstatus = b" ".join(headerparts[2:])
+                bodylength = 0
+
                 # Strip away all headers so we can start decoding Mercurial
-                # wire protocol
+                # wire protocol or read HTTP response body
                 while line:
                     line = self.handle.readline(1024).strip()
                     if line.lower().startswith(b"x-mononoke-encoding:"):
                         decompress = True
+                    if line.lower().startswith(b"content-length:"):
+                        bodylength = int(line.split()[1])
+
+                if httpcode != b"101":
+                    bodyerrmsg = self.handle.read(bodylength)
+                    self._abort(
+                        error.BadResponseError(
+                            'unexpected server response: "{} {}": {}'.format(
+                                decodeutf8(httpcode),
+                                decodeutf8(httpstatus),
+                                decodeutf8(bodyerrmsg),
+                            )
+                        )
+                    )
 
             except IOError as ex:
                 self._connectionerror(ex)
