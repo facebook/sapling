@@ -140,6 +140,14 @@ class PrefetchCmd(Subcmd):
                 )
             )
             if not args.background and not args.silent:
+                if checkout_and_patterns.patterns and not result.matchingFiles:
+                    print(
+                        f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
+                        "See `eden prefetch -h` for docs on pattern matching.",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+
                 for name in result.matchingFiles:
                     print(os.fsdecode(name))
         return 0
