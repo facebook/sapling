@@ -27,7 +27,11 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
-        "PATTERN", nargs="*", help="Filename patterns to match via fnmatch"
+        "PATTERN",
+        nargs="*",
+        # Technically, we use fnmatch, but it uses glob for pattern strings.
+        # source: https://man7.org/linux/man-pages/man3/fnmatch.3.html
+        help="Filename patterns (relative to repo root) to match via glob, see: https://man7.org/linux/man-pages/man7/glob.7.html",
     )
 
 
