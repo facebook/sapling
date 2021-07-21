@@ -534,7 +534,9 @@ cloudsmartlogopts = [
         "d",
         "date",
         "",
-        _("show version of the smartlog on date specified"),
+        _(
+            "show version of the smartlog on date specified (or on the first later date if there are no updates on the given date)"
+        ),
         _("DATE"),
     ),
     (
@@ -590,6 +592,11 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         parseddate = util.parsedate(date)
     else:
         parseddate = None
+
+    if version and date:
+        raise error.Abort(
+            "'--workspace-version' and '--date' options can't be both provided"
+        )
 
     ui.status(
         _("searching draft commits for the '%s' workspace for the '%s' repo\n")

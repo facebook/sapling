@@ -10,7 +10,7 @@ import time
 import traceback
 
 from bindings import sptui
-from edenscm.mercurial import cmdutil, progress, error
+from edenscm.mercurial import cmdutil, progress, error, util
 from edenscm.mercurial.i18n import _
 
 from . import service, token as tokenmod, workspace
@@ -35,11 +35,33 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts):
                     key=lambda version: version["version_number"],
                 )
 
+            initversion = opts.get("workspace_version")
+            date = opts.get("date")
+            inittime = int(util.parsedate(date)[0]) if date else None
+
+            if initversion and inittime:
+                raise error.Abort(
+                    "'--workspace-version' and '--date' options can't be both provided"
+                )
+
+            if inittime:
+                timestamps = sorted(
+                    self.versions,
+                    key=lambda version: version["timestamp"],
+                )
+                for index, version in enumerate(timestamps):
+                    if version["timestamp"] >= inittime:
+                        initversion = version["version_number"]
+                        break
+                    if index == len(timestamps) - 1:
+                        raise error.Abort(
+                            "You have no recorded history at or after this date"
+                        )
+
             smartlogstyle = ui.config("templatealias", template)
             if smartlogstyle:
                 self.opts["template"] = "{%s}" % smartlogstyle
 
-            initversion = opts.get("workspace_version")
             if initversion:
                 initversion = int(initversion)
                 for index, version in enumerate(self.versions):
