@@ -121,14 +121,6 @@ queries! {
         "
     }
 
-    write MarkRequestAsNewAgain(id: RowId, request_type: RequestType) {
-        none,
-        "UPDATE long_running_request_queue
-         SET status = 'new', claimed_by = NULL
-         WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress'
-        "
-    }
-
     write MarkRequestInProgress(id: RowId, request_type: RequestType, started_processing_at: Timestamp, claimed_by: ClaimedBy) {
         none,
         "UPDATE long_running_request_queue
