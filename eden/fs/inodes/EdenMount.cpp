@@ -1651,7 +1651,7 @@ struct stat EdenMount::initStatData() const {
 }
 
 namespace {
-Future<Unit> ensureDirectoryExistsHelper(
+Future<TreeInodePtr> ensureDirectoryExistsHelper(
     TreeInodePtr parent,
     PathComponentPiece childName,
     RelativePathPiece rest,
@@ -1665,7 +1665,7 @@ Future<Unit> ensureDirectoryExistsHelper(
     contents.unlock();
 
     if (rest.empty()) {
-      return folly::unit;
+      return parent->getOrLoadChildTree(childName, context);
     }
     return parent->getOrLoadChildTree(childName, context)
         .thenValue([rest = RelativePath{rest}, &context](TreeInodePtr child) {
@@ -1688,16 +1688,19 @@ Future<Unit> ensureDirectoryExistsHelper(
     throw;
   }
   if (rest.empty()) {
-    return folly::unit;
+    return child;
   }
   auto [nextChildName, nextRest] = splitFirst(rest);
   return ensureDirectoryExistsHelper(child, nextChildName, nextRest, context);
 }
 } // namespace
 
-Future<Unit> EdenMount::ensureDirectoryExists(
+Future<TreeInodePtr> EdenMount::ensureDirectoryExists(
     RelativePathPiece fromRoot,
     ObjectFetchContext& context) {
+  if (fromRoot.empty()) {
+    return getRootInode();
+  }
   auto [childName, rest] = splitFirst(fromRoot);
   return ensureDirectoryExistsHelper(getRootInode(), childName, rest, context);
 }
