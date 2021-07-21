@@ -12,6 +12,7 @@ import os
 import re
 import shlex
 import stat
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -51,6 +52,7 @@ from thrift.util import Serializer
 from . import (
     cmd_util,
     prefetch_profile as prefetch_profile_mod,
+    rage as rage_mod,
     stats_print,
     subcmd as subcmd_mod,
     tabulate,
@@ -816,8 +818,67 @@ class FlushCacheCmd(Subcmd):
         return 0
 
 
-@debug_cmd("log", "Display the EdenFS log file")
+@debug_cmd("log", "Display/Gather the EdenFS log file. Defaults to Display mode.")
 class LogCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        upload_parser = parser.add_subparsers().add_parser(
+            "upload",
+            help=(
+                "Gather logs from eden and uploads them externally. "
+                "This uses the upload tool specified by the rage.reporter config value"
+            ),
+        )
+
+        upload_parser.add_argument(
+            "--stdout",
+            action="store_true",
+            help="Print the logs to stdout: ignore reporter.",
+        )
+        upload_parser.add_argument(
+            "--full",
+            action="store_true",
+            help="Gather the full logs from eden.",
+        )
+        upload_parser.add_argument(
+            "--size",
+            type=int,
+            default=1000000,
+            help=(
+                "The amount of the logs we should gather. "
+                "If --full is passed in, we will ignore this value. Default to 1M"
+            ),
+        )
+
+        upload_parser.set_defaults(func=self.upload_logs)
+
+    def upload_logs(self, args: argparse.Namespace) -> int:
+        instance = cmd_util.get_eden_instance(args)
+
+        eden_log_path = instance.get_log_path()
+        if not eden_log_path.exists():
+            print(f"No log file found at {eden_log_path}", file=sys.stderr)
+            return 1
+
+        # For ease of use, just use the same rage reporter
+        rage_processor = instance.get_config_value("rage.reporter", default="")
+
+        proc: Optional[subprocess.Popen] = None
+        if rage_processor and not args.stdout:
+            proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
+            sink = proc.stdin
+        else:
+            proc = None
+            sink = sys.stdout.buffer
+
+        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
+        #  `Optional[typing.IO[typing.Any]]`.
+        rage_mod.print_log_file(eden_log_path, sink, args.full, args.size)
+        if proc:
+            # pyre-fixme[16]: `Optional` has no attribute `close`.
+            sink.close()
+            proc.wait()
+        return 0
+
     def run(self, args: argparse.Namespace) -> int:
         # Display eden's log with the system pager if possible.  We could
         # add a --tail option.
