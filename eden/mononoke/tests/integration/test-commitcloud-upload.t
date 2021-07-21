@@ -40,6 +40,7 @@ mononoke  local commit cloud backend
   > servicelocation = $TESTTMP
   > token_enforced = False
   > owner_team = The Test Team
+  > usehttpupload = True
   > [remotefilelog]
   > reponame=repo
   > EOF
@@ -79,6 +80,7 @@ start edenapi
   $ hgedenapi cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -87,6 +89,7 @@ start edenapi
   $ hgedenapi cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 

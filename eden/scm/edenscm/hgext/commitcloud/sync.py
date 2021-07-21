@@ -231,7 +231,8 @@ def _sync(
         # This upload doesn't support snapshots backup yet!
         uploaded, failed = upload.upload(repo, None)
         with repo.lock():
-            backupstate.BackupState(repo, remotepath, usehttp=True).update(uploaded)
+            state = backupstate.BackupState(repo, remotepath, usehttp=True)
+            state.update(uploaded)
         # Upload returns a list of all newly uploaded commits and failed commits (not just heads).
         # Backup returns a revset for failed. Create a revset for compatibility.
         failed = repo.revs("%ln", failed)
