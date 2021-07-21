@@ -235,7 +235,7 @@ class CloneTest(testcase.EdenRepoTest):
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.clone(repo_path, tmp)
         self.assertIn(
-            f"error: {repo_path!r} does not look like a valid hg or git repository\n",
+            f"error: {repo_path!r} does not look like a valid repository\n",
             context.exception.stderr,
         )
 

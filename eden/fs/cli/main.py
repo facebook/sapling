@@ -760,6 +760,11 @@ class CloneCmd(Subcmd):
             help="(Windows only) specify overlay type",
         )
 
+        parser.add_argument(
+            "--backing-store",
+            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux only).",
+        )
+
     async def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
@@ -787,43 +792,65 @@ class CloneCmd(Subcmd):
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(
-                instance, args.repo, args.rev, args.nfs, args.overlay_type
+                instance,
+                args.repo,
+                args.rev,
+                args.nfs,
+                args.overlay_type,
+                args.backing_store,
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
             return 1
 
-        # Find the commit to check out
-        if args.rev is not None:
-            try:
-                commit = repo.get_commit_hash(args.rev)
-            except Exception as ex:
+        # If it's source control respository
+        if not args.backing_store:
+            # Find the commit to check out
+            if args.rev is not None:
+                try:
+                    commit = repo.get_commit_hash(args.rev)
+                except Exception as ex:
+                    print_stderr(
+                        f"error: unable to find hash for commit " f"{args.rev!r}: {ex}"
+                    )
+                    return 1
+            else:
+                try:
+                    commit = repo.get_commit_hash(repo_config.default_revision)
+                except Exception as ex:
+                    print_stderr(
+                        f"error: unable to find hash for commit "
+                        f"{repo_config.default_revision!r}: {ex}"
+                    )
+                    return 1
+
+                NULL_REVISION = "0" * 40
+                if commit == NULL_REVISION and not args.allow_empty_repo:
+                    print_stderr(
+                        f"""\
+    error: the initial revision that would be checked out is the empty commit
+
+    The repository at {repo.source} may still be cloning.
+    Please make sure cloning completes before running `eden clone`
+    If you do want to check out the empty commit,
+    re-run `eden clone` with --allow-empty-repo"""
+                    )
+                    return 1
+
+        elif args.backing_store == "recas":
+            if sys.platform != "linux":
                 print_stderr(
-                    f"error: unable to find hash for commit " f"{args.rev!r}: {ex}"
+                    "error: recas backing store was passed but this feature is only available on Linux"
                 )
                 return 1
+            if args.rev is not None:
+                commit = args.rev
+            else:
+                NULL_REVISION = "0" * 40
+                # A special digest for RE CAS representing an empty folder
+                commit = f"{NULL_REVISION}:0"
         else:
-            try:
-                commit = repo.get_commit_hash(repo_config.default_revision)
-            except Exception as ex:
-                print_stderr(
-                    f"error: unable to find hash for commit "
-                    f"{repo_config.default_revision!r}: {ex}"
-                )
-                return 1
-
-            NULL_REVISION = "0" * 40
-            if commit == NULL_REVISION and not args.allow_empty_repo:
-                print_stderr(
-                    f"""\
-error: the initial revision that would be checked out is the empty commit
-
-The repository at {repo.source} may still be cloning.
-Please make sure cloning completes before running `eden clone`
-If you do want to check out the empty commit,
-re-run `eden clone` with --allow-empty-repo"""
-                )
-                return 1
+            raise RepoError(f"Unsupported backing store {args.backing_store}.")
 
         # Attempt to start the daemon if it is not already running.
         health_info = instance.check_health()
@@ -873,11 +900,12 @@ re-run `eden clone` with --allow-empty-repo"""
         rev: Optional[str],
         nfs: bool,
         overlay_type: Optional[str],
+        backing_store_type: Optional[str] = None,
     ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
         if checkout_config is not None:
-            repo = util.get_repo(str(checkout_config.backing_repo))
+            repo = util.get_repo(str(checkout_config.backing_repo), backing_store_type)
             if repo is None:
                 raise RepoError(
                     "EdenFS mount is configured to use repository "
@@ -887,11 +915,9 @@ re-run `eden clone` with --allow-empty-repo"""
             return repo, None, checkout_config
 
         # Confirm that repo_arg looks like an existing repository path.
-        repo = util.get_repo(repo_arg)
+        repo = util.get_repo(repo_arg, backing_store_type)
         if repo is None:
-            raise RepoError(
-                f"{repo_arg!r} does not look like a valid hg or git repository"
-            )
+            raise RepoError(f"{repo_arg!r} does not look like a valid repository")
 
         if sys.platform == "win32":
             mount_protocol = "prjfs"

@@ -60,14 +60,6 @@ class SnapshotFormatTest(DoctorTestBase):
         )
         self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
 
-    def test_format2_binary(self) -> None:
-        (self.checkout.state_dir / "SNAPSHOT").write_bytes(
-            b"eden\x00\x00\x00\x02"
-            + struct.pack(">L", 20)
-            + binascii.unhexlify(b"11223344556677889900" * 2)
-        )
-        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
-
 
 class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.

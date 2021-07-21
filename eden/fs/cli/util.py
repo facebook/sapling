@@ -392,6 +392,26 @@ class GitRepo(Repo):
         return self._run_git(["cat-file", "blob", ":".join((commit, path))])
 
 
+class ReCasRepo(Repo):
+    HEAD = "HEAD"
+
+    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+        if working_dir is not None:
+            raise RuntimeError("ReCas Repo is not expected a working_dir")
+        super(ReCasRepo, self).__init__("recas", source, working_dir)
+
+    def __repr__(self) -> str:
+        return f"ReCasRepo(source={self.source!r})"
+
+    def get_commit_hash(self, commit: str) -> str:
+        raise NotImplementedError(
+            "get_comit_hash is not supposed to be called for ReCasRepo"
+        )
+
+    def cat_file(self, commit: str, path: str) -> bytes:
+        raise NotImplementedError("cat_file is not supposed to be called for ReCasRepo")
+
+
 def mkscratch_bin() -> Path:
     # mkscratch is provided by the hg deployment at facebook, which has a
     # different installation prefix on macOS vs Linux, so we need to resolve
@@ -451,13 +471,26 @@ def get_hg_repo(path: str) -> Optional[HgRepo]:
     return HgRepo(repo_path, working_dir)
 
 
-def get_repo(path: str) -> Optional[Repo]:
+def get_recas_repo(path: str) -> Optional[ReCasRepo]:
+    """
+    If path points to a Re Cas dir, return a ReCasRepo object.
+    Otherwise, return None.
+    """
+    return ReCasRepo(path)
+
+
+def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Repo]:
     """
     Given a path inside a repository, return the repository source and type.
     """
     path = os.path.realpath(path)
     if not os.path.exists(path):
         return None
+
+    if backing_store_type is not None and backing_store_type == "recas":
+        recas_repo = get_recas_repo(path)
+        if recas_repo is not None:
+            return recas_repo
 
     while True:
         hg_repo = get_hg_repo(path)
@@ -482,6 +515,9 @@ def get_project_id(repo: Repo, rev: Optional[str]) -> Optional[str]:
         except subprocess.CalledProcessError:
             # Most likely .arcconfig does not exist.
             pass
+        except NotImplementedError:
+            # for repo not support cat
+            pass
 
     if contents is None:
         try:
@@ -489,6 +525,9 @@ def get_project_id(repo: Repo, rev: Optional[str]) -> Optional[str]:
         except subprocess.CalledProcessError:
             # Most likely .arcconfig does not exist.
             # We cannot determine the project ID.
+            return None
+        except NotImplementedError:
+            # for repo not support cat
             return None
 
     try:

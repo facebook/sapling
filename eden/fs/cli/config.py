@@ -96,11 +96,10 @@ SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
+    "recas": "",
 }
 
 SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()
-
-REPO_FOR_EXTENSION = {".git": "git", ".hg": "hg"}
 
 SUPPORTED_MOUNT_PROTOCOLS = {"fuse", "nfs", "prjfs"}
 
@@ -123,8 +122,6 @@ currently running, or it simply does not have this checkout mounted yet.
 You can run "eden doctor" to check for problems with EdenFS and try to have it
 automatically remount your checkouts.
 """
-
-assert sorted(REPO_FOR_EXTENSION.values()) == sorted(SUPPORTED_REPOS)
 
 
 class UsageError(Exception):
@@ -1122,19 +1119,15 @@ class EdenCheckout:
             elif header == SNAPSHOT_MAGIC_2:
                 (bodyLength,) = struct.unpack(">L", f.read(4))
                 parent = f.read(bodyLength)
-                if len(parent) == 20:
-                    return binascii.hexlify(parent).decode()
-                elif len(parent) == 40:
-                    return parent.decode()
-                else:
-                    raise RuntimeError("SNAPSHOT file contains invalid Mercurial hash")
+                if len(parent) != bodyLength:
+                    raise RuntimeError("SNAPSHOT file too short")
+                return parent.decode()
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
     def save_snapshot(self, commit_id: str) -> None:
         """Write a new parent commit ID into the SNAPSOHT file."""
         snapshot_path = self.state_dir / SNAPSHOT
-        assert len(commit_id) == 40
         encoded = commit_id.encode()
         write_file_atomically(
             snapshot_path, SNAPSHOT_MAGIC_2 + struct.pack(">L", len(encoded)) + encoded
