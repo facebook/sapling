@@ -579,13 +579,9 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         workspacename = workspace.defaultworkspace(ui)
 
     if opts.get("history"):
-        # developer config: commitcloud.useoldhistorytui
-        if ui.configbool("commitcloud", "useoldhistorytui", False):
-            interactivehistory.oldshowhistory(ui, repo, reponame, workspacename, **opts)
-        else:
-            interactivehistory.showhistory(
-                ui, repo, reponame, workspacename, template, **opts
-            )
+        interactivehistory.showhistory(
+            ui, repo, reponame, workspacename, template, **opts
+        )
         return
 
     date = opts.get("date")
