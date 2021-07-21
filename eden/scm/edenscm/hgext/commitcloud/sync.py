@@ -557,49 +557,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     if newvisibleheads is not None:
         visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
 
-    # Obsmarker sharing is unreliable.  Some of the commits that should now
-    # be visible might be hidden still, and some commits that should be
-    # hidden might still be visible.  Create local obsmarkers to resolve
-    # this.
-    if obsolete.isenabled(repo, obsolete.createmarkersopt) and not repo.ui.configbool(
-        "mutation", "proxy-obsstore"
-    ):
-        unfi = repo
-        # Commits that are only visible in the cloud are commits that are
-        # ancestors of the cloud heads but are hidden locally.
-        cloudvisibleonly = list(
-            unfi.set(
-                "not public() & ::%ls & hidden()",
-                [head for head in cloudrefs.heads if head not in omittedheads],
-            )
-        )
-        # Commits that are only hidden in the cloud are commits that are
-        # ancestors of the previous cloud heads that are not ancestors of the
-        # current cloud heads, but have not been hidden or obsoleted locally.
-        cloudhiddenonly = list(
-            unfi.set(
-                "(not public() & ::%ls) - (not public() & ::%ls) - hidden() - obsolete()",
-                [
-                    head
-                    for head in lastsyncstate.heads
-                    if head not in lastsyncstate.omittedheads
-                ],
-                [head for head in cloudrefs.heads if head not in omittedheads],
-            )
-        )
-        if cloudvisibleonly or cloudhiddenonly:
-            msg = _(
-                "detected obsmarker inconsistency (fixing by obsoleting [%s] and reviving [%s])\n"
-            ) % (
-                ", ".join([nodemod.short(ctx.node()) for ctx in cloudhiddenonly]),
-                ", ".join([nodemod.short(ctx.node()) for ctx in cloudvisibleonly]),
-            )
-            repo.ui.log("commitcloud_sync", msg)
-            repo.ui.warn(msg)
-            with repo.lock():
-                obsolete.createmarkers(repo, [(ctx, ()) for ctx in cloudhiddenonly])
-                obsolete.revive(cloudvisibleonly)
-
     # We have now synced the repo to the cloud version.  Store this.
     logsyncop(
         repo,
