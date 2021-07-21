@@ -145,9 +145,9 @@ impl Loader<InnerConfig> for InnerConfigLoader {
             Some(old) => !Arc::ptr_eq(old, &new_config) && *old != new_config,
             None => true,
         } {
-            Ok(Some(
-                InnerConfig::new(new_config, &self.ctx, &self.blobstore).await?,
-            ))
+            let res = Some(InnerConfig::new(new_config.clone(), &self.ctx, &self.blobstore).await?);
+            self.last_config = Some(new_config);
+            Ok(res)
         } else {
             Ok(None)
         }
