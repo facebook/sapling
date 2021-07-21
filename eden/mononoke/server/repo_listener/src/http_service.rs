@@ -380,19 +380,24 @@ where
                                 this.logger(),
                                 "http service error: can't set {} header: {}",
                                 HEADER_MONONOKE_HOST,
-                                e
+                                anyhow::Error::from(e),
                             );
                         }
                     };
                     Ok(res)
                 })
                 .or_else(|e| {
+                    let res = e.http_response();
+
                     error!(
                         this.logger(),
-                        "http service error: {} {}: {:#}", method, uri, e
+                        "http service error: {} {}: {:#}",
+                        method,
+                        uri,
+                        anyhow::Error::from(e)
                     );
 
-                    e.http_response()
+                    res
                 });
 
             // NOTE: If we fail to even generate the response here, this will crash
