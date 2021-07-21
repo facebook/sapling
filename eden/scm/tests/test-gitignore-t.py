@@ -53,3 +53,23 @@ sh % "hg status --config 'ui.ignore.global=$TESTTMP/globalignore'" == r"""
     ? Makefile
     ? exp/.gitignore
     ? exp/i.tmp"""
+
+# Test directory patterns only match directories.
+
+sh % "cat" << r"""
+*.tmp
+build*/
+""" > ".gitignore"
+
+sh % "mkdir buildstuff"
+
+sh % "touch buildstuff/output builddocs.txt"
+
+sh % "hg status" == r"""
+    ? .gitignore
+    ? Makefile
+    ? exp/.gitignore
+    ? exp/i.tmp
+    ? x.pyc"""
+# ERROR: builddocs.txt should show up as unknown.  It doesn't because of
+# gitignorematcher.matchfn assuming it is a directory.
