@@ -248,6 +248,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         route
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
+            .with_query_string_extractor::<files::UploadFileQueryString>()
             .to(upload_file_handler);
         route
             .post("/:repo/upload/filenodes")

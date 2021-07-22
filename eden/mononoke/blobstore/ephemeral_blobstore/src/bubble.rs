@@ -71,7 +71,7 @@ impl FromValue for BubbleId {
 }
 
 impl BubbleId {
-    pub(crate) fn new(id: NonZeroU64) -> Self {
+    pub fn new(id: NonZeroU64) -> Self {
         BubbleId(id)
     }
 
@@ -149,7 +149,7 @@ impl Bubble {
         self.bubble_id
     }
 
-    pub fn get_handle(&self, main_blobstore: Arc<dyn Blobstore>) -> EphemeralHandle {
+    pub fn handle<B: Blobstore>(&self, main_blobstore: B) -> EphemeralHandle<B> {
         EphemeralHandle::new(self.clone(), main_blobstore)
     }
 

@@ -26,7 +26,7 @@ use edenapi_types::{
         ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
         WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
         WireEphemeralPrepareResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireTreeEntry,
+        WireTreeEntry, WireUploadToken,
     },
     CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
@@ -46,6 +46,7 @@ enum Args {
     FullIdmapClone(CloneArgs),
     Bookmark(BookmarkArgs),
     EphemeralPrepare(EphemeralPrepareArgs),
+    UploadToken(UploadTokenArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -223,8 +224,17 @@ struct CommitHashLookupArgs {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Read the contents of a ephemeral prepare request")]
+#[structopt(about = "Read the contents of a ephemeral prepare response")]
 struct EphemeralPrepareArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the contents of a file upload response")]
+struct UploadTokenArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
     #[structopt(long, short, help = "Only look at the first N entries")]
@@ -244,6 +254,7 @@ fn main() -> Result<()> {
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
         Args::Bookmark(args) => cmd_bookmark(args),
         Args::EphemeralPrepare(args) => ephemeral_prepare(args),
+        Args::UploadToken(args) => upload_token(args),
     }
 }
 
@@ -611,6 +622,15 @@ fn ephemeral_prepare(args: EphemeralPrepareArgs) -> Result<()> {
         println!("Bubble id: {}", res.remove(0).to_api()?.bubble_id);
         Ok(())
     }
+}
+
+fn upload_token(args: UploadTokenArgs) -> Result<()> {
+    let res: Vec<WireUploadToken> = read_input(args.input, args.limit)?;
+    for (idx, token) in res.into_iter().enumerate() {
+        let token = to_api(token).ok_or_else(|| anyhow!("Failed to parse wire"))?;
+        println!("Token {}: id {:?}", idx, token.data.id);
+    }
+    Ok(())
 }
 
 fn make_history_map(

@@ -38,6 +38,7 @@ dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
+ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
@@ -55,6 +56,7 @@ mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sync_job" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }

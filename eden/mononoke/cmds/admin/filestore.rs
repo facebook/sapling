@@ -6,24 +6,26 @@
  */
 
 use anyhow::{anyhow, format_err, Error, Result};
-use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
+use ephemeral_blobstore::BubbleId;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     future::{self, TryFutureExt},
     stream::TryStreamExt,
 };
+use mononoke_api_types::InnerRepo;
 use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId, FileContents,
 };
 use slog::{info, Logger};
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufReader},
@@ -42,6 +44,7 @@ const COMMAND_IS_CHUNKED: &str = "is-chunked";
 const ARG_KIND: &str = "kind";
 const ARG_ID: &str = "id";
 const ARG_FILE: &str = "file";
+const ARG_BUBBLE_ID: &str = "bubble-id";
 
 // NOTE: Fetching by GitSha1 is not concurrently supported since that needs a size to instantiate.
 const VALID_KINDS: [&str; 3] = ["id", "sha1", "sha256"];
@@ -57,6 +60,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .help("Identifier")
         .takes_value(true)
         .required(true);
+
+    let bubble_id_arg = Arg::with_name(ARG_BUBBLE_ID)
+        .long(ARG_BUBBLE_ID)
+        .help("Bubble id to also consider")
+        .takes_value(true);
 
     SubCommand::with_name(FILESTORE)
         .about("inspect and interact with filestore data")
@@ -76,17 +84,20 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             SubCommand::with_name(COMMAND_FETCH)
                 .arg(kind_arg.clone())
-                .arg(id_arg.clone()),
+                .arg(id_arg.clone())
+                .arg(bubble_id_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_VERIFY)
                 .arg(kind_arg.clone())
-                .arg(id_arg.clone()),
+                .arg(id_arg.clone())
+                .arg(bubble_id_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_IS_CHUNKED)
                 .arg(kind_arg.clone())
-                .arg(id_arg.clone()),
+                .arg(id_arg.clone())
+                .arg(bubble_id_arg.clone()),
         )
 }
 
@@ -96,7 +107,8 @@ pub async fn execute_command<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+    let inner_repo: InnerRepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo = inner_repo.blob_repo.clone();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {
@@ -131,7 +143,8 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_FETCH, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
-            let mut stream = filestore::fetch(blobrepo.blobstore(), ctx.clone(), &fetch_key)
+            let blobstore = get_blobstore(matches, &inner_repo).await?;
+            let mut stream = filestore::fetch(blobstore, ctx.clone(), &fetch_key)
                 .await?
                 .ok_or_else(|| anyhow!("content not found"))?;
 
@@ -145,7 +158,7 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_VERIFY, Some(matches)) => {
             let key = extract_fetch_key(matches)?;
-            let blobstore = blobrepo.get_blobstore();
+            let blobstore = get_blobstore(matches, &inner_repo).await?;
 
             let metadata = filestore::get_metadata(&blobstore, &ctx, &key).await?;
             let metadata = match metadata {
@@ -188,13 +201,13 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_IS_CHUNKED, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
-            let maybe_metadata =
-                filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &fetch_key).await?;
+            let blobstore = get_blobstore(matches, &inner_repo).await?;
+            let maybe_metadata = filestore::get_metadata(&blobstore, &ctx, &fetch_key).await?;
             match maybe_metadata {
                 Some(metadata) => {
                     let file_contents = metadata
                         .content_id
-                        .load(&ctx, &blobrepo.get_blobstore())
+                        .load(&ctx, &blobstore)
                         .map_err(Error::from)
                         .await?;
                     match file_contents {
@@ -225,5 +238,27 @@ fn extract_fetch_key(matches: &ArgMatches<'_>) -> Result<FetchKey> {
         "sha1" => Ok(FetchKey::Aliased(Alias::Sha1(Sha1::from_str(id)?))),
         "sha256" => Ok(FetchKey::Aliased(Alias::Sha256(Sha256::from_str(id)?))),
         kind => Err(format_err!("Invalid kind: {}", kind)),
+    }
+}
+
+fn extract_bubble_id(matches: &ArgMatches<'_>) -> Result<Option<BubbleId>> {
+    use std::num::NonZeroU64;
+    matches
+        .value_of(ARG_BUBBLE_ID)
+        .map(|id_str| Ok(BubbleId::new(id_str.parse::<NonZeroU64>()?)))
+        .transpose()
+}
+
+async fn get_blobstore(
+    matches: &ArgMatches<'_>,
+    repo: &'_ InnerRepo,
+) -> Result<Arc<dyn Blobstore>> {
+    let bubble_id = extract_bubble_id(matches)?;
+    let main_blobstore = repo.blob_repo.get_blobstore();
+    if let Some(id) = bubble_id {
+        let bubble = repo.ephemeral_blobstore.open_bubble(id).await?;
+        Ok(Arc::new(bubble.handle(main_blobstore)))
+    } else {
+        Ok(Arc::new(main_blobstore))
     }
 }

@@ -6,7 +6,6 @@
  */
 
 use std::fmt;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,13 +15,13 @@ use context::CoreContext;
 use crate::bubble::Bubble;
 
 #[derive(Debug)]
-pub struct EphemeralHandle {
+pub struct EphemeralHandle<B: Blobstore> {
     bubble: Bubble,
-    main_blobstore: Arc<dyn Blobstore>,
+    main_blobstore: B,
 }
 
-impl EphemeralHandle {
-    pub(crate) fn new(bubble: Bubble, main_blobstore: Arc<dyn Blobstore>) -> Self {
+impl<B: Blobstore> EphemeralHandle<B> {
+    pub(crate) fn new(bubble: Bubble, main_blobstore: B) -> Self {
         Self {
             bubble,
             main_blobstore,
@@ -30,7 +29,7 @@ impl EphemeralHandle {
     }
 }
 
-impl fmt::Display for EphemeralHandle {
+impl<B: Blobstore> fmt::Display for EphemeralHandle<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -41,7 +40,7 @@ impl fmt::Display for EphemeralHandle {
 }
 
 #[async_trait]
-impl Blobstore for EphemeralHandle {
+impl<B: Blobstore> Blobstore for EphemeralHandle<B> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,

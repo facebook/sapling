@@ -14,7 +14,7 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
-use ephemeral_blobstore::Bubble;
+use ephemeral_blobstore::{Bubble, BubbleId};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
@@ -71,6 +71,27 @@ impl HgRepoContext {
         Ok(self.repo().ephemeral_blobstore().create_bubble().await?)
     }
 
+    /// Load bubble from id
+    async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
+        Ok(self
+            .repo()
+            .ephemeral_blobstore()
+            .open_bubble(bubble_id)
+            .await?)
+    }
+
+    /// Get blobstore. If bubble id is present, this is the ephemeral blobstore
+    async fn bubble_blobstore(
+        &self,
+        bubble_id: Option<BubbleId>,
+    ) -> Result<Arc<dyn Blobstore>, MononokeError> {
+        let main_blobstore = self.blob_repo().blobstore().clone();
+        Ok(match bubble_id {
+            Some(id) => Arc::new(self.open_bubble(id).await?.handle(main_blobstore)),
+            None => Arc::new(main_blobstore),
+        })
+    }
+
     /// Fetch file content size
     pub async fn fetch_file_content_size(
         &self,
@@ -123,9 +144,10 @@ impl HgRepoContext {
         content_id: ContentId,
         size: u64,
         bytes: Bytes,
+        bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
-            self.blob_repo().blobstore(),
+            &self.bubble_blobstore(bubble_id).await?,
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_canonical(size, content_id),
@@ -161,9 +183,10 @@ impl HgRepoContext {
         sha1: Sha1,
         size: u64,
         bytes: Bytes,
+        bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
-            self.blob_repo().blobstore(),
+            &self.bubble_blobstore(bubble_id).await?,
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_sha1(size, sha1),
@@ -197,9 +220,10 @@ impl HgRepoContext {
         sha256: Sha256,
         size: u64,
         bytes: Bytes,
+        bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
-            self.blob_repo().blobstore(),
+            &self.bubble_blobstore(bubble_id).await?,
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_sha256(size, sha256),

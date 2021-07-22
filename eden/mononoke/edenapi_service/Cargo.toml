@@ -13,6 +13,7 @@ bytes = { version = "1.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 gotham = { version = "0.6.0", default-features = false }

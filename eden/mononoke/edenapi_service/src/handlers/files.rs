@@ -19,6 +19,7 @@ use edenapi_types::{
     FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse,
     UploadToken, UploadTokenMetadata,
 };
+use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
@@ -47,6 +48,11 @@ pub struct UploadFileParams {
     repo: String,
     idtype: String,
     id: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadFileQueryString {
+    bubble_id: Option<std::num::NonZeroU64>,
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -162,13 +168,19 @@ async fn generate_upload_token(
 }
 
 /// Upload content of a file
-async fn store_file(repo: HgRepoContext, id: AnyFileContentId, bytes: Bytes) -> Result<(), Error> {
+async fn store_file(
+    repo: HgRepoContext,
+    id: AnyFileContentId,
+    bytes: Bytes,
+    bubble_id: Option<BubbleId>,
+) -> Result<(), Error> {
     match id {
         AnyFileContentId::ContentId(id) => {
             repo.store_file_by_contentid(
                 mononoke_types::ContentId::from(id),
                 bytes.len() as u64,
                 bytes,
+                bubble_id,
             )
             .await?
         }
@@ -177,6 +189,7 @@ async fn store_file(repo: HgRepoContext, id: AnyFileContentId, bytes: Bytes) -> 
                 mononoke_types::hash::Sha1::from(id),
                 bytes.len() as u64,
                 bytes,
+                bubble_id,
             )
             .await?
         }
@@ -185,6 +198,7 @@ async fn store_file(repo: HgRepoContext, id: AnyFileContentId, bytes: Bytes) -> 
                 mononoke_types::hash::Sha256::from(id),
                 bytes.len() as u64,
                 bytes,
+                bubble_id,
             )
             .await?
         }
@@ -195,6 +209,7 @@ async fn store_file(repo: HgRepoContext, id: AnyFileContentId, bytes: Bytes) -> 
 /// Upload content of a file requested by the client.
 pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let params = UploadFileParams::take_from(state);
+    let query_string = UploadFileQueryString::take_from(state);
 
     state.put(HandlerInfo::new(&params.repo, EdenApiMethod::UploadFile));
 
@@ -209,9 +224,14 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let body = get_request_body(state).await?;
     let content_size = body.len();
 
-    store_file(repo.clone(), id.clone(), body)
-        .await
-        .map_err(HttpError::e500)?;
+    store_file(
+        repo.clone(),
+        id.clone(),
+        body,
+        query_string.bubble_id.map(BubbleId::new),
+    )
+    .await
+    .map_err(HttpError::e500)?;
 
     let token = generate_upload_token(repo, id, content_size)
         .await
