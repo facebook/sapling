@@ -6,6 +6,7 @@
 
 import argparse
 import enum
+import errno
 import json
 import logging
 import os
@@ -541,10 +542,13 @@ def get_effective_redirections(
                     expected_target = redir.expand_target_abspath(checkout)
                     if expected_target:
                         expected_target = expected_target.resolve()
-                    # TODO: replace this with Path.readlink once Python 3.9+
-                    target = Path(
-                        os.readlink(os.fsdecode(redir.expand_repo_path(checkout)))
-                    ).resolve()
+                    symlink_path = os.fsdecode(redir.expand_repo_path(checkout))
+                    try:
+                        # TODO: replace this with Path.readlink once Python 3.9+
+                        target = Path(os.readlink(symlink_path)).resolve()
+                    except ValueError as exc:
+                        # Windows throws ValueError when the target is not a symlink
+                        raise OSError(errno.EINVAL) from exc
                     if target != expected_target:
                         redir.state = RedirectionState.SYMLINK_INCORRECT
                 except OSError:
