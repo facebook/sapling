@@ -44,6 +44,13 @@ class CheckoutContext {
       CheckoutMode checkoutMode,
       std::optional<pid_t> clientPid,
       folly::StringPiece thriftMethodName);
+
+  CheckoutContext(
+      EdenMount* mount,
+      CheckoutMode checkoutMode,
+      std::optional<pid_t> clientPid,
+      folly::StringPiece thriftMethodName);
+
   ~CheckoutContext();
 
   /**

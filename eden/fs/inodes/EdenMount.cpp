@@ -41,6 +41,7 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -552,6 +553,115 @@ void EdenMount::transitionToFuseInitializationErrorState() {
   }
 }
 
+static void logStats(
+    bool success,
+    AbsolutePath path,
+    const RootId& fromRootId,
+    const RootId& toRootId,
+    const FetchStatistics& fetchStats,
+    std::string_view methodName) {
+  XLOG(DBG1) << (success ? "" : "failed ") << methodName << " for " << path
+             << " from " << fromRootId << " to " << toRootId << " accessed "
+             << fetchStats.tree.accessCount << " trees ("
+             << fetchStats.tree.cacheHitRate << "% chr), "
+             << fetchStats.blob.accessCount << " blobs ("
+             << fetchStats.blob.cacheHitRate << "% chr), and "
+             << fetchStats.metadata.accessCount << " metadata ("
+             << fetchStats.metadata.cacheHitRate << "% chr).";
+}
+
+static folly::StringPiece getCheckoutModeString(CheckoutMode checkoutMode) {
+  switch (checkoutMode) {
+    case CheckoutMode::DRY_RUN:
+      return "dry_run";
+    case CheckoutMode::NORMAL:
+      return "normal";
+    case CheckoutMode::FORCE:
+      return "force";
+  }
+  return "<unknown>";
+}
+
+#ifndef _WIN32
+folly::Future<SetPathRootIdResultAndTimes> EdenMount::setPathRootId(
+    FOLLY_MAYBE_UNUSED RelativePathPiece path,
+    FOLLY_MAYBE_UNUSED const RootId& rootId,
+    FOLLY_MAYBE_UNUSED RootType rootType,
+    FOLLY_MAYBE_UNUSED CheckoutMode checkoutMode,
+    FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
+  if (rootType != facebook::eden::RootType::TREE) {
+    throw std::runtime_error("setPathRootID only supports Tree type");
+  }
+
+  const folly::stop_watch<> stopWatch;
+  auto setPathRootIdTime = std::make_shared<SetPathRootIdTimes>();
+  /**
+   * In theory, an exclusive wlock should be issued, but
+   * this is not efficent if many calls to this method ran in parallel.
+   * So we use read lock instead assuming the contents of loaded rootId
+   * objects are not weaving too much
+   */
+  auto oldParent = parentCommit_.rlock();
+  setPathRootIdTime->didAcquireParentsLock = stopWatch.elapsed();
+  XLOG(DBG3) << "adding " << rootId << " to Eedn mount " << this->getPath()
+             << " at path" << path << " on top of " << *oldParent;
+
+  auto ctx = std::make_shared<CheckoutContext>(
+      this, checkoutMode, std::nullopt, "setPathRootId");
+
+  /**
+   * This will update the timestamp for the entire mount,
+   * TODO(yipu) We should only update the timestamp for the
+   * partial node so only affects its children.
+   */
+  setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
+
+  auto getTargetTreeInodeFuture =
+      ensureDirectoryExists(path, ctx->getFetchContext());
+  auto getRootTreeFuture =
+      objectStore_->getRootTree(rootId, ctx->getFetchContext());
+
+  return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
+      .thenValue([this, ctx, setPathRootIdTime, stopWatch](
+                     std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
+        setPathRootIdTime->didLookupTreesOrGetInodeByPath = stopWatch.elapsed();
+        auto [targetTreeInode, incomingTree] = results;
+        targetTreeInode->unloadChildrenUnreferencedByFs();
+        // TODO(@yipu): Remove rename lock
+        ctx->start(this->acquireRenameLock());
+        setPathRootIdTime->didAcquireRenameLock = stopWatch.elapsed();
+        return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
+      })
+      .thenValue([ctx, setPathRootIdTime, stopWatch, rootId](auto&&) {
+        setPathRootIdTime->didCheckout = stopWatch.elapsed();
+        // Complete and save the new snapshot
+        return ctx->finish(rootId);
+      })
+      .thenValue([ctx, setPathRootIdTime, stopWatch](
+                     std::vector<CheckoutConflict>&& conflicts) {
+        setPathRootIdTime->didFinish = stopWatch.elapsed();
+        SetPathRootIdResultAndTimes resultAndTimes;
+        resultAndTimes.times = *setPathRootIdTime;
+        SetPathRootIdResult result;
+        result.conflicts_ref() = std::move(conflicts);
+        resultAndTimes.result = std::move(result);
+        return resultAndTimes;
+      })
+      .thenTry([this, ctx, oldParent = *oldParent, rootId](
+                   Try<SetPathRootIdResultAndTimes>&& resultAndTimes) {
+        auto fetchStats = ctx->getFetchContext().computeStatistics();
+        logStats(
+            resultAndTimes.hasValue(),
+            this->getPath(),
+            oldParent,
+            rootId,
+            fetchStats,
+            "setPathRootId");
+        return std::move(resultAndTimes);
+      });
+}
+#endif // !_WIN32
+
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING, std::memory_order_acq_rel);
   switch (oldState) {
@@ -1037,30 +1147,18 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
-        XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
-                   << this->getPath() << " from " << oldParent << " to "
-                   << snapshotHash << " accessed "
-                   << fetchStats.tree.accessCount << " trees ("
-                   << fetchStats.tree.cacheHitRate << "% chr), "
-                   << fetchStats.blob.accessCount << " blobs ("
-                   << fetchStats.blob.cacheHitRate << "% chr), and "
-                   << fetchStats.metadata.accessCount << " metadata ("
-                   << fetchStats.metadata.cacheHitRate << "% chr).";
+        logStats(
+            result.hasValue(),
+            this->getPath(),
+            oldParent,
+            snapshotHash,
+            fetchStats,
+            "checkout");
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
         auto event = FinishedCheckout{};
-        switch (checkoutMode) {
-          case CheckoutMode::DRY_RUN:
-            event.mode = "dry_run";
-            break;
-          case CheckoutMode::NORMAL:
-            event.mode = "normal";
-            break;
-          case CheckoutMode::FORCE:
-            event.mode = "force";
-            break;
-        }
+        event.mode = getCheckoutModeString(checkoutMode);
         event.duration = checkoutTimeInSeconds.count();
         event.success = result.hasValue();
         event.fetchedTrees = fetchStats.tree.fetchCount;

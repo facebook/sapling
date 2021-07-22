@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -1164,6 +1165,211 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
+
+void runTestSetPathRootId(
+    folly::StringPiece file,
+    folly::StringPiece pathToSet,
+    RelativePathPiece expectedFile) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/dir2/dir3/file.txt", "contents");
+  TestMount testMount{builder1, false};
+  builder1.setReady("");
+  builder1.setReady("dir");
+  builder1.setReady("dir/dir2");
+  builder1.setReady("dir/dir2/dir3");
+
+  // Prepare a second commit, pointing dir/sub to a different tree.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile(file, "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Insert file2 to pathToSet
+  RelativePathPiece path{pathToSet};
+
+  auto setPathRootIdResultAndTimesAndTimes =
+      testMount.getEdenMount()->setPathRootId(
+          path,
+          RootId{"2"},
+          facebook::eden::RootType::TREE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
+
+  auto executor = testMount.getServerExecutor().get();
+  auto waitedSetPathRootIdResultAndTimesAndTimes =
+      std::move(setPathRootIdResultAndTimesAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathRootIdResultAndTimesAndTimes.isReady());
+  auto result = std::move(waitedSetPathRootIdResultAndTimesAndTimes).get();
+  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+
+  // Confirm that the tree has been updated correctly.
+  EXPECT_FILE_INODE(
+      testMount.getFileInode(expectedFile), "differentcontents", 0644);
+}
+
+TEST(Checkout, testSetPathRootIdSimple) {
+  runTestSetPathRootId(
+      "differentdir/differentfile.txt",
+      "dir",
+      "dir/differentdir/differentfile.txt"_relpath);
+}
+
+TEST(Checkout, testSetPathRootIdNewDir) {
+  runTestSetPathRootId(
+      "differentdir/differentfile.txt",
+      "dir2",
+      "dir2/differentdir/differentfile.txt"_relpath);
+}
+
+TEST(Checkout, testSetPathRootIdSetOnRoot) {
+  runTestSetPathRootId(
+      "differentdir/differentfile.txt",
+      "",
+      "differentdir/differentfile.txt"_relpath);
+}
+
+TEST(Checkout, testSetPathRootIdMultipleLevelFolder) {
+  runTestSetPathRootId(
+      "differentdir/differentfile.txt",
+      "dir/dir2/dir3",
+      "dir/dir2/dir3/differentdir/differentfile.txt"_relpath);
+}
+
+TEST(Checkout, testSetPathRootIdMultipleLevelFolderAndNewDir) {
+  runTestSetPathRootId(
+      "differentdir/differentfile.txt",
+      "dir/dir2/dir4",
+      "dir/dir2/dir4/differentdir/differentfile.txt"_relpath);
+}
+
+TEST(Checkout, testSetPathRootIdConflict) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/dir2/dir3/file.txt", "contents");
+  TestMount testMount{builder1, false};
+  builder1.setReady("");
+  builder1.setReady("dir");
+  builder1.setReady("dir/dir2");
+  builder1.setReady("dir/dir2/dir3");
+
+  // Prepare a second commit, pointing dir/sub to a different tree.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("file.txt", "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Insert file2 to pathToSet
+  RelativePathPiece path{"dir/dir2/dir3"};
+  SetPathRootIdParams params;
+  params.type_ref() = facebook::eden::RootType::TREE;
+  auto setPathRootIdResultAndTimes = testMount.getEdenMount()->setPathRootId(
+      path,
+      RootId{"2"},
+      facebook::eden::RootType::TREE,
+      facebook::eden::CheckoutMode::NORMAL,
+      ObjectFetchContext::getNullContext());
+
+  auto executor = testMount.getServerExecutor().get();
+  auto waitedSetPathRootIdResultAndTimes =
+      std::move(setPathRootIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathRootIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathRootIdResultAndTimes).get();
+  ASSERT_TRUE(result.result.conflicts_ref().has_value());
+  EXPECT_EQ(1, result.result.conflicts_ref()->size());
+  EXPECT_THAT(
+      std::move(result).result.conflicts_ref().value(),
+      UnorderedElementsAre(makeConflict(
+          ConflictType::UNTRACKED_ADDED, "dir/dir2/dir3/file.txt")));
+}
+
+TEST(Checkout, testSetPathRootIdLastCheckoutTime) {
+  TestMount testMount;
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("dir/file.txt", "contents");
+  builder1.finalize(testMount.getBackingStore(), true);
+  builder1.setReady("");
+  builder1.setReady("dir");
+  auto commit = testMount.getBackingStore()->putCommit("1", builder1);
+  commit->setReady();
+
+  auto sec = std::chrono::seconds{50000};
+  auto nsec = std::chrono::nanoseconds{10000};
+  auto duration = sec + nsec;
+  std::chrono::system_clock::time_point currentTime(
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          duration));
+
+  testMount.initialize(RootId("1"), currentTime);
+  const auto& edenMount = testMount.getEdenMount();
+  struct timespec lastCheckoutTime =
+      edenMount->getLastCheckoutTime().toTimespec();
+
+  // Check if EdenMount is updating lastCheckoutTime correctly
+  EXPECT_EQ(sec.count(), lastCheckoutTime.tv_sec);
+  EXPECT_EQ(nsec.count(), lastCheckoutTime.tv_nsec);
+
+  // Check if FileInode is updating lastCheckoutTime correctly
+  auto fileInode = testMount.getFileInode("dir/file.txt");
+  auto stFile = fileInode->getMetadata().timestamps;
+  EXPECT_EQ(sec.count(), stFile.atime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.atime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.ctime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.ctime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.mtime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.mtime.toTimespec().tv_nsec);
+
+  // Prepare a second commit, pointing dir/sub to a different tree.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("file2.txt", "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto sec2 = std::chrono::seconds{60000};
+  auto nsec2 = std::chrono::nanoseconds{20000};
+  auto duration2 = sec2 + nsec2;
+  std::chrono::system_clock::time_point currentTime2(
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          duration2));
+  testMount.getClock().set(currentTime2);
+
+  // Insert file2 to dir2
+  RelativePathPiece path{"dir2"};
+  SetPathRootIdParams params;
+  params.type_ref() = facebook::eden::RootType::TREE;
+  auto setPathRootIdResultAndTimes = testMount.getEdenMount()->setPathRootId(
+      path,
+      RootId{"2"},
+      facebook::eden::RootType::TREE,
+      facebook::eden::CheckoutMode::NORMAL,
+      ObjectFetchContext::getNullContext());
+
+  auto executor = testMount.getServerExecutor().get();
+  auto waitedSetPathRootIdResultAndTimes =
+      std::move(setPathRootIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathRootIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathRootIdResultAndTimes).get();
+  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+
+  struct timespec updatedLastCheckoutTime =
+      edenMount->getLastCheckoutTime().toTimespec();
+
+  // Check if EdenMount is updating lastCheckoutTime correctly
+  EXPECT_EQ(sec2.count(), updatedLastCheckoutTime.tv_sec);
+  EXPECT_EQ(nsec2.count(), updatedLastCheckoutTime.tv_nsec);
+
+  // Now get the new file and the timestamps should be updated.
+  auto fileInode2 = testMount.getFileInode("dir2/file2.txt");
+  auto stFile2 = fileInode2->getMetadata().timestamps;
+  EXPECT_EQ(sec2.count(), stFile2.atime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec2.count(), stFile2.atime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec2.count(), stFile2.ctime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec2.count(), stFile2.ctime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec2.count(), stFile2.mtime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec2.count(), stFile2.mtime.toTimespec().tv_nsec);
+}
+
 #endif
 
 namespace {

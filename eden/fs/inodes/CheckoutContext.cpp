@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/CheckoutContext.h"
 
 #include <folly/logging/xlog.h>
+#include <optional>
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -34,6 +35,19 @@ CheckoutContext::CheckoutContext(
           ObjectFetchContext::Cause::Thrift,
           thriftMethodName} {}
 
+CheckoutContext::CheckoutContext(
+    EdenMount* mount,
+    CheckoutMode checkoutMode,
+    std::optional<pid_t> clientPid,
+    folly::StringPiece thriftMethodName)
+    : checkoutMode_{checkoutMode},
+      mount_{mount},
+      parentLock_{},
+      fetchContext_{
+          clientPid,
+          ObjectFetchContext::Cause::Thrift,
+          thriftMethodName} {}
+
 CheckoutContext::~CheckoutContext() {}
 
 void CheckoutContext::start(RenameLock&& renameLock) {
@@ -43,15 +57,19 @@ void CheckoutContext::start(RenameLock&& renameLock) {
 Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   // Only update the parent if it is not a dry run.
   if (!isDryRun()) {
-    auto oldParent = *parentLock_;
-    // Update the in-memory snapshot ID
-    *parentLock_ = newSnapshot;
+    std::optional<RootId> oldParent;
+    if (parentLock_) {
+      oldParent = *parentLock_;
+      // Update the in-memory snapshot ID
+      *parentLock_ = newSnapshot;
+    }
 
     auto config = mount_->getCheckoutConfig();
     // Save the new snapshot hash to the config
     config->setParentCommit(std::move(newSnapshot));
     XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
-               << oldParent << " to " << newSnapshot;
+               << (oldParent.has_value() ? oldParent->value() : "<none>")
+               << " to " << newSnapshot;
   }
 
   // Release the rename lock.
@@ -77,7 +95,9 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
 
     return std::move(flushInvalidationsFuture).thenValue([this](auto&&) {
       XLOG(DBG4) << "finished processing inode invalidations";
+
       parentLock_.unlock();
+
       return std::move(*conflicts_.wlock());
     });
 #else

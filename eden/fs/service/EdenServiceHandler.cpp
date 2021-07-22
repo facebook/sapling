@@ -1440,6 +1440,33 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
           }));
 }
 
+folly::Future<std::unique_ptr<SetPathRootIdResult>>
+EdenServiceHandler::future_setPathRootId(
+    std::unique_ptr<SetPathRootIdParams> params) {
+#ifndef _WIN32
+  auto mountPoint = params->get_mountPoint();
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1, mountPoint);
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+  auto parsedRootId =
+      edenMount->getObjectStore()->parseRootId(params->get_rootId());
+
+  return edenMount
+      ->setPathRootId(
+          RelativePathPiece{params->get_path()},
+          parsedRootId,
+          params->get_type(),
+          params->get_mode(),
+          helper->getFetchContext())
+      .thenValue([](auto&& resultAndTimes) {
+        return std::make_unique<SetPathRootIdResult>(
+            std::move(resultAndTimes.result));
+      });
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
+
 folly::Future<Unit> EdenServiceHandler::future_chown(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED int32_t uid,

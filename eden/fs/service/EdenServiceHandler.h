@@ -217,6 +217,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   bool removeFault(std::unique_ptr<RemoveFaultArg> fault) override;
   int64_t unblockFault(std::unique_ptr<UnblockFaultArg> info) override;
 
+  folly::Future<std::unique_ptr<SetPathRootIdResult>> future_setPathRootId(
+      std::unique_ptr<SetPathRootIdParams> params) override;
+
   void reloadConfig() override;
 
   void getDaemonInfo(DaemonInfo& result) override;

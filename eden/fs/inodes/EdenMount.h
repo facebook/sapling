@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/journal/Journal.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -139,9 +140,26 @@ struct CheckoutTimes {
   duration didFinish{};
 };
 
+/**
+ * Durations of the various stages of setPathRootId.
+ */
+struct SetPathRootIdTimes {
+  using duration = std::chrono::steady_clock::duration;
+  duration didAcquireParentsLock{};
+  duration didLookupTreesOrGetInodeByPath{};
+  duration didAcquireRenameLock{};
+  duration didCheckout{};
+  duration didFinish{};
+};
+
 struct CheckoutResult {
   std::vector<CheckoutConflict> conflicts;
   CheckoutTimes times;
+};
+
+struct SetPathRootIdResultAndTimes {
+  SetPathRootIdResult result;
+  SetPathRootIdTimes times;
 };
 
 /**
@@ -681,6 +699,25 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::weak_ptr<EdenMount> getWeakMount() {
     return weak_from_this();
   }
+
+  /**
+   * Graft a tree or blob to a path. Returns a folly::Future that will be
+   * fulfilled when the setPathRootId operation is complete. The return result
+   * include conflicts if any.
+   *
+   * CheckoutMode is similar to checkout:
+   * 1. In NORMAL mode, new tree or blob will be increamentally added to an Eden
+   * mount. The operation will not continue if any conflicts were found.
+   * 2. In FORCE mode, only new tree will exist after the operation and any
+   * other contents will disappear
+   * 3. In DRYRUN mode, no action action will be executed.
+   */
+  FOLLY_NODISCARD folly::Future<SetPathRootIdResultAndTimes> setPathRootId(
+      RelativePathPiece path,
+      const RootId& rootId,
+      RootType rootType,
+      CheckoutMode checkoutMode,
+      ObjectFetchContext& context);
 
  private:
   friend class RenameLock;
