@@ -28,6 +28,22 @@ use crate::source_control_impl::SourceControlServiceImpl;
 const BLAME_TITLE_MAX_LENGTH: usize = 128;
 
 impl SourceControlServiceImpl {
+    /// Determine whether anything exists at this path.
+    pub(crate) async fn commit_path_exists(
+        &self,
+        ctx: CoreContext,
+        commit_path: thrift::CommitPathSpecifier,
+        _params: thrift::CommitPathExistsParams,
+    ) -> Result<thrift::CommitPathExistsResponse, errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let path = changeset.path(&commit_path.path)?;
+        Ok(thrift::CommitPathExistsResponse {
+            exists: path.exists().await?,
+            file_exists: path.is_file().await?,
+            tree_exists: path.is_tree().await?,
+        })
+    }
+
     /// Returns information about the file or directory at a path in a commit.
     pub(crate) async fn commit_path_info(
         &self,

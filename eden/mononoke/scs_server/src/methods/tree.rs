@@ -14,6 +14,17 @@ use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
+    /// Determine whether a tree exists.
+    pub(crate) async fn tree_exists(
+        &self,
+        ctx: CoreContext,
+        tree: thrift::TreeSpecifier,
+        _params: thrift::TreeExistsParams,
+    ) -> Result<bool, errors::ServiceError> {
+        let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
+        Ok(tree.is_some())
+    }
+
     /// List the contents of a directory.
     pub(crate) async fn tree_list(
         &self,

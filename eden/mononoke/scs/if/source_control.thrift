@@ -801,6 +801,9 @@ struct CommitListDescendantBookmarksParams {
     5: set<CommitIdentityScheme> identity_schemes,
 }
 
+struct CommitPathExistsParams {
+}
+
 struct CommitPathInfoParams {
 }
 
@@ -843,6 +846,9 @@ struct CommitPathHistoryParams {
     8: optional CommitId descendants_of,
     // Exclude commit and all of its ancestor from results.
     9: optional CommitId exclude_changeset_and_ancestors,
+}
+
+struct TreeExistsParams {
 }
 
 struct TreeListParams {
@@ -1168,6 +1174,17 @@ struct CommitListDescendantBookmarksResponse {
     // bookmark name as the `after` parameter in a new request to
     // continue finding them.
     2: optional string continue_after,
+}
+
+struct CommitPathExistsResponse {
+    // Whether anything exists at this path.
+    1: bool exists,
+
+    // Whether a file exists at this path.
+    2: bool file_exists,
+
+    // Whether a tree (directory) exists at this path.
+    3: bool tree_exists,
 }
 
 struct CommitPathInfoResponse {
@@ -1571,6 +1588,15 @@ service SourceControlService extends fb303.FacebookService {
     // CommitPath methods
     // ==============
 
+    // Determine whether a path exists and what type it is.
+    CommitPathExistsResponse commit_path_exists(
+        1: CommitPathSpecifier commit_path,
+        2: CommitPathExistsParams params,
+    ) throws (
+        1: RequestError request_error,
+        2: InternalError internal_error,
+    ),
+
     // Get information about a path in a commit.
     CommitPathInfoResponse commit_path_info(
         1: CommitPathSpecifier commit_path,
@@ -1607,6 +1633,15 @@ service SourceControlService extends fb303.FacebookService {
 
     // Tree Methods
     // ============
+
+    // Determine whether a tree exists.
+    bool tree_exists (
+        1: TreeSpecifier file,
+        2: TreeExistsParams params,
+    ) throws (
+        1: RequestError request_error,
+        2: InternalError internal_error,
+    ),
 
     // List the contents of a directory.
     TreeListResponse tree_list(

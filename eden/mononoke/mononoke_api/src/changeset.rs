@@ -236,6 +236,14 @@ impl ChangesetContext {
         ))
     }
 
+    pub fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
+    where
+        P: TryInto<MononokePath>,
+        MononokeError: From<P::Error>,
+    {
+        Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
+    }
+
     pub async fn paths_with_content(
         &self,
         paths: impl Iterator<Item = MononokePath>,
@@ -280,10 +288,10 @@ impl ChangesetContext {
             .map_ok({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
-                    ChangesetPathContext::new(
+                    ChangesetPathContext::new_with_skeleton_manifest_entry(
                         changeset.clone(),
                         MononokePath::new(mpath),
-                        Some(entry),
+                        entry,
                     )
                 }
             })

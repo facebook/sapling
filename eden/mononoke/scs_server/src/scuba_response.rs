@@ -62,6 +62,8 @@ impl AddScubaResponse for thrift::CommitPathBlameResponse {}
 
 impl AddScubaResponse for thrift::CommitPathHistoryResponse {}
 
+impl AddScubaResponse for thrift::CommitPathExistsResponse {}
+
 impl AddScubaResponse for thrift::CommitPathInfoResponse {}
 
 impl AddScubaResponse for thrift::CommitMultiplePathInfoResponse {}

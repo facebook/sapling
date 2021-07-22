@@ -259,6 +259,8 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitPathExistsParams {}
+
 impl AddScubaParams for thrift::CommitPathInfoParams {}
 
 impl AddScubaParams for thrift::CommitMultiplePathInfoParams {
@@ -285,6 +287,8 @@ impl AddScubaParams for thrift::FileDiffParams {
         scuba.add("param_context", self.context);
     }
 }
+
+impl AddScubaParams for thrift::TreeExistsParams {}
 
 impl AddScubaParams for thrift::TreeListParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {

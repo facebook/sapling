@@ -215,12 +215,12 @@ impl ChangesetPathContentContext {
         Ok(is_file)
     }
 
-    pub async fn is_dir(&self) -> Result<bool, MononokeError> {
-        let is_dir = match self.fsnode_id().await? {
+    pub async fn is_tree(&self) -> Result<bool, MononokeError> {
+        let is_tree = match self.fsnode_id().await? {
             Some(Entry::Tree(_)) => true,
             _ => false,
         };
-        Ok(is_dir)
+        Ok(is_tree)
     }
 
     pub async fn file_type(&self) -> Result<Option<FileType>, MononokeError> {
@@ -584,7 +584,7 @@ impl ChangesetPathHistoryContext {
 }
 
 impl ChangesetPathContext {
-    pub fn new(
+    fn new_impl(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
         skeleton_manifest_entry: Option<Entry<SkeletonManifestId, ()>>,
@@ -622,6 +622,17 @@ impl ChangesetPathContext {
         }
     }
 
+    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+        Self::new_impl(changeset, path, None)
+    }
+
+    pub(crate) fn new_with_skeleton_manifest_entry(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        skeleton_manifest_entry: Entry<SkeletonManifestId, ()>,
+    ) -> Self {
+        Self::new_impl(changeset, path, Some(skeleton_manifest_entry))
+    }
 
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
@@ -658,12 +669,12 @@ impl ChangesetPathContext {
         Ok(is_file)
     }
 
-    pub async fn is_dir(&self) -> Result<bool, MononokeError> {
-        let is_dir = match self.skeleton_manifest_id().await? {
+    pub async fn is_tree(&self) -> Result<bool, MononokeError> {
+        let is_tree = match self.skeleton_manifest_id().await? {
             Some(Entry::Tree(_)) => true,
             _ => false,
         };
-        Ok(is_dir)
+        Ok(is_tree)
     }
 }
 

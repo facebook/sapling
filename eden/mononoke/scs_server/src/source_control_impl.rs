@@ -562,6 +562,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitLookupXRepoParams,
         ) -> Result<thrift::CommitLookupResponse, service::CommitLookupXrepoExn>;
 
+        async fn commit_path_exists(
+            commit_path: thrift::CommitPathSpecifier,
+            params: thrift::CommitPathExistsParams,
+        ) -> Result<thrift::CommitPathExistsResponse, service::CommitPathExistsExn>;
+
         async fn commit_path_info(
             commit_path: thrift::CommitPathSpecifier,
             params: thrift::CommitPathInfoParams,
@@ -581,6 +586,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             commit_path: thrift::CommitPathSpecifier,
             params: thrift::CommitPathHistoryParams,
         ) -> Result<thrift::CommitPathHistoryResponse, service::CommitPathHistoryExn>;
+
+        async fn tree_exists(
+            tree: thrift::TreeSpecifier,
+            params: thrift::TreeExistsParams,
+        ) -> Result<bool, service::TreeExistsExn>;
 
         async fn tree_list(
             tree: thrift::TreeSpecifier,
