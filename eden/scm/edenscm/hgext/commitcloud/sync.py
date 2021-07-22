@@ -232,10 +232,10 @@ def _sync(
         uploaded, failed = upload.upload(repo, None)
         with repo.lock():
             state = backupstate.BackupState(repo, remotepath, usehttp=True)
-            state.update(uploaded)
-        # Upload returns a list of all newly uploaded commits and failed commits (not just heads).
+            state.update([repo[r].node() for r in uploaded])
+        # Upload returns a list of all newly uploaded revs and failed revs (not just heads).
         # Backup returns a revset for failed. Create a revset for compatibility.
-        failed = repo.revs("%ln", failed)
+        failed = repo.revs("%ld", failed)
     else:
         # Back up all local commits that are not already backed up.
         # Load the backup state under the repo lock to ensure a consistent view.

@@ -1614,16 +1614,9 @@ def getfrombackup(ui, repo, **opts):
     + remoteopts,
 )
 def cloudupload(ui, repo, **opts):
-    """upload commits to commit cloud using EdenApi
+    """Upload draft commits using EdenApi Uploads
 
     Commits that have already been uploaded will be skipped.
-
-    The upload will be performed in stages:
-        * file content
-        * file nodes
-        * trees
-        * changesets
-
     If no revision is specified, uploads all visible commits.
     """
     revs = opts.get("rev")
@@ -1637,7 +1630,8 @@ def cloudupload(ui, repo, **opts):
         if len(failed) < 10:
             while failed:
                 repo.ui.warn(
-                    _("failed to upload %s\n") % nodemod.short(failed.pop()),
+                    _("failed to upload %s\n")
+                    % nodemod.short(repo[failed.pop()].node()),
                     component="commitcloud",
                 )
         else:
