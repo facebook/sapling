@@ -31,16 +31,16 @@ class RequestContext : public ObjectFetchContext {
 
   struct EdenTopStats {
    public:
-    bool didImportFromBackingStore() const {
-      return didImportFromBackingStore_.load(std::memory_order_relaxed);
+    Origin getFetchOrigin() {
+      return fetchOrigin_.load(std::memory_order_relaxed);
     }
-    void setDidImportFromBackingStore() {
-      didImportFromBackingStore_.store(true, std::memory_order_relaxed);
+    void setFetchOrigin(Origin origin) {
+      fetchOrigin_.store(origin, std::memory_order_relaxed);
     }
     std::chrono::nanoseconds fuseDuration{0};
 
    private:
-    std::atomic<bool> didImportFromBackingStore_{false};
+    std::atomic<Origin> fetchOrigin_{Origin::NotFetched};
   } edenTopStats_;
 
   /**
@@ -69,9 +69,7 @@ class RequestContext : public ObjectFetchContext {
    */
   void didFetch(ObjectType /*type*/, const Hash& /*hash*/, Origin origin)
       override {
-    if (origin == Origin::FromBackingStore) {
-      edenTopStats_.setDidImportFromBackingStore();
-    }
+    edenTopStats_.setFetchOrigin(origin);
   }
 
   // Override of `getPriority`

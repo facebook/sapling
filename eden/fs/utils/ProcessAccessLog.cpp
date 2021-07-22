@@ -234,6 +234,10 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
         accessCounts[AccessType::FsChannelRead] +
         accessCounts[AccessType::FsChannelWrite] +
         accessCounts[AccessType::FsChannelOther];
+    accessCountsByPid[pid].fsChannelMemoryCacheImports_ref() =
+        accessCounts[AccessType::FsChannelMemoryCacheImport];
+    accessCountsByPid[pid].fsChannelDiskCacheImports_ref() =
+        accessCounts[AccessType::FsChannelDiskCacheImport];
     accessCountsByPid[pid].fsChannelBackingStoreImports_ref() =
         accessCounts[AccessType::FsChannelBackingStoreImport];
     accessCountsByPid[pid].fsChannelDurationNs_ref() =

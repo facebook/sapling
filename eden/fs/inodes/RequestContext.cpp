@@ -50,9 +50,21 @@ void RequestContext::finishRequest() {
   }
 
   if (auto pid = getClientPid(); pid.has_value()) {
-    if (getEdenTopStats().didImportFromBackingStore()) {
-      auto type = ProcessAccessLog::AccessType::FsChannelBackingStoreImport;
-      pal_.recordAccess(*pid, type);
+    switch (getEdenTopStats().getFetchOrigin()) {
+      case Origin::FromMemoryCache:
+        pal_.recordAccess(
+            *pid, ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
+        break;
+      case Origin::FromDiskCache:
+        pal_.recordAccess(
+            *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
+        break;
+      case Origin::FromBackingStore:
+        pal_.recordAccess(
+            *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
+        break;
+      default:
+        break;
     }
     pal_.recordDuration(*pid, diff_ns);
   }

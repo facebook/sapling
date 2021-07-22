@@ -42,6 +42,7 @@ class ObjectFetchContext {
     FromMemoryCache,
     FromDiskCache,
     FromBackingStore,
+    NotFetched,
     kOriginEnumMax,
   };
 

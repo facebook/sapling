@@ -35,6 +35,8 @@ class ProcessAccessLog {
     FsChannelRead,
     FsChannelWrite,
     FsChannelOther,
+    FsChannelMemoryCacheImport,
+    FsChannelDiskCacheImport,
     FsChannelBackingStoreImport,
     Last,
   };
