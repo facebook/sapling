@@ -298,6 +298,46 @@ impl MegarepoApi {
         Ok(megarepo_mapping)
     }
 
+    fn prepare_ctx(
+        &self,
+        ctx: &CoreContext,
+        target: Target,
+        version: Option<SyncConfigVersion>,
+    ) -> CoreContext {
+        ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("target_repo_id", target.repo_id);
+            scuba.add("target_bookmark", target.bookmark);
+            if let Some(version) = version {
+                scuba.add("version", version);
+            }
+            scuba.add("method", "add_sync_target");
+            scuba
+        })
+    }
+
+    async fn call_and_log(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+        version: Option<&SyncConfigVersion>,
+        f: impl Future<Output = Result<ChangesetId, MegarepoError>>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let ctx = self.prepare_ctx(ctx, target.clone(), version.cloned());
+        ctx.scuba().clone().log_with_msg("Started", None);
+        let res = f.await;
+        match &res {
+            Ok(_) => {
+                ctx.scuba().clone().log_with_msg("Success", None);
+            }
+            Err(err) => {
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("Failed", Some(format!("{:#?}", err)));
+            }
+        }
+        res
+    }
+
     /// Adds new sync target. Returs the commit hash of newly created target's head.
     pub async fn add_sync_target(
         &self,
@@ -313,9 +353,11 @@ impl MegarepoApi {
             .map(|(source, cs_id)| (SourceName(source), cs_id))
             .collect();
 
-        Ok(add_sync_target
-            .run(ctx, sync_target_config, changesets_to_merge, message)
-            .await?)
+        let target = sync_target_config.target.clone();
+        let version = sync_target_config.version.clone();
+        let fut = add_sync_target.run(&ctx, sync_target_config, changesets_to_merge, message);
+
+        self.call_and_log(ctx, &target, Some(&version), fut).await
     }
 
     /// Syncs single changeset, returns the changeset it in the target.
@@ -327,13 +369,15 @@ impl MegarepoApi {
         target: Target,
     ) -> Result<ChangesetId, MegarepoError> {
         let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
-        sync_changeset::SyncChangeset::new(
+        let source_name = SourceName::new(source_name);
+        let sync_changeset = sync_changeset::SyncChangeset::new(
             &self.megarepo_configs,
             &self.mononoke,
             &target_megarepo_mapping,
-        )
-        .sync(ctx, source_cs_id, &SourceName::new(source_name), &target)
-        .await
+        );
+        let fut = sync_changeset.sync(ctx, source_cs_id, &source_name, &target);
+
+        self.call_and_log(ctx, &target, None, fut).await
     }
 
     /// Adds new sync target. Returs the commit hash of newly created target's head.
@@ -352,16 +396,16 @@ impl MegarepoApi {
             .map(|(source, cs_id)| (SourceName(source), cs_id))
             .collect();
 
+        let version = new_version.clone();
+        let fut = change_target_config.run(
+            ctx,
+            &target,
+            new_version,
+            target_location,
+            changesets_to_merge,
+            message,
+        );
 
-        Ok(change_target_config
-            .run(
-                ctx,
-                &target,
-                new_version,
-                target_location,
-                changesets_to_merge,
-                message,
-            )
-            .await?)
+        self.call_and_log(ctx, &target, Some(&version), fut).await
     }
 }

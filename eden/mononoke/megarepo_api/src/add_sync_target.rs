@@ -63,6 +63,8 @@ impl<'a> AddSyncTarget<'a> {
         changesets_to_merge: BTreeMap<SourceName, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
+        let mut scuba = ctx.scuba().clone();
+
         verify_config(ctx, &sync_target_config).map_err(MegarepoError::request)?;
 
         let repo = self
@@ -79,6 +81,7 @@ impl<'a> AddSyncTarget<'a> {
                 &changesets_to_merge,
             )
             .await?;
+        scuba.log_with_msg("Created move commits", None);
 
         // Now let's merge all the moved commits together
         let top_merge_cs_id = self
@@ -92,7 +95,6 @@ impl<'a> AddSyncTarget<'a> {
             )
             .await?;
 
-        let mut scuba = ctx.scuba().clone();
         scuba.log_with_msg(
             "Created add sync target merge commit",
             Some(format!("{}", top_merge_cs_id)),
@@ -112,6 +114,8 @@ impl<'a> AddSyncTarget<'a> {
         }
 
         derivers.try_for_each(|_| future::ready(Ok(()))).await?;
+
+        scuba.log_with_msg("Derived data", None);
 
         self.megarepo_configs
             .add_target_with_config_version(ctx.clone(), sync_target_config.clone())
