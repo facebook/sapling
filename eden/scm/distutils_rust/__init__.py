@@ -181,7 +181,9 @@ class BuildRustExt(distutils.core.Command):
             self.build_binary(target)
 
     def get_cargo_target(self):
-        return os.path.abspath(os.path.join("build", "cargo-target"))
+        return os.environ.get("CARGO_TARGET_DIR") or os.path.abspath(
+            os.path.join("build", "cargo-target")
+        )
 
     def get_temp_output(self, target):
         """Returns the location in the temp directory of the output file."""
