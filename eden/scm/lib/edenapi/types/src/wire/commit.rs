@@ -636,7 +636,7 @@ pub struct WireEphemeralPrepareRequest {}
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireEphemeralPrepareResponse {
     #[serde(rename = "1")]
-    pub bubble_id: u64,
+    pub bubble_id: Option<std::num::NonZeroU64>,
 }
 
 impl ToWire for EphemeralPrepareRequest {
@@ -668,18 +668,20 @@ impl ToWire for EphemeralPrepareResponse {
 
     fn to_wire(self) -> Self::Wire {
         Self::Wire {
-            bubble_id: self.bubble_id,
+            bubble_id: Some(self.bubble_id),
         }
     }
 }
 
 impl ToApi for WireEphemeralPrepareResponse {
     type Api = EphemeralPrepareResponse;
-    type Error = std::convert::Infallible;
+    type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(Self::Api {
-            bubble_id: self.bubble_id,
+            bubble_id: self.bubble_id.ok_or(
+                WireToApiConversionError::CannotPopulateRequiredField("bubble_id"),
+            )?,
         })
     }
 }

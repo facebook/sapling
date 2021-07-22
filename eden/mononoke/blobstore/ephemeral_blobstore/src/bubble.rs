@@ -8,6 +8,7 @@
 //! Ephemeral Blobstore Bubbles
 
 use std::fmt;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -25,7 +26,7 @@ use crate::store::EphemeralBlobstore;
 
 /// Ephemeral Blobstore Bubble ID.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct BubbleId(u64);
+pub struct BubbleId(NonZeroU64);
 
 impl fmt::Display for BubbleId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -35,11 +36,11 @@ impl fmt::Display for BubbleId {
 
 impl From<BubbleId> for Value {
     fn from(bubble_id: BubbleId) -> Self {
-        Value::UInt(bubble_id.0)
+        Value::UInt(bubble_id.0.into())
     }
 }
 
-impl From<BubbleId> for u64 {
+impl From<BubbleId> for NonZeroU64 {
     fn from(bubble_id: BubbleId) -> Self {
         bubble_id.0
     }
@@ -48,7 +49,10 @@ impl From<BubbleId> for u64 {
 impl ConvIr<BubbleId> for BubbleId {
     fn new(v: Value) -> Result<Self, FromValueError> {
         match v {
-            Value::UInt(id) => Ok(BubbleId(id)),
+            Value::UInt(id) => match NonZeroU64::new(id) {
+                Some(id) => Ok(BubbleId(id)),
+                None => Err(FromValueError(v))?,
+            },
             v => Err(FromValueError(v)),
         }
     }
@@ -67,7 +71,7 @@ impl FromValue for BubbleId {
 }
 
 impl BubbleId {
-    pub(crate) fn new(id: u64) -> Self {
+    pub(crate) fn new(id: NonZeroU64) -> Self {
         BubbleId(id)
     }
 

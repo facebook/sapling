@@ -103,7 +103,10 @@ impl EphemeralBlobstore {
 
         match res.last_insert_id() {
             Some(id) if res.affected_rows() == 1 => {
-                let bubble_id = BubbleId::new(id);
+                let bubble_id = BubbleId::new(
+                    std::num::NonZeroU64::new(id)
+                        .ok_or(EphemeralBlobstoreError::CreateBubbleFailed)?,
+                );
                 Ok(Bubble::new(
                     repo_id,
                     bubble_id,

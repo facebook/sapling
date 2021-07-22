@@ -253,7 +253,7 @@ pub struct EphemeralPrepareRequest {}
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareResponse {
-    pub bubble_id: u64,
+    pub bubble_id: std::num::NonZeroU64,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
