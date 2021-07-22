@@ -17,7 +17,6 @@ class TokenLocator(object):
     filename = ".commitcloudrc"
     servicename = "commitcloud"
     accountname = "commitcloud"
-    faketoken = "fake_token"
 
     def __init__(self, ui):
         self.ui = ui
@@ -156,7 +155,7 @@ class TokenLocator(object):
             it can throw only in case of unexpected error
         """
         if not self.tokenenforced:
-            return self.faketoken
+            return ccutil.FAKE_TOKEN
         if self.ui.config("commitcloud", "user_token_path"):
             token = self._gettokenfromfile()
         elif pycompat.isdarwin:

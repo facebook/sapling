@@ -15,6 +15,7 @@ from . import dependencies, error as ccerror
 
 SERVICE = "commitcloud"
 ACCOUNT = "commitcloud"
+FAKE_TOKEN = "fake_token"
 
 
 def getuserconfigpath(ui, overrideconfig):
@@ -65,14 +66,14 @@ def getreponame(repo):
     return reponame
 
 
-def getremotepath(repo, dest):
+def getremotepath(ui, dest):
     """Select an appopriate remote repository to connect to for commit cloud operations.
 
     If dest is empty, pass in None to get the default path.
     Priorities: 'infinitepush', 'default'
     """
     pathname = dependencies.infinitepush.constants.pathname
-    path = repo.ui.paths.getpath(
+    path = ui.paths.getpath(
         dest or None, default=(pathname.infinitepush, pathname.default)
     )
     if not path:

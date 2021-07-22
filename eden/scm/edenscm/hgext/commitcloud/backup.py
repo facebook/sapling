@@ -14,7 +14,7 @@ from . import backuplock, backupstate, dependencies, util as ccutil
 def backup(
     repo, revs, connect_opts=None, dest=None, backupsnapshots=False, force=False
 ):
-    remotepath = ccutil.getremotepath(repo, dest)
+    remotepath = ccutil.getremotepath(repo.ui, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
 
     with backuplock.lock(repo):

@@ -1356,7 +1356,7 @@ def cloudcheck(ui, repo, dest=None, **opts):
     nodestocheck = [repo[r].hex() for r in revs]
 
     if remote:
-        remotepath = ccutil.getremotepath(repo, dest)
+        remotepath = ccutil.getremotepath(ui, dest)
         getconnection = lambda: repo.connectionpool.get(remotepath, opts)
         isbackedup = {
             nodestocheck[i]: res

@@ -14,7 +14,15 @@ import tempfile
 import time
 from subprocess import PIPE, Popen
 
-from edenscm.mercurial import error, json, perftrace, pycompat, util, commands
+from edenscm.mercurial import (
+    error,
+    json,
+    perftrace,
+    pycompat,
+    util,
+    commands,
+    httpconnection,
+)
 from edenscm.mercurial.i18n import _
 
 from . import baseservice, error as ccerror, util as ccutil
@@ -53,28 +61,12 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
     def __init__(self, ui, token=None):
         self.ui = ui
-        self.token = token
+        self.token = token if token != ccutil.FAKE_TOKEN else None
         self.debugrequests = ui.config("commitcloud", "debugrequests")
-        self.remote_host = ui.config("commitcloud", "remote_host")
-        self.remote_port = ui.configint("commitcloud", "remote_port")
-        self.client_certs = util.expanduserpath(
-            ui.config("commitcloud", "tls.client_certs")
-        )
-        self.ca_certs = util.expanduserpath(ui.config("commitcloud", "tls.ca_certs"))
-        self.check_hostname = ui.configbool("commitcloud", "tls.check_hostname")
-
-        # validation
-        if not self.remote_host:
-            raise ccerror.ConfigurationError(self.ui, _("'remote_host' is required"))
-
-        if self.client_certs and not os.path.isfile(self.client_certs):
-            raise ccerror.TLSConfigurationError(
-                ui, _("%s (no such file or is a directory)") % self.client_certs
-            )
-
-        if self.ca_certs and not os.path.isfile(self.ca_certs):
-            raise ccerror.TLSConfigurationError(
-                ui, _("%s (no such file or is a directory)") % self.ca_certs
+        self.url = ui.config("commitcloud", "url")
+        if not self.url:
+            raise ccerror.ConfigurationError(
+                self.ui, _("'commitcloud.url' is required")
             )
 
         self._setuphttpsconnection()
@@ -92,31 +84,47 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         }
         if self.token:
             self.headers["Authorization"] = "OAuth %s" % self.token
-        sslcontext = ssl.create_default_context()
-        if self.client_certs:
-            sslcontext.load_cert_chain(self.client_certs)
-        if self.ca_certs:
-            sslcontext.load_verify_locations(self.ca_certs)
 
-        try:
-            sslcontext.check_hostname = self.check_hostname
-            self.connection = httplib.HTTPSConnection(
-                self.remote_host,
-                self.remote_port,
-                context=sslcontext,
-                timeout=DEFAULT_TIMEOUT,
-                check_hostname=self.check_hostname,
+        u = util.url(self.url, parsequery=False, parsefragment=False)
+        if u.scheme != "https" or not u.host or u.passwd is not None:
+            raise ccerror.ConfigurationError(
+                self.ui, _("'commitcloud.url' is invalid or unsupported")
             )
-        except TypeError:
-            sslcontext.check_hostname = self.check_hostname
-            self.connection = httplib.HTTPSConnection(
-                self.remote_host,
-                self.remote_port,
-                context=sslcontext,
-                timeout=DEFAULT_TIMEOUT,
-            )
+
+        remotehost = u.host
+        remoteport = int(u.port) if u.port else 443
+
+        sslcontext = ssl.create_default_context()
+
+        # if the token is not set, use the same TLS auth to connect to the Commit Cloud service
+        # as it is used to connect to the default path
+        if not self.token:
+            path = ccutil.getremotepath(self.ui, None)
+            authdata = httpconnection.readauthforuri(self.ui, path, u.user)
+            if authdata:
+                (authname, auth) = authdata
+                cert = auth.get("cert")
+                key = auth.get("key")
+                cacerts = auth.get("cacerts")
+                sslcontext.load_cert_chain(cert, keyfile=key)
+                if cacerts:
+                    sslcontext.load_verify_locations(cacerts)
+            else:
+                raise ccerror.TLSConfigurationError(
+                    self.ui,
+                    _(
+                        "no certificates have been found to connect to the Commit Cloud Service"
+                    ),
+                )
+
+        self.connection = httplib.HTTPSConnection(
+            remotehost,
+            remoteport,
+            context=sslcontext,
+            timeout=DEFAULT_TIMEOUT,
+        )
         self.ui.debug(
-            "will be connecting to %s:%d\n" % (self.remote_host, self.remote_port),
+            "will be connecting to %s:%d\n" % (remotehost, remoteport),
             component="commitcloud",
         )
 

@@ -18,39 +18,10 @@ Configs::
     # hostname to use for the system
     hostname = myhost
 
-    # Https endpoint host serving commit cloud requests (for servicetype = remote)
-    remote_host = example.commitcloud.com
+    # url of the endpoint serving commit cloud requests (for servicetype = remote)
+    url = https://example.commitcloud.com
 
-    # Https endpoint port serving commit cloud requests (for servicetype = remote)
-    # Default is the standard HTTPS port
-    remote_port = 443
-
-    # TLS client certificate (optional)
-    # path may contain ${USER} or %i placeholders to substitute with the user identity
-    # should be defined if mutual TLS is needed
-    # mutual TLS is vital for TLS based user authentication
-    tls.client_certs = /etc/pki/tls/certs/client_certs.pem
-
-    # TLS CA certificate (optional)
-    # File containing trusted CA's to validate server certificates
-    # path may contain ${USER} or %i placeholders to substitute with the user identity
-    # should be defined if location is not default
-    # see OPENSSLDIR in `openssl version -a` for the default location
-    tls.ca_certs = /etc/pki/tls/certs/ca.pem
-
-    # TLS CN/hostname check (true is the default)
-    # may be required to disable if non standard format is used, for example,
-    # CN field in x509 server cert contains different information rather than server's hostname.
-    # TODO: It is also possible to implement a wrapper for ssl.match_hostname method instead of disabling the check.
-    tls.check_hostname = False
-
-    # set False if
-    #   * TLS certs should be used to authenticate with the commit cloud service
-    #     This requires the path to a valid client cert in 'tls.client_certs' option to be set as well,
-    #     and possibly 'tls.ca_certs' option if not default.
-    #     check TLS handshake: `openssl s_client -connect host:port -cert <tls.client_certs> -CAfile <tls.ca_certs>'
-    #   * for testing purposes
-    #   * if the commit cloud service doesn't require any authentication
+    # set false if TLS certs should be used to authenticate with the commit cloud service instead
     token_enforced = True
 
     # help message to provide instruction on registration process
@@ -188,9 +159,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("commitcloud", "servicetype", default="remote")
-configitem("commitcloud", "remote_port", default=443)
 configitem("commitcloud", "token_enforced", default=True)
-configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "automigrate", default=False)
 configitem("commitcloud", "automigratehostworkspace", default=False)
@@ -333,7 +302,7 @@ def hintcommitcloudswitch(ui, active):
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo, None)).heads
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui, None)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         backedup = repo.dageval(lambda: draft() & ancestors(heads))
@@ -346,7 +315,7 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo, None)).heads
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui, None)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         notbackedup = repo.dageval(lambda: draft() - ancestors(heads))

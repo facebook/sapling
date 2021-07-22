@@ -221,7 +221,7 @@ def _sync(
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
 
-    remotepath = ccutil.getremotepath(repo, dest)
+    remotepath = ccutil.getremotepath(ui, dest)
 
     getconnection = lambda: repo.connectionpool.get(
         remotepath, connect_opts, reason="cloudsync"
