@@ -33,6 +33,8 @@ class PrjfsStateCmd(Subcmd):
 
         state = prjfs.PrjGetOnDiskFileState(p)
         state_formatted = ", ".join(
+            # pyre-fixme[6]: Expected `Iterable[str]` for 1st param but got
+            #  `List[enum.Flag]`.
             [flag.name for flag in prjfs.PRJ_FILE_STATE if flag in state]
         )
 
