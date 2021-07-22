@@ -31,6 +31,7 @@
 
 from __future__ import absolute_import
 
+import json
 import os
 import socket
 import ssl
@@ -216,6 +217,8 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._compression = ui.configwith(bool, "mononokepeer", "compression")
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
+        self._confheaders = ui.config("http", "extra_headers_json")
+        self._verbose = ui.configwith(bool, "http", "verbose")
 
         if not self._unix_socket_proxy:
             authdata = httpconnection.readauthforuri(self._ui, path, self._user)
@@ -297,31 +300,38 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         with self.ui.timeblockedsection("mononoke_headers"):
             try:
-                headers = [
-                    encodeutf8("GET /{} HTTP/1.1".format(self._path)),
-                    encodeutf8("Host: {}".format(self._host)),
-                    b"User-Agent: mercurial/mononoke-peer",
-                    b"Connection: Upgrade",
-                    b"Upgrade: websocket",
-                ]
+                requestline = encodeutf8("GET /{} HTTP/1.1\r\n".format(self._path))
 
-                headers.append(
-                    encodeutf8(
-                        "X-Client-Info: {}".format(
-                            self._clientinfo.into_json().decode()
-                        )
-                    )
-                )
+                headers = {
+                    "Host": self._host,
+                    "User-Agent": "mercurial/mononoke-peer",
+                    "Connection": "Upgrade",
+                    "Upgrade": "websocket",
+                }
+                headers["X-Client-Info"] = self._clientinfo.into_json().decode()
+
                 if self._unix_socket_proxy:
-                    headers.append(b"x-x2pagentd-ws-over-h1: 1")
+                    headers["x-x2pagentd-ws-over-h1"] = "1"
 
                 if self._compression:
-                    headers.append(b"X-Client-Compression: zstd=stdin")
+                    headers["X-Client-Compression"] = "zstd=stdin"
 
                 if os.getenv("CLIENT_DEBUG"):
-                    headers.append(b"X-Client-Debug: true")
+                    headers["X-Client-Debug"] = "true"
 
-                self.sock.send(b"\r\n".join(headers) + b"\r\n\r\n")
+                if self._confheaders:
+                    headers.update(json.loads(self._confheaders))
+
+                headersstr = b"\r\n".join(
+                    map(lambda x: encodeutf8(x[0] + ": " + x[1]), headers.items())
+                )
+
+                httprequest = requestline + headersstr + b"\r\n\r\n"
+
+                if self._verbose:
+                    self.ui.status(httprequest.decode())
+
+                self.sock.send(httprequest)
 
                 # Read HTTP response headers so we can start our own
                 # protocol afterwards
@@ -329,6 +339,10 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 # First line is wether request was successful
                 line = self.handle.readline(1024).strip()
+
+                if self._verbose:
+                    self.ui.status("< {}".format(line))
+
                 headerparts = line.split()
                 if len(headerparts) < 2:
                     self._abort(
@@ -350,6 +364,8 @@ class mononokepeer(stdiopeer.stdiopeer):
                 # wire protocol or read HTTP response body
                 while line:
                     line = self.handle.readline(1024).strip()
+                    if self._verbose:
+                        print("< {}".format(line))
                     if line.lower().startswith(b"x-mononoke-encoding:"):
                         decompress = True
                     if line.lower().startswith(b"content-length:"):
