@@ -15,8 +15,21 @@ from .cmd_util import require_checkout
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 
+# Avoid CRLF line-endings on Windows.
+def _println(val: str) -> None:
+    buffer = sys.stdout.buffer
+    buffer.write(val.encode("utf-8") + b"\n")
+    buffer.flush()
 
-def add_common_arguments(parser: argparse.ArgumentParser) -> None:
+
+# Avoid CRLF line-endings on Windows.
+def _eprintln(val: str) -> None:
+    buffer = sys.stderr.buffer
+    buffer.write(val.encode("utf-8") + b"\n")
+    buffer.flush()
+
+
+def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--repo", help="Specify path to repo root (default: root of cwd)"
     )
@@ -42,12 +55,12 @@ class CheckoutAndPatterns(NamedTuple):
     patterns: List[str]
 
 
-def find_checkout_and_patterns(
+def _find_checkout_and_patterns(
     args: argparse.Namespace,
 ) -> CheckoutAndPatterns:
     instance, checkout, rel_path = require_checkout(args, args.repo)
     if args.repo and rel_path != Path("."):
-        print(f"{args.repo} is not the root of an EdenFS repo", file=sys.stderr)
+        _eprintln(f"{args.repo} is not the root of an EdenFS repo")
         raise SystemExit(1)
 
     patterns = list(args.PATTERN)
@@ -68,10 +81,10 @@ class GlobCmd(Subcmd):
     HELP = "Print matching filenames"
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        add_common_arguments(parser)
+        _add_common_arguments(parser)
 
     def run(self, args: argparse.Namespace) -> int:
-        checkout_and_patterns = find_checkout_and_patterns(args)
+        checkout_and_patterns = _find_checkout_and_patterns(args)
 
         with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
             result = client.globFiles(
@@ -86,7 +99,7 @@ class GlobCmd(Subcmd):
                 )
             )
             for name in result.matchingFiles:
-                print(os.fsdecode(name))
+                _println(os.fsdecode(name))
         return 0
 
 
@@ -95,7 +108,7 @@ class PrefetchCmd(Subcmd):
     HELP = "Prefetch content for matching file patterns"
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        add_common_arguments(parser)
+        _add_common_arguments(parser)
         parser.add_argument(
             "--silent",
             help="Do not print the names of the matching files",
@@ -125,7 +138,7 @@ class PrefetchCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        checkout_and_patterns = find_checkout_and_patterns(args)
+        checkout_and_patterns = _find_checkout_and_patterns(args)
 
         with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
             result = client.globFiles(
@@ -141,13 +154,10 @@ class PrefetchCmd(Subcmd):
             )
             if not args.background and not args.silent:
                 if checkout_and_patterns.patterns and not result.matchingFiles:
-                    print(
+                    _eprintln(
                         f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
                         "See `eden prefetch -h` for docs on pattern matching.",
-                        file=sys.stderr,
-                        flush=True,
                     )
+                _println("\n".join(os.fsdecode(name) for name in result.matchingFiles))
 
-                for name in result.matchingFiles:
-                    print(os.fsdecode(name))
         return 0
