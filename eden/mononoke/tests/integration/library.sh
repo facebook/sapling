@@ -1377,7 +1377,7 @@ function hgmn {
 }
 
 function hgedenapi {
-  hg --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=repo" "$@"
+  hgmn --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=$REPONAME" "$@"
 }
 
 function hgmn_local {

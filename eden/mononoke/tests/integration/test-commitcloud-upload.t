@@ -9,6 +9,7 @@
 
 setup configuration
   $ export READ_ONLY_REPO=1
+  $ export MONONOKE_DIRECT_PEER=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   ENABLE_PRESERVE_BUNDLE2=true \
   >   setup_common_config
@@ -41,6 +42,12 @@ mononoke  local commit cloud backend
   > token_enforced = False
   > owner_team = The Test Team
   > usehttpupload = True
+  > [visibility]
+  > enabled = True
+  > [mutation]
+  > record = True
+  > enabled = True
+  > date = 0 0
   > [remotefilelog]
   > reponame=repo
   > EOF
@@ -152,3 +159,166 @@ The files of the second commit are identical to the files of the first commit, s
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
     INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
+
+  $ cd ..
+
+Try pull an uploaded commit from another client
+  $ cd client2
+  $ hgedenapi pull -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  pulling from mononoke://$LOCALIP:*/repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+
+  $ tglogm
+  o  65289540f44d 'New files Dir2'
+  │
+  @  8b2dca0c8a72 'base_commit'
+  
+
+  $ cd ..
+
+Rebase a commit and pull it again in the client2. Check for correct mutation markers.
+Also, check that upload will not reupload file contents again.
+
+  $ cd client1
+  $ hgedenapi rebase -s 65289540f44d80cecffca8a3fd655c0ca6243cd9 -d 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc
+  rebasing 65289540f44d "New files Dir2"
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head 'a8c7c28d0391' hasn't been uploaded yet
+  commitcloud: queue 1 commit for upload
+  commitcloud: queue 0 files for upload
+  commitcloud: queue 1 tree for upload
+  commitcloud: uploaded 1 tree
+  commitcloud: uploading commit 'a8c7c28d0391c5948f0a40f43e8b16d7172289cf'...
+  commitcloud: uploaded 1 changeset
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ cd ..
+
+  $ cd client2
+  $ hgedenapi pull -r a8c7c28d0391c5948f0a40f43e8b16d7172289cf
+  pulling from mononoke://$LOCALIP:*/repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+
+  $ tglogm --hidden
+  o  a8c7c28d0391 'New files Dir2'
+  │
+  o  536d3fb3929e 'New files Dir1'
+  │
+  │ x  65289540f44d 'New files Dir2'  (Rewritten using rebase into a8c7c28d0391)
+  ├─╯
+  @  8b2dca0c8a72 'base_commit'
+  
+
+Try `cloud sync` now. Expected that nothing new is either uploaded or pulled.
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+
+Try moving a directory and uploaded a resulting commit.
+Expected that the 'lookup' returns tokens for file contents and it won't be reuploaded again.
+Also, dedup for file contents is expected to work (see queue 100 files but only 1 lookup).
+  $ hgedenapi checkout a8c7c28d0391 -q
+  $ hgedenapi mv dir2 dir3 -q
+  $ hgedenapi commit -m "New files Dir3 moved from Dir2" -q
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+    INFO edenapi::client: Requesting lookup for 2 item(s)
+  commitcloud: head '32551ca74417' hasn't been uploaded yet
+    INFO edenapi::client: Requesting lookup for 3 item(s)
+  commitcloud: queue 1 commit for upload
+    INFO edenapi::client: Requesting lookup for 100 item(s)
+  commitcloud: queue 100 files for upload
+    INFO edenapi::client: Requesting lookup for 1 item(s)
+    INFO edenapi::client: Received 1 token(s) from the lookup_batch request
+    INFO edenapi::client: Received 0 new token(s) from upload requests
+    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
+  commitcloud: uploaded 100 files
+    INFO edenapi::client: Requesting lookup for 2 item(s)
+  commitcloud: queue 2 trees for upload
+    INFO edenapi::client: Requesting trees upload for 2 item(s)
+  commitcloud: uploaded 2 trees
+  commitcloud: uploading commit '32551ca744171ab6eedf48245d4fab816292ae5f'...
+    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+  commitcloud: uploaded 1 changeset
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ cd ..
+
+Back to client1 and sync.
+  $ cd client1
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: nothing to upload
+  pulling 32551ca74417 from mononoke://$LOCALIP:*/repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ tglogm
+  o  32551ca74417 'New files Dir3 moved from Dir2'
+  │
+  @  a8c7c28d0391 'New files Dir2'
+  │
+  │ x  65289540f44d 'New files Dir2'  (Rewritten using rebase into a8c7c28d0391)
+  │ │
+  o │  536d3fb3929e 'New files Dir1'
+  ├─╯
+  o  8b2dca0c8a72 'base_commit'
+  
+  $ cd ..
+
+Check how upload behaves if only commit metadata has been changed.
+No trees or filenodes are expected to be reuploaded.
+  $ cd client2
+  $ hgedenapi commit --amend -m "Edited: New files Dir3 moved from Dir2" -q
+  $ hgedenapi cloud sync
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  commitcloud: head 'c8b3ca487837' hasn't been uploaded yet
+  commitcloud: queue 1 commit for upload
+  commitcloud: queue 0 files for upload
+  commitcloud: queue 0 trees for upload
+  commitcloud: uploading commit 'c8b3ca4878376f03b729cc867113280dc38baf23'...
+  commitcloud: uploaded 1 changeset
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ cd ..
+
+Sync also client1 at the end for further tests...
+  $ cd client1
+  $ hgedenapi cloud sync -q
+
+Check that Copy From information has been uploaded correctly.
+The file dir3/0 has been moved from the file dir2/0 on the client2 previously.
+So, this information is expected to be preserved on the client1.
+  $ hgedenapi checkout c8b3ca487837 -q
+  $ hgedenapi log -f dir3/0
+  commit:      c8b3ca487837
+  user:        test
+  date:        * (glob)
+  summary:     Edited: New files Dir3 moved from Dir2
+  
+  commit:      a8c7c28d0391
+  user:        test
+  date:        * (glob)
+  summary:     New files Dir2
+  
+
