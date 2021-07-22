@@ -11,7 +11,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
 use mononoke_types::{DateTime, RepositoryId};
@@ -20,6 +20,7 @@ use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 
 use crate::error::EphemeralBlobstoreError;
+use crate::handle::EphemeralHandle;
 use crate::store::EphemeralBlobstore;
 
 /// Ephemeral Blobstore Bubble ID.
@@ -78,6 +79,7 @@ impl BubbleId {
 
 /// An opened ephemeral blobstore bubble.  This is a miniature blobstore
 /// that stores blobs just for this ephemeral bubble in a particular repo.
+#[derive(Debug, Clone)]
 pub struct Bubble {
     /// ID of the repository this bubble applies to.
     repo_id: RepositoryId,
@@ -95,6 +97,12 @@ pub struct Bubble {
     /// Ephemeral blobstore this bubble is located in.
     #[allow(unused)] // will be used to extend bubble lifespan
     ephemeral_blobstore: EphemeralBlobstore,
+}
+
+impl fmt::Display for Bubble {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Bubble({})<{}>", self.bubble_id, self.blobstore)
+    }
 }
 
 impl Bubble {
@@ -137,26 +145,39 @@ impl Bubble {
         self.bubble_id
     }
 
+    pub fn get_handle(&self, main_blobstore: Arc<dyn Blobstore>) -> EphemeralHandle {
+        EphemeralHandle::new(self.clone(), main_blobstore)
+    }
+
     pub async fn extend_lifespan(&self) -> Result<()> {
         unimplemented!()
     }
 
-    pub async fn get(&self, ctx: &CoreContext, key: &str) -> Result<Option<BlobstoreGetData>> {
+    pub(crate) async fn get(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.check_unexpired()?;
         self.blobstore.get(ctx, key).await
     }
 
-    pub async fn put(&self, ctx: &CoreContext, key: &str, value: BlobstoreBytes) -> Result<()> {
+    pub(crate) async fn put(
+        &self,
+        ctx: &CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.check_unexpired()?;
-        self.blobstore.put(ctx, key.to_string(), value).await
+        self.blobstore.put(ctx, key, value).await
     }
 
-    pub async fn is_present(
+    pub(crate) async fn is_present(
         &self,
-        _ctx: &CoreContext,
-        _bubble_id: BubbleId,
-        _key: &str,
-    ) -> Result<bool> {
-        unimplemented!()
+        ctx: &CoreContext,
+        key: &str,
+    ) -> Result<BlobstoreIsPresent> {
+        self.check_unexpired()?;
+        self.blobstore.is_present(ctx, key).await
     }
 }

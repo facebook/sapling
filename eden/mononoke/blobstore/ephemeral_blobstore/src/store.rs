@@ -12,6 +12,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
+use derivative::Derivative;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
 use sql::queries;
 use sql_ext::SqlConnections;
@@ -21,10 +22,13 @@ use crate::error::EphemeralBlobstoreError;
 use crate::repo::RepoEphemeralBlobstore;
 
 /// Ephemeral Blobstore.
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct EphemeralBlobstoreInner {
     /// The backing blobstore where blobs are stored.
     pub(crate) blobstore: Arc<dyn Blobstore>,
 
+    #[derivative(Debug = "ignore")]
     /// Database used to manage the ephemeral blobstore.
     pub(crate) connections: SqlConnections,
 
@@ -40,7 +44,7 @@ pub struct EphemeralBlobstoreInner {
 }
 
 /// Ephemeral Blobstore.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EphemeralBlobstore {
     pub(crate) inner: Arc<EphemeralBlobstoreInner>,
 }
@@ -167,23 +171,20 @@ mod test {
             ChronoDuration::days(30),
             ChronoDuration::hours(6),
         );
+        let key = "test_key".to_string();
 
         // Create a bubble and put data in it.
         let bubble1 = eph.create_bubble(REPO_ZERO).await?;
         bubble1
-            .put(&ctx, "test_key", BlobstoreBytes::from_bytes("test data"))
+            .put(&ctx, key.clone(), BlobstoreBytes::from_bytes("test data"))
             .await?;
-        let data = bubble1.get(&ctx, "test_key").await?.unwrap().into_bytes();
+        let data = bubble1.get(&ctx, &key).await?.unwrap().into_bytes();
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
         // Re-open the bubble and confirm we can read the data.
         let bubble1_id = bubble1.bubble_id();
         let bubble1_read = eph.open_bubble(REPO_ZERO, bubble1_id).await?;
-        let data = bubble1_read
-            .get(&ctx, "test_key")
-            .await?
-            .unwrap()
-            .into_bytes();
+        let data = bubble1_read.get(&ctx, &key).await?.unwrap().into_bytes();
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
         // Enumerate the blobstore and check the key got its prefix.
@@ -192,7 +193,7 @@ mod test {
             .await?;
         assert_eq!(
             enumerated.keys,
-            hashset! { format!("eph{}.repo0000.test_key", bubble1_id) }
+            hashset! { format!("eph{}.repo0000.{}", bubble1_id, key) }
         );
 
         // Create a new bubble and put data in it.
@@ -200,14 +201,14 @@ mod test {
         bubble2
             .put(
                 &ctx,
-                "test_key",
+                key.clone(),
                 BlobstoreBytes::from_bytes("other test data"),
             )
             .await?;
-        let data = bubble2.get(&ctx, "test_key").await?.unwrap().into_bytes();
+        let data = bubble2.get(&ctx, &key).await?.unwrap().into_bytes();
         assert_eq!(data.as_bytes().as_ref(), b"other test data");
 
-        let data = bubble1.get(&ctx, "test_key").await?.unwrap().into_bytes();
+        let data = bubble1.get(&ctx, &key).await?.unwrap().into_bytes();
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
         // There should now be two separate keys.
@@ -218,8 +219,8 @@ mod test {
         assert_eq!(
             enumerated.keys,
             hashset! {
-                format!("eph{}.repo0000.test_key", bubble1_id),
-                format!("eph{}.repo0000.test_key", bubble2_id),
+                format!("eph{}.repo0000.{}", bubble1_id, key),
+                format!("eph{}.repo0000.{}", bubble2_id, key),
             }
         );
         Ok(())
