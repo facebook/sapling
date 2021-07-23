@@ -18,6 +18,8 @@ class IActivityRecorder {
   explicit IActivityRecorder(std::shared_ptr<EdenMount> edenMount)
       : edenMount_{std::move(edenMount)} {}
   virtual ~IActivityRecorder() = default;
+  virtual uint64_t addSubscriber() = 0;
+  virtual void removeSubscriber(uint64_t unique) = 0;
 
  protected:
   std::shared_ptr<EdenMount> edenMount_;
@@ -26,6 +28,10 @@ class IActivityRecorder {
 class NullActivityRecorder : public IActivityRecorder {
  public:
   NullActivityRecorder() : IActivityRecorder{{}} {}
+  uint64_t addSubscriber() override {
+    return 0;
+  }
+  void removeSubscriber(uint64_t /* unique */) override {}
 };
 
 using ActivityRecorderFactory =
