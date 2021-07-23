@@ -20,6 +20,7 @@ description = '''
 anyhow = "1.0"
 eventsource = "0.5"
 filetime = "0.2.9"
+hostcaps = { path = "../hostcaps" }
 lazy_static = "1.0"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 regex = "1.4.2"
@@ -31,3 +32,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 tempfile = "3.1"
+
+[features]
+default = ["hostcaps/fb"]

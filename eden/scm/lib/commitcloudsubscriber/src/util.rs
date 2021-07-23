@@ -166,7 +166,7 @@ pub struct Token {
 }
 
 pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
-    // try to read token from file
+    // Try to read OAuth token from a file.
     let token = if let &Some(ref user_token_path) = user_token_path {
         let mut user_token_path = user_token_path.clone();
         user_token_path.push(TOKEN_FILENAME);
@@ -187,96 +187,102 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
     } else {
         None
     };
-    // try to read token from keychain
-    if cfg!(target_os = "macos") {
-        if token.is_none() {
-            // security find-generic-password -g -s commitcloud -a commitcloud -w
-            info!("Token Lookup: reading commitcloud OAuth token from keychain...");
-            let output = Command::new("security")
-                .args(vec![
-                    "find-generic-password",
-                    "-g",
-                    "-s",
-                    "commitcloud",
-                    "-a",
-                    "commitcloud",
-                    "-w",
-                ])
-                .output();
-            match output {
-                Err(e) => {
-                    if let io::ErrorKind::NotFound = e.kind() {
-                        info!("`security` executable is not found");
-                    }
-                }
-                Ok(output) => {
-                    if !output.status.success() {
-                        error!(
-                            "OAuth token: failed to retrieve from keychain, process exited with: {}",
-                            output.status
-                        );
-                    } else {
-                        let token = str::from_utf8(&output.stdout)?.trim().to_string();
-                        if token.is_empty() {
-                            error!("OAuth token is not found in the keychain");
-                        } else {
-                            info!("OAuth token is found in the keychain");
-                            return Ok(Token {
-                                token,
-                                token_type: TokenType::OAuth,
-                            });
-                        }
-                    }
-                }
+    if let Some(token) = token {
+        return Ok(Token {
+            token,
+            token_type: TokenType::OAuth,
+        });
+    }
+
+    // Try to issue a CAT token authomatically.
+    let clicat_tool = if hostcaps::is_prod() {
+        "clicat"
+    } else {
+        "corp_clicat"
+    };
+    info!(
+        "Token Lookup: generating commitcloud CAT token via {}...",
+        clicat_tool
+    );
+    let day_seconds = 86400;
+    let output = Command::new(clicat_tool)
+        .args(vec![
+            "create",
+            "--verifier_type",
+            "SERVICE_IDENTITY",
+            "--verifier_id",
+            "commitcloud-service",
+            "--token_timeout_seconds",
+            &day_seconds.to_string(),
+        ])
+        .output();
+
+    match output {
+        Err(e) => {
+            if let io::ErrorKind::NotFound = e.kind() {
+                info!("`{}` executable is not found", clicat_tool);
+            } else {
+                error!("`{}` failed: {}", clicat_tool, e)
+            }
+        }
+        Ok(output) => {
+            if !output.status.success() {
+                error!(
+                    "CAT token: failed to generate via {}, process exited with {}",
+                    clicat_tool, output.status
+                );
+            } else {
+                info!("CAT token has been generated");
+                return Ok(Token {
+                    token: str::from_utf8(&output.stdout)?.trim().to_string(),
+                    token_type: TokenType::Cat,
+                });
             }
         }
     }
 
-    if cfg!(unix) {
-        // try to issue a cat token
-        if token.is_none() {
-            info!("Token Lookup: generating commitcloud CAT token via clicat...");
-            let day_seconds = 86400;
-            let output = Command::new("clicat")
-                .args(vec![
-                    "create",
-                    "--verifier_type",
-                    "SERVICE_IDENTITY",
-                    "--verifier_id",
-                    "commitcloud-service",
-                    "--token_timeout_seconds",
-                    &day_seconds.to_string(),
-                ])
-                .output();
-
-            match output {
-                Err(e) => {
-                    if let io::ErrorKind::NotFound = e.kind() {
-                        info!("`clicat` executable is not found");
-                    }
+    // Try to fetch OAuth token from the local keychain (corp mac).
+    if !hostcaps::is_prod() && cfg!(target_os = "macos") {
+        // security find-generic-password -g -s commitcloud -a commitcloud -w
+        info!("Token Lookup: reading commitcloud OAuth token from keychain...");
+        let output = Command::new("security")
+            .args(vec![
+                "find-generic-password",
+                "-g",
+                "-s",
+                "commitcloud",
+                "-a",
+                "commitcloud",
+                "-w",
+            ])
+            .output();
+        match output {
+            Err(e) => {
+                if let io::ErrorKind::NotFound = e.kind() {
+                    info!("`security` executable is not found");
                 }
-                Ok(output) => {
-                    if !output.status.success() {
-                        error!(
-                            "CAT token: failed to generate via clicat, process exited with {}",
-                            output.status
-                        );
+            }
+            Ok(output) => {
+                if !output.status.success() {
+                    error!(
+                        "OAuth token: failed to retrieve from keychain, process exited with: {}",
+                        output.status
+                    );
+                } else {
+                    let token = str::from_utf8(&output.stdout)?.trim().to_string();
+                    if token.is_empty() {
+                        error!("OAuth token is not found in the keychain");
                     } else {
-                        // Will start using it later
-                        info!("CAT token has been generated");
+                        info!("OAuth token is found in the keychain");
                         return Ok(Token {
-                            token: str::from_utf8(&output.stdout)?.trim().to_string(),
-                            token_type: TokenType::Cat,
+                            token,
+                            token_type: TokenType::OAuth,
                         });
                     }
                 }
             }
         }
     }
-    token
-        .map(|token| Token {
-            token,
-            token_type: TokenType::OAuth,
-        })
-        .ok_or(ErrorKind::CommitCloudUnexpectedError("Token Lookup: token not found".into()).into())
+
+    Err(ErrorKind::CommitCloudUnexpectedError("Token Lookup: token not found".into()).into())
 }
