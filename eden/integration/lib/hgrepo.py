@@ -52,6 +52,8 @@ class HgRepository(repobase.Repository):
         self.hg_environment["HGPLAIN"] = "1"
         self.hg_environment["HG_REAL_BIN"] = FindExe.HG_REAL
         self.hg_environment["NOSCMLOG"] = "1"
+        self.hg_environment["LOCALE"] = "en_US.UTF-8"
+        self.hg_environment["LC_ALL"] = "en_US.UTF-8"
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         if system_hgrc:
