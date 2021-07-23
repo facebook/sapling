@@ -448,15 +448,6 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
             except BaseException as ex:
                 parts.append(bundle2.createerrorpart(str(ex)))
 
-    try:
-        snapshot = extensions.find("snapshot")
-    except KeyError:
-        pass
-    else:
-        snapshot.bundleparts.appendsnapshotmetadatabundlepart(
-            bundlerepo, outgoing.missing, parts
-        )
-
     return parts
 
 
@@ -483,12 +474,6 @@ def processparts(orig, repo, op, unbundler):
     try:
         treemfmod = extensions.find("treemanifest")
         partforwardingincludelist.append(treemfmod.TREEGROUP_PARTTYPE2)
-    except KeyError:
-        pass
-
-    try:
-        snapshot = extensions.find("snapshot")
-        partforwardingincludelist.append(snapshot.bundleparts.snapshotmetadataparttype)
     except KeyError:
         pass
 

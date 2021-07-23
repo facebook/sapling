@@ -7,7 +7,6 @@ mutationblacklist = """
     test-commitcloud-backup-all.t
     test-commitcloud-sync-oscillation.t
     test-fb-hgext-hiddenerror.t
-    test-fb-hgext-snapshot-show.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t
     test-hggit-incoming.t
@@ -226,8 +225,6 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-simplecache.t
     test-fb-hgext-smartlog-smallcommitmetadata.t
     test-fb-hgext-smartlog.t
-    test-fb-hgext-snapshot-show.t
-    test-fb-hgext-snapshot-sync.t
     test-fb-hgext-sshaskpass.py
     test-fb-hgext-syncstatus-t.py
     test-fb-hgext-template-stat.t
@@ -493,7 +490,6 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-remotefilelog-treemanifest-corrupt.t
     test-fb-hgext-remotefilelog-worker.t
     test-fb-hgext-reset-remotenames-t.py
-    test-fb-hgext-snapshot.t
     test-fb-hgext-treemanifest-blame.t
     test-fb-hgext-treemanifest-comparetrees.t
     test-fb-hgext-treemanifest-disabled-t.py

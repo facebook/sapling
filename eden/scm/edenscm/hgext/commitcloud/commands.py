@@ -884,19 +884,11 @@ def cloudbackup(ui, repo, *revs, **opts):
         background.backgroundbackup(repo, dest=dest)
         return 0
 
-    backupsnapshots = False
-    try:
-        extensions.find("snapshot")
-        backupsnapshots = True
-    except KeyError:
-        pass
-
     backedup, failed = backup.backup(
         repo,
         revs,
         dest=dest,
         connect_opts=opts,
-        backupsnapshots=backupsnapshots,
         force=force,
     )
 
@@ -1504,7 +1496,6 @@ def cloudstatus(ui, repo, **opts):
         % (len(state.bookmarks), len(state.omittedbookmarks))
     )
     ui.write(_("Last Sync Remote Bookmarks: %d\n") % (len(state.remotebookmarks)))
-    ui.write(_("Last Sync Snapshots: %d\n") % (len(state.snapshots)))
 
     ui.write(_("Last Sync Time: %s\n") % time.ctime(state.lastupdatetime))
 

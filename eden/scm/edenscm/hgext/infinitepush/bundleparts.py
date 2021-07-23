@@ -173,15 +173,6 @@ def _getscratchbranchpartsimpl(
     except KeyError:
         pass
 
-    try:
-        snapshot = extensions.find("snapshot")
-    except KeyError:
-        pass
-    else:
-        snapshot.bundleparts.appendsnapshotmetadatabundlepart(
-            repo, outgoing.missing, parts
-        )
-
     return parts
 
 

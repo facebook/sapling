@@ -66,7 +66,7 @@ class memlocal(object):
     """In-memory local blobstore for ad-hoc uploading/downloading without
     writing to the filesystem.
 
-    Used by LFS (debuglfssingleupload and debuglfssingledownload) and snapshot (rebundle).
+    Used by LFS (debuglfssingleupload and debuglfssingledownload).
     """
 
     def __init__(self):

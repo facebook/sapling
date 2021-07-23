@@ -131,7 +131,6 @@ Move to the second client
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 1
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Exception:
   'get_references' failed, the workspace has been renamed or client has an invalid state
@@ -261,7 +260,6 @@ Test reclaim workspace
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 1
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Success
 

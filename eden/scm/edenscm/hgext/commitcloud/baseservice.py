@@ -29,7 +29,7 @@ def _splitremotename(remotename):
 abstractmethod = abc.abstractmethod
 References = collections.namedtuple(
     "References",
-    "version heads bookmarks headdates remotebookmarks snapshots",
+    "version heads bookmarks headdates remotebookmarks",
 )
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
@@ -137,7 +137,7 @@ class SingletonDecorator(object):
 class BaseService(pycompat.ABC):
     @staticmethod
     def _makeemptyreferences(version):
-        return References(version, None, None, None, None, None)
+        return References(version, None, None, None, None)
 
     @classmethod
     def _makereferences(cls, data):
@@ -156,7 +156,6 @@ class BaseService(pycompat.ABC):
         newremotebookmarks = cls._decoderemotebookmarks(
             data.get("remote_bookmarks", [])
         )
-        newsnapshots = [s for s in data.get("snapshots", [])]
 
         return References(
             version,
@@ -164,7 +163,6 @@ class BaseService(pycompat.ABC):
             newbookmarks,
             headdates,
             newremotebookmarks,
-            newsnapshots,
         )
 
     @staticmethod
@@ -220,8 +218,6 @@ class BaseService(pycompat.ABC):
         newbookmarks,
         oldremotebookmarks,
         newremotebookmarks,
-        oldsnapshots,
-        newsnapshots,
     ):
         """Updates the references to a new version.
 

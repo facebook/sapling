@@ -70,7 +70,6 @@ class SyncState(object):
                     ensurestr(n): ensurestr(v)
                     for n, v in data.get("remotebookmarks", {}).items()
                 }
-                self.snapshots = [ensurestr(s) for s in data.get("snapshots", [])]
                 self.maxage = data.get("maxage", None)
                 self.omittedheads = [ensurestr(h) for h in data.get("omittedheads", ())]
                 self.omittedbookmarks = [
@@ -85,7 +84,6 @@ class SyncState(object):
             self.heads = []
             self.bookmarks = {}
             self.remotebookmarks = {}
-            self.snapshots = []
             self.maxage = None
             self.omittedheads = []
             self.omittedbookmarks = []
@@ -99,7 +97,6 @@ class SyncState(object):
         newheads=NOTSET,
         newbookmarks=NOTSET,
         newremotebookmarks=NOTSET,
-        newsnapshots=NOTSET,
         newmaxage=NOTSET,
         newomittedheads=NOTSET,
         newomittedbookmarks=NOTSET,
@@ -112,7 +109,6 @@ class SyncState(object):
         heads = update(newheads, self.heads)
         bookmarks = update(newbookmarks, self.bookmarks)
         remotebookmarks = update(newremotebookmarks, self.remotebookmarks)
-        snapshots = update(newsnapshots, self.snapshots)
         maxage = update(newmaxage, self.maxage)
         omittedheads = update(newomittedheads, self.omittedheads)
         omittedbookmarks = update(newomittedbookmarks, self.omittedbookmarks)
@@ -124,7 +120,6 @@ class SyncState(object):
             "heads": heads,
             "bookmarks": bookmarks,
             "remotebookmarks": remotebookmarks,
-            "snapshots": snapshots,
             "maxage": maxage,
             "omittedheads": omittedheads,
             "omittedbookmarks": omittedbookmarks,
@@ -136,19 +131,18 @@ class SyncState(object):
             [self.filename],
             lambda f: f.write(encodeutf8(json.dumps(data))),
         )
-        self.prevstate = (self.version, self.heads, self.bookmarks, self.snapshots)
+        self.prevstate = (self.version, self.heads, self.bookmarks)
         self.version = version
         self.heads = heads
         self.bookmarks = bookmarks
         self.remotebookmarks = remotebookmarks
-        self.snapshots = snapshots
         self.omittedheads = omittedheads
         self.omittedbookmarks = omittedbookmarks
         self.omittedremotebookmarks = omittedremotebookmarks
         self.maxage = maxage
         self.repo.ui.log(
             "commitcloud_sync",
-            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks (%d omitted), %d snapshots\n",
+            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks (%d omitted)\n",
             self.workspacename,
             version,
             len(heads),
@@ -157,5 +151,4 @@ class SyncState(object):
             len(omittedbookmarks),
             len(remotebookmarks),
             len(omittedremotebookmarks),
-            len(snapshots),
         )

@@ -266,8 +266,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newbookmarks=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
-        oldsnapshots=None,
-        newsnapshots=None,
         logopts={},
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
@@ -277,8 +275,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newbookmarks = newbookmarks or {}
         oldremotebookmarks = oldremotebookmarks or []
         newremotebookmarks = newremotebookmarks or {}
-        oldsnapshots = oldsnapshots or []
-        newsnapshots = newsnapshots or []
         self.ui.log(
             "commitcloud_updates",
             version=version,
@@ -312,8 +308,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "updated_bookmarks": newbookmarks,
             "removed_remote_bookmarks": self._makeremotebookmarks(oldremotebookmarks),
             "updated_remote_bookmarks": self._makeremotebookmarks(newremotebookmarks),
-            "removed_snapshots": oldsnapshots,
-            "new_snapshots": newsnapshots,
+            "removed_snapshots": [],
+            "new_snapshots": [],
         }
 
         response = self._timedsend(path, data)

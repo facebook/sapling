@@ -111,8 +111,6 @@ class _LocalService(baseservice.BaseService):
         newbookmarks=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
-        oldsnapshots=None,
-        newsnapshots=None,
         logopts={},
     ):
         data = self._load(workspace)
@@ -125,8 +123,6 @@ class _LocalService(baseservice.BaseService):
         newbookmarks = newbookmarks or {}
         oldremotebookmarks = set(oldremotebookmarks or [])
         newremotebookmarks = newremotebookmarks or {}
-        oldsnapshots = set(oldsnapshots or [])
-        newsnapshots = newsnapshots or []
 
         heads = [head for head in data["heads"] if head not in oldheads]
         heads.extend(newheads)
@@ -144,19 +140,12 @@ class _LocalService(baseservice.BaseService):
             if name not in oldremotebookmarks
         }
         remotebookmarks.update(newremotebookmarks)
-        snapshots = [
-            snapshot
-            for snapshot in data.get("snapshots", [])
-            if snapshot not in oldsnapshots
-        ]
-        snapshots.extend(newsnapshots)
 
         newversion = data["version"] + 1
         data["version"] = newversion
         data["heads"] = heads
         data["bookmarks"] = bookmarks
         data["remote_bookmarks"] = self._makeremotebookmarks(remotebookmarks)
-        data["snapshots"] = snapshots
         self._ui.debug(
             "commitcloud local service: "
             "update_references to %s (%s heads, %s bookmarks, %s remote bookmarks)\n"

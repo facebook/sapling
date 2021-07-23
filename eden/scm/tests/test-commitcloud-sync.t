@@ -110,7 +110,6 @@ Run cloud status after setting a workspace
   Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Success
 
@@ -156,7 +155,6 @@ Run cloud status after setting workspace
   Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Success
 
@@ -173,7 +171,6 @@ Run cloud status after enabling autosync
   Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Success
 
@@ -189,7 +186,6 @@ Run cloud status after disabling autosync
   Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Success
 
@@ -899,8 +895,8 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   remote:     715c1454ae33  stack commit 2
   remote:     9bd68ef10d6b  toobig
   push of head 9bd68ef10d6b failed: bundle is too big: 1869 bytes. max allowed size is 0 MB
-  commitcloud: failed to synchronize a6b97eebbf74
-  commitcloud: failed to synchronize 9bd68ef10d6b
+  commitcloud: failed to synchronize * (glob)
+  commitcloud: failed to synchronize * (glob)
   finished in * (glob)
 
 Run cloud status after failing to synchronize
@@ -913,7 +909,6 @@ Run cloud status after failing to synchronize
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 1 (0 omitted)
   Last Sync Remote Bookmarks: 0
-  Last Sync Snapshots: 0
   Last Sync Time: * (glob)
   Last Sync Status: Failed
 

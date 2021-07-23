@@ -101,15 +101,6 @@ def _iscleanrepo(repo):
     return not _getheads(repo) and not _getbookmarks(repo)
 
 
-def _getsnapshots(repo, lastsyncstate):
-    try:
-        extensions.find("snapshot")
-        return repo.snapshotlist.snapshots
-    except KeyError:
-        # to prevent snapshot deletion if we disabled the extension
-        return lastsyncstate.snapshots
-
-
 @perftrace.tracefunc("Cloud Sync")
 def sync(repo, *args, **kwargs):
     with backuplock.lock(repo):
@@ -211,13 +202,6 @@ def _sync(
         # The line below makes sure that working copy is updated.
         return _maybeupdateworkingcopy(repo, startnode), None
 
-    backupsnapshots = False
-    try:
-        extensions.find("snapshot")
-        backupsnapshots = True
-    except KeyError:
-        pass
-
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
 
@@ -228,7 +212,6 @@ def _sync(
     )
 
     if ui.configbool("commitcloud", "usehttpupload"):
-        # This upload doesn't support snapshots backup yet!
         uploaded, failed = upload.upload(repo, None)
         with repo.lock():
             state = backupstate.BackupState(repo, remotepath, usehttp=True)
@@ -241,9 +224,7 @@ def _sync(
         # Load the backup state under the repo lock to ensure a consistent view.
         with repo.lock():
             state = backupstate.BackupState(repo, remotepath)
-        backedup, failed = backup._backup(
-            repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
-        )
+        backedup, failed = backup._backup(repo, state, remotepath, getconnection)
 
     # Now that commits are backed up, check that visibleheads are enabled
     # locally, and only sync if visibleheads is enabled.
@@ -347,8 +328,6 @@ def logsyncop(
     newbm,
     oldrbm,
     newrbm,
-    oldsnapshots,
-    newsnapshots,
 ):
     oldheadsset = set(oldheads)
     newheadsset = set(newheads)
@@ -356,16 +335,12 @@ def logsyncop(
     newbmset = set(newbm)
     oldrbmset = set(oldrbm)
     newrbmset = set(newrbm)
-    oldsnapset = set(oldsnapshots)
-    newsnapset = set(newsnapshots)
     addedheads = blackbox.shortlist([h for h in newheads if h not in oldheadsset])
     removedheads = blackbox.shortlist([h for h in oldheads if h not in newheadsset])
     addedbm = blackbox.shortlist([h for h in newbm if h not in oldbmset])
     removedbm = blackbox.shortlist([h for h in oldbm if h not in newbmset])
     addedrbm = blackbox.shortlist([h for h in newrbm if h not in oldrbmset])
     removedrbm = blackbox.shortlist([h for h in oldrbm if h not in newrbmset])
-    addedsnaps = blackbox.shortlist([h for h in newsnapshots if h not in oldsnapset])
-    removedsnaps = blackbox.shortlist([h for h in oldsnapshots if h not in newsnapset])
     blackbox.log(
         {
             "commit_cloud_sync": {
@@ -377,8 +352,6 @@ def logsyncop(
                 "removed_bookmarks": removedbm,
                 "added_remote_bookmarks": addedrbm,
                 "removed_remote_bookmarks": removedrbm,
-                "added_snapshots": addedsnaps,
-                "removed_snapshots": removedsnaps,
             }
         }
     )
@@ -514,23 +487,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             repo, cloudrefs.remotebookmarks, lastsyncstate
         )
 
-    try:
-        snapshot = extensions.find("snapshot")
-    except KeyError:
-        snapshot = None
-        addedsnapshots = []
-        removedsnapshots = []
-        newsnapshots = lastsyncstate.snapshots
-    else:
-        addedsnapshots = [
-            s for s in cloudrefs.snapshots if s not in lastsyncstate.snapshots
-        ]
-        removedsnapshots = [
-            s for s in lastsyncstate.snapshots if s not in cloudrefs.snapshots
-        ]
-        newsnapshots = cloudrefs.snapshots
-        newheads += addedsnapshots
-
     if remotebookmarknewnodes or newheads:
         # Partition the heads into groups we can pull together.
         headgroups = _partitionheads(
@@ -549,12 +505,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         omittedremotebookmarks = _updateremotebookmarks(repo, tr, remotebookmarkupdates)
         newremotebookmarks = cloudrefs.remotebookmarks
 
-    if snapshot:
-        with repo.lock(), repo.transaction("sync-snapshots") as tr:
-            repo.snapshotlist.update(
-                tr, addnodes=addedsnapshots, removenodes=removedsnapshots
-            )
-
     if newvisibleheads is not None:
         visibility.setvisibleheads(repo, [nodemod.bin(n) for n in newvisibleheads])
 
@@ -569,8 +519,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         cloudrefs.bookmarks,
         lastsyncstate.remotebookmarks,
         newremotebookmarks,
-        lastsyncstate.snapshots,
-        newsnapshots,
     )
     lastsyncstate.update(
         tr,
@@ -582,7 +530,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newomittedheads=list(omittedheads),
         newomittedbookmarks=omittedbookmarks,
         newomittedremotebookmarks=omittedremotebookmarks,
-        newsnapshots=newsnapshots,
     )
 
     # Also update backup state.  These new heads are already backed up,
@@ -1018,7 +965,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     localheads = _getheads(repo)
     localbookmarks = _getbookmarks(repo)
     localremotebookmarks = _getremotebookmarks(repo)
-    localsnapshots = _getsnapshots(repo, lastsyncstate)
 
     # If any commits failed to back up, exclude them.  Revert any bookmark changes
     # that point to failed commits.
@@ -1059,14 +1005,11 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         and localremotebookmarks != localsyncedremotebookmarks
     )
 
-    localsnapshotsset = set(localsnapshots)
-
     if (
         set(localheads) == set(localsyncedheads)
         and localbookmarks == localsyncedbookmarks
         and not remotebookmarkschanged
         and lastsyncstate.version != 0
-        and localsnapshotsset == set(lastsyncstate.snapshots)
     ):
         # Nothing to send.
         return True, None
@@ -1122,8 +1065,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newcloudbookmarks,
         oldremotebookmarks,
         newremotebookmarks,
-        lastsyncstate.snapshots,
-        localsnapshots,
         logopts={"metalogroot": hex(repo.svfs.metalog.root())},
     )
     if synced:
@@ -1137,8 +1078,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newcloudbookmarks,
             oldremotebookmarks,
             newremotebookmarks,
-            lastsyncstate.snapshots,
-            localsnapshots,
         )
         lastsyncstate.update(
             tr,
@@ -1149,7 +1088,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newomittedheads=newomittedheads,
             newomittedbookmarks=newomittedbookmarks,
             newomittedremotebookmarks=newomittedremotebookmarks,
-            newsnapshots=localsnapshots,
         )
 
     return synced, cloudrefs

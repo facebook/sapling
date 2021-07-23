@@ -11,9 +11,7 @@ from edenscm.mercurial.i18n import _, _n
 from . import backuplock, backupstate, dependencies, util as ccutil
 
 
-def backup(
-    repo, revs, connect_opts=None, dest=None, backupsnapshots=False, force=False
-):
+def backup(repo, revs, connect_opts=None, dest=None, force=False):
     remotepath = ccutil.getremotepath(repo.ui, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
 
@@ -27,7 +25,6 @@ def backup(
             remotepath,
             getconnection,
             revs,
-            backupsnapshots=backupsnapshots,
         )
 
     return backedup, failed
@@ -35,7 +32,11 @@ def backup(
 
 @perftrace.tracefunc("Backup Draft Commits to Commit Cloud")
 def _backup(
-    repo, backupstate, remotepath, getconnection, revs=None, backupsnapshots=False
+    repo,
+    backupstate,
+    remotepath,
+    getconnection,
+    revs=None,
 ):
     """backs up the given revisions to commit cloud
 
@@ -47,11 +48,8 @@ def _backup(
 
     if revs is None:
         # No revs specified.  Back up all visible commits that are not already
-        # backed up. Also back up all the snapshots if needed.
-        snapshotcond = " + snapshot()" if backupsnapshots else ""
-        revset = (
-            "heads(not public() - hidden()%s - (not public() & ::%%ln))" % snapshotcond
-        )
+        # backed up.
+        revset = "heads(not public() - hidden() - (not public() & ::%ln))"
         heads = unfi.revs(revset, backupstate.heads)
     else:
         # Some revs were specified.  Back up all of those commits that are not
