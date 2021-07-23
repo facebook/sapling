@@ -9,6 +9,8 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
+#include "eden/fs/utils/PathFuncs.h"
 namespace facebook::eden {
 
 class EdenMount;
@@ -18,8 +20,9 @@ class IActivityRecorder {
   explicit IActivityRecorder(std::shared_ptr<EdenMount> edenMount)
       : edenMount_{std::move(edenMount)} {}
   virtual ~IActivityRecorder() = default;
-  virtual uint64_t addSubscriber() = 0;
-  virtual void removeSubscriber(uint64_t unique) = 0;
+  virtual uint64_t addSubscriber(AbsolutePathPiece outputPath) = 0;
+  virtual std::optional<std::string> removeSubscriber(uint64_t unique) = 0;
+  virtual std::vector<uint64_t> getSubscribers() = 0;
 
  protected:
   std::shared_ptr<EdenMount> edenMount_;
@@ -28,10 +31,15 @@ class IActivityRecorder {
 class NullActivityRecorder : public IActivityRecorder {
  public:
   NullActivityRecorder() : IActivityRecorder{{}} {}
-  uint64_t addSubscriber() override {
+  uint64_t addSubscriber(AbsolutePathPiece /* outputPath */) override {
     return 0;
   }
-  void removeSubscriber(uint64_t /* unique */) override {}
+  std::optional<std::string> removeSubscriber(uint64_t /* unique */) override {
+    return std::nullopt;
+  }
+  std::vector<uint64_t> getSubscribers() override {
+    return {};
+  }
 };
 
 using ActivityRecorderFactory =

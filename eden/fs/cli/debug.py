@@ -711,6 +711,57 @@ class FuseCallsCmd(Subcmd):
         return 0
 
 
+@debug_cmd(
+    "start_recording",
+    "Start recording performance profile and get the id of this profile",
+)
+class StartRecordingCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--output-dir",
+            help="The output dir to store the performance profile",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, os.getcwd())
+        with instance.get_thrift_client_legacy() as client:
+            result = client.debugStartRecordingActivity(
+                bytes(checkout.path), args.output_dir.encode()
+            )
+            if result.unique:
+                sys.stdout.buffer.write(str(result.unique).encode())
+                return 0
+        print(f"Fail to start recording at {args.output_dir}", file=sys.stderr)
+        return 1
+
+
+@debug_cmd(
+    "stop_recording",
+    "Stop recording performance profile and get the output file of this profile",
+)
+class StopRecordingCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--unique",
+            type=int,
+            help="The id of the recording to stop",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, os.getcwd())
+        output_path: Optional[bytes] = None
+        with instance.get_thrift_client_legacy() as client:
+            result = client.debugStopRecordingActivity(
+                bytes(checkout.path), args.unique
+            )
+            output_path = result.path
+        if output_path is None:
+            print(f"Fail to stop recording: {args.unique}", file=sys.stderr)
+            return 1
+        sys.stdout.buffer.write(output_path)
+        return 0
+
+
 def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
     out.write(inode_info.path + b"\n")
     out.write(b"  Inode number:  %d\n" % inode_info.inodeNumber)

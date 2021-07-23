@@ -276,6 +276,12 @@ bool ensureDirectoryExists(AbsolutePathPiece path) {
   return boost::filesystem::create_directories(path.as_boost());
 }
 
+bool ensureDirectoryExists(
+    AbsolutePathPiece path,
+    boost::system::error_code& error) noexcept {
+  return boost::filesystem::create_directories(path.as_boost(), error);
+}
+
 bool removeRecursively(AbsolutePathPiece path) {
   return boost::filesystem::remove_all(path.as_boost());
 }

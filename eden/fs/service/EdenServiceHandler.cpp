@@ -1875,6 +1875,57 @@ void EdenServiceHandler::debugOutstandingNfsCalls(
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::debugStartRecordingActivity(
+    ActivityRecorderResult& result,
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> outputDir) {
+  AbsolutePathPiece path;
+  try {
+    path = AbsolutePathPiece{*outputDir};
+  } catch (const std::exception&) {
+    throw newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path for output directory is invalid");
+  }
+
+  auto mount = server_->getMount(AbsolutePathPiece{*mountPoint});
+  auto lockedPtr = mount->getActivityRecorder().wlock();
+  // bool check on the wrapped pointer as lockedPtr is truthy as long
+  // as we have the lock
+  if (!lockedPtr->get()) {
+    auto recorder = server_->makeActivityRecorder(mount);
+    lockedPtr->swap(recorder);
+  }
+  uint64_t unique = lockedPtr->get()->addSubscriber(path);
+  // unique_ref is signed but overflow is very unlikely because unique is UNIX
+  // timestamp in seconds.
+  result.unique_ref() = unique;
+}
+
+void EdenServiceHandler::debugStopRecordingActivity(
+    ActivityRecorderResult& result,
+    std::unique_ptr<std::string> mountPoint,
+    int64_t unique) {
+  auto lockedPtr = server_->getMount(AbsolutePathPiece{*mountPoint})
+                       ->getActivityRecorder()
+                       .wlock();
+  auto* activityRecorder = lockedPtr->get();
+  if (!activityRecorder) {
+    return;
+  }
+
+  auto outputPath = activityRecorder->removeSubscriber(unique);
+  if (outputPath.has_value()) {
+    result.unique_ref() = unique;
+    result.path_ref() = outputPath.value();
+  }
+
+  if (activityRecorder->getSubscribers().size() == 0) {
+    lockedPtr->reset();
+  }
+}
+
 void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,

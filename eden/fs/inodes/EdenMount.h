@@ -384,11 +384,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return *journal_;
   }
 
-  void setActivityRecorder(std::unique_ptr<IActivityRecorder>&& recorder) {
-    activityRecorder_ = std::move(recorder);
-  }
-
-  std::unique_ptr<IActivityRecorder>& getActivityRecorder() {
+  folly::Synchronized<std::unique_ptr<IActivityRecorder>>&
+  getActivityRecorder() {
     return activityRecorder_;
   }
 
@@ -920,7 +917,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   folly::Synchronized<RootId> parentCommit_;
 
   std::unique_ptr<Journal> journal_;
-  std::unique_ptr<IActivityRecorder> activityRecorder_;
+  folly::Synchronized<std::unique_ptr<IActivityRecorder>> activityRecorder_;
 
   /**
    * A number to uniquely identify this particular incarnation of this mount.

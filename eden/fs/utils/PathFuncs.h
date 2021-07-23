@@ -1942,6 +1942,15 @@ void validatePathComponentLength(PathComponentPiece name);
 bool ensureDirectoryExists(AbsolutePathPiece path);
 
 /**
+ * Ensure that the specified path exists as a directory.
+ *
+ * Sets error code instead of throwing on error.
+ */
+bool ensureDirectoryExists(
+    AbsolutePathPiece path,
+    boost::system::error_code& error) noexcept;
+
+/**
  * Recursively remove a directory tree.
  *
  * Returns false if the directory did not exist in the first place, and true if

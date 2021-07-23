@@ -178,6 +178,16 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::vector<NfsCall>& outstandingCalls,
       std::unique_ptr<std::string> mountPoint) override;
 
+  void debugStartRecordingActivity(
+      ActivityRecorderResult& result,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> outputPath) override;
+
+  void debugStopRecordingActivity(
+      ActivityRecorderResult& result,
+      std::unique_ptr<std::string> mountPoint,
+      int64_t unique) override;
+
   void debugGetInodePath(
       InodePathDebugInfo& inodePath,
       std::unique_ptr<std::string> mountPoint,
