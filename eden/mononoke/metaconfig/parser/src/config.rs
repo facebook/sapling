@@ -1073,6 +1073,7 @@ mod test {
                     permit_writes: false,
                     permit_service_writes: false,
                     service_write_hipster_acl: None,
+                    permit_commits_without_parents: false,
                     service_write_restrictions: Default::default(),
                 },
                 source_control_service_monitoring: Some(SourceControlServiceMonitoring {

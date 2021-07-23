@@ -1347,6 +1347,9 @@ pub struct SourceControlServiceParams {
 
     /// Map from service identity to the restrictions that apply for that service
     pub service_write_restrictions: HashMap<String, ServiceWriteRestrictions>,
+
+    /// Whether users can create commits without parents.
+    pub permit_commits_without_parents: bool,
 }
 
 impl Default for SourceControlServiceParams {
@@ -1355,6 +1358,7 @@ impl Default for SourceControlServiceParams {
             permit_writes: false,
             permit_service_writes: false,
             service_write_hipster_acl: None,
+            permit_commits_without_parents: false,
             service_write_restrictions: HashMap::new(),
         }
     }

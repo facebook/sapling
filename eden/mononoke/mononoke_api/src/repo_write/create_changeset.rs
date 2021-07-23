@@ -282,11 +282,15 @@ impl RepoWriteContext {
         changes: BTreeMap<MononokePath, CreateChange>,
     ) -> Result<ChangesetContext, MononokeError> {
         self.check_method_permitted("create_changeset")?;
-
+        let allowed_no_parents = self
+            .config()
+            .source_control_service
+            .permit_commits_without_parents;
+        let valid_parent_count = parents.len() == 1 || (parents.len() == 0 && allowed_no_parents);
         // Merge rules are not validated yet, so only a single parent is supported.
-        if parents.len() != 1 {
+        if !valid_parent_count {
             return Err(MononokeError::InvalidRequest(String::from(
-                "Merge changesets and root changesets cannot be created",
+                "Merge changesets cannot be created",
             )));
         }
 

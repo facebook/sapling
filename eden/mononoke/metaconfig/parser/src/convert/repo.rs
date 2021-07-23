@@ -310,6 +310,7 @@ impl Convert for RawSourceControlServiceParams {
             permit_writes: self.permit_writes,
             permit_service_writes: self.permit_service_writes,
             service_write_hipster_acl: self.service_write_hipster_acl,
+            permit_commits_without_parents: self.permit_commits_without_parents,
             service_write_restrictions,
         })
     }

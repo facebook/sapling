@@ -1388,6 +1388,14 @@ impl RepoContext {
         ))
     }
 
+    /// Reads a value out of the underlying config, indicating if we support writes without parents in this repo.
+    pub fn allow_no_parent_writes(&self) -> bool {
+        return self
+            .config()
+            .source_control_service
+            .permit_commits_without_parents;
+    }
+
     /// A SegmentedChangelog client repository has a compressed shape of the commit graph but
     /// doesn't know the identifiers for all the commits in the graph. It only knows the
     /// identifiers for select commits called "known" commits. These repositories can query
