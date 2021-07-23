@@ -32,6 +32,7 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
@@ -381,6 +382,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   Journal& getJournal() {
     return *journal_;
+  }
+
+  void setActivityRecorder(std::unique_ptr<IActivityRecorder>&& recorder) {
+    activityRecorder_ = std::move(recorder);
+  }
+
+  std::unique_ptr<IActivityRecorder>& getActivityRecorder() {
+    return activityRecorder_;
   }
 
   uint64_t getMountGeneration() const {
@@ -911,6 +920,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   folly::Synchronized<RootId> parentCommit_;
 
   std::unique_ptr<Journal> journal_;
+  std::unique_ptr<IActivityRecorder> activityRecorder_;
 
   /**
    * A number to uniquely identify this particular incarnation of this mount.

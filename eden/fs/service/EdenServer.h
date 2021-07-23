@@ -36,6 +36,7 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -115,6 +116,7 @@ class EdenServer : private TakeoverHandler {
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
       MetadataImporterFactory metadataImporterFactory,
+      ActivityRecorderFactory activityRecorderFactory,
       std::shared_ptr<IHiveLogger> hiveLogger,
       std::string version = "");
 
@@ -331,6 +333,14 @@ class EdenServer : private TakeoverHandler {
 
   EdenStats* getStats() {
     return &serverState_->getStats();
+  }
+
+  /**
+   * Returns a ActivityRecorder appropriate for the Eden build.
+   */
+  std::unique_ptr<IActivityRecorder> makeActivityRecorder(
+      std::shared_ptr<EdenMount> edenMount) {
+    return activityRecorderFactory_(std::move(edenMount));
   }
 
   /**
@@ -568,6 +578,7 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
 
   MetadataImporterFactory metadataImporterFactory_;
+  ActivityRecorderFactory activityRecorderFactory_;
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
   const std::shared_ptr<BlobCache> blobCache_;

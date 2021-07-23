@@ -10,6 +10,7 @@
 #include <string>
 
 #include "eden/fs/store/hg/MetadataImporter.h"
+#include "eden/fs/telemetry/IActivityRecorder.h"
 
 namespace facebook {
 namespace eden {
@@ -32,6 +33,7 @@ class EdenMain {
   virtual void didFollyInit() = 0;
   virtual void prepare(const EdenServer& server) = 0;
   virtual MetadataImporterFactory getMetadataImporterFactory() = 0;
+  virtual ActivityRecorderFactory getActivityRecorderFactory() = 0;
   virtual std::shared_ptr<IHiveLogger> getHiveLogger(
       SessionInfo sessionInfo,
       std::shared_ptr<EdenConfig> edenConfig) = 0;
@@ -50,6 +52,7 @@ class DefaultEdenMain : public EdenMain {
   virtual void didFollyInit() override;
   virtual void prepare(const EdenServer& server) override;
   virtual MetadataImporterFactory getMetadataImporterFactory() override;
+  virtual ActivityRecorderFactory getActivityRecorderFactory() override;
   virtual std::shared_ptr<IHiveLogger> getHiveLogger(
       SessionInfo sessionInfo,
       std::shared_ptr<EdenConfig> edenConfig) override;

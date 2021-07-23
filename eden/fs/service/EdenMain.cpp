@@ -146,6 +146,12 @@ MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory() {
       DefaultMetadataImporter>();
 }
 
+ActivityRecorderFactory DefaultEdenMain::getActivityRecorderFactory() {
+  return [](std::shared_ptr<const EdenMount>) {
+    return std::make_unique<NullActivityRecorder>();
+  };
+}
+
 std::shared_ptr<IHiveLogger> DefaultEdenMain::getHiveLogger(
     SessionInfo /*sessionInfo*/,
     std::shared_ptr<EdenConfig> /*edenConfig*/) {
@@ -274,6 +280,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(privHelper),
         std::move(edenConfig),
         main.getMetadataImporterFactory(),
+        main.getActivityRecorderFactory(),
         std::move(hiveLogger),
         main.getEdenfsVersion());
 

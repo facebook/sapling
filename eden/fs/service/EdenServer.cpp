@@ -318,11 +318,13 @@ EdenServer::EdenServer(
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
     MetadataImporterFactory metadataImporterFactory,
+    ActivityRecorderFactory activityRecorderFactory,
     std::shared_ptr<IHiveLogger> hiveLogger,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
       metadataImporterFactory_(std::move(metadataImporterFactory)),
+      activityRecorderFactory_(std::move(activityRecorderFactory)),
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},

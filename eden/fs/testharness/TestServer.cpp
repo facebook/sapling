@@ -13,6 +13,7 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
+#include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
@@ -77,6 +78,9 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       std::move(privHelper),
       config,
       MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>(),
+      [](std::shared_ptr<const EdenMount>) {
+        return std::make_unique<NullActivityRecorder>();
+      },
       make_shared<NullHiveLogger>(),
       "test server");
 }
