@@ -1043,23 +1043,6 @@ def runedenimporthelper(repo, **opts):
         return 0
 
 
-# pyre-fixme[56]: Argument `[("", "in-fd", "", edenscm.mercurial.i18n._("Use the
-#  specified file descriptor to receive commands, rather than reading on stdin"),
-#  edenscm.mercurial.i18n._("FILENO")), ("", "out-fd", "",
-#  edenscm.mercurial.i18n._("Use the specified file descriptor to send command output,
-#  rather than writing to stdout"), edenscm.mercurial.i18n._("FILENO")), ("",
-#  "manifest", "", edenscm.mercurial.i18n._("Dump the binary manifest data for the
-#  specified revision."), edenscm.mercurial.i18n._("REVISION")), ("",
-#  "get-manifest-node", "", edenscm.mercurial.i18n._("Print the manifest node ID for
-#  the specified revision."), edenscm.mercurial.i18n._("REVISION")), ("", "cat-file",
-#  "", edenscm.mercurial.i18n._("Dump the file contents for the specified file at the
-#  given file revision"), edenscm.mercurial.i18n._("PATH:REV")), ("", "get-file-size",
-#  "", edenscm.mercurial.i18n._("Get the file size for the specified file at the given
-#  file revision"), edenscm.mercurial.i18n._("PATH:REV")), ("", "fetch-tree", "",
-#  edenscm.mercurial.i18n._("Fetch treemanifest data for the specified path at the
-#  given manifest node"), edenscm.mercurial.i18n._("PATH:REV"))]` to decorator factory
-#  `edenscm.mercurial.commands.cmdtable.command` could not be resolved in a global
-#  scope.
 @command(
     "debugedenimporthelper",
     [
@@ -1175,9 +1158,6 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
             repo.close()
 
 
-# pyre-fixme[56]: Argument `[]` to decorator factory
-#  `edenscm.mercurial.commands.cmdtable.command` could not be resolved in a global
-#  scope.
 @command("debugedenrunpostupdatehook", [])
 def edenrunpostupdatehook(ui, repo):
     # type: (ui.ui, localrepo.localrepository) -> None
