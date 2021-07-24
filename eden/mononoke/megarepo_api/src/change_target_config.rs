@@ -281,11 +281,11 @@ impl<'a> ChangeTargetConfig<'a> {
         derivers.try_for_each(|_| future::ready(Ok(()))).await?;
 
         // Move bookmark
-        self.move_bookmark(
+        self.move_bookmark_conditionally(
             ctx,
             target_repo.blob_repo(),
             target_bookmark.to_string(),
-            final_merge,
+            (target_location, final_merge),
         )
         .await?;
 
