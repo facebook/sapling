@@ -436,6 +436,28 @@ pub trait MegarepoOp {
 
         Ok(bcs)
     }
+
+    async fn create_bookmark(
+        &self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        bookmark: String,
+        cs_id: ChangesetId,
+    ) -> Result<(), MegarepoError> {
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
+        let bookmark = BookmarkName::new(bookmark).map_err(MegarepoError::request)?;
+
+        txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
+
+        let success = txn.commit().await.map_err(MegarepoError::internal)?;
+        if !success {
+            return Err(MegarepoError::internal(anyhow!(
+                "failed to create a bookmark, possibly because of race condition"
+            )));
+        }
+        Ok(())
+    }
+
     async fn move_bookmark(
         &self,
         ctx: &CoreContext,

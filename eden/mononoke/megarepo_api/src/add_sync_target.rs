@@ -121,7 +121,7 @@ impl<'a> AddSyncTarget<'a> {
             .add_target_with_config_version(ctx.clone(), sync_target_config.clone())
             .await?;
 
-        self.move_bookmark(
+        self.create_bookmark(
             ctx,
             repo.blob_repo(),
             sync_target_config.target.bookmark,
