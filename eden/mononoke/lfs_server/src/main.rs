@@ -311,7 +311,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
-        Some(spec) => config_store.get_config_handle(parse_config_spec_to_path(spec)?),
+        Some(spec) => config_store.get_config_handle_DEPRECATED(parse_config_spec_to_path(spec)?),
         None => Ok(ConfigHandle::default()),
     };
 

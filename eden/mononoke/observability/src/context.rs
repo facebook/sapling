@@ -21,8 +21,8 @@ struct CfgrObservabilityContextInner {
 
 impl CfgrObservabilityContextInner {
     fn new(config_store: &ConfigStore) -> Result<Self, Error> {
-        let config_handle =
-            config_store.get_config_handle(CONFIGERATOR_OBSERVABILITY_CONFIG.to_string())?;
+        let config_handle = config_store
+            .get_config_handle_DEPRECATED(CONFIGERATOR_OBSERVABILITY_CONFIG.to_string())?;
 
         Ok(Self { config_handle })
     }

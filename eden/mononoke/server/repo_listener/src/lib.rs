@@ -63,7 +63,7 @@ pub async fn create_repo_listeners<'a>(
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
-            .get_config_handle(CONFIGERATOR_RATE_LIMITING_CONFIG.to_string())
+            .get_config_handle_DEPRECATED(CONFIGERATOR_RATE_LIMITING_CONFIG.to_string())
             .ok();
 
         handle.and_then(|handle| {
