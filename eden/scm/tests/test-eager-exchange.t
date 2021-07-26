@@ -193,3 +193,18 @@ Read file content:
    DEBUG eagerepo::api: files a2e456504a5e61f763f1a0b36a6c247c7541b2b3
    TRACE eagerepo::api:  found: a2e456504a5e61f763f1a0b36a6c247c7541b2b3, 41 bytes
   C (no-eol)
+
+Making a commit and amend:
+(Triggers remote lookup 3 times!)
+
+  $ echo Z > Z
+  $ LOG=dag::protocol=debug hg commit -Am Z Z
+   DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
+   DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
+   DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
+
+  $ LOG=dag::protocol=debug hg amend -m Z1
+   DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
+   DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
+   DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
+
