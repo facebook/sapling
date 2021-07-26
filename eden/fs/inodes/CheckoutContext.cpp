@@ -132,34 +132,32 @@ void CheckoutContext::addConflict(
     ConflictType type,
     TreeInode* parent,
     PathComponentPiece name) {
-  // addConflict() should never be called with an unlinked TreeInode.
+  // During checkout, updated files and directories are first unlinked before
+  // being removed and/or replaced in the DirContents of their parent
+  // TreeInode. In between these two, calling addConflict would lead to an
+  // unlinked path, thus getPath cannot be used.
   //
-  // We are holding the RenameLock for the duration of the checkout operation,
-  // and we only operate on TreeInode's that still exist in the file system
-  // namespace.  Therefore parent->getPath() must always return non-none value
-  // here.
-  auto parentPath = parent->getPath();
-  XCHECK(parentPath.has_value());
+  // During checkout, the RenameLock is held without being released, preventing
+  // files from being renamed or removed.
+  auto parentPath = parent->getUnsafePath();
 
-  addConflict(type, parentPath.value() + name);
+  addConflict(type, parentPath + name);
 }
 
 void CheckoutContext::addConflict(ConflictType type, InodeBase* inode) {
-  // As above, the inode in question must have a path here.
-  auto path = inode->getPath();
-  XCHECK(path.has_value());
-  addConflict(type, path.value());
+  // See above for why getUnsafePath must be used.
+  auto path = inode->getUnsafePath();
+  addConflict(type, path);
 }
 
 void CheckoutContext::addError(
     TreeInode* parent,
     PathComponentPiece name,
     const folly::exception_wrapper& ew) {
-  // As above in addConflict(), the parent tree must have a valid path here.
-  auto parentPath = parent->getPath();
-  XCHECK(parentPath.has_value());
+  // See above for why getUnsafePath must be used.
+  auto parentPath = parent->getUnsafePath();
 
-  auto path = parentPath.value() + name;
+  auto path = parentPath + name;
   CheckoutConflict conflict;
   *conflict.path_ref() = path.value();
   *conflict.type_ref() = ConflictType::ERROR;
