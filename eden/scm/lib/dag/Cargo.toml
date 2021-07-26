@@ -37,6 +37,7 @@ minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }
 parking_lot = "0.10.2"
 quickcheck = { version = "0.9", optional = true }
+rand = { version = "0.7", features = ["small_rng"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 tempfile = { version = "3.1", optional = true }
 thiserror = "1.0"

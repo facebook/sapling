@@ -9,6 +9,7 @@ use super::AbstractNameDag;
 use crate::iddag::IdDag;
 use crate::iddagstore::InProcessStore;
 use crate::idmap::MemIdMap;
+use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::Id;
@@ -28,7 +29,17 @@ pub type MemNameDag =
 pub struct MemNameDagPath;
 
 #[derive(Debug, Clone)]
-pub struct MemNameDagState;
+pub struct MemNameDagState {
+    version: (u64, u64),
+}
+
+impl Default for MemNameDagState {
+    fn default() -> Self {
+        Self {
+            version: (rand::random(), 0),
+        }
+    }
+}
 
 impl Open for MemNameDagPath {
     type OpenTarget = MemNameDag;
@@ -42,7 +53,7 @@ impl Open for MemNameDagPath {
             path: self.clone(),
             snapshot: Default::default(),
             pending_heads: Default::default(),
-            state: MemNameDagState,
+            state: MemNameDagState::default(),
             id: format!("mem:{}", next_id()),
             overlay_map: Default::default(),
             overlay_map_next_id: Id::MIN,
@@ -72,7 +83,14 @@ impl Persist for MemNameDagState {
     }
 
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
+        self.version.1 += 1;
         Ok(())
+    }
+}
+
+impl IntVersion for MemNameDagState {
+    fn int_version(&self) -> (u64, u64) {
+        self.version
     }
 }
 

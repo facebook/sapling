@@ -10,6 +10,7 @@ use crate::errors::bug;
 use crate::iddag::IdDag;
 use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
+use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::TryClone;
@@ -116,6 +117,15 @@ impl Persist for NameDagState {
     fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
         self.mlog.as_mut().unwrap().write_meta(&lock)?;
         Ok(())
+    }
+}
+
+impl IntVersion for NameDagState {
+    fn int_version(&self) -> (u64, u64) {
+        match &self.mlog {
+            Some(mlog) => mlog.version(),
+            None => (0, 0),
+        }
     }
 }
 

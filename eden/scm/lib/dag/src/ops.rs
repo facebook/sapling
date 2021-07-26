@@ -498,6 +498,13 @@ pub trait Open: Clone {
     fn open(&self) -> Result<Self::OpenTarget>;
 }
 
+/// Has an integer tuple version that can be used to test if the data was
+/// changed. If the first number changes, it means incompatible changes.
+/// If only the second number increases, it means append-only changes.
+pub trait IntVersion {
+    fn int_version(&self) -> (u64, u64);
+}
+
 /// Fallible clone.
 pub trait TryClone {
     fn try_clone(&self) -> Result<Self>
