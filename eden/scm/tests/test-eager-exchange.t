@@ -201,10 +201,8 @@ Making a commit and amend:
   $ LOG=dag::protocol=debug hg commit -Am Z Z
    DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
    DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
-   DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
 
   $ LOG=dag::protocol=debug hg amend -m Z1
-   DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
    DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
    DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
 

@@ -386,8 +386,15 @@ class changelog(object):
         text = hgcommittext(manifest, files, desc, user, date, extra)
         node = revlog.hash(text, p1, p2)
         parents = [p for p in (p1, p2) if p != nullid]
-        if node not in self.nodemap:
+
+        # Avoid updating "tip" is node is known locally.
+        # Strictly speaking this should check with the remote server for lazy
+        # changelog. Practically that breaks offline committing and the server
+        # check is almost always "not found", and "tip" does not matter that
+        # much.
+        if not self.filternodes([node], local=True):
             self.svfs.write("tip", node)
+
         self.inner.addcommits([(node, parents, text)])
         nodes = transaction.changes.get("nodes")
         if nodes is not None:
