@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::split_batch_in_linear_stacks;
+use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMapping};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, FsnodeId};
@@ -58,7 +58,8 @@ pub async fn derive_fsnode_in_batch<Mapping>(
 where
     Mapping: BonsaiDerivedMapping<Value = RootFsnodeId> + 'static,
 {
-    let linear_stacks = split_batch_in_linear_stacks(ctx, repo, batch).await?;
+    let linear_stacks =
+        split_batch_in_linear_stacks(ctx, repo, batch, FileConflicts::ChangeDelete).await?;
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
         // Fetch the parent fsnodes, either from a previous iteration of this

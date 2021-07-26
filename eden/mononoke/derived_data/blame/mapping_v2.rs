@@ -12,14 +12,17 @@ use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreExistsWithDataMapping, BonsaiDerivable, BonsaiDerived,
-    DerivedDataTypesConfig,
+    BonsaiDerivedMapping, DerivedDataTypesConfig,
 };
+use futures::stream::{self, StreamExt, TryStreamExt};
 use metaconfig_types::BlameVersion;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::Arc;
 use unodes::RootUnodeManifestId;
 
+use crate::batch_v2::derive_blame_v2_in_batch;
 use crate::derive_v2::derive_blame_v2;
 use crate::{BlameDeriveOptions, DEFAULT_BLAME_FILESIZE_LIMIT};
 
@@ -62,6 +65,33 @@ impl BonsaiDerivable for RootBlameV2 {
             csid,
             root_manifest,
         })
+    }
+
+    async fn batch_derive_impl<BatchMapping>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Vec<ChangesetId>,
+        mapping: &BatchMapping,
+        _gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        let derived = derive_blame_v2_in_batch(ctx, repo, mapping, csids.clone()).await?;
+
+        stream::iter(derived.into_iter().map(|(csid, root_manifest)| async move {
+            let derived = RootBlameV2 {
+                csid,
+                root_manifest,
+            };
+            mapping
+                .put(ctx.clone(), csid.clone(), derived.clone())
+                .await?;
+            Ok((csid, derived))
+        }))
+        .buffered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await
     }
 }
 

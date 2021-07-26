@@ -19,6 +19,15 @@ use mononoke_types::{ChangesetId, ContentId, FileType};
 
 pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
 
+#[derive(Copy, Clone, Debug)]
+pub enum FileConflicts {
+    /// Stacks should be split if files conflict in terms of change vs delete.
+    ChangeDelete,
+
+    /// Stacks should be split on any file change conflict.
+    AnyChange,
+}
+
 /// We follow a few rules when splitting a batch in the stacks:
 /// 1) Merges go to a separate batch
 /// 2) If two commits have two files where one is a prefix of another, then they
@@ -29,6 +38,7 @@ pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
     repo: &BlobRepo,
     batch: Vec<ChangesetId>,
+    file_conflicts: FileConflicts,
 ) -> Result<Vec<LinearStack>, Error> {
     let bonsais = stream::iter(batch.into_iter().map(|bcs_id| async move {
         let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
@@ -51,7 +61,7 @@ pub async fn split_batch_in_linear_stacks(
     cur_linear_stack.push(*start_bcs_id, start_bcs);
 
     for (prev_cs, (bcs_id, bcs)) in bonsai_iter.tuple_windows() {
-        if !cur_linear_stack.can_be_in_same_linear_stack(&prev_cs, &bcs) {
+        if !cur_linear_stack.can_be_in_same_linear_stack(&prev_cs, &bcs, file_conflicts) {
             linear_stacks.push(cur_linear_stack);
             cur_linear_stack = LinearStack::new(bcs.parents().collect::<Vec<_>>());
         }
@@ -95,6 +105,7 @@ impl LinearStack {
         &self,
         (prev_cs_id, prev): &(ChangesetId, BonsaiChangeset),
         next: &BonsaiChangeset,
+        file_conflicts: FileConflicts,
     ) -> bool {
         // Each merge should go in a separate stack
         if prev.is_merge() || next.is_merge() {
@@ -109,7 +120,7 @@ impl LinearStack {
         // There must be no file conflicts when adding the new changes.
         if let Some(cur_file_changes) = self.get_last_file_changes() {
             let new_file_changes = next.file_changes().collect();
-            if has_file_conflict(cur_file_changes, new_file_changes) {
+            if has_file_conflict(cur_file_changes, new_file_changes, file_conflicts) {
                 return false;
             }
         }
@@ -125,7 +136,11 @@ impl LinearStack {
 /// Returns true if:
 /// 1) any of the files in `left` are prefix of any file in `right` and vice-versa
 /// 2) File with the same name was deleted in `left` and added in `right` or vice-versa
-fn has_file_conflict(left: &FileToContent, right: BTreeMap<&MPath, Option<&FileChange>>) -> bool {
+fn has_file_conflict(
+    left: &FileToContent,
+    right: BTreeMap<&MPath, Option<&FileChange>>,
+    file_conflicts: FileConflicts,
+) -> bool {
     let mut left = left.iter();
     let mut right = right.into_iter();
     let mut state = (left.next(), right.next());
@@ -134,10 +149,18 @@ fn has_file_conflict(left: &FileToContent, right: BTreeMap<&MPath, Option<&FileC
             (Some((l_path, l_content)), Some((r_path, r_file_change))) => match l_path.cmp(&r_path)
             {
                 CmpOrdering::Equal => {
-                    if l_content.is_some() != r_file_change.is_some() {
-                        // File is deleted and modified in two different commits -
-                        // this is a conflict, they can't be in the same stack
-                        return true;
+                    match file_conflicts {
+                        FileConflicts::ChangeDelete => {
+                            if l_content.is_some() != r_file_change.is_some() {
+                                // File is deleted and modified in two
+                                // different commits - this is a conflict,
+                                // they can't be in the same stack
+                                return true;
+                            }
+                        }
+                        FileConflicts::AnyChange => {
+                            return true;
+                        }
                     }
                     (left.next(), right.next())
                 }
@@ -185,7 +208,9 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![root]).await?;
+        let linear_stacks =
+            split_batch_in_linear_stacks(&ctx, &repo, vec![root], FileConflicts::ChangeDelete)
+                .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -197,7 +222,9 @@ mod test {
         )
         .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![second]).await?;
+        let linear_stacks =
+            split_batch_in_linear_stacks(&ctx, &repo, vec![second], FileConflicts::ChangeDelete)
+                .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -209,7 +236,13 @@ mod test {
         )
         .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![root, second]).await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            &repo,
+            vec![root, second],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -251,7 +284,9 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![p1, merge]).await?;
+        let linear_stacks =
+            split_batch_in_linear_stacks(&ctx, &repo, vec![p1, merge], FileConflicts::ChangeDelete)
+                .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -269,7 +304,9 @@ mod test {
         )
         .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![p1, p2]).await?;
+        let linear_stacks =
+            split_batch_in_linear_stacks(&ctx, &repo, vec![p1, p2], FileConflicts::ChangeDelete)
+                .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -308,7 +345,13 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![root, child]).await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            &repo,
+            vec![root, child],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -344,7 +387,13 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![root, child]).await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            &repo,
+            vec![root, child],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -379,7 +428,14 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks = split_batch_in_linear_stacks(&ctx, &repo, vec![root, child]).await?;
+        // With ChangeDelete, the stack is combined.
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            &repo,
+            vec![root, child],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -394,6 +450,26 @@ mod test {
         )
         .await?;
 
+        // With AnyChange, the stack is split.
+        let linear_stacks =
+            split_batch_in_linear_stacks(&ctx, &repo, vec![root, child], FileConflicts::AnyChange)
+                .await?;
+        assert_linear_stacks(
+            &ctx,
+            &repo,
+            linear_stacks,
+            vec![
+                (
+                    vec![],
+                    vec![btreemap! {file1 => Some(("content1".to_string(), FileType::Regular))}],
+                ),
+                (
+                    vec![root],
+                    vec![btreemap! {file1 => Some(("content2".to_string(), FileType::Regular))}],
+                ),
+            ],
+        )
+        .await?;
         Ok(())
     }
 

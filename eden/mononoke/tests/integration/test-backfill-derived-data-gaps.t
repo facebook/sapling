@@ -40,6 +40,7 @@ enable some more derived data types for normal usage and backfilling
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG
   > [derived_data_config.backfilling]
   > types=["blame", "skeleton_manifests"]
+  > blame_version=2
   > CONFIG
 
 start the tailer with tailing and backfilling some different types
@@ -61,14 +62,7 @@ stop when it becomes idle.
   *] derive unodes for 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195 (glob)
   *] derive unodes for da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4 (glob)
   *] derive unodes for 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
-  *] derive blame for 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (glob)
-  *] derive blame for 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (glob)
-  *] derive blame for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (glob)
-  *] derive blame for 86de925f9338cbc325f5ec1620b6556fb441d1e08466f65ae51930fae6abe120 (glob)
-  *] derive blame for 3da511c8c7361f8fea95a776a44cc369e96f0e58ef4e7a52b45bed1a71f75b74 (glob)
-  *] derive blame for 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195 (glob)
-  *] derive blame for da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4 (glob)
-  *] derive blame for 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
+  *] derive blame batch at 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (stack of 8 from batch of 8) (glob)
 
 Heads should all be derived
   $ mononoke_admin --log-level ERROR derived-data exists fsnodes main

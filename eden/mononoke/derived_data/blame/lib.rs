@@ -8,6 +8,7 @@
 #![deny(warnings)]
 #![type_length_limit = "1441792"]
 
+mod batch_v2;
 mod compat;
 mod derive_v1;
 mod derive_v2;
