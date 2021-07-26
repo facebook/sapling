@@ -1725,11 +1725,19 @@ where
     async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
         let mut list = self.map.vertex_id_batch(names).await?;
         if self.is_vertex_lazy() {
-            let missing_indexes: Vec<usize> = list
-                .iter()
-                .enumerate()
-                .filter_map(|(i, r)| if r.is_err() { Some(i) } else { None })
-                .collect();
+            let missing_indexes: Vec<usize> = {
+                let known_missing = self.missing_vertexes_confirmed_by_remote.read();
+                list.iter()
+                    .enumerate()
+                    .filter_map(|(i, r)| {
+                        if r.is_err() && !known_missing.contains(&names[i]) {
+                            Some(i)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            };
             if !missing_indexes.is_empty() {
                 let missing_names: Vec<VertexName> =
                     missing_indexes.iter().map(|i| names[*i].clone()).collect();
