@@ -179,7 +179,7 @@ Clone:
 Commit hash and message are lazy
 
   $ LOG=dag::protocol=debug,eagerepo=debug hg log -T '{desc} {node}\n' -r 'all()'
-   DEBUG dag::protocol: resolve ids [1, 0] remotely
+   DEBUG dag::protocol: resolve ids [0] remotely
    DEBUG eagerepo::api: revlog_data 748104bd5058bf2c386d074d8dcf2704855380f6, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999
   A 748104bd5058bf2c386d074d8dcf2704855380f6
   C 178c10ffbc2f92d5407c14478ae9d9dea81f232e
@@ -206,12 +206,10 @@ Making a commit and amend:
    TRACE dag::cache: cached missing 567c5fc544ed12bf9619197fdd5263d6c3129cd0 (server confirmed)
    TRACE dag::cache: cached missing [567c5fc544ed12bf9619197fdd5263d6c3129cd0] (ancestors missing)
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
-   DEBUG dag::cache: cleared missing cache
+   DEBUG dag::cache: reusing cache (1 missing)
    DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
    TRACE dag::cache: cached missing 567c5fc544ed12bf9619197fdd5263d6c3129cd0 (server confirmed)
    TRACE dag::cache: cached missing [567c5fc544ed12bf9619197fdd5263d6c3129cd0] (ancestors missing)
-   DEBUG dag::cache: cleared missing cache
-   DEBUG dag::cache: cleared overlay map cache
 
   $ LOG=dag::protocol=debug,dag::open=debug,dag::cache=trace hg amend -m Z1
    DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
@@ -221,15 +219,11 @@ Making a commit and amend:
    TRACE dag::cache: cached missing 26ef60562bd4f4205f24250ea9d2e24e61108072 (server confirmed)
    TRACE dag::cache: cached missing [26ef60562bd4f4205f24250ea9d2e24e61108072] (ancestors missing)
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
-   DEBUG dag::cache: cleared missing cache
+   DEBUG dag::cache: reusing cache (1 missing)
    DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
    TRACE dag::cache: cached missing 26ef60562bd4f4205f24250ea9d2e24e61108072 (server confirmed)
    TRACE dag::cache: cached missing [26ef60562bd4f4205f24250ea9d2e24e61108072] (ancestors missing)
-   DEBUG dag::cache: cleared missing cache
-   DEBUG dag::cache: cleared overlay map cache
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
-   DEBUG dag::cache: cleared missing cache
+   DEBUG dag::cache: reusing cache (1 missing)
    TRACE dag::cache: cached missing [] (ancestors missing)
-   DEBUG dag::cache: cleared missing cache
-   DEBUG dag::cache: cleared overlay map cache
 

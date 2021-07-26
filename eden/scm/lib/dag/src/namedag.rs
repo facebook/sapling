@@ -33,6 +33,7 @@ use crate::ops::DagPersistent;
 use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
+use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Parents;
 use crate::ops::Persist;
@@ -133,7 +134,7 @@ where
     IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + Send + Sync + 'static,
-    S: TryClone + Persist + Send + Sync + 'static,
+    S: TryClone + IntVersion + Persist + Send + Sync + 'static,
 {
     /// Add vertexes and their ancestors to the on-disk DAG.
     ///
@@ -152,19 +153,24 @@ where
             ));
         }
 
-        self.invalidate_snapshot();
-
         // Take lock.
         //
         // Reload meta and logs. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
         //
         // Also see comments in `NameDagState::lock()`.
-        self.invalidate_missing_vertex_cache();
+        let old_version = self.state.int_version();
         let lock = self.state.lock()?;
         let map_lock = self.map.lock()?;
         let dag_lock = self.dag.lock()?;
         self.state.reload(&lock)?;
+        let new_version = self.state.int_version();
+        if old_version != new_version {
+            self.invalidate_snapshot();
+            self.invalidate_missing_vertex_cache();
+            self.invalidate_overlay_map()?;
+        }
+
         self.map.reload(&map_lock)?;
         self.dag.reload(&dag_lock)?;
 
@@ -192,9 +198,6 @@ where
         drop(map_lock);
         drop(lock);
 
-        self.invalidate_missing_vertex_cache();
-        self.invalidate_overlay_map()?;
-
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
     }
@@ -220,11 +223,19 @@ where
 
         // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
+
+        // Can we reuse some caches?
+        if new_name_dag.state.int_version() == self.state.int_version() {
+            new_name_dag.missing_vertexes_confirmed_by_remote =
+                self.missing_vertexes_confirmed_by_remote.clone();
+        }
+
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
         let non_master_heads = &self.pending_heads;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.set_remote_protocol(self.remote_protocol.clone());
+        new_name_dag.maybe_reuse_caches_from(self);
         new_name_dag
             .add_heads_and_flush(&parents, master_heads, non_master_heads)
             .await?;
@@ -255,6 +266,7 @@ where
         new.state.reload(&lock)?;
         new.map.reload(&map_lock)?;
         new.dag.reload(&dag_lock)?;
+        new.maybe_reuse_caches_from(self);
 
         let id_names =
             calculate_id_name_from_paths(&new.map, &*new.dag, new.overlay_map_next_id, &to_insert)
@@ -267,6 +279,33 @@ where
         new.state.persist(&lock)?;
 
         Ok(())
+    }
+}
+
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: Send + Sync + 'static,
+    M: Send + Sync + 'static,
+    P: Send + Sync + 'static,
+    S: IntVersion + Send + Sync + 'static,
+{
+    /// Attempt to reuse caches from `other` if two `NameDag`s are compatible.
+    /// Usually called when `self` is newly created.
+    fn maybe_reuse_caches_from(&mut self, other: &Self) {
+        if self.state.int_version() != other.state.int_version()
+            || self.overlay_map_next_id != other.overlay_map_next_id
+        {
+            tracing::debug!(target: "dag::cache", "cannot reuse cache");
+            return;
+        }
+        tracing::debug!(
+            target: "dag::cache", "reusing cache ({} missing)",
+            other.missing_vertexes_confirmed_by_remote.read().len(),
+        );
+        self.missing_vertexes_confirmed_by_remote =
+            other.missing_vertexes_confirmed_by_remote.clone();
+        self.overlay_map = other.overlay_map.clone();
+        self.overlay_map_paths = other.overlay_map_paths.clone();
     }
 }
 
