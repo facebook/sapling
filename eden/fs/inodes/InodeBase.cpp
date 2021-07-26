@@ -103,27 +103,6 @@ bool InodeBase::isUnlinked() const {
   return loc->unlinked;
 }
 
-/**
- * Helper function for getPath() and getLogPath()
- *
- * Populates the names vector with the list of PathComponents from the root
- * down to this inode.
- *
- * This method should not be called on the root inode.  The caller is
- * responsible for checking that before calling getPathHelper().
- *
- * Returns true if the the file exists at the given path, or false if the file
- * has been unlinked.
- *
- * If stopOnUnlinked is true, it breaks immediately when it finds that the file
- * has been unlinked.  The contents of the names vector are then undefined if
- * the function returns false.
- *
- * If stopOnUnlinked is false it continues building the names vector even if
- * the file is unlinked, which will then contain the path that the file used to
- * exist at.  (This path should be used only for logging purposes at that
- * point.)
- */
 bool InodeBase::getPathHelper(
     std::vector<PathComponent>& names,
     bool stopOnUnlinked) const {
@@ -182,6 +161,16 @@ std::optional<RelativePath> InodeBase::getPath() const {
     return std::nullopt;
   }
   return RelativePath(names);
+}
+
+RelativePath InodeBase::getUnsafePath() const {
+  if (ino_ == kRootNodeId) {
+    return RelativePath();
+  }
+
+  std::vector<PathComponent> names;
+  getPathHelper(names, false);
+  return RelativePath{names};
 }
 
 std::string InodeBase::getLogPath() const {

@@ -180,6 +180,19 @@ class InodeBase {
   std::optional<RelativePath> getPath() const;
 
   /**
+   * Compute the path to this inode, from the root of the mount point.
+   *
+   * This is similar to getPath with one major difference: unlinked inodes will
+   * have their full path returned while getPath would return std::nullopt in
+   * that case.
+   *
+   * This should not be used unless your code needs to deal with potentially
+   * unlinked paths. Documenting why getPath cannot be used is strongly
+   * recommended.
+   */
+  RelativePath getUnsafePath() const;
+
+  /**
    * Get a string to use to refer to this file in a log message.
    *
    * This will usually return the path to the file, but if the file has been
@@ -415,6 +428,27 @@ class InodeBase {
   InodeBase(InodeBase&&) = delete;
   InodeBase& operator=(InodeBase&&) = delete;
 
+  /**
+   * Helper function for get*Path()
+   *
+   * Populates the names vector with the list of PathComponents from the root
+   * down to this inode.
+   *
+   * This method should not be called on the root inode.  The caller is
+   * responsible for checking that before calling getPathHelper().
+   *
+   * Returns true if the the file exists at the given path, or false if the file
+   * has been unlinked.
+   *
+   * If stopOnUnlinked is true, it breaks immediately when it finds that the
+   * file has been unlinked.  The contents of the names vector are then
+   * undefined if the function returns false.
+   *
+   * If stopOnUnlinked is false it continues building the names vector even if
+   * the file is unlinked, which will then contain the path that the file used
+   * to exist at.  (This path should be used only for logging purposes at that
+   * point.)
+   */
   bool getPathHelper(std::vector<PathComponent>& names, bool stopOnUnlinked)
       const;
 
