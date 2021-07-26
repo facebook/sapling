@@ -46,6 +46,7 @@ impl Open for IndexedLogNameDagPath {
         crate::failpoint!("dag-namedag-open");
         let path = &self.0;
         let opts = NameDag::default_open_options();
+        tracing::debug!(target: "dag::open",  "open at {:?}", path.display());
         let mut mlog = opts.open(path)?;
         let mut logs = mlog.detach_logs();
         let dag_log = logs.pop().unwrap();

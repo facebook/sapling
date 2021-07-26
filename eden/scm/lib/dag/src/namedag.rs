@@ -247,6 +247,7 @@ where
         }
 
         // Lock, reload from disk. Use a new state so the existing dag is not affected.
+        tracing::debug!(target: "dag::cache", "flushing cached idmap ({} items)", to_insert.len());
         let mut new: Self = self.path.open()?;
         let lock = new.state.lock()?;
         let map_lock = new.map.lock()?;
@@ -739,6 +740,7 @@ where
     }
 
     fn invalidate_missing_vertex_cache(&mut self) {
+        tracing::debug!(target: "dag::cache", "cleared missing cache");
         *self.missing_vertexes_confirmed_by_remote.write() = Default::default();
     }
 
@@ -746,6 +748,7 @@ where
         let next_id = self.dag.next_free_id(0, Group::MASTER)?;
         self.overlay_map = Default::default();
         self.overlay_map_next_id = next_id;
+        tracing::debug!(target: "dag::cache", "cleared overlay map cache");
         Ok(())
     }
 
@@ -819,6 +822,7 @@ where
         if self.is_vertex_lazy() {
             let unassigned = calculate_definitely_unassigned_vertexes(self, parents, heads).await?;
             let mut missing = self.missing_vertexes_confirmed_by_remote.write();
+            tracing::trace!(target: "dag::cache", "cached missing {:?} (ancestors missing)", &unassigned);
             for v in unassigned {
                 missing.insert(v);
             }
@@ -953,7 +957,7 @@ where
             if let Some(id) = overlay.lookup_vertex_id(name) {
                 ids.push(Some(id));
             } else {
-                tracing::trace!("missing_vertexes_confirmed_by_remote += {:?}", &name);
+                tracing::trace!(target: "dag::cache", "cached missing {:?} (server confirmed)", &name);
                 missing.insert(name.clone());
                 ids.push(None);
             }
