@@ -141,6 +141,29 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Stat poll{createStat("fuse.poll_us")};
   Stat forgetmulti{createStat("fuse.forgetmulti_us")};
   Stat fallocate{createStat("fuse.fallocate_us")};
+
+  Stat nfsNull{createStat("nfs.null_us")};
+  Stat nfsGetattr{createStat("nfs.getattr_us")};
+  Stat nfsSetattr{createStat("nfs.setattr_us")};
+  Stat nfsLookup{createStat("nfs.lookup_us")};
+  Stat nfsAccess{createStat("nfs.access_us")};
+  Stat nfsReadlink{createStat("nfs.readlink_us")};
+  Stat nfsRead{createStat("nfs.read_us")};
+  Stat nfsWrite{createStat("nfs.write_us")};
+  Stat nfsCreate{createStat("nfs.create_us")};
+  Stat nfsMkdir{createStat("nfs.mkdir_us")};
+  Stat nfsSymlink{createStat("nfs.symlink_us")};
+  Stat nfsMknod{createStat("nfs.mknod_us")};
+  Stat nfsRemove{createStat("nfs.remove_us")};
+  Stat nfsRmdir{createStat("nfs.rmdir_us")};
+  Stat nfsRename{createStat("nfs.rename_us")};
+  Stat nfsLink{createStat("nfs.link_us")};
+  Stat nfsReaddir{createStat("nfs.readdir_us")};
+  Stat nfsReaddirplus{createStat("nfs.readdirplus_us")};
+  Stat nfsFsstat{createStat("nfs.fsstat_us")};
+  Stat nfsFsinfo{createStat("nfs.fsinfo_us")};
+  Stat nfsPathconf{createStat("nfs.pathconf_us")};
+  Stat nfsCommit{createStat("nfs.commit_us")};
 #else
   Stat outOfOrderCreate{createStat("prjfs.out_of_order_create")};
 

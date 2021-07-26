@@ -45,7 +45,7 @@ target_link_libraries(
 
 add_library(
   eden_nfs_nfsd3 STATIC
-    "Nfsd3.cpp" "Nfsd3.h"
+    "Nfsd3.cpp" "Nfsd3.h" "NfsRequestContext.cpp" "NfsRequestContext.h"
 )
 
 target_link_libraries(

@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 #ifndef __APPLE__
 #include <sys/sysmacros.h>
@@ -16,7 +17,10 @@
 #include <folly/Utility.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
+#include <memory>
+#include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/SystemError.h"
@@ -40,6 +44,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       CaseSensitivity caseSensitive,
       uint32_t iosize,
       folly::Promise<Nfsd3::StopData>& stopPromise,
+      ProcessAccessLog& processAccessLog,
       std::atomic<size_t>& traceDetailedArguments,
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus)
       : dispatcher_(std::move(dispatcher)),
@@ -47,6 +52,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         caseSensitive_(caseSensitive),
         iosize_(iosize),
         stopPromise_{stopPromise},
+        processAccessLog_{processAccessLog},
         traceDetailedArguments_(traceDetailedArguments),
         traceBus_(traceBus) {}
 
@@ -65,52 +71,94 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
 
   void onSocketClosed() override;
 
-  ImmediateFuture<folly::Unit>
-  null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  getattr(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  setattr(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  lookup(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  access(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  readlink(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  read(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  write(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  create(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  mkdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  symlink(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  mknod(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  remove(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  rmdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  rename(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  link(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  readdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
+  ImmediateFuture<folly::Unit> null(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> getattr(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> setattr(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> lookup(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> access(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> readlink(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> read(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> write(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> create(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> mkdir(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> symlink(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> mknod(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> remove(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> rmdir(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> rename(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> link(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> readdir(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
   ImmediateFuture<folly::Unit> readdirplus(
       folly::io::Cursor deser,
       folly::io::QueueAppender ser,
-      uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  fsstat(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  fsinfo(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  pathconf(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
-  ImmediateFuture<folly::Unit>
-  commit(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> fsstat(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> fsinfo(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> pathconf(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
+  ImmediateFuture<folly::Unit> commit(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      NfsRequestContext& context);
 
  private:
   std::unique_ptr<NfsDispatcher> dispatcher_;
@@ -122,6 +170,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // lifetime of  nfs3d. The way we currently enforce this is by waiting for
   // this promise to be set before destroying of the nfs3d.
   folly::Promise<Nfsd3::StopData>& stopPromise_;
+  ProcessAccessLog& processAccessLog_;
   std::atomic<size_t>& traceDetailedArguments_;
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
 };
@@ -193,8 +242,8 @@ nfsstat3 exceptionToNfsError(const folly::exception_wrapper& ex) {
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::null(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   return folly::unit;
 }
 
@@ -365,16 +414,12 @@ ImmediateFuture<PathComponent> extractPathComponent(std::string str) {
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
 
   auto args = XdrTrait<GETATTR3args>::deserialize(deser);
 
-  // TODO(xavierd): make an NfsRequestContext.
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("getattr");
-
-  return dispatcher_->getattr(args.object.ino, *context)
+  return dispatcher_->getattr(args.object.ino, context)
       .thenTry(
           [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
             if (try_.hasException()) {
@@ -396,8 +441,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::getattr(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
 
   auto args = XdrTrait<SETATTR3args>::deserialize(deser);
 
@@ -408,9 +453,6 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
     XdrTrait<SETATTR3res>::serialize(ser, res);
     return folly::unit;
   }
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("setattr");
 
   auto size = args.new_attributes.size.tag
       ? std::optional(std::get<uint64_t>(args.new_attributes.size.v))
@@ -445,7 +487,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
       /*mtime*/ makeTimespec(args.new_attributes.mtime),
   };
 
-  return dispatcher_->setattr(args.object.ino, desired, *context)
+  return dispatcher_->setattr(args.object.ino, desired, context)
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SetattrRes>&& try_) mutable {
         if (try_.hasException()) {
@@ -469,20 +511,15 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<LOOKUP3args>::deserialize(deser);
-
-  // TODO(xavierd): make an NfsRequestContext.
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("lookup");
 
   // TODO(xavierd): the lifetime of this future is a bit tricky and it needs to
   // be consumed in this function to avoid use-after-free. This future may also
   // need to be executed after the lookup call to conform to fill the "post-op"
   // attributes
-  auto dirAttrFut = dispatcher_->getattr(args.what.dir.ino, *context);
+  auto dirAttrFut = dispatcher_->getattr(args.what.dir.ino, context);
 
   if (args.what.name.length() > NAME_MAX) {
     // The filename is too long, let's try to get the attributes of the
@@ -506,18 +543,18 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
         });
   }
 
-  return makeImmediateFutureWith([this, args = std::move(args)]() {
+  return makeImmediateFutureWith([this, args = std::move(args), &context]() {
            if (args.what.name == ".") {
-             return dispatcher_->getattr(args.what.dir.ino, *context)
+             return dispatcher_->getattr(args.what.dir.ino, context)
                  .thenValue(
                      [ino = args.what.dir.ino](struct stat && stat)
                          -> std::tuple<InodeNumber, struct stat> {
                        return {ino, std::move(stat)};
                      });
            } else if (args.what.name == "..") {
-             return dispatcher_->getParent(args.what.dir.ino, *context)
-                 .thenValue([this](InodeNumber ino) {
-                   return dispatcher_->getattr(ino, *context)
+             return dispatcher_->getParent(args.what.dir.ino, context)
+                 .thenValue([this, &context](InodeNumber ino) {
+                   return dispatcher_->getattr(ino, context)
                        .thenValue(
                            [ino](struct stat && stat)
                                -> std::tuple<InodeNumber, struct stat> {
@@ -526,9 +563,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
                  });
            } else {
              return extractPathComponent(std::move(args.what.name))
-                 .thenValue([this,
-                             ino = args.what.dir.ino](PathComponent&& name) {
-                   return dispatcher_->lookup(ino, std::move(name), *context);
+                 .thenValue([this, ino = args.what.dir.ino, &context](
+                                PathComponent&& name) {
+                   return dispatcher_->lookup(ino, std::move(name), context);
                  });
            }
          })
@@ -572,16 +609,12 @@ uint32_t getEffectiveAccessRights(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
 
   auto args = XdrTrait<ACCESS3args>::deserialize(deser);
 
-  // TODO(xavierd): make an NfsRequestContext.
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("access");
-
-  return dispatcher_->getattr(args.object.ino, *context)
+  return dispatcher_->getattr(args.object.ino, context)
       .thenTry([ser = std::move(ser), desiredAccess = args.access](
                    folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
@@ -608,16 +641,12 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readlink(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<READLINK3args>::deserialize(deser);
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("readlink");
-
-  auto getattr = dispatcher_->getattr(args.symlink.ino, *context);
-  return dispatcher_->readlink(args.symlink.ino, *context)
+  auto getattr = dispatcher_->getattr(args.symlink.ino, context);
+  return dispatcher_->readlink(args.symlink.ino, context)
       .thenTry([ser = std::move(ser), getattr = std::move(getattr)](
                    folly::Try<std::string> tryReadlink) mutable {
         return std::move(getattr).thenTry(
@@ -648,18 +677,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readlink(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<READ3args>::deserialize(deser);
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("read");
-
-  return dispatcher_->read(args.file.ino, args.count, args.offset, *context)
-      .thenTry([this, ser = std::move(ser), ino = args.file.ino](
+  return dispatcher_->read(args.file.ino, args.count, args.offset, context)
+      .thenTry([this, ser = std::move(ser), ino = args.file.ino, &context](
                    folly::Try<NfsDispatcher::ReadRes> tryRead) mutable {
-        return dispatcher_->getattr(ino, *context)
+        return dispatcher_->getattr(ino, context)
             .thenTry([ser = std::move(ser), tryRead = std::move(tryRead)](
                          const folly::Try<struct stat>& tryStat) mutable {
               if (tryRead.hasException()) {
@@ -703,13 +728,9 @@ writeverf3 makeWriteVerf() {
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::write(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<WRITE3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("write");
 
   // I have no idea why NFS sent us data that we shouldn't write to the file,
   // but here it is, let's only take up to count bytes from the data.
@@ -718,7 +739,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::write(
   auto data = queue.split(args.count);
 
   return dispatcher_
-      ->write(args.file.ino, std::move(data), args.offset, *context)
+      ->write(args.file.ino, std::move(data), args.offset, context)
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::WriteRes> writeTry) mutable {
         if (writeTry.hasException()) {
@@ -781,13 +802,9 @@ mode_t setMode3ToMode(const set_mode3& mode) {
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<CREATE3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("create");
 
   if (args.how.tag == createmode3::EXCLUSIVE) {
     // Exclusive file creation is complicated, for now let's not support it.
@@ -800,8 +817,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
   auto mode = S_IFREG | setMode3ToMode(attr.mode);
 
   return extractPathComponent(std::move(args.where.name))
-      .thenValue([this, ino = args.where.dir.ino, mode](PathComponent&& name) {
-        return dispatcher_->create(ino, std::move(name), mode, *context);
+      .thenValue([this, ino = args.where.dir.ino, mode, &context](
+                     PathComponent&& name) {
+        return dispatcher_->create(ino, std::move(name), mode, context);
       })
       .thenTry([ser = std::move(ser), createmode = args.how.tag](
                    folly::Try<NfsDispatcher::CreateRes> try_) mutable {
@@ -853,13 +871,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<MKDIR3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("mkdir");
 
   // Don't allow creating this directory and its parent.
   if (args.where.name == "." || args.where.name == "..") {
@@ -878,8 +892,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
   // OK?
 
   return extractPathComponent(std::move(args.where.name))
-      .thenValue([this, ino = args.where.dir.ino, mode](PathComponent&& name) {
-        return dispatcher_->mkdir(ino, std::move(name), mode, *context);
+      .thenValue([this, ino = args.where.dir.ino, mode, &context](
+                     PathComponent&& name) {
+        return dispatcher_->mkdir(ino, std::move(name), mode, context);
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MkdirRes> try_) mutable {
@@ -908,13 +923,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<SYMLINK3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("symlink");
 
   // Don't allow creating a symlink named . or ..
   if (args.where.name == "." || args.where.name == "..") {
@@ -928,10 +939,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
   return extractPathComponent(std::move(args.where.name))
       .thenValue([this,
                   ino = args.where.dir.ino,
-                  symlink_data = std::move(args.symlink.symlink_data)](
-                     PathComponent&& name) mutable {
+                  symlink_data = std::move(args.symlink.symlink_data),
+                  &context](PathComponent&& name) mutable {
         return dispatcher_->symlink(
-            ino, std::move(name), std::move(symlink_data), *context);
+            ino, std::move(name), std::move(symlink_data), context);
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SymlinkRes> try_) mutable {
@@ -961,13 +972,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<MKNOD3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("mknod");
 
   switch (args.what.tag) {
     case ftype3::NF3REG:
@@ -1008,9 +1015,9 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
   // attributes.
 
   return extractPathComponent(std::move(args.where.name))
-      .thenValue([this, ino = args.where.dir.ino, mode, rdev](
+      .thenValue([this, ino = args.where.dir.ino, mode, rdev, &context](
                      PathComponent&& name) {
-        return dispatcher_->mknod(ino, std::move(name), mode, rdev, *context);
+        return dispatcher_->mknod(ino, std::move(name), mode, rdev, context);
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MknodRes> try_) mutable {
@@ -1039,9 +1046,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<REMOVE3args>::deserialize(deser);
 
   // Don't allow removing the special directories.
@@ -1051,18 +1057,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
     return folly::unit;
   }
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("remove");
-
   // TODO(xavierd): What if args.object.name is a directory? This will fail
   // with NFS3ERR_ISDIR, but the spec is vague regarding what needs to happen
   // here, "REMOVE can be used to remove directories, subject to restrictions
   // imposed by either the client or server interfaces"
 
   return extractPathComponent(std::move(args.object.name))
-      .thenValue([this, ino = args.object.dir.ino](PathComponent&& name) {
-        return dispatcher_->unlink(ino, std::move(name), *context);
-      })
+      .thenValue(
+          [this, ino = args.object.dir.ino, &context](PathComponent&& name) {
+            return dispatcher_->unlink(ino, std::move(name), context);
+          })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::UnlinkRes> try_) mutable {
         if (try_.hasException()) {
@@ -1085,9 +1089,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<RMDIR3args>::deserialize(deser);
 
   // Don't allow removing the special directories.
@@ -1100,13 +1103,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
     return folly::unit;
   }
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("rmdir");
-
   return extractPathComponent(std::move(args.object.name))
-      .thenValue([this, ino = args.object.dir.ino](PathComponent&& name) {
-        return dispatcher_->rmdir(ino, std::move(name), *context);
-      })
+      .thenValue(
+          [this, ino = args.object.dir.ino, &context](PathComponent&& name) {
+            return dispatcher_->rmdir(ino, std::move(name), context);
+          })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RmdirRes> try_) mutable {
         if (try_.hasException()) {
@@ -1129,9 +1130,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<RENAME3args>::deserialize(deser);
 
   if (args.from.name == "." || args.from.name == ".." || args.to.name == "." ||
@@ -1148,9 +1148,6 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
     return folly::unit;
   }
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("rename");
-
   return extractPathComponent(std::move(args.from.name))
       .thenValue([toName = args.to.name](PathComponent&& fromName) mutable {
         return extractPathComponent(std::move(toName))
@@ -1160,11 +1157,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
                   return {std::move(fromName), std::move(toName)};
                 });
       })
-      .thenValue([this, fromIno = args.from.dir.ino, toIno = args.to.dir.ino](
-                     std::tuple<PathComponent, PathComponent>&& paths) {
+      .thenValue([this,
+                  fromIno = args.from.dir.ino,
+                  toIno = args.to.dir.ino,
+                  &context](std::tuple<PathComponent, PathComponent>&& paths) {
         auto [fromName, toName] = std::move(paths);
         return dispatcher_->rename(
-            fromIno, std::move(fromName), toIno, std::move(toName), *context);
+            fromIno, std::move(fromName), toIno, std::move(toName), context);
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RenameRes> try_) mutable {
@@ -1194,17 +1193,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::link(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<LINK3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("link");
 
   // EdenFS doesn't support hardlinks, let's just collect the attributes for
   // the file and fail.
-  return dispatcher_->getattr(args.file.ino, *context)
+  return dispatcher_->getattr(args.file.ino, context)
       .thenTry(
           [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
             LINK3res res{
@@ -1245,13 +1240,9 @@ uint64_t getReaddirCookieverf() {
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<READDIR3args>::deserialize(deser);
-
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("readdir");
 
   if (!isReaddirCookieverfValid(args.cookieverf)) {
     READDIR3res res{{{nfsstat3::NFS3ERR_BAD_COOKIE, READDIR3resfail{}}}};
@@ -1259,10 +1250,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
     return folly::unit;
   }
 
-  return dispatcher_->readdir(args.dir.ino, args.cookie, args.count, *context)
-      .thenTry([this, ino = args.dir.ino, ser = std::move(ser)](
+  return dispatcher_->readdir(args.dir.ino, args.cookie, args.count, context)
+      .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
-        return dispatcher_->getattr(ino, *context)
+        return dispatcher_->getattr(ino, context)
             .thenTry([ser = std::move(ser), try_ = std::move(try_)](
                          const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
@@ -1293,26 +1284,22 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdirplus(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, context.getXid());
   return folly::unit;
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
 
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("fsstat");
-
-  return dispatcher_->statfs(args.fsroot.ino, *context)
-      .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino](
+  return dispatcher_->statfs(args.fsroot.ino, context)
+      .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino, &context](
                    folly::Try<struct statfs> statFsTry) mutable {
-        return dispatcher_->getattr(ino, *context)
+        return dispatcher_->getattr(ino, context)
             .thenTry([ser = std::move(ser), statFsTry = std::move(statFsTry)](
                          const folly::Try<struct stat>& statTry) mutable {
               if (statFsTry.hasException()) {
@@ -1346,9 +1333,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsinfo(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<FSINFO3args>::deserialize(deser);
   (void)args;
 
@@ -1377,9 +1363,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsinfo(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::pathconf(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::SUCCESS, xid);
-
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<PATHCONF3args>::deserialize(deser);
   (void)args;
 
@@ -1404,8 +1389,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::pathconf(
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::commit(
     folly::io::Cursor /*deser*/,
     folly::io::QueueAppender ser,
-    uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+    NfsRequestContext& context) {
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, context.getXid());
   return folly::unit;
 }
 
@@ -1653,7 +1638,7 @@ std::string formatCommit(folly::io::Cursor /*deser*/) {
 using Handler = ImmediateFuture<folly::Unit> (Nfsd3ServerProcessor::*)(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
-    uint32_t xid);
+    NfsRequestContext& context);
 
 /**
  * Format the passed in arguments. The Cursor must be passed as a copy to avoid
@@ -1668,12 +1653,14 @@ struct HandlerEntry {
       folly::StringPiece n,
       Handler h,
       FormatArgs format,
+      ChannelThreadStats::StatPtr s,
       AccessType at = AccessType::FsChannelOther)
-      : name(n), handler(h), formatArgs(format), accessType(at) {}
+      : name(n), handler(h), formatArgs(format), stat{s}, accessType(at) {}
 
   folly::StringPiece name;
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
+  ChannelThreadStats::StatPtr stat = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
 };
 
@@ -1683,52 +1670,133 @@ constexpr auto kNfs3dHandlers = [] {
 
   std::array<HandlerEntry, 22> handlers;
   handlers[folly::to_underlying(nfsv3Procs::null)] = {
-      "NULL", &Nfsd3ServerProcessor::null, formatNull};
+      "NULL",
+      &Nfsd3ServerProcessor::null,
+      formatNull,
+      &ChannelThreadStats::nfsNull};
   handlers[folly::to_underlying(nfsv3Procs::getattr)] = {
-      "GETATTR", &Nfsd3ServerProcessor::getattr, formatGetattr, Read};
+      "GETATTR",
+      &Nfsd3ServerProcessor::getattr,
+      formatGetattr,
+      &ChannelThreadStats::nfsGetattr,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::setattr)] = {
-      "SETATTR", &Nfsd3ServerProcessor::setattr, formatSetattr, Write};
+      "SETATTR",
+      &Nfsd3ServerProcessor::setattr,
+      formatSetattr,
+      &ChannelThreadStats::nfsSetattr,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::lookup)] = {
-      "LOOKUP", &Nfsd3ServerProcessor::lookup, formatLookup, Read};
+      "LOOKUP",
+      &Nfsd3ServerProcessor::lookup,
+      formatLookup,
+      &ChannelThreadStats::nfsLookup,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::access)] = {
-      "ACCESS", &Nfsd3ServerProcessor::access, formatAccess, Read};
+      "ACCESS",
+      &Nfsd3ServerProcessor::access,
+      formatAccess,
+      &ChannelThreadStats::nfsAccess,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::readlink)] = {
-      "READLINK", &Nfsd3ServerProcessor::readlink, formatReadlink, Read};
+      "READLINK",
+      &Nfsd3ServerProcessor::readlink,
+      formatReadlink,
+      &ChannelThreadStats::nfsReadlink,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::read)] = {
-      "READ", &Nfsd3ServerProcessor::read, formatRead, Read};
+      "READ",
+      &Nfsd3ServerProcessor::read,
+      formatRead,
+      &ChannelThreadStats::nfsRead,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
-      "WRITE", &Nfsd3ServerProcessor::write, formatWrite, Write};
+      "WRITE",
+      &Nfsd3ServerProcessor::write,
+      formatWrite,
+      &ChannelThreadStats::nfsWrite,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
-      "CREATE", &Nfsd3ServerProcessor::create, formatCreate, Write};
+      "CREATE",
+      &Nfsd3ServerProcessor::create,
+      formatCreate,
+      &ChannelThreadStats::nfsCreate,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::mkdir)] = {
-      "MKDIR", &Nfsd3ServerProcessor::mkdir, formatMkdir, Write};
+      "MKDIR",
+      &Nfsd3ServerProcessor::mkdir,
+      formatMkdir,
+      &ChannelThreadStats::nfsMkdir,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::symlink)] = {
-      "SYMLINK", &Nfsd3ServerProcessor::symlink, formatSymlink, Write};
+      "SYMLINK",
+      &Nfsd3ServerProcessor::symlink,
+      formatSymlink,
+      &ChannelThreadStats::nfsSymlink,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::mknod)] = {
-      "MKNOD", &Nfsd3ServerProcessor::mknod, formatMknod, Write};
+      "MKNOD",
+      &Nfsd3ServerProcessor::mknod,
+      formatMknod,
+      &ChannelThreadStats::nfsMknod,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::remove)] = {
-      "REMOVE", &Nfsd3ServerProcessor::remove, formatRemove, Write};
+      "REMOVE",
+      &Nfsd3ServerProcessor::remove,
+      formatRemove,
+      &ChannelThreadStats::nfsRemove,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::rmdir)] = {
-      "RMDIR", &Nfsd3ServerProcessor::rmdir, formatRmdir, Write};
+      "RMDIR",
+      &Nfsd3ServerProcessor::rmdir,
+      formatRmdir,
+      &ChannelThreadStats::nfsRmdir,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::rename)] = {
-      "RENAME", &Nfsd3ServerProcessor::rename, formatRename, Write};
+      "RENAME",
+      &Nfsd3ServerProcessor::rename,
+      formatRename,
+      &ChannelThreadStats::nfsRename,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::link)] = {
-      "LINK", &Nfsd3ServerProcessor::link, formatLink, Write};
+      "LINK",
+      &Nfsd3ServerProcessor::link,
+      formatLink,
+      &ChannelThreadStats::nfsLink,
+      Write};
   handlers[folly::to_underlying(nfsv3Procs::readdir)] = {
-      "READDIR", &Nfsd3ServerProcessor::readdir, formatReaddir, Read};
+      "READDIR",
+      &Nfsd3ServerProcessor::readdir,
+      formatReaddir,
+      &ChannelThreadStats::nfsReaddir,
+      Read};
   handlers[folly::to_underlying(nfsv3Procs::readdirplus)] = {
       "READDIRPLUS",
       &Nfsd3ServerProcessor::readdirplus,
       formatReaddirplus,
+      &ChannelThreadStats::nfsReaddirplus,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::fsstat)] = {
-      "FSSTAT", &Nfsd3ServerProcessor::fsstat, formatFsstat};
+      "FSSTAT",
+      &Nfsd3ServerProcessor::fsstat,
+      formatFsstat,
+      &ChannelThreadStats::nfsFsstat};
   handlers[folly::to_underlying(nfsv3Procs::fsinfo)] = {
-      "FSINFO", &Nfsd3ServerProcessor::fsinfo, formatFsinfo};
+      "FSINFO",
+      &Nfsd3ServerProcessor::fsinfo,
+      formatFsinfo,
+      &ChannelThreadStats::nfsFsinfo};
   handlers[folly::to_underlying(nfsv3Procs::pathconf)] = {
-      "PATHCONF", &Nfsd3ServerProcessor::pathconf, formatPathconf};
+      "PATHCONF",
+      &Nfsd3ServerProcessor::pathconf,
+      formatPathconf,
+      &ChannelThreadStats::nfsPathconf};
   handlers[folly::to_underlying(nfsv3Procs::commit)] = {
-      "COMMIT", &Nfsd3ServerProcessor::commit, formatCommit, Write};
+      "COMMIT",
+      &Nfsd3ServerProcessor::commit,
+      formatCommit,
+      &ChannelThreadStats::nfsCommit,
+      Write};
 
   return handlers;
 }();
@@ -1802,8 +1870,21 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   auto liveRequest = LiveRequest{
       traceBus_, traceDetailedArguments_, handlerEntry, deser, xid, procNumber};
 
-  return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid)
-      .ensure([liveRequest = std::move(liveRequest)]() {});
+  // TODO: Add requestMetrics for NFS.
+  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
+  auto context = std::make_unique<NfsRequestContext>(
+      xid, handlerEntry.name, processAccessLog_);
+  context->startRequest(
+      dispatcher_->getStats(), handlerEntry.stat, nullRequestWatch);
+
+  // The data that contextRef reference to is alive for the duration of the
+  // handler function and is deleted when context unique_ptr goes out of the
+  // scope at the `ensure` lambda.
+  auto& contextRef = *context;
+  return (this->*handlerEntry.handler)(
+             std::move(deser), std::move(ser), contextRef)
+      .ensure([liveRequest = std::move(liveRequest),
+               context = std::move(context)]() { context->finishRequest(); });
 }
 
 void Nfsd3ServerProcessor::onSocketClosed() {
@@ -1831,6 +1912,7 @@ Nfsd3::Nfsd3(
               caseSensitive,
               iosize,
               stopPromise_,
+              processAccessLog_,
               traceDetailedArguments_,
               traceBus_),
           evb,
