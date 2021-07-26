@@ -20,6 +20,7 @@ eagerepo = { path = "../eagerepo" }
 edenapi = { path = "../edenapi" }
 edenfs_client = { path = "../edenfs-client" }
 encoding = { path = "../encoding" }
+fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0", features = ["rust_backend", "tokio"], default-features = false }
 fsyncglob = { path = "../fsyncglob" }
 hg-http = { path = "../hg-http" }

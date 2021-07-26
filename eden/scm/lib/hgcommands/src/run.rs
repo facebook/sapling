@@ -14,6 +14,7 @@ use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use clientinfo::ClientInfo;
 use configparser::config::ConfigSet;
+use fail::FailScenario;
 use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -69,6 +70,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         Ok(res) => res,
     };
 
+    let scenario = FailScenario::setup();
     setup_eager_repo();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
@@ -168,6 +170,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
     blackbox::sync();
+
+    scenario.teardown();
 
     exit_code
 }
