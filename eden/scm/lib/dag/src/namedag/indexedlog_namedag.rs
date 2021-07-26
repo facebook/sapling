@@ -42,6 +42,7 @@ impl Open for IndexedLogNameDagPath {
     type OpenTarget = NameDag;
 
     fn open(&self) -> Result<Self::OpenTarget> {
+        crate::failpoint!("dag-namedag-open");
         let path = &self.0;
         let opts = NameDag::default_open_options();
         let mut mlog = opts.open(path)?;

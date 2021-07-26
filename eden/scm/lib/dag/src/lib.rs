@@ -74,5 +74,17 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub use indexedlog::Repair;
 pub use nonblocking;
 
+#[macro_export]
+macro_rules! failpoint {
+    ($name:literal) => {
+        ::fail::fail_point!($name, |_| {
+            let msg = format!("failpoint injected by FAILPOINTS: {}", $name);
+            Err($crate::errors::DagError::from(
+                $crate::errors::BackendError::Generic(msg),
+            ))
+        })
+    };
+}
+
 #[cfg(test)]
 dev_logger::init!();
