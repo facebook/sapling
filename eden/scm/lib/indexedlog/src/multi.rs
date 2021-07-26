@@ -75,9 +75,14 @@ const INDEX_REVERSE_KEY: &[u8] = b"r";
 /// The reverse index is the first index. See [`multi_meta_log_open_options`].
 const INDEX_REVERSE: usize = 0;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct MultiMeta {
     metas: BTreeMap<String, Arc<Mutex<LogMetadata>>>,
+
+    /// The version. Updated on flush.
+    /// `(a, b)` is backwards compatible (only has appended content) with
+    /// `(c, d)` if `a == c` and `b >= d`.
+    version: (u64, u64),
 }
 
 impl OpenOptions {
@@ -206,6 +211,7 @@ impl MultiLog {
             return Err(crate::Error::programming(msg));
         }
         let result: crate::Result<_> = (|| {
+            self.multimeta.bump_version();
             if !self.leacy_multimeta_source {
                 // New MultiLog uses multimeta_log to track MultiMeta.
                 self.multimeta.write_log(&mut self.multimeta_log, lock)?;
@@ -218,6 +224,18 @@ impl MultiLog {
             Ok(())
         })();
         result.context("in MultiLog::write_meta")
+    }
+
+    /// Return the version in `(a, b)` form.
+    ///
+    /// Version `(a, b)` only has append-only data than version `(c, d)`, if
+    /// `a == c` and `b > d`.
+    ///
+    /// Version `(a, _)` is incompatible with version `(b, _)` if `a != b`.
+    ///
+    /// Version gets updated on `write_meta`.
+    pub fn version(&self) -> (u64, u64) {
+        self.multimeta.version
     }
 
     /// Reload meta from disk so they become visible to Logs.
@@ -445,15 +463,24 @@ fn indent(s: &str) -> String {
         .concat()
 }
 
+impl Default for MultiMeta {
+    fn default() -> Self {
+        Self {
+            metas: Default::default(),
+            version: (rand_u64(), 0),
+        }
+    }
+}
+
 impl MultiMeta {
     /// Update self with content from a reader.
     /// Metadata with existing keys are mutated in-place.
     fn read(&mut self, mut reader: impl io::Read) -> io::Result<()> {
-        let version: usize = reader.read_vlq()?;
-        if version != 0 {
+        let format_version: usize = reader.read_vlq()?;
+        if format_version != 0 {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
-                format!("MultiMeta version is unsupported: {}", version),
+                format!("MultiMeta format {} is unsupported", format_version),
             ));
         }
         let count: usize = reader.read_vlq()?;
@@ -477,6 +504,9 @@ impl MultiMeta {
                 })
                 .or_insert_with(|| Arc::new(Mutex::new(meta.clone())));
         }
+        let version_major: u64 = reader.read_vlq().unwrap_or_else(|_| rand_u64());
+        let version_minor: u64 = reader.read_vlq().unwrap_or_default();
+        self.version = (version_major, version_minor);
         Ok(())
     }
 
@@ -490,6 +520,8 @@ impl MultiMeta {
             writer.write_all(name.as_bytes())?;
             meta.lock().unwrap().write(&mut writer)?;
         }
+        writer.write_vlq(self.version.0)?;
+        writer.write_vlq(self.version.1)?;
         Ok(())
     }
 
@@ -541,6 +573,23 @@ impl MultiMeta {
         log.append(&data)?;
         log.sync()?;
         Ok(())
+    }
+
+    /// Bump the version recorded in this [`MultiMeta`].
+    fn bump_version(&mut self) {
+        self.version.1 += 1;
+    }
+}
+
+fn rand_u64() -> u64 {
+    if cfg!(test) {
+        // For tests, generate different numbers each time.
+        use std::sync::atomic::AtomicU64;
+        use std::sync::atomic::Ordering::SeqCst;
+        static COUNT: AtomicU64 = AtomicU64::new(1000);
+        COUNT.fetch_add(1, SeqCst)
+    } else {
+        rand::random()
     }
 }
 
@@ -615,6 +664,39 @@ mod tests {
         let mlog2 = simple_multilog(path);
         assert_eq!(mlog2[0].iter().count(), 2);
         assert_eq!(mlog2[1].iter().count(), 0);
+    }
+
+    #[test]
+    fn test_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let mut mlog1 = simple_multilog(&path.join("1"));
+        let mut mlog2 = simple_multilog(&path.join("2"));
+
+        // Different logs have different versions.
+        let v1 = mlog1.version();
+        let v2 = mlog2.version();
+        assert!(v1.1 == 0);
+        assert!(v2.1 == 0);
+        assert_ne!(v1, v2);
+
+        // The second number of the version gets bumped on flush.
+        mlog1.sync().unwrap();
+        mlog2.sync().unwrap();
+        let v3 = mlog1.version();
+        let v4 = mlog2.version();
+        assert_eq!(v3.0, v1.0);
+        assert_eq!(v4.0, v2.0);
+        assert!(v3 > v1);
+        assert!(v4 > v2);
+
+        // Reopen preserves the versions.
+        let mlog1 = simple_multilog(&path.join("1"));
+        let mlog2 = simple_multilog(&path.join("2"));
+        let v5 = mlog1.version();
+        let v6 = mlog2.version();
+        assert_eq!(v5, v3);
+        assert_eq!(v6, v4);
     }
 
     #[test]
@@ -817,7 +899,7 @@ MultiMeta is valid"#
     }
 
     quickcheck! {
-        fn test_roundtrip_multimeta(name_len_list: Vec<(String, u64)>) -> bool {
+        fn test_roundtrip_multimeta(name_len_list: Vec<(String, u64)>, version: (u64, u64)) -> bool {
             let metas = name_len_list
                 .into_iter()
                 .map(|(name, len)| {
@@ -825,7 +907,7 @@ MultiMeta is valid"#
                     (name, Arc::new(Mutex::new(meta)))
                 })
                 .collect();
-            let meta = MultiMeta { metas, ..Default::default() };
+            let meta = MultiMeta { metas, version, ..Default::default() };
             let mut buf = Vec::new();
             meta.write(&mut buf).unwrap();
             let mut meta2 = MultiMeta::default();
