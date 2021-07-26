@@ -63,6 +63,7 @@ pub struct HybridCommits {
 
 const EDENSCM_DISABLE_REMOTE_RESOLVE: &str = "EDENSCM_DISABLE_REMOTE_RESOLVE";
 const EDENSCM_REMOTE_ID_THRESHOLD: &str = "EDENSCM_REMOTE_ID_THRESHOLD";
+const EDENSCM_REMOTE_NAME_THRESHOLD: &str = "EDENSCM_REMOTE_NAME_THRESHOLD";
 
 struct EdenApiProtocol {
     client: Arc<dyn EdenApi>,
@@ -73,9 +74,14 @@ struct EdenApiProtocol {
     disabled_names: HashSet<Vertex>,
 
     /// Manually disabled ID resolution after `N` entries.
-    /// Set by `EDENSCM_DISABLE_REMOTE_RESOLVE=N`.
+    /// Set by `EDENSCM_REMOTE_ID_THRESHOLD=N`.
     remote_id_threshold: Option<usize>,
     remote_id_current: AtomicUsize,
+
+    /// Manually disabled name resolution after `N` entries.
+    /// Set by `EDENSCM_REMOTE_NAME_THRESHOLD=N`.
+    remote_name_threshold: Option<usize>,
+    remote_name_current: AtomicUsize,
 }
 
 fn to_dag_error<E: Into<anyhow::Error>>(e: E) -> dag::Error {
@@ -103,6 +109,16 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                         name, EDENSCM_DISABLE_REMOTE_RESOLVE
                     );
                     return Err(dag::errors::BackendError::Generic(msg).into());
+                }
+                if let Some(threshold) = self.remote_name_threshold {
+                    let current = self.remote_name_current.fetch_add(1, SeqCst);
+                    if current >= threshold {
+                        let msg = format!(
+                            "Resolving name {:?} exceeds threshold {} set by {}",
+                            name, threshold, EDENSCM_REMOTE_NAME_THRESHOLD
+                        );
+                        return Err(dag::errors::BackendError::Generic(msg).into());
+                    }
                 }
                 hgids.push(Id20::from_slice(name.as_ref()).map_err(to_dag_error)?);
             }
@@ -137,7 +153,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
     ) -> dag::Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         if let Some(threshold) = self.remote_id_threshold {
             let current = self.remote_id_current.fetch_add(1, SeqCst);
-            if current > threshold {
+            if current >= threshold {
                 let msg = format!(
                     "Resolving id exceeds threshold {} set by {}",
                     threshold, EDENSCM_REMOTE_ID_THRESHOLD
@@ -219,12 +235,19 @@ impl HybridCommits {
         } else {
             None
         };
+        let remote_name_threshold = if let Ok(env) = std::env::var(EDENSCM_REMOTE_NAME_THRESHOLD) {
+            env.parse::<usize>().ok()
+        } else {
+            None
+        };
         let protocol = EdenApiProtocol {
             reponame: self.reponame.clone(),
             client: self.client.clone(),
             disabled_names,
             remote_id_threshold,
             remote_id_current: Default::default(),
+            remote_name_threshold,
+            remote_name_current: Default::default(),
         };
         self.commits.dag.set_remote_protocol(Arc::new(protocol));
         self.lazy_hash_desc = format!("lazy, using EdenAPI (repo = {})", &self.reponame);
