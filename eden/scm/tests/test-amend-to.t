@@ -52,6 +52,7 @@ Test adding, modifying, removing, and renaming files in amend.
 
 
 
+
 Test removing, modifying and renaming files in subsequent commit.
   $ newrepo
   $ echo foo > foo
@@ -121,6 +122,7 @@ Test removing, modifying and renaming files in subsequent commit.
 
 
 
+
 Test three way merge during rebase.
   $ newrepo
   $ printf "one\n\ntwo\n\nthree\n" > foo
@@ -152,6 +154,7 @@ Test three way merge during rebase.
      +
      +three
   
+
 
 
 
@@ -196,6 +199,7 @@ Test replacing file with directory.
 
 
 
+
 Test replacing file with symlink.
   $ newrepo
   $ echo foo > foo
@@ -220,6 +224,7 @@ Test replacing file with symlink.
      +bar
      \ No newline at end of file
   
+
 
 
 
@@ -261,6 +266,7 @@ Test replacing file with symlink in subsequent commit.
 
 
 
+
 Test renaming a file modified by later commit (not supported).
   $ newrepo
   $ echo foo > foo
@@ -289,6 +295,7 @@ Test renaming a file modified by later commit (not supported).
      @@ -0,0 +1,1 @@
      +foo
   
+
 
 
 
@@ -334,6 +341,7 @@ Test conflict during initial patch.
 
 
 
+
 Test conflict during rebase.
   $ newrepo
   $ echo foo > foo
@@ -371,6 +379,7 @@ Test conflict during rebase.
      @@ -0,0 +1,1 @@
      +foo
   
+
 
 
 
@@ -426,6 +435,8 @@ Test amending when target commit has other children.
 
 
 
+
+
 Test amending a renamed file (don't lose copysource).
   $ newrepo
   $ echo foo > foo
@@ -453,6 +464,72 @@ Test amending a renamed file (don't lose copysource).
   
 
 
+
+Test rebasing across multiple changes to multiple files.
+  $ newrepo
+  $ echo baz > baz
+  $ hg ci -m "zero" -Aq
+  $ echo foo > foo
+  $ echo bar > bar
+  $ hg ci -m "one" -Aq
+  $ echo foo >> foo
+  $ echo bar >> bar
+  $ hg ci -m "two"
+  $ echo foo >> foo
+  $ echo bar >> bar
+  $ hg ci -m "three"
+  $ echo baz >> baz
+  $ hg amend --to "desc(zero)"
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  three bd9189084dc0diff --git a/bar b/bar
+  │  --- a/bar
+  │  +++ b/bar
+  │  @@ -1,2 +1,3 @@
+  │   bar
+  │   bar
+  │  +bar
+  │  diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,2 +1,3 @@
+  │   foo
+  │   foo
+  │  +foo
+  │
+  o  two a9827e13655ediff --git a/bar b/bar
+  │  --- a/bar
+  │  +++ b/bar
+  │  @@ -1,1 +1,2 @@
+  │   bar
+  │  +bar
+  │  diff --git a/foo b/foo
+  │  --- a/foo
+  │  +++ b/foo
+  │  @@ -1,1 +1,2 @@
+  │   foo
+  │  +foo
+  │
+  o  one 735f48a31286diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │  diff --git a/foo b/foo
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/foo
+  │  @@ -0,0 +1,1 @@
+  │  +foo
+  │
+  o  zero 471861caabd6diff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,2 @@
+     +baz
+     +baz
+  
 
 
 

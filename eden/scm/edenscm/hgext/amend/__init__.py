@@ -617,7 +617,7 @@ def inmemorymerge(ui, repo, src, dest, base):
     for path, merged in resolved.items():
         mergedctx[path] = context.overlayfilectx(
             src[path],
-            datafunc=lambda: merged,
+            datafunc=lambda data=merged: data,
             ctx=mergedctx,
         )
 

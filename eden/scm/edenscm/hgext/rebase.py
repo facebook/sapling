@@ -958,10 +958,16 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
         basetext = basectx[file].data()
         localtext = ctx[file].data()
         othertext = p1ctx[file].data()
-        ui.status(_("merging %s\n") % file)
+
         m3 = Merge3Text(basetext, localtext, othertext)
+
         # merge_lines() has side effect setting conflicts
         merged = b"".join(m3.merge_lines())
+
+        # Suppress message if merged result is the same as local contents.
+        if merged != localtext:
+            ui.status(_("merging %s\n") % file)
+
         if m3.conflicts:
             conflicts.append(file)
         else:
