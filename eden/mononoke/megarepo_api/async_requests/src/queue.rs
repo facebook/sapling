@@ -184,6 +184,7 @@ mod tests {
     use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use mononoke_types::Timestamp;
     use requests_table::{ClaimedBy, RequestStatus};
 
     use source_control::{
@@ -230,9 +231,9 @@ mod tests {
                     .await?
                     .expect("Request is mising in the DB");
                 assert_eq!(entry.status, RequestStatus::New);
-                assert_eq!(entry.started_processing_at, None);
-                assert_eq!(entry.ready_at, None);
-                assert_eq!(entry.polled_at, None);
+                assert_eq!(entry.started_processing_at, Some(Timestamp::from_timestamp_secs(0)));
+                assert_eq!(entry.ready_at, Some(Timestamp::from_timestamp_secs(0)));
+                assert_eq!(entry.polled_at, Some(Timestamp::from_timestamp_secs(0)));
                 assert_eq!(entry.repo_id,  RepositoryId::new(0));
                 assert_eq!(
                     entry.request_type,
