@@ -26,8 +26,9 @@ use edenapi_types::{
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
     TreeEntry, UploadBonsaiChangeset, UploadBonsaiChangesetsResponse, UploadHgChangeset,
-    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadToken, UploadTreeResponse,
+    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadTreeResponse,
 };
+use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
 use revisionstore::{
@@ -522,45 +523,62 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf /* path */, PyBytes /* hgid */)>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
+    ) -> PyResult<(
+        // TODO(yancouto): Create common struct for this
+        TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>,
+        PyFuture,
+    )> {
         let keys = to_keys(py, &keys)?;
         let store = as_legacystore(py, store)?;
+        let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
 
-        let mut uniques = BTreeSet::new();
-        let data = keys
+        let (content_ids, data): (Vec<_>, Vec<_>) = keys
             .into_iter()
-            .filter_map(|key| {
-                let content = match store.get_file_content(&key).map_pyerr(py) {
-                    Ok(c) => c,
-                    Err(e) => return Some(Err(e)),
-                };
+            .map(|key| {
+                let content = store.get_file_content(&key).map_pyerr(py)?;
                 match content {
                     Some(v) => {
                         let content_id = calc_contentid(&v);
-                        if uniques.insert(content_id) {
-                            Some(Ok((AnyFileContentId::ContentId(content_id), v)))
-                        } else {
-                            // No duplicates
-                            None
-                        }
+                        Ok((content_id, (AnyFileContentId::ContentId(content_id), v)))
                     }
-                    None => Some(
-                        Err(format_err!(
-                            "failed to fetch file content for the key '{}'",
-                            key
-                        ))
-                        .map_pyerr(py),
-                    ),
+                    None => Err(format_err!(
+                        "failed to fetch file content for the key '{}'",
+                        key
+                    ))
+                    .map_pyerr(py),
                 }
             })
             // fail the entire operation if content is missing for some key because this is unexpected
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .unzip();
 
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
                     let response = self.process_files_upload(repo, data).await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                    let file_content_tokens = response
+                        .entries
+                        .try_collect::<Vec<_>>()
+                        .await?
+                        .into_iter()
+                        .map(|token| {
+                            let content_id = match token.data.id {
+                                AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                                _ => bail!(EdenApiError::Other(format_err!(downcast_error))),
+                            };
+                            Ok((content_id, token))
+                        })
+                        .collect::<Result<BTreeMap<_, _>, _>>()?;
+                    let tokens = content_ids.into_iter().enumerate().map(move |(idx, cid)| 
+                        Result::<_, EdenApiError>::Ok(UploadHgFilenodeResponse {
+                            index: idx,
+                            token: file_content_tokens
+                            .get(&cid)
+                            .ok_or_else(|| EdenApiError::Other(format_err!("unexpected error: upload token is missing for ContentId({})", cid)))?.clone(),
+                        })
+                    );
+                    Ok::<_, EdenApiError>((stream::iter(tokens), response.stats))
                 })
             })
             .map_pyerr(py)?

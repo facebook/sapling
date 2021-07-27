@@ -278,7 +278,7 @@ py_class!(pub class client |py| {
             PyPathBuf, /* path */
             PyBytes,   /* hgid */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
     }
 
