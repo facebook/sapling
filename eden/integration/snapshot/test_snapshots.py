@@ -15,6 +15,7 @@ from eden.integration.lib import edenclient
 from . import snapshot as snapshot_mod, verify as verify_mod
 
 
+@unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class Test(unittest.TestCase):
     """Tests to verify the contents of various saved snapshots.
 

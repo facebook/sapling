@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 from eden.fs.cli import fsck as fsck_mod
+from eden.integration.lib import edenclient
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
@@ -190,6 +191,7 @@ class CorruptNextInodeNumber(ExpectedError):
         return error.next_inode_number == self.next_inode_number
 
 
+@unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class SnapshotTestBase(
     unittest.TestCase, TemporaryDirectoryMixin, metaclass=abc.ABCMeta
 ):
