@@ -13,9 +13,9 @@
   `args_blobstore_key` varchar(255) NOT NULL,
   `result_blobstore_key` varchar(255) DEFAULT NULL,
   `created_at` bigint(20) NOT NULL,
-  `started_processing_at` bigint(20) NOT NULL DEFAULT 0,
-  `ready_at` bigint(20) NOT NULL DEFAULT 0,
-  `polled_at` bigint(20) NOT NULL DEFAULT 0,
+  `started_processing_at` bigint(20) DEFAULT NULL,
+  `ready_at` bigint(20) DEFAULT NULL,
+  `polled_at` bigint(20) DEFAULT NULL,
   `status` VARCHAR(32) NOT NULL, -- enum('new','in_progress','ready','polled') NOT NULL DEFAULT 'new',
   `claimed_by` VARCHAR(255) NULL
 );
