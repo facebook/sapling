@@ -30,8 +30,8 @@ use edenapi_types::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
         WireLookupResponse, WireToApiConversionError, WireTreeEntry,
-        WireUploadHgChangesetsResponse, WireUploadHgFilenodeResponse, WireUploadToken,
-        WireUploadTreeResponse,
+        WireUploadBonsaiChangesetsResponse, WireUploadHgChangesetsResponse,
+        WireUploadHgFilenodeResponse, WireUploadToken, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
@@ -39,6 +39,7 @@ use edenapi_types::{
     CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry, FileRequest,
     FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
     LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    UploadBonsaiChangeset, UploadBonsaiChangesetsRequest, UploadBonsaiChangesetsResponse,
     UploadHgChangeset, UploadHgChangesetsRequest, UploadHgChangesetsResponse,
     UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
     UploadTreeRequest, UploadTreeResponse,
@@ -80,6 +81,7 @@ mod paths {
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
     pub const UPLOAD_TREES: &str = "upload/trees";
     pub const UPLOAD_CHANGESETS: &str = "upload/changesets";
+    pub const UPLOAD_BONSAI_CHANGESETS: &str = "upload/changesets/bonsai";
 }
 
 pub struct Client {
@@ -1008,6 +1010,42 @@ impl EdenApi for Client {
 
         Ok(self
             .fetch::<WireUploadHgChangesetsResponse>(vec![request], None)
+            .await?)
+    }
+
+    async fn upload_bonsai_changesets(
+        &self,
+        repo: String,
+        changesets: Vec<UploadBonsaiChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
+        let msg = format!(
+            "Requesting changesets upload for {} item(s)",
+            changesets.len(),
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if changesets.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::UPLOAD_BONSAI_CHANGESETS, Some(&repo))?;
+        let req = UploadBonsaiChangesetsRequest {
+            changesets,
+            mutations,
+        }
+        .to_wire();
+
+        let request = self
+            .configure(Request::post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        Ok(self
+            .fetch::<WireUploadBonsaiChangesetsResponse>(vec![request], None)
             .await?)
     }
 }

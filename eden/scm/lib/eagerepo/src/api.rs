@@ -38,6 +38,8 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadBonsaiChangeset;
+use edenapi::types::UploadBonsaiChangesetsResponse;
 use edenapi::types::UploadHgChangeset;
 use edenapi::types::UploadHgChangesetsResponse;
 use edenapi::types::UploadHgFilenodeResponse;
@@ -497,6 +499,17 @@ impl EdenApi for EagerRepo {
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support upload_changesets endpoint".to_string(),
+        ))
+    }
+
+    async fn upload_bonsai_changesets(
+        &self,
+        _repo: String,
+        _changesets: Vec<UploadBonsaiChangeset>,
+        _mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
         ))

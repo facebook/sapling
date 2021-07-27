@@ -16,7 +16,8 @@ use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     EdenApiServerError, FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
-    LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
+    LookupResponse, TreeAttributes, TreeEntry, UploadBonsaiChangeset,
+    UploadBonsaiChangesetsResponse, UploadHgChangeset, UploadHgChangesetsResponse,
     UploadHgFilenodeResponse, UploadToken, UploadTreeEntry, UploadTreeResponse,
 };
 use http_client::Progress;
@@ -179,6 +180,13 @@ pub trait EdenApi: Send + Sync + 'static {
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError>;
+
+    async fn upload_bonsai_changesets(
+        &self,
+        repo: String,
+        changesets: Vec<UploadBonsaiChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -395,6 +403,17 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_changesets(repo, changesets, mutations)
+            .await
+    }
+
+    async fn upload_bonsai_changesets(
+        &self,
+        repo: String,
+        changesets: Vec<UploadBonsaiChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .upload_bonsai_changesets(repo, changesets, mutations)
             .await
     }
 }
