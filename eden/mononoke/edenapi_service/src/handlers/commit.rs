@@ -10,18 +10,19 @@ use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use edenapi_types::{
     wire::{
         WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
         WireCommitLocationToHashRequestBatch, WireEphemeralPrepareRequest,
-        WireUploadHgChangesetsRequest,
+        WireUploadBonsaiChangesetsRequest, WireUploadHgChangesetsRequest,
     },
     AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, ToWire,
-    UploadHgChangesetsRequest, UploadHgChangesetsResponse, UploadToken,
+    UploadBonsaiChangesetsRequest, UploadBonsaiChangesetsResponse, UploadHgChangesetsRequest,
+    UploadHgChangesetsResponse, UploadToken,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -33,7 +34,7 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
     cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
-    parse_wire_request, to_mutation_entry, to_revlog_changeset,
+    parse_wire_request, to_bonsai_changeset, to_mutation_entry, to_revlog_changeset,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -64,6 +65,11 @@ pub struct HashLookupParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadHgChangesetsParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadBonsaiChangesetsParams {
     repo: String,
 }
 
@@ -311,6 +317,77 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
     let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
     let request = parse_wire_request::<WireUploadHgChangesetsRequest>(state).await?;
     let responses = store_hg_changesets(repo, request)
+        .await
+        .map_err(HttpError::e500)?;
+
+    Ok(cbor_stream_filtered_errors(
+        stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
+    ))
+}
+/// Store list of HgChangesets
+async fn upload_bonsai_changesets_impl(
+    repo: HgRepoContext,
+    request: UploadBonsaiChangesetsRequest,
+) -> Result<Vec<Result<UploadBonsaiChangesetsResponse, Error>>, Error> {
+    let changesets = request.changesets;
+    let mutations = request.mutations;
+    let mut hgid_to_csid = HashMap::new();
+    let indexes = changesets
+        .iter()
+        .enumerate()
+        .map(|(index, cs)| (cs.hg_changeset_id.clone(), index))
+        .collect::<BTreeMap<_, _>>();
+    let changesets_data = changesets
+        .into_iter()
+        .map(|bonsai_cs| {
+            let hg_id = bonsai_cs.hg_changeset_id;
+            let cs = to_bonsai_changeset(bonsai_cs.changeset_content, &hgid_to_csid)?;
+            hgid_to_csid.insert(hg_id.clone(), cs.get_changeset_id());
+            Ok((HgChangesetId::new(HgNodeHash::from(hg_id)), cs))
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let mutation_data = mutations
+        .into_iter()
+        .map(to_mutation_entry)
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let results = repo
+        .store_bonsai_changesets(changesets_data, mutation_data)
+        .await?
+        .into_iter()
+        .map(|r| {
+            r.map(|hg_cs_id| {
+                let hgid = HgId::from(hg_cs_id.into_nodehash());
+                UploadBonsaiChangesetsResponse {
+                    index: indexes.get(&hgid).cloned().unwrap(), // always present
+                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
+                }
+            })
+            .map_err(Error::from)
+        })
+        .collect();
+
+    Ok(results)
+}
+
+/// Upload list of bonsai changesets requested by the client
+pub async fn upload_bonsai_changesets(
+    state: &mut State,
+) -> Result<impl TryIntoResponse, HttpError> {
+    let params = UploadBonsaiChangesetsParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::UploadBonsaiChangesets,
+    ));
+
+    let rctx = RequestContext::borrow_from(state).clone();
+    let sctx = ServerContext::borrow_from(state);
+
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let request = parse_wire_request::<WireUploadBonsaiChangesetsRequest>(state).await?;
+    let responses = upload_bonsai_changesets_impl(repo, request)
         .await
         .map_err(HttpError::e500)?;
 

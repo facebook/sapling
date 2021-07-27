@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::{self, format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::{BlobRepoHg, ChangesetHandle};
+use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
 use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
@@ -376,6 +376,34 @@ impl HgRepoContext {
             .map_err(MononokeError::from)?;
 
         Ok(results)
+    }
+
+    /// Store bonsai changesets and mutations, assuming derivation will yield correct hg ids.
+    pub async fn store_bonsai_changesets(
+        &self,
+        changesets: Vec<(HgChangesetId, BonsaiChangeset)>,
+        mutations: Vec<HgMutationEntry>,
+    ) -> Result<Vec<Result<HgChangesetId, MononokeError>>, MononokeError> {
+        let mut hg_changesets = Vec::new();
+        let blobstore = self.blob_repo().blobstore();
+        let mut response = Vec::new();
+        for (hg_node, bonsai_cs) in changesets {
+            let result = save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs)
+                .await
+                .map(|_| hg_node)
+                .map_err(MononokeError::from);
+            if result.is_ok() {
+                hg_changesets.push(hg_node);
+            }
+            response.push(result);
+        }
+
+        self.blob_repo()
+            .hg_mutation_store()
+            .add_entries(&self.ctx(), hg_changesets.into_iter().collect(), mutations)
+            .await?;
+
+        Ok(response)
     }
 
     /// Request all of the tree nodes in the repo under a given path.

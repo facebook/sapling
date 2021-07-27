@@ -72,7 +72,8 @@ pub use crate::wire::{
         WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse, WireEphemeralPrepareRequest,
         WireEphemeralPrepareResponse, WireExtra, WireHgChangesetContent,
-        WireHgMutationEntryContent, WireUploadHgChangeset, WireUploadHgChangesetsRequest,
+        WireHgMutationEntryContent, WireUploadBonsaiChangesetsRequest,
+        WireUploadBonsaiChangesetsResponse, WireUploadHgChangeset, WireUploadHgChangesetsRequest,
         WireUploadHgChangesetsResponse,
     },
     complete_tree::WireCompleteTreeRequest,
@@ -83,7 +84,7 @@ pub use crate::wire::{
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{
         WireAnyFileContentId, WireContentId, WireDirectoryMetadata, WireDirectoryMetadataRequest,
-        WireFileMetadata, WireFileMetadataRequest, WireSha1, WireSha256,
+        WireFileMetadata, WireFileMetadataRequest, WireFileType, WireSha1, WireSha256,
     },
     token::{WireUploadToken, WireUploadTokenData, WireUploadTokenSignature},
     tree::{

@@ -19,20 +19,24 @@
 //! in implentation, it is possible that conversion failures may occur
 //! in practice.
 
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use smallvec::SmallVec;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str;
 
-use edenapi_types::{HgChangesetContent, HgMutationEntryContent};
+use edenapi_types::{
+    commit::{BonsaiChangesetContent, BonsaiFileChange},
+    token::{UploadTokenData, UploadTokenMetadata},
+    AnyFileContentId, AnyId, HgChangesetContent, HgMutationEntryContent,
+};
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
     blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
 };
 use mononoke_api::path::MononokePath;
-use mononoke_types::DateTime;
 use mononoke_types::MPath;
-use types::{RepoPath, RepoPathBuf};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
+use types::{HgId, RepoPath, RepoPathBuf};
 
 use crate::errors::ErrorKind;
 
@@ -79,6 +83,61 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
         time: DateTime::from_timestamp(cs.time, cs.tz)?,
         user: cs.user,
     })
+}
+
+fn to_bonsai_file_change(fc: BonsaiFileChange) -> Result<FileChange> {
+    // TODO: Verify signature on upload token
+    if let UploadTokenData {
+        id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
+        metadata: Some(UploadTokenMetadata::FileContentTokenMetadata(metadata)),
+    } = fc.upload_token.data
+    {
+        Ok(FileChange::new(
+            content_id.into(),
+            fc.file_type.into(),
+            metadata.content_size,
+            None,
+        ))
+    } else {
+        bail!("Invalid upload token format, missing content id or file size metadata.")
+    }
+}
+
+pub fn to_bonsai_changeset(
+    cs: BonsaiChangesetContent,
+    hgid_to_csid: &HashMap<HgId, ChangesetId>,
+) -> Result<BonsaiChangeset> {
+    BonsaiChangesetMut {
+        parents: cs
+            .hg_parents
+            .into_iter()
+            .map(|hgid| {
+                hgid_to_csid
+                    .get(&hgid)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("HgId missing"))
+            })
+            .collect::<Result<_>>()?,
+        author: cs.author,
+        author_date: DateTime::from_timestamp(cs.time, cs.tz)?,
+        committer: None,
+        committer_date: None,
+        message: cs.message,
+        extra: cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+        file_changes: cs
+            .file_changes
+            .into_iter()
+            .map(|(path, fc)| {
+                let file_change = to_bonsai_file_change(fc)
+                    .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                Ok((
+                    to_mpath(path)?.ok_or_else(|| anyhow!("Missing path"))?,
+                    Some(file_change),
+                ))
+            })
+            .collect::<Result<_>>()?,
+    }
+    .freeze()
 }
 
 pub fn to_mutation_entry(mutation: HgMutationEntryContent) -> Result<HgMutationEntry> {

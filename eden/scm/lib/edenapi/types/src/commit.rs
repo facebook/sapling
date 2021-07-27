@@ -14,7 +14,7 @@ use serde_derive::{Deserialize, Serialize};
 use dag_types::Location;
 use types::{hgid::HgId, Parents, RepoPathBuf};
 
-use crate::{ServerError, UploadToken};
+use crate::{FileType, ServerError, UploadToken};
 
 /// Given a graph location, return `count` hashes following first parent links.
 ///
@@ -244,6 +244,50 @@ pub struct UploadHgChangesetsRequest {
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadHgChangesetsResponse {
+    pub index: usize,
+    pub token: UploadToken,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct BonsaiExtra {
+    pub key: String,
+    pub value: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct BonsaiFileChange {
+    pub file_type: FileType,
+    /// Token proving the file was uploaded, and containing its content id and size
+    pub upload_token: UploadToken,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct BonsaiChangesetContent {
+    pub hg_parents: Parents,
+    pub author: String,
+    pub time: i64,
+    pub tz: i32,
+    pub extra: Vec<BonsaiExtra>,
+    pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadBonsaiChangeset {
+    pub hg_changeset_id: HgId,
+    pub changeset_content: BonsaiChangesetContent,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadBonsaiChangesetsRequest {
+    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
+    pub changesets: Vec<UploadBonsaiChangeset>,
+    /// list of mutation entries for the uploading changesets
+    pub mutations: Vec<HgMutationEntryContent>,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadBonsaiChangesetsResponse {
     pub index: usize,
     pub token: UploadToken,
 }

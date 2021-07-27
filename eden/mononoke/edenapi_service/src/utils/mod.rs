@@ -26,7 +26,10 @@ pub use cbor::{
     cbor_mime, cbor_stream_filtered_errors, custom_cbor_stream, parse_cbor_request,
     parse_wire_request, to_cbor_bytes,
 };
-pub use convert::{to_hg_path, to_mononoke_path, to_mpath, to_mutation_entry, to_revlog_changeset};
+pub use convert::{
+    to_bonsai_changeset, to_hg_path, to_mononoke_path, to_mpath, to_mutation_entry,
+    to_revlog_changeset,
+};
 
 pub async fn get_repo(
     sctx: &ServerContext,

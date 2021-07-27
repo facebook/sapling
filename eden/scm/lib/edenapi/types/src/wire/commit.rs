@@ -13,14 +13,16 @@ use dag_types::Location;
 use types::HgId;
 
 use crate::commit::{
-    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
-    HgChangesetContent, HgMutationEntryContent, UploadHgChangeset, UploadHgChangesetsRequest,
+    BonsaiChangesetContent, BonsaiExtra, BonsaiFileChange, CommitHashLookupRequest,
+    CommitHashLookupResponse, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
+    HgMutationEntryContent, UploadBonsaiChangeset, UploadBonsaiChangesetsRequest,
+    UploadBonsaiChangesetsResponse, UploadHgChangeset, UploadHgChangesetsRequest,
     UploadHgChangesetsResponse,
 };
 use crate::wire::{
-    is_default, ToApi, ToWire, WireHgId, WireParents, WireRepoPathBuf, WireResult,
+    is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents, WireRepoPathBuf, WireResult,
     WireToApiConversionError, WireUploadToken,
 };
 
@@ -624,6 +626,232 @@ impl ToApi for WireUploadHgChangesetsResponse {
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(UploadHgChangesetsResponse {
+            index: self.index,
+            token: self.token.to_api()?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireBonsaiExtra {
+    #[serde(rename = "1")]
+    pub key: String,
+
+    #[serde(rename = "2")]
+    pub value: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireBonsaiFileChange {
+    #[serde(rename = "1")]
+    pub file_type: WireFileType,
+
+    #[serde(rename = "2")]
+    pub upload_token: WireUploadToken,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireBonsaiChangesetContent {
+    #[serde(rename = "1")]
+    pub hg_parents: WireParents,
+
+    #[serde(rename = "2")]
+    pub author: String,
+
+    #[serde(rename = "3")]
+    pub time: i64,
+
+    #[serde(rename = "4")]
+    pub tz: i32,
+
+    #[serde(rename = "5")]
+    pub extra: Vec<WireBonsaiExtra>,
+
+    #[serde(rename = "6")]
+    pub file_changes: Vec<(WireRepoPathBuf, WireBonsaiFileChange)>,
+
+    #[serde(rename = "7")]
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadBonsaiChangeset {
+    #[serde(rename = "1")]
+    pub hg_changeset_id: WireHgId,
+
+    #[serde(rename = "2")]
+    pub changeset_content: WireBonsaiChangesetContent,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadBonsaiChangesetsRequest {
+    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
+    #[serde(rename = "1")]
+    pub changesets: Vec<WireUploadBonsaiChangeset>,
+
+    /// list of mutation entries for the uploading changesets
+    #[serde(rename = "2")]
+    pub mutations: Vec<WireHgMutationEntryContent>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireUploadBonsaiChangesetsResponse {
+    #[serde(rename = "1")]
+    pub index: usize,
+
+    #[serde(rename = "2")]
+    pub token: WireUploadToken,
+}
+
+impl ToWire for BonsaiExtra {
+    type Wire = WireBonsaiExtra;
+
+    fn to_wire(self) -> Self::Wire {
+        WireBonsaiExtra {
+            key: self.key,
+            value: self.value,
+        }
+    }
+}
+
+impl ToWire for BonsaiFileChange {
+    type Wire = WireBonsaiFileChange;
+    fn to_wire(self) -> Self::Wire {
+        WireBonsaiFileChange {
+            file_type: self.file_type.to_wire(),
+            upload_token: self.upload_token.to_wire(),
+        }
+    }
+}
+
+impl ToWire for BonsaiChangesetContent {
+    type Wire = WireBonsaiChangesetContent;
+
+    fn to_wire(self) -> Self::Wire {
+        WireBonsaiChangesetContent {
+            hg_parents: self.hg_parents.to_wire(),
+            author: self.author,
+            time: self.time,
+            tz: self.tz,
+            extra: self.extra.to_wire(),
+            file_changes: self
+                .file_changes
+                .into_iter()
+                .map(|(a, b)| (a.to_wire(), b.to_wire()))
+                .collect(),
+            message: self.message,
+        }
+    }
+}
+
+impl ToWire for UploadBonsaiChangeset {
+    type Wire = WireUploadBonsaiChangeset;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadBonsaiChangeset {
+            hg_changeset_id: self.hg_changeset_id.to_wire(),
+            changeset_content: self.changeset_content.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireBonsaiExtra {
+    type Api = BonsaiExtra;
+    type Error = std::convert::Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(BonsaiExtra {
+            key: self.key,
+            value: self.value,
+        })
+    }
+}
+
+impl ToApi for WireBonsaiFileChange {
+    type Api = BonsaiFileChange;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(BonsaiFileChange {
+            file_type: self.file_type.to_api()?,
+            upload_token: self.upload_token.to_api()?,
+        })
+    }
+}
+
+impl ToApi for WireUploadBonsaiChangeset {
+    type Api = UploadBonsaiChangeset;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadBonsaiChangeset {
+            hg_changeset_id: self.hg_changeset_id.to_api()?,
+            changeset_content: self.changeset_content.to_api()?,
+        })
+    }
+}
+
+impl ToApi for WireBonsaiChangesetContent {
+    type Api = BonsaiChangesetContent;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(BonsaiChangesetContent {
+            hg_parents: self.hg_parents.to_api()?,
+            author: self.author,
+            time: self.time,
+            tz: self.tz,
+            extra: self.extra.to_api()?,
+            file_changes: self
+                .file_changes
+                .into_iter()
+                .map(|(a, b)| Ok((a.to_api()?, b.to_api()?)))
+                .collect::<Result<_, Self::Error>>()?,
+            message: self.message,
+        })
+    }
+}
+
+impl ToWire for UploadBonsaiChangesetsRequest {
+    type Wire = WireUploadBonsaiChangesetsRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadBonsaiChangesetsRequest {
+            changesets: self.changesets.to_wire(),
+            mutations: self.mutations.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadBonsaiChangesetsRequest {
+    type Api = UploadBonsaiChangesetsRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadBonsaiChangesetsRequest {
+            changesets: self.changesets.to_api()?,
+            mutations: self.mutations.to_api()?,
+        })
+    }
+}
+
+impl ToWire for UploadBonsaiChangesetsResponse {
+    type Wire = WireUploadBonsaiChangesetsResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        WireUploadBonsaiChangesetsResponse {
+            index: self.index,
+            token: self.token.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireUploadBonsaiChangesetsResponse {
+    type Api = UploadBonsaiChangesetsResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(UploadBonsaiChangesetsResponse {
             index: self.index,
             token: self.token.to_api()?,
         })

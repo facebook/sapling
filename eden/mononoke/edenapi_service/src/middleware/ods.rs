@@ -37,6 +37,7 @@ define_stats! {
     upload_hg_filenodes_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     upload_hg_changesets_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    upload_bonsai_changesets_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     ephemeral_prepare_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
@@ -82,6 +83,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 UploadHgFilenodes => STATS::upload_hg_filenodes_duration_ms.add_value(dur_ms),
                 UploadTrees => STATS::upload_trees_duration_ms.add_value(dur_ms),
                 UploadHgChangesets => STATS::upload_hg_changesets_duration_ms.add_value(dur_ms),
+                UploadBonsaiChangesets => {
+                    STATS::upload_bonsai_changesets_duration_ms.add_value(dur_ms)
+                }
                 EphemeralPrepare => STATS::ephemeral_prepare_duration_ms.add_value(dur_ms),
             }
         }
