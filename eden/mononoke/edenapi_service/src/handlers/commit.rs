@@ -337,15 +337,15 @@ async fn upload_bonsai_changesets_impl(
         .enumerate()
         .map(|(index, cs)| (cs.hg_changeset_id.clone(), index))
         .collect::<BTreeMap<_, _>>();
-    let changesets_data = changesets
-        .into_iter()
-        .map(|bonsai_cs| {
-            let hg_id = bonsai_cs.hg_changeset_id;
-            let cs = to_bonsai_changeset(bonsai_cs.changeset_content, &hgid_to_csid)?;
-            hgid_to_csid.insert(hg_id.clone(), cs.get_changeset_id());
-            Ok((HgChangesetId::new(HgNodeHash::from(hg_id)), cs))
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
+    // Here we are assuming the changesets are sorted topologically
+    // So when we process a changeset, all its parents were already processed
+    let mut changesets_data = Vec::with_capacity(changesets.len());
+    for bonsai_cs in changesets {
+        let hg_id = bonsai_cs.hg_changeset_id;
+        let cs = to_bonsai_changeset(&repo, bonsai_cs.changeset_content, &hgid_to_csid).await?;
+        hgid_to_csid.insert(hg_id.clone(), cs.get_changeset_id());
+        changesets_data.push((HgChangesetId::new(HgNodeHash::from(hg_id)), cs))
+    }
 
     let mutation_data = mutations
         .into_iter()

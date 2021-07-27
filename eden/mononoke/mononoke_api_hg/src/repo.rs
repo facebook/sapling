@@ -92,6 +92,17 @@ impl HgRepoContext {
         })
     }
 
+    /// Get changeset id from hg changeset id
+    pub async fn get_bonsai_from_hg(
+        &self,
+        hgid: HgChangesetId,
+    ) -> Result<Option<ChangesetId>, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .get_bonsai_from_hg(self.ctx().clone(), hgid)
+            .await?)
+    }
+
     /// Fetch file content size
     pub async fn fetch_file_content_size(
         &self,
