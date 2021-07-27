@@ -872,13 +872,13 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
       }
       progress10pct = progress;
     }
-    if (auto callback = progressCallback) {
-      callback(10);
-    }
     FsOverlay::formatSubdirShardPath(shardID, subdir);
     auto subdirPath = fs_->getLocalDir() + PathComponentPiece{subdir};
 
     readInodeSubdir(subdirPath, shardID);
+  }
+  if (auto callback = progressCallback) {
+    callback(10);
   }
   XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": scanned " << inodes_.size()
              << " inodes";
