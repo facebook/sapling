@@ -25,7 +25,7 @@ use edenapi_types::{
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
     HistoryEntry, LookupResponse, TreeEntry, UploadHgChangeset, UploadHgChangesetsResponse,
-    UploadHgFilenodeResponse, UploadTreeResponse,
+    UploadHgFilenodeResponse, UploadToken, UploadTreeResponse,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
@@ -509,6 +509,61 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn uploadfileblobs_py(
+        self: Arc<Self>,
+        py: Python,
+        store: PyObject,
+        repo: String,
+        keys: Vec<(PyPathBuf /* path */, PyBytes /* hgid */)>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
+        let keys = to_keys(py, &keys)?;
+        let store = as_legacystore(py, store)?;
+
+        let mut uniques = BTreeSet::new();
+        let data = keys
+            .into_iter()
+            .filter_map(|key| {
+                let content = match store.get_file_content(&key).map_pyerr(py) {
+                    Ok(c) => c,
+                    Err(e) => return Some(Err(e)),
+                };
+                match content {
+                    Some(v) => {
+                        let content_id = calc_contentid(&v);
+                        if uniques.insert(content_id) {
+                            Some(Ok((AnyFileContentId::ContentId(content_id), v)))
+                        } else {
+                            // No duplicates
+                            None
+                        }
+                    }
+                    None => Some(
+                        Err(format_err!(
+                            "failed to fetch file content for the key '{}'",
+                            key
+                        ))
+                        .map_pyerr(py),
+                    ),
+                }
+            })
+            // fail the entire operation if content is missing for some key because this is unexpected
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self.process_files_upload(repo, data).await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
 
         let responses_py = responses.map_ok(Serde).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;

@@ -21,7 +21,7 @@ use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData,
     HgChangesetContent, HgMutationEntryContent, LookupResponse, UploadHgChangesetsResponse,
-    UploadHgFilenodeResponse, UploadTreeResponse,
+    UploadHgFilenodeResponse, UploadToken, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -266,6 +266,19 @@ py_class!(pub class client |py| {
         -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
     {
         self.inner(py).clone().lookup_trees(py, repo, hgids)
+    }
+
+    /// Upload file contents only
+    def uploadfileblobs(
+        &self,
+        store: PyObject,
+        repo: String,
+        keys: Vec<(
+            PyPathBuf, /* path */
+            PyBytes,   /* hgid */
+        )>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
+        self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
     }
 
     /// Upload file contents and hg filenodes
