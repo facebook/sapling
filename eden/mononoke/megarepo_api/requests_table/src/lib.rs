@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use mononoke_types::RepositoryId;
+use mononoke_types::{RepositoryId, Timestamp};
 
 mod store;
 mod types;
@@ -67,6 +67,31 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         ctx: &CoreContext,
         req_id: &RequestId,
         claimed_by: &ClaimedBy,
+    ) -> Result<bool>;
+
+    /// Update the inprogress_last_updated_at timestamp
+    /// This is used to mark that request is still executing
+    async fn update_in_progress_timestamp(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+    ) -> Result<bool>;
+
+    /// Find requests that have "inprogress" status but which timestamp
+    /// hasn't been updated after `abandoned_timestamp`.
+    async fn find_abandoned_requests(
+        &self,
+        ctx: &CoreContext,
+        abandoned_timestamp: Timestamp,
+    ) -> Result<Vec<RequestId>>;
+
+    /// If `request_id` is still abandoned, then mark it as new so that
+    /// somebody else can pick it up
+    async fn mark_abandoned_request_as_new(
+        &self,
+        ctx: &CoreContext,
+        request_id: RequestId,
+        abandoned_timestamp: Timestamp,
     ) -> Result<bool>;
 
     /// Mark request as ready

@@ -31,6 +31,7 @@ queries! {
         Option<Timestamp>,
         Option<Timestamp>,
         Option<Timestamp>,
+        Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
     ) {
@@ -42,6 +43,7 @@ queries! {
             result_blobstore_key,
             created_at,
             started_processing_at,
+            inprogress_last_updated_at,
             ready_at,
             polled_at,
             status,
@@ -61,6 +63,7 @@ queries! {
         Option<Timestamp>,
         Option<Timestamp>,
         Option<Timestamp>,
+        Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
     ) {
@@ -72,6 +75,7 @@ queries! {
             result_blobstore_key,
             created_at,
             started_processing_at,
+            inprogress_last_updated_at,
             ready_at,
             polled_at,
             status,
@@ -91,6 +95,7 @@ queries! {
         Option<Timestamp>,
         Option<Timestamp>,
         Option<Timestamp>,
+        Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
     ) {
@@ -102,6 +107,7 @@ queries! {
             result_blobstore_key,
             created_at,
             started_processing_at,
+            inprogress_last_updated_at,
             ready_at,
             polled_at,
             status,
@@ -121,11 +127,52 @@ queries! {
         "
     }
 
-    write MarkRequestInProgress(id: RowId, request_type: RequestType, started_processing_at: Timestamp, claimed_by: ClaimedBy) {
+    read FindAbandonedRequests(abandoned_timestamp: Timestamp) -> (RowId, RequestType) {
+        "
+        SELECT id, request_type
+        FROM long_running_request_queue
+        WHERE status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
+        "
+    }
+
+    write MarkRequestAsNewAgainIfAbandoned(
+        id: RowId,
+        request_type: RequestType,
+        abandoned_timestamp: Timestamp,
+    )
+    {
         none,
         "UPDATE long_running_request_queue
-         SET started_processing_at = {started_processing_at}, status = 'inprogress', claimed_by = {claimed_by}
+         SET status = 'new', claimed_by = NULL, inprogress_last_updated_at = NULL
+         WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
+        "
+    }
+
+    write MarkRequestInProgress(
+        id: RowId,
+        request_type: RequestType,
+        started_processing_at: Timestamp,
+        claimed_by: ClaimedBy,
+    ) {
+        none,
+        "UPDATE long_running_request_queue
+         SET started_processing_at = {started_processing_at},
+             inprogress_last_updated_at = {started_processing_at},
+             status = 'inprogress',
+             claimed_by = {claimed_by}
          WHERE id = {id} AND request_type = {request_type} AND status = 'new'
+        "
+    }
+
+    write UpdateInProgressTimestamp(
+        id: RowId,
+        request_type: RequestType,
+        inprogress_last_updated_at: Timestamp,
+    ) {
+        none,
+        "UPDATE long_running_request_queue
+         SET inprogress_last_updated_at = {inprogress_last_updated_at}
+         WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress'
         "
     }
 
@@ -166,6 +213,7 @@ fn row_to_entry(
         Option<Timestamp>,
         Option<Timestamp>,
         Option<Timestamp>,
+        Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
     ),
@@ -179,6 +227,7 @@ fn row_to_entry(
         result_blobstore_key,
         created_at,
         started_processing_at,
+        inprogress_last_updated_at,
         ready_at,
         polled_at,
         status,
@@ -193,6 +242,7 @@ fn row_to_entry(
         result_blobstore_key,
         created_at,
         started_processing_at,
+        inprogress_last_updated_at,
         ready_at,
         polled_at,
         status,
@@ -296,6 +346,49 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         Ok(res.affected_rows() > 0)
     }
 
+    async fn update_in_progress_timestamp(
+        &self,
+        _ctx: &CoreContext,
+        req_id: &RequestId,
+    ) -> Result<bool> {
+        let res = UpdateInProgressTimestamp::query(
+            &self.connections.write_connection,
+            &req_id.0,
+            &req_id.1,
+            &Timestamp::now(),
+        )
+        .await?;
+        Ok(res.affected_rows() > 0)
+    }
+
+    async fn find_abandoned_requests(
+        &self,
+        _ctx: &CoreContext,
+        abandoned_timestamp: Timestamp,
+    ) -> Result<Vec<RequestId>> {
+        let rows =
+            FindAbandonedRequests::query(&self.connections.write_connection, &abandoned_timestamp)
+                .await?;
+        Ok(rows.into_iter().map(|(id, ty)| RequestId(id, ty)).collect())
+    }
+
+    async fn mark_abandoned_request_as_new(
+        &self,
+        _ctx: &CoreContext,
+        request_id: RequestId,
+        abandoned_timestamp: Timestamp,
+    ) -> Result<bool> {
+        let res = MarkRequestAsNewAgainIfAbandoned::query(
+            &self.connections.write_connection,
+            &request_id.0,
+            &request_id.1,
+            &abandoned_timestamp,
+        )
+        .await?;
+
+        Ok(res.affected_rows() > 0)
+    }
+
     async fn mark_ready(
         &self,
         _ctx: &CoreContext,
@@ -385,3 +478,162 @@ impl SqlConstruct for SqlLongRunningRequestsQueue {
 }
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlLongRunningRequestsQueue {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use fbinit::FacebookInit;
+    use std::time::Duration;
+
+    #[fbinit::test]
+    async fn test_mark_inprogress(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let id = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                &RepositoryId::new(0),
+                &BookmarkName::new("book")?,
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert!(request.inprogress_last_updated_at.is_none());
+
+        queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .await?;
+
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert!(request.inprogress_last_updated_at.is_some());
+
+        let timestamp = request.inprogress_last_updated_at.unwrap();
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let updated = queue
+            .update_in_progress_timestamp(&ctx, &RequestId(request.id, request.request_type))
+            .await?;
+        assert!(updated);
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        // Check that timestamp was updated
+        assert!(request.unwrap().inprogress_last_updated_at.unwrap() > timestamp);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_find_abandoned_requests(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let id = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                &RepositoryId::new(0),
+                &BookmarkName::new("book")?,
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        // This claims new request from queue and makes it inprogress
+        let req = queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .await?;
+        assert!(req.is_some());
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        let now = Timestamp::now();
+        let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
+        let abandoned = queue
+            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .await?;
+        assert_eq!(abandoned.len(), 1);
+        assert_eq!(abandoned[0].0, id);
+
+        // Now update timestamp of the request, and check that it's not considered
+        // abandoned anymore
+        let updated = queue
+            .update_in_progress_timestamp(&ctx, &abandoned[0])
+            .await?;
+        assert!(updated);
+        assert_eq!(
+            queue
+                .find_abandoned_requests(&ctx, abandoned_timestamp)
+                .await?,
+            vec![]
+        );
+
+        // Now mark ready first, then make sure that update_in_progress_timestamp does nothing
+        assert!(
+            queue
+                .mark_ready(&ctx, &abandoned[0], BlobstoreKey("key".to_string()))
+                .await?
+        );
+        assert!(
+            !queue
+                .update_in_progress_timestamp(&ctx, &abandoned[0])
+                .await?
+        );
+
+        // And also check that marking as new does nothing on a completed request
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        let now = Timestamp::now();
+        let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
+        assert!(
+            !queue
+                .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp)
+                .await?
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_mark_as_new(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let id = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                &RepositoryId::new(0),
+                &BookmarkName::new("book")?,
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        // This claims new request from queue and makes it inprogress
+        let req = queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .await?;
+        assert!(req.is_some());
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        let now = Timestamp::now();
+        let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
+        let abandoned = queue
+            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .await?;
+        assert_eq!(abandoned.len(), 1);
+        assert_eq!(abandoned[0].0, id);
+
+        let res = queue
+            .mark_abandoned_request_as_new(&ctx, abandoned[0].clone(), abandoned_timestamp)
+            .await?;
+        assert!(res);
+
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert_eq!(request.status, RequestStatus::New);
+
+        Ok(())
+    }
+}

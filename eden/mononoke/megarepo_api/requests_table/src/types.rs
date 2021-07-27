@@ -111,6 +111,7 @@ pub struct LongRunningRequestEntry {
     pub result_blobstore_key: Option<BlobstoreKey>,
     pub created_at: Timestamp,
     pub started_processing_at: Option<Timestamp>,
+    pub inprogress_last_updated_at: Option<Timestamp>,
     pub ready_at: Option<Timestamp>,
     pub polled_at: Option<Timestamp>,
     pub status: RequestStatus,

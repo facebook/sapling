@@ -10,24 +10,35 @@
 //!
 //! In can grab requests from the queue, compute the result and update the
 //! requests table with a response.
+//! One important consideration to keep in mind - worker executes request "at least once"
+//! but not exactly once i.e. the same request might be executed a few times.
 
 use crate::methods::megarepo_async_request_compute;
 use async_requests::{
     types::MegarepoAsynchronousRequestParams, AsyncMethodRequestQueue, ClaimedBy, RequestId,
 };
 use async_stream::try_stream;
+use cloned::cloned;
 use context::CoreContext;
-use futures::stream::{StreamExt, TryStreamExt};
 use futures::Stream;
+use futures::{
+    future::{abortable, select, Either},
+    pin_mut,
+    stream::{StreamExt, TryStreamExt},
+};
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
-use mononoke_types::RepositoryId;
-use slog::{debug, info};
+use mononoke_types::{RepositoryId, Timestamp};
+use slog::{debug, error, info};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
+// Number of seconds after which inprogress request is considered abandoned
+// if it hasn't updated inprogress timestamp
+const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
+const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestWorker {
@@ -96,11 +107,38 @@ impl AsyncMethodRequestWorker {
     ) -> impl Stream<Item = Result<(RequestId, MegarepoAsynchronousRequestParams), MegarepoError>>
     {
         let claimed_by = ClaimedBy(self.name.clone());
+        let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
+        Self::request_stream_inner(
+            ctx,
+            claimed_by,
+            queues_with_repos,
+            will_exit,
+            sleep_time,
+            ABANDONED_REQUEST_THRESHOLD_SECS,
+        )
+    }
+
+    fn request_stream_inner(
+        ctx: CoreContext,
+        claimed_by: ClaimedBy,
+        queues_with_repos: Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>,
+        will_exit: Arc<AtomicBool>,
+        sleep_time: Duration,
+        abandoned_threshold_secs: i64,
+    ) -> impl Stream<Item = Result<(RequestId, MegarepoAsynchronousRequestParams), MegarepoError>>
+    {
         try_stream! {
-            let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
             'outer: loop {
                 let mut yielded = false;
                 for (repo_ids, queue) in &queues_with_repos {
+                    let now = Timestamp::now();
+                    let abandoned_timestamp = Timestamp::from_timestamp_secs(
+                        now.timestamp_seconds() - abandoned_threshold_secs,
+                    );
+                    let requests = queue.find_abandoned_requests(&ctx, abandoned_timestamp).await?;
+                    for req_id in requests {
+                        queue.mark_abandoned_request_as_new(&ctx, req_id, abandoned_timestamp).await?;
+                    }
                     if will_exit.load(Ordering::Relaxed) {
                         break 'outer;
                     }
@@ -122,7 +160,6 @@ impl AsyncMethodRequestWorker {
         }
     }
 
-
     /// Params into stored response. Doesn't mark it as "in progress" (as this is done during dequeueing).
     /// Returns true if the result was successfully stored. Returns false if we
     /// lost the race (the request table was updated).
@@ -133,6 +170,10 @@ impl AsyncMethodRequestWorker {
         params: MegarepoAsynchronousRequestParams,
     ) -> Result<bool, MegarepoError> {
         let target = params.target()?.clone();
+        let queue = self
+            .megarepo
+            .async_method_request_queue(&ctx, &target)
+            .await?;
 
         info!(
             ctx.logger(),
@@ -145,22 +186,186 @@ impl AsyncMethodRequestWorker {
         );
 
         // Do the actual work.
-        let result = megarepo_async_request_compute(&ctx, &self.megarepo, params).await;
-        info!(
-            ctx.logger(),
-            "[{}] request complete, saving result", &req_id.0
+        let work_fut = megarepo_async_request_compute(&ctx, &self.megarepo, params);
+
+        // Start the loop that would keep saying that request is still being
+        // processed
+        let (keep_alive, keep_alive_abort_handle) = abortable({
+            cloned!(ctx, req_id, queue);
+            async move { Self::keep_alive_loop(&ctx, &req_id, &queue).await }
+        });
+
+        let keep_alive = tokio::spawn(keep_alive);
+
+        pin_mut!(work_fut);
+        pin_mut!(keep_alive);
+        match select(work_fut, keep_alive).await {
+            Either::Left((result, _)) => {
+                // We completed the request - let's mark it as complete
+                keep_alive_abort_handle.abort();
+                info!(
+                    ctx.logger(),
+                    "[{}] request complete, saving result", &req_id.0
+                );
+
+                // Save the result.
+                let updated = queue.complete(&ctx, &req_id, result).await?;
+
+                info!(ctx.logger(), "[{}] result saved", &req_id.0);
+
+                Ok(updated)
+            }
+            Either::Right((res, _)) => {
+                // We haven't completed the request, and failed to update
+                // inprogress timestamp. Most likely it means that other
+                // worker has completed it
+
+                res.map_err(MegarepoError::internal)?
+                    .map_err(MegarepoError::internal)?;
+                info!(
+                    ctx.logger(),
+                    "[{}] was completed by other worker, stopping", &req_id.0
+                );
+                Ok(false)
+            }
+        }
+    }
+
+    async fn keep_alive_loop(
+        ctx: &CoreContext,
+        req_id: &RequestId,
+        queue: &AsyncMethodRequestQueue,
+    ) {
+        loop {
+            let res = queue.update_in_progress_timestamp(&ctx, &req_id).await;
+            match res {
+                Ok(res) => {
+                    // Weren't able to update inprogress timestamp - that probably means
+                    // that request was completed by someone else. Exiting
+                    if !res {
+                        break;
+                    }
+                }
+                Err(err) => {
+                    error!(
+                        ctx.logger(),
+                        "[{}] failed to update inprogress timestamp: {:?}", req_id.0, err
+                    )
+                }
+            }
+            tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use anyhow::Error;
+    use fbinit::FacebookInit;
+    use megarepo_configs::types::Target as ThriftTarget;
+    use requests_table::RequestType;
+    use source_control as thrift;
+    use std::sync::atomic::Ordering;
+
+    #[fbinit::test]
+    async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
+        let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let params = thrift::MegarepoSyncChangesetParams {
+            cs_id: vec![],
+            source_name: "name".to_string(),
+            target: ThriftTarget {
+                repo_id: 0,
+                bookmark: "book".to_string(),
+            },
+        };
+        q.enqueue(ctx.clone(), params).await?;
+
+        let will_exit = Arc::new(AtomicBool::new(false));
+        let s = AsyncMethodRequestWorker::request_stream_inner(
+            ctx,
+            ClaimedBy("name".to_string()),
+            vec![(vec![RepositoryId::new(0)], q)],
+            will_exit.clone(),
+            Duration::from_millis(100),
+            ABANDONED_REQUEST_THRESHOLD_SECS,
         );
 
-        // Save the result.
-        let updated = self
-            .megarepo
-            .async_method_request_queue(&ctx, &target)
-            .await?
-            .complete(&ctx, &req_id, result)
+        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        will_exit.store(true, Ordering::Relaxed);
+        let res = s.await??;
+        assert_eq!(res.len(), 1);
+        assert_eq!(
+            res[0].0.1,
+            RequestType("megarepo_sync_changeset".to_string())
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
+        let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let params = thrift::MegarepoSyncChangesetParams {
+            cs_id: vec![],
+            source_name: "name".to_string(),
+            target: ThriftTarget {
+                repo_id: 0,
+                bookmark: "book".to_string(),
+            },
+        };
+        q.enqueue(ctx.clone(), params).await?;
+
+        // Grab it from the queue...
+        let dequed = q
+            .dequeue(
+                &ctx,
+                &ClaimedBy("name".to_string()),
+                &[RepositoryId::new(0)],
+            )
             .await?;
+        assert!(dequed.is_some());
 
-        info!(ctx.logger(), "[{}] result saved", &req_id.0);
+        // ... and check that the queue is empty now...
+        let will_exit = Arc::new(AtomicBool::new(false));
+        let s = AsyncMethodRequestWorker::request_stream_inner(
+            ctx.clone(),
+            ClaimedBy("name".to_string()),
+            vec![(vec![RepositoryId::new(0)], q.clone())],
+            will_exit.clone(),
+            Duration::from_millis(100),
+            ABANDONED_REQUEST_THRESHOLD_SECS,
+        );
 
-        Ok(updated)
+        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        will_exit.store(true, Ordering::Relaxed);
+        let res = s.await??;
+        assert_eq!(res, vec![]);
+
+
+        // ... now make it "abandoned", and make sure we reclaim it
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let will_exit = Arc::new(AtomicBool::new(false));
+        let s = AsyncMethodRequestWorker::request_stream_inner(
+            ctx,
+            ClaimedBy("name".to_string()),
+            vec![(vec![RepositoryId::new(0)], q)],
+            will_exit.clone(),
+            Duration::from_millis(100),
+            1, // 1 second
+        );
+
+        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        will_exit.store(true, Ordering::Relaxed);
+        let res = s.await??;
+        assert_eq!(res.len(), 1);
+
+        Ok(())
     }
 }

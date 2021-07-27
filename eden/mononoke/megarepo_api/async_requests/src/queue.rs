@@ -14,7 +14,7 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
-use mononoke_types::RepositoryId;
+use mononoke_types::{RepositoryId, Timestamp};
 use requests_table::{
     BlobstoreKey, LongRunningRequestsQueue, RequestType, SqlLongRunningRequestsQueue,
 };
@@ -176,6 +176,37 @@ impl AsyncMethodRequestQueue {
                 }
             }
         }
+    }
+
+    pub async fn update_in_progress_timestamp(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+    ) -> Result<bool, MegarepoError> {
+        Ok(self.table.update_in_progress_timestamp(ctx, req_id).await?)
+    }
+
+    pub async fn find_abandoned_requests(
+        &self,
+        ctx: &CoreContext,
+        abandoned_timestamp: Timestamp,
+    ) -> Result<Vec<RequestId>, MegarepoError> {
+        Ok(self
+            .table
+            .find_abandoned_requests(ctx, abandoned_timestamp)
+            .await?)
+    }
+
+    pub async fn mark_abandoned_request_as_new(
+        &self,
+        ctx: &CoreContext,
+        request_id: RequestId,
+        abandoned_timestamp: Timestamp,
+    ) -> Result<bool, MegarepoError> {
+        Ok(self
+            .table
+            .mark_abandoned_request_as_new(ctx, request_id, abandoned_timestamp)
+            .await?)
     }
 }
 
