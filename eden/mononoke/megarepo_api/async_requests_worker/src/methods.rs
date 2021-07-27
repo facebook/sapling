@@ -85,7 +85,6 @@ async fn megarepo_change_target_config(
 /// funtion and returns the computation result. This function doesn't return
 /// `Result` as both successfull computation and error are part of
 /// `MegarepoAsynchronousRequestResult` structure.
-#[allow(dead_code)]
 pub(crate) async fn megarepo_async_request_compute(
     ctx: &CoreContext,
     megarepo_api: &MegarepoApi,

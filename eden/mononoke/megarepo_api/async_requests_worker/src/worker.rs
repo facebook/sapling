@@ -27,6 +27,7 @@ use futures::{
     stream::{StreamExt, TryStreamExt},
 };
 use megarepo_api::MegarepoApi;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use mononoke_types::{RepositoryId, Timestamp};
 use slog::{debug, error, info};
@@ -131,14 +132,11 @@ impl AsyncMethodRequestWorker {
             'outer: loop {
                 let mut yielded = false;
                 for (repo_ids, queue) in &queues_with_repos {
-                    let now = Timestamp::now();
-                    let abandoned_timestamp = Timestamp::from_timestamp_secs(
-                        now.timestamp_seconds() - abandoned_threshold_secs,
-                    );
-                    let requests = queue.find_abandoned_requests(&ctx, abandoned_timestamp).await?;
-                    for req_id in requests {
-                        queue.mark_abandoned_request_as_new(&ctx, req_id, abandoned_timestamp).await?;
-                    }
+                    Self::cleanup_abandoned_requests(
+                        &ctx,
+                        &queue,
+                        abandoned_threshold_secs
+                    ).await?;
                     if will_exit.load(Ordering::Relaxed) {
                         break 'outer;
                     }
@@ -160,6 +158,38 @@ impl AsyncMethodRequestWorker {
         }
     }
 
+    async fn cleanup_abandoned_requests(
+        ctx: &CoreContext,
+        queue: &AsyncMethodRequestQueue,
+        abandoned_threshold_secs: i64,
+    ) -> Result<(), MegarepoError> {
+        let now = Timestamp::now();
+        let abandoned_timestamp =
+            Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
+        let requests = queue
+            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .await?;
+        if !requests.is_empty() {
+            ctx.scuba().clone().log_with_msg(
+                "Find requests to abandon",
+                Some(format!("{}", requests.len())),
+            );
+        }
+
+        for req_id in requests {
+            if queue
+                .mark_abandoned_request_as_new(&ctx, req_id.clone(), abandoned_timestamp)
+                .await?
+            {
+                ctx.scuba()
+                    .clone()
+                    .add("request_id", req_id.0.0)
+                    .log_with_msg("Abandoned request", None);
+            }
+        }
+        Ok(())
+    }
+
     /// Params into stored response. Doesn't mark it as "in progress" (as this is done during dequeueing).
     /// Returns true if the result was successfully stored. Returns false if we
     /// lost the race (the request table was updated).
@@ -175,15 +205,7 @@ impl AsyncMethodRequestWorker {
             .async_method_request_queue(&ctx, &target)
             .await?;
 
-        info!(
-            ctx.logger(),
-            "[{}] new request:  id: {}, type: {}, repo_id: {}, bookmark: {}",
-            &req_id.0,
-            &req_id.0,
-            &req_id.1,
-            &target.repo_id,
-            &target.bookmark,
-        );
+        let ctx = self.prepare_ctx(&ctx, &req_id, &target);
 
         // Do the actual work.
         let work_fut = megarepo_async_request_compute(&ctx, &self.megarepo, params);
@@ -207,11 +229,26 @@ impl AsyncMethodRequestWorker {
                     ctx.logger(),
                     "[{}] request complete, saving result", &req_id.0
                 );
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("Request complete, saving result", None);
 
                 // Save the result.
-                let updated = queue.complete(&ctx, &req_id, result).await?;
+                let updated_res = queue.complete(&ctx, &req_id, result).await;
 
-                info!(ctx.logger(), "[{}] result saved", &req_id.0);
+                let updated = match updated_res {
+                    Ok(updated) => {
+                        info!(ctx.logger(), "[{}] result saved", &req_id.0);
+                        ctx.scuba().clone().log_with_msg("Result saved", None);
+                        updated
+                    }
+                    Err(err) => {
+                        ctx.scuba()
+                            .clone()
+                            .log_with_msg("Failed to save result", Some(format!("{:?}", err)));
+                        return Err(err);
+                    }
+                };
 
                 Ok(updated)
             }
@@ -231,26 +268,57 @@ impl AsyncMethodRequestWorker {
         }
     }
 
+    fn prepare_ctx(&self, ctx: &CoreContext, req_id: &RequestId, target: &Target) -> CoreContext {
+        let ctx = ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("request_id", req_id.0.0);
+            scuba
+        });
+
+        info!(
+            ctx.logger(),
+            "[{}] new request:  id: {}, type: {}, repo_id: {}, bookmark: {}",
+            &req_id.0,
+            &req_id.0,
+            &req_id.1,
+            &target.repo_id,
+            &target.bookmark,
+        );
+
+        ctx
+    }
+
     async fn keep_alive_loop(
         ctx: &CoreContext,
         req_id: &RequestId,
         queue: &AsyncMethodRequestQueue,
     ) {
         loop {
+            let mut scuba = ctx.scuba().clone();
+            ctx.perf_counters().insert_perf_counters(&mut scuba);
+
             let res = queue.update_in_progress_timestamp(&ctx, &req_id).await;
             match res {
                 Ok(res) => {
                     // Weren't able to update inprogress timestamp - that probably means
                     // that request was completed by someone else. Exiting
                     if !res {
+                        scuba.log_with_msg(
+                            "Race while updating inprogress timestamp, exiting keep-alive loop",
+                            None,
+                        );
                         break;
                     }
+                    scuba.log_with_msg("Updated inprogress timestamp", None);
                 }
                 Err(err) => {
                     error!(
                         ctx.logger(),
                         "[{}] failed to update inprogress timestamp: {:?}", req_id.0, err
-                    )
+                    );
+                    scuba.log_with_msg(
+                        "Failed to update inprogress timestamp",
+                        Some(format!("{:?}", err)),
+                    );
                 }
             }
             tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
