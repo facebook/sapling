@@ -148,7 +148,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .await?;
 
         let mut pushrebase_hooks =
-            get_pushrebase_hooks(ctx, repo, &self.bookmark, pushrebase_params)?;
+            get_pushrebase_hooks(ctx, repo, &self.bookmark, bookmark_attrs, pushrebase_params)?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
@@ -205,6 +205,7 @@ pub fn get_pushrebase_hooks(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: &BookmarkName,
+    bookmark_attrs: &BookmarkAttrs,
     params: &PushrebaseParams,
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks = Vec::new();
@@ -228,6 +229,17 @@ pub fn get_pushrebase_hooks(
             // No hook necessary
         }
     };
+
+    for attr in bookmark_attrs.select(bookmark) {
+        if let Some(descendant_bookmark) = &attr.params().ensure_ancestor_of {
+            return Err(
+                BookmarkMovementError::PushrebaseNotAllowedRequiresAncestorsOf {
+                    bookmark: bookmark.clone(),
+                    descendant_bookmark: descendant_bookmark.clone(),
+                },
+            );
+        }
+    }
 
     if params.populate_git_mapping {
         let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());

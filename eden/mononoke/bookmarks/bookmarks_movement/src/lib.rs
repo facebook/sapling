@@ -19,7 +19,6 @@ mod delete;
 #[cfg(fbcode_build)]
 mod facebook;
 mod git_mapping;
-mod globalrev_mapping;
 mod hook_running;
 mod pushrebase_onto;
 mod repo_lock;
@@ -108,6 +107,16 @@ pub enum BookmarkMovementError {
     PushrebaseInvalidGlobalrevsBookmark {
         bookmark: BookmarkName,
         globalrevs_publishing_bookmark: BookmarkName,
+    },
+
+    #[error(
+        "Pushrebase is not allowed onto the bookmark '{}', because this bookmark is required to be an ancestor of '{}'",
+        .bookmark,
+        .descendant_bookmark,
+    )]
+    PushrebaseNotAllowedRequiresAncestorsOf {
+        bookmark: BookmarkName,
+        descendant_bookmark: BookmarkName,
     },
 
     #[error("Bookmark '{bookmark}' can only be moved to ancestors of '{descendant_bookmark}'")]

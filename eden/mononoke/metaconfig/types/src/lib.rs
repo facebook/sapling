@@ -540,6 +540,10 @@ pub struct BookmarkParams {
     /// Skip hooks for changesets that are already ancestors of these
     /// bookmarks
     pub hooks_skip_ancestors_of: Vec<BookmarkName>,
+    /// Ensure that given bookmark(s) are ancestors of `ensure_ancestors_of`
+    /// bookmark. That also implies that it's not longer possible to
+    /// pushrebase to these bookmarks.
+    pub ensure_ancestor_of: Option<BookmarkName>,
 }
 
 /// The type of the hook

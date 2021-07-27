@@ -19,6 +19,7 @@ use cmdlib::{
 };
 use context::CoreContext;
 use maplit::hashset;
+use metaconfig_types::BookmarkAttrs;
 use pushrebase::do_pushrebase_bonsai;
 use slog::Logger;
 
@@ -73,9 +74,15 @@ pub async fn subcommand_pushrebase<'a>(
     let bookmark = BookmarkName::new(bookmark)?;
 
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let pushrebase_hooks =
-        bookmarks_movement::get_pushrebase_hooks(&ctx, &repo, &bookmark, &repo_config.pushrebase)
-            .map_err(Error::from)?;
+    let bookmark_attrs = BookmarkAttrs::new(fb, repo_config.bookmarks.clone()).await?;
+    let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
+        &ctx,
+        &repo,
+        &bookmark,
+        &bookmark_attrs,
+        &repo_config.pushrebase,
+    )
+    .map_err(Error::from)?;
 
     let bcs = cs_id
         .load(&ctx, &repo.get_blobstore())

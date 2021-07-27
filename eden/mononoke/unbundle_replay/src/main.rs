@@ -34,7 +34,7 @@ use futures_old::stream::Stream as OldStream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
-use metaconfig_types::{RepoConfig, RepoReadOnly};
+use metaconfig_types::{BookmarkAttrs, RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -524,10 +524,12 @@ async fn do_main(
                 "Pushrebase starting: {}: {:?} -> {:?}", onto_bookmark, onto_rev, target
             );
 
+            let bookmark_attrs = BookmarkAttrs::new(fb, repo_config.bookmarks.clone()).await?;
             let mut pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
                 &ctx,
                 &repo,
                 &onto_bookmark,
+                &bookmark_attrs,
                 &repo_config.pushrebase,
             )?;
 

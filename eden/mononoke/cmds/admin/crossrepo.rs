@@ -29,7 +29,7 @@ use futures::{compat::Future01CompatExt, stream, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{CommitSyncConfig, RepoConfig};
+use metaconfig_types::{BookmarkAttrs, CommitSyncConfig, RepoConfig};
 use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
@@ -484,10 +484,12 @@ async fn change_mapping_via_extras<'a>(
 
 
     let pushrebase_flags = repo_config.pushrebase.flags;
+    let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         &ctx,
         &large_repo,
         &large_bookmark,
+        &bookmark_attrs,
         &repo_config.pushrebase,
     )?;
 

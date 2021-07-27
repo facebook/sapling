@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use blobrepo::BlobRepo;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, SourceControlServiceParams};
+use futures::{stream, StreamExt, TryStreamExt};
+use metaconfig_types::{
+    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
+};
+use mononoke_types::ChangesetId;
+use reachabilityindex::LeastCommonAncestorsHint;
 
 use crate::BookmarkMovementError;
 
@@ -104,4 +110,78 @@ impl BookmarkKindRestrictions {
             (_, _) => Ok(BookmarkKind::Public),
         }
     }
+}
+
+pub(crate) async fn check_restriction_ensure_ancestor_of(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_to_move: &BookmarkName,
+    bookmark_attrs: &BookmarkAttrs,
+    pushrebase_params: &PushrebaseParams,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    target: ChangesetId,
+) -> Result<(), BookmarkMovementError> {
+    // NOTE: Obviously this is a little racy, but the bookmark could move after we check, so it
+    // doesn't matter.
+
+    let mut descendant_bookmarks = vec![];
+    for attr in bookmark_attrs.select(bookmark_to_move) {
+        if let Some(descendant_bookmark) = &attr.params().ensure_ancestor_of {
+            descendant_bookmarks.push(descendant_bookmark);
+        }
+    }
+
+    if let Some(descendant_bookmark) = &pushrebase_params.globalrevs_publishing_bookmark {
+        descendant_bookmarks.push(&descendant_bookmark);
+    }
+
+    stream::iter(descendant_bookmarks)
+        .map(Ok)
+        .try_for_each_concurrent(10, |descendant_bookmark| async move {
+            let is_ancestor = ensure_ancestor_of(
+                ctx,
+                repo,
+                bookmark_to_move,
+                lca_hint,
+                &descendant_bookmark,
+                target,
+            )
+            .await?;
+            if !is_ancestor {
+                let e = BookmarkMovementError::RequiresAncestorOf {
+                    bookmark: bookmark_to_move.clone(),
+                    descendant_bookmark: descendant_bookmark.clone(),
+                };
+                return Err(e);
+            }
+            Ok(())
+        })
+        .await?;
+
+    Ok(())
+}
+
+pub(crate) async fn ensure_ancestor_of(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_to_move: &BookmarkName,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    descendant_bookmark: &BookmarkName,
+    target: ChangesetId,
+) -> Result<bool, BookmarkMovementError> {
+    let descendant_cs_id = repo
+        .get_bonsai_bookmark(ctx.clone(), descendant_bookmark)
+        .await?
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Bookmark '{}' does not exist, but it should be a descendant of '{}'!",
+                descendant_bookmark,
+                bookmark_to_move
+            )
+        })?;
+
+    Ok(target == descendant_cs_id
+        || lca_hint
+            .is_ancestor(ctx, &repo.get_changeset_fetcher(), target, descendant_cs_id)
+            .await?)
 }

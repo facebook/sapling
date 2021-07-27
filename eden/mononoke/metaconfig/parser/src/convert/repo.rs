@@ -177,6 +177,7 @@ impl Convert for RawBookmarkConfig {
             .into_iter()
             .map(BookmarkName::new)
             .collect::<Result<Vec<_>, _>>()?;
+        let ensure_ancestor_of = self.ensure_ancestor_of.map(BookmarkName::new).transpose()?;
 
         Ok(BookmarkParams {
             bookmark: bookmark_or_regex,
@@ -186,6 +187,7 @@ impl Convert for RawBookmarkConfig {
             allowed_hipster_group,
             rewrite_dates,
             hooks_skip_ancestors_of,
+            ensure_ancestor_of,
         })
     }
 }

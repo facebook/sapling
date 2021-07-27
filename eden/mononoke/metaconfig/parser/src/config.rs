@@ -768,6 +768,7 @@ mod test {
 
             [[bookmarks]]
             regex="[^/]*/stable"
+            ensure_ancestor_of="master"
 
             [[hooks]]
             name="hook1"
@@ -975,6 +976,7 @@ mod test {
                         allowed_hipster_group: None,
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
+                        ensure_ancestor_of: None,
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
@@ -984,6 +986,7 @@ mod test {
                         allowed_hipster_group: None,
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
+                        ensure_ancestor_of: Some(BookmarkName::new("master").unwrap()),
                     },
                 ],
                 hooks: vec![

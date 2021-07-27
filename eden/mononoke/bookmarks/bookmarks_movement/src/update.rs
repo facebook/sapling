@@ -252,12 +252,13 @@ impl<'op> UpdateBookmarkOp<'op> {
                 vec![]
             }
             BookmarkKind::Public => {
-                crate::globalrev_mapping::check_globalrevs_push(
+                crate::restrictions::check_restriction_ensure_ancestor_of(
                     ctx,
                     repo,
-                    lca_hint.as_ref(),
-                    pushrebase_params,
                     self.bookmark,
+                    bookmark_attrs,
+                    pushrebase_params,
+                    lca_hint,
                     self.targets.new,
                 )
                 .await?;

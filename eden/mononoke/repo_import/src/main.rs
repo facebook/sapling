@@ -34,7 +34,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
-use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
+use metaconfig_types::{BookmarkAttrs, CommitSyncConfigVersion, RepoConfig};
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
@@ -579,10 +579,12 @@ async fn push_merge_commit(
 
     let merged_cs = merged_cs_id.load(ctx, repo.blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
+    let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         &ctx,
         &repo,
         &bookmark_to_merge_into,
+        &bookmark_attrs,
         &repo_config.pushrebase,
     )?;
 
