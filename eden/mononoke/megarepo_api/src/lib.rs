@@ -303,6 +303,7 @@ impl MegarepoApi {
         ctx: &CoreContext,
         target: Target,
         version: Option<SyncConfigVersion>,
+        method: &str,
     ) -> CoreContext {
         ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("target_repo_id", target.repo_id);
@@ -310,7 +311,7 @@ impl MegarepoApi {
             if let Some(version) = version {
                 scuba.add("version", version);
             }
-            scuba.add("method", "add_sync_target");
+            scuba.add("method", method);
             scuba
         })
     }
@@ -321,8 +322,9 @@ impl MegarepoApi {
         target: &Target,
         version: Option<&SyncConfigVersion>,
         f: impl Future<Output = Result<ChangesetId, MegarepoError>>,
+        method: &str,
     ) -> Result<ChangesetId, MegarepoError> {
-        let ctx = self.prepare_ctx(ctx, target.clone(), version.cloned());
+        let ctx = self.prepare_ctx(ctx, target.clone(), version.cloned(), method);
         ctx.scuba().clone().log_with_msg("Started", None);
         let res = f.await;
         match &res {
@@ -357,7 +359,8 @@ impl MegarepoApi {
         let version = sync_target_config.version.clone();
         let fut = add_sync_target.run(&ctx, sync_target_config, changesets_to_merge, message);
 
-        self.call_and_log(ctx, &target, Some(&version), fut).await
+        self.call_and_log(ctx, &target, Some(&version), fut, "add_sync_target")
+            .await
     }
 
     /// Syncs single changeset, returns the changeset it in the target.
@@ -377,7 +380,8 @@ impl MegarepoApi {
         );
         let fut = sync_changeset.sync(ctx, source_cs_id, &source_name, &target);
 
-        self.call_and_log(ctx, &target, None, fut).await
+        self.call_and_log(ctx, &target, None, fut, "sync_changeset")
+            .await
     }
 
     /// Adds new sync target. Returs the commit hash of newly created target's head.
@@ -406,6 +410,7 @@ impl MegarepoApi {
             message,
         );
 
-        self.call_and_log(ctx, &target, Some(&version), fut).await
+        self.call_and_log(ctx, &target, Some(&version), fut, "change_target_config")
+            .await
     }
 }
