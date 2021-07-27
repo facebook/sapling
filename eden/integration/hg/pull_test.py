@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 from eden.integration.lib import hgrepo
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
@@ -20,7 +22,10 @@ class PullTest(EdenHgTestCase):
         self.server_repo = self.create_server_repo()
 
         hgrc = self.get_hgrc()
-        hgrc["paths"] = {"default": self.server_repo.path}
+        hgrc["paths"] = {
+            "default": self.server_repo.path,
+            "infinitepush": self.server_repo.path,
+        }
         repo = self.create_hg_repo("main", hgrc=hgrc)
         self.populate_backing_repo(repo)
         return repo
