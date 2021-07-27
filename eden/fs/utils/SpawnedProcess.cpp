@@ -1140,7 +1140,7 @@ std::pair<std::string, std::string> SpawnedProcess::threadedCommunicate(
     // Close the input stream; this typically signals the child
     // process that we're done and allows us to safely block
     // on the reads below.
-    pipes_.erase(STDIN_FILENO);
+    inPipe.close();
   }
 
   return std::make_pair(std::move(outFuture).get(), std::move(errFuture).get());
