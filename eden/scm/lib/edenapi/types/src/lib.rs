@@ -43,13 +43,13 @@ pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::CommitGraphEntry;
 pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
-    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
-    HgMutationEntryContent, UploadBonsaiChangeset, UploadBonsaiChangesetsRequest,
-    UploadBonsaiChangesetsResponse, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgChangesetsResponse,
+    BonsaiChangesetContent, CommitHashLookupRequest, CommitHashLookupResponse,
+    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
+    HgChangesetContent, HgMutationEntryContent, UploadBonsaiChangeset,
+    UploadBonsaiChangesetsRequest, UploadBonsaiChangesetsResponse, UploadHgChangeset,
+    UploadHgChangesetsRequest, UploadHgChangesetsResponse,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;

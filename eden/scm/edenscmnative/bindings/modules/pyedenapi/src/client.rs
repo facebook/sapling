@@ -19,9 +19,10 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
-    CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData,
-    HgChangesetContent, HgMutationEntryContent, LookupResponse, UploadHgChangesetsResponse,
-    UploadHgFilenodeResponse, UploadToken, UploadTreeResponse,
+    BonsaiChangesetContent, CommitHashToLocationResponse, CommitLocationToHashResponse,
+    CommitRevlogData, HgChangesetContent, HgMutationEntryContent, LookupResponse,
+    UploadBonsaiChangesetsResponse, UploadHgChangesetsResponse, UploadHgFilenodeResponse,
+    UploadToken, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -322,6 +323,20 @@ py_class!(pub class client |py| {
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations)
+    }
+
+    /// Upload bonsai changesets
+    /// This method sends a single request, batching should be done outside.
+    def uploadbonsaichangesets(
+        &self,
+        repo: String,
+        changesets: Vec<(
+            PyBytes,                   /* hgid (node_id) */
+            Serde<BonsaiChangesetContent>  /* changeset content */
+        )>,
+        mutations: Vec<Serde<HgMutationEntryContent>>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadBonsaiChangesetsResponse>>>, PyFuture)> {
+        self.inner(py).clone().uploadbonsaichangesets_py(py, repo, changesets, mutations)
     }
 });
 
