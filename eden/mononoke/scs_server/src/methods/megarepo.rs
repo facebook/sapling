@@ -82,30 +82,35 @@ impl SourceControlServiceImpl {
 
         // We've seen cases where config is not readable immediately after
         // it was written. Let's try reading a few times before returning
-        let mut successful_read = false;
+        let mut latest_error = None;
         for _ in 0..10 {
             let res = megarepo_configs.get_config_by_version(
                 ctx.clone(),
                 new_config.target.clone(),
                 new_config.version.clone(),
             );
-            if res.is_ok() {
-                successful_read = true;
-                break;
-            } else {
-                warn!(
-                    ctx.logger(),
-                    "failed to read just written config version {}, retrying...",
-                    new_config.version
-                );
-                tokio::time::sleep(Duration::from_secs(5)).await;
+            match res {
+                Ok(_) => {
+                    latest_error = None;
+                    break;
+                }
+                Err(err) => {
+                    latest_error = Some(err);
+                    warn!(
+                        ctx.logger(),
+                        "failed to read just written config version {}, retrying...",
+                        new_config.version
+                    );
+
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
             }
         }
 
-        if !successful_read {
+        if let Some(err) = latest_error {
             return Err(errors::internal_error(format!(
-                "Failed to read just written config version {}",
-                new_config.version
+                "Failed to read just written config version {}, error: {:?}",
+                new_config.version, err
             ))
             .into());
         }
