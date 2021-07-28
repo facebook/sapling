@@ -82,6 +82,7 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     async fn find_abandoned_requests(
         &self,
         ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>>;
 

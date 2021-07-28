@@ -24,4 +24,4 @@
 CREATE INDEX `request_status` ON long_running_request_queue (`status`, `request_type`);
 CREATE INDEX `request_creation` ON long_running_request_queue (`created_at`);
 CREATE INDEX `request_dequeue` ON long_running_request_queue (`status`, `repo_id`, `created_at`);
-CREATE INDEX `status_inprogress_last_updated_at` ON long_running_request_queue (`status`, `inprogress_last_updated_at`);
+CREATE INDEX `abandoned_request_index` ON long_running_request_queue (`repo_id`, `status`, `inprogress_last_updated_at`);

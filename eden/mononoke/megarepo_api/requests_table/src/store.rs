@@ -127,11 +127,14 @@ queries! {
         "
     }
 
-    read FindAbandonedRequests(abandoned_timestamp: Timestamp) -> (RowId, RequestType) {
+    read FindAbandonedRequests(
+        abandoned_timestamp: Timestamp,
+        >list repo_ids: RepositoryId
+    ) -> (RowId, RequestType) {
         "
         SELECT id, request_type
         FROM long_running_request_queue
-        WHERE status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
+        WHERE repo_id IN {repo_ids} AND status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
         "
     }
 
@@ -364,11 +367,15 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     async fn find_abandoned_requests(
         &self,
         _ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>> {
-        let rows =
-            FindAbandonedRequests::query(&self.connections.write_connection, &abandoned_timestamp)
-                .await?;
+        let rows = FindAbandonedRequests::query(
+            &self.connections.write_connection,
+            &abandoned_timestamp,
+            &repo_ids,
+        )
+        .await?;
         Ok(rows.into_iter().map(|(id, ty)| RequestId(id, ty)).collect())
     }
 
@@ -532,11 +539,12 @@ mod test {
     async fn test_find_abandoned_requests(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let repo_id = RepositoryId::new(0);
         let id = queue
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &RepositoryId::new(0),
+                &repo_id,
                 &BookmarkName::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
@@ -552,7 +560,7 @@ mod test {
         let now = Timestamp::now();
         let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
         let abandoned = queue
-            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
             .await?;
         assert_eq!(abandoned.len(), 1);
         assert_eq!(abandoned[0].0, id);
@@ -565,7 +573,7 @@ mod test {
         assert!(updated);
         assert_eq!(
             queue
-                .find_abandoned_requests(&ctx, abandoned_timestamp)
+                .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
                 .await?,
             vec![]
         );
@@ -599,11 +607,12 @@ mod test {
     async fn test_mark_as_new(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let repo_id = RepositoryId::new(0);
         let id = queue
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &RepositoryId::new(0),
+                &repo_id,
                 &BookmarkName::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
@@ -619,7 +628,7 @@ mod test {
         let now = Timestamp::now();
         let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
         let abandoned = queue
-            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
             .await?;
         assert_eq!(abandoned.len(), 1);
         assert_eq!(abandoned[0].0, id);

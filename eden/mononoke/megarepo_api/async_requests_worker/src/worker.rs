@@ -134,6 +134,7 @@ impl AsyncMethodRequestWorker {
                 for (repo_ids, queue) in &queues_with_repos {
                     Self::cleanup_abandoned_requests(
                         &ctx,
+                        &repo_ids,
                         &queue,
                         abandoned_threshold_secs
                     ).await?;
@@ -160,6 +161,7 @@ impl AsyncMethodRequestWorker {
 
     async fn cleanup_abandoned_requests(
         ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
         queue: &AsyncMethodRequestQueue,
         abandoned_threshold_secs: i64,
     ) -> Result<(), MegarepoError> {
@@ -167,7 +169,7 @@ impl AsyncMethodRequestWorker {
         let abandoned_timestamp =
             Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
         let requests = queue
-            .find_abandoned_requests(&ctx, abandoned_timestamp)
+            .find_abandoned_requests(&ctx, repo_ids, abandoned_timestamp)
             .await?;
         if !requests.is_empty() {
             ctx.scuba().clone().log_with_msg(

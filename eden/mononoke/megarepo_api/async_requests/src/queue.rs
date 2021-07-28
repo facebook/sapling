@@ -189,11 +189,12 @@ impl AsyncMethodRequestQueue {
     pub async fn find_abandoned_requests(
         &self,
         ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>, MegarepoError> {
         Ok(self
             .table
-            .find_abandoned_requests(ctx, abandoned_timestamp)
+            .find_abandoned_requests(ctx, repo_ids, abandoned_timestamp)
             .await?)
     }
 
