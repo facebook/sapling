@@ -16,9 +16,8 @@ use edenapi_types::{
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     EdenApiServerError, FileAttributes, FileAuxData, FileContent, FileEntry, FileSpec,
     HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadBonsaiChangeset, UploadBonsaiChangesetsResponse, UploadHgChangeset,
-    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadToken, UploadTreeEntry,
-    UploadTreeResponse,
+    TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse,
+    UploadTreeEntry, UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -473,7 +472,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -490,7 +489,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -499,7 +498,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _changesets: Vec<UploadBonsaiChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 }

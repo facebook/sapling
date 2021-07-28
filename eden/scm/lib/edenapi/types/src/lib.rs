@@ -48,14 +48,13 @@ pub use crate::commit::{
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
     HgChangesetContent, HgMutationEntryContent, UploadBonsaiChangeset,
-    UploadBonsaiChangesetsRequest, UploadBonsaiChangesetsResponse, UploadHgChangeset,
-    UploadHgChangesetsRequest, UploadHgChangesetsResponse,
+    UploadBonsaiChangesetsRequest, UploadHgChangeset, UploadHgChangesetsRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;
 pub use crate::file::{
     FileAttributes, FileAuxData, FileContent, FileEntry, FileError, FileRequest, FileSpec,
-    HgFilenodeData, UploadHgFilenodeRequest, UploadHgFilenodeResponse,
+    HgFilenodeData, UploadHgFilenodeRequest, UploadTokensResponse,
 };
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,

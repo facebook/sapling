@@ -21,8 +21,7 @@ use edenapi_types::TreeEntry;
 use edenapi_types::{
     BonsaiChangesetContent, CommitHashToLocationResponse, CommitLocationToHashResponse,
     CommitRevlogData, HgChangesetContent, HgMutationEntryContent, LookupResponse,
-    UploadBonsaiChangesetsResponse, UploadHgChangesetsResponse, UploadHgFilenodeResponse,
-    UploadToken, UploadTreeResponse,
+    UploadTokensResponse, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -278,7 +277,7 @@ py_class!(pub class client |py| {
             PyPathBuf, /* path */
             PyBytes,   /* hgid */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
     }
 
@@ -293,7 +292,7 @@ py_class!(pub class client |py| {
             PyBytes,   /* p1 */
             PyBytes,   /* p2 */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadfiles_py(py, store, repo, keys)
     }
 
@@ -321,7 +320,7 @@ py_class!(pub class client |py| {
             Serde<HgChangesetContent>  /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations)
     }
 
@@ -335,7 +334,7 @@ py_class!(pub class client |py| {
             Serde<BonsaiChangesetContent>  /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadBonsaiChangesetsResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadbonsaichangesets_py(py, repo, changesets, mutations)
     }
 });

@@ -21,8 +21,7 @@ use edenapi_types::{
     AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, ToWire,
-    UploadBonsaiChangesetsRequest, UploadBonsaiChangesetsResponse, UploadHgChangesetsRequest,
-    UploadHgChangesetsResponse, UploadToken,
+    UploadBonsaiChangesetsRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -260,7 +259,7 @@ async fn commit_revlog_data(
 async fn store_hg_changesets(
     repo: HgRepoContext,
     request: UploadHgChangesetsRequest,
-) -> Result<Vec<Result<UploadHgChangesetsResponse, Error>>, Error> {
+) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
     let changesets = request.changesets;
     let mutations = request.mutations;
     let indexes = changesets
@@ -290,7 +289,7 @@ async fn store_hg_changesets(
         .map(|r| {
             r.map(|(hg_cs_id, _bonsai_cs_id)| {
                 let hgid = HgId::from(hg_cs_id.into_nodehash());
-                UploadHgChangesetsResponse {
+                UploadTokensResponse {
                     index: indexes.get(&hgid).cloned().unwrap(), // always present
                     token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
                 }
@@ -328,7 +327,7 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
 async fn upload_bonsai_changesets_impl(
     repo: HgRepoContext,
     request: UploadBonsaiChangesetsRequest,
-) -> Result<Vec<Result<UploadBonsaiChangesetsResponse, Error>>, Error> {
+) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
     let changesets = request.changesets;
     let mutations = request.mutations;
     let mut hgid_to_csid = HashMap::new();
@@ -361,7 +360,7 @@ async fn upload_bonsai_changesets_impl(
         .map(|r| {
             r.map(|hg_cs_id| {
                 let hgid = HgId::from(hg_cs_id.into_nodehash());
-                UploadBonsaiChangesetsResponse {
+                UploadTokensResponse {
                     index: indexes.get(&hgid).cloned().unwrap(), // always present
                     token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
                 }

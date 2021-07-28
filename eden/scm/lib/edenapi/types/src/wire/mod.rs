@@ -72,15 +72,12 @@ pub use crate::wire::{
         WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse, WireEphemeralPrepareRequest,
         WireEphemeralPrepareResponse, WireExtra, WireHgChangesetContent,
-        WireHgMutationEntryContent, WireUploadBonsaiChangesetsRequest,
-        WireUploadBonsaiChangesetsResponse, WireUploadHgChangeset, WireUploadHgChangesetsRequest,
-        WireUploadHgChangesetsResponse,
+        WireHgMutationEntryContent, WireUploadBonsaiChangesetsRequest, WireUploadHgChangeset,
+        WireUploadHgChangesetsRequest,
     },
     complete_tree::WireCompleteTreeRequest,
     errors::{WireError, WireResult},
-    file::{
-        WireFileEntry, WireFileRequest, WireUploadHgFilenodeRequest, WireUploadHgFilenodeResponse,
-    },
+    file::{WireFileEntry, WireFileRequest, WireUploadHgFilenodeRequest, WireUploadTokensResponse},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{
         WireAnyFileContentId, WireContentId, WireDirectoryMetadata, WireDirectoryMetadataRequest,

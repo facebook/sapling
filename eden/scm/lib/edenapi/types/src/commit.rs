@@ -243,12 +243,6 @@ pub struct UploadHgChangesetsRequest {
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadHgChangesetsResponse {
-    pub index: usize,
-    pub token: UploadToken,
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct BonsaiExtra {
     pub key: String,
     pub value: Vec<u8>,
@@ -284,12 +278,6 @@ pub struct UploadBonsaiChangesetsRequest {
     pub changesets: Vec<UploadBonsaiChangeset>,
     /// list of mutation entries for the uploading changesets
     pub mutations: Vec<HgMutationEntryContent>,
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadBonsaiChangesetsResponse {
-    pub index: usize,
-    pub token: UploadToken,
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]

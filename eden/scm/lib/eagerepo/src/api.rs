@@ -39,11 +39,9 @@ use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
 use edenapi::types::UploadBonsaiChangeset;
-use edenapi::types::UploadBonsaiChangesetsResponse;
 use edenapi::types::UploadHgChangeset;
-use edenapi::types::UploadHgChangesetsResponse;
-use edenapi::types::UploadHgFilenodeResponse;
 use edenapi::types::UploadToken;
+use edenapi::types::UploadTokensResponse;
 use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
@@ -477,7 +475,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
         ))
@@ -498,7 +496,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
         ))
@@ -509,7 +507,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _changesets: Vec<UploadBonsaiChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
         ))

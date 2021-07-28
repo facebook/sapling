@@ -16,8 +16,8 @@ use std::str::FromStr;
 use edenapi_types::{
     wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
     AnyFileContentId, AnyId, FileAttributes, FileAuxData, FileContent, FileContentTokenMetadata,
-    FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest, UploadHgFilenodeResponse,
-    UploadToken, UploadTokenMetadata,
+    FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata,
+    UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -245,7 +245,7 @@ async fn store_hg_filenode(
     repo: HgRepoContext,
     item: UploadHgFilenodeRequest,
     index: usize,
-) -> Result<UploadHgFilenodeResponse, Error> {
+) -> Result<UploadTokensResponse, Error> {
     // TODO(liubovd): validate signature of the upload token (item.token) and
     // return 'ErrorKind::UploadHgFilenodeRequestInvalidToken' if it's invalid.
     // This will be added later, for now assume tokens are always valid.
@@ -302,7 +302,7 @@ async fn store_hg_filenode(
     repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
         .await?;
 
-    Ok(UploadHgFilenodeResponse {
+    Ok(UploadTokensResponse {
         index,
         token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id)),
     })

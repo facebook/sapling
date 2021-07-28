@@ -18,8 +18,7 @@ use crate::commit::{
     CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
     EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
     HgMutationEntryContent, UploadBonsaiChangeset, UploadBonsaiChangesetsRequest,
-    UploadBonsaiChangesetsResponse, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgChangesetsResponse,
+    UploadHgChangeset, UploadHgChangesetsRequest,
 };
 use crate::wire::{
     is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents, WireRepoPathBuf, WireResult,
@@ -461,15 +460,6 @@ pub struct WireUploadHgChangesetsRequest {
     pub mutations: Vec<WireHgMutationEntryContent>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireUploadHgChangesetsResponse {
-    #[serde(rename = "1")]
-    pub index: usize,
-
-    #[serde(rename = "2")]
-    pub token: WireUploadToken,
-}
-
 impl ToWire for Extra {
     type Wire = WireExtra;
 
@@ -609,29 +599,6 @@ impl ToApi for WireUploadHgChangesetsRequest {
     }
 }
 
-impl ToWire for UploadHgChangesetsResponse {
-    type Wire = WireUploadHgChangesetsResponse;
-
-    fn to_wire(self) -> Self::Wire {
-        WireUploadHgChangesetsResponse {
-            index: self.index,
-            token: self.token.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireUploadHgChangesetsResponse {
-    type Api = UploadHgChangesetsResponse;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadHgChangesetsResponse {
-            index: self.index,
-            token: self.token.to_api()?,
-        })
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireBonsaiExtra {
     #[serde(rename = "1")]
@@ -692,15 +659,6 @@ pub struct WireUploadBonsaiChangesetsRequest {
     /// list of mutation entries for the uploading changesets
     #[serde(rename = "2")]
     pub mutations: Vec<WireHgMutationEntryContent>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireUploadBonsaiChangesetsResponse {
-    #[serde(rename = "1")]
-    pub index: usize,
-
-    #[serde(rename = "2")]
-    pub token: WireUploadToken,
 }
 
 impl ToWire for BonsaiExtra {
@@ -831,29 +789,6 @@ impl ToApi for WireUploadBonsaiChangesetsRequest {
         Ok(UploadBonsaiChangesetsRequest {
             changesets: self.changesets.to_api()?,
             mutations: self.mutations.to_api()?,
-        })
-    }
-}
-
-impl ToWire for UploadBonsaiChangesetsResponse {
-    type Wire = WireUploadBonsaiChangesetsResponse;
-
-    fn to_wire(self) -> Self::Wire {
-        WireUploadBonsaiChangesetsResponse {
-            index: self.index,
-            token: self.token.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireUploadBonsaiChangesetsResponse {
-    type Api = UploadBonsaiChangesetsResponse;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadBonsaiChangesetsResponse {
-            index: self.index,
-            token: self.token.to_api()?,
         })
     }
 }

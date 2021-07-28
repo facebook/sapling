@@ -25,8 +25,7 @@ use edenapi_types::{
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    TreeEntry, UploadBonsaiChangeset, UploadBonsaiChangesetsResponse, UploadHgChangeset,
-    UploadHgChangesetsResponse, UploadHgFilenodeResponse, UploadTreeResponse,
+    TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -524,8 +523,7 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         keys: Vec<(PyPathBuf /* path */, PyBytes /* hgid */)>,
     ) -> PyResult<(
-        // TODO(yancouto): Create common struct for this
-        TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>,
+        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
         PyFuture,
     )> {
         let keys = to_keys(py, &keys)?;
@@ -571,7 +569,7 @@ pub trait EdenApiPyExt: EdenApi {
                         })
                         .collect::<Result<BTreeMap<_, _>, _>>()?;
                     let tokens = content_ids.into_iter().enumerate().map(move |(idx, cid)| 
-                        Result::<_, EdenApiError>::Ok(UploadHgFilenodeResponse {
+                        Result::<_, EdenApiError>::Ok(UploadTokensResponse {
                             index: idx,
                             token: file_content_tokens
                             .get(&cid)
@@ -601,7 +599,7 @@ pub trait EdenApiPyExt: EdenApi {
             PyBytes,   /* p2 */
         )>,
     ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadHgFilenodeResponse>>>,
+        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
         PyFuture,
     )> {
         let keys = to_keys_with_parents(py, &keys)?;
@@ -731,7 +729,7 @@ pub trait EdenApiPyExt: EdenApi {
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadHgChangesetsResponse>>>,
+        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
         PyFuture,
     )> {
         let changesets = changesets
@@ -769,7 +767,7 @@ pub trait EdenApiPyExt: EdenApi {
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadBonsaiChangesetsResponse>>>,
+        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
         PyFuture,
     )> {
         let changesets = changesets

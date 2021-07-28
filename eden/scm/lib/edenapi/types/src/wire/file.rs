@@ -13,7 +13,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{
     file::{
         FileAttributes, FileAuxData, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
-        UploadHgFilenodeRequest, UploadHgFilenodeResponse,
+        UploadHgFilenodeRequest, UploadTokensResponse,
     },
     wire::{
         is_default, ToApi, ToWire, WireContentId, WireHgId, WireKey, WireParents,
@@ -266,7 +266,7 @@ pub struct WireUploadHgFilenodeRequest {
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireUploadHgFilenodeResponse {
+pub struct WireUploadTokensResponse {
     #[serde(rename = "1")]
     pub index: usize,
 
@@ -301,23 +301,23 @@ impl ToApi for WireHgFilenodeData {
     }
 }
 
-impl ToWire for UploadHgFilenodeResponse {
-    type Wire = WireUploadHgFilenodeResponse;
+impl ToWire for UploadTokensResponse {
+    type Wire = WireUploadTokensResponse;
 
     fn to_wire(self) -> Self::Wire {
-        WireUploadHgFilenodeResponse {
+        WireUploadTokensResponse {
             index: self.index,
             token: self.token.to_wire(),
         }
     }
 }
 
-impl ToApi for WireUploadHgFilenodeResponse {
-    type Api = UploadHgFilenodeResponse;
+impl ToApi for WireUploadTokensResponse {
+    type Api = UploadTokensResponse;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadHgFilenodeResponse {
+        Ok(UploadTokensResponse {
             index: self.index,
             token: self.token.to_api()?,
         })

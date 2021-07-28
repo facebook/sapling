@@ -291,7 +291,7 @@ pub struct UploadHgFilenodeRequest {
 }
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadHgFilenodeResponse {
+pub struct UploadTokensResponse {
     pub index: usize,
     pub token: UploadToken,
 }

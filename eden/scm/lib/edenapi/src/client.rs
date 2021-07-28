@@ -29,9 +29,8 @@ use edenapi_types::{
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
         WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireLookupResponse, WireToApiConversionError, WireTreeEntry,
-        WireUploadBonsaiChangesetsResponse, WireUploadHgChangesetsResponse,
-        WireUploadHgFilenodeResponse, WireUploadToken, WireUploadTreeResponse,
+        WireLookupResponse, WireToApiConversionError, WireTreeEntry, WireUploadToken,
+        WireUploadTokensResponse, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
@@ -40,9 +39,9 @@ use edenapi_types::{
     FileEntry, FileRequest, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
     HistoryRequest, LookupRequest, LookupResponse, ServerError, ToApi, ToWire, TreeAttributes,
     TreeEntry, TreeRequest, UploadBonsaiChangeset, UploadBonsaiChangesetsRequest,
-    UploadBonsaiChangesetsResponse, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgChangesetsResponse, UploadHgFilenodeRequest, UploadHgFilenodeResponse, UploadToken,
-    UploadTokenMetadata, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
+    UploadHgChangeset, UploadHgChangesetsRequest, UploadHgFilenodeRequest, UploadToken,
+    UploadTokenMetadata, UploadTokensResponse, UploadTreeEntry, UploadTreeRequest,
+    UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -916,7 +915,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadHgFilenodeResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -944,7 +943,7 @@ impl EdenApi for Client {
         )?;
 
         Ok(self
-            .fetch::<WireUploadHgFilenodeResponse>(requests, None)
+            .fetch::<WireUploadTokensResponse>(requests, None)
             .await?)
     }
 
@@ -988,7 +987,7 @@ impl EdenApi for Client {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadHgChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         let msg = format!(
             "Requesting changesets upload for {} item(s)",
             changesets.len(),
@@ -1015,7 +1014,7 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self
-            .fetch::<WireUploadHgChangesetsResponse>(vec![request], None)
+            .fetch::<WireUploadTokensResponse>(vec![request], None)
             .await?)
     }
 
@@ -1024,7 +1023,7 @@ impl EdenApi for Client {
         repo: String,
         changesets: Vec<UploadBonsaiChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadBonsaiChangesetsResponse>, EdenApiError> {
+    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         let msg = format!(
             "Requesting changesets upload for {} item(s)",
             changesets.len(),
@@ -1051,7 +1050,7 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self
-            .fetch::<WireUploadBonsaiChangesetsResponse>(vec![request], None)
+            .fetch::<WireUploadTokensResponse>(vec![request], None)
             .await?)
     }
 }
