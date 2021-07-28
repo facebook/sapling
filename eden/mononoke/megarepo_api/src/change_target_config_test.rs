@@ -468,3 +468,158 @@ async fn test_change_target_config_no_file_dir_conflict_2(fb: FacebookInit) -> R
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_change_target_config_repeat_same_request(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let first_source_name = SourceName::new("source_1");
+    let target: Target = test.target("target".to_string());
+
+    init_megarepo(&ctx, &mut test).await?;
+
+    let first_source_cs_id =
+        resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+
+    let version_2 = "version_2".to_string();
+    let third_source_name = SourceName::new("source_3");
+    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("third", "third")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, third_source_name.to_string())
+        .set_to(third_source_cs_id)
+        .await?;
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version_2.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .linkfile("first", "linkfiles/first_in_other_location")
+        .build_source()?
+        .source_builder(third_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    change_target_config
+        .run(
+            &ctx,
+            &target,
+            version_2.clone(),
+            target_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                third_source_name.clone() => third_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    // Now repeat the same request - it should succeed
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    change_target_config
+        .run(
+            &ctx,
+            &target,
+            version_2.clone(),
+            target_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                third_source_name.clone() => third_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    // Now send slightly different request - it should fail
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    assert!(
+        change_target_config
+            .run(
+                &ctx,
+                &target,
+                version_2,
+                target_cs_id,
+                btreemap! {
+                    first_source_name.clone() => first_source_cs_id,
+                },
+                None,
+            )
+            .await
+            .is_err()
+    );
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_change_target_config_noop_change(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let first_source_name = SourceName::new("source_1");
+    let target: Target = test.target("target".to_string());
+
+    init_megarepo(&ctx, &mut test).await?;
+
+    let first_source_cs_id =
+        resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+
+    let version_2 = "version_2".to_string();
+    let third_source_name = SourceName::new("source_3");
+    let third_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("third", "third")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, third_source_name.to_string())
+        .set_to(third_source_cs_id)
+        .await?;
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version_2.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .linkfile("first", "linkfiles/first_in_other_location")
+        .build_source()?
+        .source_builder(third_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let new_target_cs_id = change_target_config
+        .run(
+            &ctx,
+            &target,
+            version_2.clone(),
+            target_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                third_source_name.clone() => third_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    // Now do a noop change on existing commit
+    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let noop_change = change_target_config
+        .run(
+            &ctx,
+            &target,
+            version_2.clone(),
+            new_target_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                third_source_name.clone() => third_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    assert_ne!(noop_change, new_target_cs_id);
+
+    Ok(())
+}

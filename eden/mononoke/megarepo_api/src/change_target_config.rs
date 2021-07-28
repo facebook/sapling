@@ -176,19 +176,26 @@ impl<'a> ChangeTargetConfig<'a> {
         // Find the target config version and remapping state that was used to
         // create the latest target commit. This config version will be used to
         // as a base for comparing with new config.
-        let (target_bookmark, old_target_cs_id) =
+        let (target_bookmark, actual_target_location) =
             find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
-        if old_target_cs_id != target_location {
-            return Err(MegarepoError::request(anyhow!(
-                "Can't change target config because \
-                 target_location is set to {} which is different \
-                 from actual target location {}.",
-                target_location,
-                old_target_cs_id,
-            )));
+
+        // target doesn't point to the commit we expect - check
+        // if this method has already succeded and just immediately return the
+        // result if so.
+        if actual_target_location != target_location {
+            return self
+                .check_if_this_method_has_already_succeeded(
+                    ctx,
+                    &new_version,
+                    (target_location, actual_target_location),
+                    &changesets_to_merge,
+                    &target_repo,
+                )
+                .await;
         }
+
         let old_target_cs = &target_repo
-            .changeset(old_target_cs_id)
+            .changeset(target_location)
             .await?
             .ok_or_else(|| {
                 MegarepoError::internal(anyhow!("programming error - target changeset not found!"))
@@ -196,7 +203,7 @@ impl<'a> ChangeTargetConfig<'a> {
         let (old_remapping_state, old_config) = find_target_sync_config(
             &ctx,
             target_repo.blob_repo(),
-            old_target_cs_id,
+            target_location,
             &target,
             &self.megarepo_configs,
         )
@@ -657,6 +664,47 @@ impl<'a> ChangeTargetConfig<'a> {
         save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
 
         Ok(merge.get_changeset_id())
+    }
+
+    // If that change_target_config() call was successful, but failed to send
+    // successful result to the client (e.g. network issues) then
+    // client will retry a request. We need to detect this situation and
+    // send a successful response to the client.
+    async fn check_if_this_method_has_already_succeeded(
+        &self,
+        ctx: &CoreContext,
+        new_version: &SyncConfigVersion,
+        (expected_target_location, actual_target_location): (ChangesetId, ChangesetId),
+        changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
+        repo: &RepoContext,
+    ) -> Result<ChangesetId, MegarepoError> {
+        // Bookmark points a non-expected commit - let's see if changeset it points to was created
+        // by a previous change_target_config call
+
+        // Check that first parent is a target location
+        let parents = repo
+            .blob_repo()
+            .get_changeset_parents_by_bonsai(ctx.clone(), actual_target_location)
+            .await?;
+        if parents.get(0) != Some(&expected_target_location) {
+            return Err(MegarepoError::request(anyhow!(
+                "Neither {} nor its first parent {:?} point to a target location {}",
+                actual_target_location,
+                parents.get(0),
+                expected_target_location,
+            )));
+        }
+
+        self.check_if_commit_has_expected_remapping_state(
+            ctx,
+            actual_target_location,
+            new_version,
+            changesets_to_merge,
+            repo,
+        )
+        .await?;
+
+        Ok(actual_target_location)
     }
 }
 
