@@ -27,8 +27,16 @@ async fn megarepo_sync_changeset(
     params: thrift::MegarepoSyncChangesetParams,
 ) -> Result<thrift::MegarepoSyncChangesetResponse, MegarepoError> {
     let source_cs_id = ChangesetId::from_bytes(params.cs_id).map_err(MegarepoError::request)?;
+    let target_location =
+        ChangesetId::from_bytes(params.target_location).map_err(MegarepoError::request)?;
     let cs_id = megarepo_api
-        .sync_changeset(ctx, source_cs_id, params.source_name, params.target)
+        .sync_changeset(
+            ctx,
+            source_cs_id,
+            params.source_name,
+            params.target,
+            target_location,
+        )
         .await?
         .as_ref()
         .into();

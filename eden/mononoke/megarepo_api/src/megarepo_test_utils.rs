@@ -65,7 +65,7 @@ impl MegarepoTest {
         ctx: &CoreContext,
         version: &SyncConfigVersion,
         target: &Target,
-    ) -> Result<(), Error> {
+    ) -> Result<ChangesetId, Error> {
         let initial_config = self.configs_storage.get_config_by_version(
             ctx.clone(),
             target.clone(),
@@ -114,7 +114,7 @@ impl MegarepoTest {
         bookmark(&ctx, &self.blobrepo, target.bookmark.clone())
             .set_to(init_target_cs_id)
             .await?;
-        Ok(())
+        Ok(init_target_cs_id)
     }
 }
 

@@ -118,7 +118,7 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
 
     sync_changeset
-        .sync(&ctx, cs_id, &first_source_name, &target)
+        .sync(&ctx, cs_id, &first_source_name, &target, target_cs_id)
         .await?;
 
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;

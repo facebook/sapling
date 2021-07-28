@@ -13,7 +13,6 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::{create_source_to_target_multi_mover, rewrite_commit, upload_commits};
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -63,13 +62,13 @@ impl<'a> SyncChangeset<'a> {
         source_cs_id: ChangesetId,
         source_name: &SourceName,
         target: &Target,
+        target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
         let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
 
         // Now we need to find the target config version that was used to create the latest
         // target commit. This config version will be used to sync the new changeset
-        let (target_bookmark, target_cs_id) =
-            find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+        let (_, target_cs_id) = find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
 
         let (commit_remapping_state, target_config) = find_target_sync_config(
             &ctx,
@@ -142,21 +141,13 @@ impl<'a> SyncChangeset<'a> {
             .await?;
 
         // Move the bookmark and record latest synced source changeset
-        let res = update_target_bookmark(
-            &ctx,
+        self.move_bookmark_conditionally(
+            ctx,
             target_repo.blob_repo(),
-            target_bookmark,
-            target_cs_id,
-            new_target_cs_id,
+            target.bookmark.clone(),
+            (target_location, new_target_cs_id),
         )
         .await?;
-
-        if !res {
-            // TODO(stash): we might want a special exception type for this case
-            return Err(MegarepoError::request(anyhow!(
-                "race condition - target bookmark moved while request was executing",
-            )));
-        }
 
         Ok(new_target_cs_id)
     }
@@ -353,33 +344,6 @@ async fn sync_changeset_to_target(
     Ok(target_cs_id)
 }
 
-async fn update_target_bookmark(
-    ctx: &CoreContext,
-    target_repo: &BlobRepo,
-    bookmark: BookmarkName,
-    from_target_cs_id: ChangesetId,
-    to_target_cs_id: ChangesetId,
-) -> Result<bool, MegarepoError> {
-    let mut bookmark_txn = target_repo.bookmarks().create_transaction(ctx.clone());
-
-    bookmark_txn
-        .update(
-            &bookmark,
-            to_target_cs_id,
-            from_target_cs_id,
-            BookmarkUpdateReason::XRepoSync,
-            None,
-        )
-        .map_err(MegarepoError::internal)?;
-
-    let res = bookmark_txn
-        .commit()
-        .await
-        .map_err(MegarepoError::internal)?;
-
-    Ok(res)
-}
-
 fn find_latest_synced_cs_id(
     commit_remapping_state: &CommitRemappingState,
     source_name: &SourceName,
@@ -433,7 +397,8 @@ mod test {
             .set_to(init_source_cs_id)
             .await?;
 
-        test.prepare_initial_commit_in_target(&ctx, &version, &target)
+        let latest_target_cs_id = test
+            .prepare_initial_commit_in_target(&ctx, &version, &target)
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
@@ -441,7 +406,13 @@ mod test {
             SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
         println!("Trying to sync already synced commit again");
         let res = sync_changeset
-            .sync(&ctx, init_source_cs_id, &source_name, &target)
+            .sync(
+                &ctx,
+                init_source_cs_id,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await;
         assert!(res.is_err());
 
@@ -452,7 +423,13 @@ mod test {
 
         println!("Syncing a commit that's not ancestor of target bookmark");
         let res = sync_changeset
-            .sync(&ctx, source_cs_id, &source_name, &target)
+            .sync(
+                &ctx,
+                source_cs_id,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await;
         assert!(res.is_err());
 
@@ -462,7 +439,13 @@ mod test {
 
         println!("Syncing new commit");
         sync_changeset
-            .sync(&ctx, source_cs_id, &source_name, &target)
+            .sync(
+                &ctx,
+                source_cs_id,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await?;
 
         let cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
@@ -507,7 +490,8 @@ mod test {
             .set_to(init_source_cs_id)
             .await?;
 
-        test.prepare_initial_commit_in_target(&ctx, &version, &target)
+        let latest_target_cs_id = test
+            .prepare_initial_commit_in_target(&ctx, &version, &target)
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
@@ -560,7 +544,13 @@ mod test {
             .await?;
         println!("Syncing first merge parent");
         let merge_parent_1_target = sync_changeset
-            .sync(&ctx, merge_parent_1_source, &source_name, &target)
+            .sync(
+                &ctx,
+                merge_parent_1_source,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await?;
 
         bookmark(&ctx, &test.blobrepo, source_name.to_string())
@@ -568,9 +558,14 @@ mod test {
             .await?;
         println!("Syncing merge commit parent");
         let merge_target = sync_changeset
-            .sync(&ctx, merge_source, &source_name, &target)
+            .sync(
+                &ctx,
+                merge_source,
+                &source_name,
+                &target,
+                merge_parent_1_target,
+            )
             .await?;
-
 
         let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
 
@@ -590,7 +585,6 @@ mod test {
         );
 
         let merge_target_cs = merge_target.load(&ctx, &test.blobrepo.blobstore()).await?;
-
 
         let copied_file_change_from_bonsai = merge_target_cs
             .file_changes()
@@ -654,7 +648,8 @@ mod test {
             .set_to(init_source2_cs_id)
             .await?;
 
-        test.prepare_initial_commit_in_target(&ctx, &version, &target)
+        let mut latest_target_cs_id = test
+            .prepare_initial_commit_in_target(&ctx, &version, &target)
             .await?;
 
         print!("Syncing one commit to each of sources... 1");
@@ -669,8 +664,14 @@ mod test {
         bookmark(&ctx, &test.blobrepo, source1_name.to_string())
             .set_to(source1_cs_id)
             .await?;
-        let _source1_cs_synced = sync_changeset
-            .sync(&ctx, source1_cs_id, &source1_name, &target)
+        latest_target_cs_id = sync_changeset
+            .sync(
+                &ctx,
+                source1_cs_id,
+                &source1_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await?;
         println!(", 2");
 
@@ -682,13 +683,25 @@ mod test {
         bookmark(&ctx, &test.blobrepo, source2_name.to_string())
             .set_to(source2_cs_id)
             .await?;
-        let _source2_cs_synced = sync_changeset
-            .sync(&ctx, source2_cs_id, &source2_name, &target)
+        latest_target_cs_id = sync_changeset
+            .sync(
+                &ctx,
+                source2_cs_id,
+                &source2_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await?;
 
         println!("Trying to sync already synced commit again");
         let res = sync_changeset
-            .sync(&ctx, source1_cs_id, &source1_name, &target)
+            .sync(
+                &ctx,
+                source1_cs_id,
+                &source1_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await;
         assert!(res.is_err());
         println!("Trying to sync a diamond merge commit");
@@ -705,7 +718,13 @@ mod test {
             .set_to(source1_diamond_merge_cs_id)
             .await?;
         let _diamond_merge_synced = sync_changeset
-            .sync(&ctx, source1_diamond_merge_cs_id, &source1_name, &target)
+            .sync(
+                &ctx,
+                source1_diamond_merge_cs_id,
+                &source1_name,
+                &target,
+                latest_target_cs_id,
+            )
             .await?;
 
         let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;

@@ -370,6 +370,7 @@ impl MegarepoApi {
         source_cs_id: ChangesetId,
         source_name: String,
         target: Target,
+        target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
         let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
         let source_name = SourceName::new(source_name);
@@ -378,7 +379,7 @@ impl MegarepoApi {
             &self.mononoke,
             &target_megarepo_mapping,
         );
-        let fut = sync_changeset.sync(ctx, source_cs_id, &source_name, &target);
+        let fut = sync_changeset.sync(ctx, source_cs_id, &source_name, &target, target_location);
 
         self.call_and_log(ctx, &target, None, fut, "sync_changeset")
             .await
