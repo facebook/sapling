@@ -112,6 +112,16 @@ impl CommitRemappingState {
         repo: &BlobRepo,
         cs_id: ChangesetId,
     ) -> Result<Self, Error> {
+        let maybe_state = Self::read_state_from_commit_opt(ctx, repo, cs_id).await?;
+
+        maybe_state.ok_or_else(|| anyhow!("file {} not found", REMAPPING_STATE_FILE))
+    }
+
+    pub async fn read_state_from_commit_opt(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        cs_id: ChangesetId,
+    ) -> Result<Option<Self>, Error> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
 
         let path = MPath::new(REMAPPING_STATE_FILE)?;
@@ -120,14 +130,16 @@ impl CommitRemappingState {
             .find_entry(ctx.clone(), repo.get_blobstore(), Some(path))
             .await?;
 
-        let entry = maybe_entry.ok_or_else(|| anyhow!("{} not found", REMAPPING_STATE_FILE))?;
+        let entry = match maybe_entry {
+            Some(entry) => entry,
+            None => {
+                return Ok(None);
+            }
+        };
 
         let file = match entry {
             Entry::Tree(_) => {
-                return Err(anyhow!(
-                    "{} is a directory, but should be a file!",
-                    REMAPPING_STATE_FILE
-                ));
+                return Ok(None);
             }
             Entry::Leaf(file) => file,
         };
@@ -136,7 +148,7 @@ impl CommitRemappingState {
         let content = String::from_utf8(bytes.to_vec())
             .with_context(|| format!("{} is not utf8", REMAPPING_STATE_FILE))?;
         let state: CommitRemappingState = serde_json::from_str(&content)?;
-        Ok(state)
+        Ok(Some(state))
     }
 
     pub async fn save_in_changeset(
@@ -162,6 +174,10 @@ impl CommitRemappingState {
 
     pub fn get_latest_synced_changeset(&self, source: &SourceName) -> Option<&ChangesetId> {
         self.latest_synced_changesets.get(source)
+    }
+
+    pub fn get_all_latest_synced_changesets(&self) -> &BTreeMap<SourceName, ChangesetId> {
+        &self.latest_synced_changesets
     }
 
     pub fn sync_config_version(&self) -> &SyncConfigVersion {

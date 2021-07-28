@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -15,6 +15,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{stream, StreamExt, TryFutureExt, TryStreamExt};
+use itertools::{EitherOrBoth, Itertools};
 use manifest::ManifestOps;
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
@@ -511,6 +512,110 @@ pub trait MegarepoOp {
             )));
         }
         Ok(())
+    }
+
+
+    async fn check_if_new_sync_target_config_is_equivalent_to_already_existing(
+        &self,
+        ctx: &CoreContext,
+        megarepo_configs: &Arc<dyn MononokeMegarepoConfigs>,
+        sync_target_config: &SyncTargetConfig,
+    ) -> Result<(), MegarepoError> {
+        let existing_config = megarepo_configs
+            .get_config_by_version(
+                ctx.clone(),
+                sync_target_config.target.clone(),
+                sync_target_config.version.clone(),
+            )
+            .with_context(|| {
+                format!(
+                    "while checking existence of {} config",
+                    sync_target_config.version
+                )
+            })
+            .map_err(MegarepoError::request)?;
+
+        if &existing_config != sync_target_config {
+            return Err(MegarepoError::request(anyhow!(
+                "config with version {} is stored, but it's different from the one sent in request parameters",
+                sync_target_config.version,
+            )));
+        }
+
+        Ok(())
+    }
+
+    async fn check_if_commit_has_expected_remapping_state(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        version: &SyncConfigVersion,
+        changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
+        repo: &RepoContext,
+    ) -> Result<Option<ChangesetId>, MegarepoError> {
+        let maybe_state =
+            CommitRemappingState::read_state_from_commit_opt(ctx, repo.blob_repo(), cs_id)
+                .await
+                .context("While reading remapping state file")
+                .map_err(MegarepoError::request)?;
+
+        let state = maybe_state.ok_or_else(|| {
+            MegarepoError::request(anyhow!("no remapping state file exist for {}", cs_id))
+        })?;
+
+        if version != state.sync_config_version() {
+            return Err(MegarepoError::request(anyhow!(
+                "Commit {} which has different config version: {}",
+                cs_id,
+                state.sync_config_version(),
+            )));
+        }
+
+        let state_changesets_to_merge = state.get_all_latest_synced_changesets();
+        if changesets_to_merge != state.get_all_latest_synced_changesets() {
+            // // Find at least one different source commit that we can put in error message
+            let mut error = None;
+
+            let merged_iterator = changesets_to_merge
+                .iter()
+                .merge_join_by(state_changesets_to_merge, |i, j| i.cmp(j));
+
+            for entry in merged_iterator {
+                match entry {
+                    EitherOrBoth::Left((key, value)) => {
+                        error = Some(format!(
+                            "{} -> {} is not present in the state file, but present in request",
+                            key, value,
+                        ));
+                        break;
+                    }
+                    EitherOrBoth::Right((key, value)) => {
+                        error = Some(format!(
+                            "{} -> {} is present in the state file, but not present in request",
+                            key, value,
+                        ));
+                        break;
+                    }
+                    EitherOrBoth::Both(request, state) => {
+                        if request != state {
+                            error = Some(format!(
+                                "{:?} is present in request, but {:?} in state file",
+                                request, state
+                            ));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return Err(MegarepoError::request(anyhow!(
+                "{} which was built from different source commits. Example - {}",
+                cs_id,
+                error.unwrap_or_else(|| "".to_string())
+            )));
+        }
+
+        Ok(Some(cs_id))
     }
 }
 

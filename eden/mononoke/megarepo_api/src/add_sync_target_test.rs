@@ -660,3 +660,112 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let target: Target = test.target("target".to_string());
+
+    let first_source_name = SourceName::new("source_1");
+    let second_source_name = SourceName::new("source_2");
+    let version = "version_1".to_string();
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .source_builder(second_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    println!("Create initial source commits and bookmarks");
+    let first_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("first", "first")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, first_source_name.to_string())
+        .set_to(first_source_cs_id)
+        .await?;
+
+    let second_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+        .add_file("second", "second")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &test.blobrepo, second_source_name.to_string())
+        .set_to(second_source_cs_id)
+        .await?;
+
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+
+    let mut sync_target_config =
+        test.configs_storage
+            .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let first_result = add_sync_target
+        .run(
+            &ctx,
+            sync_target_config.clone(),
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    // Now repeat the same request again (as if client retries a reqeust that has already
+    // succeeded). We should get the same result as the first time.
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let second_result = add_sync_target
+        .run(
+            &ctx,
+            sync_target_config.clone(),
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
+            },
+            None,
+        )
+        .await?;
+
+    assert_eq!(first_result, second_result);
+
+    // Now modify the request - it should fail
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    assert!(
+        add_sync_target
+            .run(
+                &ctx,
+                sync_target_config.clone(),
+                btreemap! {
+                    first_source_name.clone() => first_source_cs_id,
+                },
+                None,
+            )
+            .await
+            .is_err()
+    );
+
+    // Now send different config with the same name - should fail
+    sync_target_config.sources = vec![];
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let res = add_sync_target
+        .run(
+            &ctx,
+            sync_target_config,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+                second_source_name.clone() => second_source_cs_id,
+            },
+            None,
+        )
+        .await;
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert!(format!("{}", err).contains("it's different from the one sent in request parameters"));
+
+    Ok(())
+}
