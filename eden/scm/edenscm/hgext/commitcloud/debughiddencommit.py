@@ -71,6 +71,7 @@ def debughiddencommit(ui, repo, *pats, **opts):
 
         visibility.remove(repo, [node])
 
-    backup.backup(repo, [int(repo[node])])
+    uploaded, failed = backup.backup(repo, [int(repo[node])])
 
     ui.write(_("%s\n") % hex(node))
+    return 0 if not failed else 2

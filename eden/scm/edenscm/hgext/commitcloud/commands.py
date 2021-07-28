@@ -1630,3 +1630,4 @@ def cloudupload(ui, repo, **opts):
                 _("failed to upload %d commits\n") % len(failed),
                 component="commitcloud",
             )
+        return 2
