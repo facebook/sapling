@@ -1010,9 +1010,6 @@ struct MegarepoChangeTargetConfigParams {
     // This version *must* refer to the `target`
     2: megarepo_configs.SyncConfigVersion new_version,
     // Current location of the `target`'s bookmark.
-    // This operation will succeed only if the
-    // `target`'s bookmark is still at the same location
-    // when this operation tries to advance it
     // This argument exists to prevent race conditions
     3: megarepo_configs.ChangesetId target_location,
     // Initial changesets to merge for each of the
@@ -1035,6 +1032,9 @@ struct MegarepoSyncChangesetParams {
     // changesets up to and including `cs_id` from
     // `source` into `target`
     3: megarepo_configs.ChangesetId cs_id,
+    // Current location of the `target`'s bookmark.
+    // This argument exists to prevent race conditions
+    4: megarepo_configs.ChangesetId target_location,
 }
 
 // Params for megarepo_re_merge_source method
@@ -1050,9 +1050,6 @@ struct MegarepoRemergeSourceParams {
     // source
     3: megarepo_configs.ChangesetId cs_id,
     // Current location of the `target`'s bookmark.
-    // This operation will succeed only if the
-    // `target`'s bookmark is still at the same location
-    // when this operation tries to advance it
     // This argument exists to prevent race conditions
     4: megarepo_configs.ChangesetId target_location,
     // A message to be used in the commit description

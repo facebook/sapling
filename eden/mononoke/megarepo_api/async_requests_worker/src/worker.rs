@@ -350,6 +350,7 @@ mod test {
                 repo_id: 0,
                 bookmark: "book".to_string(),
             },
+            target_location: vec![],
         };
         q.enqueue(ctx.clone(), params).await?;
 
@@ -387,6 +388,7 @@ mod test {
                 repo_id: 0,
                 bookmark: "book".to_string(),
             },
+            target_location: vec![],
         };
         q.enqueue(ctx.clone(), params).await?;
 
