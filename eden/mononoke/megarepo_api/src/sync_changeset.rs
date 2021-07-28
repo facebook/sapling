@@ -68,12 +68,26 @@ impl<'a> SyncChangeset<'a> {
 
         // Now we need to find the target config version that was used to create the latest
         // target commit. This config version will be used to sync the new changeset
-        let (_, target_cs_id) = find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+        let (_, actual_target_location) =
+            find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+
+        if target_location != actual_target_location {
+            // Check if previous call was successful and return result if so
+            return self
+                .check_if_this_method_has_already_succeeded(
+                    ctx,
+                    source_cs_id,
+                    source_name,
+                    (target_location, actual_target_location),
+                    &target_repo,
+                )
+                .await;
+        }
 
         let (commit_remapping_state, target_config) = find_target_sync_config(
             &ctx,
             target_repo.blob_repo(),
-            target_cs_id,
+            target_location,
             &target,
             &self.megarepo_configs,
         )
@@ -122,7 +136,7 @@ impl<'a> SyncChangeset<'a> {
             source_repo.blob_repo(),
             source_cs,
             target_repo.blob_repo(),
-            target_cs_id,
+            target_location,
             &target,
             commit_remapping_state,
             &side_parents_move_commits,
@@ -195,6 +209,52 @@ impl<'a> SyncChangeset<'a> {
         )
         .await?;
         Ok(moved_commits)
+    }
+
+    // If that sync_changeset() call was successful, but failed to send
+    // successful result to the client (e.g. network issues) then
+    // client will retry a request. We need to detect this situation and
+    // send a successful response to the client.
+    async fn check_if_this_method_has_already_succeeded(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+        source_name: &SourceName,
+        (expected_target_location, actual_target_location): (ChangesetId, ChangesetId),
+        repo: &RepoContext,
+    ) -> Result<ChangesetId, MegarepoError> {
+        // Bookmark points a non-expected commit - let's see if changeset it points to was created
+        // by a previous sync_changeset call
+
+        // Check that first parent is a target location
+        let parents = repo
+            .blob_repo()
+            .get_changeset_parents_by_bonsai(ctx.clone(), actual_target_location)
+            .await?;
+        if parents.get(0) != Some(&expected_target_location) {
+            return Err(MegarepoError::request(anyhow!(
+                "Neither {} nor its first parent {:?} point to a target location {}",
+                actual_target_location,
+                parents.get(0),
+                expected_target_location,
+            )));
+        }
+
+        let state = self
+            .read_remapping_state_file(ctx, repo, actual_target_location)
+            .await?;
+
+        let latest_synced = state.latest_synced_changesets.get(source_name);
+        if Some(&source_cs_id) != latest_synced {
+            return Err(MegarepoError::request(anyhow!(
+                "In target commit {} latest synced source commit is {:?}, but expected {}",
+                actual_target_location,
+                latest_synced,
+                source_cs_id,
+            )));
+        }
+
+        Ok(actual_target_location)
     }
 }
 
@@ -746,6 +806,74 @@ mod test {
         let target_cs = target_cs_id.load(&ctx, &test.blobrepo.blobstore()).await?;
         // All parents are preserved.
         assert_eq!(target_cs.parents().count(), 2);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_sync_changeset_repeat_same_request(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let source_name = SourceName::new("source_1");
+        let version = "version_1".to_string();
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commit and bookmark");
+        let init_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
+            .set_to(init_source_cs_id)
+            .await?;
+
+        let latest_target_cs_id = test
+            .prepare_initial_commit_in_target(&ctx, &version, &target)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+
+        let source_cs_id = CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source_cs_id])
+            .add_file("anotherfile", "anothercontent")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
+            .set_to(source_cs_id)
+            .await?;
+
+        println!("Syncing new commit");
+        let res1 = sync_changeset
+            .sync(
+                &ctx,
+                source_cs_id,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
+            .await?;
+
+        println!("Now syncing the same commit again - should succeed");
+        let res2 = sync_changeset
+            .sync(
+                &ctx,
+                source_cs_id,
+                &source_name,
+                &target,
+                latest_target_cs_id,
+            )
+            .await?;
+
+        assert_eq!(res1, res2);
 
         Ok(())
     }

@@ -553,15 +553,7 @@ pub trait MegarepoOp {
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
         repo: &RepoContext,
     ) -> Result<Option<ChangesetId>, MegarepoError> {
-        let maybe_state =
-            CommitRemappingState::read_state_from_commit_opt(ctx, repo.blob_repo(), cs_id)
-                .await
-                .context("While reading remapping state file")
-                .map_err(MegarepoError::request)?;
-
-        let state = maybe_state.ok_or_else(|| {
-            MegarepoError::request(anyhow!("no remapping state file exist for {}", cs_id))
-        })?;
+        let state = self.read_remapping_state_file(ctx, repo, cs_id).await?;
 
         if version != state.sync_config_version() {
             return Err(MegarepoError::request(anyhow!(
@@ -616,6 +608,23 @@ pub trait MegarepoOp {
         }
 
         Ok(Some(cs_id))
+    }
+
+    async fn read_remapping_state_file(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        cs_id: ChangesetId,
+    ) -> Result<CommitRemappingState, MegarepoError> {
+        let maybe_state =
+            CommitRemappingState::read_state_from_commit_opt(ctx, repo.blob_repo(), cs_id)
+                .await
+                .context("While reading remapping state file")
+                .map_err(MegarepoError::request)?;
+
+        maybe_state.ok_or_else(|| {
+            MegarepoError::request(anyhow!("no remapping state file exist for {}", cs_id))
+        })
     }
 }
 
