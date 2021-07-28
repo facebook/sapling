@@ -39,10 +39,10 @@ class ObjectFetchContext {
    * Suitable for use as an index into an array of size kOriginEnumMax.
    */
   enum Origin : unsigned {
+    NotFetched,
     FromMemoryCache,
     FromDiskCache,
     FromBackingStore,
-    NotFetched,
     kOriginEnumMax,
   };
 
