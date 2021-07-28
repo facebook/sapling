@@ -63,4 +63,9 @@ def upload(repo, revs, force=False):
         repo.dageval(lambda: ancestors(missingheads) & draft())
     )
 
-    return edenapi_upload.uploadhgchangesets(repo, draftrevs, force)
+    return edenapi_upload.uploadhgchangesets(
+        repo,
+        draftrevs,
+        force,
+        usebonsaiformat=ui.configbool("commitcloud", "usebonsaiformat"),
+    )

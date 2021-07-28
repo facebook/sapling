@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -342,7 +342,9 @@ async fn upload_bonsai_changesets_impl(
     let mut changesets_data = Vec::with_capacity(changesets.len());
     for bonsai_cs in changesets {
         let hg_id = bonsai_cs.hg_changeset_id;
-        let cs = to_bonsai_changeset(&repo, bonsai_cs.changeset_content, &hgid_to_csid).await?;
+        let cs = to_bonsai_changeset(&repo, bonsai_cs.changeset_content, &hgid_to_csid)
+            .await
+            .with_context(|| anyhow!("When creating bonsai changeset for {}", hg_id))?;
         hgid_to_csid.insert(hg_id.clone(), cs.get_changeset_id());
         changesets_data.push((HgChangesetId::new(HgNodeHash::from(hg_id)), cs))
     }

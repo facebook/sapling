@@ -13,6 +13,7 @@ use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
 use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use bytes::Bytes;
+use changesets::ChangesetInsert;
 use context::CoreContext;
 use ephemeral_blobstore::{Bubble, BubbleId};
 use filestore::{self, Alias, FetchKey, StoreRequest};
@@ -399,8 +400,20 @@ impl HgRepoContext {
         let blobstore = self.blob_repo().blobstore();
         let mut response = Vec::new();
         for (hg_node, bonsai_cs) in changesets {
-            let result = save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs)
-                .await
+            let insert = ChangesetInsert {
+                cs_id: bonsai_cs.get_changeset_id(),
+                parents: bonsai_cs.parents().collect(),
+            };
+            let result =
+                match save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs).await {
+                    Ok(_) => {
+                        self.blob_repo()
+                            .get_changesets_object()
+                            .add(self.ctx().clone(), insert)
+                            .await
+                    }
+                    Err(err) => Err(err),
+                }
                 .map(|_| hg_node)
                 .map_err(MononokeError::from);
             if result.is_ok() {

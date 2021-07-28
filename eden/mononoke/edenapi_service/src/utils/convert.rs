@@ -118,7 +118,7 @@ pub async fn to_bonsai_changeset(
                     None => repo
                         .get_bonsai_from_hg(hgid.into())
                         .await?
-                        .ok_or_else(|| anyhow!("Parent HgId is invalid"))?,
+                        .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))?,
                 })
             })
             .try_collect()
