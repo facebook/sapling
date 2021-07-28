@@ -530,14 +530,14 @@ pub trait EdenApiPyExt: EdenApi {
         let store = as_legacystore(py, store)?;
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
 
-        let (content_ids, data): (Vec<_>, Vec<_>) = keys
+        let (content_ids, mut data): (Vec<_>, Vec<_>) = keys
             .into_iter()
             .map(|key| {
                 let content = store.get_file_content(&key).map_pyerr(py)?;
                 match content {
                     Some(v) => {
                         let content_id = calc_contentid(&v);
-                        Ok((content_id, (AnyFileContentId::ContentId(content_id), v)))
+                        Ok((content_id, (content_id, v)))
                     }
                     None => Err(format_err!(
                         "failed to fetch file content for the key '{}'",
@@ -550,6 +550,15 @@ pub trait EdenApiPyExt: EdenApi {
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .unzip();
+
+        // Deduplicate upload data
+        let mut uniques = BTreeSet::new();
+        data.retain(|(content_id, _)| uniques.insert(*content_id));
+        let data = data
+            .into_iter()
+            .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
+            .collect();
+
 
         let (responses, stats) = py
             .allow_threads(|| {
