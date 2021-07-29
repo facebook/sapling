@@ -197,6 +197,9 @@ Read file content:
 Making a commit and amend:
 (Triggers remote lookup 1 time!)
 
+#if no-windows
+(Path separator is different on Windows)
+
   $ echo Z > Z
   $ LOG=dag::protocol=debug,dag::open=debug,dag::cache=trace hg commit -Am Z Z
    DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
@@ -223,3 +226,4 @@ Making a commit and amend:
    DEBUG dag::cache: reusing cache (1 missing)
    TRACE dag::cache: cached missing [] (ancestors missing)
 
+#endif
