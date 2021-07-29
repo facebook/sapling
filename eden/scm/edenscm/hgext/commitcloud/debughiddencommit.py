@@ -9,7 +9,7 @@ from edenscm.mercurial.context import memctx
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
-from . import backup
+from . import backup, backuplock
 from .commands import command
 
 
@@ -36,7 +36,7 @@ def debughiddencommit(ui, repo, *pats, **opts):
 
     Commit hash is printed as a result of this command.
     """
-    with repo.wlock():
+    with backuplock.lock(repo), repo.wlock():
         status = repo.status()
         files = status.modified + status.added + status.removed + status.deleted
         removed = set(status.removed + status.deleted)
@@ -69,9 +69,9 @@ def debughiddencommit(ui, repo, *pats, **opts):
             extra,
         ).commit()
 
-        visibility.remove(repo, [node])
+        uploaded, failed = backup.backupwithlockheld(repo, [int(repo[node])])
 
-    uploaded, failed = backup.backup(repo, [int(repo[node])])
+        visibility.remove(repo, [node])
 
     ui.write(_("%s\n") % hex(node))
     return 0 if not failed else 2

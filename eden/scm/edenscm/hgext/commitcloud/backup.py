@@ -12,22 +12,25 @@ from . import backuplock, backupstate, dependencies, util as ccutil
 
 
 def backup(repo, revs, connect_opts=None, dest=None, force=False):
-    remotepath = ccutil.getremotepath(repo.ui, dest)
-    getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
-
     with backuplock.lock(repo):
-        # Load the backup state under the repo lock to ensure a consistent view.
-        with repo.lock():
-            state = backupstate.BackupState(repo, remotepath, resetlocalstate=force)
-        backedup, failed = _backup(
-            repo,
-            state,
-            remotepath,
-            getconnection,
-            revs,
+        return backupwithlockheld(
+            repo, revs, connect_opts=connect_opts, dest=dest, force=force
         )
 
-    return backedup, failed
+
+def backupwithlockheld(repo, revs, connect_opts=None, dest=None, force=False):
+    remotepath = ccutil.getremotepath(repo.ui, dest)
+    getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
+    with repo.lock():
+        # Load the backup state under the repo lock to ensure a consistent view.
+        state = backupstate.BackupState(repo, remotepath, resetlocalstate=force)
+    return _backup(
+        repo,
+        state,
+        remotepath,
+        getconnection,
+        revs,
+    )
 
 
 @perftrace.tracefunc("Backup Draft Commits to Commit Cloud")
