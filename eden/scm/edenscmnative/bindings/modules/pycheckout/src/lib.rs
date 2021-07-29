@@ -15,6 +15,7 @@ use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrE
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher};
+use progress_model::{ProgressBar, Registry};
 use pyconfigparser::config;
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
@@ -61,7 +62,13 @@ py_class!(class checkoutplan |py| {
 
         let current = current_manifest.borrow_underlying(py);
         let target = target_manifest.borrow_underlying(py);
-        let diff = Diff::new(&current, &target, &matcher);
+
+        let mut diff = Diff::new(&current, &target, &matcher);
+
+        let bar = &ProgressBar::new("Calculating", 0, "depth");
+        Registry::main().register_progress_bar(bar);
+        diff.attach_progress_bar(bar);
+
         let mut actions = ActionMap::from_diff(diff).map_pyerr(py)?;
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
             let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));

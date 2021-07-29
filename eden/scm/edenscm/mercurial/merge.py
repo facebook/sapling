@@ -2612,8 +2612,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
     if repo.ui.configbool("checkout", "resumable"):
         updateprogresspath = repo.localvfs.join("updateprogress")
 
-    with progress.spinner(repo.ui, _("calculating")):
-        plan = makenativecheckoutplan(repo, p1, p2, matcher, updateprogresspath)
+    plan = makenativecheckoutplan(repo, p1, p2, matcher, updateprogresspath)
 
     if repo.ui.debugflag:
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)

@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::{cmp::Ordering, collections::VecDeque, mem};
+use std::{cmp::Ordering, collections::VecDeque, mem, sync::Arc};
 
 use anyhow::Result;
 
 use manifest::{DiffEntry, File};
 use pathmatcher::{DirectoryMatch, Matcher};
+use progress_model::ProgressBar;
 use types::RepoPath;
 
 use crate::{store::InnerStore, DirLink, TreeManifest};
@@ -84,6 +85,7 @@ pub struct Diff<'a> {
     lstore: &'a InnerStore,
     rstore: &'a InnerStore,
     matcher: &'a dyn Matcher,
+    progress_bar: Option<&'a Arc<ProgressBar>>,
 }
 
 impl<'a> Diff<'a> {
@@ -104,7 +106,12 @@ impl<'a> Diff<'a> {
             lstore: &left.store,
             rstore: &right.store,
             matcher,
+            progress_bar: None,
         }
+    }
+
+    pub fn attach_progress_bar(&mut self, bar: &'a Arc<ProgressBar>) {
+        self.progress_bar = Some(bar);
     }
 
     /// Prefetch the contents of the directories in the next layer of the traversal.
@@ -158,6 +165,11 @@ impl<'a> Diff<'a> {
         if self.current.is_empty() {
             self.prefetch()?;
             mem::swap(&mut self.current, &mut self.next);
+
+            if let Some(bar) = self.progress_bar {
+                // Increase "depth" by one as we descend to next BFS level.
+                bar.increase_position(1);
+            }
         }
 
         let entries = match self.current.pop_front() {
