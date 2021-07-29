@@ -9,11 +9,13 @@
 #![deny(warnings)]
 #![feature(map_first_last)]
 
-use anyhow::{anyhow, format_err, Error, Result};
+use anyhow::{anyhow, format_err, Context, Error, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use bookmarks::{BookmarkKind, BookmarkPagination, BookmarkPrefix, Freshness};
+use bookmarks::{
+    BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
+};
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
@@ -832,6 +834,13 @@ async fn subcommand_tail(
             .map(|d| d.name())
             .collect::<BTreeSet<_>>(),
     );
+
+    let mut bookmarks_subscription = repo
+        .bookmarks()
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await
+        .context("Error creating bookmarks subscription")?;
+
     let backfill_derivers: Vec<Arc<dyn DerivedUtils>> =
         if backfill && !derived_data_config.backfilling.types.is_empty() {
             // Some backfilling types may depend on enabled types for their
@@ -873,8 +882,13 @@ async fn subcommand_tail(
             tokio::spawn(async move {
                 let mut derived_heads = HashSet::new();
                 loop {
-                    let heads = match get_most_recent_heads(&ctx, &repo).await {
-                        Ok(heads) => heads.into_iter().collect::<HashSet<_>>(),
+                    let heads_res = bookmarks_subscription.refresh(&ctx).await;
+                    let heads = match heads_res {
+                        Ok(()) => bookmarks_subscription
+                            .bookmarks()
+                            .into_iter()
+                            .map(|(_, (cs_id, _))| *cs_id)
+                            .collect::<HashSet<_>>(),
                         Err(e) => return Err::<(), _>(e),
                     };
                     let underived_heads = heads
@@ -938,7 +952,7 @@ async fn subcommand_tail(
     } else {
         info!(ctx.logger(), "using simple deriver");
         loop {
-            tail_one_iteration(ctx, &repo, &tail_derivers).await?;
+            tail_one_iteration(ctx, &repo, &tail_derivers, &mut bookmarks_subscription).await?;
         }
     }
     Ok(())
@@ -1044,8 +1058,17 @@ async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
+    bookmarks_subscription: &mut Box<dyn BookmarksSubscription>,
 ) -> Result<()> {
-    let heads = get_most_recent_heads(ctx, &repo).await?;
+    bookmarks_subscription
+        .refresh(ctx)
+        .await
+        .context("failed refreshing bookmarks subscriptions")?;
+    let heads = bookmarks_subscription
+        .bookmarks()
+        .into_iter()
+        .map(|(_, (cs_id, _))| *cs_id)
+        .collect::<Vec<_>>();
 
     // Find heads that needs derivation and find their oldest underived ancestor
     let find_pending_futs: Vec<_> = derive_utils
@@ -1173,10 +1196,17 @@ mod tests {
     async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
+
+        let mut bookmarks_subscription = repo
+            .bookmarks()
+            .create_subscription(&ctx, Freshness::MostRecent)
+            .await
+            .context("Error creating bookmarks subscription")?;
+
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let master = resolve_cs_id(&ctx, &repo, "master").await?;
         assert!(!RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
-        tail_one_iteration(&ctx, &repo, &[derived_utils]).await?;
+        tail_one_iteration(&ctx, &repo, &[derived_utils], &mut bookmarks_subscription).await?;
         assert!(RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
 
         Ok(())
