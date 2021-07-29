@@ -19,7 +19,7 @@ use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{
     LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
 };
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
@@ -233,6 +233,25 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         self.log
             .with(move |log| log.push((blobstore_id, key.to_string())));
         Ok(())
+    }
+}
+
+struct FailingPutHandler {}
+
+#[async_trait]
+impl MultiplexedBlobstorePutHandler for FailingPutHandler {
+    async fn on_put<'out>(
+        &'out self,
+        _ctx: &'out CoreContext,
+        mut _scuba: MononokeScubaSampleBuilder,
+        _blobstore_id: BlobstoreId,
+        _blobstore_type: String,
+        _multiplex_id: MultiplexId,
+        _operation_key: &'out OperationKey,
+        _key: &'out str,
+        _blob_size: Option<u64>,
+    ) -> Result<()> {
+        Err(anyhow!("failed on_put"))
     }
 }
 
@@ -1789,5 +1808,51 @@ async fn no_handlers(fb: FacebookInit) {
         });
 
         clear();
+    }
+}
+
+#[fbinit::test]
+async fn failing_put_handler(fb: FacebookInit) {
+    let bs0 = Arc::new(Tickable::new());
+    let bs1 = Arc::new(Tickable::new());
+    let bs2 = Arc::new(Tickable::new());
+    let failing_put_handler = Arc::new(FailingPutHandler {});
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), bs0.clone()),
+            (BlobstoreId::new(1), bs1.clone()),
+            (BlobstoreId::new(2), bs2.clone()),
+        ],
+        vec![],
+        // 1 mininum successful write
+        nonzero!(1usize),
+        failing_put_handler,
+        MononokeScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+    let ctx = CoreContext::test_mock(fb);
+
+    let k = String::from("k");
+    let v = make_value("v");
+
+    // Put succeeds in all blobstores, so failures in log handler shouldn't matter.
+    {
+        let mut fut = bs
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+
+        bs0.tick(None);
+        // Poll the future to trigger a handler, which would fail
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+
+        bs1.tick(None);
+        bs2.tick(None);
+
+        // Make sure put is successful
+        fut.await.expect("Put should have succeeded");
     }
 }

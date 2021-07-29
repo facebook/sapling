@@ -105,7 +105,8 @@ pub struct MultiplexedBlobstoreBase {
     /// 2. When we're recording blobstore stats to Scuba on a `get` - in this case, the read executes
     ///    solely to gather statistics, and the result is discarded
     write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
-    /// At least this many `put` and `on_put` pairs have to succeed before we consider a `put` successful
+    /// `put` is considered successful if either this many `put` and `on_put` pairs succeeded or all puts were
+    /// successful (regardless of whether `on_put`s were successful).
     /// This is meant to ensure that `put` fails if the data could end up lost (e.g. if a buggy experimental
     /// blobstore wins the `put` race).
     /// Note that if this is bigger than the number of blobstores, we will always fail writes
@@ -656,6 +657,7 @@ impl MultiplexedBlobstoreBase {
                     .increment_counter(PerfCounterType::BlobPuts);
 
                 let mut put_errors = HashMap::new();
+                let mut handler_errors = HashMap::new();
                 let mut handlers = FuturesUnordered::new();
 
                 while let Some(result) = select_next(
@@ -696,15 +698,17 @@ impl MultiplexedBlobstoreBase {
                             }
                         }
                         Right(Err((blobstore_id, e))) => {
-                            put_errors.insert(blobstore_id, e);
+                            handler_errors.insert(blobstore_id, e);
                         }
                     }
                 }
-                if put_errors.len() == 1 {
-                    let (_, put_error) = put_errors.drain().next().unwrap();
-                    Err(put_error)
+                let mut errors = put_errors;
+                errors.extend(handler_errors.into_iter());
+                if errors.len() == 1 {
+                    let (_, error) = errors.drain().next().unwrap();
+                    Err(error)
                 } else {
-                    Err(ErrorKind::MultiplePutFailures(Arc::new(put_errors)).into())
+                    Err(ErrorKind::MultiplePutFailures(Arc::new(errors)).into())
                 }
             }
             .timed()
