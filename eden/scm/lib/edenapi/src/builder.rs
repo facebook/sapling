@@ -121,6 +121,7 @@ pub struct HttpClientBuilder {
     http_version: Option<HttpVersion>,
     validate_certs: bool,
     log_dir: Option<PathBuf>,
+    convert_cert: bool,
 }
 
 impl HttpClientBuilder {
@@ -223,6 +224,16 @@ impl HttpClientBuilder {
         let log_dir = config
             .get_opt::<PathBuf>("edenapi", "logdir")
             .map_err(|e| ConfigError::Malformed("edenapi.logdir".into(), e))?;
+
+
+        // Normally, this setting would be set globally for Mercurial elsewhere. However, when this
+        // crate is used outside of Mercurial (such as in EdenFS), global Mercurial HTTP client
+        // config options will not be applied. Since this particular option is essential for EdenAPI
+        // to work correctly, we explicitly [re]set it here.
+        let convert_cert = config
+            .get_or("http", "convert-cert", || cfg!(windows))
+            .map_err(|e| ConfigError::Malformed("http.convert-cert".into(), e))?;
+
         Ok(HttpClientBuilder {
             server_url: Some(server_url),
             cert,
@@ -240,6 +251,7 @@ impl HttpClientBuilder {
             http_version,
             validate_certs,
             log_dir,
+            convert_cert,
         })
     }
 
@@ -364,6 +376,14 @@ impl HttpClientBuilder {
         self.log_dir = Some(dir.as_ref().into());
         self
     }
+
+    /// If enabled, convert the user's client certificate from PEM to PKCS#12
+    /// prior to use. This is required on platforms that do not natively support
+    /// PEM certificates, such as Windows.
+    pub fn convert_cert(mut self, enable: bool) -> Self {
+        self.convert_cert = enable;
+        self
+    }
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
@@ -387,6 +407,7 @@ pub(crate) struct Config {
     pub(crate) http_version: Option<HttpVersion>,
     pub(crate) validate_certs: bool,
     pub(crate) log_dir: Option<PathBuf>,
+    pub(crate) convert_cert: bool,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -410,6 +431,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             http_version,
             validate_certs,
             log_dir,
+            convert_cert,
         } = builder;
 
         // Check for missing required fields.
@@ -444,6 +466,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             http_version,
             validate_certs,
             log_dir,
+            convert_cert,
         })
     }
 }

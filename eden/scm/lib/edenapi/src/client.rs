@@ -116,6 +116,7 @@ impl Client {
                 check_certs(cert)?;
             }
             req.set_cert(cert);
+            req.set_convert_cert(self.config.convert_cert);
         }
 
         if let Some(ref key) = self.config.key {
