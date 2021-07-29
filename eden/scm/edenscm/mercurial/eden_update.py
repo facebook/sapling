@@ -79,7 +79,9 @@ def update(
             if updatecheck == "noconflict":
                 with progress.spinner(repo.ui, _("checking for conflicts")):
                     conflicts = repo.dirstate.eden_client.checkout(
-                        destctx.node(), CheckoutMode.DRY_RUN
+                        destctx.node(),
+                        CheckoutMode.DRY_RUN,
+                        manifest=destctx.manifestnode(),
                     )
                 if conflicts:
                     actions = _determine_actions_for_conflicts(repo, p1ctx, conflicts)
@@ -102,7 +104,9 @@ def update(
             # to do anything with them here.
             with progress.spinner(repo.ui, _("updating to %s") % deststr):
                 conflicts = repo.dirstate.eden_client.checkout(
-                    destctx.node(), CheckoutMode.FORCE
+                    destctx.node(),
+                    CheckoutMode.FORCE,
+                    manifest=destctx.manifestnode(),
                 )
             # We do still need to make sure to update the merge state though.
             # In the non-force code path the merge state is updated in
@@ -115,7 +119,9 @@ def update(
         else:
             with progress.spinner(repo.ui, _("updating to %s") % deststr):
                 conflicts = repo.dirstate.eden_client.checkout(
-                    destctx.node(), CheckoutMode.NORMAL
+                    destctx.node(),
+                    CheckoutMode.NORMAL,
+                    manifest=destctx.manifestnode(),
                 )
             # TODO(mbolin): Add a warning if we did a DRY_RUN and the conflicts
             # we get here do not match. Only in the event of a race would we

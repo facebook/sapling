@@ -198,8 +198,9 @@ class DirstateChecker(HgFileChecker):
             parents = eden_ttypes.WorkingDirectoryParents(parent1=self._new_parents[0])
             if self._new_parents[1] != self._null_commit_id:
                 parents.parent2 = self._new_parents[1]
+            params = eden_ttypes.ResetParentCommitsParams()
             with self.checkout.instance.get_thrift_client_legacy() as client:
-                client.resetParentCommits(bytes(self.checkout.path), parents)
+                client.resetParentCommits(bytes(self.checkout.path), parents, params)
 
     def _commit_hex(self, commit: bytes) -> str:
         return binascii.hexlify(commit).decode("utf-8")

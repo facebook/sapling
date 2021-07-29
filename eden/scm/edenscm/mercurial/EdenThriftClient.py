@@ -111,7 +111,7 @@ class EdenThriftClient(object):
         """
         return create_thrift_client(socket_path=self._socket_path)
 
-    def setHgParents(self, p1, p2, need_flush=True):
+    def setHgParents(self, p1, p2, need_flush=True, p1manifest=None):
         if p2 == node.nullid:
             p2 = None
 
@@ -119,8 +119,9 @@ class EdenThriftClient(object):
             self._flushPendingTransactions()
 
         parents = eden_ttypes.WorkingDirectoryParents(parent1=p1, parent2=p2)
+        params = eden_ttypes.ResetParentCommitsParams(hgRootManifest=p1manifest)
         with self._get_client() as client:
-            client.resetParentCommits(self._eden_root, parents)
+            client.resetParentCommits(self._eden_root, parents, params)
 
     def getStatus(self, parent, list_ignored):  # noqa: C901
 
@@ -149,12 +150,15 @@ class EdenThriftClient(object):
 
             return edenstatus
 
-    def checkout(self, node, checkout_mode, need_flush=True):
+    def checkout(self, node, checkout_mode, need_flush=True, manifest=None):
         if need_flush:
             self._flushPendingTransactions()
+        params = eden_ttypes.CheckOutRevisionParams(hgRootManifest=manifest)
         with self._get_client() as client:
             try:
-                return client.checkOutRevision(self._eden_root, node, checkout_mode)
+                return client.checkOutRevision(
+                    self._eden_root, node, checkout_mode, params
+                )
             except EdenError as e:
                 raise error.Abort(_("error performing EdenFS checkout: %s") % e.message)
 

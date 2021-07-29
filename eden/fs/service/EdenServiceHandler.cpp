@@ -444,16 +444,33 @@ void EdenServiceHandler::checkOutRevision(
     std::vector<CheckoutConflict>& results,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
-    CheckoutMode checkoutMode) {
+    CheckoutMode checkoutMode,
+    std::unique_ptr<CheckOutRevisionParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
       logHash(*hash),
-      apache::thrift::util::enumName(checkoutMode, "(unknown)"));
+      apache::thrift::util::enumName(checkoutMode, "(unknown)"),
+      params->hgRootManifest_ref().has_value()
+          ? logHash(*params->hgRootManifest_ref())
+          : "(unspecified hg root manifest)");
 
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootId = edenMount->getObjectStore()->parseRootId(*hash);
+  if (params->hgRootManifest_ref().has_value()) {
+    // The hg client has told us what the root manifest is.
+    //
+    // This is useful when a commit has just been created.  We won't be able to
+    // ask the import helper to map the commit to its root manifest because it
+    // won't know about the new commit until it reopens the repo.  Instead,
+    // import the manifest for this commit directly.
+    auto rootManifest = hashFromThrift(*params->hgRootManifest_ref());
+    edenMount->getObjectStore()
+        ->getBackingStore()
+        ->importManifestForRoot(rootId, rootManifest)
+        .get();
+  }
   auto checkoutFuture = edenMount->checkout(
       rootId,
       helper->getFetchContext().getClientPid(),
@@ -464,13 +481,33 @@ void EdenServiceHandler::checkOutRevision(
 
 void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<WorkingDirectoryParents> parents) {
+    std::unique_ptr<WorkingDirectoryParents> parents,
+    std::unique_ptr<ResetParentCommitsParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG1, *mountPoint, logHash(*parents->parent1_ref()));
+      DBG1,
+      *mountPoint,
+      logHash(*parents->parent1_ref()),
+      params->hgRootManifest_ref().has_value()
+          ? logHash(*params->hgRootManifest_ref())
+          : "(unspecified hg root manifest)");
+
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto parent1 =
       edenMount->getObjectStore()->parseRootId(*parents->parent1_ref());
+  if (params->hgRootManifest_ref().has_value()) {
+    // The hg client has told us what the root manifest is.
+    //
+    // This is useful when a commit has just been created.  We won't be able to
+    // ask the import helper to map the commit to its root manifest because it
+    // won't know about the new commit until it reopens the repo.  Instead,
+    // import the manifest for this commit directly.
+    auto rootManifest = hashFromThrift(*params->hgRootManifest_ref());
+    edenMount->getObjectStore()
+        ->getBackingStore()
+        ->importManifestForRoot(parent1, rootManifest)
+        .get();
+  }
   edenMount->resetParent(parent1);
 }
 

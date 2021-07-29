@@ -686,6 +686,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     mount=bytes(checkout.path),
                     parent1=b"\x12\x00\x00\x00" * 5,
                     parent2=None,
+                    hg_root_manifest=None,
                 )
             ],
         )
@@ -730,6 +731,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     mount=bytes(checkout.path),
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
+                    hg_root_manifest=None,
                 )
             ],
         )
@@ -777,6 +779,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
                     mount=bytes(checkout.path),
                     parent1=b"\x87\x65\x43\x21" * 5,
                     parent2=None,
+                    hg_root_manifest=None,
                 )
             ],
         )

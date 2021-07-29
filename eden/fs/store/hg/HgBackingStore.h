@@ -95,6 +95,16 @@ class HgBackingStore {
   void periodicManagementTask();
 
   /**
+   * Import the root manifest for the specied revision using mercurial
+   * treemanifest data.  This is called when the root manifest is provided
+   * to EdenFS directly by the hg client.
+   */
+  folly::Future<folly::Unit> importTreeManifestForRoot(
+      const RootId& rootId,
+      const Hash& manifestId,
+      bool prefetchMetadata);
+
+  /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
@@ -156,6 +166,11 @@ class HgBackingStore {
   folly::Future<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
       const Hash& commitID,
       const Hash& rootTreeHash,
+      bool prefetchMetadata);
+
+  folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
+      const Hash& commitId,
+      Hash manifestNode,
       bool prefetchMetadata);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.

@@ -15,6 +15,7 @@ class ResetParentsCommitsArgs(NamedTuple):
     mount: bytes
     parent1: bytes
     parent2: Optional[bytes]
+    hg_root_manifest: Optional[bytes]
 
 
 class FakeClient:
@@ -41,10 +42,16 @@ class FakeClient:
         return self._mounts
 
     def resetParentCommits(
-        self, mountPoint: bytes, parents: eden_ttypes.WorkingDirectoryParents
+        self,
+        mountPoint: bytes,
+        parents: eden_ttypes.WorkingDirectoryParents,
+        params: eden_ttypes.ResetParentCommitsParams,
     ):
         self.set_parents_calls.append(
             ResetParentsCommitsArgs(
-                mount=mountPoint, parent1=parents.parent1, parent2=parents.parent2
+                mount=mountPoint,
+                parent1=parents.parent1,
+                parent2=parents.parent2,
+                hg_root_manifest=params.hgRootManifest,
             )
         )

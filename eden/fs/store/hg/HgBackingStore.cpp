@@ -598,6 +598,38 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
   return make_unique<Tree>(std::move(entries), edenTreeID);
 }
 
+folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
+    const RootId& rootId,
+    const Hash& manifestId,
+    bool prefetchMetadata) {
+  auto commitId = hashFromRootId(rootId);
+  return localStore_
+      ->getFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
+      .thenValue(
+          [this, commitId, manifestId, prefetchMetadata](
+              StoreResult result) -> folly::Future<folly::Unit> {
+            if (result.isValid()) {
+              // We have already imported this commit, nothing to do.
+              return folly::unit;
+            }
+
+            return importTreeManifestImpl(
+                       commitId, manifestId, prefetchMetadata)
+                .thenValue([this, commitId, manifestId](
+                               std::unique_ptr<Tree> rootTree) {
+                  XLOG(DBG3)
+                      << "imported mercurial commit " << commitId.toString()
+                      << " with manifest " << manifestId.toString()
+                      << " as tree " << rootTree->getHash().toString();
+
+                  localStore_->put(
+                      KeySpace::HgCommitToTreeFamily,
+                      commitId,
+                      rootTree->getHash().getBytes());
+                });
+          });
+}
+
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
     const Hash& commitId,
     bool prefetchMetadata) {
@@ -611,26 +643,32 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
       .thenValue([this, commitId, prefetchMetadata](auto manifestNode) {
         XLOG(DBG2) << "revision " << commitId.toString()
                    << " has manifest node " << manifestNode;
-        // Record that we are at the root for this node
-        RelativePathPiece path{};
-        auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-        // needs to write the scs proxy hash before the fetch so that it is
-        // available for the request
-        auto batch = localStore_->beginWrite();
-        ScsProxyHash::store(proxyInfo.first, path, commitId, batch.get());
-        batch->flush();
-        auto futTree = importTreeImpl(
-            manifestNode, proxyInfo.first, path, commitId, prefetchMetadata);
-        return std::move(futTree).thenValue(
-            [batch = localStore_->beginWrite(),
-             info = std::move(proxyInfo)](auto tree) {
-              // Only write the proxy hash value for this once we've imported
-              // the root.
-              HgProxyHash::store(info, batch.get());
-              batch->flush();
-              return tree;
-            });
+        return importTreeManifestImpl(commitId, manifestNode, prefetchMetadata);
       });
+}
+
+folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
+    const Hash& commitId,
+    Hash manifestNode,
+    bool prefetchMetadata) {
+  // Record that we are at the root for this node
+  RelativePathPiece path{};
+  auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
+  // needs to write the scs proxy hash before the fetch so that it is
+  // available for the request
+  auto batch = localStore_->beginWrite();
+  ScsProxyHash::store(proxyInfo.first, path, commitId, batch.get());
+  batch->flush();
+  auto futTree = importTreeImpl(
+      manifestNode, proxyInfo.first, path, commitId, prefetchMetadata);
+  return std::move(futTree).thenValue([batch = localStore_->beginWrite(),
+                                       info = std::move(proxyInfo)](auto tree) {
+    // Only write the proxy hash value for this once we've imported
+    // the root.
+    HgProxyHash::store(info, batch.get());
+    batch->flush();
+    return tree;
+  });
 }
 
 unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(

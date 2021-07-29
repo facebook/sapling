@@ -147,6 +147,10 @@ class HgQueuedBackingStore final : public BackingStore {
   void recordFetch(folly::StringPiece) override;
   std::unordered_set<std::string> stopRecordingFetch() override;
 
+  folly::SemiFuture<folly::Unit> importManifestForRoot(
+      const RootId& root,
+      const Hash& manifest) override;
+
   HgBackingStore& getHgBackingStore() {
     return *backingStore_;
   }

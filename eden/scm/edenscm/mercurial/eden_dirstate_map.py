@@ -60,7 +60,12 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # We do not need to flush any pending transaction state here--manifest
         # and changelog data for a transaction is always written to disk before the
         # dirstate is updated.
-        self._thrift_client.setHgParents(parents[0], parents[1], need_flush=False)
+        self._thrift_client.setHgParents(
+            parents[0],
+            parents[1],
+            need_flush=False,
+            p1manifest=self._repo[parents[0]].manifestnode(),
+        )
         self._dirtyparents = False
         self.nonnormalset, self.otherparentset = self.nonnormalentries()
 

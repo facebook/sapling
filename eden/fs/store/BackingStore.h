@@ -77,6 +77,27 @@ class BackingStore : public RootIdCodec {
     return {};
   }
 
+  /**
+   * Directly import a manifest for a root.
+   *
+   * Subclasses of BackingStore can override this to opportunistically import
+   * known manifests for a particular root.
+   *
+   * This is called when the hg client informs EdenFS of a root to manifest
+   * mapping.  This is useful when the commit has just been created, as
+   * EdenFS won't be able to find out the manifest from the import helper
+   * until it re-opens the repo.
+   *
+   * TODO: When EdenFS no longer uses hg import helper subprocesses and when
+   * Hash is widened to variable-width, eliminating the need for proxy hashes,
+   * this API should be removed.
+   */
+  virtual folly::SemiFuture<folly::Unit> importManifestForRoot(
+      const RootId& /*rootId*/,
+      const Hash& /*manifest*/) {
+    return folly::unit;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;

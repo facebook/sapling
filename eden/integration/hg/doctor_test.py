@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import WorkingDirectoryParents
+from facebook.eden.ttypes import WorkingDirectoryParents, ResetParentCommitsParams
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -62,8 +62,11 @@ class DoctorTest(EdenHgTestCase):
         # set eden to point at the first commit, while keeping mercurial at the
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
+        params = ResetParentCommitsParams()
         with self.eden.get_thrift_client() as client:
-            client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
+            client.resetParentCommits(
+                mountPoint=bytes(mount_path), parents=parents, params=params
+            )
 
         with self.assertRaises(hgrepo.HgError) as status_context:
             self.repo.status()
@@ -105,10 +108,13 @@ class DoctorTest(EdenHgTestCase):
 
         corrupt_commit = b"9" * 40
         parents = WorkingDirectoryParents(parent1=corrupt_commit)
+        params = ResetParentCommitsParams()
 
         # point eden to a random commit
         with self.eden.get_thrift_client() as client:
-            client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
+            client.resetParentCommits(
+                mountPoint=bytes(mount_path), parents=parents, params=params
+            )
 
         with self.assertRaises(hgrepo.HgError) as status_context:
             self.repo.status()

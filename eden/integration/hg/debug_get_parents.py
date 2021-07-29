@@ -7,7 +7,7 @@
 from pathlib import Path
 
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import WorkingDirectoryParents
+from facebook.eden.ttypes import WorkingDirectoryParents, ResetParentCommitsParams
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -44,8 +44,11 @@ class DebugGetParentsTest(EdenHgTestCase):
         # set eden to point at the first commit, while keeping mercurial at the
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
+        params = ResetParentCommitsParams()
         with self.eden.get_thrift_client() as client:
-            client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
+            client.resetParentCommits(
+                mountPoint=bytes(mount_path), parents=parents, params=params
+            )
 
         output = self.eden.run_cmd("debug", "parents", cwd=self.mount).strip("\n")
         self.assertEqual(output, self.commit1)

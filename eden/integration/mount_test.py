@@ -20,6 +20,7 @@ from facebook.eden.ttypes import (
     MountState,
     UnblockFaultArg,
     WorkingDirectoryParents,
+    ResetParentCommitsParams,
 )
 from fb303_core.ttypes import fb303_status
 from thrift.Thrift import TException  # @manual=//thrift/lib/py:base
@@ -176,8 +177,11 @@ class MountTest(testcase.EdenRepoTest):
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         parents = WorkingDirectoryParents(parent1=null_commit)
+        params = ResetParentCommitsParams()
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            client.resetParentCommits(mountPoint=bytes(mount_path), parents=parents)
+            client.resetParentCommits(
+                mountPoint=bytes(mount_path), parents=parents, params=params
+            )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     def _wait_until_initializing(self, num_mounts: int = 1) -> None:

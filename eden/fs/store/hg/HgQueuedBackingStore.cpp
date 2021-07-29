@@ -545,4 +545,20 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
   return paths;
 }
 
+folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
+    const RootId& root,
+    const Hash& manifest) {
+  // This method is used when the client informs us about a target manifest
+  // that it is about to update to, for the scenario when a manifest has
+  // just been created.  Since the manifest has just been created locally, and
+  // metadata is only available remotely, there will be no metadata available
+  // to prefetch.
+  //
+  // When the local store is populated with metadata for newly-created
+  // manifests then we can update this so that is true when appropriate.
+  bool prefetchMetadata = false;
+  return backingStore_->importTreeManifestForRoot(
+      root, manifest, prefetchMetadata);
+}
+
 } // namespace facebook::eden
