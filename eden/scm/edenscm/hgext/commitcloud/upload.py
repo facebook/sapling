@@ -8,14 +8,14 @@ from __future__ import absolute_import
 from edenscm.mercurial import node as nodemod, edenapi_upload
 from edenscm.mercurial.i18n import _, _n
 
-from . import util as ccutil
-
 
 def upload(repo, revs, force=False):
     """Upload draft commits using EdenApi Uploads
 
     Commits that have already been uploaded will be skipped.
     If no revision is specified, uploads all visible commits.
+
+    Returns list of uploaded heads (as nodes) and list of failed commits (as nodes).
     """
     ui = repo.ui
 
@@ -38,7 +38,7 @@ def upload(repo, revs, force=False):
 
     if not missingheads:
         ui.status(_("nothing to upload\n"), component="commitcloud")
-        return [], []
+        return heads, []
 
     # Print the heads missing on the server
     _maxoutput = 20
@@ -63,9 +63,24 @@ def upload(repo, revs, force=False):
         repo.dageval(lambda: ancestors(missingheads) & draft())
     )
 
-    return edenapi_upload.uploadhgchangesets(
+    newuploaded, failed = edenapi_upload.uploadhgchangesets(
         repo,
         draftrevs,
         force,
         usebonsaiformat=ui.configbool("commitcloud", "usebonsaiformat"),
     )
+
+    failednodes = {repo[r].node() for r in failed}
+
+    # Uploaded heads are all heads that have been filtered or uploaded and also heads of the 'newuploaded' revs.
+
+    # Example (5e4faf031 must be included in uploadedheads):
+    #  o  4bb40f883 (failed)
+    #  │
+    #  @  5e4faf031 (uploaded)
+
+    uploadedheads = list(
+        repo.nodes("heads(%ld) + %ln - heads(%ln)", newuploaded, heads, failednodes)
+    )
+
+    return uploadedheads, failednodes

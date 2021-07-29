@@ -203,6 +203,13 @@ def _gettrees(repo, nodes):
             yield treenode, p1, p2, treetext
 
 
+def _torevs(repo, uploadednodes, failednodes):
+    """Convert nodes back to revs"""
+    return set([repo[node].rev() for node in uploadednodes]), set(
+        [repo[node].rev() for node in failednodes]
+    )
+
+
 def _filetypefromfile(f):
     if f.isexec():
         return "Executable"
@@ -286,11 +293,7 @@ def _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs):
         for mut in mutations
     ]
 
-    uploaded, failed = _uploadchangesets(repo, changesets, mutations, True)
-    uploaded = [repo[node].rev() for node in uploaded]
-    failed = [repo[node].rev() for node in failed]
-
-    return uploaded, failed
+    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations, True))
 
 
 def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
@@ -319,7 +322,7 @@ def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
     If ``force`` is True (the default is False) the lookup check isn't performed prior to upload for commits, filenodes and trees.
     It will be still performed for file contents.
 
-    Returns (uploaded, failed) revs where uploaded and failed are lists.
+    Returns newly uploaded revs and failed revs.
     """
 
     nodes = [repo[r].node() for r in revs]
@@ -427,8 +430,4 @@ def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
         for mut in mutations
     ]
 
-    uploaded, failed = _uploadchangesets(repo, changesets, mutations, False)
-    uploaded = [repo[node].rev() for node in uploaded]
-    failed = [repo[node].rev() for node in failed]
-
-    return uploaded, failed
+    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations, False))

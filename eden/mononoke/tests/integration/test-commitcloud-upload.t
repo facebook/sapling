@@ -132,6 +132,9 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
     INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
  
  
 Make another commit in the first client and upload it
@@ -160,6 +163,9 @@ The files of the second commit are identical to the files of the first commit, s
     INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
 
+  $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
+
   $ cd ..
 
 Try pull an uploaded commit from another client
@@ -177,6 +183,13 @@ Try pull an uploaded commit from another client
   │
   @  8b2dca0c8a72 'base_commit'
   
+  $ hgedenapi cloud check -r 65289540f44d  # pull doesn't update backup state
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
+
+  $ hgedenapi cloud upload
+  commitcloud: nothing to upload
+  $ hgedenapi cloud check -r 65289540f44d  # upload does
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
   $ cd ..
 

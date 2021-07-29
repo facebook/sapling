@@ -1617,12 +1617,17 @@ def cloudupload(ui, repo, **opts):
         revs = None
 
     uploaded, failed = upload.upload(repo, revs, force=opts.get("force"))
+    if uploaded:
+        with repo.lock():
+            backupstate.BackupState(
+                repo, ccutil.getremotepath(ui, None), usehttp=True
+            ).update(uploaded)
+
     if failed:
         if len(failed) < 10:
             while failed:
                 repo.ui.warn(
-                    _("failed to upload %s\n")
-                    % nodemod.short(repo[failed.pop()].node()),
+                    _("failed to upload %s\n") % nodemod.short(failed.pop()),
                     component="commitcloud",
                 )
         else:
