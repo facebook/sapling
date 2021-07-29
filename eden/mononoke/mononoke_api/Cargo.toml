@@ -7,7 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.45"
+async-trait = "0.1.51"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }

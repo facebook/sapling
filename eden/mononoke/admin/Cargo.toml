@@ -11,7 +11,7 @@ path = "../cmds/admin/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.45"
+async-trait = "0.1.51"
 backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.45"
+async-trait = "0.1.51"
 auth = { path = "../../auth" }
 configmodel = { path = "../../configmodel" }
 edenapi_types = { path = "../types" }
