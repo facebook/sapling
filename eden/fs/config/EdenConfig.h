@@ -636,6 +636,15 @@ class EdenConfig : private ConfigSettingManager {
       0,
       this};
 
+  /**
+   * An allowlist to check for logging if the alias environment variable is
+   * set
+   */
+  ConfigSetting<std::vector<std::string>> logFileAccessesAliasAllowlist{
+      "prefetch-profiles:file-access-logging-alias-allowlist",
+      std::vector<std::string>{},
+      this};
+
   // [overlay]
 
   /**
