@@ -223,7 +223,21 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
     const Hash& edenTreeId,
     LocalStore::WriteBatch* writeBatch,
     const std::optional<Hash>& commitHash) {
-  if (auto tree = store_.getTree(manifestId.getBytes())) {
+  // For root trees we will try getting the tree locally first.  This allows
+  // us to catch when Mercurial might have just written a tree to the store,
+  // and refresh the store so that the store can pick it up.  We don't do
+  // this for all trees, as it would cause a lot of additional work on every
+  // cache miss, and just doing it for root trees is sufficient to detect the
+  // scenario where Mercurial just wrote a brand new tree.
+  bool local_only = path.empty();
+  auto tree = store_.getTree(manifestId.getBytes(), local_only);
+  if (!tree && local_only) {
+    // Mercurial might have just written the tree to the store. Refresh the
+    // store and try again, this time allowing remote fetches.
+    store_.refresh();
+    tree = store_.getTree(manifestId.getBytes(), false);
+  }
+  if (tree) {
     return fromRawTree(tree.get(), edenTreeId, path, writeBatch, commitHash);
   }
   return nullptr;

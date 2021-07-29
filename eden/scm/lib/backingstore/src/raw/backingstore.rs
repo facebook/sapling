@@ -114,13 +114,15 @@ fn backingstore_get_tree(
     store: *mut BackingStore,
     node: *const u8,
     node_len: usize,
+    local: bool,
 ) -> Result<*mut Tree> {
     assert!(!store.is_null());
     let store = unsafe { &*store };
     let node = stringpiece_to_slice(node, node_len)?;
 
     store
-        .get_tree(node)
+        .get_tree(node, local)
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
         .and_then(|list| list.try_into())
         .map(|result| Box::into_raw(Box::new(result)))
 }
@@ -130,8 +132,9 @@ pub extern "C" fn rust_backingstore_get_tree(
     store: *mut BackingStore,
     node: *const u8,
     node_len: usize,
+    local: bool,
 ) -> CFallible<Tree> {
-    backingstore_get_tree(store, node, node_len).into()
+    backingstore_get_tree(store, node, node_len, local).into()
 }
 
 #[no_mangle]
