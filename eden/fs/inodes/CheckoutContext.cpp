@@ -101,7 +101,6 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
       return std::move(*conflicts_.wlock());
     });
 #else
-    auto* channel = mount_->getPrjfsChannel();
     if (auto* channel = mount_->getPrjfsChannel()) {
       channel->flushNegativePathCache();
     }
