@@ -12,6 +12,7 @@
 #include <folly/portability/Windows.h>
 
 #include <ProjectedFSLib.h> // @manual
+#include <winioctl.h> // @manual
 
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -46,23 +47,107 @@ std::set<PathComponent> makeEntriesSet(const overlay::OverlayDir& dir) {
   return result;
 }
 
-mode_t modeFromEntry(const boost::filesystem::directory_entry& entry) {
-  // NOTE: Both boost::filesystem and MSVC's std::filesystem only supports
-  // detecting regular file, directory and symlink. This should be sufficient
-  // for us.
-  if (boost_fs::is_regular_file(entry)) {
-    return dtype_to_mode(dtype_t::Regular);
-  } else if (boost_fs::is_directory(entry)) {
-    return dtype_to_mode(dtype_t::Dir);
-  } else if (boost_fs::is_symlink(entry)) {
-    return dtype_to_mode(dtype_t::Symlink);
+namespace {
+// Reparse tag for UNIX domain socket is not defined in Windows header files.
+const ULONG IO_REPARSE_TAG_SOCKET = 0x80000023;
+
+// This is only defined in Windows Device Driver Kit and it is inconvenient to
+// include. This is copied from Watchman's FileDescriptor.cpp.
+struct REPARSE_DATA_BUFFER {
+  ULONG ReparseTag;
+  USHORT ReparseDataLength;
+  USHORT Reserved;
+  union {
+    struct {
+      USHORT SubstituteNameOffset;
+      USHORT SubstituteNameLength;
+      USHORT PrintNameOffset;
+      USHORT PrintNameLength;
+      ULONG Flags;
+      WCHAR PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      USHORT SubstituteNameOffset;
+      USHORT SubstituteNameLength;
+      USHORT PrintNameOffset;
+      USHORT PrintNameLength;
+      WCHAR PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      UCHAR DataBuffer[1];
+    } GenericReparseBuffer;
+  };
+};
+} // namespace
+
+dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
+  XLOGF(DBG9, "dtypeFromEntry: {}", entry.path().string().c_str());
+  auto path = entry.path().wstring();
+  WIN32_FILE_ATTRIBUTE_DATA attrs;
+
+  if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attrs)) {
+    XLOGF(
+        DBG3,
+        "Unable to get file attributes for {}: {}",
+        entry.path().string(),
+        GetLastError());
+    return dtype_t::Unknown;
   }
-  XLOGF(
-      DBG5,
-      "Failed to get file mode for file: {}, status is: {}",
-      entry.path().string(),
-      entry.status().type());
-  return dtype_to_mode(dtype_t::Unknown);
+
+  if (attrs.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+    auto handle = CreateFileW(
+        path.c_str(),
+        FILE_GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+        NULL);
+    if (handle == INVALID_HANDLE_VALUE) {
+      XLOGF(
+          DBG3,
+          "Unable to determine reparse point type for {}: {}",
+          entry.path().string(),
+          GetLastError());
+      return dtype_t::Unknown;
+    }
+
+    char buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    DWORD bytes_written;
+
+    if (!DeviceIoControl(
+            handle,
+            FSCTL_GET_REPARSE_POINT,
+            NULL,
+            0,
+            buffer,
+            MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
+            &bytes_written,
+            NULL)) {
+      XLOGF(
+          DBG3,
+          "Unable to read reparse point data for {}: {}",
+          entry.path().string(),
+          GetLastError());
+      return dtype_t::Unknown;
+    }
+
+    auto reparse_data = reinterpret_cast<const REPARSE_DATA_BUFFER*>(buffer);
+
+    if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK) {
+      return dtype_t::Symlink;
+    } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
+      return dtype_t::Regular;
+    }
+
+    // We don't care about other reparse point types, so treating them as
+    // regular files.
+    return dtype_t::Regular;
+  } else if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    return dtype_t::Dir;
+  } else {
+    return dtype_t::Regular;
+  }
 }
 
 std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
@@ -134,10 +219,11 @@ void scanCurrentDir(
        boost::filesystem::directory_iterator(dir.as_boost())) {
     auto path = AbsolutePath{entry.path().c_str()};
     auto name = path.basename();
+    auto dtype = dtypeFromEntry(entry);
 
     // TODO: EdenFS for Windows does not support symlinks yet, the only
     // symlink we have are redirection points.
-    if (boost_fs::is_symlink(entry)) {
+    if (dtype == dtype_t::Symlink) {
       continue;
     }
 
@@ -155,21 +241,21 @@ void scanCurrentDir(
       }
     }
 
-    auto mode = modeFromEntry(entry);
     if (presentInOverlay) {
       auto overlayEntry = getEntryFromOverlayDir(knownState, name);
       // TODO: remove cast once we don't use Thrift to represent overlay entry
-      auto overlayMode = static_cast<mode_t>(*overlayEntry->mode_ref());
+      auto overlayDtype =
+          mode_to_dtype(static_cast<mode_t>(*overlayEntry->mode_ref()));
 
       // Check if the user has created a different kind of file with the same
       // name. For example, overlay thinks one file is a file while it's now a
       // directory on disk.
-      if (overlayMode != mode) {
+      if (overlayDtype != dtype) {
         XLOGF(
             DBG3,
             "Mismatch file type, expected: {} overlay: {}",
-            mode,
-            overlayMode);
+            dtype,
+            overlayDtype);
         removeOverlayEntry(overlay, inode, name, overlayEntry);
         presentInOverlay = false;
       }
@@ -185,7 +271,7 @@ void scanCurrentDir(
       // Add current file to overlay
       XLOGF(DBG3, "Adding missing entry to overlay {}", name);
       overlay::OverlayEntry overlayEntry;
-      overlayEntry.set_mode(mode);
+      overlayEntry.set_mode(dtype_to_mode(dtype));
       overlayEntry.set_inodeNumber(overlay.nextInodeNumber().get());
       overlay.addChild(inode, name, overlayEntry);
     }
@@ -214,11 +300,13 @@ void scanCurrentDir(
   for (const auto& entry :
        boost::filesystem::directory_iterator(dir.as_boost())) {
     auto path = AbsolutePath{entry.path().c_str()};
+    auto mode = dtypeFromEntry(entry);
+
     // We can't scan non-directories nor follow symlinks
-    if (!path.is_directory()) {
-      continue;
-    } else if (boost_fs::is_symlink(entry)) {
+    if (mode == dtype_t::Symlink) {
       XLOGF(DBG5, "Skipped {} since it's a symlink", path);
+      continue;
+    } else if (mode != dtype_t::Dir) {
       continue;
     }
 
@@ -242,9 +330,10 @@ void scanCurrentDir(
 void windowsFsckScanLocalChanges(
     TreeOverlay& overlay,
     AbsolutePathPiece mountPath) {
-  XLOG(INFO) << "Start scanning";
+  XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
     scanCurrentDir(overlay, mountPath, kRootNodeId, *view, false);
+    XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)
         << "Unable to start fsck since root inode is not present. Possibly new mount.";
