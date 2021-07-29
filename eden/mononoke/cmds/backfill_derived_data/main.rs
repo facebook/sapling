@@ -61,6 +61,7 @@ define_stats! {
     prefix = "mononoke.derived_data";
     oldest_underived_secs: dynamic_singleton_counter("{}.oldest_underived_secs", (reponame: String)),
     derivation_time_ms: dynamic_timeseries("{}.derivation_time_ms", (reponame: String); Average, Sum),
+    derivation_idle_time_ms: dynamic_timeseries("{}.idle_time_ms", (reponame: String); Sum),
 }
 
 const ARG_ALL_TYPES: &str = "all-types";
@@ -89,6 +90,7 @@ const SUBCOMMAND_SINGLE: &str = "single";
 
 const DEFAULT_BATCH_SIZE_STR: &str = "128";
 const DEFAULT_SLICE_SIZE_STR: &str = "20000";
+const SLEEP_TIME: u64 = 250;
 
 /// Derived data types that are permitted to access redacted files. This list
 /// should be limited to those data types that need access to the content of
@@ -980,7 +982,8 @@ async fn tail_batch_iteration(
 
     let size = derive_graph.size();
     if size == 0 {
-        tokio::time::sleep(Duration::from_millis(250)).await;
+        STATS::derivation_idle_time_ms.add_value(SLEEP_TIME as i64, (repo.name().to_string(),));
+        tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
     } else {
         info!(ctx.logger(), "deriving data {}", size);
         // We are using `bounded_traversal_dag` directly instead of `DeriveGraph::derive`
@@ -1087,7 +1090,8 @@ async fn tail_one_iteration(
     let pending_futs: Vec<_> = pending_futs.flatten().collect();
 
     if pending_futs.is_empty() {
-        tokio::time::sleep(Duration::from_millis(250)).await;
+        STATS::derivation_idle_time_ms.add_value(SLEEP_TIME as i64, (repo.name().to_string(),));
+        tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
         Ok(())
     } else {
         let count = pending_futs.len();
