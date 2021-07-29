@@ -27,7 +27,6 @@ use crate::{
     },
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::LocalStore,
-    remotestore::HgIdRemoteStore,
     types::StoreKey,
 };
 

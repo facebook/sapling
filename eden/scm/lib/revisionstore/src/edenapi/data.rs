@@ -184,7 +184,7 @@ mod tests {
     use tempfile::TempDir;
 
     use configparser::config::ConfigSet;
-    use edenapi_types::{ContentId, FileAuxData as EdenApiAux, Sha1};
+    use edenapi_types::{ContentId, Sha1};
     use types::{testutil::*, Sha256};
 
     use crate::{
@@ -334,7 +334,7 @@ mod tests {
         };
 
         // Test that we can read aux data from EdenApi
-        let mut fetched = store
+        let fetched = store
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");
@@ -343,7 +343,7 @@ mod tests {
         // Disable EdenApi and local cache, make sure we can read from aux cache.
         store.edenapi = None;
         store.indexedlog_cache = None;
-        let mut fetched = store
+        let fetched = store
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");

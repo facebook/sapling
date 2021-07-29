@@ -139,6 +139,7 @@ impl AuxStoreInner {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
         let inner = &self.0;
         inner
@@ -211,6 +212,7 @@ impl AuxStoreReadGuard<'_> {
         self.0.get(hgid)
     }
 
+    #[cfg(test)]
     pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
         self.0.hgids()
     }
@@ -236,10 +238,6 @@ impl AuxStoreWriteGuard<'_> {
 
     pub fn flush(&mut self) -> Result<()> {
         self.0.flush()
-    }
-
-    pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
-        self.0.hgids()
     }
 }
 

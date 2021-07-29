@@ -12,7 +12,7 @@ use std::convert::{TryFrom, TryInto};
 use std::ops::{AddAssign, BitAnd, BitOr, Not, Sub};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow::{anyhow, bail, ensure, Error, Result};
 use parking_lot::{Mutex, RwLock};

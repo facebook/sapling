@@ -14,7 +14,6 @@
 use anyhow::*;
 use serde::*;
 use sha2::{Digest, Sha256};
-use std::ffi::{CStr, CString};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -207,6 +206,7 @@ struct Containers {
     containers: Vec<ApfsContainer>,
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct PartitionInfo {
@@ -370,7 +370,7 @@ fn find_disk_for_eden_mount(mount_point: &str) -> Result<String> {
 
     let mut stat: libc::statfs = unsafe { std::mem::zeroed() };
 
-    let client_link_cstr = CString::new(
+    let client_link_cstr = std::ffi::CString::new(
         client_link
             .to_str()
             .ok_or_else(|| anyhow!("not a valid UTF-8 path somehow"))?,
@@ -380,11 +380,11 @@ fn find_disk_for_eden_mount(mount_point: &str) -> Result<String> {
         return Err(std::io::Error::last_os_error().into());
     }
 
-    let fstype = unsafe { CStr::from_ptr(stat.f_fstypename.as_ptr()).to_str()? };
+    let fstype = unsafe { std::ffi::CStr::from_ptr(stat.f_fstypename.as_ptr()).to_str()? };
     if "apfs" != fstype {
         bail!("disk {} must be apfs");
     }
-    let partition = unsafe { CStr::from_ptr(stat.f_mntfromname.as_ptr()).to_str()? };
+    let partition = unsafe { std::ffi::CStr::from_ptr(stat.f_mntfromname.as_ptr()).to_str()? };
     let output = new_cmd_unprivileged(DISKUTIL)
         .args(&["info", "-plist", &partition])
         .output()?;
@@ -702,12 +702,16 @@ fn main() -> Result<()> {
 // the plutil utility to be installed.  That limitation can be removed once some
 // build system work is completed that will unblock using a different crate vendoring
 // system at fb.
-#[cfg(all(test, any(target_os = "macos", feature = "native-plist")))]
+#[cfg(test)]
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    #[test]
+    #[cfg_attr(any(target_os = "macos", feature = "native-plist"), test)]
+    #[cfg_attr(
+        not(any(target_os = "macos", feature = "native-plist")),
+        allow(dead_code)
+    )]
     fn test_mount_parse() {
         let data = r#"
 /dev/disk1s1 on / (apfs, local, journaled)
@@ -743,7 +747,11 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
         );
     }
 
-    #[test]
+    #[cfg_attr(any(target_os = "macos", feature = "native-plist"), test)]
+    #[cfg_attr(
+        not(any(target_os = "macos", feature = "native-plist")),
+        allow(dead_code)
+    )]
     fn test_plist() {
         let data = r#"
 <?xml version="1.0" encoding="UTF-8"?>

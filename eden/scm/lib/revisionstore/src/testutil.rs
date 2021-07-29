@@ -14,10 +14,10 @@ use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stat
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileAttributes, FileAuxData, FileContent, FileEntry, FileSpec,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse,
-    UploadTreeEntry, UploadTreeResponse,
+    EdenApiServerError, FileAttributes, FileContent, FileEntry, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
+    UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;

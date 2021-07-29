@@ -42,14 +42,14 @@ mod tests {
         let file_path = dir.path().join("temp_file");
 
         #[cfg(unix)]
-        let mut cmd = {
+        let cmd = {
             let mut cmd = Command::new("/bin/sh");
             cmd.arg("-c")
                 .arg(format!("echo foo > {}", file_path.to_string_lossy()));
             cmd
         };
         #[cfg(windows)]
-        let mut cmd = {
+        let cmd = {
             let mut cmd = Command::new("cmd.exe");
             cmd.arg("/c")
                 .arg(format!("echo foo > {}", file_path.to_string_lossy()));
