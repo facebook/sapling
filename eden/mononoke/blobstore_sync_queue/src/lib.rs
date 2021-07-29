@@ -19,6 +19,7 @@ use futures::{
 };
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{errors::ErrorKind, DateTime, Timestamp};
+use shared_error::anyhow::{IntoSharedError, SharedError};
 use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -168,8 +169,12 @@ pub struct SqlBlobstoreSyncQueue {
     write_connection: Arc<Connection>,
     read_connection: Connection,
     read_master_connection: Connection,
-    write_sender:
-        Arc<mpsc::UnboundedSender<(oneshot::Sender<Result<(), Error>>, BlobstoreSyncQueueEntry)>>,
+    write_sender: Arc<
+        mpsc::UnboundedSender<(
+            oneshot::Sender<Result<(), SharedError>>,
+            BlobstoreSyncQueueEntry,
+        )>,
+    >,
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
 }
 
@@ -256,7 +261,10 @@ impl SqlConstruct for SqlBlobstoreSyncQueue {
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         let write_connection = Arc::new(connections.write_connection);
-        type ChannelType = (oneshot::Sender<Result<(), Error>>, BlobstoreSyncQueueEntry);
+        type ChannelType = (
+            oneshot::Sender<Result<(), SharedError>>,
+            BlobstoreSyncQueueEntry,
+        );
         let (sender, receiver): (mpsc::UnboundedSender<ChannelType>, _) = mpsc::unbounded();
 
         let ensure_worker_scheduled = {
@@ -276,10 +284,12 @@ impl SqlConstruct for SqlBlobstoreSyncQueue {
                                     }
                                 }
                                 Err(err) => {
-                                    let s = format!("failed to insert {}", err);
+                                    let err = err
+                                        .context("Failed to insert to sync queue")
+                                        .shared_error();
                                     for sender in senders {
                                         // Ignoring the error, because receiver might have gone
-                                        let _ = sender.send(Err(Error::msg(s.clone())));
+                                        let _ = sender.send(Err(err.clone()));
                                     }
                                 }
                             }
