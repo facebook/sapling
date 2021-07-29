@@ -19,6 +19,12 @@ pub trait Config {
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
     fn get(&self, section: &str, name: &str) -> Option<Text>;
+
+    /// Get a nonempty config value for a given config.
+    /// Return `None` if the config item does not exist, is unset or is empty str.
+    fn get_nonempty(&self, section: &str, name: &str) -> Option<Text> {
+        self.get(section, name).filter(|v| !v.is_empty())
+    }
 }
 
 /// Extra APIs (incompatible with trait objects) around reading config.
