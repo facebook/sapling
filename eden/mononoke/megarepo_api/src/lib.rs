@@ -328,8 +328,11 @@ impl MegarepoApi {
         ctx.scuba().clone().log_with_msg("Started", None);
         let res = f.await;
         match &res {
-            Ok(_) => {
-                ctx.scuba().clone().log_with_msg("Success", None);
+            Ok(cs_id) => {
+                ctx.scuba()
+                    .clone()
+                    .add("Result", format!("{}", cs_id))
+                    .log_with_msg("Success", None);
             }
             Err(err) => {
                 ctx.scuba()
