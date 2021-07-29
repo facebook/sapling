@@ -813,6 +813,15 @@ class SparseConfig(object):
         for field in (self.includes, self.excludes, self.profiles):
             yield field
 
+    # Return whether self and other_config are effectively equivalent.
+    # In particular, don't compare path or metadata.
+    def equivalent(self, other_config):
+        return (
+            self.includes == other_config.includes
+            and self.excludes == other_config.excludes
+            and self.profiles == other_config.profiles
+        )
+
 
 def _wraprepo(ui, repo):
     # metadata parsing expression

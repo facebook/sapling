@@ -2569,11 +2569,17 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
         # Ignore files that are not in either source or target sparse match
         # This is not enough if sparse profile changes, but works for checkout within same sparse profile
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
-        oldsparsematch = sparsematch(fp1)
-        newsparsematcher = sparsematch(fp2)
+
+        # If sparse configs are identical, don't set old/new matchers.
+        # This signals to nativecheckout that there isn't a sparse
+        # profile transition.
+        oldnewmatchers = None
+        if not repo.getsparsepatterns(fp1).equivalent(repo.getsparsepatterns(fp2)):
+            oldnewmatchers = (sparsematch(fp1), sparsematch(fp2))
+
         # This can be optimized - if matchers are same, we can set sparsematchers = None
         # sparse.py does not do it, so we are not making things worse
-        return matcher, (oldsparsematch, newsparsematcher)
+        return matcher, oldnewmatchers
     else:
         return matcher, None
 
