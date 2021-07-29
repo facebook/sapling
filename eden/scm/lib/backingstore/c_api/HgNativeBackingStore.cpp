@@ -253,17 +253,25 @@ void HgNativeBackingStore::getTreeBatch(
 }
 
 std::shared_ptr<RustTree> HgNativeBackingStore::getTree(
+    folly::ByteRange name,
     folly::ByteRange node,
     bool local) {
-  XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
-             << " from hgcache";
+  XLOG(DBG7) << "Importing tree name=" << name.data()
+             << " node=" << folly::hexlify(node) << " from hgcache";
 
   RustCFallible<RustTree> manifest(
-      rust_backingstore_get_tree(store_.get(), node.data(), node.size(), local),
+      rust_backingstore_get_tree(
+          store_.get(),
+          name.data(),
+          name.size(),
+          node.data(),
+          node.size(),
+          local),
       rust_tree_free);
 
   if (manifest.isError()) {
-    XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
+    XLOG(DBG5) << "Error while getting tree name=" << name.data()
+               << " node=" << folly::hexlify(node)
                << " from backingstore: " << manifest.getError();
     return nullptr;
   }

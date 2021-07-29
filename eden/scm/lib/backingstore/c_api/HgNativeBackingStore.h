@@ -48,7 +48,8 @@ class HgNativeBackingStore {
       bool local,
       std::function<void(size_t, std::shared_ptr<RustTree>)>&& resolve);
 
-  std::shared_ptr<RustTree> getTree(folly::ByteRange node, bool local);
+  std::shared_ptr<RustTree>
+  getTree(folly::ByteRange name, folly::ByteRange node, bool local);
 
   void refresh();
 
