@@ -29,6 +29,7 @@
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
+#include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
@@ -148,6 +149,7 @@ DEFINE_uint64(
     "The minimum number of recent blobs to keep cached. Trumps maximumBlobCacheSize");
 
 using apache::thrift::ThriftServer;
+using apache::thrift::ThriftServerAsyncProcessorFactory;
 using folly::Future;
 using folly::makeFuture;
 using folly::makeFutureWith;
@@ -1694,7 +1696,10 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->leakOutstandingRequestsWhenServerStops(true);
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
-  server_->setInterface(handler_);
+  auto procFactory =
+      std::make_shared<ThriftServerAsyncProcessorFactory<EdenServiceHandler>>(
+          handler_);
+  server_->setProcessorFactory(procFactory);
 
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
