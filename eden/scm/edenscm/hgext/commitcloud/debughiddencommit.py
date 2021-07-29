@@ -73,5 +73,7 @@ def debughiddencommit(ui, repo, *pats, **opts):
 
         visibility.remove(repo, [node])
 
+    if failed:
+        return 2
+
     ui.write(_("%s\n") % hex(node))
-    return 0 if not failed else 2
