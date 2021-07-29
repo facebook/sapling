@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/synchronization/Rcu.h>
+#include <memory>
 
 namespace facebook::eden {
 
@@ -84,6 +85,11 @@ class RcuPtr {
   explicit RcuPtr(RcuDomain& rcuDomain, Args&&... args)
       : domain_(rcuDomain), inner_(new T(std::forward<Args>(args)...)) {}
 
+  explicit RcuPtr(RcuDomain& rcuDomain) : domain_(rcuDomain) {}
+
+  explicit RcuPtr(RcuDomain& rcuDomain, std::unique_ptr<T, Deleter> ptr)
+      : domain_(rcuDomain), inner_(ptr.release()) {}
+
   RcuPtr(const RcuPtr&) = delete;
   RcuPtr& operator=(const RcuPtr&) = delete;
   RcuPtr(RcuPtr&&) = delete;
@@ -132,6 +138,10 @@ class RcuPtr {
     update_inner(new T(std::forward<Args>(args)...));
   }
 
+  void update(std::unique_ptr<T, Deleter> ptr) noexcept {
+    update_inner(ptr.release());
+  }
+
   /**
    * Blocks until no RcuLockedPtr are live.
    *
@@ -151,7 +161,9 @@ class RcuPtr {
 
   void update_inner(T* inner) {
     auto old = exchange_inner(inner);
-    domain_.call([old] { Deleter()(old); });
+    if (old) {
+      domain_.call([old] { Deleter()(old); });
+    }
   }
 
   RcuDomain& domain_;
