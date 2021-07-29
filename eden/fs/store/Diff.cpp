@@ -141,30 +141,36 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
       processRemovedSide(
           context, childFutures, currentPath, scmEntries[scmIdx]);
       ++scmIdx;
-    } else if (scmEntries[scmIdx].getName() < wdEntries[wdIdx].getName()) {
-      processRemovedSide(
-          context, childFutures, currentPath, scmEntries[scmIdx]);
-      ++scmIdx;
-    } else if (scmEntries[scmIdx].getName() > wdEntries[wdIdx].getName()) {
-      processAddedSide(
-          context,
-          childFutures,
-          currentPath,
-          wdEntries[wdIdx],
-          ignore.get(),
-          isIgnored);
-      ++wdIdx;
     } else {
-      processBothPresent(
-          context,
-          childFutures,
-          currentPath,
-          scmEntries[scmIdx],
-          wdEntries[wdIdx],
-          ignore.get(),
-          isIgnored);
-      ++scmIdx;
-      ++wdIdx;
+      auto compare = comparePathComponent(
+          scmEntries[scmIdx].getName(),
+          wdEntries[wdIdx].getName(),
+          context->caseSensitive);
+      if (compare == CompareResult::BEFORE) {
+        processRemovedSide(
+            context, childFutures, currentPath, scmEntries[scmIdx]);
+        ++scmIdx;
+      } else if (compare == CompareResult::AFTER) {
+        processAddedSide(
+            context,
+            childFutures,
+            currentPath,
+            wdEntries[wdIdx],
+            ignore.get(),
+            isIgnored);
+        ++wdIdx;
+      } else {
+        processBothPresent(
+            context,
+            childFutures,
+            currentPath,
+            scmEntries[scmIdx],
+            wdEntries[wdIdx],
+            ignore.get(),
+            isIgnored);
+        ++scmIdx;
+        ++wdIdx;
+      }
     }
   }
 

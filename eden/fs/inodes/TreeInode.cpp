@@ -2139,48 +2139,6 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
       });
 }
 
-namespace {
-/**
- * Value returned by comparePathComponent
- */
-enum class CompareResult {
-  EQUAL,
-  BEFORE,
-  AFTER,
-};
-
-/**
- * Compare the 2 passed in path based on the case sensitivity.
- *
- * Returns:
- *  - CompareResult::EQUAL if both are equal according to the case sensitivity
- *  - CompareResult::BEFORE if left is lexicographically before right
- *  - CompareResult::AFTER if left is lexicographically after right
- *
- */
-CompareResult comparePathComponent(
-    PathComponentPiece left,
-    PathComponentPiece right,
-    CaseSensitivity caseSensitivity) {
-  if (caseSensitivity == CaseSensitivity::Insensitive) {
-    if (left.stringPiece().equals(
-            right.stringPiece(), folly::AsciiCaseInsensitive())) {
-      return CompareResult::EQUAL;
-    }
-  } else {
-    if (left == right) {
-      return CompareResult::EQUAL;
-    }
-  }
-
-  if (left < right) {
-    return CompareResult::BEFORE;
-  } else {
-    return CompareResult::AFTER;
-  }
-}
-} // namespace
-
 /*
 This algorithm starts at the root `TreeInode` of the working directory and the
 root source control commit `Tree`, traversing the trees in a level order
@@ -2476,7 +2434,7 @@ Future<Unit> TreeInode::computeDiff(
         auto compare = comparePathComponent(
             scEntries[scIdx].getName(),
             inodeIter->first,
-            getMount()->getCheckoutConfig()->getCaseSensitive());
+            context->caseSensitive);
 
         if (compare == CompareResult::BEFORE) {
           processRemoved(scEntries[scIdx]);

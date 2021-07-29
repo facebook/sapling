@@ -25,6 +25,7 @@
 #include <optional>
 #include <type_traits>
 
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Utf8.h"
 
 #ifdef _WIN32
@@ -1974,6 +1975,26 @@ bool removeFileWithAbsolutePath(AbsolutePathPiece path);
 void renameWithAbsolutePath(
     AbsolutePathPiece srcPath,
     AbsolutePathPiece destPath);
+
+enum class CompareResult {
+  EQUAL,
+  BEFORE,
+  AFTER,
+};
+
+/**
+ * Compare the 2 passed in path based on the case sensitivity.
+ *
+ * Returns:
+ *  - CompareResult::EQUAL if both are equal according to the case sensitivity
+ *  - CompareResult::BEFORE if left is lexicographically before right
+ *  - CompareResult::AFTER if left is lexicographically after right
+ *
+ */
+CompareResult comparePathComponent(
+    PathComponentPiece left,
+    PathComponentPiece right,
+    CaseSensitivity caseSensitivity);
 
 /**
  * Convenient literals for constructing path types.

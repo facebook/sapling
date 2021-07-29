@@ -51,10 +51,15 @@ class DiffContext {
   DiffContext(
       DiffCallback* cb,
       bool listIgnored,
+      CaseSensitivity caseSensitive,
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
       LoadFileFunction loadFileContentsFromPath,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
+
+  /**
+   * Test only constructor.
+   */
   DiffContext(DiffCallback* cb, const ObjectStore* os);
 
   DiffContext(const DiffContext&) = delete;
@@ -73,6 +78,11 @@ class DiffContext {
    */
   bool const listIgnored;
 
+  /**
+   * Controls the case sensitivity of the diff operation.
+   */
+  CaseSensitivity const caseSensitive;
+
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
   LoadFileFunction getLoadFileContentsFromPath() const;
@@ -80,11 +90,17 @@ class DiffContext {
     return fetchContext_;
   }
 
+  /** Whether this repository is mounted in case-sensitive mode */
+  CaseSensitivity getCaseSensitive() const {
+    return caseSensitive_;
+  }
+
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const LoadFileFunction loadFileContentsFromPath_;
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
   StatsFetchContext fetchContext_;
+  CaseSensitivity caseSensitive_;
 };
 
 } // namespace facebook::eden

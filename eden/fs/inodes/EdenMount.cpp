@@ -1224,6 +1224,7 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
   return make_unique<DiffContext>(
       callback,
       listIgnored,
+      getCheckoutConfig()->getCaseSensitive(),
       getObjectStore(),
       serverState_->getTopLevelIgnores(),
       std::move(loadContents),

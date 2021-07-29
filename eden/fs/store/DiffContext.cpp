@@ -20,6 +20,7 @@ namespace facebook::eden {
 DiffContext::DiffContext(
     DiffCallback* cb,
     bool listIgnored,
+    CaseSensitivity caseSensitive,
     const ObjectStore* os,
     std::unique_ptr<TopLevelIgnores> topLevelIgnores,
     LoadFileFunction loadFileContentsFromPath,
@@ -27,6 +28,7 @@ DiffContext::DiffContext(
     : callback{cb},
       store{os},
       listIgnored{listIgnored},
+      caseSensitive{caseSensitive},
       topLevelIgnores_(std::move(topLevelIgnores)),
       loadFileContentsFromPath_{loadFileContentsFromPath},
       request_{request} {}
@@ -35,6 +37,7 @@ DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
     : callback{cb},
       store{os},
       listIgnored{true},
+      caseSensitive{kPathMapDefaultCaseSensitive},
       topLevelIgnores_{std::unique_ptr<TopLevelIgnores>()},
       loadFileContentsFromPath_{nullptr},
       request_{nullptr} {};

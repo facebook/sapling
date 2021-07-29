@@ -97,7 +97,8 @@ class DiffTest : public ::testing::Test {
       std::string gitIgnoreContents = {},
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},
-      bool listIgnored = true) {
+      bool listIgnored = true,
+      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
     auto callback = std::make_unique<ScmStatusDiffCallback>();
     auto callbackPtr = callback.get();
     auto mockedLoadFile = [gitIgnoreContents](
@@ -110,6 +111,7 @@ class DiffTest : public ::testing::Test {
     auto diffContext = DiffContext(
         callbackPtr,
         listIgnored,
+        caseSensitive,
         store_.get(),
         std::move(topLevelIgnores),
         mockedLoadFile);
@@ -1233,4 +1235,40 @@ TEST_F(DiffTest, hiddenFolder) {
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("a/c.txt", ScmFileStatus::ADDED)));
+}
+
+TEST_F(DiffTest, caseSensitivity) {
+  FakeTreeBuilder builder1, builder2;
+
+  builder1.setFile("a/b.txt", "test\n");
+  builder1.finalize(backingStore_, /* setReady */ true);
+  backingStore_->putCommit("1", builder1)->setReady();
+
+  builder2.setFile("a/B.txt", "test\n");
+  builder2.finalize(backingStore_, /* setReady */ true);
+  backingStore_->putCommit("2", builder2)->setReady();
+
+  auto resultInsensitive = diffCommitsWithGitIgnore(
+      builder1.getRoot()->get().getHash(),
+      builder2.getRoot()->get().getHash(),
+      "",
+      "",
+      "",
+      true,
+      CaseSensitivity::Insensitive);
+  EXPECT_THAT(*resultInsensitive.entries_ref(), UnorderedElementsAre());
+
+  auto resultSensitive = diffCommitsWithGitIgnore(
+      builder1.getRoot()->get().getHash(),
+      builder2.getRoot()->get().getHash(),
+      "",
+      "",
+      "",
+      true,
+      CaseSensitivity::Sensitive);
+  EXPECT_THAT(
+      *resultSensitive.entries_ref(),
+      UnorderedElementsAre(
+          Pair("a/b.txt", ScmFileStatus::REMOVED),
+          Pair("a/B.txt", ScmFileStatus::ADDED)));
 }

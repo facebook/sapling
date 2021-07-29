@@ -81,7 +81,8 @@ class DiffTest {
   ScmStatus diff(
       bool listIgnored = false,
       folly::StringPiece systemWideIgnoreFileContents = "",
-      folly::StringPiece userIgnoreFileContents = "") {
+      folly::StringPiece userIgnoreFileContents = "",
+      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
     ScmStatusDiffCallback callback;
     DiffContext::LoadFileFunction loadFileContentsFromPath =
         [this](ObjectFetchContext& fetchContext, RelativePathPiece path) {
@@ -91,6 +92,7 @@ class DiffTest {
     DiffContext diffContext{
         &callback,
         listIgnored,
+        caseSensitive,
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents),
@@ -297,18 +299,16 @@ TEST(DiffTest, fileCasingChange) {
   mount.mkdir("DOC");
   mount.addFile("DOC/README.txt", kReadmeContent);
 
-  auto result = test.diff();
+  auto resultInsensitive =
+      test.diff(false, "", "", CaseSensitivity::Insensitive);
+  EXPECT_THAT(*resultInsensitive.entries_ref(), UnorderedElementsAre());
 
-  if (mount.getEdenMount()->getCheckoutConfig()->getCaseSensitive() ==
-      CaseSensitivity::Insensitive) {
-    test.checkNoChanges();
-  } else {
-    EXPECT_THAT(
-        *result.entries_ref(),
-        UnorderedElementsAre(
-            std::make_pair("doc/readme.txt", ScmFileStatus::REMOVED),
-            std::make_pair("DOC/README.txt", ScmFileStatus::ADDED)));
-  }
+  auto resultSensitive = test.diff(false, "", "", CaseSensitivity::Sensitive);
+  EXPECT_THAT(
+      *resultSensitive.entries_ref(),
+      UnorderedElementsAre(
+          std::make_pair("doc/readme.txt", ScmFileStatus::REMOVED),
+          std::make_pair("DOC/README.txt", ScmFileStatus::ADDED)));
 }
 
 // Test file adds/removes/modifications with various orderings of names between
