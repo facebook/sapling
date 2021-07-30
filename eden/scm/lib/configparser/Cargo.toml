@@ -25,10 +25,10 @@ os_info = "=3.0.6"
 pest = "2.1"
 regex = "1.4.2"
 reqwest = { version = "0.10", features = ["blocking"], optional = true }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sha2 = { version = "0.8", optional = true }
 tempfile = "3.1"
-thrift-types = { path = "../thrift-types", optional = true }
 tracing = "0.1"
 types = { path = "../types", optional = true }
 util = { path = "../util" }
@@ -43,4 +43,4 @@ tempdir = "0.3"
 
 [features]
 default = []
-fb = ["hostcaps/fb", "reqwest", "sha2", "thrift-types", "types", "zstd"]
+fb = ["hostcaps/fb", "reqwest", "sha2", "types", "zstd"]
