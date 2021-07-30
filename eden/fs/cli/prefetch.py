@@ -55,6 +55,22 @@ class CheckoutAndPatterns(NamedTuple):
     patterns: List[str]
 
 
+# \ is a path separator on Windows. On Linux, we allow special characters in the
+# paterns, which use \. It's much more common to use \ as a path separator
+# instead of a special character on Windows. Many Windows tools will return the
+# path with \, so it would be nicer if we could be compatible with this.
+# Sould a user need to use special charters on windows we could have them escape
+# the backslash. Then we would turn '\\\\' into '\\' here instead of '//'.
+# However, changes would need to be made to the daemon as well to teach our
+# path abstractions to recognize this as a special character because
+# they treat \ as a path separator.
+def _clean_pattern(pattern: str) -> str:
+    if sys.platform == "win32":
+        return pattern.replace("\\", "/")
+    else:
+        return pattern
+
+
 def _find_checkout_and_patterns(
     args: argparse.Namespace,
 ) -> CheckoutAndPatterns:
@@ -63,10 +79,12 @@ def _find_checkout_and_patterns(
         _eprintln(f"{args.repo} is not the root of an EdenFS repo")
         raise SystemExit(1)
 
-    patterns = list(args.PATTERN)
+    raw_patterns = list(args.PATTERN)
     if args.pattern_file is not None:
         with open(args.pattern_file) as f:
-            patterns.extend(pat.strip() for pat in f.readlines())
+            raw_patterns.extend(pat.strip() for pat in f.readlines())
+
+    patterns = [_clean_pattern(pattern) for pattern in raw_patterns]
 
     return CheckoutAndPatterns(
         instance=instance,
