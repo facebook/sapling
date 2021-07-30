@@ -6,7 +6,6 @@
  */
 
 #![deny(warnings)]
-#![feature(const_fn)]
 
 pub mod changesetid;
 pub mod contentid;

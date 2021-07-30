@@ -8,7 +8,6 @@
 //! Base types used throughout Mononoke.
 
 #![deny(warnings)]
-#![feature(const_fn)]
 
 pub mod blame;
 pub mod blame_v2;

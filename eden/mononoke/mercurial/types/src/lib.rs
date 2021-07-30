@@ -44,7 +44,6 @@
 //! differences. These are for interfacing at the edges, but are not used within Mononoke's core
 //! structures at all.
 #![deny(warnings)]
-#![feature(const_fn)]
 
 pub mod bdiff;
 pub mod blob;
