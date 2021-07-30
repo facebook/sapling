@@ -141,7 +141,7 @@ information, and instead stores the file contents in the
 
 ![Materialized Inode Data](img/materialized_inode.svg)
 
-`FileInode`s are materailized when their contents are updated.
+`FileInode`s are materialized when their contents are updated.
 `TreeInode`s are materialized when a child entry is added or removed.  Note
 that as discussed above in [Inode Allocation](#inode-allocation) directory
 information is often stored in the overlay even when the directory is
