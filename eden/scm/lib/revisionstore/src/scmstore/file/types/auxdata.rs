@@ -1,0 +1,65 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use serde::{Deserialize, Serialize};
+
+use edenapi_types::{ContentId, FileAuxData as EdenApiFileAuxData, Sha1};
+use types::Sha256;
+
+use crate::indexedlogauxstore::Entry as AuxDataEntry;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct FileAuxData {
+    pub total_size: u64,
+    pub content_id: ContentId,
+    pub content_sha1: Sha1,
+    pub content_sha256: Sha256,
+}
+
+impl From<AuxDataEntry> for FileAuxData {
+    fn from(v: AuxDataEntry) -> Self {
+        FileAuxData {
+            total_size: v.total_size() as u64,
+            content_id: v.content_id(),
+            content_sha1: v.content_sha1(),
+            content_sha256: Sha256::from_byte_array(v.content_sha256().0),
+        }
+    }
+}
+
+impl From<FileAuxData> for AuxDataEntry {
+    fn from(v: FileAuxData) -> Self {
+        AuxDataEntry {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            content_sha1: v.content_sha1,
+            content_sha256: v.content_sha256.into_inner().into(),
+        }
+    }
+}
+
+impl From<EdenApiFileAuxData> for FileAuxData {
+    fn from(v: EdenApiFileAuxData) -> Self {
+        FileAuxData {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            content_sha1: v.sha1,
+            content_sha256: Sha256::from_byte_array(v.sha256.0),
+        }
+    }
+}
+
+impl From<FileAuxData> for EdenApiFileAuxData {
+    fn from(v: FileAuxData) -> Self {
+        EdenApiFileAuxData {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            sha1: v.content_sha1,
+            sha256: v.content_sha256.into_inner().into(),
+        }
+    }
+}
