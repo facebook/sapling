@@ -38,6 +38,8 @@ use crate::ops::IdConvert;
 #[cfg(test)]
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
+use crate::render::render_segment_dag;
+#[cfg(test)]
 use crate::Id;
 #[cfg(test)]
 pub(crate) use test_dag::ProtocolMonitor;
@@ -1191,6 +1193,96 @@ Lv2: R0-3[] R4-6[1]"#
             dag.ancestors(set.clone()).unwrap().as_spans(),
         );
     }
+}
+
+#[test]
+fn test_render_segment_dag() {
+    // For reference in below graphs.
+    assert_eq!(
+        build_segments(ASCII_DAG2, "W", 3).ascii[0],
+        r#"
+                      19/---------------13-14--\           19
+                     / /                        \           \
+               /----4-5-\    /-------11-12-------15-\     18-20--\
+            0-1-2-3------6--7--8--9--10--------------16-17--------21-22
+                                   \--13
+Lv0: RH0-3[] 4-5[1] H6-10[3, 5] 11-12[7] 13-14[5, 9] 15-15[12, 14] H16-17[10, 15] R18-18[] 19-19[4] 20-20[18, 19] H21-22[17, 20]
+Lv1: R0-10[] 11-15[7, 5, 9] 16-17[10, 15] R18-20[4]
+Lv2: R0-17[]"#
+    );
+
+    let built = build_segments(ASCII_DAG2, "W", 3);
+    let mut buf = Vec::new();
+    buf.push(b'\n');
+    render_segment_dag(&mut buf, &built.name_dag, 0, Group::MASTER).unwrap();
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        r#"
+o    V(21)-W(22)
+├─╮
+│ o    U(20)-U(20)
+│ ├─╮
+│ │ o  T(19)-T(19)
+│ │ │
+│ o │  S(18)-S(18)
+│   │
+o   │  Q(16)-R(17)
+├─╮ │
+│ o │    P(15)-P(15)
+│ ├───╮
+│ │ │ o  N(13)-O(14)
+╭───┬─╯
+│ o │  L(11)-M(12)
+├─╯ │
+o   │  G(6)-K(10)
+├───╮
+│   o  E(4)-F(5)
+├───╯
+o  A(0)-D(3)
+
+"#
+    );
+
+
+    let mut buf = Vec::new();
+    buf.push(b'\n');
+    render_segment_dag(&mut buf, &built.name_dag, 1, Group::MASTER).unwrap();
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        r#"
+o  S(18)-U(20)
+│
+│ o  Q(16)-R(17)
+╭─┤
+│ o  L(11)-P(15)
+╭─╯
+o  A(0)-K(10)
+
+"#
+    );
+}
+
+#[test]
+fn test_render_segment_dag_non_master() {
+    let mut t = TestDag::new();
+
+    // A: master; B, Z: non-master.
+    t.drawdag("A--B--Z", &["A"]);
+
+    let mut buf = Vec::new();
+    buf.push(b'\n');
+    render_segment_dag(&mut buf, &t.dag, 0, Group::NON_MASTER).unwrap();
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        r#"
+o  B(N0)-Z(N1)
+│
+~
+"#
+    );
 }
 
 // Test utilities

@@ -82,7 +82,7 @@ impl Span {
         }
     }
 
-    fn contains(self, value: Id) -> bool {
+    pub(crate) fn contains(self, value: Id) -> bool {
         self.low <= value && value <= self.high
     }
 

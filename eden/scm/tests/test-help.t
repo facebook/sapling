@@ -1066,6 +1066,8 @@ Test list of internal help commands
                  test file and tree fetching using scmstore
    debugsegmentclone
                  clone a repository using segmented changelog
+   debugsegmentgraph
+                 display segment graph for a given group and level
    debugsegmentpull
                  pull a repository using segmented changelog. This command does
                  not do discovery and requrires specifying old/new master

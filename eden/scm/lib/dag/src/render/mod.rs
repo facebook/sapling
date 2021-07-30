@@ -25,3 +25,5 @@ pub use self::ascii_large::AsciiLargeRenderer;
 pub use self::box_drawing::BoxDrawingRenderer;
 pub use self::render::{Ancestor, GraphRowRenderer, LinkLine, NodeLine, PadLine, Renderer};
 pub use self::render_utils::render_namedag;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+pub use self::render_utils::render_segment_dag;

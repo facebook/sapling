@@ -7,10 +7,17 @@
 
 use super::render::{Ancestor, Renderer};
 use crate::nameset::SyncNameSetQuery;
-use crate::DagAlgorithm;
-use crate::VertexName;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::ops::IdConvert;
+use crate::{DagAlgorithm, VertexName};
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::{Group, IdSpan, Level, NameDag};
+
 use anyhow::Result;
 use nonblocking::non_blocking_result;
+
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use std::{cmp::Ordering, io::Write};
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
@@ -51,4 +58,51 @@ pub fn render_namedag(
             .join("\n")
     );
     Ok(output)
+}
+
+#[cfg(any(test, feature = "indexedlog-backend"))]
+pub fn render_segment_dag(
+    mut out: impl Write,
+    dag: &NameDag,
+    level: Level,
+    group: Group,
+) -> Result<()> {
+    let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
+    let segs = dag.dag.next_segments(group.min_id(), level)?;
+
+    for seg in segs.iter().rev() {
+        let mut parents = vec![];
+        for parent_id in seg.parents()? {
+            // For each parent Id, look for the containing segment.
+            let parent_span: IdSpan = parent_id.into();
+            let parent_idx = segs.binary_search_by(|s| {
+                let span = s.span().unwrap();
+                if span.contains(parent_id) {
+                    Ordering::Equal
+                } else {
+                    span.cmp(&parent_span)
+                }
+            });
+
+            if let Ok(parent_idx) = parent_idx {
+                parents.push(Ancestor::Parent(&segs[parent_idx]));
+            } else {
+                // Probably a non-master segment with master parent.
+                parents.push(Ancestor::Anonymous);
+            }
+        }
+
+        let span = seg.span()?;
+        let name = format!(
+            "{:.12?}({})-{:.12?}({})",
+            non_blocking_result(dag.vertex_name(span.low))?,
+            span.low,
+            non_blocking_result(dag.vertex_name(span.high))?,
+            span.high,
+        );
+        let row = renderer.next_row(seg, parents, String::from("o"), name);
+        write!(out, "{}", row)?;
+    }
+
+    Ok(())
 }
