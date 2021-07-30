@@ -61,6 +61,7 @@ pub struct ResponseMeta {
     pub tw_canary_id: Option<String>,
     pub server_load: Option<usize>,
     pub content_length: Option<usize>,
+    pub content_encoding: Option<String>,
 }
 
 impl ResponseMeta {
@@ -76,6 +77,7 @@ impl ResponseMeta {
             server_load: get_header(headers, SERVER_LOAD_HEADER).and_then(|l| l.parse().ok()),
             content_length: get_header(headers, header::CONTENT_LENGTH.as_str())
                 .and_then(|l| l.parse().ok()),
+            content_encoding: get_header(headers, header::CONTENT_ENCODING.as_str()),
         }
     }
 }

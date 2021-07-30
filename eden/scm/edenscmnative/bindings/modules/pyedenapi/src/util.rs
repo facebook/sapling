@@ -169,5 +169,6 @@ pub fn meta_to_dict(py: Python, meta: &ResponseMeta) -> PyResult<PyDict> {
     dict.set_item(py, "tw_canary_id", &meta.tw_canary_id)?;
     dict.set_item(py, "server_load", &meta.server_load)?;
     dict.set_item(py, "content_length", &meta.content_length)?;
+    dict.set_item(py, "content_encoding", &meta.content_encoding)?;
     Ok(dict)
 }
