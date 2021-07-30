@@ -56,7 +56,7 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 folly::Future<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
-    RelativePathPiece path,
+    RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
     auto treePtr = inode.asTreePtr();
@@ -147,13 +147,17 @@ folly::Future<std::string> PrjfsDispatcherImpl::read(
 namespace {
 folly::Future<TreeInodePtr> createDirInode(
     const EdenMount& mount,
-    const RelativePathPiece path,
+    RelativePath path,
     ObjectFetchContext& context) {
-  return mount.getInode(path, context)
-      .thenValue([](const InodePtr inode) { return inode.asTreePtr(); })
+  auto treeInodeFut =
+      mount.getInode(path, context).thenValue([](const InodePtr inode) {
+        return inode.asTreePtr();
+      });
+  return std::move(treeInodeFut)
       .thenError(
           folly::tag_t<std::system_error>{},
-          [=, &mount, &context](const std::system_error& ex) {
+          [path = std::move(path), &mount, &context](
+              const std::system_error& ex) {
             if (!isEnoent(ex)) {
               return folly::makeFuture<TreeInodePtr>(ex);
             }
@@ -175,21 +179,21 @@ folly::Future<TreeInodePtr> createDirInode(
 
             auto fut = folly::makeFuture(mount.getRootInode());
             for (auto parent : path.paths()) {
-              fut = std::move(fut).thenValue([parent, &context](
-                                                 TreeInodePtr treeInode) {
-                try {
-                  auto inode = treeInode->mkdir(
-                      parent.basename(), _S_IFDIR, InvalidationRequired::No);
-                  inode->incFsRefcount();
-                } catch (const std::system_error& ex) {
-                  if (ex.code().value() != EEXIST) {
-                    throw;
-                  }
-                }
+              fut = std::move(fut).thenValue(
+                  [parent = parent.copy(), &context](TreeInodePtr treeInode) {
+                    auto basename = parent.basename();
+                    try {
+                      auto inode = treeInode->mkdir(
+                          basename, _S_IFDIR, InvalidationRequired::No);
+                      inode->incFsRefcount();
+                    } catch (const std::system_error& ex) {
+                      if (ex.code().value() != EEXIST) {
+                        throw;
+                      }
+                    }
 
-                return treeInode->getOrLoadChildTree(
-                    parent.basename(), context);
-              });
+                    return treeInode->getOrLoadChildTree(basename, context);
+                  });
             }
 
             return fut;
@@ -198,39 +202,41 @@ folly::Future<TreeInodePtr> createDirInode(
 
 folly::Future<folly::Unit> createFile(
     const EdenMount& mount,
-    const RelativePathPiece path,
+    RelativePath path,
     bool isDirectory,
     ObjectFetchContext& context) {
-  return createDirInode(mount, path.dirname(), context)
-      .thenValue([=](const TreeInodePtr treeInode) {
-        if (isDirectory) {
-          try {
-            auto inode = treeInode->mkdir(
-                path.basename(), _S_IFDIR, InvalidationRequired::No);
-            inode->incFsRefcount();
-          } catch (const std::system_error& ex) {
-            /*
-             * If a concurrent createFile for a child of this directory finished
-             * before this one, the directory will already exist. This is not an
-             * error.
-             */
-            if (ex.code().value() != EEXIST) {
-              return folly::makeFuture<folly::Unit>(ex);
+  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context);
+  return std::move(treeInodeFut)
+      .thenValue(
+          [path = std::move(path), isDirectory](const TreeInodePtr treeInode) {
+            if (isDirectory) {
+              try {
+                auto inode = treeInode->mkdir(
+                    path.basename(), _S_IFDIR, InvalidationRequired::No);
+                inode->incFsRefcount();
+              } catch (const std::system_error& ex) {
+                /*
+                 * If a concurrent createFile for a child of this directory
+                 * finished before this one, the directory will already exist.
+                 * This is not an error.
+                 */
+                if (ex.code().value() != EEXIST) {
+                  return folly::makeFuture<folly::Unit>(ex);
+                }
+              }
+            } else {
+              auto inode = treeInode->mknod(
+                  path.basename(), _S_IFREG, 0, InvalidationRequired::No);
+              inode->incFsRefcount();
             }
-          }
-        } else {
-          auto inode = treeInode->mknod(
-              path.basename(), _S_IFREG, 0, InvalidationRequired::No);
-          inode->incFsRefcount();
-        }
 
-        return folly::makeFuture(folly::unit);
-      });
+            return folly::makeFuture(folly::unit);
+          });
 }
 
 folly::Future<folly::Unit> materializeFile(
     const EdenMount& mount,
-    const RelativePathPiece path,
+    RelativePath path,
     ObjectFetchContext& context) {
   return mount.getInode(path, context).thenValue([](const InodePtr inode) {
     auto fileInode = inode.asFilePtr();
@@ -241,11 +247,13 @@ folly::Future<folly::Unit> materializeFile(
 
 folly::Future<folly::Unit> renameFile(
     const EdenMount& mount,
-    const RelativePath oldPath,
-    const RelativePath newPath,
+    RelativePath oldPath,
+    RelativePath newPath,
     ObjectFetchContext& context) {
-  auto oldParentInode = createDirInode(mount, oldPath.dirname(), context);
-  auto newParentInode = createDirInode(mount, newPath.dirname(), context);
+  auto oldParentInode =
+      createDirInode(mount, oldPath.dirname().copy(), context);
+  auto newParentInode =
+      createDirInode(mount, newPath.dirname().copy(), context);
 
   return folly::collect(oldParentInode, newParentInode)
       .via(mount.getServerThreadPool().get())
@@ -276,11 +284,12 @@ folly::Future<folly::Unit> renameFile(
 
 folly::Future<folly::Unit> removeFile(
     const EdenMount& mount,
-    const RelativePathPiece path,
+    RelativePath path,
     bool isDirectory,
     ObjectFetchContext& context) {
-  return mount.getInode(path.dirname(), context)
-      .thenValue([path, isDirectory, &context](const InodePtr inode) {
+  auto inodeFut = mount.getInode(path.dirname(), context);
+  return std::move(inodeFut).thenValue(
+      [path = std::move(path), isDirectory, &context](const InodePtr inode) {
         auto treeInodePtr = inode.asTreePtr();
         if (isDirectory) {
           return treeInodePtr->rmdir(
@@ -299,7 +308,7 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::newFileCreated(
     RelativePath /*destPath*/,
     bool isDirectory,
     ObjectFetchContext& context) {
-  return createFile(*mount_, relPath, isDirectory, context);
+  return createFile(*mount_, std::move(relPath), isDirectory, context);
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileOverwritten(
@@ -307,7 +316,7 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileOverwritten(
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& context) {
-  return materializeFile(*mount_, relPath, context);
+  return materializeFile(*mount_, std::move(relPath), context);
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileHandleClosedFileModified(
@@ -315,7 +324,7 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileHandleClosedFileModified(
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& context) {
-  return materializeFile(*mount_, relPath, context);
+  return materializeFile(*mount_, std::move(relPath), context);
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
@@ -326,7 +335,7 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
   if (oldPath.empty()) {
-    return createFile(*mount_, newPath, isDirectory, context);
+    return createFile(*mount_, std::move(newPath), isDirectory, context);
   } else if (newPath.empty()) {
     return removeFile(*mount_, oldPath, isDirectory, context);
   } else {

@@ -49,7 +49,7 @@ class PrjfsDispatcher {
    * Open a directory
    */
   virtual folly::Future<std::vector<FileMetadata>> opendir(
-      RelativePathPiece path,
+      RelativePath path,
       ObjectFetchContext& context) = 0;
 
   /**

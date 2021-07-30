@@ -184,7 +184,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
         context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
         FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-        return dispatcher_->opendir(path, *context)
+        return dispatcher_->opendir(std::move(path), *context)
             .thenValue([this,
                         context = std::move(context),
                         guid = std::move(guid)](auto&& dirents) {
