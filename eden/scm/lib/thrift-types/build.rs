@@ -30,6 +30,10 @@ fn generate_thrift_subcrates(thrift_units: &[ThriftUnit]) -> io::Result<()> {
 
     // Use thrift provided by buck. Currently this only works in fbcode build environment.
     let thrift_bin_path = fbcode_path.join("buck-out/gen/thrift/compiler/thrift");
+    let thrift_bin_path = match thrift_bin_path.canonicalize() {
+        Ok(path) => path,
+        Err(_) => thrift_bin_path,
+    };
     if !thrift_bin_path.exists() {
         // Do not make it a fatal error on non-fbcode environment (ex. OSS).
         println!(
@@ -97,6 +101,7 @@ futures = "0.3"
 serde = {{ version = "1", features = ["derive"] }}
 serde_derive = "1.0"
 thiserror = "1"
+tokio_shim = {{ path = "../../../../../common/rust/shed/tokio_shim" }}
 {}"#,
                 "g", unit.name, deps
             ),
