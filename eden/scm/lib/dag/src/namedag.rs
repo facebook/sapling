@@ -224,12 +224,6 @@ where
         // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
 
-        // Can we reuse some caches?
-        if new_name_dag.state.int_version() == self.state.int_version() {
-            new_name_dag.missing_vertexes_confirmed_by_remote =
-                self.missing_vertexes_confirmed_by_remote.clone();
-        }
-
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
         let non_master_heads = &self.pending_heads;
         let seg_size = self.dag.get_new_segment_size();
