@@ -1487,18 +1487,21 @@ EdenServiceHandler::future_setPathRootId(
   auto edenMount = server_->getMount(mountPath);
   auto parsedRootId =
       edenMount->getObjectStore()->parseRootId(params->get_rootId());
+  auto& fetchContext = helper->getFetchContext();
 
-  return edenMount
-      ->setPathRootId(
-          RelativePathPiece{params->get_path()},
-          parsedRootId,
-          params->get_type(),
-          params->get_mode(),
-          helper->getFetchContext())
-      .thenValue([](auto&& resultAndTimes) {
-        return std::make_unique<SetPathRootIdResult>(
-            std::move(resultAndTimes.result));
-      });
+  return wrapFuture(
+      std::move(helper),
+      edenMount
+          ->setPathRootId(
+              RelativePathPiece{params->get_path()},
+              parsedRootId,
+              params->get_type(),
+              params->get_mode(),
+              fetchContext)
+          .thenValue([](auto&& resultAndTimes) {
+            return std::make_unique<SetPathRootIdResult>(
+                std::move(resultAndTimes.result));
+          }));
 #else
   NOT_IMPLEMENTED();
 #endif
