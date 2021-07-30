@@ -1340,7 +1340,7 @@ class MountCmd(Subcmd):
                 exitcode = instance.mount(path, args.read_only)
                 if exitcode:
                     return exitcode
-            except EdenNotRunningError as ex:
+            except (EdenService.EdenError, EdenNotRunningError) as ex:
                 print_stderr("error: {}", ex)
                 return 1
         return 0

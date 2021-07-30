@@ -664,6 +664,7 @@ Do you want to run `eden mount %s` instead?"""
                     f"ERROR: Mount point in use! {path} is already mounted by EdenFS."
                 )
                 return 1
+            raise
 
         return 0
 
