@@ -307,6 +307,7 @@ def _preimportmodules():
         "sigtrace",
         "simplecache",
         "smartlog",
+        "snapshot",
         "sparse",
         "sshaskpass",
         "stablerev",
