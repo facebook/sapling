@@ -4,6 +4,6 @@
 # GNU General Public License version 2.
 
 
-def createremote(repo, ui, **opts):
+def createremote(ui, repo, **opts):
     # TODO(yancouto): Pipe command through and implement logic
     pass
