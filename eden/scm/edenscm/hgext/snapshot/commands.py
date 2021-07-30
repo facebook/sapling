@@ -5,6 +5,8 @@
 
 from edenscm.mercurial import error, registrar
 
+from . import createremote
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -16,3 +18,12 @@ def snapshot(ui, repo, **opts):
     raise error.Abort(
         "you need to specify a subcommand (run with --help to see a list of subcommands)"
     )
+
+
+subcmd = snapshot.subcommand(categories=[("Manage snapshots", ["createremote"])])
+
+
+@subcmd("createremote", [])
+def createremotecmd(*args, **kwargs):
+    """upload to the server a snapshot of the current uncommitted changes"""
+    createremote.createremote(*args, **kwargs)
