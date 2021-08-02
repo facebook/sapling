@@ -14,6 +14,7 @@ pub use megarepo_configs::types::{
     Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
+use std::path::PathBuf;
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]
@@ -30,15 +31,20 @@ pub use oss::CfgrMononokeMegarepoConfigs;
 pub use test_impl::TestMononokeMegarepoConfigs;
 
 /// Options for instantiating MononokeMegarepoConfigs
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum MononokeMegarepoConfigsOptions {
     /// Create prod-style `MononokeMegarepoConfigs` implementation
     /// (requires fb infra to function correctly, although will
     /// successfully instantiate with `unimplemented!` methods
     /// when built outside of fbcode)
     Prod,
+    /// Create a config implementation that writes JSON to disk at the
+    /// given path instead of calling FB infra.
+    /// Used with a testing config store, this gives you a good basis
+    /// for integration tests
+    IntegrationTest(PathBuf),
     /// Create test-style `MononokeMegarepoConfigs` implementation
-    Test,
+    UnitTest,
 }
 
 /// An API for Megarepo Configs

@@ -737,7 +737,11 @@ fn parse_mononoke_megarepo_configs_options(
         })?;
 
     if use_test {
-        Ok(MononokeMegarepoConfigsOptions::Test)
+        if let Some(path) = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG) {
+            Ok(MononokeMegarepoConfigsOptions::IntegrationTest(path.into()))
+        } else {
+            Ok(MononokeMegarepoConfigsOptions::UnitTest)
+        }
     } else {
         Ok(MononokeMegarepoConfigsOptions::Prod)
     }

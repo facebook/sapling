@@ -12,6 +12,7 @@ use fbinit::FacebookInit;
 use megarepo_configs::types::{SyncConfigVersion, SyncTargetConfig, Target};
 use megarepo_error::MegarepoError;
 use slog::{warn, Logger};
+use std::path::PathBuf;
 
 use crate::MononokeMegarepoConfigs;
 
@@ -27,6 +28,7 @@ impl CfgrMononokeMegarepoConfigs {
         _fb: FacebookInit,
         logger: &Logger,
         _config_store: ConfigStore,
+        _test_write_path: Option<PathBuf>,
     ) -> Result<Self, MegarepoError> {
         warn!(
             logger,
