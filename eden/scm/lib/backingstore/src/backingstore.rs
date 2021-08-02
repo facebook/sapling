@@ -20,6 +20,7 @@ use revisionstore::{
 };
 use std::path::Path;
 use std::sync::Arc;
+use tracing::{event, instrument, Level};
 use types::Key;
 
 pub struct BackingStore {
@@ -95,9 +96,14 @@ impl BackingStore {
     /// from on disk stores.
     pub fn get_blob(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
         let key = key_from_path_node_slice(path, node)?;
+        self.get_blob_by_key(key, local_only)
+    }
 
+    #[instrument(level = "debug", skip(self))]
+    fn get_blob_by_key(&self, key: Key, local_only: bool) -> Result<Option<Vec<u8>>> {
         // check if the blob present on disk
         if local_only && !self.blobstore.contains(&StoreKey::from(&key))? {
+            event!(Level::DEBUG, "blob not found locally");
             return Ok(None);
         }
 
@@ -108,6 +114,7 @@ impl BackingStore {
     /// called with the file content or an error message, and the index of the blob in the request
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
+    #[instrument(level = "debug", skip(self, resolve))]
     pub fn get_blob_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
@@ -160,7 +167,11 @@ impl BackingStore {
 
     pub fn get_tree(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<List>> {
         let key = key_from_path_node_slice(path, node)?;
+        self.get_tree_by_key(key, local_only)
+    }
 
+    #[instrument(level = "debug", skip(self))]
+    fn get_tree_by_key(&self, key: Key, local_only: bool) -> Result<Option<List>> {
         // check if the blob is present on disk
         if local_only
             && !self
@@ -168,6 +179,7 @@ impl BackingStore {
                 .as_content_store()
                 .contains(&StoreKey::from(&key))?
         {
+            event!(Level::DEBUG, "tree not found locally");
             return Ok(None);
         }
 
@@ -178,6 +190,7 @@ impl BackingStore {
     /// called with the tree content or an error message, and the index of the tree in the request
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
+    #[instrument(level = "debug", skip(self, resolve))]
     pub fn get_tree_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<List>>) -> (),
@@ -225,6 +238,7 @@ impl BackingStore {
     }
 
     /// Forces backing store to rescan pack files or local indexes
+    #[instrument(level = "debug", skip(self))]
     pub fn refresh(&self) {
         self.blobstore.refresh().ok();
         self.treestore.as_content_store().refresh().ok();
