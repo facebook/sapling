@@ -104,7 +104,6 @@ if sys.platform == "win32":
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
-        "hg.fold_test.FoldTestTreeOnly": True,
         "hg.grep_test.GrepTestTreeOnly": [
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",

@@ -26,8 +26,6 @@ class FoldTest(EdenHgTestCase):
         files = self.repo.log(template="{files}")
         self.assertEqual(["letters numbers", "numbers"], files)
 
-        editor = self.create_editor_that_writes_commit_messages(["Combined commit."])
-
         self.hg(
             "fold",
             "--config",
@@ -36,7 +34,8 @@ class FoldTest(EdenHgTestCase):
             "ui.interface=text",
             "--from",
             ".^",
-            hgeditor=editor,
+            "--message",
+            "Combined commit.",
         )
 
         self.assert_status_empty()
