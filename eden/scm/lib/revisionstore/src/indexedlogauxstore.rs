@@ -259,6 +259,12 @@ mod tests {
         ExtStoredPolicy, HgIdMutableDeltaStore, IndexedLogHgIdDataStore,
     };
 
+    fn single_byte_sha1(fst: u8) -> Sha1 {
+        let mut x: [u8; Sha1::len()] = Default::default();
+        x[0] = fst;
+        Sha1::from(x)
+    }
+
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
@@ -274,7 +280,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1.0[0] = 1;
+        entry.content_sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 
@@ -293,7 +299,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1.0[0] = 1;
+        entry.content_sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 
@@ -315,7 +321,7 @@ mod tests {
         let k = key("a", "2");
         let mut entry = Entry::default();
         entry.total_size = 2;
-        entry.content_sha1.0[0] = 2;
+        entry.content_sha1 = single_byte_sha1(2);
 
         store.write().put(k.hgid, &entry)?;
         store.write().flush()?;
@@ -332,7 +338,7 @@ mod tests {
         let k = key("a", "3");
         let mut entry = Entry::default();
         entry.total_size = 3;
-        entry.content_sha1.0[0] = 3;
+        entry.content_sha1 = single_byte_sha1(3);
 
         store.write().put(k.hgid, &entry)?;
         store.write().flush()?;
@@ -349,7 +355,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1.0[0] = 1;
+        entry.content_sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 

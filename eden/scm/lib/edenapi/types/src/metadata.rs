@@ -7,22 +7,12 @@
 
 use crate::ServerError;
 
-use faster_hex::hex_decode;
 use std::fmt;
 use std::str::FromStr;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
-
-pub const SHA1_HASH_LENGTH_BYTES: usize = 20;
-pub const SHA1_HASH_LENGTH_HEX: usize = SHA1_HASH_LENGTH_BYTES * 2;
-
-pub const SHA256_HASH_LENGTH_BYTES: usize = 32;
-pub const SHA256_HASH_LENGTH_HEX: usize = SHA256_HASH_LENGTH_BYTES * 2;
-
-pub const CONTENT_ID_HASH_LENGTH_BYTES: usize = 32;
-pub const CONTENT_ID_HASH_LENGTH_HEX: usize = CONTENT_ID_HASH_LENGTH_BYTES * 2;
 
 /// Directory entry metadata
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -70,165 +60,9 @@ pub struct FileMetadataRequest {
     pub with_content_sha256: bool,
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Sha1(pub [u8; SHA1_HASH_LENGTH_BYTES]);
-
-impl From<[u8; SHA1_HASH_LENGTH_BYTES]> for Sha1 {
-    fn from(v: [u8; SHA1_HASH_LENGTH_BYTES]) -> Self {
-        Sha1(v)
-    }
-}
-
-impl AsRef<[u8]> for Sha1 {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for Sha1 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Debug for Sha1 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha1(\"{}\")", self)
-    }
-}
-
-impl FromStr for Sha1 {
-    type Err = ServerError;
-
-    fn from_str(s: &str) -> Result<Sha1, Self::Err> {
-        if s.len() != SHA1_HASH_LENGTH_HEX {
-            return Err(Self::Err::generic(format!(
-                "sha1 parsing failure: need exactly {} hex digits",
-                SHA1_HASH_LENGTH_HEX
-            )));
-        }
-        let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
-        match hex_decode(s.as_bytes(), &mut ret.0) {
-            Ok(_) => Ok(ret),
-            Err(_) => Err(Self::Err::generic(
-                "sha1 parsing failure: bad hex character",
-            )),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Sha256(pub [u8; SHA256_HASH_LENGTH_BYTES]);
-
-impl From<[u8; SHA256_HASH_LENGTH_BYTES]> for Sha256 {
-    fn from(v: [u8; SHA256_HASH_LENGTH_BYTES]) -> Self {
-        Sha256(v)
-    }
-}
-
-impl AsRef<[u8]> for Sha256 {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for Sha256 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Debug for Sha256 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha256(\"{}\")", self)
-    }
-}
-
-impl FromStr for Sha256 {
-    type Err = ServerError;
-
-    fn from_str(s: &str) -> Result<Sha256, Self::Err> {
-        if s.len() != SHA256_HASH_LENGTH_HEX {
-            return Err(Self::Err::generic(format!(
-                "sha256 parsing failure: need exactly {} hex digits",
-                SHA256_HASH_LENGTH_HEX
-            )));
-        }
-        let mut ret = Sha256([0; SHA256_HASH_LENGTH_BYTES]);
-        match hex_decode(s.as_bytes(), &mut ret.0) {
-            Ok(_) => Ok(ret),
-            Err(_) => Err(Self::Err::generic(
-                "sha256 parsing failure: bad hex character",
-            )),
-        }
-    }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Serialize,
-    Deserialize
-)]
-pub struct ContentId(pub [u8; CONTENT_ID_HASH_LENGTH_BYTES]);
-
-impl From<[u8; CONTENT_ID_HASH_LENGTH_BYTES]> for ContentId {
-    fn from(v: [u8; CONTENT_ID_HASH_LENGTH_BYTES]) -> Self {
-        ContentId(v)
-    }
-}
-
-impl AsRef<[u8]> for ContentId {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::Display for ContentId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Debug for ContentId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "ContentId(\"{}\")", self)
-    }
-}
-
-impl FromStr for ContentId {
-    type Err = ServerError;
-
-    fn from_str(s: &str) -> Result<ContentId, Self::Err> {
-        if s.len() != CONTENT_ID_HASH_LENGTH_HEX {
-            return Err(Self::Err::generic(format!(
-                "content_id parsing failure: need exactly {} hex digits",
-                CONTENT_ID_HASH_LENGTH_HEX
-            )));
-        }
-        let mut ret = ContentId([0; CONTENT_ID_HASH_LENGTH_BYTES]);
-        match hex_decode(s.as_bytes(), &mut ret.0) {
-            Ok(_) => Ok(ret),
-            Err(_) => Err(Self::Err::generic(
-                "content_id parsing failure: bad hex character",
-            )),
-        }
-    }
-}
+sized_hash!(Sha1, 20);
+sized_hash!(Sha256, 32);
+blake2_hash!(ContentId);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FileType {
@@ -382,33 +216,6 @@ impl Arbitrary for FileType {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FsnodeId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for ContentId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for Sha1 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for Sha256 {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         let mut v = Self::default();
         g.fill_bytes(&mut v.0);

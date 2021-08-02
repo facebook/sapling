@@ -26,7 +26,7 @@ impl From<AuxDataEntry> for FileAuxData {
             total_size: v.total_size() as u64,
             content_id: v.content_id(),
             content_sha1: v.content_sha1(),
-            content_sha256: Sha256::from_byte_array(v.content_sha256().0),
+            content_sha256: Sha256::from_byte_array(v.content_sha256().into()),
         }
     }
 }
@@ -48,7 +48,7 @@ impl From<EdenApiFileAuxData> for FileAuxData {
             total_size: v.total_size,
             content_id: v.content_id,
             content_sha1: v.sha1,
-            content_sha256: Sha256::from_byte_array(v.sha256.0),
+            content_sha256: Sha256::from_byte_array(v.sha256.into()),
         }
     }
 }

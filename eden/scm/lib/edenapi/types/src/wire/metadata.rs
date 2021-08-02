@@ -364,7 +364,7 @@ impl ToWire for ContentId {
     type Wire = WireContentId;
 
     fn to_wire(self) -> Self::Wire {
-        WireContentId(self.0)
+        WireContentId(self.into())
     }
 }
 
@@ -373,7 +373,7 @@ impl ToApi for WireContentId {
     type Error = Infallible;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(ContentId(self.0))
+        Ok(ContentId::from(self.0))
     }
 }
 
@@ -420,7 +420,7 @@ impl ToWire for Sha1 {
     type Wire = WireSha1;
 
     fn to_wire(self) -> Self::Wire {
-        WireSha1(self.0)
+        WireSha1(self.into())
     }
 }
 
@@ -429,7 +429,7 @@ impl ToApi for WireSha1 {
     type Error = Infallible;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(Sha1(self.0))
+        Ok(Sha1::from(self.0))
     }
 }
 
@@ -476,7 +476,7 @@ impl ToWire for Sha256 {
     type Wire = WireSha256;
 
     fn to_wire(self) -> Self::Wire {
-        WireSha256(self.0)
+        WireSha256(self.into())
     }
 }
 
@@ -485,7 +485,7 @@ impl ToApi for WireSha256 {
     type Error = Infallible;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(Sha256(self.0))
+        Ok(Sha256::from(self.0))
     }
 }
 

@@ -517,13 +517,13 @@ impl Arbitrary for GitSha1 {
 
 impl From<Sha1> for EdenapiSha1 {
     fn from(v: Sha1) -> Self {
-        EdenapiSha1(v.0)
+        EdenapiSha1::from(v.0)
     }
 }
 
 impl From<EdenapiSha1> for Sha1 {
     fn from(v: EdenapiSha1) -> Self {
-        Sha1::from_byte_array(v.0)
+        Sha1::from_byte_array(v.into())
     }
 }
 
@@ -537,13 +537,13 @@ impl Arbitrary for Sha1 {
 
 impl From<Sha256> for EdenapiSha256 {
     fn from(v: Sha256) -> Self {
-        EdenapiSha256(v.0)
+        EdenapiSha256::from(v.0)
     }
 }
 
 impl From<EdenapiSha256> for Sha256 {
     fn from(v: EdenapiSha256) -> Self {
-        Sha256::from_byte_array(v.0)
+        Sha256::from_byte_array(v.into())
     }
 }
 

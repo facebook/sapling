@@ -23,6 +23,9 @@
 //! TYPES MAY CAUSE VERSION SKEW, so any changes should proceed
 //! with caution.
 
+#[macro_use]
+pub mod hash;
+
 pub mod anyid;
 pub mod batch;
 pub mod bookmark;
@@ -62,8 +65,7 @@ pub use crate::history::{
 };
 pub use crate::metadata::{
     AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
-    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, CONTENT_ID_HASH_LENGTH_BYTES,
-    SHA1_HASH_LENGTH_BYTES,
+    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256,
 };
 pub use crate::token::{
     FileContentTokenMetadata, UploadToken, UploadTokenData, UploadTokenMetadata,

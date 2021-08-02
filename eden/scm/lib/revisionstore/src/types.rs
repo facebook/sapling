@@ -13,7 +13,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(any(test, feature = "for-tests"))]
 use rand::Rng;
 
-use edenapi_types::{ContentId, Sha1, CONTENT_ID_HASH_LENGTH_BYTES, SHA1_HASH_LENGTH_BYTES};
+use edenapi_types::{ContentId, Sha1};
 use types::{Key, Sha256};
 
 /// Kind of content hash stored in the LFS pointer. Adding new types is acceptable, re-ordering or
@@ -56,18 +56,20 @@ impl ContentHash {
         use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
 
         // cribbed from pyedenapi
-        let mut hash = VarBlake2b::new_keyed(b"content", CONTENT_ID_HASH_LENGTH_BYTES);
+        let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());
         hash.input(data);
-        let mut ret = [0u8; CONTENT_ID_HASH_LENGTH_BYTES];
+        let mut ret = [0u8; ContentId::len()];
         hash.variable_result(|res| {
             if let Err(e) = ret.as_mut().write_all(res) {
                 panic!(
                     "{}-byte array must work with {}-byte blake2b: {:?}",
-                    CONTENT_ID_HASH_LENGTH_BYTES, CONTENT_ID_HASH_LENGTH_BYTES, e
+                    ContentId::len(),
+                    ContentId::len(),
+                    e
                 );
             }
         });
-        ContentId(ret)
+        ContentId::from(ret)
     }
 
     pub(crate) fn sha1(data: &Bytes) -> Sha1 {
@@ -76,7 +78,7 @@ impl ContentHash {
         let mut hash = sha1::Sha1::new();
         hash.input(data);
 
-        let bytes: [u8; SHA1_HASH_LENGTH_BYTES] = hash.result().into();
+        let bytes: [u8; Sha1::len()] = hash.result().into();
         Sha1::from(bytes)
     }
 

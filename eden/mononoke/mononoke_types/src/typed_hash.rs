@@ -411,13 +411,13 @@ impl_typed_hash! {
 
 impl From<ContentId> for EdenapiContentId {
     fn from(v: ContentId) -> Self {
-        EdenapiContentId(v.0.into_inner())
+        EdenapiContentId::from(v.0.into_inner())
     }
 }
 
 impl From<EdenapiContentId> for ContentId {
     fn from(v: EdenapiContentId) -> Self {
-        ContentId::new(Blake2::from_byte_array(v.0))
+        ContentId::new(Blake2::from_byte_array(v.into()))
     }
 }
 

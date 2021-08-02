@@ -103,7 +103,7 @@ pub struct ContentId(pub [u8; 32]);
 
 impl From<ApiContentId> for ContentId {
     fn from(v: ApiContentId) -> Self {
-        ContentId(v.0)
+        ContentId(v.into())
     }
 }
 
@@ -113,7 +113,7 @@ pub struct Sha1(pub [u8; 20]);
 
 impl From<ApiSha1> for Sha1 {
     fn from(v: ApiSha1) -> Self {
-        Sha1(v.0)
+        Sha1(v.into())
     }
 }
 
@@ -123,7 +123,7 @@ pub struct Sha256(pub [u8; 32]);
 
 impl From<ApiSha256> for Sha256 {
     fn from(v: ApiSha256) -> Self {
-        Sha256(v.0)
+        Sha256(v.into())
     }
 }
 

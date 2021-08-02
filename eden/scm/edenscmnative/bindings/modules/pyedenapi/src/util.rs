@@ -12,7 +12,7 @@ use cpython::*;
 use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::{Progress, ProgressCallback, ResponseMeta};
-use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry, CONTENT_ID_HASH_LENGTH_BYTES};
+use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use std::io::Write;
@@ -31,24 +31,26 @@ pub fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
 }
 
 pub fn to_contentid(py: Python, content_id: &PyBytes) -> ContentId {
-    let mut bytes = [0u8; CONTENT_ID_HASH_LENGTH_BYTES];
-    bytes.copy_from_slice(&content_id.data(py)[0..CONTENT_ID_HASH_LENGTH_BYTES]);
-    ContentId(bytes)
+    let mut bytes = [0u8; ContentId::len()];
+    bytes.copy_from_slice(&content_id.data(py)[0..ContentId::len()]);
+    ContentId::from(bytes)
 }
 
 pub fn calc_contentid(data: &[u8]) -> ContentId {
-    let mut hash = VarBlake2b::new_keyed(b"content", CONTENT_ID_HASH_LENGTH_BYTES);
+    let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());
     hash.input(data);
-    let mut ret = [0u8; CONTENT_ID_HASH_LENGTH_BYTES];
+    let mut ret = [0u8; ContentId::len()];
     hash.variable_result(|res| {
         if let Err(e) = ret.as_mut().write_all(res) {
             panic!(
                 "{}-byte array must work with {}-byte blake2b: {:?}",
-                CONTENT_ID_HASH_LENGTH_BYTES, CONTENT_ID_HASH_LENGTH_BYTES, e
+                ContentId::len(),
+                ContentId::len(),
+                e
             );
         }
     });
-    ContentId(ret)
+    ContentId::from(ret)
 }
 
 pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {
