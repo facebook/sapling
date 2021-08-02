@@ -24,6 +24,7 @@ use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
+use edenapi::types::EphemeralPrepareResponse;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileSpec;
@@ -510,6 +511,15 @@ impl EdenApi for EagerRepo {
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
+        ))
+    }
+
+    async fn ephemeral_prepare(
+        &self,
+        _repo: String,
+    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+        Err(not_implemented_error(
+            "EagerRepo does not support ephemeral_prepare endpoint".to_string(),
         ))
     }
 }

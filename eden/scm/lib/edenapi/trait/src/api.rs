@@ -15,9 +15,10 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
-    LookupResponse, TreeAttributes, TreeEntry, UploadBonsaiChangeset, UploadHgChangeset,
-    UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
+    EdenApiServerError, EphemeralPrepareResponse, FileEntry, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
+    UploadTreeResponse,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -186,6 +187,11 @@ pub trait EdenApi: Send + Sync + 'static {
         changesets: Vec<UploadBonsaiChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
+
+    async fn ephemeral_prepare(
+        &self,
+        repo: String,
+    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -413,6 +419,15 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_bonsai_changesets(repo, changesets, mutations)
+            .await
+    }
+
+    async fn ephemeral_prepare(
+        &self,
+        repo: String,
+    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .ephemeral_prepare(repo)
             .await
     }
 }
