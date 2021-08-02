@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import os
+import sys
 
 from eden.integration.lib import hgrepo
 
@@ -22,4 +23,5 @@ class SymlinkTest(EdenHgTestCase):
 
     def test_post_clone_permissions(self) -> None:
         st = os.lstat(os.path.join(self.mount, ".hg"))
-        self.assertEqual(st.st_mode & 0o777, 0o755)
+        expected_mode = 0o777 if sys.platform == "win32" else 0o755
+        self.assertEqual(st.st_mode & 0o777, expected_mode)
