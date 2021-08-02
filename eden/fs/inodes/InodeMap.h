@@ -35,13 +35,6 @@ class InodeBase;
 class TreeInode;
 class ParentInodeInfo;
 
-struct UnloadedInodeData {
-  UnloadedInodeData(InodeNumber p, PathComponentPiece n) : parent(p), name(n) {}
-
-  InodeNumber const parent;
-  PathComponent const name;
-};
-
 class InodeMapLock;
 
 /**
@@ -403,9 +396,6 @@ class InodeMap {
 
   /**
    * Data about an unloaded inode.
-   *
-   * Note that this is different from the public UnloadedInodeData type which
-   * we return to callers.  This class tracks more state.
    */
   struct UnloadedInode {
     UnloadedInode(InodeNumber parentNum, PathComponentPiece entryName);
