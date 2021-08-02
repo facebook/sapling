@@ -45,6 +45,9 @@
 //! 7. If the type has a corresponding API type, add a quickcheck wire-API round
 //! trip test.
 
+#[macro_use]
+pub mod hash;
+
 pub mod anyid;
 pub mod batch;
 pub mod bookmark;

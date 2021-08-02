@@ -351,172 +351,22 @@ impl<'de> serde::Deserialize<'de> for WireFsnodeId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WireContentId([u8; WireContentId::len()]);
-
-impl WireContentId {
-    pub const fn len() -> usize {
-        32
-    }
+wire_hash! {
+    wire => WireContentId,
+    api  => ContentId,
+    size => 32,
 }
 
-impl ToWire for ContentId {
-    type Wire = WireContentId;
-
-    fn to_wire(self) -> Self::Wire {
-        WireContentId(self.into())
-    }
+wire_hash! {
+    wire => WireSha1,
+    api  => Sha1,
+    size => 20,
 }
 
-impl ToApi for WireContentId {
-    type Api = ContentId;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(ContentId::from(self.0))
-    }
-}
-
-impl serde::Serialize for WireContentId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for WireContentId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
-        let bytes = bytes.as_ref();
-
-        if bytes.len() == Self::len() {
-            let mut ary = [0u8; Self::len()];
-            ary.copy_from_slice(&bytes);
-            Ok(WireContentId(ary))
-        } else {
-            Err(D::Error::custom(TryFromBytesError {
-                expected_len: Self::len(),
-                found_len: bytes.len(),
-            }))
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WireSha1([u8; WireSha1::len()]);
-
-impl WireSha1 {
-    pub const fn len() -> usize {
-        20
-    }
-}
-
-impl ToWire for Sha1 {
-    type Wire = WireSha1;
-
-    fn to_wire(self) -> Self::Wire {
-        WireSha1(self.into())
-    }
-}
-
-impl ToApi for WireSha1 {
-    type Api = Sha1;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(Sha1::from(self.0))
-    }
-}
-
-impl serde::Serialize for WireSha1 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for WireSha1 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
-        let bytes = bytes.as_ref();
-
-        if bytes.len() == Self::len() {
-            let mut ary = [0u8; Self::len()];
-            ary.copy_from_slice(&bytes);
-            Ok(WireSha1(ary))
-        } else {
-            Err(D::Error::custom(TryFromBytesError {
-                expected_len: Self::len(),
-                found_len: bytes.len(),
-            }))
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WireSha256([u8; WireSha256::len()]);
-
-impl WireSha256 {
-    pub const fn len() -> usize {
-        32
-    }
-}
-
-impl ToWire for Sha256 {
-    type Wire = WireSha256;
-
-    fn to_wire(self) -> Self::Wire {
-        WireSha256(self.into())
-    }
-}
-
-impl ToApi for WireSha256 {
-    type Api = Sha256;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(Sha256::from(self.0))
-    }
-}
-
-impl serde::Serialize for WireSha256 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for WireSha256 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
-        let bytes = bytes.as_ref();
-
-        if bytes.len() == Self::len() {
-            let mut ary = [0u8; Self::len()];
-            ary.copy_from_slice(&bytes);
-            Ok(WireSha256(ary))
-        } else {
-            Err(D::Error::custom(TryFromBytesError {
-                expected_len: Self::len(),
-                found_len: bytes.len(),
-            }))
-        }
-    }
+wire_hash! {
+    wire => WireSha256,
+    api  => Sha256,
+    size => 32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
