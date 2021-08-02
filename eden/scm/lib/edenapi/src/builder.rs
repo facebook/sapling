@@ -18,7 +18,7 @@ use url::Url;
 
 use auth::AuthSection;
 use configmodel::ConfigExt;
-use http_client::HttpVersion;
+use http_client::{Encoding, HttpVersion};
 
 use crate::client::Client;
 use crate::errors::{ConfigError, EdenApiError};
@@ -122,6 +122,7 @@ pub struct HttpClientBuilder {
     validate_certs: bool,
     log_dir: Option<PathBuf>,
     convert_cert: bool,
+    encoding: Option<Encoding>,
 }
 
 impl HttpClientBuilder {
@@ -234,6 +235,11 @@ impl HttpClientBuilder {
             .get_or("http", "convert-cert", || cfg!(windows))
             .map_err(|e| ConfigError::Malformed("http.convert-cert".into(), e))?;
 
+        let encoding = config
+            .get_opt::<String>("edenapi", "encoding")
+            .map_err(|e| ConfigError::Malformed("edenapi.encoding".into(), e))?
+            .map(|s| Encoding::from(&*s));
+
         Ok(HttpClientBuilder {
             server_url: Some(server_url),
             cert,
@@ -252,6 +258,7 @@ impl HttpClientBuilder {
             validate_certs,
             log_dir,
             convert_cert,
+            encoding,
         })
     }
 
@@ -408,6 +415,7 @@ pub(crate) struct Config {
     pub(crate) validate_certs: bool,
     pub(crate) log_dir: Option<PathBuf>,
     pub(crate) convert_cert: bool,
+    pub(crate) encoding: Option<Encoding>,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -432,6 +440,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             validate_certs,
             log_dir,
             convert_cert,
+            encoding,
         } = builder;
 
         // Check for missing required fields.
@@ -467,6 +476,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             validate_certs,
             log_dir,
             convert_cert,
+            encoding,
         })
     }
 }

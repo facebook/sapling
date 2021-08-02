@@ -144,6 +144,10 @@ impl Client {
             req.set_http_version(http_version);
         }
 
+        if let Some(encoding) = &self.config.encoding {
+            req.set_accept_encoding([encoding.clone()]);
+        }
+
         Ok(req)
     }
 
