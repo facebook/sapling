@@ -6,6 +6,7 @@
 
 import os
 import subprocess
+import sys
 
 from eden.integration.lib import hgrepo
 
@@ -58,8 +59,13 @@ class AddTest(EdenHgTestCase):
     def test_add_nonexistent_directory(self) -> None:
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.hg("add", "dir3")
+        expected_error = (
+            "dir3: The system cannot find the file specified\n"
+            if sys.platform == "win32"
+            else "dir3: No such file or directory\n"
+        )
         self.assertEqual(
-            "dir3: No such file or directory\n",
+            expected_error,
             context.exception.stderr.decode("utf-8"),
         )
         self.assertEqual(1, context.exception.returncode)

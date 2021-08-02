@@ -95,11 +95,6 @@ if sys.platform == "win32":
         #
         # Test classes from the hg integration test binary
         #
-        "hg.add_test.AddTestTreeOnly": [
-            "test_add_file_that_would_normally_be_ignored",
-            "test_add_nonexistent_directory",
-            "test_debugdirstate",
-        ],
         "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": True,
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
