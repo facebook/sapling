@@ -43,7 +43,6 @@ from .util import (
     EdenStartError,
     HealthStatus,
     print_stderr,
-    readlink_retry_estale,
     write_file_atomically,
 )
 
@@ -619,7 +618,7 @@ Do you want to run `eden mount %s` instead?"""
         # Check if it is already mounted.
         try:
             root = path / ".eden" / "root"
-            target = readlink_retry_estale(root)
+            target = os.readlink(root)
             if Path(target) == path:
                 print_stderr(
                     f"ERROR: Mount point in use! {path} is already mounted by EdenFS."
@@ -758,7 +757,7 @@ Do you want to run `eden mount %s` instead?"""
     def get_checkout_config_for_path(self, path: str) -> Optional[CheckoutConfig]:
         client_link = os.path.join(path, ".eden", "client")
         try:
-            client_dir = readlink_retry_estale(client_link)
+            client_dir = os.readlink(client_link)
         except OSError:
             return None
 
@@ -1235,15 +1234,11 @@ def find_eden(
     checkout_state_dir = None
     try:
         if sys.platform != "win32":
-            eden_socket_path = readlink_retry_estale(
-                path.joinpath(path, ".eden", "socket")
-            )
+            eden_socket_path = os.readlink(path.joinpath(path, ".eden", "socket"))
             eden_state_dir = os.path.dirname(eden_socket_path)
 
-            checkout_root = Path(readlink_retry_estale(path.joinpath(".eden", "root")))
-            checkout_state_dir = Path(
-                readlink_retry_estale(path.joinpath(".eden", "client"))
-            )
+            checkout_root = Path(os.readlink(path.joinpath(".eden", "root")))
+            checkout_state_dir = Path(os.readlink(path.joinpath(".eden", "client")))
         else:
             # On Windows, walk the path backwards until both parent and dir
             # point to "C:\"

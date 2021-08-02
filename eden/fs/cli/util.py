@@ -561,19 +561,6 @@ def is_valid_sha1(sha1: str) -> bool:
     return set(sha1).issubset(string.hexdigits)
 
 
-def readlink_retry_estale(path: Union[Path, str]) -> str:
-    attempts = 10
-    while True:
-        try:
-            return os.readlink(str(path))
-        except OSError as ex:
-            if attempts == 0 or ex.errno != errno.ESTALE:
-                raise
-            pass
-        attempts -= 1
-        time.sleep(random.uniform(0.001, 0.01))
-
-
 def get_eden_mount_name(path_arg: str) -> str:
     """
     Get the path to the Eden checkout containing the specified path
@@ -593,11 +580,11 @@ def get_eden_mount_name(path_arg: str) -> str:
     else:
         path = os.path.join(path_arg, ".eden", "root")
         try:
-            return readlink_retry_estale(path)
+            return os.readlink(path)
         except OSError as ex:
             if ex.errno == errno.ENOTDIR:
                 path = os.path.join(os.path.dirname(path_arg), ".eden", "root")
-                return readlink_retry_estale(path)
+                return os.readlink(path)
             elif ex.errno == errno.ENOENT:
                 raise NotAnEdenMountError(path_arg)
             raise

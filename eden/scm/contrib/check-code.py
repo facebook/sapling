@@ -501,7 +501,7 @@ create_eden_dirstate deleted_files display_mode
 eden_files explicit_matches get_merge_string get_merge_string ignored_files
 manifest_entry max_to_show merge_state merge_str modified_files
 non_removed_matches nonnormal_copy num_remaining orig_pack orig_unpack
-parent_mf readlink_retry_estale removed_files to_remove total_conflicts
+parent_mf removed_files to_remove total_conflicts
 unknown_files unsure_files why_not_eden wrap_pack wrap_unpack
 
 always_allow_pending always_allow_shared_pending chunked_paths cmd_cat_file
