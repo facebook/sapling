@@ -124,7 +124,6 @@ if sys.platform == "win32":
             "test_truncation_after_open_modifies_file",
             "test_truncation_upon_open_modifies_file",
         ],
-        "hg.symlink_test.SymlinkTestTreeOnly": True,
         "hg.update_test.UpdateCacheInvalidationTestTreeOnly": [
             "test_changing_file_contents_creates_new_inode_and_flushes_dcache"
         ],
