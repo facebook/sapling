@@ -1798,7 +1798,10 @@ def _phase(repo, subset, *targets):
 
 @predicate("draft()", safe=True)
 def getdraft(repo, subset, x):
-    """Changeset in draft phase."""
+    """Changeset in draft phase.
+    This means non landed commits. Not to be confused with draft diffs.
+    All non landed diffs are associated with a draft commit.
+    """
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
     target = phases.draft

@@ -18611,6 +18611,8 @@ msgstr ""
 msgid ""
 "``draft()``\n"
 "    Changeset in draft phase."
+"This means non landed commits. Not to be confused with draft diffs."
+"All non landed diffs are associated with a draft commit."
 msgstr ""
 
 #. i18n: "draft" is a keyword
