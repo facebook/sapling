@@ -280,6 +280,20 @@ pub struct UploadBonsaiChangesetsRequest {
     pub mutations: Vec<HgMutationEntryContent>,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct SnapshotRawFiles {
+    // TODO(yancouto): Add added/removed/missing/untracked files
+    pub modified: Vec<RepoPathBuf>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct SnapshotRawData {
+    pub files: SnapshotRawFiles,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct UploadSnapshotResponse {}
+
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareRequest {}
 

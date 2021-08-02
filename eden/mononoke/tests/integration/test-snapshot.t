@@ -46,7 +46,9 @@ Make a commit in the first client and upload it
 This test also checks file content deduplication. We upload 1 file content and 100 filenodes here.
   $ cd repo
   $ echo b > a
-  $ hg snapshot
+  $ hgedenapi snapshot
   abort: you need to specify a subcommand (run with --help to see a list of subcommands)
   [255]
-  $ hg snapshot createremote
+  $ EDENSCM_LOG=edenapi::client=info hgedenapi snapshot createremote
+    INFO edenapi::client: Preparing ephemeral bubble
+    INFO edenapi::client: Created bubble 1

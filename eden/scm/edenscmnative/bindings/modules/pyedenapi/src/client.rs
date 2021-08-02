@@ -20,8 +20,8 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     BonsaiChangesetContent, CommitHashToLocationResponse, CommitLocationToHashResponse,
-    CommitRevlogData, HgChangesetContent, HgMutationEntryContent, LookupResponse,
-    UploadTokensResponse, UploadTreeResponse,
+    CommitRevlogData, HgChangesetContent, HgMutationEntryContent, LookupResponse, SnapshotRawData,
+    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -336,6 +336,14 @@ py_class!(pub class client |py| {
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadbonsaichangesets_py(py, repo, changesets, mutations)
+    }
+
+    def uploadsnapshot(
+        &self,
+        repo: String,
+        data: Serde<SnapshotRawData>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>, PyFuture)> {
+        self.inner(py).clone().uploadsnapshot_py(py, repo, data)
     }
 });
 

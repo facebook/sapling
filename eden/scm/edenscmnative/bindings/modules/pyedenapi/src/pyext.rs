@@ -11,7 +11,7 @@ use cpython::*;
 use futures::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::{bail, format_err};
+use anyhow::{anyhow, bail, format_err};
 use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -25,7 +25,8 @@ use edenapi_types::{
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadTokensResponse, UploadTreeResponse,
+    SnapshotRawData, TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadSnapshotResponse,
+    UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -794,6 +795,42 @@ pub trait EdenApiPyExt: EdenApi {
                         .upload_bonsai_changesets(repo, changesets, mutations)
                         .await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn uploadsnapshot_py(
+        &self,
+        py: Python,
+        repo: String,
+        _data: Serde<SnapshotRawData>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>,
+        PyFuture,
+    )> {
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self.ephemeral_prepare(repo).await?;
+                    let prepare_response = response
+                        .entries
+                        .try_collect::<Vec<_>>()
+                        .await?
+                        .get(0)
+                        .cloned()
+                        .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))?;
+                    Ok::<_, EdenApiError>((
+                        stream::once(async {
+                            Result::<_, EdenApiError>::Ok(UploadSnapshotResponse {})
+                        }),
+                        response.stats,
+                    ))
                 })
             })
             .map_pyerr(py)?
