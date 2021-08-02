@@ -43,7 +43,7 @@ pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::CommitGraphEntry;
 pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
-    BonsaiChangesetContent, CommitHashLookupRequest, CommitHashLookupResponse,
+    BonsaiChangesetContent, BonsaiFileChange, CommitHashLookupRequest, CommitHashLookupResponse,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,

@@ -57,3 +57,4 @@ Create a snapshot.
     INFO edenapi::client: Received 0 token(s) from the lookup_batch request
     INFO edenapi::client: Requesting upload for */repo/upload/file/content_id/21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 (glob)
     INFO edenapi::client: Received 1 new token(s) from upload requests
+    INFO edenapi::client: Requesting changesets upload for 1 item(s)

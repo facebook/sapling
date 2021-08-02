@@ -21,9 +21,9 @@ use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{
-    AnyFileContentId, AnyId, BonsaiChangesetContent, CommitGraphEntry,
+    AnyFileContentId, AnyId, BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry,
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, FileType,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
     SnapshotRawData, TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadSnapshotResponse,
     UploadTokensResponse, UploadTreeResponse,
@@ -36,6 +36,7 @@ use revisionstore::{
     datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
     StoreResult,
 };
+use types::{HgId, Parents};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -812,18 +813,20 @@ pub trait EdenApiPyExt: EdenApi {
         TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>,
         PyFuture,
     )> {
-        let mut upload_data = data
+        let (modified, mut upload_data): (Vec<_>, Vec<_>) = data
             .0
             .files
             .modified
             .into_iter()
             .map(|path| {
-                let bytes = std::fs::read(&path.into_string())?;
+                let bytes = std::fs::read(path.as_repo_path().as_str())?;
                 let content_id = calc_contentid(&bytes);
-                Ok((content_id, Bytes::from_owner(bytes)))
+                Ok(((path, content_id), (content_id, Bytes::from_owner(bytes))))
             })
             .collect::<Result<Vec<_>, std::io::Error>>()
-            .map_pyerr(py)?;
+            .map_pyerr(py)?
+            .into_iter()
+            .unzip();
 
         // Deduplicate upload data
         let mut uniques = BTreeSet::new();
@@ -836,20 +839,18 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let (_prepare_response, stats) = {
-                        let mut response = self.ephemeral_prepare(repo.clone()).await?;
-                        let prepare_response = response
+                    let _prepare_response = {
+                        self.ephemeral_prepare(repo.clone())
+                            .await?
                             .entries
                             .next()
                             .await
-                            .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))??;
-                            (prepare_response, response.stats)
+                            .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))??
                     };
-                    let _file_content_tokens = {
+                    let file_content_tokens = {
                         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                         // upload file contents first, receiving upload tokens
-                        self
-                            .process_files_upload(repo, upload_data)
+                        self.process_files_upload(repo.clone(), upload_data)
                             .await?
                             .entries
                             .try_collect::<Vec<_>>()
@@ -864,11 +865,36 @@ pub trait EdenApiPyExt: EdenApi {
                             })
                             .collect::<Result<BTreeMap<_, _>, _>>()?
                     };
+                    let response = self.upload_bonsai_changesets(
+                        repo, vec![UploadBonsaiChangeset {
+                            // TODO(yancouto): Remove HgId as it doesn't exist and is unnecessary
+                            hg_changeset_id: HgId::null_id().clone(),
+                            changeset_content: BonsaiChangesetContent {
+                                // TODO(yancouto): Get correct parents
+                                hg_parents: Parents::None,
+                                // TODO(yancouto): Get correct author
+                                author: "placeholder".to_string(),
+                                // TODO(yancouto): Get correct current time
+                                time: 0,
+                                tz: 0,
+                                extra: vec![],
+                                // TODO(yancouto): Also upload new files
+                                file_changes: modified.into_iter().map(|(path, cid)| {
+                                    Ok((path, BonsaiFileChange {
+                                        // TODO(yancouto): Get correct file type
+                                        file_type: FileType::Regular,
+                                        upload_token: file_content_tokens.get(&cid).ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?.clone()
+                                    }))
+                                }).collect::<anyhow::Result<_>>()?,
+                                message: "THIS IS A SNAPSHOT".to_string(),
+                            },
+                        }], vec![]
+                    ).await?;
                     Ok::<_, EdenApiError>((
                         stream::once(async {
                             Result::<_, EdenApiError>::Ok(UploadSnapshotResponse {})
                         }),
-                        stats,
+                        response.stats,
                     ))
                 })
             })
