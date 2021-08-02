@@ -70,6 +70,8 @@ create new commits in repo2 and check that they are seen as outgoing
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   "master_bookmark"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id

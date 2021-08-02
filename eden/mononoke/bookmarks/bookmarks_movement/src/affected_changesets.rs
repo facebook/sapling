@@ -594,6 +594,7 @@ pub async fn log_commits_to_scribe(
     };
 
     let repo_id = repo.get_repoid();
+    let repo_name = repo.name();
     let bookmark = bookmark.map(|bm| bm.as_str());
     let received_timestamp = Utc::now();
 
@@ -619,6 +620,7 @@ pub async fn log_commits_to_scribe(
                 let identities = ctx.metadata().identities();
                 let ci = scribe_commit_queue::CommitInfo::new(
                     repo_id,
+                    repo_name,
                     bookmark,
                     generation,
                     changeset_id,

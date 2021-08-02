@@ -16,6 +16,7 @@ use std::convert::TryInto;
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {
     repo_id: RepositoryId,
+    repo_name: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     bookmark: Option<&'a str>,
     generation: Generation,
@@ -60,6 +61,7 @@ impl ChangedFilesInfo {
 impl<'a> CommitInfo<'a> {
     pub fn new(
         repo_id: RepositoryId,
+        repo_name: &'a str,
         bookmark: Option<&'a str>,
         generation: Generation,
         changeset_id: ChangesetId,
@@ -72,6 +74,7 @@ impl<'a> CommitInfo<'a> {
     ) -> Self {
         Self {
             repo_id,
+            repo_name,
             bookmark,
             generation,
             changeset_id,
