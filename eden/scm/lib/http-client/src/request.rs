@@ -66,6 +66,60 @@ impl fmt::Display for Method {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Encoding {
+    Identity,
+    Brotli,
+    Deflate,
+    Gzip,
+    Zstd,
+    Other(String),
+}
+
+impl Encoding {
+    /// If the Accept-Encoding is explicitly set to the empty string, libcurl
+    /// will advertise all supported content encodings (as opposed to the
+    /// default behavior of omitting the Accept-Encoding header). This method
+    /// is provided as a convenient way to specify this.
+    fn all_supported() -> Vec<Self> {
+        vec![Encoding::Other(String::new())]
+    }
+}
+
+impl<'a> From<&'a str> for Encoding {
+    fn from(encoding: &'a str) -> Self {
+        use Encoding::*;
+        match encoding {
+            "identity" => Identity,
+            "br" => Brotli,
+            "deflate" => Deflate,
+            "gzip" => Gzip,
+            "zstd" => Zstd,
+            other => Other(other.into()),
+        }
+    }
+}
+
+impl AsRef<str> for Encoding {
+    fn as_ref(&self) -> &str {
+        use Encoding::*;
+        match self {
+            Identity => "identity",
+            Brotli => "br",
+            Deflate => "deflate",
+            Gzip => "gzip",
+            Zstd => "zstd",
+            Other(s) => s,
+        }
+    }
+}
+
+impl fmt::Display for Encoding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_ref())
+    }
+}
+
 /// A subset of the `Request` builder. Preserved in curl types.
 /// Expose the request in curl handler callback context.
 #[cfg_attr(test, derive(Clone))]
@@ -94,6 +148,7 @@ pub struct Request {
     cainfo: Option<PathBuf>,
     timeout: Option<Duration>,
     http_version: HttpVersion,
+    accept_encoding: Vec<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
     verify_tls_host: bool,
     verify_tls_cert: bool,
@@ -169,6 +224,7 @@ impl Request {
             // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
             // if version negotiation with the server fails.
             http_version: HttpVersion::V2,
+            accept_encoding: Vec::new(),
             min_transfer_speed: None,
             verify_tls_host: true,
             verify_tls_cert: true,
@@ -240,6 +296,23 @@ impl Request {
     /// Set the http version for this request. Defaults to HTTP/2.
     pub fn set_http_version(&mut self, version: HttpVersion) -> &mut Self {
         self.http_version = version;
+        self
+    }
+
+    /// Specify the content compression formats the client should advertise to
+    /// the server. By default, this will be every format supported by libcurl.
+    pub fn accept_encoding(mut self, formats: impl IntoIterator<Item = Encoding>) -> Self {
+        self.set_accept_encoding(formats);
+        self
+    }
+
+    /// Specify the content compression formats the client should advertise to
+    /// the server. By default, this will be every format supported by libcurl.
+    pub fn set_accept_encoding(
+        &mut self,
+        formats: impl IntoIterator<Item = Encoding>,
+    ) -> &mut Self {
+        self.accept_encoding = formats.into_iter().collect();
         self
     }
 
@@ -596,6 +669,21 @@ impl Request {
 
         easy.http_version(self.http_version)?;
 
+        // Note that if CURLOPT_ACCEPT_ENCODING is explicitly set to the empty
+        // string, libcurl will advertise all supported formats in the request
+        // header. Since we want to have the option to omit the header entirely,
+        // don't attempt to set it unless we have a non-empty encoding list.
+        if !self.accept_encoding.is_empty() {
+            easy.accept_encoding(
+                &self
+                    .accept_encoding
+                    .iter()
+                    .map(|s| s.as_ref())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )?;
+        }
+
         if let Some(mts) = self.min_transfer_speed {
             easy.low_speed_limit(mts.min_bytes_per_second)?;
             easy.low_speed_time(mts.grace_period)?;
@@ -908,6 +996,26 @@ mod tests {
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_accept_encoding() -> Result<()> {
+        let mock = mock("GET", "/test")
+            .with_status(200)
+            .match_header("Accept-Encoding", "zstd, gzip, foobar")
+            .create();
+
+        let encodings = vec![
+            Encoding::Zstd,
+            Encoding::Gzip,
+            Encoding::Other("foobar".into()),
+        ];
+
+        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let _ = Request::get(url).accept_encoding(encodings).send()?;
+
+        mock.assert();
         Ok(())
     }
 
