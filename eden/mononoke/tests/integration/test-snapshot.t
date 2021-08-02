@@ -42,13 +42,18 @@ start edenapi
 
 TEST CASES:
 
-Make a commit in the first client and upload it
-This test also checks file content deduplication. We upload 1 file content and 100 filenodes here.
+Make some local changes
   $ cd repo
   $ echo b > a
   $ hgedenapi snapshot
   abort: you need to specify a subcommand (run with --help to see a list of subcommands)
   [255]
+
+Create a snapshot.
   $ EDENSCM_LOG=edenapi::client=info hgedenapi snapshot createremote
     INFO edenapi::client: Preparing ephemeral bubble
     INFO edenapi::client: Created bubble 1
+    INFO edenapi::client: Requesting lookup for 1 item(s)
+    INFO edenapi::client: Received 0 token(s) from the lookup_batch request
+    INFO edenapi::client: Requesting upload for */repo/upload/file/content_id/21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 (glob)
+    INFO edenapi::client: Received 1 new token(s) from upload requests

@@ -29,6 +29,7 @@ use edenapi_types::{
     UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
+use minibytes::Bytes;
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
 use revisionstore::{
@@ -511,7 +512,6 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-
         let responses_py = responses.map_ok(Serde).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
@@ -560,7 +560,6 @@ pub trait EdenApiPyExt: EdenApi {
             .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
             .collect();
 
-
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -578,7 +577,7 @@ pub trait EdenApiPyExt: EdenApi {
                             Ok((content_id, token))
                         })
                         .collect::<Result<BTreeMap<_, _>, _>>()?;
-                    let tokens = content_ids.into_iter().enumerate().map(move |(idx, cid)| 
+                    let tokens = content_ids.into_iter().enumerate().map(move |(idx, cid)|
                         Result::<_, EdenApiError>::Ok(UploadTokensResponse {
                             index: idx,
                             token: file_content_tokens
@@ -698,7 +697,6 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((responses_py.into(), stats_py))
     }
 
-
     /// Upload trees
     fn uploadtrees_py(
         self: Arc<Self>,
@@ -809,27 +807,68 @@ pub trait EdenApiPyExt: EdenApi {
         &self,
         py: Python,
         repo: String,
-        _data: Serde<SnapshotRawData>,
+        data: Serde<SnapshotRawData>,
     ) -> PyResult<(
         TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>,
         PyFuture,
     )> {
+        let mut upload_data = data
+            .0
+            .files
+            .modified
+            .into_iter()
+            .map(|path| {
+                let bytes = std::fs::read(&path.into_string())?;
+                let content_id = calc_contentid(&bytes);
+                Ok((content_id, Bytes::from_owner(bytes)))
+            })
+            .collect::<Result<Vec<_>, std::io::Error>>()
+            .map_pyerr(py)?;
+
+        // Deduplicate upload data
+        let mut uniques = BTreeSet::new();
+        upload_data.retain(|(content_id, _)| uniques.insert(*content_id));
+        let upload_data = upload_data
+            .into_iter()
+            .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
+            .collect();
+
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.ephemeral_prepare(repo).await?;
-                    let prepare_response = response
-                        .entries
-                        .try_collect::<Vec<_>>()
-                        .await?
-                        .get(0)
-                        .cloned()
-                        .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))?;
+                    let (_prepare_response, stats) = {
+                        let mut response = self.ephemeral_prepare(repo.clone()).await?;
+                        let prepare_response = response
+                            .entries
+                            .next()
+                            .await
+                            .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))??;
+                            (prepare_response, response.stats)
+                    };
+                    let _file_content_tokens = {
+                        let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
+                        // upload file contents first, receiving upload tokens
+                        self
+                            .process_files_upload(repo, upload_data)
+                            .await?
+                            .entries
+                            .try_collect::<Vec<_>>()
+                            .await?
+                            .into_iter()
+                            .map(|token| {
+                                let content_id = match token.data.id {
+                                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                                    _ => bail!(EdenApiError::Other(format_err!(downcast_error))),
+                                };
+                                Ok((content_id, token))
+                            })
+                            .collect::<Result<BTreeMap<_, _>, _>>()?
+                    };
                     Ok::<_, EdenApiError>((
                         stream::once(async {
                             Result::<_, EdenApiError>::Ok(UploadSnapshotResponse {})
                         }),
-                        response.stats,
+                        stats,
                     ))
                 })
             })
