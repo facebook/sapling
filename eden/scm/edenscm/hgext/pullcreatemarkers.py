@@ -33,7 +33,7 @@ command = registrar.command(cmdtable)
 
 configtable = {}
 configitem = registrar.configitem(configtable)
-configitem("pullcreatemarkers", "check-local-versions", default=True)
+configitem("pullcreatemarkers", "check-local-versions", default=False)
 
 
 def _isrevert(message, diffid):

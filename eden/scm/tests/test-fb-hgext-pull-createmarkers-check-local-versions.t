@@ -3,6 +3,7 @@
 Setup
   $ configure modern
   $ enable pullcreatemarkers
+  $ setconfig pullcreatemarkers.check-local-versions=True
 
 Configure arc...
   $ echo '{}' > .arcrc
