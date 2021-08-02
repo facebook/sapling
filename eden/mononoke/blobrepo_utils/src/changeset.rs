@@ -9,9 +9,9 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
+use dashmap::DashMap;
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_ext::{send_discard, BoxFuture};
 use futures_old::{
@@ -82,7 +82,7 @@ where
         logger,
         repo,
         visitor,
-        visit_started: CHashMap::new(),
+        visit_started: DashMap::new(),
     });
 
     for changeset_id in start_points {
@@ -102,7 +102,7 @@ struct VisitOneShared<V> {
     logger: Logger,
     repo: BlobRepo,
     visitor: V,
-    visit_started: CHashMap<HgChangesetId, ()>,
+    visit_started: DashMap<HgChangesetId, ()>,
 }
 
 impl<V> VisitOneShared<V> {
