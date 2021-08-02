@@ -84,6 +84,7 @@ queries! {
     ) {
         none,
         "INSERT INTO streaming_changelog_chunks \
+            (repo_id, chunk_num, idx_blob_name, idx_size, data_blob_name, data_size) \
             VALUES {values}"
     }
 
@@ -100,12 +101,13 @@ impl SqlConstruct for SqlStreamingChunksFetcher {
     const CREATION_QUERY: &'static str = "
         CREATE TABLE `streaming_changelog_chunks` (
         `repo_id` int(11) NOT NULL,
+        `tag` varbinary(100) NOT NULL DEFAULT '',
         `chunk_num` int(11) NOT NULL,
         `idx_blob_name` varbinary(4096) NOT NULL,
         `idx_size` int(11) NOT NULL,
         `data_blob_name` varbinary(4096) NOT NULL,
         `data_size` int(11) NOT NULL,
-        PRIMARY KEY (`repo_id`,`chunk_num`)
+        PRIMARY KEY (`repo_id`,`tag`,`chunk_num`)
         )
     ";
 
