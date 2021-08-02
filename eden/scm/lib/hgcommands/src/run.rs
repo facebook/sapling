@@ -19,6 +19,7 @@ use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use progress_model::Registry;
+use std::cell::Cell;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -70,7 +71,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         Ok(res) => res,
     };
 
-    let scenario = FailScenario::setup();
+    let scenario = setup_fail_points();
     setup_eager_repo();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
@@ -171,7 +172,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // so we need to flush now.
     blackbox::sync();
 
-    scenario.teardown();
+    if let Some(scenario) = scenario {
+        scenario.teardown();
+    }
 
     exit_code
 }
@@ -567,4 +570,20 @@ fn setup_eager_repo() {
     });
 
     *REGISTERED
+}
+
+thread_local! {
+    static FAIL_SETUP: Cell<bool> = Cell::new(false);
+}
+
+fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
+    FAIL_SETUP.with(|b| {
+        if b.get() {
+            // Already setup.
+            None
+        } else {
+            b.set(true);
+            Some(FailScenario::setup())
+        }
+    })
 }
