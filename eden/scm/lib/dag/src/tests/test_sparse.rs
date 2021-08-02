@@ -197,7 +197,6 @@ async fn test_pull_remap() {
         client.output(),
         [
             "resolve names: [E, B, A], heads: []",
-            "resolve names: [E, B, A], heads: []",
             "resolve names: [C, F], heads: [E]"
         ]
     );

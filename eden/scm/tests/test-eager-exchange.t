@@ -207,10 +207,8 @@ Making a commit and amend:
    DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
    DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
    TRACE dag::cache: cached missing 567c5fc544ed12bf9619197fdd5263d6c3129cd0 (server confirmed)
-   TRACE dag::cache: cached missing [567c5fc544ed12bf9619197fdd5263d6c3129cd0] (ancestors missing)
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
    DEBUG dag::cache: reusing cache (1 missing)
-   TRACE dag::cache: cached missing [567c5fc544ed12bf9619197fdd5263d6c3129cd0] (ancestors missing)
 
   $ LOG=dag::protocol=debug,dag::open=debug,dag::cache=trace hg amend -m Z1
    DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
@@ -218,12 +216,9 @@ Making a commit and amend:
    DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
    DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
    TRACE dag::cache: cached missing 26ef60562bd4f4205f24250ea9d2e24e61108072 (server confirmed)
-   TRACE dag::cache: cached missing [26ef60562bd4f4205f24250ea9d2e24e61108072] (ancestors missing)
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
    DEBUG dag::cache: reusing cache (1 missing)
-   TRACE dag::cache: cached missing [26ef60562bd4f4205f24250ea9d2e24e61108072] (ancestors missing)
    DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
    DEBUG dag::cache: reusing cache (1 missing)
-   TRACE dag::cache: cached missing [] (ancestors missing)
 
 #endif

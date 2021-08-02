@@ -855,9 +855,10 @@ where
         if self.is_vertex_lazy() {
             let unassigned = calculate_definitely_unassigned_vertexes(self, parents, heads).await?;
             let mut missing = self.missing_vertexes_confirmed_by_remote.write();
-            tracing::trace!(target: "dag::cache", "cached missing {:?} (ancestors missing)", &unassigned);
             for v in unassigned {
-                missing.insert(v);
+                if missing.insert(v.clone()) {
+                    tracing::trace!(target: "dag::cache", "cached missing {:?} (ancestor missing)", &v);
+                }
             }
         }
         Ok(())
