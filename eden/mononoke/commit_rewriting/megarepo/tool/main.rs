@@ -71,8 +71,8 @@ use crate::cli::{
     HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
     MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
     ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
-    SECOND_PARENT, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE,
-    TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    SECOND_PARENT, SELECT_PARENTS_AUTOMATICALLY, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS,
+    SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -480,18 +480,21 @@ async fn run_manual_commit_sync<'a>(
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
 
     let target_repo = commit_syncer.get_target_repo();
-    let target_repo_parents = sub_m.values_of(PARENTS);
-    let target_repo_parents = match target_repo_parents {
-        Some(target_repo_parents) => {
-            try_join_all(
-                target_repo_parents
-                    .into_iter()
-                    .map(|p| helpers::csid_resolve(ctx.clone(), target_repo.clone(), p).compat()),
-            )
-            .await?
-        }
-        None => vec![],
-    };
+    let target_repo_parents =
+        if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
+            None
+        } else {
+            let target_repo_parents = sub_m.values_of(PARENTS);
+            match target_repo_parents {
+                Some(target_repo_parents) => Some(
+                    try_join_all(target_repo_parents.into_iter().map(|p| {
+                        helpers::csid_resolve(ctx.clone(), target_repo.clone(), p).compat()
+                    }))
+                    .await?,
+                ),
+                None => Some(vec![]),
+            }
+        };
 
     let source_cs = sub_m
         .value_of(CHANGESET)

@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeClapApp};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
@@ -56,6 +56,7 @@ pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
 pub const RUN_MOVER: &str = "run-mover";
 pub const SECOND_PARENT: &str = "second-parent";
+pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
 pub const SYNC_DIAMOND_MERGE: &str = "sync-diamond-merge";
@@ -424,7 +425,13 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .help("Parents of the new commit")
                 .takes_value(true)
                 .multiple(true)
-                .required(true),
+        )
+        .arg(
+            Arg::with_name(SELECT_PARENTS_AUTOMATICALLY)
+                .long(SELECT_PARENTS_AUTOMATICALLY)
+                .help("Finds parents automatically: takes parents in the source repo and finds equivalent commits in target repo. \
+                If parents are not remapped yet then this command will fail")
+                .takes_value(false)
         )
         .arg(
             Arg::with_name(MAPPING_VERSION_NAME)
@@ -432,6 +439,11 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .help("name of the noop mapping that will be inserted")
                 .takes_value(true)
                 .required(true),
+        )
+        .group(
+            ArgGroup::with_name("parents_group")
+                .args(&[SELECT_PARENTS_AUTOMATICALLY, PARENTS])
+                .required(true)
         );
 
     let catchup_delete_head_subcommand = SubCommand::with_name(CATCHUP_DELETE_HEAD)
