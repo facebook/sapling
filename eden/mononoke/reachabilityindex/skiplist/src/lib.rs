@@ -17,9 +17,9 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
-use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
+use dashmap::DashMap;
 use futures::future::try_join_all;
 use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_util::try_join;
@@ -138,7 +138,7 @@ pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<Skipli
 
 fn deserialize_skiplist_mapping(logger: Logger, bytes: Bytes) -> Result<SkiplistEdgeMapping> {
     let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
-    let cmap: CHashMap<ChangesetId, SkiplistNodeType> = CHashMap::with_capacity(map.len());
+    let cmap: DashMap<ChangesetId, SkiplistNodeType> = DashMap::with_capacity(map.len());
     let mut pnodecount = 0;
     let mut snodecount = 0;
     let mut maxsedgelen = 0;
@@ -183,19 +183,19 @@ fn deserialize_skiplist_mapping(logger: Logger, bytes: Bytes) -> Result<Skiplist
 
 #[derive(Debug, Clone)]
 struct SkiplistEdgeMapping {
-    pub mapping: CHashMap<ChangesetId, SkiplistNodeType>,
+    pub mapping: DashMap<ChangesetId, SkiplistNodeType>,
     pub skip_edges_per_node: u32,
 }
 
 impl SkiplistEdgeMapping {
     pub fn new() -> Self {
         SkiplistEdgeMapping {
-            mapping: CHashMap::new(),
+            mapping: DashMap::new(),
             skip_edges_per_node: DEFAULT_EDGE_COUNT,
         }
     }
 
-    pub fn from_map(map: CHashMap<ChangesetId, SkiplistNodeType>) -> Self {
+    pub fn from_map(map: DashMap<ChangesetId, SkiplistNodeType>) -> Self {
         SkiplistEdgeMapping {
             mapping: map,
             skip_edges_per_node: DEFAULT_EDGE_COUNT,
@@ -518,9 +518,7 @@ impl SkiplistIndex {
         }
     }
 
-    pub fn new_with_skiplist_graph(
-        skiplist_graph: CHashMap<ChangesetId, SkiplistNodeType>,
-    ) -> Self {
+    pub fn new_with_skiplist_graph(skiplist_graph: DashMap<ChangesetId, SkiplistNodeType>) -> Self {
         SkiplistIndex::from_edges(SkiplistEdgeMapping::from_map(skiplist_graph))
     }
 
@@ -670,26 +668,24 @@ impl ReachabilityIndex for SkiplistIndex {
 ///
 /// The merge-commit bit is the information we use for finding merges later without consulting the
 /// commit graph.
-struct SkiplistTraversalTrace(CHashMap<ChangesetId, Vec<(ChangesetId, bool)>>);
+struct SkiplistTraversalTrace(DashMap<ChangesetId, Vec<(ChangesetId, bool)>>);
 
 impl SkiplistTraversalTrace {
     pub fn new() -> Self {
-        SkiplistTraversalTrace(CHashMap::new())
+        SkiplistTraversalTrace(DashMap::new())
     }
 
-    pub fn inner(&self) -> &CHashMap<ChangesetId, Vec<(ChangesetId, bool)>> {
+    pub fn inner(&self) -> &DashMap<ChangesetId, Vec<(ChangesetId, bool)>> {
         &self.0
     }
 
     pub fn add(&self, ancestor: ChangesetId, child: (ChangesetId, bool)) {
-        self.0.alter(ancestor, |old_val| {
-            if let Some(mut old_val) = old_val {
+        self.0
+            .entry(ancestor)
+            .and_modify(|old_val| {
                 old_val.push(child);
-                Some(old_val)
-            } else {
-                Some(vec![child])
-            }
-        });
+            })
+            .or_insert_with(|| vec![child]);
     }
 }
 
@@ -1112,8 +1108,7 @@ impl SkiplistIndex {
 
         // DFS walk over the skiplist travesal trace.
         while let Some(cs_id) = stack.pop() {
-            let descendant_entries = trace.inner().remove(&cs_id);
-            if let Some(descendant_entries) = descendant_entries {
+            if let Some((_key, descendant_entries)) = trace.inner().remove(&cs_id) {
                 for (descendant_cs_id, is_merge) in descendant_entries {
                     stack.push(descendant_cs_id);
                     if is_merge {
@@ -1136,9 +1131,9 @@ mod test {
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
-    use chashmap::CHashMap;
     use cloned::cloned;
     use context::CoreContext;
+    use dashmap::DashMap;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
     use futures::stream::{iter, StreamExt, TryStreamExt};
@@ -1174,8 +1169,8 @@ mod test {
         fn is_sync<T: Sync>() {}
         fn is_send<T: Send>() {}
 
-        is_sync::<Arc<CHashMap<ChangesetId, SkiplistNodeType>>>();
-        is_send::<Arc<CHashMap<ChangesetId, SkiplistNodeType>>>();
+        is_sync::<Arc<DashMap<ChangesetId, SkiplistNodeType>>>();
+        is_send::<Arc<DashMap<ChangesetId, SkiplistNodeType>>>();
     }
 
     #[fbinit::test]
