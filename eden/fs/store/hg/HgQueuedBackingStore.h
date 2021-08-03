@@ -32,7 +32,7 @@ class EdenStats;
 class HgImportRequest;
 class StructuredLogger;
 
-constexpr uint8_t kNumberHgQueueWorker = 8;
+constexpr uint8_t kNumberHgQueueWorker = 32;
 
 struct HgImportTraceEvent : TraceEventBase {
   enum EventType : uint8_t {
