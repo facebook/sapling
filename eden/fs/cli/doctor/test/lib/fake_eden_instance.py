@@ -107,6 +107,7 @@ class FakeEdenInstance:
         config = CheckoutConfig(
             backing_repo=backing_repo_path,
             scm_type=scm_type,
+            # pyre-fixme[6]: Expected `str` for 3rd param but got `UUID`.
             guid=uuid.uuid4(),
             mount_protocol="prjfs" if sys.platform == "win32" else "fuse",
             case_sensitive=sys.platform == "linux",

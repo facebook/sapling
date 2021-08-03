@@ -189,7 +189,11 @@ class DirstateChecker(HgFileChecker):
                     # pyre-fixme[6]: Expected `Tuple[bytes, bytes]` for 2nd param
                     #  but got `Optional[Tuple[bytes, bytes]]`.
                     self._new_parents,
+                    # pyre-fixme[6]: Expected `Dict[str, Tuple[str, int, int]]` for
+                    #  3rd param but got `Dict[bytes, Tuple[str, int, int]]`.
                     self._tuples_dict,
+                    # pyre-fixme[6]: Expected `Dict[str, str]` for 4th param but got
+                    #  `Dict[bytes, bytes]`.
                     self._copymap,
                 )
 
