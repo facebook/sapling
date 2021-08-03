@@ -532,6 +532,16 @@ pub trait EdenApiPyExt: EdenApi {
         let store = as_legacystore(py, store)?;
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
 
+        // Preupload LFS blobs
+        store
+            .upload(
+                &keys
+                    .iter()
+                    .map(|key| StoreKey::hgid(key.clone()))
+                    .collect::<Vec<_>>(),
+            )
+            .map_pyerr(py)?;
+
         let (content_ids, mut data): (Vec<_>, Vec<_>) = keys
             .into_iter()
             .map(|key| {
@@ -614,6 +624,16 @@ pub trait EdenApiPyExt: EdenApi {
     )> {
         let keys = to_keys_with_parents(py, &keys)?;
         let store = as_legacystore(py, store)?;
+
+        // Preupload LFS blobs
+        store
+            .upload(
+                &keys
+                    .iter()
+                    .map(|(key, _)| StoreKey::hgid(key.clone()))
+                    .collect::<Vec<_>>(),
+            )
+            .map_pyerr(py)?;
 
         let (mut upload_data, filenodes_data): (Vec<_>, Vec<_>) = keys
             .into_iter()
