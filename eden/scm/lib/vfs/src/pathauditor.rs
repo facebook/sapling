@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use chashmap::CHashMap;
+use dashmap::DashMap;
 use std::fs::symlink_metadata;
 use std::path::{Path, PathBuf};
 
@@ -21,7 +21,7 @@ use types::{RepoPath, RepoPathBuf};
 /// The cache is concurrent and is shared between cloned instances of PathAuditor
 pub struct PathAuditor {
     root: PathBuf,
-    audited: CHashMap<RepoPathBuf, ()>,
+    audited: DashMap<RepoPathBuf, ()>,
 }
 
 impl PathAuditor {
@@ -52,24 +52,18 @@ impl PathAuditor {
             if !self.audited.contains_key(parent) {
                 // If fast check failed, lock and do stat syscall
                 // Alternatively we can just do syscall and then call insert
-                let mut result = Ok(());
-                self.audited.alter(parent.to_owned(), |val| {
-                    match val {
-                        Some(_) => val, // already checked
-                        None => {
-                            if let Err(e) = self
-                                .audit_fs(parent)
-                                .with_context(|| format!("Can't audit path \"{}\"", parent))
-                            {
-                                result = Err(e);
-                                None
-                            } else {
-                                Some(())
-                            }
+                self.audited
+                    .entry(parent.to_owned())
+                    .or_try_insert_with(|| {
+                        if let Err(e) = self
+                            .audit_fs(parent)
+                            .with_context(|| format!("Can't audit path \"{}\"", parent))
+                        {
+                            Err(e)
+                        } else {
+                            Ok(())
                         }
-                    }
-                });
-                result?;
+                    })?;
             }
         }
 
