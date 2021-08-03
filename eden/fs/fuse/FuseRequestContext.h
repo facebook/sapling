@@ -66,13 +66,6 @@ class FuseRequestContext : public RequestContext {
   const fuse_in_header& getReq() const;
 
   /**
-   * Returns the underlying fuse request. Unlike getReq this function doesn't
-   * throw. The caller is responsible to verify that the fuse_in_header is
-   * valid by checking if (fuseHeader.opcode != 0)
-   */
-  const fuse_in_header& examineReq() const;
-
-  /**
    * Append error handling clauses to a future chain. These clauses result in
    * reporting a fuse request error back to the kernel.
    */
@@ -112,8 +105,7 @@ class FuseRequestContext : public RequestContext {
 
   template <typename... T>
   void sendReply(T&&... payload) {
-    result_ = 0;
-    channel_->sendReply(stealReq(), std::forward<T>(payload)...);
+    channel_->sendReply(stealReqWithResult(0), std::forward<T>(payload)...);
   }
 
   /**
@@ -123,8 +115,7 @@ class FuseRequestContext : public RequestContext {
    */
   template <typename T>
   void sendReplyWithInode(uint64_t nodeid, T&& reply) {
-    result_ = nodeid;
-    channel_->sendReply(stealReq(), std::forward<T>(reply));
+    channel_->sendReply(stealReqWithResult(nodeid), std::forward<T>(reply));
   }
 
   // Reply with a negative errno value or 0 for success
@@ -134,10 +125,12 @@ class FuseRequestContext : public RequestContext {
   void replyNone();
 
  private:
-  fuse_in_header stealReq();
+  // Returns the header and sets result_ to indicate
+  // that the request has been released.
+  fuse_in_header stealReqWithResult(int64_t result);
 
   FuseChannel* channel_;
-  fuse_in_header fuseHeader_;
+  const fuse_in_header fuseHeader_;
 
   std::optional<int64_t> result_;
 };

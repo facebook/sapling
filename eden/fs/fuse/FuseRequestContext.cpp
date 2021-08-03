@@ -26,25 +26,18 @@ FuseRequestContext::FuseRequestContext(
       channel_(channel),
       fuseHeader_(fuseHeader) {}
 
-fuse_in_header FuseRequestContext::stealReq() {
-  if (fuseHeader_.opcode == 0) {
+fuse_in_header FuseRequestContext::stealReqWithResult(int64_t result) {
+  if (result_.has_value()) {
     throw std::runtime_error("req_ has been released");
   }
-  fuse_in_header res = fuseHeader_;
-  fuseHeader_.opcode = 0;
-  return res;
-}
-
-const fuse_in_header& FuseRequestContext::getReq() const {
-  if (fuseHeader_.opcode == 0) {
-    throw std::runtime_error("req_ has been released");
-  }
+  result_ = result;
   return fuseHeader_;
 }
 
-const fuse_in_header& FuseRequestContext::examineReq() const {
-  // Will just return the fuseHeader_ and not throw(unlike getReq)
-  // The caller is responsible to check the opcode and ignore if zero
+const fuse_in_header& FuseRequestContext::getReq() const {
+  if (result_.has_value()) {
+    throw std::runtime_error("req_ has been released");
+  }
   return fuseHeader_;
 }
 
@@ -85,13 +78,11 @@ void FuseRequestContext::timeoutErrorHandler(
 
 void FuseRequestContext::replyError(int err) {
   XCHECK(err >= 0) << "errno values are positive";
-  result_ = -err;
-  channel_->replyError(stealReq(), err);
+  channel_->replyError(stealReqWithResult(-err), err);
 }
 
 void FuseRequestContext::replyNone() {
-  result_ = 0;
-  stealReq();
+  stealReqWithResult(0);
 }
 
 } // namespace facebook::eden
