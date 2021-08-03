@@ -1966,6 +1966,29 @@ void EdenServiceHandler::debugStopRecordingActivity(
   }
 }
 
+void EdenServiceHandler::debugListActivityRecordings(
+    ListActivityRecordingsResult& result,
+    std::unique_ptr<std::string> mountPoint) {
+  auto lockedPtr = server_->getMount(AbsolutePathPiece{*mountPoint})
+                       ->getActivityRecorder()
+                       .rlock();
+  auto* activityRecorder = lockedPtr->get();
+  if (!activityRecorder) {
+    return;
+  }
+
+  std::vector<ActivityRecorderResult> recordings;
+  auto subscribers = activityRecorder->getSubscribers();
+  recordings.reserve(subscribers.size());
+  for (auto const& subscriber : subscribers) {
+    ActivityRecorderResult recording;
+    recording.unique_ref() = std::get<0>(subscriber);
+    recording.path_ref() = std::get<1>(subscriber);
+    recordings.push_back(std::move(recording));
+  }
+  result.recordings_ref() = recordings;
+}
+
 void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,

@@ -22,7 +22,8 @@ class IActivityRecorder {
   virtual ~IActivityRecorder() = default;
   virtual uint64_t addSubscriber(AbsolutePathPiece outputPath) = 0;
   virtual std::optional<std::string> removeSubscriber(uint64_t unique) = 0;
-  virtual std::vector<uint64_t> getSubscribers() = 0;
+  virtual std::vector<std::tuple<uint64_t, folly::StringPiece>>
+  getSubscribers() = 0;
 
  protected:
   std::shared_ptr<EdenMount> edenMount_;
@@ -37,7 +38,8 @@ class NullActivityRecorder : public IActivityRecorder {
   std::optional<std::string> removeSubscriber(uint64_t /* unique */) override {
     return std::nullopt;
   }
-  std::vector<uint64_t> getSubscribers() override {
+  std::vector<std::tuple<uint64_t, folly::StringPiece>> getSubscribers()
+      override {
     return {};
   }
 };

@@ -190,6 +190,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       int64_t unique) override;
 
+  void debugListActivityRecordings(
+      ListActivityRecordingsResult& result,
+      std::unique_ptr<std::string> mountPoint) override;
+
   void debugGetInodePath(
       InodePathDebugInfo& inodePath,
       std::unique_ptr<std::string> mountPoint,

@@ -713,7 +713,7 @@ class FuseCallsCmd(Subcmd):
 
 @debug_cmd(
     "start_recording",
-    "Start recording performance profile and get the id of this profile",
+    "Start an activity recording session and get its id",
 )
 class StartRecordingCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -737,7 +737,7 @@ class StartRecordingCmd(Subcmd):
 
 @debug_cmd(
     "stop_recording",
-    "Stop recording performance profile and get the output file of this profile",
+    "Stop the given activity recording session and get the output file",
 )
 class StopRecordingCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -759,6 +759,30 @@ class StopRecordingCmd(Subcmd):
             print(f"Fail to stop recording: {args.unique}", file=sys.stderr)
             return 1
         sys.stdout.buffer.write(output_path)
+        return 0
+
+
+@debug_cmd(
+    "list_recordings",
+    "List active activity recording sessions",
+)
+class ListRecordingsCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, os.getcwd())
+        with instance.get_thrift_client_legacy() as client:
+            result = client.debugListActivityRecordings(bytes(checkout.path))
+            if not result.recordings:
+                print("There is no active activity recording sessions.")
+            else:
+                for recording in result.recordings:
+                    path = recording.path
+                    print(
+                        "ID: %s Output file: %s"
+                        % (
+                            recording.unique,
+                            "" if path is None else path.decode("utf-8"),
+                        ),
+                    )
         return 0
 
 
