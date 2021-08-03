@@ -223,7 +223,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> path) override;
 
-  void getStatInfo(InternalStats& result) override;
+  void getStatInfo(
+      InternalStats& result,
+      std::unique_ptr<GetStatInfoParams> params) override;
 
   void enableTracing() override;
   void disableTracing() override;

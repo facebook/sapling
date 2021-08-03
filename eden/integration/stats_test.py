@@ -10,7 +10,8 @@ import time
 import typing
 from pathlib import Path, PurePath
 
-from facebook.eden.ttypes import JournalInfo
+from facebook.eden.constants import STATS_MOUNTS_STATS
+from facebook.eden.ttypes import GetStatInfoParams, JournalInfo
 
 from .lib import testcase
 from .lib.hgrepo import HgRepository
@@ -217,9 +218,16 @@ class JournalInfoTest(testcase.EdenRepoTest):
 
     def journal_stats(self) -> JournalInfo:
         with self.get_thrift_client() as thrift_client:
-            stats = thrift_client.getStatInfo()
+            stats = thrift_client.getStatInfo(
+                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+            )
             journal_key = self.mount.encode()
-            journal = stats.mountPointJournalInfo[journal_key]
+            mountPointJournalInfo = stats.mountPointJournalInfo
+            journal = (
+                None
+                if mountPointJournalInfo is None
+                else mountPointJournalInfo[journal_key]
+            )
             self.assertIsNotNone(journal, "Journal does not exist")
             return journal
 

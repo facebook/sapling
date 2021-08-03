@@ -2103,74 +2103,105 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 #endif
 }
 
-void EdenServiceHandler::getStatInfo(InternalStats& result) {
+void EdenServiceHandler::getStatInfo(
+    InternalStats& result,
+    std::unique_ptr<GetStatInfoParams> params) {
+  int64_t statsMask = params->get_statsMask();
+  // return all stats when mask not provided
+  // TODO: remove when no old clients exists
+  if (0 == statsMask) {
+    statsMask = ~0;
+  }
+
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  auto mountList = server_->getMountPoints();
-  for (auto& mount : mountList) {
-    auto inodeMap = mount->getInodeMap();
-    // Set LoadedInde Count and unloaded Inode count for the mountPoint.
-    MountInodeInfo mountInodeInfo;
-    auto counts = inodeMap->getInodeCounts();
-    mountInodeInfo.unloadedInodeCount_ref() = counts.unloadedInodeCount;
-    mountInodeInfo.loadedFileCount_ref() = counts.fileCount;
-    mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
 
-    JournalInfo journalThrift;
-    if (auto journalStats = mount->getJournal().getStats()) {
-      journalThrift.entryCount_ref() = journalStats->entryCount;
-      journalThrift.durationSeconds_ref() =
-          journalStats->getDurationInSeconds();
-    } else {
-      journalThrift.entryCount_ref() = 0;
-      journalThrift.durationSeconds_ref() = 0;
+  if (statsMask & eden_constants::STATS_MOUNTS_STATS_) {
+    auto mountList = server_->getMountPoints();
+    std::map<PathString, MountInodeInfo> mountPointInfo = {};
+    std::map<PathString, JournalInfo> mountPointJournalInfo = {};
+    for (auto& mount : mountList) {
+      auto inodeMap = mount->getInodeMap();
+      // Set LoadedInde Count and unloaded Inode count for the mountPoint.
+      MountInodeInfo mountInodeInfo;
+      auto counts = inodeMap->getInodeCounts();
+      mountInodeInfo.unloadedInodeCount_ref() = counts.unloadedInodeCount;
+      mountInodeInfo.loadedFileCount_ref() = counts.fileCount;
+      mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
+
+      JournalInfo journalThrift;
+      if (auto journalStats = mount->getJournal().getStats()) {
+        journalThrift.entryCount_ref() = journalStats->entryCount;
+        journalThrift.durationSeconds_ref() =
+            journalStats->getDurationInSeconds();
+      } else {
+        journalThrift.entryCount_ref() = 0;
+        journalThrift.durationSeconds_ref() = 0;
+      }
+      journalThrift.memoryUsage_ref() =
+          mount->getJournal().estimateMemoryUsage();
+      mountPointJournalInfo[mount->getPath().stringPiece().str()] =
+          journalThrift;
+
+      mountPointInfo[mount->getPath().stringPiece().str()] = mountInodeInfo;
     }
-    journalThrift.memoryUsage_ref() = mount->getJournal().estimateMemoryUsage();
-    result.mountPointJournalInfo_ref()[mount->getPath().stringPiece().str()] =
-        journalThrift;
-
-    result.mountPointInfo_ref()[mount->getPath().stringPiece().str()] =
-        mountInodeInfo;
-  }
-  // Get the counters and set number of inodes unloaded by periodic unload job.
-  result.counters_ref() = fb303::ServiceData::get()->getCounters();
-  result.periodicUnloadCount_ref() =
-      result.counters_ref()[kPeriodicUnloadCounterKey.toString()];
-
-  auto privateDirtyBytes = facebook::eden::proc_util::calculatePrivateBytes();
-  if (privateDirtyBytes) {
-    result.privateBytes_ref() = privateDirtyBytes.value();
+    result.mountPointInfo_ref() = mountPointInfo;
+    result.mountPointJournalInfo_ref() = mountPointJournalInfo;
   }
 
-  auto memoryStats = facebook::eden::proc_util::readMemoryStats();
-  if (memoryStats) {
-    result.vmRSSBytes_ref() = memoryStats->resident;
+  if (statsMask & eden_constants::STATS_COUNTERS_) {
+    // Get the counters and set number of inodes unloaded by periodic unload
+    // job.
+    auto counters = fb303::ServiceData::get()->getCounters();
+    result.counters_ref() = counters;
+    result.periodicUnloadCount_ref() =
+        counters[kPeriodicUnloadCounterKey.toString()];
   }
 
-  // Note: this will be removed in a subsequent commit.
-  // We now report periodically via ServiceData
-  std::string smaps;
-  if (folly::readFile("/proc/self/smaps", smaps)) {
-    result.smaps_ref() = std::move(smaps);
+  if (statsMask & eden_constants::STATS_PRIVATE_BYTES_) {
+    auto privateDirtyBytes = facebook::eden::proc_util::calculatePrivateBytes();
+    if (privateDirtyBytes) {
+      result.privateBytes_ref() = privateDirtyBytes.value();
+    }
   }
 
-  const auto blobCacheStats = server_->getBlobCache()->getStats();
-  result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.objectCount;
-  result.blobCacheStats_ref()->totalSizeInBytes_ref() =
-      blobCacheStats.totalSizeInBytes;
-  result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;
-  result.blobCacheStats_ref()->missCount_ref() = blobCacheStats.missCount;
-  result.blobCacheStats_ref()->evictionCount_ref() =
-      blobCacheStats.evictionCount;
-  result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
+  if (statsMask & eden_constants::STATS_RSS_BYTES_) {
+    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+    if (memoryStats) {
+      result.vmRSSBytes_ref() = memoryStats->resident;
+    }
+  }
 
-  const auto treeCacheStats = server_->getTreeCache()->getStats();
-  result.treeCacheStats_ref()->entryCount_ref() = treeCacheStats.objectCount;
-  result.treeCacheStats_ref()->totalSizeInBytes_ref() =
-      treeCacheStats.totalSizeInBytes;
-  result.treeCacheStats_ref()->hitCount_ref() = treeCacheStats.hitCount;
-  result.treeCacheStats_ref()->missCount_ref() = treeCacheStats.missCount;
-  result.treeCacheStats_ref()->evictionCount_ref() =
-      treeCacheStats.evictionCount;
+  if (statsMask & eden_constants::STATS_SMAPS_) {
+    // Note: this will be removed in a subsequent commit.
+    // We now report periodically via ServiceData
+    std::string smaps;
+    if (folly::readFile("/proc/self/smaps", smaps)) {
+      result.smaps_ref() = std::move(smaps);
+    }
+  }
+
+  if (statsMask & eden_constants::STATS_CACHE_STATS_) {
+    const auto blobCacheStats = server_->getBlobCache()->getStats();
+    result.blobCacheStats_ref() = CacheStats{};
+    result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.objectCount;
+    result.blobCacheStats_ref()->totalSizeInBytes_ref() =
+        blobCacheStats.totalSizeInBytes;
+    result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;
+    result.blobCacheStats_ref()->missCount_ref() = blobCacheStats.missCount;
+    result.blobCacheStats_ref()->evictionCount_ref() =
+        blobCacheStats.evictionCount;
+    result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
+
+    const auto treeCacheStats = server_->getTreeCache()->getStats();
+    result.treeCacheStats_ref() = CacheStats{};
+    result.treeCacheStats_ref()->entryCount_ref() = treeCacheStats.objectCount;
+    result.treeCacheStats_ref()->totalSizeInBytes_ref() =
+        treeCacheStats.totalSizeInBytes;
+    result.treeCacheStats_ref()->hitCount_ref() = treeCacheStats.hitCount;
+    result.treeCacheStats_ref()->missCount_ref() = treeCacheStats.missCount;
+    result.treeCacheStats_ref()->evictionCount_ref() =
+        treeCacheStats.evictionCount;
+  }
 }
 
 void EdenServiceHandler::flushStatsNow() {

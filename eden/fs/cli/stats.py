@@ -10,7 +10,16 @@ import logging
 import os
 import sys
 import textwrap
-from typing import Dict, List, Optional, cast
+from typing import NamedTuple, Dict, List, Optional, cast
+
+from facebook.eden.constants import (
+    STATS_MOUNTS_STATS,
+    STATS_RSS_BYTES,
+    STATS_ALL,
+)
+from facebook.eden.ttypes import GetStatInfoParams
+from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
+from thrift.util import Serializer as ThriftSerializer
 
 from . import cmd_util, stats_print, subcmd as subcmd_mod
 from .config import EdenInstance
@@ -30,16 +39,39 @@ Table2D = Dict[str, List[List[Optional[str]]]]
 stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
 
 
+class StatsGeneralOptions(NamedTuple):
+    out: io.TextIOWrapper = stdoutWrapper
+    basic: bool = False
+    json: bool = False
+
+
 # Shows information like memory usage, list of mount points and number of inodes
 # loaded, unloaded, and materialized in the mount points, etc.
-def do_stats_general(
-    instance: EdenInstance, out: io.TextIOWrapper = stdoutWrapper
-) -> None:
-    with instance.get_thrift_client_legacy() as client:
-        stat_info = client.getStatInfo()
+def do_stats_general(instance: EdenInstance, options: StatsGeneralOptions) -> None:
+    out, basic, json = options
 
-    private_bytes = stats_print.format_size(stat_info.privateBytes)
-    resident_bytes = stats_print.format_size(stat_info.vmRSSBytes)
+    with instance.get_thrift_client_legacy() as client:
+        statsMask = STATS_MOUNTS_STATS | STATS_RSS_BYTES if basic else STATS_ALL
+        stat_info = client.getStatInfo(GetStatInfoParams(statsMask=statsMask))
+
+    if json:
+        json_factory = TSimpleJSONProtocolFactory()
+        out.write(ThriftSerializer.serialize(json_factory, stat_info).decode("utf-8"))
+    else:
+        print_stats(stat_info, out)
+
+
+def print_stats(stat_info, out: io.TextIOWrapper):
+    private_bytes = (
+        stats_print.format_size(stat_info.privateBytes)
+        if stat_info.privateBytes is not None
+        else "-"
+    )
+    resident_bytes = (
+        stats_print.format_size(stat_info.vmRSSBytes)
+        if stat_info.vmRSSBytes is not None
+        else "-"
+    )
 
     if stat_info.blobCacheStats is not None:
         blob_cache_size = stats_print.format_size(
@@ -488,8 +520,22 @@ class StatsCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.add_subcommands(parser, stats_cmd.commands)
+        parser.add_argument(
+            "--json",
+            help="Print output in JSON format",
+            action="store_true",
+            default=False,
+        )
+        parser.add_argument(
+            "--basic",
+            help="""Collect a basic set of stats. Others are zeroed out.""",
+            action="store_true",
+            default=False,
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
-        do_stats_general(instance)
+        do_stats_general(
+            instance, StatsGeneralOptions(stdoutWrapper, args.basic, args.json)
+        )
         return 0

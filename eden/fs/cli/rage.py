@@ -81,7 +81,10 @@ def print_diagnostic_info(
     if health_status.is_healthy() and sys.platform != "win32":
         # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
         with io.StringIO() as stats_stream:
-            stats_mod.do_stats_general(instance, out=stats_stream)
+            stats_mod.do_stats_general(
+                instance,
+                stats_mod.StatsGeneralOptions(out=stats_stream),
+            )
             out.write(stats_stream.getvalue().encode())
 
     print_env_variables(out)
