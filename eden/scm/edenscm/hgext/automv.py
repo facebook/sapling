@@ -12,6 +12,9 @@ The threshold at which a file is considered a move can be set with the
 ``automv.similarity`` config option. This option takes a percentage between 0
 (disabled) and 100 (files must be identical), the default is 95.
 
+The ``automv.max-files`` sets the maximum changed files for automv to run.
+The default is 50.
+
 """
 
 # Using 95 as a default similarity is based on an analysis of the mercurial
@@ -41,6 +44,7 @@ from edenscm.mercurial.i18n import _
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem("automv", "max-files", default=50)
 configitem("automv", "similarity", default=95)
 
 
@@ -62,8 +66,10 @@ def mvcheck(orig, ui, repo, *pats, **opts):
             raise error.Abort(_("automv.similarity must be between 0 and 100"))
         if threshold > 0:
             match = scmutil.match(repo[None], pats, opts)
-            added, removed = _interestingfiles(repo, match)
-            renames = _findrenames(repo, match, added, removed, threshold / 100.0)
+            maxfiles = ui.configint("automv", "max-files")
+            added, removed = _interestingfiles(repo, match, maxfiles)
+            if len(added) + len(removed) <= maxfiles:
+                renames = _findrenames(repo, match, added, removed, threshold / 100.0)
 
     with repo.wlock():
         if renames is not None:
@@ -72,7 +78,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
         return orig(ui, repo, *pats, **opts)
 
 
-def _interestingfiles(repo, matcher):
+def _interestingfiles(repo, matcher, maxfiles):
     """Find what files were added or removed in this commit.
 
     Returns a tuple of two lists: (added, removed). Only files not *already*

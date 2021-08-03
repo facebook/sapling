@@ -309,3 +309,14 @@ similarity=110
 sh % "hg commit -m 'revision to amend to'" == r"""
     abort: automv.similarity must be between 0 and 100
     [255]"""
+
+# max-files setting
+sh % "newrepo"
+sh % "touch A"
+sh % "hg ci -m A -A A --config automv.similarity=1"
+sh % "mv A B"
+sh % "hg addremove A B"
+sh % "hg ci -m mv --config automv.max-files=0 --config automv.similarity=1"
+sh % "hg status --change . -C" == r"""
+    A B
+    R A"""
