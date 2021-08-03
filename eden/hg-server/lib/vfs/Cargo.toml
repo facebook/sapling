@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-chashmap = "2.2"
 crossbeam = "0.8"
+dashmap = { version = "4.0.2", features = ["serde"] }
 fsinfo = { path = "../fsinfo" }
 libc = "0.2.86"
 minibytes = { path = "../minibytes" }
