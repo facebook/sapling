@@ -149,6 +149,10 @@ impl Client {
             req.set_accept_encoding([encoding.clone()]);
         }
 
+        if let Some(mts) = &self.config.min_transfer_speed {
+            req.set_min_transfer_speed(*mts);
+        }
+
         Ok(req)
     }
 

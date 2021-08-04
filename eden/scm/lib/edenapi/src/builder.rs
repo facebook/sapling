@@ -18,7 +18,7 @@ use url::Url;
 
 use auth::AuthSection;
 use configmodel::ConfigExt;
-use http_client::{Encoding, HttpVersion};
+use http_client::{Encoding, HttpVersion, MinTransferSpeed};
 
 use crate::client::Client;
 use crate::errors::{ConfigError, EdenApiError};
@@ -123,6 +123,7 @@ pub struct HttpClientBuilder {
     log_dir: Option<PathBuf>,
     convert_cert: bool,
     encoding: Option<Encoding>,
+    min_transfer_speed: Option<MinTransferSpeed>,
 }
 
 impl HttpClientBuilder {
@@ -240,6 +241,21 @@ impl HttpClientBuilder {
             .map_err(|e| ConfigError::Malformed("edenapi.encoding".into(), e))?
             .map(|s| Encoding::from(&*s));
 
+
+        let low_speed_grace_period = config
+            .get_or("edenapi", "low-speed-grace-period", || 10_000)
+            .map_err(|e| ConfigError::Malformed("edenapi.low-speed-grace-period".into(), e))?;
+
+        let min_transfer_speed = config
+            .get_opt::<u32>("edenapi", "low-speed-min-bytes-per-second")
+            .map_err(|e| {
+                ConfigError::Malformed("edenapi.low-speed-min-bytes-per-second".into(), e)
+            })?
+            .map(|min_bytes_per_second| MinTransferSpeed {
+                min_bytes_per_second,
+                grace_period: Duration::from_millis(low_speed_grace_period),
+            });
+
         Ok(HttpClientBuilder {
             server_url: Some(server_url),
             cert,
@@ -259,6 +275,7 @@ impl HttpClientBuilder {
             log_dir,
             convert_cert,
             encoding,
+            min_transfer_speed,
         })
     }
 
@@ -416,6 +433,7 @@ pub(crate) struct Config {
     pub(crate) log_dir: Option<PathBuf>,
     pub(crate) convert_cert: bool,
     pub(crate) encoding: Option<Encoding>,
+    pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -441,6 +459,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             log_dir,
             convert_cert,
             encoding,
+            min_transfer_speed,
         } = builder;
 
         // Check for missing required fields.
@@ -477,6 +496,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             log_dir,
             convert_cert,
             encoding,
+            min_transfer_speed,
         })
     }
 }
