@@ -10,7 +10,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 
 [patch.crates-io]
-chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4c86952f1e799960e736c0b2bb9d2a6d935bf1" }
 object = { git = "https://github.com/andrewjcg/object", rev = "ddbae7208292a13a016e8952c256f69737c763ab" }
