@@ -17,6 +17,7 @@ pub(crate) mod limit_commitsize;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
 mod lua_pattern;
+pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
 pub(crate) mod no_questionable_filenames;
@@ -82,6 +83,11 @@ pub fn hook_name_to_file_hook(
         )?)),
         "no_bad_filenames" => Some(Box::new(
             no_bad_filenames::NoBadFilenames::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
+        "no_bad_extensions" => Some(Box::new(
+            no_bad_extensions::NoBadExtensions::builder()
                 .set_from_config(config)
                 .build()?,
         )),
