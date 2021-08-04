@@ -32,7 +32,7 @@ from eden.fs.cli.util import (
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
+from facebook.eden.ttypes import FuseCall, MountInfo as ThriftMountInfo, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -66,12 +66,6 @@ from .util import ShutdownError, print_stderr, get_environment_suitable_for_subp
 
 if sys.platform != "win32":
     from . import fsck as fsck_mod
-
-try:
-    from eden.fs.service.eden.types import FuseCall
-except ImportError:
-    # Thrift-py3 is not available in CMake build yet.
-    pass
 
 
 subcmd = subcmd_mod.Decorator()
@@ -1053,7 +1047,7 @@ class StraceCmd(Subcmd):
 
         return 0
 
-    def print_outstanding_calls(self, calls: List["FuseCall"]) -> None:
+    def print_outstanding_calls(self, calls: List[FuseCall]) -> None:
         header = "Outstanding FUSE calls"
         print(header)
         print("-" * len(header))
@@ -1061,7 +1055,7 @@ class StraceCmd(Subcmd):
             print(self.format_call(call))
         print("-" * len(header))
 
-    def format_opcode(self, call: "FuseCall") -> str:
+    def format_opcode(self, call: FuseCall) -> str:
         if not call.opcodeName:
             return f"unknown-{call.opcode}"
 
@@ -1072,14 +1066,15 @@ class StraceCmd(Subcmd):
 
     def format_call(
         self,
-        call: "FuseCall",
+        call: FuseCall,
         arguments: Optional[str] = None,
         result: Optional[int] = None,
     ) -> str:
-        if call.processName is None:
+        processName = call.processName
+        if processName is None:
             processName = str(call.pid)
         else:
-            processName = f"{call.processName.split(chr(0))[0]}({call.pid})"
+            processName = f"{processName.split(chr(0))[0]}({call.pid})"
 
         opcodeName = self.format_opcode(call)
         argString = ""
