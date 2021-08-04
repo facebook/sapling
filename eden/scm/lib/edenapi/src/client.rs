@@ -61,6 +61,7 @@ const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
+const MAX_ERROR_MSG_LEN: usize = 500;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -321,7 +322,7 @@ impl EdenApi for Client {
         }
 
         let req = self.configure(Request::get(url))?;
-        let res = req.send_async().await?;
+        let res = raise_for_status(req.send_async().await?).await?;
 
         Ok(ResponseMeta::from(&res))
     }
@@ -1110,7 +1111,15 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
     }
 
     let body = res.body.try_concat().await?;
-    let message = String::from_utf8_lossy(&body).into_owned();
+    let mut message = String::from_utf8_lossy(&body).into_owned();
+
+    if message.len() >= 9 && &*message[..9].to_lowercase() == "<!doctype" {
+        message = "HTML content omitted (this error may have come from a proxy server)".into();
+    } else if message.len() > MAX_ERROR_MSG_LEN {
+        message.truncate(MAX_ERROR_MSG_LEN);
+        message.push_str("... (truncated)")
+    }
+
     Err(EdenApiError::HttpError {
         status: res.status,
         message,
