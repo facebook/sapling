@@ -24,6 +24,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, ensure, format_err, Context, Result};
+use configmodel::ConfigExt;
 use futures::{
     future::FutureExt,
     stream::{iter, FuturesUnordered, StreamExt, TryStreamExt},
@@ -68,10 +69,7 @@ use crate::{
     remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
-    util::{
-        get_auth_proxy_socket_path, get_lfs_blobs_path, get_lfs_objects_path,
-        get_lfs_pointers_path, get_str_config,
-    },
+    util::{get_lfs_blobs_path, get_lfs_objects_path, get_lfs_pointers_path, get_str_config},
 };
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
@@ -114,6 +112,7 @@ struct HttpOptions {
     throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
     proxy_unix_socket: Option<String>,
+    auth_http_proxy: Option<String>,
     use_client_certs: bool,
 }
 
@@ -1054,10 +1053,23 @@ impl LfsRemoteInner {
             });
         }
 
-        if http_options.proxy_unix_socket.is_some() {
+        let mut user_agent_sufix = "";
+
+        if http_options.proxy_unix_socket.is_some() || http_options.auth_http_proxy.is_some() {
             url.set_scheme("http").expect("Couldn't set url scheme");
+            user_agent_sufix = "+proxied";
         }
         let span = trace_span!("LfsRemoteInner::send_with_retry", url = %url);
+
+        let host_str = url.host_str().expect("No host in url").to_string();
+
+        if let Some(proxy_url) = &http_options.auth_http_proxy {
+            let proxy_url = Url::parse(&proxy_url).expect("Failed to parse http proxy url");
+            url.set_host(proxy_url.host_str())
+                .expect("Couldn't set url host");
+            url.set_port(proxy_url.port())
+                .expect("Couldn't set url port");
+        }
 
         async move {
             let mut backoff = http_options.backoff_times.iter().copied();
@@ -1067,12 +1079,17 @@ impl LfsRemoteInner {
 
             loop {
                 attempt += 1;
+
                 let mut req = Request::new(url.clone(), method)
                     .header("Accept", "application/vnd.git-lfs+json")
                     .header("Content-Type", "application/vnd.git-lfs+json")
-                    .header("User-Agent", &http_options.user_agent)
+                    .header(
+                        "User-Agent",
+                        format!("{}{}", &http_options.user_agent, user_agent_sufix),
+                    )
                     .header("X-Attempt", attempt.to_string())
                     .header("X-Attempts-Left", backoff.len().to_string())
+                    .header("Host", host_str.clone())
                     .header(
                         "X-Throttle-Attempts-Left",
                         throttle_backoff.len().to_string(),
@@ -1091,8 +1108,12 @@ impl LfsRemoteInner {
                     req.set_min_transfer_speed(mts);
                 }
 
-                if http_options.proxy_unix_socket.is_some() {
-                    req.set_auth_proxy_socket_path(http_options.proxy_unix_socket.clone());
+                if http_options.proxy_unix_socket.is_some()
+                    || http_options.auth_http_proxy.is_some()
+                {
+                    if http_options.proxy_unix_socket.is_some() {
+                        req.set_auth_proxy_socket_path(http_options.proxy_unix_socket.clone());
+                    }
                     req.set_header("x-x2pagentd-ws-over-h1", "1");
                     req.set_verify_tls_cert(false)
                         .set_verify_tls_host(false)
@@ -1524,11 +1545,13 @@ impl LfsRemote {
             if !["http", "https"].contains(&url.scheme()) {
                 bail!("Unsupported url: {}", url);
             }
-            let proxy_unix_socket = get_auth_proxy_socket_path(config)?;
+            let proxy_unix_socket =
+                config.get_nonempty_opt::<String>("auth_proxy", "unix_socket_path")?;
+            let auth_http_proxy = config.get_nonempty_opt::<String>("auth_proxy", "http_proxy")?;
 
             let mut use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
 
-            let auth = if proxy_unix_socket.is_some() {
+            let auth = if proxy_unix_socket.is_some() || auth_http_proxy.is_some() {
                 url.set_scheme("http").expect("Couldn't change url scheme");
                 use_client_certs = false;
                 None
@@ -1608,6 +1631,7 @@ impl LfsRemote {
                         throttle_backoff_times,
                         request_timeout,
                         proxy_unix_socket,
+                        auth_http_proxy,
                         use_client_certs,
                     },
                 }),

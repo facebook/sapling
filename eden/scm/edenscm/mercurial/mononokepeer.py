@@ -217,10 +217,16 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._compression = ui.configwith(bool, "mononokepeer", "compression")
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
+        self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
         self._confheaders = ui.config("http", "extra_headers_json")
         self._verbose = ui.configwith(bool, "http", "verbose")
 
-        if not self._unix_socket_proxy:
+        if self._auth_proxy_http:
+            u = util.url(self._auth_proxy_http, parsequery=False, parsefragment=False)
+            self._auth_proxy_http_host = u.host
+            self._auth_proxy_http_port = u.port
+
+        if not (self._unix_socket_proxy or self._auth_proxy_http):
             authdata = httpconnection.readauthforuri(self._ui, path, self._user)
             if not authdata:
                 errormessage = _(
@@ -253,7 +259,9 @@ class mononokepeer(stdiopeer.stdiopeer):
         msg += "%s:%s\n" % (self._host, self._port)
         msg += " reason: %s\n" % ex
         if self._unix_socket_proxy:
-            msg += " proxy:  %s\n" % self._unix_socket_proxy
+            msg += " UDS proxy:  %s\n" % self._unix_socket_proxy
+        elif self._auth_proxy_http:
+            msg += " HTTP proxy:  %s\n" % self._auth_proxy_http
         else:
             msg += " cn:     %s\n" % self._cn
             msg += " cert:   %s\n" % self._cert
@@ -265,17 +273,20 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         self._abort(error.BadResponseError(msg))
 
-    def _validaterepo(self):
-        # cleanup up previous run
-        self._cleanup()
-        decompress = False
-
+    def _setmononokesock(self):
         with self.ui.timeblockedsection("mononoke_tcp"):
             try:
                 if self._unix_socket_proxy:
                     self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     self.sock.settimeout(self._sockettimeout)
                     self.sock.connect(self._unix_socket_proxy)
+                    return
+                elif self._auth_proxy_http:
+                    self.sock = socket.create_connection(
+                        (self._auth_proxy_http_host, self._auth_proxy_http_port),
+                        self._sockettimeout,
+                    )
+                    return
                 else:
                     self.sock = socket.create_connection(
                         (self._host, self._port), self._sockettimeout
@@ -283,28 +294,40 @@ class mononokepeer(stdiopeer.stdiopeer):
             except IOError as ex:
                 self._connectionerror(ex)
 
-        if not self._unix_socket_proxy:
-            with self.ui.timeblockedsection("mononoke_tls"):
-                try:
-                    self.sock = sslutil.wrapsocket(
-                        self.sock,
-                        self._key,
-                        self._cert,
-                        ui=self.ui,
-                        serverhostname=self._cn,
-                    )
-                    sslutil.validatesocket(self.sock)
+        with self.ui.timeblockedsection("mononoke_tls"):
+            try:
+                self.sock = sslutil.wrapsocket(
+                    self.sock,
+                    self._key,
+                    self._cert,
+                    ui=self.ui,
+                    serverhostname=self._cn,
+                )
+                sslutil.validatesocket(self.sock)
 
-                except IOError as ex:
-                    self._connectionerror(ex, tlserror=True)
+            except IOError as ex:
+                self._connectionerror(ex, tlserror=True)
+
+    def _validaterepo(self):
+        # cleanup up previous run
+        self._cleanup()
+        decompress = False
+
+        self._setmononokesock()
 
         with self.ui.timeblockedsection("mononoke_headers"):
             try:
                 requestline = encodeutf8("GET /{} HTTP/1.1\r\n".format(self._path))
+                proxy = (
+                    "+proxied"
+                    if self._unix_socket_proxy or self._auth_proxy_http
+                    else ""
+                )
+                useragent = "mercurial/mononoke-peer{}".format(proxy)
 
                 headers = {
                     "Host": self._host,
-                    "User-Agent": "mercurial/mononoke-peer",
+                    "User-Agent": useragent,
                     "Connection": "Upgrade",
                     "Upgrade": "websocket",
                 }

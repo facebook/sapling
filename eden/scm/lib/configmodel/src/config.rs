@@ -36,6 +36,13 @@ pub trait ConfigExt: Config {
             .transpose()
     }
 
+    /// Get a nonempty config item. Convert to type `T`.
+    fn get_nonempty_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+        self.get_nonempty(section, name)
+            .map(|bytes| T::try_from_str(&bytes))
+            .transpose()
+    }
+
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, calculate it using `default_func`.

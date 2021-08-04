@@ -32,13 +32,6 @@ pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<S
     Ok(name.to_string())
 }
 
-pub fn get_auth_proxy_socket_path(config: &ConfigSet) -> Result<Option<String>> {
-    if let Some(true) = config.get_opt::<bool>("revisionstore", "lfs_no_unix_socket")? {
-        return Ok(None);
-    }
-    Ok(config.get_opt::<String>("auth_proxy", "unix_socket_path")?)
-}
-
 pub fn get_repo_name(config: &ConfigSet) -> Result<String> {
     get_str_config(config, "remotefilelog", "reponame")
 }
