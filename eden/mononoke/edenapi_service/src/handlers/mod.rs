@@ -49,7 +49,7 @@ pub enum EdenApiMethod {
     UploadHgFilenodes,
     UploadTrees,
     UploadHgChangesets,
-    UploadBonsaiChangesets,
+    UploadBonsaiChangeset,
     Trees,
     CompleteTrees,
     History,
@@ -84,7 +84,7 @@ impl fmt::Display for EdenApiMethod {
             Self::UploadHgFilenodes => "upload_filenodes",
             Self::UploadTrees => "upload_trees",
             Self::UploadHgChangesets => "upload_hg_changesets",
-            Self::UploadBonsaiChangesets => "upload_bonsai_changesets",
+            Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
             Self::EphemeralPrepare => "ephemeral_prepare",
         };
         write!(f, "{}", name)
@@ -180,8 +180,8 @@ define_handler!(upload_trees_handler, trees::upload_trees);
 define_handler!(upload_hg_changesets_handler, commit::upload_hg_changesets);
 define_handler!(ephemeral_prepare_handler, commit::ephemeral_prepare);
 define_handler!(
-    upload_bonsai_changesets_handler,
-    commit::upload_bonsai_changesets
+    upload_bonsai_changeset_handler,
+    commit::upload_bonsai_changeset
 );
 
 fn health_handler(state: State) -> (State, &'static str) {
@@ -273,8 +273,8 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<commit::EphemeralPrepareParams>()
             .to(ephemeral_prepare_handler);
         route
-            .post("/:repo/upload/changesets/bonsai")
-            .with_path_extractor::<commit::UploadBonsaiChangesetsParams>()
-            .to(upload_bonsai_changesets_handler);
+            .post("/:repo/upload/changeset/bonsai")
+            .with_path_extractor::<commit::UploadBonsaiChangesetParams>()
+            .to(upload_bonsai_changeset_handler);
     })
 }

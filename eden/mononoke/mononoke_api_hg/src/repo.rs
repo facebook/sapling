@@ -395,45 +395,28 @@ impl HgRepoContext {
         Ok(results)
     }
 
-    /// Store bonsai changesets and mutations, assuming derivation will yield correct hg ids.
-    pub async fn store_bonsai_changesets(
+    /// Store bonsai changeset
+    pub async fn store_bonsai_changeset(
         &self,
-        changesets: Vec<(HgChangesetId, BonsaiChangeset)>,
-        mutations: Vec<HgMutationEntry>,
-    ) -> Result<Vec<Result<ChangesetId, MononokeError>>, MononokeError> {
-        let mut hg_changesets = Vec::new();
+        bonsai_cs: BonsaiChangeset,
+    ) -> Result<(), MononokeError> {
         let blobstore = self.blob_repo().blobstore();
-        let mut response = Vec::new();
-        for (hg_node, bonsai_cs) in changesets {
-            let cs_id = bonsai_cs.get_changeset_id();
-            let insert = ChangesetInsert {
-                cs_id,
-                parents: bonsai_cs.parents().collect(),
-            };
-            let result =
-                match save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs).await {
-                    Ok(_) => {
-                        self.blob_repo()
-                            .get_changesets_object()
-                            .add(self.ctx().clone(), insert)
-                            .await
-                    }
-                    Err(err) => Err(err),
-                }
-                .map(|_| cs_id)
-                .map_err(MononokeError::from);
-            if result.is_ok() {
-                hg_changesets.push(hg_node);
+        let cs_id = bonsai_cs.get_changeset_id();
+        let insert = ChangesetInsert {
+            cs_id,
+            parents: bonsai_cs.parents().collect(),
+        };
+        match save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs).await {
+            Ok(_) => {
+                self.blob_repo()
+                    .get_changesets_object()
+                    .add(self.ctx().clone(), insert)
+                    .await
             }
-            response.push(result);
-        }
+            Err(err) => Err(err),
+        }?;
 
-        self.blob_repo()
-            .hg_mutation_store()
-            .add_entries(&self.ctx(), hg_changesets.into_iter().collect(), mutations)
-            .await?;
-
-        Ok(response)
+        Ok(())
     }
 
     /// Request all of the tree nodes in the repo under a given path.

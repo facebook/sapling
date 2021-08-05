@@ -32,16 +32,16 @@ use edenapi_types::{
         WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse, WireToApiConversionError,
         WireTreeEntry, WireUploadToken, WireUploadTokensResponse, WireUploadTreeResponse,
     },
-    AnyFileContentId, AnyId, Batch, BookmarkEntry, BookmarkRequest, CloneData,
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, EphemeralPrepareRequest,
-    EphemeralPrepareResponse, FileContentTokenMetadata, FileEntry, FileRequest, FileSpec,
+    AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
+    CloneData, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, FileEntry, FileRequest, FileSpec,
     HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
     LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
-    UploadBonsaiChangeset, UploadBonsaiChangesetsRequest, UploadHgChangeset,
-    UploadHgChangesetsRequest, UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata,
-    UploadTokensResponse, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
+    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
+    UploadHgFilenodeRequest, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeRequest,
+    UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -81,7 +81,7 @@ mod paths {
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
     pub const UPLOAD_TREES: &str = "upload/trees";
     pub const UPLOAD_CHANGESETS: &str = "upload/changesets";
-    pub const UPLOAD_BONSAI_CHANGESETS: &str = "upload/changesets/bonsai";
+    pub const UPLOAD_BONSAI_CHANGESET: &str = "upload/changeset/bonsai";
     pub const EPHEMERAL_PREPARE: &str = "ephemeral/prepare";
 }
 
@@ -1023,31 +1023,19 @@ impl EdenApi for Client {
             .await?)
     }
 
-    async fn upload_bonsai_changesets(
+    async fn upload_bonsai_changeset(
         &self,
         repo: String,
-        changesets: Vec<UploadBonsaiChangeset>,
-        mutations: Vec<HgMutationEntryContent>,
+        changeset: BonsaiChangesetContent,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
-        let msg = format!(
-            "Requesting changesets upload for {} item(s)",
-            changesets.len(),
-        );
+        let msg = "Requesting changeset upload";
         tracing::info!("{}", &msg);
         if self.config.debug {
             eprintln!("{}", &msg);
         }
 
-        if changesets.is_empty() {
-            return Ok(Fetch::empty());
-        }
-
-        let url = self.url(paths::UPLOAD_BONSAI_CHANGESETS, Some(&repo))?;
-        let req = UploadBonsaiChangesetsRequest {
-            changesets,
-            mutations,
-        }
-        .to_wire();
+        let url = self.url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
+        let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
 
         let request = self
             .configure(Request::post(url.clone()))?

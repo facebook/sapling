@@ -13,11 +13,11 @@ use async_trait::async_trait;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, EphemeralPrepareResponse, FileEntry, FileSpec, HgFilenodeData,
-    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
-    UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
+    AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
+    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FileEntry, FileSpec,
+    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
+    TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
     UploadTreeResponse,
 };
 use http_client::Progress;
@@ -181,11 +181,10 @@ pub trait EdenApi: Send + Sync + 'static {
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
 
-    async fn upload_bonsai_changesets(
+    async fn upload_bonsai_changeset(
         &self,
         repo: String,
-        changesets: Vec<UploadBonsaiChangeset>,
-        mutations: Vec<HgMutationEntryContent>,
+        changeset: BonsaiChangesetContent,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
 
     async fn ephemeral_prepare(
@@ -411,14 +410,13 @@ impl EdenApi for Arc<dyn EdenApi> {
             .await
     }
 
-    async fn upload_bonsai_changesets(
+    async fn upload_bonsai_changeset(
         &self,
         repo: String,
-        changesets: Vec<UploadBonsaiChangeset>,
-        mutations: Vec<HgMutationEntryContent>,
+        changeset: BonsaiChangesetContent,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_bonsai_changesets(repo, changesets, mutations)
+            .upload_bonsai_changeset(repo, changeset)
             .await
     }
 

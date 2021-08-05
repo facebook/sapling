@@ -75,7 +75,7 @@ pub use crate::wire::{
         WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse, WireEphemeralPrepareRequest,
         WireEphemeralPrepareResponse, WireExtra, WireHgChangesetContent,
-        WireHgMutationEntryContent, WireUploadBonsaiChangesetsRequest, WireUploadHgChangeset,
+        WireHgMutationEntryContent, WireUploadBonsaiChangesetRequest, WireUploadHgChangeset,
         WireUploadHgChangesetsRequest,
     },
     complete_tree::WireCompleteTreeRequest,

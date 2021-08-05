@@ -12,11 +12,11 @@ use async_trait::async_trait;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
-    AnyFileContentId, AnyId, BookmarkEntry, CloneData, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, EphemeralPrepareResponse, FileAttributes, FileContent, FileEntry, FileSpec,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadToken, UploadTokensResponse,
+    AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
+    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FileAttributes, FileContent,
+    FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
+    TreeAttributes, TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse,
     UploadTreeEntry, UploadTreeResponse,
 };
 use futures::prelude::*;
@@ -493,11 +493,10 @@ impl EdenApi for FakeEdenApi {
         unimplemented!();
     }
 
-    async fn upload_bonsai_changesets(
+    async fn upload_bonsai_changeset(
         &self,
         _repo: String,
-        _changesets: Vec<UploadBonsaiChangeset>,
-        _mutations: Vec<HgMutationEntryContent>,
+        _changeset: BonsaiChangesetContent,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }

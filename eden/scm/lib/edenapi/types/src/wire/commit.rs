@@ -17,8 +17,8 @@ use crate::commit::{
     CommitHashLookupResponse, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
     EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
-    HgMutationEntryContent, UploadBonsaiChangeset, UploadBonsaiChangesetsRequest,
-    UploadHgChangeset, UploadHgChangesetsRequest,
+    HgMutationEntryContent, UploadBonsaiChangesetRequest, UploadHgChangeset,
+    UploadHgChangesetsRequest,
 };
 use crate::wire::{
     is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents, WireRepoPathBuf, WireResult,
@@ -642,23 +642,10 @@ pub struct WireBonsaiChangesetContent {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireUploadBonsaiChangeset {
+pub struct WireUploadBonsaiChangesetRequest {
+    /// changeset to upload
     #[serde(rename = "1")]
-    pub hg_changeset_id: WireHgId,
-
-    #[serde(rename = "2")]
-    pub changeset_content: WireBonsaiChangesetContent,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireUploadBonsaiChangesetsRequest {
-    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
-    #[serde(rename = "1")]
-    pub changesets: Vec<WireUploadBonsaiChangeset>,
-
-    /// list of mutation entries for the uploading changesets
-    #[serde(rename = "2")]
-    pub mutations: Vec<WireHgMutationEntryContent>,
+    pub changeset: WireBonsaiChangesetContent,
 }
 
 impl ToWire for BonsaiExtra {
@@ -702,17 +689,6 @@ impl ToWire for BonsaiChangesetContent {
     }
 }
 
-impl ToWire for UploadBonsaiChangeset {
-    type Wire = WireUploadBonsaiChangeset;
-
-    fn to_wire(self) -> Self::Wire {
-        WireUploadBonsaiChangeset {
-            hg_changeset_id: self.hg_changeset_id.to_wire(),
-            changeset_content: self.changeset_content.to_wire(),
-        }
-    }
-}
-
 impl ToApi for WireBonsaiExtra {
     type Api = BonsaiExtra;
     type Error = std::convert::Infallible;
@@ -733,18 +709,6 @@ impl ToApi for WireBonsaiFileChange {
         Ok(BonsaiFileChange {
             file_type: self.file_type.to_api()?,
             upload_token: self.upload_token.to_api()?,
-        })
-    }
-}
-
-impl ToApi for WireUploadBonsaiChangeset {
-    type Api = UploadBonsaiChangeset;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadBonsaiChangeset {
-            hg_changeset_id: self.hg_changeset_id.to_api()?,
-            changeset_content: self.changeset_content.to_api()?,
         })
     }
 }
@@ -770,25 +734,23 @@ impl ToApi for WireBonsaiChangesetContent {
     }
 }
 
-impl ToWire for UploadBonsaiChangesetsRequest {
-    type Wire = WireUploadBonsaiChangesetsRequest;
+impl ToWire for UploadBonsaiChangesetRequest {
+    type Wire = WireUploadBonsaiChangesetRequest;
 
     fn to_wire(self) -> Self::Wire {
-        WireUploadBonsaiChangesetsRequest {
-            changesets: self.changesets.to_wire(),
-            mutations: self.mutations.to_wire(),
+        WireUploadBonsaiChangesetRequest {
+            changeset: self.changeset.to_wire(),
         }
     }
 }
 
-impl ToApi for WireUploadBonsaiChangesetsRequest {
-    type Api = UploadBonsaiChangesetsRequest;
+impl ToApi for WireUploadBonsaiChangesetRequest {
+    type Api = UploadBonsaiChangesetRequest;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadBonsaiChangesetsRequest {
-            changesets: self.changesets.to_api()?,
-            mutations: self.mutations.to_api()?,
+        Ok(UploadBonsaiChangesetRequest {
+            changeset: self.changeset.to_api()?,
         })
     }
 }

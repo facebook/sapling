@@ -25,8 +25,8 @@ use edenapi_types::{
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    SnapshotRawData, TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadSnapshotResponse,
-    UploadTokensResponse, UploadTreeResponse,
+    SnapshotRawData, TreeEntry, UploadHgChangeset, UploadSnapshotResponse, UploadTokensResponse,
+    UploadTreeResponse,
 };
 use futures::stream;
 use minibytes::Bytes;
@@ -36,7 +36,6 @@ use revisionstore::{
     datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
     StoreResult,
 };
-use types::HgId;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -850,26 +849,23 @@ pub trait EdenApiPyExt: EdenApi {
                             })
                             .collect::<Result<BTreeMap<_, _>, _>>()?
                     };
-                    let mut response = self.upload_bonsai_changesets(
-                        repo, vec![UploadBonsaiChangeset {
-                            // TODO(yancouto): Remove HgId as it doesn't exist and is unnecessary
-                            hg_changeset_id: HgId::null_id().clone(),
-                            changeset_content: BonsaiChangesetContent {
-                                hg_parents,
-                                author,
-                                time,
-                                tz,
-                                extra: vec![],
-                                // TODO(yancouto): Also upload new files
-                                file_changes: modified.into_iter().map(|(path, file_type, cid)| {
-                                    Ok((path, BonsaiFileChange {
-                                        file_type,
-                                        upload_token: file_content_tokens.get(&cid).ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?.clone()
-                                    }))
-                                }).collect::<anyhow::Result<_>>()?,
-                                message: "THIS IS A SNAPSHOT".to_string(),
-                            },
-                        }], vec![]
+                    let mut response = self.upload_bonsai_changeset(
+                        repo, 
+                        BonsaiChangesetContent {
+                            hg_parents,
+                            author,
+                            time,
+                            tz,
+                            extra: vec![],
+                            // TODO(yancouto): Also upload new files
+                            file_changes: modified.into_iter().map(|(path, file_type, cid)| {
+                                Ok((path, BonsaiFileChange {
+                                    file_type,
+                                    upload_token: file_content_tokens.get(&cid).ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?.clone()
+                                }))
+                            }).collect::<anyhow::Result<_>>()?,
+                            message: "THIS IS A SNAPSHOT".to_string(),
+                        }
                     ).await?;
                     let changeset_response = response
                         .entries

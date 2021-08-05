@@ -267,17 +267,9 @@ pub struct BonsaiChangesetContent {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadBonsaiChangeset {
-    pub hg_changeset_id: HgId,
-    pub changeset_content: BonsaiChangesetContent,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadBonsaiChangesetsRequest {
-    /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
-    pub changesets: Vec<UploadBonsaiChangeset>,
-    /// list of mutation entries for the uploading changesets
-    pub mutations: Vec<HgMutationEntryContent>,
+pub struct UploadBonsaiChangesetRequest {
+    /// changeset to upload
+    pub changeset: BonsaiChangesetContent,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

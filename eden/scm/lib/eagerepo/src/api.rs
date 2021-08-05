@@ -17,6 +17,7 @@ use dag::{Location, VertexName};
 use edenapi::configmodel;
 use edenapi::types::AnyFileContentId;
 use edenapi::types::AnyId;
+use edenapi::types::BonsaiChangesetContent;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashToLocationResponse;
@@ -39,7 +40,6 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
-use edenapi::types::UploadBonsaiChangeset;
 use edenapi::types::UploadHgChangeset;
 use edenapi::types::UploadToken;
 use edenapi::types::UploadTokensResponse;
@@ -503,14 +503,13 @@ impl EdenApi for EagerRepo {
         ))
     }
 
-    async fn upload_bonsai_changesets(
+    async fn upload_bonsai_changeset(
         &self,
         _repo: String,
-        _changesets: Vec<UploadBonsaiChangeset>,
-        _mutations: Vec<HgMutationEntryContent>,
+        _changeset: BonsaiChangesetContent,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
-            "EagerRepo does not support upload_changesets endpoint".to_string(),
+            "EagerRepo does not support upload_bonsai_changeset endpoint".to_string(),
         ))
     }
 

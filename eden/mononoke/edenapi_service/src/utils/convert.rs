@@ -22,7 +22,7 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use futures::{stream, StreamExt, TryStreamExt};
 use smallvec::SmallVec;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::str;
 
 use edenapi_types::{
@@ -37,8 +37,8 @@ use mercurial_types::{
 use mononoke_api::path::MononokePath;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::MPath;
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
-use types::{HgId, RepoPath, RepoPathBuf};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange};
+use types::{RepoPath, RepoPathBuf};
 
 use crate::errors::ErrorKind;
 
@@ -108,18 +108,13 @@ fn to_bonsai_file_change(fc: BonsaiFileChange) -> Result<FileChange> {
 pub async fn to_bonsai_changeset(
     repo: &HgRepoContext,
     cs: BonsaiChangesetContent,
-    hgid_to_csid: &HashMap<HgId, ChangesetId>,
 ) -> Result<BonsaiChangeset> {
     BonsaiChangesetMut {
         parents: stream::iter(cs.hg_parents)
             .then(|hgid| async move {
-                Result::<_, Error>::Ok(match hgid_to_csid.get(&hgid) {
-                    Some(csid) => csid.clone(),
-                    None => repo
-                        .get_bonsai_from_hg(hgid.into())
-                        .await?
-                        .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))?,
-                })
+                repo.get_bonsai_from_hg(hgid.into())
+                    .await?
+                    .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
             })
             .try_collect()
             .await?,
