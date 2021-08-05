@@ -274,26 +274,40 @@ impl CheckoutPlan {
     pub fn stream_data_from_scmstore(
         store: Arc<FileStore>,
         keys: Vec<Key>,
-    ) -> UnboundedReceiver<Result<(Bytes, Key)>> {
-        let (tx, rx) = mpsc::unbounded();
+    ) -> impl Stream<Item = Result<(Bytes, Key)>> {
         let store = store.clone();
-        Handle::current().spawn_blocking(move || {
-            for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-                for result in store
-                    .fetch(chunk.iter().cloned(), FileAttributes::CONTENT)
-                    .results()
-                {
-                    let result = match result {
-                        Err(err) => Err(err),
-                        Ok((key, mut file)) => file.file_content().map(|content| (content, key)),
-                    };
-                    if tx.unbounded_send(result).is_err() {
-                        return;
+        stream::iter(keys.into_iter())
+            .chunks(PREFETCH_CHUNK_SIZE)
+            .map(move |chunk| {
+                let store = store.clone();
+                Handle::current().spawn_blocking(move || {
+                    let mut data = vec![];
+                    for result in store
+                        .fetch(chunk.iter().cloned(), FileAttributes::CONTENT)
+                        .results()
+                    {
+                        let result = match result {
+                            Err(err) => Err(err),
+                            Ok((key, mut file)) => {
+                                file.file_content().map(|content| (content, key))
+                            }
+                        };
+                        let is_err = result.is_err();
+                        data.push(result);
+                        if is_err {
+                            break;
+                        }
                     }
-                }
-            }
-        });
-        rx
+                    stream::iter(data.into_iter())
+                })
+            })
+            .buffer_unordered(FETCH_PARALLELISM)
+            .map(|r| {
+                r.unwrap_or_else(|_| {
+                    stream::iter(vec![Err(anyhow!("background fetch join error"))].into_iter())
+                })
+            })
+            .flatten()
     }
 
     pub fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
