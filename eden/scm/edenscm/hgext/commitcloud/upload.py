@@ -67,7 +67,6 @@ def upload(repo, revs, force=False):
         repo,
         draftrevs,
         force,
-        usebonsaiformat=ui.configbool("commitcloud", "usebonsaiformat"),
     )
 
     failednodes = {repo[r].node() for r in failed}

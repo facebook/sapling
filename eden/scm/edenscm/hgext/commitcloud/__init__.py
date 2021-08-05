@@ -112,9 +112,6 @@ Configs::
     # Use EdenApi Uploads for uploading commit cloud commits during sync
     usehttpupload = True
     
-    # Use bonsai format when uploading commit cloud commits via EdenAPI
-    usebonsaiformat = True
-
     # The command to download bundles from a backup bundle store
     # the command has to be a formatted string with params: 'filename' and 'handle'
     get_command = bundlefetcher -h {handle} -o {filename}
@@ -173,7 +170,6 @@ configitem("commitcloud", "unhydratedpullsizelimit", 5000)
 configitem("commitcloud", "sl_showremotebookmarks", False)
 configitem("commitcloud", "sl_showallbookmarks", False)
 configitem("commitcloud", "usehttpupload", False)
-configitem("commitcloud", "usebonsaiformat", False)
 configitem(
     "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
 )

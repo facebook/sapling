@@ -784,46 +784,6 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((responses_py.into(), stats_py))
     }
 
-    /// Upload bonsai changesets
-    /// This method sends a single request, batching should be done outside.
-    fn uploadbonsaichangesets_py(
-        self: Arc<Self>,
-        py: Python,
-        repo: String,
-        changesets: Vec<(
-            PyBytes,                       /* hgid (node_id) */
-            Serde<BonsaiChangesetContent>, /* changeset content */
-        )>,
-        mutations: Vec<Serde<HgMutationEntryContent>>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
-        PyFuture,
-    )> {
-        let changesets = changesets
-            .into_iter()
-            .map(|(hg_changeset_id, content)| UploadBonsaiChangeset {
-                hg_changeset_id: to_hgid(py, &hg_changeset_id),
-                changeset_content: content.0,
-            })
-            .collect();
-        let mutations = mutations.into_iter().map(|m| m.0).collect();
-        let (responses, stats) = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self
-                        .upload_bonsai_changesets(repo, changesets, mutations)
-                        .await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?;
-
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
-    }
-
     fn uploadsnapshot_py(
         &self,
         py: Python,

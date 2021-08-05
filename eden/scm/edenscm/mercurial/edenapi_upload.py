@@ -63,35 +63,6 @@ def _filtertrees(repo, keys):
     return [tree for index, tree in enumerate(keys) if index not in foundindices]
 
 
-def _uploadfileblobs(repo, keys):
-    """Upload file content and filenodes"""
-    if not keys:
-        return
-    dpack, _hpack = repo.fileslog.getmutablelocalpacks()
-    try:
-        stream, _stats = repo.edenapi.uploadfileblobs(
-            dpack, getreponame(repo), [(k[0], k[1]) for k in keys]
-        )
-        indicestotoken = {
-            keys[item[INDEX_KEY]][1]: item[TOKEN_KEY]
-            for item in stream
-            if item[TOKEN_KEY]
-        }
-        repo.ui.status(
-            _n(
-                "uploaded %d file\n",
-                "uploaded %d files\n",
-                len(indicestotoken),
-            )
-            % len(indicestotoken),
-            component="edenapi",
-        )
-
-        return indicestotoken
-    except (error.RustError, error.HttpError) as e:
-        raise error.Abort(e)
-
-
 def _uploadfilenodes(repo, keys):
     """Upload file content and filenodes"""
     if not keys:
@@ -136,20 +107,15 @@ def _uploadtrees(repo, trees):
         raise error.Abort(e)
 
 
-def _uploadchangesets(repo, changesets, mutations, bonsaiformat):
+def _uploadchangesets(repo, changesets, mutations):
     """Upload changesets"""
     uploaded, failed = [], []
     if not changesets:
         return uploaded, failed
     try:
-        if bonsaiformat:
-            stream, _stats = repo.edenapi.uploadbonsaichangesets(
-                getreponame(repo), changesets, mutations
-            )
-        else:
-            stream, _stats = repo.edenapi.uploadchangesets(
-                getreponame(repo), changesets, mutations
-            )
+        stream, _stats = repo.edenapi.uploadchangesets(
+            getreponame(repo), changesets, mutations
+        )
         foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
         repo.ui.status(
             _n(
@@ -230,76 +196,7 @@ def parentsfromctx(ctx):
         return None
 
 
-def _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs):
-    repo.ui.status(
-        _n(
-            "queue %d file for upload\n",
-            "queue %d files for upload\n",
-            len(blobs),
-        )
-        % len(blobs),
-        component="edenapi",
-    )
-
-    # Upload missing files
-    hgidtouploadtoken = _uploadfileblobs(repo, blobs)
-
-    # Uploading changesets
-    changesets = []
-    for node in uploadcommitqueue.iterrev():
-        repo.ui.status(
-            _("uploading commit '%s'...\n") % nodemod.hex(node), component="commitcloud"
-        )
-        ctx = repo[node]
-        extra = [
-            {"key": key, "value": value.encode()}
-            for key, value in ctx.extra().items()
-            if key != "branch"
-        ]
-        (time, timezone) = ctx.date()
-        changesets.append(
-            (
-                node,
-                {
-                    "hg_parents": parentsfromctx(ctx),
-                    "author": ctx.user(),
-                    "time": int(time),
-                    "tz": timezone,
-                    "extra": extra,
-                    "file_changes": [
-                        (
-                            ctx[f].path(),
-                            {
-                                "upload_token": hgidtouploadtoken[ctx[f].filenode()],
-                                "file_type": filetypefromfile(ctx[f]),
-                            },
-                        )
-                        for f in ctx.files()
-                    ],
-                    "message": ctx.description(),
-                },
-            )
-        )
-
-    mutations = mutation.entriesfornodes(repo, uploadcommitqueue)
-    mutations = [
-        {
-            "successor": mut.succ(),
-            "predecessors": mut.preds(),
-            "split": mut.split(),
-            "op": mut.op(),
-            "user": mut.user().encode(),
-            "time": mut.time(),
-            "tz": mut.tz(),
-            "extras": [{"key": key, "value": value} for key, value in mut.extra()],
-        }
-        for mut in mutations
-    ]
-
-    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations, True))
-
-
-def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
+def uploadhgchangesets(repo, revs, force=False):
     """Upload list of revs via EdenApi Uploads protocol
 
     EdenApi Uploads API consists of the following:
@@ -347,9 +244,6 @@ def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
 
     # Build a queue of missing filenodes to upload
     blobs = list(_getblobs(repo, uploadcommitqueue))
-
-    if usebonsaiformat:
-        return _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs)
 
     uploadblobqueue = blobs if force else _filterfilenodes(repo, blobs)
     repo.ui.status(
@@ -425,4 +319,4 @@ def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
         for mut in mutations
     ]
 
-    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations, False))
+    return _torevs(repo, *_uploadchangesets(repo, changesets, mutations))
