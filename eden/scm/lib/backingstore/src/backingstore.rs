@@ -21,7 +21,7 @@ use revisionstore::{
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{event, instrument, Level};
-use types::Key;
+use types::{Key, Node, RepoPathBuf};
 
 pub struct BackingStore {
     blobstore: ContentStore,
@@ -165,13 +165,11 @@ impl BackingStore {
         manifest.list(&key.path)
     }
 
-    pub fn get_tree(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<List>> {
-        let key = key_from_path_node_slice(path, node)?;
-        self.get_tree_by_key(key, local_only)
-    }
-
     #[instrument(level = "debug", skip(self))]
-    fn get_tree_by_key(&self, key: Key, local_only: bool) -> Result<Option<List>> {
+    pub fn get_tree(&self, node: &[u8], local_only: bool) -> Result<Option<List>> {
+        let node = Node::from_slice(node)?;
+        let path = RepoPathBuf::new();
+        let key = Key::new(path, node);
         // check if the blob is present on disk
         if local_only
             && !self

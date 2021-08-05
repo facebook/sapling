@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<eedea1888281a922bfa29b8a1f18cfe2>>
+ * @generated SignedSource<<d55c0fa3a07268a77cb8b9aee5ec761e>>
  *
  */
 
@@ -147,8 +147,6 @@ void rust_backingstore_get_blob_batch(RustBackingStore *store,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
-                                                       const uint8_t *name,
-                                                       uintptr_t name_len,
                                                        const uint8_t *node,
                                                        uintptr_t node_len,
                                                        bool local);

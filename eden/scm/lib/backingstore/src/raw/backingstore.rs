@@ -112,19 +112,16 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
 
 fn backingstore_get_tree(
     store: *mut BackingStore,
-    name: *const u8,
-    name_len: usize,
     node: *const u8,
     node_len: usize,
     local: bool,
 ) -> Result<*mut Tree> {
     assert!(!store.is_null());
     let store = unsafe { &*store };
-    let name = stringpiece_to_slice(name, name_len)?;
     let node = stringpiece_to_slice(node, node_len)?;
 
     store
-        .get_tree(name, node, local)
+        .get_tree(node, local)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
         .and_then(|list| list.try_into())
         .map(|result| Box::into_raw(Box::new(result)))
@@ -133,13 +130,11 @@ fn backingstore_get_tree(
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_tree(
     store: *mut BackingStore,
-    name: *const u8,
-    name_len: usize,
     node: *const u8,
     node_len: usize,
     local: bool,
 ) -> CFallible<Tree> {
-    backingstore_get_tree(store, name, name_len, node, node_len, local).into()
+    backingstore_get_tree(store, node, node_len, local).into()
 }
 
 #[no_mangle]
