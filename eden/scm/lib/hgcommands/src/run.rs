@@ -19,7 +19,6 @@ use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use progress_model::Registry;
-use std::cell::Cell;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -27,6 +26,7 @@ use std::io::{BufWriter, Write};
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread;
@@ -174,6 +174,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     if let Some(scenario) = scenario {
         scenario.teardown();
+        FAIL_SETUP.store(false, SeqCst);
     }
 
     exit_code
@@ -572,18 +573,17 @@ fn setup_eager_repo() {
     *REGISTERED
 }
 
-thread_local! {
-    static FAIL_SETUP: Cell<bool> = Cell::new(false);
-}
+static FAIL_SETUP: AtomicBool = AtomicBool::new(false);
 
 fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
-    FAIL_SETUP.with(|b| {
-        if b.get() {
-            // Already setup.
-            None
-        } else {
-            b.set(true);
-            Some(FailScenario::setup())
-        }
-    })
+    if std::env::var("FAILPOINTS").is_err() {
+        // No need to setup failpoints.
+        return None;
+    }
+    if FAIL_SETUP.fetch_or(true, SeqCst) {
+        // Already setup.
+        None
+    } else {
+        Some(FailScenario::setup())
+    }
 }
