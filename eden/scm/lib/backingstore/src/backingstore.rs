@@ -21,7 +21,7 @@ use revisionstore::{
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{event, instrument, Level};
-use types::{Key, Node, RepoPathBuf};
+use types::{Key, Node, RepoPath};
 
 pub struct BackingStore {
     blobstore: ContentStore,
@@ -160,28 +160,12 @@ impl BackingStore {
         }
     }
 
-    fn get_tree_impl(&self, key: Key) -> Result<List> {
-        let manifest = TreeManifest::durable(self.treestore.clone(), key.hgid);
-        manifest.list(&key.path)
-    }
-
     #[instrument(level = "debug", skip(self))]
-    pub fn get_tree(&self, node: &[u8], local_only: bool) -> Result<Option<List>> {
+    pub fn get_tree(&self, node: &[u8]) -> Result<List> {
         let node = Node::from_slice(node)?;
-        let path = RepoPathBuf::new();
-        let key = Key::new(path, node);
-        // check if the blob is present on disk
-        if local_only
-            && !self
-                .treestore
-                .as_content_store()
-                .contains(&StoreKey::from(&key))?
-        {
-            event!(Level::DEBUG, "tree not found locally");
-            return Ok(None);
-        }
+        let manifest = TreeManifest::durable(self.treestore.clone(), node);
 
-        Ok(Some(self.get_tree_impl(key)?))
+        manifest.list(RepoPath::empty())
     }
 
     /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
@@ -217,7 +201,7 @@ impl BackingStore {
             let store_key = StoreKey::from(&key);
             // Assuming a blob do not exist if `.contains` call fails
             if contentstore.contains(&store_key).unwrap_or(false) {
-                resolve(index, Some(self.get_tree_impl(key)).transpose())
+                resolve(index, Some(self.get_tree(key.hgid.as_ref())).transpose())
             } else if !local_only {
                 missing.push(store_key);
                 missing_requests.push((index, key));
@@ -231,14 +215,14 @@ impl BackingStore {
 
         let _ = contentstore.prefetch(&missing);
         for (index, key) in missing_requests {
-            resolve(index, Some(self.get_tree_impl(key)).transpose())
+            resolve(index, Some(self.get_tree(key.hgid.as_ref())).transpose())
         }
     }
 
-    /// Forces backing store to rescan pack files or local indexes
+    /// Forces backing store to rescan pack files
     #[instrument(level = "debug", skip(self))]
     pub fn refresh(&self) {
-        self.blobstore.refresh().ok();
-        self.treestore.as_content_store().refresh().ok();
+        self.blobstore.get_missing(&[]).ok();
+        self.treestore.as_content_store().get_missing(&[]).ok();
     }
 }

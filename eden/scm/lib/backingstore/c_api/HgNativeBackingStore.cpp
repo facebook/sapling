@@ -252,14 +252,12 @@ void HgNativeBackingStore::getTreeBatch(
       });
 }
 
-std::shared_ptr<RustTree> HgNativeBackingStore::getTree(
-    folly::ByteRange node,
-    bool local) {
+std::shared_ptr<RustTree> HgNativeBackingStore::getTree(folly::ByteRange node) {
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
 
   RustCFallible<RustTree> manifest(
-      rust_backingstore_get_tree(store_.get(), node.data(), node.size(), local),
+      rust_backingstore_get_tree(store_.get(), node.data(), node.size()),
       rust_tree_free);
 
   if (manifest.isError()) {

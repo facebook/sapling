@@ -462,7 +462,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
     }
 
     fn refresh(&self) -> Result<()> {
-        self.flush_log()
+        Ok(())
     }
 }
 
