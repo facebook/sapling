@@ -902,11 +902,18 @@ async fn calculate_definitely_unassigned_vertexes(
         }
 
         // Sample: heads, roots, and the "middle point" from "remaining".
-        let sample = subdag
-            .roots(remaining.clone())
-            .await?
-            .union(&subdag.heads(remaining.clone()).await?)
-            .union(&remaining.skip((remaining_old_len as u64) / 2).take(1));
+        let sample = if i <= 2 {
+            // But for the first few queries, let's just check the roots.
+            // This could reduce remote lookups, when we only need to
+            // query the roots to rule out all `remaining` vertexes.
+            subdag.roots(remaining.clone()).await?
+        } else {
+            subdag
+                .roots(remaining.clone())
+                .await?
+                .union(&subdag.heads(remaining.clone()).await?)
+                .union(&remaining.skip((remaining_old_len as u64) / 2).take(1))
+        };
         let sample: Vec<VertexName> = sample.iter().await?.try_collect().await?;
         let assigned_bools: Vec<bool> = {
             let ids = this.vertex_id_batch(&sample).await?;

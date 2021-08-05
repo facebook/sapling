@@ -135,13 +135,13 @@ async fn test_add_heads() {
     assert_eq!(
         client.output(),
         [
-            "resolve names: [K, I, G, F, A], heads: [B]",
-            "resolve names: [H, D, C], heads: [B]"
+            "resolve names: [I, A], heads: [B]",
+            "resolve names: [C], heads: [B]"
         ]
     );
 
     client.dag.flush(&["G".into()]).await.unwrap();
-    assert_eq!(client.output(), ["resolve names: [K, I, G, C], heads: [B]"]);
+    assert_eq!(client.output(), ["resolve names: [I, C], heads: [B]"]);
 
     let mut client = server.client_cloned_data().await;
     client
@@ -152,8 +152,8 @@ async fn test_add_heads() {
     assert_eq!(
         client.output(),
         [
-            "resolve names: [G, K, I, H, A], heads: [B]",
-            "resolve names: [F, D, C], heads: [B]"
+            "resolve names: [I, A], heads: [B]",
+            "resolve names: [C], heads: [B]"
         ]
     );
 }
@@ -196,7 +196,7 @@ async fn test_pull_remap() {
     assert_eq!(
         client.output(),
         [
-            "resolve names: [E, B, A], heads: []",
+            "resolve names: [A], heads: []",
             "resolve names: [C, F], heads: [E]"
         ]
     );
