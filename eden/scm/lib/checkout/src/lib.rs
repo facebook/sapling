@@ -49,6 +49,7 @@ use tokio::runtime::Handle;
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
 const VFS_BATCH_SIZE: usize = 100;
+const FETCH_PARALLELISM: usize = 20;
 
 /// Contains lists of files to be removed / updated during checkout.
 pub struct CheckoutPlan {
@@ -298,43 +299,52 @@ impl CheckoutPlan {
     pub fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
         store: &DS,
         keys: Vec<Key>,
-    ) -> UnboundedReceiver<Result<(Bytes, Key)>> {
-        let (tx, rx) = mpsc::unbounded();
+    ) -> impl Stream<Item = Result<(Bytes, Key)>> {
         let store = store.clone();
-        Handle::current().spawn_blocking(move || {
-            let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
-            for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-                match store.prefetch(chunk) {
-                    Err(e) => {
-                        if tx.unbounded_send(Err(e)).is_err() {
-                            return;
+        stream::iter(keys.into_iter().map(StoreKey::HgId))
+            .chunks(PREFETCH_CHUNK_SIZE)
+            .map(move |chunk| {
+                let store = store.clone();
+                Handle::current().spawn_blocking(move || {
+                    let mut data = vec![];
+                    match store.prefetch(&chunk) {
+                        Err(e) => {
+                            data.push(Err(e));
                         }
-                    }
-                    Ok(_) => {
-                        for store_key in chunk {
-                            let key = match store_key {
-                                StoreKey::HgId(key) => key,
-                                _ => unreachable!(),
-                            };
-                            let store_result = store.get(store_key.clone());
-                            let result = match store_result {
-                                Err(err) => Err(err),
-                                Ok(StoreResult::Found(data)) => {
-                                    strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
+                        Ok(_) => {
+                            for store_key in chunk.iter() {
+                                let key = match store_key {
+                                    StoreKey::HgId(key) => key,
+                                    _ => unreachable!(),
+                                };
+                                let store_result = store.get(store_key.clone());
+                                let result = match store_result {
+                                    Err(err) => Err(err),
+                                    Ok(StoreResult::Found(data)) => {
+                                        strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
+                                    }
+                                    Ok(StoreResult::NotFound(k)) => {
+                                        Err(format_err!("{:?} not found in store", k))
+                                    }
+                                };
+                                let is_err = result.is_err();
+                                data.push(result);
+                                if is_err {
+                                    break;
                                 }
-                                Ok(StoreResult::NotFound(k)) => {
-                                    Err(format_err!("{:?} not found in store", k))
-                                }
-                            };
-                            if tx.unbounded_send(result).is_err() {
-                                return;
                             }
                         }
-                    }
-                }
-            }
-        });
-        rx
+                    };
+                    stream::iter(data.into_iter())
+                })
+            })
+            .buffer_unordered(FETCH_PARALLELISM)
+            .map(|r| {
+                r.unwrap_or_else(|_| {
+                    stream::iter(vec![Err(anyhow!("background fetch join error"))].into_iter())
+                })
+            })
+            .flatten()
     }
 
     pub async fn apply_remote_data_store_dry_run<DS: RemoteDataStore + Clone + 'static>(
