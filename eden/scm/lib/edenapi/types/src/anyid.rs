@@ -12,12 +12,15 @@ use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 use types::HgId;
 
+blake2_hash!(BonsaiChangesetId);
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnyId {
     AnyFileContentId(AnyFileContentId),
     HgFilenodeId(HgId),
     HgTreeId(HgId),
     HgChangesetId(HgId),
+    BonsaiChangesetId(BonsaiChangesetId),
 }
 
 impl Default for AnyId {
@@ -43,12 +46,13 @@ impl Arbitrary for AnyId {
         use rand::Rng;
         use AnyId::*;
 
-        let variant = g.gen_range(0, 4);
+        let variant = g.gen_range(0, 5);
         match variant {
             0 => AnyFileContentId(Arbitrary::arbitrary(g)),
             1 => HgFilenodeId(Arbitrary::arbitrary(g)),
             2 => HgTreeId(Arbitrary::arbitrary(g)),
             3 => HgChangesetId(Arbitrary::arbitrary(g)),
+            4 => BonsaiChangesetId(Arbitrary::arbitrary(g)),
             _ => unreachable!(),
         }
     }

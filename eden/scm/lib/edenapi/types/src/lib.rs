@@ -40,7 +40,7 @@ pub mod token;
 pub mod tree;
 pub mod wire;
 
-pub use crate::anyid::{AnyId, LookupRequest, LookupResponse};
+pub use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::CommitGraphEntry;

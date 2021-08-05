@@ -67,6 +67,13 @@ macro_rules! wire_hash {
                 }
             }
         }
+
+        #[cfg(any(test, feature = "for-tests"))]
+        impl quickcheck::Arbitrary for $wire {
+            fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+                $api::arbitrary(g).to_wire()
+            }
+        }
     };
 
     // fallback when not comma terminated

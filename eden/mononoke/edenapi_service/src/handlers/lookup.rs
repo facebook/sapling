@@ -71,6 +71,7 @@ async fn check_request_item(
             repo.changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
                 .await?
         }
+        AnyId::BonsaiChangesetId(id) => repo.changeset_exists_by_bonsai(id.into()).await?,
     };
 
     Ok(LookupResponse {

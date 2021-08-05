@@ -257,6 +257,17 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
     }
 
+    /// Look up by bonsai changeset
+    pub async fn changeset_exists_by_bonsai(
+        &self,
+        changeset_id: ChangesetId,
+    ) -> Result<bool, MononokeError> {
+        self.blob_repo()
+            .changeset_exists_by_bonsai(self.ctx().clone(), changeset_id)
+            .await
+            .map_err(MononokeError::from)
+    }
+
     /// Look up in blobstore by `HgFileNodeId`
     pub async fn filenode_exists(&self, filenode_id: HgFileNodeId) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&filenode_id.blobstore_key())
@@ -395,13 +406,14 @@ impl HgRepoContext {
         &self,
         changesets: Vec<(HgChangesetId, BonsaiChangeset)>,
         mutations: Vec<HgMutationEntry>,
-    ) -> Result<Vec<Result<HgChangesetId, MononokeError>>, MononokeError> {
+    ) -> Result<Vec<Result<ChangesetId, MononokeError>>, MononokeError> {
         let mut hg_changesets = Vec::new();
         let blobstore = self.blob_repo().blobstore();
         let mut response = Vec::new();
         for (hg_node, bonsai_cs) in changesets {
+            let cs_id = bonsai_cs.get_changeset_id();
             let insert = ChangesetInsert {
-                cs_id: bonsai_cs.get_changeset_id(),
+                cs_id,
                 parents: bonsai_cs.parents().collect(),
             };
             let result =
@@ -414,7 +426,7 @@ impl HgRepoContext {
                     }
                     Err(err) => Err(err),
                 }
-                .map(|_| hg_node)
+                .map(|_| cs_id)
                 .map_err(MononokeError::from);
             if result.is_ok() {
                 hg_changesets.push(hg_node);

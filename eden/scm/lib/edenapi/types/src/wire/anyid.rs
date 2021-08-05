@@ -10,11 +10,17 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::anyid::{AnyId, LookupRequest, LookupResponse};
+use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
 use crate::wire::{
     is_default, ToApi, ToWire, WireAnyFileContentId, WireHgId, WireToApiConversionError,
     WireUploadToken,
 };
+
+wire_hash! {
+    wire => WireBonsaiChangesetId,
+    api  => BonsaiChangesetId,
+    size => 32,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireAnyId {
@@ -29,6 +35,9 @@ pub enum WireAnyId {
 
     #[serde(rename = "4")]
     WireHgChangesetId(WireHgId),
+
+    #[serde(rename = "5")]
+    WireBonsaiChangesetId(WireBonsaiChangesetId),
 
     #[serde(other, rename = "0")]
     Unknown,
@@ -50,6 +59,7 @@ impl ToWire for AnyId {
             HgFilenodeId(id) => WireAnyId::WireHgFilenodeId(id.to_wire()),
             HgTreeId(id) => WireAnyId::WireHgTreeId(id.to_wire()),
             HgChangesetId(id) => WireAnyId::WireHgChangesetId(id.to_wire()),
+            BonsaiChangesetId(id) => WireAnyId::WireBonsaiChangesetId(id.to_wire()),
         }
     }
 }
@@ -70,6 +80,7 @@ impl ToApi for WireAnyId {
             WireHgFilenodeId(id) => AnyId::HgFilenodeId(id.to_api()?),
             WireHgTreeId(id) => AnyId::HgTreeId(id.to_api()?),
             WireHgChangesetId(id) => AnyId::HgChangesetId(id.to_api()?),
+            WireBonsaiChangesetId(id) => AnyId::BonsaiChangesetId(id.to_api()?),
         })
     }
 }
@@ -139,12 +150,13 @@ impl Arbitrary for WireAnyId {
         use rand::Rng;
         use WireAnyId::*;
 
-        let variant = g.gen_range(0, 4);
+        let variant = g.gen_range(0, 5);
         match variant {
             0 => WireAnyFileContentId(Arbitrary::arbitrary(g)),
             1 => WireHgFilenodeId(Arbitrary::arbitrary(g)),
             2 => WireHgTreeId(Arbitrary::arbitrary(g)),
             3 => WireHgChangesetId(Arbitrary::arbitrary(g)),
+            4 => WireBonsaiChangesetId(Arbitrary::arbitrary(g)),
             _ => unreachable!(),
         }
     }

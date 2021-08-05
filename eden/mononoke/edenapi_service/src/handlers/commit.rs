@@ -339,13 +339,15 @@ async fn upload_bonsai_changesets_impl(
     // Here we are assuming the changesets are sorted topologically
     // So when we process a changeset, all its parents were already processed
     let mut changesets_data = Vec::with_capacity(changesets.len());
+    let mut hgids = Vec::with_capacity(changesets.len());
     for bonsai_cs in changesets {
         let hg_id = bonsai_cs.hg_changeset_id;
         let cs = to_bonsai_changeset(&repo, bonsai_cs.changeset_content, &hgid_to_csid)
             .await
             .with_context(|| anyhow!("When creating bonsai changeset for {}", hg_id))?;
         hgid_to_csid.insert(hg_id.clone(), cs.get_changeset_id());
-        changesets_data.push((HgChangesetId::new(HgNodeHash::from(hg_id)), cs))
+        changesets_data.push((HgChangesetId::new(HgNodeHash::from(hg_id)), cs));
+        hgids.push(hg_id);
     }
 
     let mutation_data = mutations
@@ -357,12 +359,12 @@ async fn upload_bonsai_changesets_impl(
         .store_bonsai_changesets(changesets_data, mutation_data)
         .await?
         .into_iter()
-        .map(|r| {
-            r.map(|hg_cs_id| {
-                let hgid = HgId::from(hg_cs_id.into_nodehash());
+        .zip(hgids.into_iter())
+        .map(|(r, hgid)| {
+            r.map(|cs_id| {
                 UploadTokensResponse {
                     index: indexes.get(&hgid).cloned().unwrap(), // always present
-                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
+                    token: UploadToken::new_fake_token(AnyId::BonsaiChangesetId(cs_id.into())),
                 }
             })
             .map_err(Error::from)

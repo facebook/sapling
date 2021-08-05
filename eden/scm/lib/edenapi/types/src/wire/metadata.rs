@@ -508,33 +508,6 @@ impl Arbitrary for WireFsnodeId {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireContentId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireSha1 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireSha256 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireAnyFileContentId {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         use rand::Rng;

@@ -13,7 +13,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use edenapi_types::{ContentId as EdenapiContentId, FsnodeId as EdenapiFsnodeId};
+use edenapi_types::{
+    BonsaiChangesetId as EdenapiBonsaiChangesetId, ContentId as EdenapiContentId,
+    FsnodeId as EdenapiFsnodeId,
+};
 use sql::mysql;
 
 use crate::{
@@ -393,6 +396,22 @@ macro_rules! impl_typed_hash {
     }
 }
 
+macro_rules! impl_edenapi_hash_convert {
+    ($this: ident, $edenapi: ident) => {
+        impl From<$this> for $edenapi {
+            fn from(v: $this) -> Self {
+                $edenapi::from(v.0.into_inner())
+            }
+        }
+
+        impl From<$edenapi> for $this {
+            fn from(v: $edenapi) -> Self {
+                $this::new(Blake2::from_byte_array(v.into()))
+            }
+        }
+    };
+}
+
 impl_typed_hash! {
     hash_type => ChangesetId,
     thrift_hash_type => thrift::ChangesetId,
@@ -400,6 +419,8 @@ impl_typed_hash! {
     context_type => ChangesetIdContext,
     context_key => "changeset",
 }
+
+impl_edenapi_hash_convert!(ChangesetId, EdenapiBonsaiChangesetId);
 
 impl_typed_hash! {
     hash_type => ContentId,
@@ -409,17 +430,7 @@ impl_typed_hash! {
     context_key => "content",
 }
 
-impl From<ContentId> for EdenapiContentId {
-    fn from(v: ContentId) -> Self {
-        EdenapiContentId::from(v.0.into_inner())
-    }
-}
-
-impl From<EdenapiContentId> for ContentId {
-    fn from(v: EdenapiContentId) -> Self {
-        ContentId::new(Blake2::from_byte_array(v.into()))
-    }
-}
+impl_edenapi_hash_convert!(ContentId, EdenapiContentId);
 
 impl_typed_hash! {
     hash_type => ContentChunkId,
