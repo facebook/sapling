@@ -1,4 +1,7 @@
-# Copyright 2004-present Facebook. All Rights Reserved.
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -55,7 +58,7 @@ class ExtutilTests(unittest.TestCase):
             util.spawndetached([os.devnull, "arg1", "arg2"])
             self.fail("expected spawndetached to fail with EACCES")
         except (OSError, IOError) as ex:
-            self.assertEqual(ex.errno, errno.EACCES)
+            self.assertEqual(ex.errno, errno.EPERM)
 
     def testflock(self):
         testtmp = os.environ["TESTTMP"]
