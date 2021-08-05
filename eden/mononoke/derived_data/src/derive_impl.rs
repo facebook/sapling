@@ -134,10 +134,11 @@ pub async fn derive_impl<
         let derive_and_log = |csid: ChangesetId| {
             cloned!(ctx, derived_mapping, repo);
             async move {
-                ctx.scuba().clone().log_with_msg(
-                    "Waiting for derived data to be generated",
-                    Some(format!("{} {}", Derivable::NAME, csid)),
-                );
+                ctx.scuba()
+                    .clone()
+                    .add("changeset_id", csid.to_string())
+                    .add("derived_data_type", Derivable::NAME)
+                    .log_with_msg("Waiting for derived data to be generated", None);
 
                 let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
                     .timed()
@@ -151,7 +152,9 @@ pub async fn derive_impl<
                 ctx.scuba()
                     .clone()
                     .add_future_stats(&stats)
-                    .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
+                    .add("changeset_id", csid.to_string())
+                    .add("derived_data_type", Derivable::NAME)
+                    .log_with_msg(tag, None);
                 res?;
                 Result::<_, Error>::Ok(csid)
             }
@@ -250,15 +253,12 @@ pub async fn derive_impl<
             start_csid,
             stats.completion_time,
         );
-        ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-            "Slow derivation",
-            Some(format!(
-                "type={},count={},csid={}",
-                Derivable::NAME,
-                count,
-                start_csid.to_string()
-            )),
-        );
+        ctx.scuba()
+            .clone()
+            .add_future_stats(&stats)
+            .add("changeset_id", start_csid.to_string())
+            .add("derived_data_type", Derivable::NAME)
+            .log_with_msg("Slow derivation", Some(format!("count={}", count)));
     }
 
     res?;
