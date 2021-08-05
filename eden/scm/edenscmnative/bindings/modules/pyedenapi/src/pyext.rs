@@ -829,10 +829,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         data: Serde<SnapshotRawData>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<Serde<UploadSnapshotResponse>> {
         let (modified, mut upload_data): (Vec<_>, Vec<_>) = data
             .0
             .files
@@ -856,7 +853,7 @@ pub trait EdenApiPyExt: EdenApi {
             .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
             .collect();
 
-        let (responses, stats) = py
+        let response = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
                     let _prepare_response = {
@@ -885,7 +882,7 @@ pub trait EdenApiPyExt: EdenApi {
                             })
                             .collect::<Result<BTreeMap<_, _>, _>>()?
                     };
-                    let response = self.upload_bonsai_changesets(
+                    let mut response = self.upload_bonsai_changesets(
                         repo, vec![UploadBonsaiChangeset {
                             // TODO(yancouto): Remove HgId as it doesn't exist and is unnecessary
                             hg_changeset_id: HgId::null_id().clone(),
@@ -910,20 +907,20 @@ pub trait EdenApiPyExt: EdenApi {
                             },
                         }], vec![]
                     ).await?;
-                    Ok::<_, EdenApiError>((
-                        stream::once(async {
-                            Result::<_, EdenApiError>::Ok(UploadSnapshotResponse {})
-                        }),
-                        response.stats,
-                    ))
+                    let changeset_response = response
+                        .entries
+                        .next()
+                        .await
+                        .ok_or_else(|| anyhow!("Failed to create changeset"))??;
+                    Ok::<_, EdenApiError>(UploadSnapshotResponse {
+                        changeset_token: changeset_response.token,
+                    })
                 })
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(response))
     }
 }
 

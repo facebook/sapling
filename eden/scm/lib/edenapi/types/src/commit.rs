@@ -292,7 +292,9 @@ pub struct SnapshotRawData {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct UploadSnapshotResponse {}
+pub struct UploadSnapshotResponse {
+    pub changeset_token: UploadToken,
+}
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareRequest {}

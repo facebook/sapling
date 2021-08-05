@@ -7,11 +7,14 @@ from edenscm.mercurial.edenapi_upload import getreponame
 
 
 def createremote(ui, repo, **opts):
-    # TODO(yancouto): Pipe command through and implement logic
     status = repo.status()
 
     # Until we get a functional snapshot end to end, let's only consider modifed
     # files. Later, we'll add all other types of files.
-    _stream, _stats = repo.edenapi.uploadsnapshot(
+    response = repo.edenapi.uploadsnapshot(
         getreponame(repo), {"files": {"modified": status.modified}}
     )
+
+    csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()
+
+    ui.status(f"Snapshot created with id {csid}\n", component="snapshot")

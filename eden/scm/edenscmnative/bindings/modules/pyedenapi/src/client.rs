@@ -342,7 +342,7 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         data: Serde<SnapshotRawData>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadSnapshotResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<UploadSnapshotResponse>> {
         self.inner(py).clone().uploadsnapshot_py(py, repo, data)
     }
 });
