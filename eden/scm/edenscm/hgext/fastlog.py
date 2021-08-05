@@ -188,6 +188,16 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
         repo.ui.debug("fastlog: not used because fastlog is disabled\n")
         return orig(repo, subset, x, name, followfirst)
 
+    try:
+        # Test that the GraphQL client can be constructed, to rule
+        # out configuration issues like missing `.arcrc` etc.
+        _graphqlclient = graphql.Client(repo=repo)
+    except Exception as ex:
+        repo.ui.debug(
+            "fastlog: not used because graphql client cannot be constructed: %r\n" % ex
+        )
+        return orig(repo, subset, x, name, followfirst)
+
     path = revset.getstring(args["file"], _("%s expected a pattern") % name)
     if path.startswith("path:"):
         # strip "path:" prefix
