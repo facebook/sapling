@@ -9,6 +9,7 @@
 
 #include <folly/dynamic.h>
 #include <optional>
+#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -18,12 +19,6 @@
 #endif
 
 namespace facebook::eden {
-
-enum class MountProtocol {
-  FUSE,
-  PRJFS,
-  NFS,
-};
 
 /**
  * CheckoutConfig contains the configuration state for a single Eden checkout.

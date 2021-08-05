@@ -141,7 +141,6 @@ class EdenTestCase(EdenTestCaseBase):
             logging_settings=logging_settings,
             extra_args=extra_args,
             storage_engine=storage_engine,
-            use_nfs=self.use_nfs(),
         )
         # Just to better reflect normal user environments, update $HOME
         # to point to our test home directory for the duration of the test.
@@ -223,7 +222,10 @@ class EdenTestCase(EdenTestCaseBase):
         The format is the following:
         {"namespace": ["key1=value1", "key2=value2"}
         """
-        return {"experimental": ["enable-nfs-server = true"]}
+        configs = {"experimental": ["enable-nfs-server = true"]}
+        if self.use_nfs():
+            configs["clone"] = ['default-mount-protocol = "NFS"']
+        return configs
 
     def create_hg_repo(
         self, name: str, hgrc: Optional[configparser.ConfigParser] = None

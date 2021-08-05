@@ -19,6 +19,7 @@
 
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
+#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -664,6 +665,16 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> unsafeInMemoryOverlay{
       "overlay:unsafe-in-memory-overlay",
       false,
+      this};
+
+  // [clone]
+
+  /**
+   * Controls the mount protocol that `eden clone` will default to.
+   */
+  ConfigSetting<MountProtocol> defaultCloneMountProtocol{
+      "clone:default-mount-protocol",
+      folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE,
       this};
 };
 

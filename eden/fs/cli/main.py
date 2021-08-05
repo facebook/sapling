@@ -781,7 +781,17 @@ class CloneCmd(Subcmd):
                 )
                 return 1
 
+        def is_nfs_default():
+            default_protocol = "PrjFS" if sys.platform == "win32" else "FUSE"
+            return (
+                instance.get_config_value(
+                    "clone.default-mount-protocol", default_protocol
+                ).upper()
+                == "NFS"
+            )
+
         args.path = os.path.realpath(args.path)
+        args.nfs = args.nfs or is_nfs_default()
 
         # Find the repository information
         try:
