@@ -78,6 +78,9 @@ pub enum CreateChange {
 
     /// The file is created or modified to contain the same contents as an
     /// existing file
+    // TODO: Possible improvement: Add ExistingUploadToken variant which has the
+    // upload token for the uploaded file, which can save a trip to blobstore
+    // Or just add possible size here.
     ExistingContent(FileId, FileType, Option<CreateCopyInfo>),
 
     /// The file is deleted

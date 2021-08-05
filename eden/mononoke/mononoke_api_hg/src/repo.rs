@@ -24,6 +24,7 @@ use mercurial_mutation::HgMutationEntry;
 use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifestId, HgNodeHash};
 use metaconfig_types::RepoConfig;
+use mononoke_api::RepoWriteContext;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{
     hash::{Sha1, Sha256},
@@ -70,6 +71,11 @@ impl HgRepoContext {
     /// Create bubble and return its id
     pub async fn create_bubble(&self) -> Result<Bubble, MononokeError> {
         Ok(self.repo().ephemeral_blobstore().create_bubble().await?)
+    }
+
+    /// Get a write context to make changes to this repository.
+    pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
+        self.repo.write().await
     }
 
     /// Load bubble from id

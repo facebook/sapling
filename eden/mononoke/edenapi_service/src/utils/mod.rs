@@ -27,7 +27,7 @@ pub use cbor::{
     parse_wire_request, to_cbor_bytes,
 };
 pub use convert::{
-    to_bonsai_changeset, to_hg_path, to_mononoke_path, to_mpath, to_mutation_entry,
+    to_create_change, to_hg_path, to_mononoke_path, to_mpath, to_mutation_entry,
     to_revlog_changeset,
 };
 

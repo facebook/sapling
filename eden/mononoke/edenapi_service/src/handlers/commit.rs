@@ -26,6 +26,7 @@ use edenapi_types::{
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
+use mononoke_types::DateTime;
 use types::HgId;
 
 use crate::context::ServerContext;
@@ -33,7 +34,7 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
     cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
-    parse_wire_request, to_bonsai_changeset, to_mutation_entry, to_revlog_changeset,
+    parse_wire_request, to_create_change, to_mononoke_path, to_mutation_entry, to_revlog_changeset,
 };
 
 use super::{EdenApiMethod, HandlerInfo};
@@ -328,12 +329,38 @@ async fn upload_bonsai_changeset_impl(
     repo: HgRepoContext,
     request: UploadBonsaiChangesetRequest,
 ) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
-    let cs = to_bonsai_changeset(&repo, request.changeset)
+    let cs = request.changeset;
+    let repo_write = repo.clone().write().await?;
+    let repo = &repo;
+    let parents = stream::iter(cs.hg_parents)
+        .then(|hgid| async move {
+            repo.get_bonsai_from_hg(hgid.into())
+                .await?
+                .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
+        })
+        .try_collect()
+        .await?;
+    let cs_id = repo_write
+        .create_changeset(
+            parents,
+            cs.author,
+            DateTime::from_timestamp(cs.time, cs.tz)?.into(),
+            None,
+            None,
+            cs.message,
+            cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+            cs.file_changes
+                .into_iter()
+                .map(|(path, fc)| {
+                    let create_change = to_create_change(fc)
+                        .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                    Ok((to_mononoke_path(path)?, create_change))
+                })
+                .collect::<anyhow::Result<_>>()?,
+        )
         .await
-        .with_context(|| anyhow!("When creating bonsai changeset"))?;
-
-    let cs_id = cs.get_changeset_id();
-    repo.store_bonsai_changeset(cs).await?;
+        .with_context(|| anyhow!("When creating bonsai changeset"))?
+        .id();
 
     Ok(vec![Ok(UploadTokensResponse {
         index: 0,

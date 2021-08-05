@@ -110,6 +110,12 @@ impl DateTime {
     }
 }
 
+impl From<DateTime> for ChronoDateTime<FixedOffset> {
+    fn from(d: DateTime) -> Self {
+        d.into_chrono()
+    }
+}
+
 impl std::ops::Add<ChronoDuration> for DateTime {
     type Output = DateTime;
 
