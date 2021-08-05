@@ -8,6 +8,12 @@
   > path=/intern/conduit/
   > EOF
 
+This test actually relies on scanning the local repo, unfortunately:
+(When we migrate fastlog to EdenAPI protocol, we should revisit and
+write proper tests exercising the remote path)
+
+  $ setconfig fastlog.scan-local-repo=true
+
 Log on empty repo
 
   $ hg init repo

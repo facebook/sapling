@@ -19,6 +19,9 @@ Config::
     # Also use fastlog for files. Otherwise only use fastlog for directories.
     # (default: false)
     files=true
+
+    # Enable or disable scanning repos locally (default: false).
+    scan-local-repo=false
 """
 
 import heapq
@@ -270,7 +273,11 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
         queue = util.queue(FASTLOG_QUEUE_SIZE + 100)
         hash = repo[rev].hex()
 
-        local = LocalIteratorThread(queue, LOCAL, rev, dirs, localmatch, repo)
+        localenabled = repo.ui.configbool("fastlog", "scan-local-repo")
+        if localenabled:
+            local = LocalIteratorThread(queue, LOCAL, rev, dirs, localmatch, repo)
+        else:
+            local = None
         remote = FastLogThread(queue, REMOTE, reponame, "hg", hash, dirs, repo)
 
         # Allow debugging either remote or local path
@@ -278,7 +285,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
         if debug != "local":
             repo.ui.debug("starting fastlog at %s\n" % hash)
             remote.start()
-        if debug != "remote":
+        if local is not None and debug != "remote":
             local.start()
         seen = set([rev])
 
@@ -289,7 +296,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
                 except util.empty:
                     raise error.Abort("Timeout reading log data")
                 if not success:
-                    if producer == LOCAL:
+                    if producer == LOCAL or local is None:
                         raise error.Abort(msg)
                     elif msg:
                         repo.ui.log("hgfastlog", msg)
@@ -310,7 +317,8 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
                     seen.add(rev)
                     yield rev
         finally:
-            local.stop()
+            if local is not None:
+                local.stop()
             remote.stop()
 
     revgen = fastlog(repo, rev, dirs, dirmatches)
