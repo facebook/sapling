@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import os
 import shlex
 import sys
+import time
 
 import bindings
 import edenscm
@@ -117,6 +118,10 @@ def debugshell(ui, repo, *args, **opts):
 
 
 def _startipython(ui, repo):
+    # IPython requires time.clock. It is missing on Windows. Polyfill it.
+    if getattr(time, "clock", None) is None:
+        time.clock = time.time
+
     from IPython.terminal.embed import InteractiveShellEmbed
     from IPython.terminal.ipapp import load_default_config
 
