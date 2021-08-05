@@ -23,6 +23,12 @@ pub enum UploadTokenMetadata {
     FileContentTokenMetadata(FileContentTokenMetadata),
 }
 
+impl From<FileContentTokenMetadata> for UploadTokenMetadata {
+    fn from(fctm: FileContentTokenMetadata) -> Self {
+        Self::FileContentTokenMetadata(fctm)
+    }
+}
+
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadTokenData {
     pub id: AnyId,

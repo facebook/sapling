@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
+use edenapi_types::AnyFileContentId;
 use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
@@ -33,6 +34,22 @@ impl From<Alias> for FetchKey {
 impl From<hash::Sha256> for FetchKey {
     fn from(hash: hash::Sha256) -> Self {
         FetchKey::Aliased(Alias::Sha256(hash))
+    }
+}
+
+impl From<hash::Sha1> for FetchKey {
+    fn from(hash: hash::Sha1) -> Self {
+        FetchKey::Aliased(Alias::Sha1(hash))
+    }
+}
+
+impl From<AnyFileContentId> for FetchKey {
+    fn from(id: AnyFileContentId) -> Self {
+        match id {
+            AnyFileContentId::ContentId(id) => Self::from(ContentId::from(id)),
+            AnyFileContentId::Sha1(id) => Self::from(hash::Sha1::from(id)),
+            AnyFileContentId::Sha256(id) => Self::from(hash::Sha256::from(id)),
+        }
     }
 }
 

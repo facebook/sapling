@@ -858,13 +858,7 @@ impl EdenApi for Client {
         let mut entries = self.lookup_batch(repo.clone(), anyids).await?.entries;
         while let Some(entry) = entries.next().await {
             if let Ok(entry) = entry {
-                if let Some(mut token) = entry.token {
-                    // Let's populate size metadata as we know it
-                    token.data.metadata = Some(UploadTokenMetadata::FileContentTokenMetadata(
-                        FileContentTokenMetadata {
-                            content_size: data[entry.index].1.len() as u64,
-                        },
-                    ));
+                if let Some(token) = entry.token {
                     uploaded_indices.insert(entry.index);
                     uploaded_tokens.push(token)
                 }

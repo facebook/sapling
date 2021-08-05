@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use anyhow::{self, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use bookmarks::Freshness;
 use bytes::Bytes;
 use changesets::ChangesetInsert;
@@ -104,7 +104,7 @@ impl HgRepoContext {
             .await?)
     }
 
-    /// Fetch file content size
+    /// Fetch file content size, fails if it doesn't exist.
     pub async fn fetch_file_content_size(
         &self,
         content_id: ContentId,
@@ -176,17 +176,22 @@ impl HgRepoContext {
             .await
     }
 
-    /// Convert `Sha1 alias` to the canonical ContentId
-    pub async fn convert_file_sha1(&self, sha1: Sha1) -> Result<ContentId, MononokeError> {
-        Ok(FetchKey::Aliased(Alias::Sha1(sha1))
+    /// Convert given hash to canonical ContentId
+    pub async fn convert_file_to_content_id<H: Into<FetchKey> + Copy + std::fmt::Debug>(
+        &self,
+        hash: H,
+    ) -> Result<Option<ContentId>, MononokeError> {
+        match hash
+            .into()
             .load(self.ctx(), self.blob_repo().blobstore())
             .await
-            .map_err(|_| {
-                MononokeError::InvalidRequest(format!(
-                    "failed to fetch ContentId for Sha1('{}'), file content must be prior uploaded",
-                    sha1
-                ))
-            })?)
+        {
+            Ok(cid) => Ok(Some(cid)),
+            Err(LoadableError::Missing(_)) => Ok(None),
+            Err(LoadableError::Error(err)) => {
+                Err(err).with_context(|| format_err!("While fetching ContentId for {:?}", hash))?
+            }
+        }
     }
 
     /// Store file into blobstore by `Sha1 alias`
@@ -213,17 +218,6 @@ impl HgRepoContext {
     pub async fn is_file_present_by_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&Alias::Sha256(sha256).blobstore_key())
             .await
-    }
-
-    /// Convert `Sha256 alias` to the canonical ContentId
-    pub async fn convert_file_sha256(&self, sha256: Sha256) -> Result<ContentId, MononokeError> {
-        Ok(FetchKey::Aliased(Alias::Sha256(sha256))
-            .load(self.ctx(), self.blob_repo().blobstore())
-            .await
-            .map_err(|_| {MononokeError::InvalidRequest(format!(
-                "failed to fetch ContentId for Sha256('{}'), file content must be prior uploaded",
-                sha256
-            ))})?)
     }
 
     /// Store file into blobstore by `Sha256 alias`

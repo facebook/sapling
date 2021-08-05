@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::{format_err, Context, Error};
 use bytes::Bytes;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
@@ -23,6 +23,7 @@ use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
+use mononoke_types::{hash::Sha1, hash::Sha256, ContentId};
 use rate_limiting::Metric;
 use types::Key;
 
@@ -176,31 +177,16 @@ async fn store_file(
 ) -> Result<(), Error> {
     match id {
         AnyFileContentId::ContentId(id) => {
-            repo.store_file_by_contentid(
-                mononoke_types::ContentId::from(id),
-                bytes.len() as u64,
-                bytes,
-                bubble_id,
-            )
-            .await?
+            repo.store_file_by_contentid(ContentId::from(id), bytes.len() as u64, bytes, bubble_id)
+                .await?
         }
         AnyFileContentId::Sha1(id) => {
-            repo.store_file_by_sha1(
-                mononoke_types::hash::Sha1::from(id),
-                bytes.len() as u64,
-                bytes,
-                bubble_id,
-            )
-            .await?
+            repo.store_file_by_sha1(Sha1::from(id), bytes.len() as u64, bytes, bubble_id)
+                .await?
         }
         AnyFileContentId::Sha256(id) => {
-            repo.store_file_by_sha256(
-                mononoke_types::hash::Sha256::from(id),
-                bytes.len() as u64,
-                bytes,
-                bubble_id,
-            )
-            .await?
+            repo.store_file_by_sha256(Sha256::from(id), bytes.len() as u64, bytes, bubble_id)
+                .await?
         }
     };
     Ok(())
@@ -271,7 +257,7 @@ async fn store_hg_filenode(
         .map(HgNodeHash::from)
         .map(HgFileNodeId::from_node_hash);
 
-    let content_id = match match token.data.id {
+    let any_file_content_id = match token.data.id {
         AnyId::AnyFileContentId(id) => Some(id),
         _ => None,
     }
@@ -280,17 +266,12 @@ async fn store_hg_filenode(
             node_id.clone(),
             "the provided token is not for file content".into(),
         )
-    })? {
-        AnyFileContentId::ContentId(id) => mononoke_types::ContentId::from(id),
-        AnyFileContentId::Sha1(id) => {
-            repo.convert_file_sha1(mononoke_types::hash::Sha1::from(id))
-                .await?
-        }
-        AnyFileContentId::Sha256(id) => {
-            repo.convert_file_sha256(mononoke_types::hash::Sha256::from(id))
-                .await?
-        }
-    };
+    })?;
+
+    let content_id = repo
+        .convert_file_to_content_id(any_file_content_id)
+        .await?
+        .ok_or_else(|| format_err!("File from upload token should be present"))?;
 
     let content_size = match token.data.metadata {
         Some(UploadTokenMetadata::FileContentTokenMetadata(meta)) => meta.content_size,

@@ -13,7 +13,8 @@ use serde::Deserialize;
 
 use edenapi_types::{
     wire::{ToWire, WireBatch, WireLookupRequest},
-    AnyFileContentId, AnyId, LookupRequest, LookupResponse, UploadToken,
+    AnyId, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
+    UploadTokenMetadata,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
@@ -44,42 +45,56 @@ async fn check_request_item(
     item: LookupRequest,
     index: usize,
 ) -> Result<LookupResponse, Error> {
-    let is_present = match item.id {
-        AnyId::AnyFileContentId(id) => match id {
-            AnyFileContentId::ContentId(id) => {
-                repo.is_file_present_by_contentid(mononoke_types::ContentId::from(id))
-                    .await?
+    enum Lookup {
+        NotPresent,
+        Present(Option<UploadTokenMetadata>),
+    }
+    impl From<bool> for Lookup {
+        fn from(b: bool) -> Self {
+            if b {
+                Self::Present(None)
+            } else {
+                Self::NotPresent
             }
-            AnyFileContentId::Sha1(id) => {
-                repo.is_file_present_by_sha1(mononoke_types::hash::Sha1::from(id))
-                    .await?
+        }
+    }
+    let lookup = match item.id {
+        AnyId::AnyFileContentId(id) => {
+            let content_id = repo.convert_file_to_content_id(id).await?;
+            if let Some(content_id) = content_id {
+                Lookup::Present(Some(
+                    FileContentTokenMetadata {
+                        content_size: repo.fetch_file_content_size(content_id).await?,
+                    }
+                    .into(),
+                ))
+            } else {
+                Lookup::NotPresent
             }
-            AnyFileContentId::Sha256(id) => {
-                repo.is_file_present_by_sha256(mononoke_types::hash::Sha256::from(id))
-                    .await?
-            }
-        },
-        AnyId::HgFilenodeId(id) => {
-            repo.filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
-                .await?
         }
-        AnyId::HgTreeId(id) => {
-            repo.tree_exists(HgManifestId::new(HgNodeHash::from(id)))
-                .await?
-        }
-        AnyId::HgChangesetId(id) => {
-            repo.changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
-                .await?
-        }
-        AnyId::BonsaiChangesetId(id) => repo.changeset_exists_by_bonsai(id.into()).await?,
+        AnyId::HgFilenodeId(id) => repo
+            .filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+            .await?
+            .into(),
+        AnyId::HgTreeId(id) => repo
+            .tree_exists(HgManifestId::new(HgNodeHash::from(id)))
+            .await?
+            .into(),
+        AnyId::HgChangesetId(id) => repo
+            .changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
+            .await?
+            .into(),
+        AnyId::BonsaiChangesetId(id) => repo.changeset_exists_by_bonsai(id.into()).await?.into(),
     };
 
     Ok(LookupResponse {
         index,
-        token: if is_present {
-            Some(UploadToken::new_fake_token(item.id))
-        } else {
-            None
+        token: match lookup {
+            Lookup::NotPresent => None,
+            Lookup::Present(None) => Some(UploadToken::new_fake_token(item.id)),
+            Lookup::Present(Some(metadata)) => {
+                Some(UploadToken::new_fake_token_with_metadata(item.id, metadata))
+            }
         },
     })
 }
