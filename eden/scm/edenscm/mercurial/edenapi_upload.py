@@ -210,13 +210,24 @@ def _torevs(repo, uploadednodes, failednodes):
     )
 
 
-def _filetypefromfile(f):
+def filetypefromfile(f):
     if f.isexec():
         return "Executable"
     elif f.islink():
         return "Symlink"
     else:
         return "Regular"
+
+
+def parentsfromctx(ctx):
+    p1 = ctx.p1().node()
+    p2 = ctx.p2().node()
+    if p1 != nodemod.nullid and p2 != nodemod.nullid:
+        return (p1, p2)
+    elif p1 != nodemod.nullid:
+        return p1
+    else:
+        return None
 
 
 def _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs):
@@ -246,19 +257,11 @@ def _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs):
             if key != "branch"
         ]
         (time, timezone) = ctx.date()
-        p1 = ctx.p1().node()
-        p2 = ctx.p2().node()
-        if p1 != nodemod.nullid and p2 != nodemod.nullid:
-            parents = (p1, p2)
-        elif p1 != nodemod.nullid:
-            parents = p1
-        else:
-            parents = None
         changesets.append(
             (
                 node,
                 {
-                    "hg_parents": parents,
+                    "hg_parents": parentsfromctx(ctx),
                     "author": ctx.user(),
                     "time": int(time),
                     "tz": timezone,
@@ -268,7 +271,7 @@ def _uploadbonsai(repo, revs, force, uploadcommitqueue, blobs):
                             ctx[f].path(),
                             {
                                 "upload_token": hgidtouploadtoken[ctx[f].filenode()],
-                                "file_type": _filetypefromfile(ctx[f]),
+                                "file_type": filetypefromfile(ctx[f]),
                             },
                         )
                         for f in ctx.files()
@@ -391,19 +394,11 @@ def uploadhgchangesets(repo, revs, force=False, usebonsaiformat=False):
             if key != "branch"
         ]
         (time, timezone) = ctx.date()
-        p1 = ctx.p1().node()
-        p2 = ctx.p2().node()
-        if p1 != nodemod.nullid and p2 != nodemod.nullid:
-            parents = (p1, p2)
-        elif p1 != nodemod.nullid:
-            parents = p1
-        else:
-            parents = None
         changesets.append(
             (
                 node,
                 {
-                    "parents": parents,
+                    "parents": parentsfromctx(ctx),
                     "manifestid": ctx.manifestnode(),
                     "user": ctx.user().encode(),
                     "time": int(time),

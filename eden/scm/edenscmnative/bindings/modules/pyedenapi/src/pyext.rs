@@ -23,7 +23,7 @@ use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry,
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, FileType,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
     SnapshotRawData, TreeEntry, UploadBonsaiChangeset, UploadHgChangeset, UploadSnapshotResponse,
     UploadTokensResponse, UploadTreeResponse,
@@ -36,7 +36,7 @@ use revisionstore::{
     datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
     StoreResult,
 };
-use types::{HgId, Parents};
+use types::HgId;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -830,15 +830,23 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         data: Serde<SnapshotRawData>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        let (modified, mut upload_data): (Vec<_>, Vec<_>) = data
-            .0
-            .files
+        let SnapshotRawData {
+            files,
+            author,
+            hg_parents,
+            time,
+            tz,
+        } = data.0;
+        let (modified, mut upload_data): (Vec<_>, Vec<_>) = files
             .modified
             .into_iter()
-            .map(|path| {
+            .map(|(path, file_type)| {
                 let bytes = std::fs::read(path.as_repo_path().as_str())?;
                 let content_id = calc_contentid(&bytes);
-                Ok(((path, content_id), (content_id, Bytes::from_owner(bytes))))
+                Ok((
+                    (path, file_type, content_id),
+                    (content_id, Bytes::from_owner(bytes)),
+                ))
             })
             .collect::<Result<Vec<_>, std::io::Error>>()
             .map_pyerr(py)?
@@ -887,19 +895,15 @@ pub trait EdenApiPyExt: EdenApi {
                             // TODO(yancouto): Remove HgId as it doesn't exist and is unnecessary
                             hg_changeset_id: HgId::null_id().clone(),
                             changeset_content: BonsaiChangesetContent {
-                                // TODO(yancouto): Get correct parents
-                                hg_parents: Parents::None,
-                                // TODO(yancouto): Get correct author
-                                author: "placeholder".to_string(),
-                                // TODO(yancouto): Get correct current time
-                                time: 0,
-                                tz: 0,
+                                hg_parents,
+                                author,
+                                time,
+                                tz,
                                 extra: vec![],
                                 // TODO(yancouto): Also upload new files
-                                file_changes: modified.into_iter().map(|(path, cid)| {
+                                file_changes: modified.into_iter().map(|(path, file_type, cid)| {
                                     Ok((path, BonsaiFileChange {
-                                        // TODO(yancouto): Get correct file type
-                                        file_type: FileType::Regular,
+                                        file_type,
                                         upload_token: file_content_tokens.get(&cid).ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?.clone()
                                     }))
                                 }).collect::<anyhow::Result<_>>()?,

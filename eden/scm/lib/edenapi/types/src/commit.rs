@@ -283,12 +283,16 @@ pub struct UploadBonsaiChangesetsRequest {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct SnapshotRawFiles {
     // TODO(yancouto): Add added/removed/missing/untracked files
-    pub modified: Vec<RepoPathBuf>,
+    pub modified: Vec<(RepoPathBuf, FileType)>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct SnapshotRawData {
+    pub hg_parents: Parents,
     pub files: SnapshotRawFiles,
+    pub time: i64,
+    pub tz: i32,
+    pub author: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

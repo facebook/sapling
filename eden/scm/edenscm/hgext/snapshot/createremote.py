@@ -3,16 +3,32 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial.edenapi_upload import getreponame
+from edenscm.mercurial.edenapi_upload import (
+    getreponame,
+    filetypefromfile,
+    parentsfromctx,
+)
 
 
 def createremote(ui, repo, **opts):
-    status = repo.status()
+    # Current working context
+    wctx = repo[None]
+
+    (time, tz) = wctx.date()
 
     # Until we get a functional snapshot end to end, let's only consider modifed
     # files. Later, we'll add all other types of files.
     response = repo.edenapi.uploadsnapshot(
-        getreponame(repo), {"files": {"modified": status.modified}}
+        getreponame(repo),
+        {
+            "files": {
+                "modified": [(f, filetypefromfile(wctx[f])) for f in wctx.modified()]
+            },
+            "author": wctx.user(),
+            "time": int(time),
+            "tz": tz,
+            "hg_parents": parentsfromctx(wctx),
+        },
     )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()
