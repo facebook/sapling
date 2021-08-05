@@ -26,15 +26,11 @@ namespace scm {
 namespace service {
 
 rust::srserver::RustThriftMetadata* create_metadata() noexcept {
-  using apache::thrift::can_throw;
-
   auto meta = new rust::srserver::RustThriftMetadata();
   meta->meta_ =
       [](apache::thrift::metadata::ThriftServiceMetadataResponse& response) {
         ::apache::thrift::detail::md::ServiceMetadata<
-            ::facebook::scm::service::SourceControlServiceSvIf>::
-            gen(can_throw(*response.metadata_ref()),
-                can_throw(*response.context_ref()));
+            ::facebook::scm::service::SourceControlServiceSvIf>::gen(response);
       };
   return meta;
 }
