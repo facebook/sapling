@@ -86,5 +86,9 @@ if (NOT WIN32)
       eden_fuse
       eden_notifications
       eden_takeover
+    PRIVATE
+      eden_smartplatform_service
   )
 endif()
+
+add_subdirectory(facebook)

@@ -646,7 +646,14 @@ class EdenConfig : private ConfigSettingManager {
       std::vector<std::string>{},
       this};
 
-  // [overlay]
+  /**
+   * The number of globs to use for a predictive prefetch profile,
+   * 10,000 by default.
+   */
+  ConfigSetting<uint32_t> predictivePrefetchProfileSize{
+      "predictive-prefetch-profiles:size",
+      10000,
+      this};
 
   /**
    * Only used in CLI to control if new clones are using TreeOverlay by default.

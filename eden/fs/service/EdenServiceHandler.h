@@ -11,6 +11,13 @@
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "fb303/BaseService.h"
+#ifdef __linux__
+#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
+#endif
+
+namespace {
+class ThriftFetchContext;
+} // namespace
 
 namespace folly {
 template <typename T>
@@ -112,6 +119,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
   folly::Future<std::unique_ptr<Glob>> future_globFiles(
+      std::unique_ptr<GlobParams> params) override;
+
+  folly::Future<std::unique_ptr<Glob>> future_predictiveGlobFiles(
       std::unique_ptr<GlobParams> params) override;
 
   folly::Future<folly::Unit> future_chown(
@@ -291,6 +301,24 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
 
+  folly::Future<std::unique_ptr<Glob>> _globFiles(
+      folly::StringPiece mountPoint,
+      std::vector<std::string> globs,
+      bool includeDotfiles,
+      bool prefetchFiles,
+      bool suppressFileList,
+      bool wantDtype,
+      std::vector<std::string> revisions,
+      bool prefetchMetadata,
+      folly::StringPiece searchRootUser,
+      bool background,
+      ThriftFetchContext& fetchContext);
+
+#ifdef __linux__
+  // an endpoint for the edenfs/edenfs_service smartservice used for predictive
+  // prefetch profiles
+  std::unique_ptr<EdenFSSmartPlatformServiceEndpoint> spServiceEndpoint_;
+#endif
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
 };
