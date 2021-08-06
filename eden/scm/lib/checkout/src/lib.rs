@@ -6,8 +6,6 @@
  */
 
 use anyhow::{anyhow, bail, format_err, Result};
-use futures::channel::mpsc;
-use futures::channel::mpsc::UnboundedReceiver;
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{FileMetadata, FileType, Manifest};
 use minibytes::Bytes;
