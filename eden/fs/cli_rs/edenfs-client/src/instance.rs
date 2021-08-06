@@ -12,7 +12,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
-use tokio::net::UnixStream;
 
 use edenfs_config::EdenFsConfig;
 use edenfs_error::{EdenFsError, Result, ResultExt};
@@ -20,6 +19,7 @@ use fb303_core::types::fb303_status;
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
+use tokio_uds_compat::UnixStream;
 
 use crate::utils::get_executable;
 use crate::EdenFsClient;
