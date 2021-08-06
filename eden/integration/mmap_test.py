@@ -7,6 +7,7 @@
 import ctypes
 import mmap
 import os
+import platform
 import subprocess
 from ctypes import c_int, c_size_t, c_ssize_t, c_void_p
 
@@ -18,14 +19,16 @@ from .lib import testcase
 #
 # We have to ignore type errors on the next line until we update to a version
 # of typeshed that includes https://github.com/python/typeshed/pull/3945
-libc = ctypes.CDLL(None)
-c_off_t = c_ssize_t
+libc = None
+if platform.system() != "Windows":
+    libc = ctypes.CDLL(None)
+    c_off_t = c_ssize_t
 
-libc.mmap.argtypes = [c_void_p, c_size_t, c_int, c_int, c_off_t]
-libc.mmap.restype = ctypes.POINTER(ctypes.c_byte)
+    libc.mmap.argtypes = [c_void_p, c_size_t, c_int, c_int, c_off_t]
+    libc.mmap.restype = ctypes.POINTER(ctypes.c_byte)
 
-libc.munmap.restype = c_void_p
-libc.munmap.argtypes = [c_void_p, c_size_t]
+    libc.munmap.restype = c_void_p
+    libc.munmap.argtypes = [c_void_p, c_size_t]
 
 
 @testcase.eden_repo_test

@@ -5,7 +5,6 @@
 # GNU General Public License version 2.
 
 import os
-import resource
 import signal
 import sys
 import threading
@@ -34,6 +33,8 @@ class TakeoverTest(testcase.EdenRepoTest):
     enable_fault_injection: bool = True
 
     def populate_repo(self) -> None:
+        import resource
+
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize
         self.page2 = "2" * self.pagesize

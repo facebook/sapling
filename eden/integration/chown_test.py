@@ -4,9 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import grp
 import os
-import pwd
 
 from .lib import repobase, testcase
 
@@ -33,6 +31,9 @@ class ChownTest(testcase.EdenRepoTest):
         return self.create_hg_repo("main")
 
     def setup_eden_test(self) -> None:
+        import grp
+        import pwd
+
         super().setup_eden_test()
         self.nobody_uid = pwd.getpwnam("nobody").pw_uid
         self.nobody_gid = grp.getgrnam("nobody").gr_gid

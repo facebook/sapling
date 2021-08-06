@@ -7,10 +7,17 @@
 import os
 import os.path
 import pathlib
+import platform
 import unittest
 
-from .lib.linux import LinuxCgroup, is_cgroup_v2_mounted
 from .lib.testcase import IntegrationTestCase
+
+if platform.system() != "Windows":
+    from .lib.linux import LinuxCgroup, is_cgroup_v2_mounted
+else:
+
+    def is_cgroup_v2_mounted():
+        return False
 
 
 class LinuxCgroupTest(IntegrationTestCase):
