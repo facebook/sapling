@@ -297,6 +297,9 @@ impl Client {
             }
         }
 
+        url.query_pairs_mut()
+            .append_pair("content_size", &raw_content.len().to_string());
+
         let msg = format!("Requesting upload for {}", url);
         tracing::info!("{}", &msg);
 

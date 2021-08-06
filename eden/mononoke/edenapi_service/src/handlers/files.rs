@@ -54,6 +54,7 @@ pub struct UploadFileParams {
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadFileQueryString {
     bubble_id: Option<std::num::NonZeroU64>,
+    content_size: Option<u64>, // Option is temporarily
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -157,14 +158,12 @@ async fn fetch_file(
 async fn generate_upload_token(
     _repo: HgRepoContext,
     id: AnyFileContentId,
-    content_size: usize,
+    content_size: u64,
 ) -> Result<UploadToken, Error> {
     // At first, returns a fake token
     Ok(UploadToken::new_fake_token_with_metadata(
         AnyId::AnyFileContentId(id),
-        UploadTokenMetadata::FileContentTokenMetadata(FileContentTokenMetadata {
-            content_size: content_size as u64,
-        }),
+        UploadTokenMetadata::FileContentTokenMetadata(FileContentTokenMetadata { content_size }),
     ))
 }
 
@@ -173,19 +172,20 @@ async fn store_file(
     repo: HgRepoContext,
     id: AnyFileContentId,
     bytes: Bytes,
+    content_size: u64,
     bubble_id: Option<BubbleId>,
 ) -> Result<(), Error> {
     match id {
         AnyFileContentId::ContentId(id) => {
-            repo.store_file_by_contentid(ContentId::from(id), bytes.len() as u64, bytes, bubble_id)
+            repo.store_file_by_contentid(ContentId::from(id), content_size, bytes, bubble_id)
                 .await?
         }
         AnyFileContentId::Sha1(id) => {
-            repo.store_file_by_sha1(Sha1::from(id), bytes.len() as u64, bytes, bubble_id)
+            repo.store_file_by_sha1(Sha1::from(id), content_size, bytes, bubble_id)
                 .await?
         }
         AnyFileContentId::Sha256(id) => {
-            repo.store_file_by_sha256(Sha256::from(id), bytes.len() as u64, bytes, bubble_id)
+            repo.store_file_by_sha256(Sha256::from(id), content_size, bytes, bubble_id)
                 .await?
         }
     };
@@ -208,12 +208,13 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map_err(HttpError::e400)?;
 
     let body = get_request_body(state).await?;
-    let content_size = body.len();
+    let content_size = query_string.content_size.unwrap_or(body.len() as u64);
 
     store_file(
         repo.clone(),
         id.clone(),
         body,
+        content_size,
         query_string.bubble_id.map(BubbleId::new),
     )
     .await
