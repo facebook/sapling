@@ -281,7 +281,9 @@ facebook::eden::InodePtr inodeFromUserPath(
 
 // INSTRUMENT_THRIFT_CALL returns a unique pointer to
 // ThriftLogHelper object. The returned pointer can be used to call wrapFuture()
-// to attach a log message on the completion of the Future.
+// to attach a log message on the completion of the Future. This must be
+// called in a Thrift worker thread because the calling pid of
+// getAndRegisterClientPid is stored in a thread local variable.
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
@@ -301,11 +303,14 @@ facebook::eden::InodePtr inodeFromUserPath(
         getAndRegisterClientPid());                                   \
   }(__func__, __FILE__, __LINE__))
 
-// INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME works in the same way as
-// INSTRUMENT_THRIFT_CALL but takes the function name as a parameter in case of
-// using inside of a lambda (in which case __func__ is "()")
+// INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID works in the same way
+// as INSTRUMENT_THRIFT_CALL but takes the function name and pid
+// as a parameter in case of using inside of a lambda (in which case
+// __func__ is "()"). Also, the pid passed to this function must be
+// obtained from a Thrift worker thread because the calling pid is
+// stored in a thread local variable.
 
-#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(                    \
+#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(            \
     level, functionName, pid, ...)                                    \
   ([&](folly::StringPiece fileName, uint32_t lineNumber) {            \
     static folly::Logger logger(                                      \
@@ -1260,7 +1265,10 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
     bool prefetchMetadata,
     folly::StringPiece searchRootUser,
     bool background,
-    ThriftFetchContext& fetchContext) {
+    folly::StringPiece caller,
+    std::optional<pid_t> pid) {
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
+      DBG3, caller, pid, mountPoint, toLogArg(globs), includeDotfiles);
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
@@ -1287,6 +1295,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
       ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
       : nullptr;
 
+  auto& fetchContext = helper->getFetchContext();
   fetchContext.setPrefetchMetadata(prefetchMetadata);
 
   // These hashes must outlive the GlobResult created by evaluate as the
@@ -1361,17 +1370,22 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
         folly::makeSemiFuture(
             folly::collectAll(std::move(globResults))
                 .toUnsafeFuture()
-                .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
-                  // keep globRoot and originRootIds alive until the end.
+                .ensure([globRoot,
+                         originRootIds = std::move(originRootIds),
+                         helper = std::move(helper)]() {
+                  // keep globRoot, originRootIds, and helper alive until the
+                  // end. the helper contains the fetchContext, which is needed
+                  // while fetching.
                 })));
     return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
   }
-  return folly::collectAll(std::move(globResults))
-      .via(server_->getServerState()->getThreadPool().get())
-      .thenValue(
-          [fileBlobsToPrefetch, suppressFileList](
-              std::vector<folly::Try<std::vector<GlobNode::GlobResult>>>&&
-                  rawResults) {
+  return wrapFuture(
+      std::move(helper),
+      folly::collectAll(std::move(globResults))
+          .via(server_->getServerState()->getThreadPool().get())
+          .thenValue([fileBlobsToPrefetch, suppressFileList](
+                         std::vector<folly::Try<
+                             std::vector<GlobNode::GlobResult>>>&& rawResults) {
             // deduplicate and combine all the globResults.
             std::vector<GlobNode::GlobResult> combinedResults{};
             if (!suppressFileList) {
@@ -1419,59 +1433,62 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
             return folly::makeFuture<std::vector<GlobNode::GlobResult>>(
                 std::move(combinedResults));
           })
-      .thenValue([edenMount,
-                  wantDtype,
-                  fileBlobsToPrefetch,
-                  suppressFileList,
-                  &fetchContext,
-                  config = server_->getServerState()->getEdenConfig()](
-                     std::vector<GlobNode::GlobResult>&& results) mutable {
-        auto out = std::make_unique<Glob>();
+          .thenValue([edenMount,
+                      wantDtype,
+                      fileBlobsToPrefetch,
+                      suppressFileList,
+                      &fetchContext,
+                      config = server_->getServerState()->getEdenConfig()](
+                         std::vector<GlobNode::GlobResult>&& results) mutable {
+            auto out = std::make_unique<Glob>();
 
-        if (!suppressFileList) {
-          // already deduplicated at this point, no need to de-dup
-          for (auto& entry : results) {
-            out->matchingFiles_ref()->emplace_back(
-                entry.name.stringPiece().toString());
+            if (!suppressFileList) {
+              // already deduplicated at this point, no need to de-dup
+              for (auto& entry : results) {
+                out->matchingFiles_ref()->emplace_back(
+                    entry.name.stringPiece().toString());
 
-            if (wantDtype) {
-              out->dtypes_ref()->emplace_back(
-                  static_cast<OsDtype>(entry.dtype));
+                if (wantDtype) {
+                  out->dtypes_ref()->emplace_back(
+                      static_cast<OsDtype>(entry.dtype));
+                }
+
+                out->originHashes_ref()->emplace_back(
+                    edenMount->getObjectStore()->renderRootId(
+                        *entry.originHash));
+              }
             }
+            if (fileBlobsToPrefetch) {
+              std::vector<folly::Future<folly::Unit>> futures;
 
-            out->originHashes_ref()->emplace_back(
-                edenMount->getObjectStore()->renderRootId(*entry.originHash));
-          }
-        }
-        if (fileBlobsToPrefetch) {
-          std::vector<folly::Future<folly::Unit>> futures;
+              auto store = edenMount->getObjectStore();
+              auto blobs = fileBlobsToPrefetch->rlock();
+              std::vector<Hash> batch;
+              bool useEdenNativeFetch =
+                  config->useEdenNativePrefetch.getValue();
 
-          auto store = edenMount->getObjectStore();
-          auto blobs = fileBlobsToPrefetch->rlock();
-          std::vector<Hash> batch;
-          bool useEdenNativeFetch = config->useEdenNativePrefetch.getValue();
+              for (auto& hash : *blobs) {
+                if (!useEdenNativeFetch && batch.size() >= 20480) {
+                  futures.emplace_back(
+                      store->prefetchBlobs(batch, fetchContext));
+                  batch.clear();
+                }
+                batch.emplace_back(hash);
+              }
+              if (!batch.empty()) {
+                futures.emplace_back(store->prefetchBlobs(batch, fetchContext));
+              }
 
-          for (auto& hash : *blobs) {
-            if (!useEdenNativeFetch && batch.size() >= 20480) {
-              futures.emplace_back(store->prefetchBlobs(batch, fetchContext));
-              batch.clear();
+              return folly::collectUnsafe(futures).thenValue(
+                  [glob = std::move(out)](auto&&) mutable {
+                    return makeFuture(std::move(glob));
+                  });
             }
-            batch.emplace_back(hash);
-          }
-          if (!batch.empty()) {
-            futures.emplace_back(store->prefetchBlobs(batch, fetchContext));
-          }
-
-          return folly::collectUnsafe(futures).thenValue(
-              [glob = std::move(out)](auto&&) mutable {
-                return makeFuture(std::move(glob));
-              });
-        }
-        return makeFuture(std::move(out));
-      })
-      .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
-        // keep globRoot and originRootIds alive until the end
-      });
+            return makeFuture(std::move(out));
+          })
+          .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
+            // keep globRoot and originRootIds alive until the end
+          }));
 }
 
 folly::Future<std::unique_ptr<SetPathRootIdResult>>
@@ -1507,10 +1524,9 @@ EdenServiceHandler::future_setPathRootId(
 folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2, *params->mountPoint_ref(), *params->includeDotfiles_ref());
 #ifdef __linux__
-  auto& fetchContext = helper->getFetchContext();
+  // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
+  // of getTopUsedDirs won't be taken into account
   auto numResults = params->predictiveGlob_ref().has_value()
       ? *params->predictiveGlob_ref()->numTopDirectories_ref()
       : server_->getServerState()
@@ -1525,67 +1541,56 @@ EdenServiceHandler::future_predictiveGlobFiles(
   auto& prefetchMetadata = *params->prefetchMetadata_ref();
   auto& searchRoot = *params->searchRoot_ref();
   auto& background = *params->background_ref();
-  // keep helper alive until the end, the helper contains the fetchContext,
-  // which is needed while fetching.
-  return wrapFuture(
-      std::move(helper),
-      spServiceEndpoint_
-          ->getTopUsedDirs(
-              folly::StringPiece{
-                  server_->getServerState()->getUserInfo().getUsername()},
-              folly::StringPiece{
-                  server_->getMount(AbsolutePathPiece{mountPoint})
-                      ->getRepoName()},
-              numResults)
-          .thenValue([&, this](std::vector<std::string>&& globs) {
-            return _globFiles(
-                mountPoint,
-                globs,
-                includeDotfiles,
-                prefetchFiles,
-                suppressFileList,
-                wantDtype,
-                revisions,
-                prefetchMetadata,
-                searchRoot,
-                background,
-                fetchContext);
-          })
-          .thenError([](folly::exception_wrapper&& ew) {
-            XLOG(ERR) << "Error fetching predictive file globs: "
-                      << folly::exceptionStr(ew);
-            return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
-          })
-          .ensure([params = std::move(params)]() {}));
+  return spServiceEndpoint_
+      ->getTopUsedDirs(
+          folly::StringPiece{
+              server_->getServerState()->getUserInfo().getUsername()},
+          folly::StringPiece{
+              server_->getMount(AbsolutePathPiece{mountPoint})->getRepoName()},
+          numResults)
+      .thenValue([&, func = __func__, pid = getAndRegisterClientPid(), this](
+                     std::vector<std::string>&& globs) {
+        return _globFiles(
+            mountPoint,
+            globs,
+            includeDotfiles,
+            prefetchFiles,
+            suppressFileList,
+            wantDtype,
+            revisions,
+            prefetchMetadata,
+            searchRoot,
+            background,
+            func,
+            pid);
+      })
+      .thenError([](folly::exception_wrapper&& ew) {
+        XLOG(ERR) << "Error fetching predictive file globs: "
+                  << folly::exceptionStr(ew);
+        return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
+      })
+      .ensure([params = std::move(params)]() {});
 #else
+  (void)params;
   NOT_IMPLEMENTED();
 #endif
 }
 
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3,
+  return _globFiles(
       *params->mountPoint_ref(),
-      toLogArg(*params->globs_ref()),
-      *params->includeDotfiles_ref());
-  auto& fetchContext = helper->getFetchContext();
-  // keep helper alive until the end, the helper contains the fetchContext,
-  // which is needed while fetching.
-  return wrapFuture(
-      std::move(helper),
-      _globFiles(
-          *params->mountPoint_ref(),
-          *params->globs_ref(),
-          *params->includeDotfiles_ref(),
-          *params->prefetchFiles_ref(),
-          *params->suppressFileList_ref(),
-          *params->wantDtype_ref(),
-          *params->revisions_ref(),
-          *params->prefetchMetadata_ref(),
-          *params->searchRoot_ref(),
-          *params->background_ref(),
-          fetchContext));
+      *params->globs_ref(),
+      *params->includeDotfiles_ref(),
+      *params->prefetchFiles_ref(),
+      *params->suppressFileList_ref(),
+      *params->wantDtype_ref(),
+      *params->revisions_ref(),
+      *params->prefetchMetadata_ref(),
+      *params->searchRoot_ref(),
+      *params->background_ref(),
+      __func__,
+      getAndRegisterClientPid());
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(
@@ -1607,7 +1612,7 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
   auto* request = callback->getRequest();
   folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
-    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
+    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
         DBG2,
         func,
         pid,
@@ -1645,7 +1650,7 @@ void EdenServiceHandler::async_tm_getScmStatus(
     unique_ptr<string> commitHash) {
   auto* request = callback->getRequest();
   folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
-    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
+    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
         DBG2,
         func,
         pid,

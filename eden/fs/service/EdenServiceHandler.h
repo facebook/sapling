@@ -15,10 +15,6 @@
 #include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
 #endif
 
-namespace {
-class ThriftFetchContext;
-} // namespace
-
 namespace folly {
 template <typename T>
 class Future;
@@ -312,7 +308,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       bool prefetchMetadata,
       folly::StringPiece searchRootUser,
       bool background,
-      ThriftFetchContext& fetchContext);
+      folly::StringPiece caller,
+      std::optional<pid_t> pid);
 
 #ifdef __linux__
   // an endpoint for the edenfs/edenfs_service smartservice used for predictive
