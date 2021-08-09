@@ -40,11 +40,13 @@ pub async fn streaming_clone<'a>(
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
+    let mut scuba = matches.scuba_sample_builder();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+    scuba.add("reponame", repo.name().clone());
 
     let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches)?;
-    match matches.subcommand() {
+    let res = match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
             // This command works only if there are no streaming chunks at all for a give repo.
             // So exit quickly if database is not empty
@@ -63,15 +65,29 @@ pub async fn streaming_clone<'a>(
             update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher).await
         }
         _ => Err(anyhow!("unknown subcommand")),
-    }
+    };
+
+    match res {
+        Ok(chunks_num) => {
+            scuba.add("chunks_inserted", format!("{}", chunks_num));
+        }
+        Err(ref err) => {
+            scuba.add("error", format!("{:#}", err));
+        }
+    };
+
+    scuba.log();
+    res?;
+    Ok(())
 }
 
+// Returns how many chunks were inserted
 async fn update_streaming_changelog(
     ctx: &CoreContext,
     repo: &BlobRepo,
     sub_m: &ArgMatches<'_>,
     streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
-) -> Result<(), Error> {
+) -> Result<usize, Error> {
     let max_data_chunk_size: u32 =
         args::get_and_parse(sub_m, MAX_DATA_CHUNK_SIZE, DEFAULT_MAX_DATA_CHUNK_SIZE);
     let (idx, data) = get_revlog_paths(&sub_m)?;
@@ -102,7 +118,7 @@ async fn update_streaming_changelog(
         .await?;
     info!(ctx.logger(), "current max chunk num is {:?}", start);
     let start = start.map_or(0, |start| start + 1);
-    let chunks = chunks
+    let chunks: Vec<_> = chunks
         .into_iter()
         .enumerate()
         .map(|(chunk_id, (chunk, keys))| {
@@ -111,9 +127,10 @@ async fn update_streaming_changelog(
         })
         .map(|(chunk_id, (chunk, keys))| (start + chunk_id, chunk, keys))
         .collect();
+    let chunks_num = chunks.len();
     insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks).await?;
 
-    Ok(())
+    Ok(chunks_num)
 }
 
 fn get_revlog_paths(sub_m: &ArgMatches<'_>) -> Result<(PathBuf, PathBuf), Error> {
@@ -435,6 +452,7 @@ fn add_common_args<'a, 'b>(sub_cmd: App<'a, 'b>) -> App<'a, 'b> {
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = args::MononokeAppBuilder::new("Tool to manage streaming clone chunks")
         .with_advanced_args_hidden()
+        .with_scuba_logging_args()
         .build()
         .subcommand(add_common_args(
             SubCommand::with_name(CREATE_SUB_CMD).about("create new streaming clone"),

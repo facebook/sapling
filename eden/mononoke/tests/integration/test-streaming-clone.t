@@ -18,13 +18,18 @@ setup configuration
   $
   blobimporting
 
-  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
+  $ LOG_FILE="$TESTTMP/log_file"
+  $ streaming_clone --scuba-dataset dataset --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0 (glob)
   * about to upload 1 entries (glob)
   * inserting into streaming clone database (glob)
   * current max chunk num is None (glob)
+  $ jq .normal.reponame < "$LOG_FILE"
+  "repo"
+  $ jq .normal.chunks_inserted < "$LOG_FILE"
+  "1"
 
 Try creating again, this should fail
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
