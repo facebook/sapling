@@ -15,7 +15,7 @@ use crate::receiver::CommandName::{
 use crate::util;
 use anyhow::{bail, Result};
 use eventsource::reqwest::Client;
-use log::{error, info, warn};
+use log::{error, info};
 use reqwest::Url;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -112,9 +112,6 @@ pub struct WorkspaceSubscriberService {
     /// Server-Sent Events endpoint for Commit Cloud Notifications
     pub(crate) notification_url: String,
 
-    /// Http endpoint for Commit Cloud requests
-    pub(crate) service_url: String,
-
     /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
     pub(crate) user_token_path: Option<PathBuf>,
 
@@ -144,10 +141,6 @@ impl WorkspaceSubscriberService {
                 .notification_url
                 .clone()
                 .ok_or_else(|| ErrorKind::CommitCloudConfigError("undefined 'notification_url'"))?,
-            service_url: config
-                .service_url
-                .clone()
-                .ok_or_else(|| ErrorKind::CommitCloudConfigError("undefined 'service_url'"))?,
             user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or_else(
                 || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
@@ -294,7 +287,6 @@ impl WorkspaceSubscriberService {
         repo_roots: Vec<PathBuf>,
     ) -> Result<thread::JoinHandle<()>> {
         let mut notification_url = Url::parse(&self.notification_url)?;
-        let service_url = Url::parse(&self.service_url)?;
 
         let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
         info!("{} Subscribing to {}", sid, notification_url);
@@ -319,13 +311,6 @@ impl WorkspaceSubscriberService {
             info!("{} Thread started...", sid);
 
             let fire = |reason: &'static str, version: Option<u64>| {
-                if service_url.socket_addrs(|| None).is_err() {
-                    warn!(
-                        "{} Skip CloudSyncTrigger: failed to lookup address information {}",
-                        sid, service_url
-                    );
-                    return;
-                }
                 for repo_root in repo_roots.iter() {
                     info!(
                         "{} Fire CloudSyncTrigger in '{}' {}",

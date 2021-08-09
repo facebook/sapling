@@ -74,10 +74,6 @@ mod defaults {
 
 #[derive(Debug, Deserialize)]
 pub struct CommitCloudConfig {
-    /// Http endpoint for Commit Cloud requests
-    #[serde(default)]
-    pub service_url: Option<String>,
-
     /// Server-Sent Events endpoint for real-time Commit Cloud Notifications
     #[serde(default)]
     pub notification_url: Option<String>,
