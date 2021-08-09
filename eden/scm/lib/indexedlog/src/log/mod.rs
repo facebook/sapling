@@ -1667,15 +1667,15 @@ impl Debug for Log {
 
 impl ReadonlyBuffer for ExternalKeyBuffer {
     #[inline]
-    fn slice(&self, start: u64, len: u64) -> &[u8] {
+    fn slice(&self, start: u64, len: u64) -> Option<&[u8]> {
         if start < self.disk_len {
-            &self.disk_buf[(start as usize)..(start + len) as usize]
+            self.disk_buf.get((start as usize)..(start + len) as usize)
         } else {
             let start = start - self.disk_len;
             // See "UNSAFE NOTICE" in ExternalKeyBuffer definition.
             // This pointer cannot be null.
             let mem_buf = unsafe { &*self.mem_buf };
-            &mem_buf[(start as usize)..(start + len) as usize]
+            mem_buf.get((start as usize)..(start + len) as usize)
         }
     }
 }

@@ -974,7 +974,16 @@ impl ExtKeyOffset {
             (start, len, Some(TYPE_BYTES + vlq_len1 + vlq_len2))
         };
         let key_buf = index.key_buf.as_ref();
-        Ok((key_buf.slice(start, len), entry_size))
+        let key_content = match key_buf.slice(start, len) {
+            Some(k) => k,
+            None => {
+                return Err(index.corruption(format!(
+                    "key buffer is invalid when reading referred keys at {}",
+                    start
+                )));
+            }
+        };
+        Ok((key_content, entry_size))
     }
 
     /// Create a new in-memory external key entry. The key cannot be empty.
@@ -1925,13 +1934,13 @@ pub struct Index {
 /// and expose them as if it's contiguous.
 pub trait ReadonlyBuffer {
     /// Get a slice using the given offset.
-    fn slice(&self, start: u64, len: u64) -> &[u8];
+    fn slice(&self, start: u64, len: u64) -> Option<&[u8]>;
 }
 
 impl<T: AsRef<[u8]>> ReadonlyBuffer for T {
     #[inline]
-    fn slice(&self, start: u64, len: u64) -> &[u8] {
-        &self.as_ref()[start as usize..(start + len) as usize]
+    fn slice(&self, start: u64, len: u64) -> Option<&[u8]> {
+        self.as_ref().get(start as usize..(start + len) as usize)
     }
 }
 
@@ -2863,7 +2872,14 @@ impl Index {
         let (key, key_buf_offset) = match key {
             InsertKey::Embed(k) => (k, None),
             InsertKey::Reference((start, len)) => {
-                let key = self.key_buf.as_ref().slice(start, len);
+                let key = match self.key_buf.as_ref().slice(start, len) {
+                    Some(k) => k,
+                    None => {
+                        return Err(
+                            self.corruption("key buffer is invalid when inserting referred keys")
+                        );
+                    }
+                };
                 // UNSAFE NOTICE: `key` is valid as long as `self.key_buf` is valid. `self.key_buf`
                 // won't be changed. So `self` can still be mutable without a read-only
                 // relationship with `key`.
