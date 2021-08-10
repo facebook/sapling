@@ -141,7 +141,7 @@ async fn test_add_heads() {
     );
 
     client.dag.flush(&["G".into()]).await.unwrap();
-    assert_eq!(client.output(), ["resolve names: [I, C], heads: [B]"]);
+    assert_eq!(client.output(), ["resolve names: [I], heads: [B]"]);
 
     let mut client = server.client_cloned_data().await;
     client

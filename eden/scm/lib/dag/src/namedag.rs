@@ -857,7 +857,7 @@ where
             let mut missing = self.missing_vertexes_confirmed_by_remote.write();
             for v in unassigned {
                 if missing.insert(v.clone()) {
-                    tracing::trace!(target: "dag::cache", "cached missing {:?} (ancestor missing)", &v);
+                    tracing::trace!(target: "dag::cache", "cached missing {:?} (definitely missing)", &v);
                 }
             }
         }
@@ -865,7 +865,8 @@ where
     }
 }
 
-/// Calculate vertexes that are definitely not assigned according to
+/// Calculate vertexes that are definitely not assigned (not in the IdMap,
+/// and not in the lazy part of the IdMap) according to
 /// `hint_pending_subdag`. This does not report all unassigned vertexes.
 /// But the reported vertexes are guaranteed not assigned.
 ///
@@ -874,13 +875,130 @@ where
 ///
 /// This function visits the "roots" of "parents", and if they are not assigned,
 /// then add their descendants to the "unassigned" result set.
-async fn calculate_definitely_unassigned_vertexes(
-    this: &dyn IdConvert,
+async fn calculate_definitely_unassigned_vertexes<IS, M, P, S>(
+    this: &AbstractNameDag<IdDag<IS>, M, P, S>,
     parents: &dyn Parents,
     heads: &[VertexName],
-) -> Result<Vec<VertexName>> {
+) -> Result<Vec<VertexName>>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    // subdag: vertexes to insert
+    //
+    // For example, when adding C---D to the graph A---B:
+    //
+    //      A---B
+    //           \
+    //            C---D
+    //
+    // The subdag is C---D (C does not have parent).
+    //
+    // Extra checks are needed because upon reload, the main graph
+    // A---B might already contain part of the subdag to be added.
     let subdag = parents.hint_subdag_for_insertion(heads).await?;
 
+    let mut remaining = subdag.all().await?;
+    let mut unassigned = NameSet::empty();
+
+    // For lazy graph, avoid some remote lookups by figuring out
+    // some definitely unassigned (missing) vertexes. For example,
+    //
+    //      A---B---C
+    //           \
+    //            D---E
+    //
+    // When adding D---E (subdag, new vertex that might trigger remote
+    // lookup) with parent B to the main graph (A--B--C),
+    // 1. If B exists, and is not in the master group, then B and its
+    //    descendants cannot be not lazy, and there is no need to lookup
+    //    D remotely.
+    // 2. If B exists, and is in the master group, and all its children
+    //    except D (i.e. C) are known locally, and the vertex name of D
+    //    does not match other children (C), we know that D cannot be
+    //    in the lazy part of the main graph, and can skip the remote
+    //    lookup.
+    let mut unassigned_roots = Vec::new();
+    if this.is_vertex_lazy() {
+        let roots = subdag.roots(remaining.clone()).await?;
+        let mut roots_iter = roots.iter().await?;
+        while let Some(root) = roots_iter.next().await {
+            let root = root?;
+
+            // Do a local "contains" check.
+            if matches!(
+                &this.contains_vertex_name_locally(&[root.clone()]).await?[..],
+                [true]
+            ) {
+                tracing::debug!(target: "dag::definitelymissing", "root {:?} is already known", &root);
+                continue;
+            }
+
+            let root_parents_id_set = {
+                let root_parents = parents.parent_names(root.clone()).await?;
+                let root_parents_set = match this
+                    .sort(&NameSet::from_static_names(root_parents))
+                    .await
+                {
+                    Ok(set) => set,
+                    Err(_) => {
+                        tracing::trace!(target: "dag::definitelymissing", "root {:?} is unclear (parents cannot be resolved)", &root);
+                        continue;
+                    }
+                };
+                this.to_id_set(&root_parents_set).await?
+            };
+
+            // If there are no parents of `root`, we cannot confidently test
+            // whether `root` is missing or not.
+            if root_parents_id_set.is_empty() {
+                tracing::trace!(target: "dag::definitelymissing", "root {:?} is unclear (no parents)", &root);
+                continue;
+            }
+
+            // All parents of `root` are non-lazy.
+            // So `root` is non-lazy and the local "contains" check is the same
+            // as a remote "contains" check.
+            if root_parents_id_set
+                .iter()
+                .all(|i| i.group() == Group::NON_MASTER)
+            {
+                tracing::debug!(target: "dag::definitelymissing", "root {:?} is not assigned (non-lazy parent)", &root);
+                unassigned_roots.push(root);
+                continue;
+            }
+
+            // All children of lazy parents of `root` are known locally.
+            // So `root` cannot match an existing vertex in the lazy graph.
+            let children_ids: Vec<Id> = this.dag.children(root_parents_id_set)?.iter().collect();
+            if this
+                .map
+                .contains_vertex_id_locally(&children_ids)
+                .await?
+                .iter()
+                .all(|b| *b)
+            {
+                tracing::debug!(target: "dag::definitelymissing", "root {:?} is not assigned (children of parents are known)", &root);
+                unassigned_roots.push(root);
+                continue;
+            }
+
+            tracing::trace!(target: "dag::definitelymissing", "root {:?} is unclear", &root);
+        }
+
+        if !unassigned_roots.is_empty() {
+            unassigned = subdag
+                .descendants(NameSet::from_static_names(unassigned_roots))
+                .await?;
+            remaining = remaining.difference(&unassigned);
+        }
+    }
+
+    // Figure out unassigned (missing) vertexes that do need to be inserted.
+    //
     // remaining:  vertexes to query.
     // unassigned: vertexes known unassigned.
     // assigned:   vertexes known assigned.
@@ -891,9 +1009,6 @@ async fn calculate_definitely_unassigned_vertexes(
     // - Include ancestors(subset_assigned) in "assigned".
     // - Include descendants(subset_unassigned) in "unassigned".
     // - Exclude "assigned" and "unassigned" from "remaining".
-
-    let mut remaining = subdag.all().await?;
-    let mut unassigned = NameSet::empty();
 
     for i in 1usize.. {
         let remaining_old_len = remaining.count().await?;
@@ -943,8 +1058,9 @@ async fn calculate_definitely_unassigned_vertexes(
         unassigned = unassigned.union(&subdag.descendants(new_unassigned).await?);
         let unassigned_new_len = unassigned.count().await?;
 
-        tracing::debug!(
-            "calculate_unassigned: #{} remaining {} => {}, unassigned: {} => {}",
+        tracing::trace!(
+            target: "dag::definitelymissing",
+            "#{} remaining {} => {}, unassigned: {} => {}",
             i,
             remaining_old_len,
             remaining_new_len,
@@ -952,6 +1068,7 @@ async fn calculate_definitely_unassigned_vertexes(
             unassigned_new_len
         );
     }
+    tracing::debug!(target: "dag::definitelymissing", "unassigned (missing): {:?}", &unassigned);
 
     let unassigned = unassigned.iter().await?.try_collect().await?;
     Ok(unassigned)

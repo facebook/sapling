@@ -194,31 +194,15 @@ Read file content:
    TRACE eagerepo::api:  found: a2e456504a5e61f763f1a0b36a6c247c7541b2b3, 41 bytes
   C (no-eol)
 
-Making a commit and amend:
-(Triggers remote lookup 1 time!)
-
-#if no-windows
-(Path separator is different on Windows)
+Make a commit on tip, and amend. They do not trigger remote lookups:
 
   $ echo Z > Z
-  $ LOG=dag::protocol=debug,dag::open=debug,dag::cache=trace hg commit -Am Z Z
-   DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
-   DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
-   DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
-   DEBUG dag::protocol: resolve names [567c5fc544ed12bf9619197fdd5263d6c3129cd0] remotely
-   TRACE dag::cache: cached missing 567c5fc544ed12bf9619197fdd5263d6c3129cd0 (server confirmed)
-   DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
+  $ LOG=warn hg up -q tip
+  $ LOG=dag::protocol=debug,dag::cache=trace hg commit -Am Z Z
+   TRACE dag::cache: cached missing ae226a63078b2a472fa38ec61318bb37e8c10bfb (definitely missing)
    DEBUG dag::cache: reusing cache (1 missing)
 
-  $ LOG=dag::protocol=debug,dag::open=debug,dag::cache=trace hg amend -m Z1
-   DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
-   DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
-   DEBUG dag::open: open at "$TESTTMP/e1/.hg/store/segments/v1"
-   DEBUG dag::protocol: resolve names [26ef60562bd4f4205f24250ea9d2e24e61108072] remotely
-   TRACE dag::cache: cached missing 26ef60562bd4f4205f24250ea9d2e24e61108072 (server confirmed)
-   DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
+  $ LOG=dag::protocol=debug,dag::cache=trace hg amend -m Z1
+   TRACE dag::cache: cached missing 893a1eb784b46325fb3062573ba15a22780ebe4a (definitely missing)
    DEBUG dag::cache: reusing cache (1 missing)
-   DEBUG dag::open: open at "$TESTTMP/cloned/.hg/store/segments/v1"
    DEBUG dag::cache: reusing cache (1 missing)
-
-#endif
