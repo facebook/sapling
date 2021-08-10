@@ -52,6 +52,7 @@ use crate::builder::Config;
 use crate::errors::EdenApiError;
 use crate::response::{Fetch, ResponseMeta};
 use crate::types::wire::pull::PullFastForwardRequest;
+use metrics::{Counter, EntranceGuard};
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.
@@ -62,6 +63,10 @@ const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
 const MAX_ERROR_MSG_LEN: usize = 500;
+
+static REQUESTS_INFLIGHT: Counter = Counter::new("edenapi.req_inflight");
+static FILES_INFLIGHT: Counter = Counter::new("edenapi.files_inflight");
+static FILES_ATTRS_INFLIGHT: Counter = Counter::new("edenapi.files_attrs_inflight");
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -236,14 +241,30 @@ impl Client {
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
     {
+        self.fetch_guard::<T>(requests, progress, vec![])
+    }
+
+    fn fetch_guard<T>(
+        &self,
+        requests: Vec<Request>,
+        progress: Option<ProgressCallback>,
+        mut guards: Vec<EntranceGuard>,
+    ) -> Result<Fetch<<T as ToApi>::Api>, EdenApiError>
+    where
+        T: ToApi + Send + DeserializeOwned + 'static,
+        <T as ToApi>::Api: Send + 'static,
+    {
+        guards.push(REQUESTS_INFLIGHT.entrance_guard(requests.len()));
         let Fetch { entries, stats } = self.fetch_raw::<T>(requests, progress)?;
 
+        let stats = metrics::wrap_future_keep_guards(stats, guards).boxed();
         let entries = entries
             .and_then(|v| future::ready(v.to_api().map_err(|e| EdenApiError::from(e.into()))))
             .boxed();
 
         Ok(Fetch { entries, stats })
     }
+
 
     /// Log the request to the configured log directory as JSON.
     fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
@@ -348,6 +369,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
+        let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
+
         let url = self.url(paths::FILES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
@@ -355,7 +378,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        Ok(self.fetch::<WireFileEntry>(requests, progress)?)
+        Ok(self.fetch_guard::<WireFileEntry>(requests, progress, guards)?)
     }
 
     async fn files_attrs(
@@ -374,6 +397,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
+        let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
+
         let url = self.url(paths::FILES, Some(&repo))?;
         let requests = self.prepare(&url, reqs, self.config.max_files, |reqs| {
             let req = FileRequest { reqs, keys: vec![] };
@@ -381,7 +406,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        Ok(self.fetch::<WireFileEntry>(requests, progress)?)
+        Ok(self.fetch_guard::<WireFileEntry>(requests, progress, guards)?)
     }
 
     async fn history(
