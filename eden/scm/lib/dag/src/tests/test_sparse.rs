@@ -375,7 +375,7 @@ async fn check_local_cache(client: &TestDag, v: VertexName, id: Id) {
         &client.dag.vertex_id_batch(&[v.clone()]).await.unwrap()[..],
         [Ok(i)] if *i == id
     ));
-    assert!(!client.output().is_empty()); // SUBOPTIMAL
+    assert!(client.output().is_empty());
 
     // Try looking up Id using different APIs.
     assert_eq!(client.dag.vertex_name(id).await.unwrap(), v.clone());
@@ -391,7 +391,7 @@ async fn check_local_cache(client: &TestDag, v: VertexName, id: Id) {
         &client.dag.vertex_name_batch(&[id]).await.unwrap()[..],
         [Ok(n)] if n == &v
     ));
-    assert!(!client.output().is_empty()); // SUBOPTIMAL
+    assert!(client.output().is_empty());
 }
 
 #[tokio::test]

@@ -1824,6 +1824,16 @@ where
     async fn vertex_name_batch(&self, ids: &[Id]) -> Result<Vec<Result<VertexName>>> {
         let mut list = self.map.vertex_name_batch(ids).await?;
         if self.is_vertex_lazy() {
+            // Read from overlay map cache.
+            {
+                let map = self.overlay_map.read();
+                for (r, id) in list.iter_mut().zip(ids) {
+                    if let Some(name) = map.lookup_vertex_name(*id) {
+                        *r = Ok(name);
+                    }
+                }
+            }
+            // Read from missing_vertexes_confirmed_by_remote cache.
             let missing_indexes: Vec<usize> = {
                 let max_master_id = self.dag.master_group()?.max();
                 list.iter()
@@ -1847,6 +1857,16 @@ where
     async fn vertex_id_batch(&self, names: &[VertexName]) -> Result<Vec<Result<Id>>> {
         let mut list = self.map.vertex_id_batch(names).await?;
         if self.is_vertex_lazy() {
+            // Read from overlay map cache.
+            {
+                let map = self.overlay_map.read();
+                for (r, name) in list.iter_mut().zip(names) {
+                    if let Some(id) = map.lookup_vertex_id(name) {
+                        *r = Ok(id);
+                    }
+                }
+            }
+            // Read from missing_vertexes_confirmed_by_remote cache.
             let missing_indexes: Vec<usize> = {
                 let known_missing = self.missing_vertexes_confirmed_by_remote.read();
                 list.iter()
