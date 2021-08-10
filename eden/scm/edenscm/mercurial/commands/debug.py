@@ -524,14 +524,13 @@ def debugchangelog(ui, repo, migrate=None, unless=[]):
     """
     cl = repo.changelog
     if migrate:
-        if unless and changelog2.backendname(repo) in unless:
-            return
-        changelog2.migrateto(repo, migrate)
-        return
-    ui.write(_("The changelog is backed by Rust. More backend information:\n"))
-    ui.write(_("%s") % cl.inner.describebackend())
-    if ui.debugflag:
-        cl.inner.explaininternals(ui.fout)
+        if not unless or changelog2.backendname(repo) not in unless:
+            changelog2.migrateto(repo, migrate)
+    if not migrate:
+        ui.write(_("The changelog is backed by Rust. More backend information:\n"))
+        ui.write(_("%s") % cl.inner.describebackend())
+        if ui.debugflag:
+            cl.inner.explaininternals(ui.fout)
 
 
 @command("debugcheckstate", [], "")
