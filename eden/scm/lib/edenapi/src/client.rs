@@ -191,7 +191,7 @@ impl Client {
     /// the order the responses arrive. The response streams will be
     /// combined into a single stream, in which the returned entries
     /// from different HTTP responses may be arbitrarily interleaved.
-    async fn fetch_raw<T: DeserializeOwned + Send + 'static>(
+    fn fetch_raw<T: DeserializeOwned + Send + 'static>(
         &self,
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
@@ -227,7 +227,7 @@ impl Client {
     /// the order the responses arrive. The response streams will be
     /// combined into a single stream, in which the returned entries
     /// from different HTTP responses may be arbitrarily interleaved.
-    async fn fetch<T>(
+    fn fetch<T>(
         &self,
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
@@ -236,7 +236,7 @@ impl Client {
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
     {
-        let Fetch { entries, stats } = self.fetch_raw::<T>(requests, progress).await?;
+        let Fetch { entries, stats } = self.fetch_raw::<T>(requests, progress)?;
 
         let entries = entries
             .and_then(|v| future::ready(v.to_api().map_err(|e| EdenApiError::from(e.into()))))
@@ -303,17 +303,15 @@ impl Client {
         let msg = format!("Requesting upload for {}", url);
         tracing::info!("{}", &msg);
 
-        Ok(self
-            .fetch::<WireUploadToken>(
-                vec![{
-                    let request = self
-                        .configure(Request::put(url.clone()))?
-                        .body(raw_content.to_vec());
-                    request
-                }],
-                progress,
-            )
-            .await?)
+        Ok(self.fetch::<WireUploadToken>(
+            vec![{
+                let request = self
+                    .configure(Request::put(url.clone()))?
+                    .body(raw_content.to_vec());
+                request
+            }],
+            progress,
+        )?)
     }
 }
 
@@ -357,7 +355,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        Ok(self.fetch::<WireFileEntry>(requests, progress).await?)
+        Ok(self.fetch::<WireFileEntry>(requests, progress)?)
     }
 
     async fn files_attrs(
@@ -383,7 +381,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        Ok(self.fetch::<WireFileEntry>(requests, progress).await?)
+        Ok(self.fetch::<WireFileEntry>(requests, progress)?)
     }
 
     async fn history(
@@ -410,9 +408,8 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        let Fetch { entries, stats } = self
-            .fetch::<WireHistoryResponseChunk>(requests, progress)
-            .await?;
+        let Fetch { entries, stats } =
+            self.fetch::<WireHistoryResponseChunk>(requests, progress)?;
 
         // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
         let entries = entries
@@ -450,7 +447,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        Ok(self.fetch::<WireTreeEntry>(requests, progress).await?)
+        Ok(self.fetch::<WireTreeEntry>(requests, progress)?)
     }
 
     async fn complete_trees(
@@ -487,7 +484,7 @@ impl EdenApi for Client {
             .cbor(&wire_tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        Ok(self.fetch::<WireTreeEntry>(vec![req], progress).await?)
+        Ok(self.fetch::<WireTreeEntry>(vec![req], progress)?)
     }
 
     async fn commit_revlog_data(
@@ -513,7 +510,6 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch_raw::<CommitRevlogData>(vec![req], progress)
-            .await
     }
 
     async fn bookmarks(
@@ -535,7 +531,7 @@ impl EdenApi for Client {
             .cbor(&bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        Ok(self.fetch::<WireBookmarkEntry>(vec![req], progress).await?)
+        Ok(self.fetch::<WireBookmarkEntry>(vec![req], progress)?)
     }
 
     async fn clone_data(
@@ -551,7 +547,7 @@ impl EdenApi for Client {
 
         let url = self.url(paths::CLONE_DATA, Some(&repo))?;
         let req = self.configure(Request::post(url))?;
-        let mut fetch = self.fetch::<WireCloneData>(vec![req], progress).await?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], progress)?;
         let clone_data = fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })??;
@@ -584,7 +580,7 @@ impl EdenApi for Client {
                 .to_wire(),
             )
             .map_err(EdenApiError::RequestSerializationFailed)?;
-        let mut fetch = self.fetch::<WireCloneData>(vec![req], None).await?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], None)?;
         let clone_data = fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })??;
@@ -674,9 +670,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self
-            .fetch::<WireCommitLocationToHashResponse>(formatted, progress)
-            .await?)
+        Ok(self.fetch::<WireCommitLocationToHashResponse>(formatted, progress)?)
     }
 
     async fn commit_hash_to_location(
@@ -711,9 +705,7 @@ impl EdenApi for Client {
             batch.to_wire()
         })?;
 
-        Ok(self
-            .fetch::<WireCommitHashToLocationResponse>(formatted, progress)
-            .await?)
+        Ok(self.fetch::<WireCommitHashToLocationResponse>(formatted, progress)?)
     }
 
     async fn commit_known(
@@ -837,7 +829,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self.fetch::<WireLookupResponse>(requests, None).await?)
+        Ok(self.fetch::<WireLookupResponse>(requests, None)?)
     }
 
     async fn process_files_upload(
@@ -950,9 +942,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self
-            .fetch::<WireUploadTokensResponse>(requests, None)
-            .await?)
+        Ok(self.fetch::<WireUploadTokensResponse>(requests, None)?)
     }
 
     async fn upload_trees_batch(
@@ -986,7 +976,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self.fetch::<WireUploadTreeResponse>(requests, None).await?)
+        Ok(self.fetch::<WireUploadTreeResponse>(requests, None)?)
     }
 
     // the request isn't batched, batching should be done outside if needed
@@ -1021,9 +1011,7 @@ impl EdenApi for Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        Ok(self
-            .fetch::<WireUploadTokensResponse>(vec![request], None)
-            .await?)
+        Ok(self.fetch::<WireUploadTokensResponse>(vec![request], None)?)
     }
 
     async fn upload_bonsai_changeset(
@@ -1045,9 +1033,7 @@ impl EdenApi for Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        Ok(self
-            .fetch::<WireUploadTokensResponse>(vec![request], None)
-            .await?)
+        Ok(self.fetch::<WireUploadTokensResponse>(vec![request], None)?)
     }
 
     async fn ephemeral_prepare(
@@ -1066,9 +1052,7 @@ impl EdenApi for Client {
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        let mut fetch = self
-            .fetch::<WireEphemeralPrepareResponse>(vec![request], None)
-            .await?;
+        let mut fetch = self.fetch::<WireEphemeralPrepareResponse>(vec![request], None)?;
         fetch.entries = fetch
             .entries
             .inspect_ok(|r| tracing::info!("Created bubble {}", r.bubble_id))
