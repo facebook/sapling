@@ -18,7 +18,6 @@ use regex::Regex;
 pub struct NoBadFilenamesBuilder<'a> {
     allowlist_regex: Option<&'a str>,
     illegal_regex: Option<&'a str>,
-    illegal_extensions: Option<Vec<String>>,
 }
 
 impl<'a> NoBadFilenamesBuilder<'a> {
@@ -28,9 +27,6 @@ impl<'a> NoBadFilenamesBuilder<'a> {
         }
         if let Some(v) = config.strings.get("illegal_regex") {
             self = self.illegal_regex(v)
-        }
-        if let Some(v) = config.strings.get("illegal_extensions") {
-            self = self.illegal_extensions(v.split(','))
         }
         self
     }
@@ -42,12 +38,6 @@ impl<'a> NoBadFilenamesBuilder<'a> {
 
     pub fn illegal_regex(mut self, regex: &'a str) -> Self {
         self.illegal_regex = Some(regex);
-        self
-    }
-
-    pub fn illegal_extensions(mut self, strs: impl IntoIterator<Item = impl AsRef<str>>) -> Self {
-        self.illegal_extensions =
-            Some(strs.into_iter().map(|s| String::from(s.as_ref())).collect());
         self
     }
 
@@ -63,9 +53,6 @@ impl<'a> NoBadFilenamesBuilder<'a> {
                     .ok_or_else(|| anyhow!("Missing illegal_regex config"))?,
             )
             .context("Failed to create regex for illegal")?,
-            illegal_extensions: self
-                .illegal_extensions
-                .ok_or_else(|| anyhow!("Missing illegal_extensions config"))?,
         })
     }
 }
@@ -73,7 +60,6 @@ impl<'a> NoBadFilenamesBuilder<'a> {
 pub struct NoBadFilenames {
     allowlist_regex: Option<Regex>,
     illegal_regex: Regex,
-    illegal_extensions: Vec<String>,
 }
 
 impl NoBadFilenames {
@@ -97,18 +83,6 @@ impl FileHook for NoBadFilenames {
         }
 
         let path = format!("{}", path);
-        let lowercase_path = path.to_ascii_lowercase();
-        for ext in &self.illegal_extensions {
-            if lowercase_path.ends_with(ext) {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                    "Illegal filename",
-                    format!(
-                        "ABORT: Illegal filename: '{}'. You cannot commit {} files.",
-                        path, ext
-                    ),
-                )));
-            }
-        }
         if self.illegal_regex.is_match(&path) {
             match self.allowlist_regex {
                 Some(ref allow) if allow.is_match(&path) => {}
