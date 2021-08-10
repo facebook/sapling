@@ -107,6 +107,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         let _guard = span.enter();
         let in_scope = Arc::new(()); // Used to tell progress rendering thread to stop.
 
+        metrics_render::init_from_env(Arc::downgrade(&in_scope));
+
         let table = commands::table();
         let exit_code = match {
             dispatch::Dispatcher::from_args(args[1..].to_vec()).and_then(|dispatcher| {
