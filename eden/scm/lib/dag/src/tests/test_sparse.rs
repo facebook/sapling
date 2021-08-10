@@ -331,3 +331,135 @@ async fn test_pull_no_pending_changes() {
         "ProgrammingError: import_pull_data called with pending heads ([D])"
     );
 }
+
+async fn client_for_local_cache_test() -> TestDag {
+    let server = TestDag::draw("A-B-C-D-E-F-G # master: G");
+    server.client_cloned_data().await
+}
+
+async fn check_local_cache(client: &TestDag, v: VertexName, id: Id) {
+    // Try looking up vertex using different APIs.
+    assert_eq!(client.dag.vertex_id(v.clone()).await.unwrap(), id);
+    assert!(client.output().is_empty());
+
+    assert!(client.dag.contains_vertex_name(&v.clone()).await.unwrap());
+    assert!(client.output().is_empty());
+
+    assert_eq!(
+        client.dag.vertex_id_optional(&v.clone()).await.unwrap(),
+        Some(id)
+    );
+    assert!(client.output().is_empty());
+
+    assert_eq!(
+        client
+            .dag
+            .vertex_id_with_max_group(&v.clone(), Group::MASTER)
+            .await
+            .unwrap(),
+        Some(id)
+    );
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client
+            .dag
+            .contains_vertex_name_locally(&[v.clone()])
+            .await
+            .unwrap()[..],
+        [true]
+    ));
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client.dag.vertex_id_batch(&[v.clone()]).await.unwrap()[..],
+        [Ok(i)] if *i == id
+    ));
+    assert!(!client.output().is_empty()); // SUBOPTIMAL
+
+    // Try looking up Id using different APIs.
+    assert_eq!(client.dag.vertex_name(id).await.unwrap(), v.clone());
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client.dag.contains_vertex_id_locally(&[id]).await.unwrap()[..],
+        [true]
+    ));
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client.dag.vertex_name_batch(&[id]).await.unwrap()[..],
+        [Ok(n)] if n == &v
+    ));
+    assert!(!client.output().is_empty()); // SUBOPTIMAL
+}
+
+#[tokio::test]
+async fn test_local_cache_existing_vertex_to_id() {
+    let client = client_for_local_cache_test().await;
+
+    let v: VertexName = "C".into();
+    let id = client.dag.vertex_id(v.clone()).await.unwrap();
+    assert_eq!(client.output(), ["resolve names: [C], heads: [G]"]);
+
+    check_local_cache(&client, v, id).await;
+}
+
+#[tokio::test]
+async fn test_local_cache_existing_id_to_vertex() {
+    let client = client_for_local_cache_test().await;
+
+    let id = Id(3);
+    let v = client.dag.vertex_name(id).await.unwrap();
+    assert_eq!(client.output(), ["resolve paths: [G~3]"]);
+
+    check_local_cache(&client, v, id).await;
+}
+
+#[tokio::test]
+async fn test_local_cache_missing_vertex_to_id() {
+    let client = client_for_local_cache_test().await;
+
+    // Test that the local cache can prevent remote lookups resolving Vertex -> None.
+    assert!(client.dag.vertex_id("Z".into()).await.is_err());
+    assert_eq!(client.output(), ["resolve names: [Z], heads: [G]"]);
+
+    // Try looking up using different APIs.
+    assert!(client.dag.vertex_id("Z".into()).await.is_err());
+    assert!(client.output().is_empty());
+
+    assert!(!client.dag.contains_vertex_name(&"Z".into()).await.unwrap());
+    assert!(client.output().is_empty());
+
+    assert_eq!(
+        client.dag.vertex_id_optional(&"Z".into()).await.unwrap(),
+        None,
+    );
+    assert!(client.output().is_empty());
+
+    assert_eq!(
+        client
+            .dag
+            .vertex_id_with_max_group(&"Z".into(), Group::MASTER)
+            .await
+            .unwrap(),
+        None,
+    );
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client
+            .dag
+            .contains_vertex_name_locally(&["Z".into()])
+            .await
+            .unwrap()[..],
+        [false]
+    ));
+    assert!(client.output().is_empty());
+
+    assert!(matches!(
+        &client.dag.vertex_id_batch(&["Z".into()]).await.unwrap()[..],
+        [Err(_)]
+    ));
+    assert!(client.output().is_empty());
+}
