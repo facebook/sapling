@@ -1183,6 +1183,7 @@ where
 
         let mut overlay = self.overlay_map.write();
         for (id, name) in to_insert {
+            tracing::trace!(target: "dag::cache", "cached mapping {:?} <=> {:?}", id, &name);
             overlay.insert_vertex_id_name(id, name);
         }
 
