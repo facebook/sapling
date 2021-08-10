@@ -5,4 +5,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 once_cell = "1.4"

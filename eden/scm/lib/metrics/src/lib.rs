@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use futures::Future;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
@@ -66,6 +67,13 @@ impl Drop for EntranceGuard {
     fn drop(&mut self) {
         self.0.sub(self.1);
     }
+}
+
+pub async fn wrap_future_keep_guards<F: Future>(
+    future: F,
+    _guards: Vec<EntranceGuard>,
+) -> F::Output {
+    future.await
 }
 
 #[derive(Default)]
