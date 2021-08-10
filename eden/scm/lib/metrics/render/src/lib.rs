@@ -6,6 +6,7 @@
  */
 
 use metrics::{Counter, Registry};
+use once_cell::sync::Lazy;
 use progress_model::Registry as ProgressRegistry;
 use progress_model::{IoSample, IoTimeSeries, TimeSeriesMode};
 use std::collections::HashSet;
@@ -13,6 +14,7 @@ use std::env;
 use std::sync::Weak;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use tracing::error;
 
 /// Initializes metrics reporting while guard is not dropped.
@@ -21,6 +23,10 @@ use tracing::error;
 ///
 /// Filter is the name of the metric, either full name, or a prefix (crate name without '.').
 /// Reporter is optional, by default progress reporter is used - it renders progress bar with the counter.
+///
+/// Available renderers:
+/// p | progress = render interactively using progress crate.
+/// l | log = periodically print available counters. This best works for non-interactive executions like when debugging performance inside EdenFS
 pub fn init_from_env(guard: Weak<()>) {
     if let Ok(config) = env::var("EDENSCM_METRICS") {
         init(&config, guard)
@@ -69,6 +75,7 @@ fn parse_config(config: &str) -> Vec<(MetricsFilter, Renderer)> {
                 }
                 Renderer::ProgressBar(Default::default())
             }
+            Some("l") | Some("log") => Renderer::Log,
             Some(other) => {
                 error!("Invalid metrics renderer: {}", other);
                 continue;
@@ -105,13 +112,41 @@ impl MetricsFilter {
 
 enum Renderer {
     ProgressBar(HashSet<&'static str>),
+    Log,
 }
 
 impl Renderer {
     pub fn render(&mut self, metrics: Vec<(&'static str, &'static Counter)>) {
         match self {
             Self::ProgressBar(inner) => Self::render_progress(inner, metrics),
+            Self::Log => Self::render_log(metrics),
         }
+    }
+
+    fn render_log(metrics: Vec<(&'static str, &'static Counter)>) {
+        use std::fmt::Write;
+
+        const LINE_LENGTH: usize = 120;
+        static STARTED: Lazy<Instant> = Lazy::new(Instant::now);
+
+        let started = *STARTED;
+        if metrics.is_empty() {
+            return;
+        }
+
+        let timestamp_ms = started.elapsed().as_millis();
+        let mut lines = vec![];
+        let mut current_line = String::with_capacity(LINE_LENGTH);
+        write!(current_line, "T{:0>8}{: <31}", timestamp_ms, "").ok(); // 40 symbols
+        for (name, counter) in metrics {
+            if current_line.len() >= LINE_LENGTH {
+                lines.push(current_line);
+                current_line = String::with_capacity(LINE_LENGTH);
+            }
+            write!(current_line, "{:.<32}{: <8}", name, counter.value()).ok(); // 40 symbols
+        }
+        lines.push(current_line);
+        println!("{}", lines.join("\n"));
     }
 
     fn render_progress(
