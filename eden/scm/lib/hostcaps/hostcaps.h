@@ -9,5 +9,5 @@
 
 // @dep=//eden/scm/lib/hostcaps:hostcaps
 
-extern "C" bool eden_is_prod();
-extern "C" bool eden_has_servicerouter();
+extern "C" bool fb_is_prod();
+extern "C" bool fb_has_servicerouter();

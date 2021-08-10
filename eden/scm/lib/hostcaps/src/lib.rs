@@ -16,11 +16,11 @@ pub fn is_prod() -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn eden_is_prod() -> bool {
+pub extern "C" fn fb_is_prod() -> bool {
     is_prod()
 }
 
 #[no_mangle]
-pub extern "C" fn eden_has_servicerouter() -> bool {
+pub extern "C" fn fb_has_servicerouter() -> bool {
     is_prod()
 }
