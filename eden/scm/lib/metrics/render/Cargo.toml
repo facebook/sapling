@@ -5,5 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+async-runtime = { path = "../../async-runtime" }
 metrics = { path = ".." }
+progress-model = { path = "../../progress/model" }
 tracing = "0.1"
