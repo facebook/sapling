@@ -47,10 +47,24 @@ impl Counter {
         self.inner().load(Ordering::Relaxed)
     }
 
+    /// Increment counter by v and decrement it back by v when returned guard is dropped
+    pub fn entrance_guard(&'static self, v: usize) -> EntranceGuard {
+        self.add(v);
+        EntranceGuard(self, v)
+    }
+
     fn inner(&'static self) -> &AtomicUsize {
         self.registered
             .get_or_init(|| Registry::global().register_counter(self));
         &self.inner
+    }
+}
+
+pub struct EntranceGuard(&'static Counter, usize);
+
+impl Drop for EntranceGuard {
+    fn drop(&mut self) {
+        self.0.sub(self.1);
     }
 }
 
@@ -95,5 +109,16 @@ mod test {
         let counters = Registry::global().counters();
         assert_eq!(1, counters.get("COUNTER1").unwrap().value());
         assert_eq!(5, counters.get("COUNTER2").unwrap().value());
+    }
+
+    #[test]
+    fn entrance_test() {
+        static COUNTER3: Counter = Counter::new("COUNTER3");
+        let guard1 = COUNTER3.entrance_guard(1);
+        let counters = Registry::global().counters();
+        assert_eq!(1, counters.get("COUNTER3").unwrap().value());
+        std::mem::drop(guard1);
+        let counters = Registry::global().counters();
+        assert_eq!(0, counters.get("COUNTER3").unwrap().value());
     }
 }
