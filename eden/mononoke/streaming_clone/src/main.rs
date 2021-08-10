@@ -69,9 +69,11 @@ pub async fn streaming_clone<'a>(
 
     match res {
         Ok(chunks_num) => {
+            scuba.add("success", 1);
             scuba.add("chunks_inserted", format!("{}", chunks_num));
         }
         Err(ref err) => {
+            scuba.add("success", 0);
             scuba.add("error", format!("{:#}", err));
         }
     };
