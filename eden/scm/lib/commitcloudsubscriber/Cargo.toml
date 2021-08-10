@@ -20,7 +20,7 @@ description = '''
 anyhow = "1.0"
 eventsource = "0.5"
 filetime = "0.2.9"
-hostcaps = { path = "../hostcaps" }
+hostcaps = { path = "../../../../common/rust/shed/hostcaps" }
 lazy_static = "1.0"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 regex = "1.4.2"
