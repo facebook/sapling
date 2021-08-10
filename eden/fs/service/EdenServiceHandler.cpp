@@ -658,7 +658,7 @@ EdenServiceHandler::subscribeStreamTemporary(
 
   // This is called when the subscription channel is torn down
   auto onDisconnect = [weakMount, handle, disconnected] {
-    XLOG(ERR) << "streaming client disconnected";
+    XLOG(INFO) << "streaming client disconnected";
     auto mount = weakMount.lock();
     if (mount) {
       disconnected->store(true);
