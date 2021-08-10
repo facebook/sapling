@@ -28,16 +28,16 @@ Clone the lazy repo:
 
 Commit and edit on top of B:
 
-  $ LOG=dag::protocol=debug hg up $B -q
+  $ LOG=dag::protocol=debug,checkout::prefetch=debug hg up $B -q
    DEBUG dag::protocol: resolve names [112478962961147124edd43549aedd1a335e44bf] remotely
+   DEBUG dag::protocol: resolve names [112478962961147124edd43549aedd1a335e44bf] remotely
+   DEBUG dag::protocol: resolve ids [2] remotely
+   DEBUG checkout::prefetch: children of 112478962961147124edd43549aedd1a335e44bf: ['26805aba1e600a82e93661149f2313866a221a7b']
    DEBUG dag::protocol: resolve ids [0] remotely
    DEBUG dag::protocol: resolve names [112478962961147124edd43549aedd1a335e44bf] remotely
   $ touch B1
   $ LOG=dag::protocol=debug hg commit -Am B1 B1
-   DEBUG dag::protocol: resolve names [6450b32886cbb2753b70e8ee3ccc82db22a0aa84] remotely
 
   $ LOG=dag::protocol=debug hg metaedit -m B11
-   DEBUG dag::protocol: resolve names [9eea6a043f2ec4b2de206be3b46bba3a2bb1c37b] remotely
 
 (suboptimal: extra network fetches needed for checkout)
-(suboptimal: extra network fetches needed for commit and amend)

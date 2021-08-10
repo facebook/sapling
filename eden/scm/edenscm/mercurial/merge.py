@@ -20,6 +20,7 @@ import struct
 from bindings import checkout as nativecheckout
 from bindings import status as nativestatus
 from bindings import worker as rustworker
+from edenscm import tracing
 
 from . import (
     copies,
@@ -2149,6 +2150,45 @@ def querywatchmanrecrawls(repo):
         return 0
 
 
+def _prefetchlazychildren(repo, node):
+    """Prefetch children for ``node`` for lazy changelog.
+
+    This helps making committing on ``node`` offline-friendly.
+    """
+    # Prefetch lazy node to make offline commit possible.
+    if "lazychangelog" in repo.storerequirements:
+        # node might be a revision number.
+        if not isinstance(node, bytes):
+            node = repo[node].node()
+        dag = repo.changelog.dag
+        if node in dag.mastergroup():
+            # See D30004908. Pre-calcualte children(node) so
+            # commit on node is more offline friendly.
+            try:
+                childrennodes = list(dag.children([node]))
+            except Exception as e:
+                tracing.debug(
+                    "cannot resolve children of %s: %r" % (hex(node), e),
+                    target="checkout::prefetch",
+                )
+            else:
+                tracing.debug(
+                    "children of %s: %s" % (hex(node), [hex(n) for n in childrennodes]),
+                    target="checkout::prefetch",
+                )
+        else:
+            tracing.debug(
+                "skip prefetch because %s is not in master (lazy) group" % hex(node),
+                target="checkout::prefetch",
+            )
+
+    else:
+        tracing.debug(
+            "skip prefetch for non-lazychangelog",
+            target="checkout::prefetch",
+        )
+
+
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def update(
@@ -2220,6 +2260,8 @@ def update(
     # This function used to find the default destination if node was None, but
     # that's now in destutil.py.
     assert node is not None
+
+    _prefetchlazychildren(repo, node)
 
     if edenfs.requirement in repo.requirements:
         if matcher is not None and not matcher.always():
