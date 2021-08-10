@@ -1101,6 +1101,7 @@ where
         } else {
             tracing::debug!(target: "dag::protocol", "resolve names ({}) remotely", names.len());
         }
+        crate::failpoint!("dag-resolve-vertexes-remotely");
         let request: protocol::RequestNameToLocation =
             (self.map(), self.dag()).process(names.to_vec()).await?;
         let path_names = self
@@ -1141,6 +1142,7 @@ where
         } else {
             tracing::debug!(target: "dag::protocol", "resolve ids ({}) remotely", ids.len());
         }
+        crate::failpoint!("dag-resolve-ids-remotely");
         let request: protocol::RequestLocationToName = (self.map(), self.dag())
             .process(IdSet::from_spans(ids.iter().copied()))
             .await?;
