@@ -3,3 +3,7 @@
 name = "metrics-render"
 version = "0.1.0"
 edition = "2018"
+
+[dependencies]
+metrics = { path = ".." }
+tracing = "0.1"
