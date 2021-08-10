@@ -182,7 +182,7 @@ impl IoTimeSeries {
         let values: Vec<u8> = bytes_per_second_list
             .into_iter()
             .map(|bytes_per_second| {
-                if bytes_per_second == 0 {
+                if bytes_per_second == 0 || bytes_per_second_max <= 1 {
                     0u8
                 } else {
                     (1 + ((bytes_per_second - 1) * (max - 1) as u64) / (bytes_per_second_max - 1))
