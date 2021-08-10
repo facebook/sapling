@@ -466,10 +466,11 @@ def debugcapabilities(ui, path, **opts):
             [],
             _("skip migrating from specified formats"),
         ),
+        ("", "remove-backup", False, _("remove backup files after migration")),
     ],
     "",
 )
-def debugchangelog(ui, repo, migrate=None, unless=[]):
+def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
     """show or migrate changelog backend
 
     If --migrate is not set, print details about the current changelog backend.
@@ -526,7 +527,9 @@ def debugchangelog(ui, repo, migrate=None, unless=[]):
     if migrate:
         if not unless or changelog2.backendname(repo) not in unless:
             changelog2.migrateto(repo, migrate)
-    if not migrate:
+    if remove_backup:
+        changelog2.removebackupfiles(repo)
+    if not migrate and not remove_backup:
         ui.write(_("The changelog is backed by Rust. More backend information:\n"))
         ui.write(_("%s") % cl.inner.describebackend())
         if ui.debugflag:

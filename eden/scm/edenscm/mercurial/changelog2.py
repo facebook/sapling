@@ -22,6 +22,7 @@ from . import (
     smartset,
     util,
     visibility,
+    vfs as vfsmod,
 )
 from .changelog import changelogrevision, hgcommittext, readfiles
 from .i18n import _
@@ -945,3 +946,46 @@ def backendname(repo):
             return name
     # Fallback
     return "revlog"
+
+
+def _tryremove(repo, svfs, name):
+    """Attempt to remote a file from svfs.
+    Failures such as EPERM are ignored.
+    """
+    try:
+        if svfs.isdir(name):
+            svfs.rmtree(name)
+        else:
+            svfs.unlink(name)
+        repo.ui.note_err(_("removed backup file %s\n") % name)
+    except Exception as e:
+        repo.ui.status_err("cannot remove backup file %s: %s\n" % (name, e))
+
+
+def removebackupfiles(repo):
+    """Attempt to remove backup files to free disk space.
+
+    Only works for the lazy changelog backend. Has no effects for other
+    changelog backends.
+    """
+    ui = repo.ui
+    # Only works for lazy changelog.
+    if "lazychangelog" not in repo.storerequirements:
+        return
+
+    # Bypass svfs file name encoding. (Rust logic does not respect them)
+    svfs = vfsmod.vfs(repo.svfs.join(""))
+
+    # Remove 00changelog*, hgcommits.tmp.*, segments.old.*
+    for name in sorted(svfs.listdir()):
+        if (
+            name.startswith("00changelog.")
+            or name.startswith("hgcommits.tmp.")
+            or name.startswith("segments.old.")
+        ):
+            _tryremove(repo, svfs, name)
+    # Remove segments/v1.bak*
+    if svfs.isdir("segments"):
+        for name in svfs.listdir("segments"):
+            if name.startswith("v1.") and name.endswith(".bak"):
+                _tryremove(repo, svfs, "segments/%s" % name)

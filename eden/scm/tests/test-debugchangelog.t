@@ -302,3 +302,22 @@ Revlog -> Lazy:
       EdenAPI (remaining, public)
       Revlog (not used)
   Commit Hashes: lazy, using EdenAPI (repo = reponame-default)
+
+--remove-backup removes backup files
+
+  $ ls .hg/store/00changelog.{i,d}
+  .hg/store/00changelog.d
+  .hg/store/00changelog.i
+  $ ls .hg/store/segments
+  v1
+  v1.*.bak (glob)
+
+  $ hg debugchangelog --migrate lazy --remove-backup -v
+  removed backup file 00changelog.d
+  removed backup file 00changelog.i
+  removed backup file 00changelog.len
+  removed backup file segments/v1.*.bak (glob)
+
+  $ ls .hg/store/segments
+  v1
+

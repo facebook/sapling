@@ -412,7 +412,7 @@ Show all commands + options
   debugbundle: all, part-type, spec
   debugcapabilities: 
   debugcauserusterror: 
-  debugchangelog: migrate, unless
+  debugchangelog: migrate, unless, remove-backup
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 
