@@ -579,7 +579,7 @@ HRESULT PrjfsChannelInner::getFileData(
 }
 
 namespace {
-typedef folly::Future<folly::Unit> (PrjfsDispatcher::*NotificationHandler)(
+typedef folly::Future<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(
     RelativePath oldPath,
     RelativePath destPath,
     bool isDirectory,
@@ -607,35 +607,35 @@ std::string newFileCreatedRenderer(
     RelativePathPiece /*destPath*/,
     bool isDirectory) {
   return fmt::format(
-      FMT_STRING("{}({})"), isDirectory ? "mkdir" : "mknod", relPath);
+      FMT_STRING("{}Created({})"), isDirectory ? "dir" : "file", relPath);
 }
 
 std::string fileOverwrittenRenderer(
     RelativePathPiece relPath,
     RelativePathPiece /*destPath*/,
     bool /*isDirectory*/) {
-  return fmt::format(FMT_STRING("overwrite({})"), relPath);
+  return fmt::format(FMT_STRING("fileOverwritten({})"), relPath);
 }
 
 std::string fileHandleClosedFileModifiedRenderer(
     RelativePathPiece relPath,
     RelativePathPiece /*destPath*/,
     bool /*isDirectory*/) {
-  return fmt::format(FMT_STRING("modified({})"), relPath);
+  return fmt::format(FMT_STRING("fileModified({})"), relPath);
 }
 
 std::string fileRenamedRenderer(
     RelativePathPiece oldPath,
     RelativePathPiece newPath,
     bool /*isDirectory*/) {
-  return fmt::format(FMT_STRING("rename({} -> {})"), oldPath, newPath);
+  return fmt::format(FMT_STRING("fileRenamed({} -> {})"), oldPath, newPath);
 }
 
-std::string preRenamedRenderer(
+std::string preRenameRenderer(
     RelativePathPiece oldPath,
     RelativePathPiece newPath,
     bool /*isDirectory*/) {
-  return fmt::format(FMT_STRING("prerename({} -> {})"), oldPath, newPath);
+  return fmt::format(FMT_STRING("preRename({} -> {})"), oldPath, newPath);
 }
 
 std::string fileHandleClosedFileDeletedRenderer(
@@ -643,7 +643,7 @@ std::string fileHandleClosedFileDeletedRenderer(
     RelativePathPiece /*destPath*/,
     bool isDirectory) {
   return fmt::format(
-      FMT_STRING("{}({})"), isDirectory ? "rmdir" : "unlink", relPath);
+      FMT_STRING("{}Deleted({})"), isDirectory ? "dir" : "file", relPath);
 }
 
 std::string preSetHardlinkRenderer(
@@ -657,48 +657,125 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
     notificationHandlerMap = {
         {
             PRJ_NOTIFICATION_NEW_FILE_CREATED,
-            {&PrjfsDispatcher::newFileCreated,
+            {&PrjfsChannelInner::newFileCreated,
              newFileCreatedRenderer,
              &ChannelThreadStats::newFileCreated},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
-            {&PrjfsDispatcher::fileOverwritten,
+            {&PrjfsChannelInner::fileOverwritten,
              fileOverwrittenRenderer,
              &ChannelThreadStats::fileOverwritten},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
-            {&PrjfsDispatcher::fileHandleClosedFileModified,
+            {&PrjfsChannelInner::fileHandleClosedFileModified,
              fileHandleClosedFileModifiedRenderer,
              &ChannelThreadStats::fileHandleClosedFileModified},
         },
         {
             PRJ_NOTIFICATION_FILE_RENAMED,
-            {&PrjfsDispatcher::fileRenamed,
+            {&PrjfsChannelInner::fileRenamed,
              fileRenamedRenderer,
              &ChannelThreadStats::fileRenamed},
         },
         {
             PRJ_NOTIFICATION_PRE_RENAME,
-            {&PrjfsDispatcher::preRename,
-             preRenamedRenderer,
+            {&PrjfsChannelInner::preRename,
+             preRenameRenderer,
              &ChannelThreadStats::preRenamed},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
-            {&PrjfsDispatcher::fileHandleClosedFileDeleted,
+            {&PrjfsChannelInner::fileHandleClosedFileDeleted,
              fileHandleClosedFileDeletedRenderer,
              &ChannelThreadStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
-            {&PrjfsDispatcher::preSetHardlink,
+            {&PrjfsChannelInner::preSetHardlink,
              preSetHardlinkRenderer,
              &ChannelThreadStats::preSetHardlink},
         },
 };
 } // namespace
+
+folly::Future<folly::Unit> PrjfsChannelInner::newFileCreated(
+    RelativePath relPath,
+    RelativePath /*destPath*/,
+    bool isDirectory,
+    ObjectFetchContext& context) {
+  if (isDirectory) {
+    return dispatcher_->dirCreated(std::move(relPath), context);
+  } else {
+    return dispatcher_->fileCreated(std::move(relPath), context);
+  }
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::fileOverwritten(
+    RelativePath relPath,
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
+    ObjectFetchContext& context) {
+  return dispatcher_->fileModified(std::move(relPath), context);
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileModified(
+    RelativePath relPath,
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
+    ObjectFetchContext& context) {
+  return dispatcher_->fileModified(std::move(relPath), context);
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::fileRenamed(
+    RelativePath oldPath,
+    RelativePath newPath,
+    bool isDirectory,
+    ObjectFetchContext& context) {
+  // When files are moved in and out of the repo, the rename paths are
+  // empty, handle these like creation/removal of files.
+  if (oldPath.empty()) {
+    return newFileCreated(
+        std::move(newPath), RelativePath{}, isDirectory, context);
+  } else if (newPath.empty()) {
+    return fileHandleClosedFileDeleted(
+        std::move(oldPath), RelativePath{}, isDirectory, context);
+  } else {
+    return dispatcher_->fileRenamed(
+        std::move(oldPath), std::move(newPath), context);
+  }
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::preRename(
+    RelativePath /*oldPath*/,
+    RelativePath /*newPath*/,
+    bool /*isDirectory*/,
+    ObjectFetchContext& /*context*/) {
+  return folly::unit;
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
+    RelativePath oldPath,
+    RelativePath /*destPath*/,
+    bool isDirectory,
+    ObjectFetchContext& context) {
+  if (isDirectory) {
+    return dispatcher_->dirDeleted(std::move(oldPath), context);
+  } else {
+    return dispatcher_->fileDeleted(std::move(oldPath), context);
+  }
+}
+
+folly::Future<folly::Unit> PrjfsChannelInner::preSetHardlink(
+    RelativePath relPath,
+    RelativePath /*newPath*/,
+    bool /*isDirectory*/,
+    ObjectFetchContext& context) {
+  return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+      HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
+      fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
+}
 
 HRESULT PrjfsChannelInner::notification(
     std::shared_ptr<PrjfsRequestContext> context,
@@ -732,7 +809,7 @@ HRESULT PrjfsChannelInner::notification(
       context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
       FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
-      return (dispatcher_.get()->*handler)(
+      return (this->*handler)(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
           .thenValue([context = std::move(context)](auto&&) {
             context->sendNotificationSuccess();

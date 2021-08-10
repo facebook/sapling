@@ -32,46 +32,29 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       RelativePath path,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> newFileCreated(
+  folly::Future<folly::Unit> fileCreated(
       RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileOverwritten(
+  folly::Future<folly::Unit> dirCreated(
       RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileHandleClosedFileModified(
+  folly::Future<folly::Unit> fileModified(
       RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> preRename(
+  folly::Future<folly::Unit> fileDeleted(
       RelativePath oldPath,
-      RelativePath newPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
-      RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
-      ObjectFetchContext& context) override;
-
-  folly::Future<folly::Unit> preSetHardlink(
+  folly::Future<folly::Unit> dirDeleted(
       RelativePath oldPath,
-      RelativePath newPath,
-      bool isDirectory,
       ObjectFetchContext& context) override;
 
  private:

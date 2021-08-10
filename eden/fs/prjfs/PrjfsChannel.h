@@ -120,6 +120,73 @@ class PrjfsChannelInner {
       PCWSTR destinationFileName,
       PRJ_NOTIFICATION_PARAMETERS* notificationParameters);
 
+  /**
+   * Notification sent when a file or directory has been created.
+   */
+  folly::Future<folly::Unit> newFileCreated(
+      RelativePath relPath,
+      RelativePath destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent when a file or directory has been replaced.
+   */
+  folly::Future<folly::Unit> fileOverwritten(
+      RelativePath relPath,
+      RelativePath destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent when a file has been modified.
+   */
+  folly::Future<folly::Unit> fileHandleClosedFileModified(
+      RelativePath relPath,
+      RelativePath destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent when a file or directory has been renamed.
+   */
+  folly::Future<folly::Unit> fileRenamed(
+      RelativePath oldPath,
+      RelativePath newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent prior to a file or directory being renamed.
+   *
+   * Called prior to ProjectedFS doing any on-disk checks, and thus if newPath
+   * exist on disk, the file rename may later fail. The rename is known to have
+   * happened only when fileRenamed is called.
+   */
+  folly::Future<folly::Unit> preRename(
+      RelativePath oldPath,
+      RelativePath newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent when a file or directory has been removed.
+   */
+  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+      RelativePath relPath,
+      RelativePath destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  /**
+   * Notification sent prior to a hardlink being created.
+   */
+  folly::Future<folly::Unit> preSetHardlink(
+      RelativePath oldPath,
+      RelativePath newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
   }

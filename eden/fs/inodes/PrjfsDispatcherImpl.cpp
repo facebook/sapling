@@ -200,16 +200,21 @@ folly::Future<TreeInodePtr> createDirInode(
           });
 }
 
-folly::Future<folly::Unit> createFile(
+enum class InodeType : bool {
+  Tree,
+  File,
+};
+
+folly::Future<folly::Unit> createInode(
     const EdenMount& mount,
     RelativePath path,
-    bool isDirectory,
+    InodeType inodeType,
     ObjectFetchContext& context) {
   auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context);
   return std::move(treeInodeFut)
       .thenValue(
-          [path = std::move(path), isDirectory](const TreeInodePtr treeInode) {
-            if (isDirectory) {
+          [path = std::move(path), inodeType](const TreeInodePtr treeInode) {
+            if (inodeType == InodeType::Tree) {
               try {
                 auto inode = treeInode->mkdir(
                     path.basename(), _S_IFDIR, InvalidationRequired::No);
@@ -234,29 +239,60 @@ folly::Future<folly::Unit> createFile(
           });
 }
 
-folly::Future<folly::Unit> materializeFile(
+folly::Future<folly::Unit> removeInode(
     const EdenMount& mount,
     RelativePath path,
+    InodeType inodeType,
     ObjectFetchContext& context) {
-  return mount.getInode(path, context).thenValue([](const InodePtr inode) {
+  auto inodeFut = mount.getInode(path.dirname(), context);
+  return std::move(inodeFut).thenValue(
+      [path = std::move(path), inodeType, &context](const InodePtr inode) {
+        auto treeInodePtr = inode.asTreePtr();
+        if (inodeType == InodeType::Tree) {
+          return treeInodePtr->rmdir(
+              path.basename(), InvalidationRequired::No, context);
+        } else {
+          return treeInodePtr->unlink(
+              path.basename(), InvalidationRequired::No, context);
+        }
+      });
+}
+
+} // namespace
+
+folly::Future<folly::Unit> PrjfsDispatcherImpl::fileCreated(
+    RelativePath path,
+    ObjectFetchContext& context) {
+  return createInode(*mount_, std::move(path), InodeType::File, context);
+}
+
+folly::Future<folly::Unit> PrjfsDispatcherImpl::dirCreated(
+    RelativePath path,
+    ObjectFetchContext& context) {
+  return createInode(*mount_, std::move(path), InodeType::Tree, context);
+}
+
+folly::Future<folly::Unit> PrjfsDispatcherImpl::fileModified(
+    RelativePath path,
+    ObjectFetchContext& context) {
+  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
     auto fileInode = inode.asFilePtr();
     fileInode->materialize();
     return folly::unit;
   });
 }
 
-folly::Future<folly::Unit> renameFile(
-    const EdenMount& mount,
+folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
     ObjectFetchContext& context) {
   auto oldParentInode =
-      createDirInode(mount, oldPath.dirname().copy(), context);
+      createDirInode(*mount_, oldPath.dirname().copy(), context);
   auto newParentInode =
-      createDirInode(mount, newPath.dirname().copy(), context);
+      createDirInode(*mount_, newPath.dirname().copy(), context);
 
   return folly::collect(oldParentInode, newParentInode)
-      .via(mount.getServerThreadPool().get())
+      .via(mount_->getServerThreadPool().get())
       .thenValue(
           [oldPath = std::move(oldPath),
            newPath = std::move(newPath),
@@ -282,91 +318,16 @@ folly::Future<folly::Unit> renameFile(
           });
 }
 
-folly::Future<folly::Unit> removeFile(
-    const EdenMount& mount,
+folly::Future<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
-    bool isDirectory,
     ObjectFetchContext& context) {
-  auto inodeFut = mount.getInode(path.dirname(), context);
-  return std::move(inodeFut).thenValue(
-      [path = std::move(path), isDirectory, &context](const InodePtr inode) {
-        auto treeInodePtr = inode.asTreePtr();
-        if (isDirectory) {
-          return treeInodePtr->rmdir(
-              path.basename(), InvalidationRequired::No, context);
-        } else {
-          return treeInodePtr->unlink(
-              path.basename(), InvalidationRequired::No, context);
-        }
-      });
+  return removeInode(*mount_, std::move(path), InodeType::File, context);
 }
 
-} // namespace
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::newFileCreated(
-    RelativePath relPath,
-    RelativePath /*destPath*/,
-    bool isDirectory,
+folly::Future<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
+    RelativePath path,
     ObjectFetchContext& context) {
-  return createFile(*mount_, std::move(relPath), isDirectory, context);
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileOverwritten(
-    RelativePath relPath,
-    RelativePath /*destPath*/,
-    bool /*isDirectory*/,
-    ObjectFetchContext& context) {
-  return materializeFile(*mount_, std::move(relPath), context);
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileHandleClosedFileModified(
-    RelativePath relPath,
-    RelativePath /*destPath*/,
-    bool /*isDirectory*/,
-    ObjectFetchContext& context) {
-  return materializeFile(*mount_, std::move(relPath), context);
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
-    RelativePath oldPath,
-    RelativePath newPath,
-    bool isDirectory,
-    ObjectFetchContext& context) {
-  // When files are moved in and out of the repo, the rename paths are
-  // empty, handle these like creation/removal of files.
-  if (oldPath.empty()) {
-    return createFile(*mount_, std::move(newPath), isDirectory, context);
-  } else if (newPath.empty()) {
-    return removeFile(*mount_, oldPath, isDirectory, context);
-  } else {
-    return renameFile(*mount_, std::move(oldPath), std::move(newPath), context);
-  }
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::preRename(
-    RelativePath /*oldPath*/,
-    RelativePath /*newPath*/,
-    bool /*isDirectory*/,
-    ObjectFetchContext& /*context*/) {
-  return folly::unit;
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileHandleClosedFileDeleted(
-    RelativePath oldPath,
-    RelativePath /*destPath*/,
-    bool isDirectory,
-    ObjectFetchContext& context) {
-  return removeFile(*mount_, oldPath, isDirectory, context);
-}
-
-folly::Future<folly::Unit> PrjfsDispatcherImpl::preSetHardlink(
-    RelativePath relPath,
-    RelativePath /*destPath*/,
-    bool /*isDirectory*/,
-    ObjectFetchContext& /*context*/) {
-  return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
-      HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
-      fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
+  return removeInode(*mount_, std::move(path), InodeType::Tree, context);
 }
 
 } // namespace facebook::eden

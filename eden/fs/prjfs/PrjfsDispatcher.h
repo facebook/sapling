@@ -81,28 +81,22 @@ class PrjfsDispatcher {
   /**
    * Notification sent when a file was created
    */
-  virtual folly::Future<folly::Unit> newFileCreated(
-      RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
+  virtual folly::Future<folly::Unit> fileCreated(
+      RelativePath path,
       ObjectFetchContext& context) = 0;
 
   /**
-   * Notification sent when a file was ovewritten
+   * Notification sent when a directory was created
    */
-  virtual folly::Future<folly::Unit> fileOverwritten(
-      RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
+  virtual folly::Future<folly::Unit> dirCreated(
+      RelativePath path,
       ObjectFetchContext& context) = 0;
 
   /**
-   * Notification sent when a file is closed after being modified
+   * Notification sent when a file has been modified
    */
-  virtual folly::Future<folly::Unit> fileHandleClosedFileModified(
+  virtual folly::Future<folly::Unit> fileModified(
       RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
       ObjectFetchContext& context) = 0;
 
   /**
@@ -111,38 +105,20 @@ class PrjfsDispatcher {
   virtual folly::Future<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
-      bool isDirectory,
       ObjectFetchContext& context) = 0;
 
   /**
-   * Notification sent prior to renaming a file
-   *
-   * A failure will block the rename operation
+   * Notification sent when a file was removed
    */
-  virtual folly::Future<folly::Unit> preRename(
-      RelativePath oldPath,
-      RelativePath newPath,
-      bool isDirectory,
-      ObjectFetchContext& context) = 0;
-
-  /**
-   * Notification sent when a file is being removed
-   */
-  virtual folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+  virtual folly::Future<folly::Unit> fileDeleted(
       RelativePath relPath,
-      RelativePath destPath,
-      bool isDirectory,
       ObjectFetchContext& context) = 0;
 
   /**
-   * Notification sent prior to creating a hardlink
-   *
-   * A failure will block the hardlink operation
+   * Notification sent when a directory was removed
    */
-  virtual folly::Future<folly::Unit> preSetHardlink(
-      RelativePath oldPath,
-      RelativePath newPath,
-      bool isDirectory,
+  virtual folly::Future<folly::Unit> dirDeleted(
+      RelativePath relPath,
       ObjectFetchContext& context) = 0;
 
  private:
