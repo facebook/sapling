@@ -37,6 +37,7 @@ use streaming_clone::{RevlogStreamingChunks, SqlStreamingChunksFetcher};
 use tokio::time;
 
 const REPO_ARG: &str = "repo";
+const REPO_WITH_TAGS_ARG: &str = "repo-with-tags";
 const PERIOD_ARG: &str = "warmup-period";
 
 #[fbinit::main]
@@ -52,7 +53,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(true)
                 .multiple(true)
-                .help("Repository name to warm-up"),
+                .help("Repository name to warm-up, and empty tag is assumed"),
+        )
+        .arg(
+            Arg::with_name(REPO_WITH_TAGS_ARG)
+                .long(REPO_WITH_TAGS_ARG)
+                .takes_value(true)
+                .required(true)
+                .multiple(true)
+                .help("Repository name with a list of tags to warmup in format REPO=tag1,tag2."),
         )
         .arg(
             Arg::with_name(PERIOD_ARG)
@@ -83,12 +92,26 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .parse()?;
     let period = Duration::from_secs(period_secs);
 
-    let reponames: Vec<_> = matches
-        .values_of(REPO_ARG)
-        .ok_or_else(|| anyhow!("--{} argument is required", REPO_ARG))?
-        .map(ToString::to_string)
-        .collect();
-    if reponames.is_empty() {
+    let mut reponames_with_tags = vec![];
+    if let Some(values) = matches.values_of(REPO_ARG) {
+        // Assume empty tag
+        reponames_with_tags.extend(
+            values
+                .map(ToString::to_string)
+                .map(|reponame| (reponame, None)),
+        );
+    }
+
+    if let Some(values) = matches.values_of(REPO_WITH_TAGS_ARG) {
+        for value in values {
+            let (reponame, tags) = split_repo_with_tags(value)?;
+            for tag in tags {
+                reponames_with_tags.push((reponame.clone(), Some(tag)));
+            }
+        }
+    }
+
+    if reponames_with_tags.is_empty() {
         error!(ctx.logger(), "At least one repo had to be specified");
         return Ok(());
     }
@@ -99,7 +122,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let configs = args::load_repo_configs(config_store, matches)?;
 
     let mut warmers = Vec::new();
-    for reponame in reponames {
+    for (reponame, tag) in reponames_with_tags {
         let config = configs
             .repos
             .get(&reponame)
@@ -107,6 +130,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let warmer = StreamingCloneWarmup::new(
             ctx.clone(),
             reponame,
+            tag,
             config,
             mysql_options,
             blobstore_options.clone(),
@@ -131,17 +155,29 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     Ok(())
 }
 
+fn split_repo_with_tags(s: &str) -> Result<(String, Vec<String>), Error> {
+    if let Some((reponame, tags)) = s.split_once('=') {
+        let tags = tags.split(",").map(|s| s.to_string()).collect();
+
+        Ok((reponame.to_string(), tags))
+    } else {
+        Err(anyhow!("invalid format for repo with tags: {}", s))
+    }
+}
+
 struct StreamingCloneWarmup {
     fetcher: SqlStreamingChunksFetcher,
     blobstore: Arc<dyn Blobstore>,
     repoid: RepositoryId,
     reponame: String,
+    tag: Option<String>,
 }
 
 impl StreamingCloneWarmup {
     async fn new(
         ctx: CoreContext,
         reponame: String,
+        tag: Option<String>,
         config: &RepoConfig,
         mysql_options: &MysqlOptions,
         blobstore_options: BlobstoreOptions,
@@ -177,17 +213,24 @@ impl StreamingCloneWarmup {
             blobstore: Arc::new(blobstore),
             repoid: config.repoid,
             reponame,
+            tag,
         })
     }
 
     /// Periodically fetch streaming clone data
     async fn warmer_task(&self, ctx: CoreContext, period: Duration) -> Result<(), Error> {
-        info!(ctx.logger(), "[{}] warmer started", self.reponame);
+        if let Some(ref tag) = self.tag {
+            info!(ctx.logger(), "[{}:{}] warmer started", self.reponame, tag);
+        } else {
+            info!(ctx.logger(), "[{}] warmer started", self.reponame);
+        };
+
         loop {
+            let tag = None;
             let start = Instant::now();
             let chunks = self
                 .fetcher
-                .fetch_changelog(ctx.clone(), self.repoid, self.blobstore.clone())
+                .fetch_changelog(ctx.clone(), self.repoid, tag, self.blobstore.clone())
                 .await?;
             info!(
                 ctx.logger(),

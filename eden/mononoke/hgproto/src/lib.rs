@@ -88,7 +88,9 @@ pub enum SingleRequest {
         respondlightly: bool,
     },
     Gettreepack(GettreepackArgs),
-    StreamOutShallow,
+    StreamOutShallow {
+        tag: Option<String>,
+    },
     GetpackV1,
     GetpackV2,
     GetCommitData {
@@ -114,7 +116,7 @@ impl SingleRequest {
             &SingleRequest::Unbundle { .. } => "unbundle",
             &SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
             &SingleRequest::Gettreepack(_) => "gettreepack",
-            &SingleRequest::StreamOutShallow => "stream_out_shallow",
+            &SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
             &SingleRequest::GetpackV1 => "getpackv1",
             &SingleRequest::GetpackV2 => "getpackv2",
             &SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",

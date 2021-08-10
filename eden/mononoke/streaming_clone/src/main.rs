@@ -18,7 +18,7 @@ use fbinit::FacebookInit;
 use futures::{future, stream, StreamExt, TryStreamExt};
 use mercurial_revlog::revlog::{Entry, RevIdx, Revlog};
 use mononoke_types::RepositoryId;
-use slog::{info, Logger};
+use slog::{info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::borrow::Borrow;
 use std::convert::TryInto;
@@ -33,6 +33,7 @@ pub const DOT_HG_PATH_ARG: &str = "dot-hg-path";
 pub const MAX_DATA_CHUNK_SIZE: &str = "max-data-chunk-size";
 pub const SKIP_LAST_CHUNK_ARG: &str = "skip-last-chunk";
 pub const STREAMING_CLONE: &str = "streaming-clone";
+pub const TAG_ARG: &str = "tag";
 pub const UPDATE_SUB_CMD: &str = "update";
 
 pub async fn streaming_clone<'a>(
@@ -41,17 +42,21 @@ pub async fn streaming_clone<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let mut scuba = matches.scuba_sample_builder();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     scuba.add("reponame", repo.name().clone());
 
     let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, matches)?;
     let res = match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
+            let tag: Option<&str> = sub_m.value_of(TAG_ARG);
+            if let Some(tag) = tag {
+                scuba.add("tag", tag);
+            }
+            let ctx = build_context(fb, &logger, &repo, &tag);
             // This command works only if there are no streaming chunks at all for a give repo.
             // So exit quickly if database is not empty
             let count = streaming_chunks_fetcher
-                .count_chunks(&ctx, repo.get_repoid())
+                .count_chunks(&ctx, repo.get_repoid(), tag)
                 .await?;
             if count > 0 {
                 return Err(anyhow!(
@@ -59,10 +64,15 @@ pub async fn streaming_clone<'a>(
                 ));
             }
 
-            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher).await
+            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher, tag).await
         }
         (UPDATE_SUB_CMD, Some(sub_m)) => {
-            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher).await
+            let tag: Option<&str> = sub_m.value_of(TAG_ARG);
+            if let Some(tag) = tag {
+                scuba.add("tag", tag);
+            }
+            let ctx = build_context(fb, &logger, &repo, &tag);
+            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher, tag).await
         }
         _ => Err(anyhow!("unknown subcommand")),
     };
@@ -83,12 +93,28 @@ pub async fn streaming_clone<'a>(
     Ok(())
 }
 
+fn build_context(
+    fb: FacebookInit,
+    logger: &Logger,
+    repo: &BlobRepo,
+    tag: &Option<&str>,
+) -> CoreContext {
+    let logger = if let Some(tag) = tag {
+        logger.new(o!("repo" => repo.name().to_string(), "tag" => tag.to_string()))
+    } else {
+        logger.new(o!("repo" => repo.name().to_string()))
+    };
+
+    CoreContext::new_with_logger(fb, logger)
+}
+
 // Returns how many chunks were inserted
 async fn update_streaming_changelog(
     ctx: &CoreContext,
     repo: &BlobRepo,
     sub_m: &ArgMatches<'_>,
     streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
+    tag: Option<&str>,
 ) -> Result<usize, Error> {
     let max_data_chunk_size: u32 =
         args::get_and_parse(sub_m, MAX_DATA_CHUNK_SIZE, DEFAULT_MAX_DATA_CHUNK_SIZE);
@@ -100,6 +126,7 @@ async fn update_streaming_changelog(
         &revlog,
         repo.get_repoid(),
         &streaming_chunks_fetcher,
+        tag,
     )
     .await?;
 
@@ -130,7 +157,7 @@ async fn update_streaming_changelog(
         .map(|(chunk_id, (chunk, keys))| (start + chunk_id, chunk, keys))
         .collect();
     let chunks_num = chunks.len();
-    insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks).await?;
+    insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks, tag).await?;
 
     Ok(chunks_num)
 }
@@ -152,10 +179,11 @@ async fn find_latest_rev_id_in_streaming_changelog(
     revlog: &Revlog,
     repo_id: RepositoryId,
     streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
+    tag: Option<&str>,
 ) -> Result<usize, Error> {
     let index_entry_size = revlog.index_entry_size();
     let (cur_idx_size, cur_data_size) = streaming_chunks_fetcher
-        .select_index_and_data_sizes(&ctx, repo_id)
+        .select_index_and_data_sizes(&ctx, repo_id, tag)
         .await?
         .unwrap_or((0, 0));
     info!(
@@ -259,6 +287,7 @@ async fn insert_entries_into_db(
     repo: &BlobRepo,
     streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
     entries: Vec<(u32, &'_ Chunk, BlobstoreKeys)>,
+    tag: Option<&str>,
 ) -> Result<(), Error> {
     for insert_chunk in entries.chunks(10) {
         let mut rows = vec![];
@@ -273,7 +302,7 @@ async fn insert_entries_into_db(
         }
 
         streaming_chunks_fetcher
-            .insert_chunks(&ctx, repo.get_repoid(), rows)
+            .insert_chunks(&ctx, repo.get_repoid(), tag, rows)
             .await?;
     }
 
@@ -440,6 +469,13 @@ fn add_common_args<'a, 'b>(sub_cmd: App<'a, 'b>) -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("max size of the data entry that we'll write to the blobstore"),
+        )
+        .arg(
+            Arg::with_name(TAG_ARG)
+                .long(TAG_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("which tag to use when preparing the changelog"),
         )
         .arg(
             Arg::with_name(SKIP_LAST_CHUNK_ARG)

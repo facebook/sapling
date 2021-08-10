@@ -1938,7 +1938,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('stream_out_shallow')
-    fn stream_out_shallow(&self) -> BoxStream<BytesOld, Error> {
+    fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<BytesOld, Error> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
             let streaming_clone = self.repo.streaming_clone().clone();
 
@@ -1952,7 +1952,12 @@ impl HgCommands for RepoClient {
                     } = streaming_clone;
 
                     let changelog = fetcher
-                        .fetch_changelog(ctx.clone(), repoid, blobstore.clone())
+                        .fetch_changelog(
+                            ctx.clone(),
+                            repoid,
+                            tag.as_ref().map(|s| s.as_str()),
+                            blobstore.clone(),
+                        )
                         .await?;
 
                     let data_blobs = changelog

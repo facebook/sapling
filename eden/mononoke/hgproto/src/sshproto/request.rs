@@ -638,7 +638,11 @@ fn parse_with_params(
                     )
                 ))?,
             })))
-        | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |_kv| Ok(StreamOutShallow))
+        | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |kv| {
+            Ok(StreamOutShallow {
+                tag: parseval_option(&kv, "tag", utf8_string_complete)?
+            })
+        })
         | command_star!("getpackv1", GetpackV1, parse_params, {})
         | command_star!("getpackv2", GetpackV2, parse_params, {})
         | command!("getcommitdata", GetCommitData, parse_params, {
@@ -1615,7 +1619,10 @@ mod test_parse {
                    noflatmanifest 4\n\
                    True";
 
-        test_parse(inp, Request::Single(SingleRequest::StreamOutShallow));
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::StreamOutShallow { tag: None }),
+        );
     }
 
     #[test]

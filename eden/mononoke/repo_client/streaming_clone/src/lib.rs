@@ -54,27 +54,28 @@ pub struct SqlStreamingChunksFetcher {
 }
 
 queries! {
-    read CountChunks(repo_id: RepositoryId) -> (u64) {
+    read CountChunks(repo_id: RepositoryId, tag: &str) -> (u64) {
         "SELECT count(*)
          FROM streaming_changelog_chunks
-         WHERE repo_id = {repo_id}"
+         WHERE repo_id = {repo_id} and tag = {tag}"
     }
-    read SelectChunks(repo_id: RepositoryId) -> (Vec<u8>, i32, Vec<u8>, i32) {
+    read SelectChunks(repo_id: RepositoryId, tag: &str) -> (Vec<u8>, i32, Vec<u8>, i32) {
         "SELECT idx_blob_name, idx_size, data_blob_name, data_size
          FROM streaming_changelog_chunks
-         WHERE repo_id = {repo_id}
+         WHERE repo_id = {repo_id} and tag = {tag}
          ORDER BY chunk_num ASC"
     }
 
-    read SelectSizes(repo_id: RepositoryId) -> (Option<u64>, Option<u64>) {
+    read SelectSizes(repo_id: RepositoryId, tag: &str) -> (Option<u64>, Option<u64>) {
         "SELECT CAST(SUM(idx_size) AS UNSIGNED), CAST(SUM(data_size) AS UNSIGNED)
          FROM streaming_changelog_chunks
-         WHERE repo_id = {repo_id}"
+         WHERE repo_id = {repo_id} and tag = {tag}"
     }
 
     write InsertChunks(
         values: (
             repo_id: RepositoryId,
+            tag: &str,
             chunk_num: u32,
             idx_blob_name: &str,
             idx_size: u32,
@@ -84,7 +85,7 @@ queries! {
     ) {
         none,
         "INSERT INTO streaming_changelog_chunks \
-            (repo_id, chunk_num, idx_blob_name, idx_size, data_blob_name, data_size) \
+            (repo_id, tag, chunk_num, idx_blob_name, idx_size, data_blob_name, data_size) \
             VALUES {values}"
     }
 
@@ -151,11 +152,13 @@ impl SqlStreamingChunksFetcher {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
+        tag: Option<&str>,
     ) -> Result<u64, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let res = CountChunks::query(&self.read_connection, &repo_id).await?;
+        let tag = tag.unwrap_or("");
+        let res = CountChunks::query(&self.read_connection, &repo_id, &tag).await?;
         Ok(res.get(0).map_or(0, |x| x.0))
     }
 
@@ -163,11 +166,14 @@ impl SqlStreamingChunksFetcher {
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
+        tag: Option<&str>,
         blobstore: impl Blobstore + Clone + 'static,
     ) -> Result<RevlogStreamingChunks, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectChunks::query(&self.read_connection, &repo_id).await?;
+
+        let tag = tag.unwrap_or("");
+        let rows = SelectChunks::query(&self.read_connection, &repo_id, &tag).await?;
 
         let res = rows.into_iter().fold(
             RevlogStreamingChunks::new(),
@@ -199,14 +205,17 @@ impl SqlStreamingChunksFetcher {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
+        tag: Option<&str>,
         chunks: Vec<(u32, &str, u32, &str, u32)>,
     ) -> Result<(), Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
+        let tag = tag.unwrap_or("");
+
         let ref_chunks: Vec<_> = chunks
             .iter()
-            .map(|row| (&repo_id, &row.0, &row.1, &row.2, &row.3, &row.4))
+            .map(|row| (&repo_id, &tag, &row.0, &row.1, &row.2, &row.3, &row.4))
             .collect();
 
         InsertChunks::query(&self.write_connection, &ref_chunks[..]).await?;
@@ -218,11 +227,14 @@ impl SqlStreamingChunksFetcher {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
+        tag: Option<&str>,
     ) -> Result<Option<(u64, u64)>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let res = SelectSizes::query(&self.read_connection, &repo_id).await?;
+        let tag = tag.unwrap_or("");
+
+        let res = SelectSizes::query(&self.read_connection, &repo_id, &tag).await?;
         let (idx, data) = match res.get(0) {
             Some((Some(idx), Some(data))) => (idx, data),
             _ => {

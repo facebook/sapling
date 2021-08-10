@@ -200,9 +200,9 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::StreamOutShallow => (
+            SingleRequest::StreamOutShallow { tag } => (
                 hgcmds
-                    .stream_out_shallow()
+                    .stream_out_shallow(tag)
                     .map(SingleResponse::StreamOutShallow)
                     .boxify(),
                 ok(instream).boxify(),
@@ -688,7 +688,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('stream_out_shallow', '*')
-    fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
+    fn stream_out_shallow(&self, _tag: Option<String>) -> BoxStream<Bytes, Error> {
         once(Err(
             ErrorKind::Unimplemented("stream_out_shallow".into()).into()
         ))

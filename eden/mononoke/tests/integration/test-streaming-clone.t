@@ -22,10 +22,10 @@ setup configuration
   $ streaming_clone --scuba-dataset dataset --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
-  * current sizes in database: index: 0, data: 0 (glob)
-  * about to upload 1 entries (glob)
-  * inserting into streaming clone database (glob)
-  * current max chunk num is None (glob)
+  * current sizes in database: index: 0, data: 0, repo: repo (glob)
+  * about to upload 1 entries, repo: repo (glob)
+  * inserting into streaming clone database, repo: repo (glob)
+  * current max chunk num is None, repo: repo (glob)
   $ jq .normal.reponame < "$LOG_FILE"
   "repo"
   $ jq .normal.chunks_inserted < "$LOG_FILE"
@@ -64,10 +64,10 @@ Try creating again, this should fail
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
-  * current sizes in database: index: 0, data: 0 (glob)
-  * about to upload 3 entries (glob)
-  * inserting into streaming clone database (glob)
-  * current max chunk num is None (glob)
+  * current sizes in database: index: 0, data: 0, repo: repo (glob)
+  * about to upload 3 entries, repo: repo (glob)
+  * inserting into streaming clone database, repo: repo (glob)
+  * current max chunk num is None, repo: repo (glob)
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
   $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
@@ -142,18 +142,18 @@ Check that with last chunk skipping no new batches are uploaded
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
-  * current sizes in database: index: 192, data: 165 (glob)
-  * about to upload 0 entries (glob)
-  * inserting into streaming clone database (glob)
-  * current max chunk num is Some(2) (glob)
+  * current sizes in database: index: 192, data: 165, repo: repo (glob)
+  * about to upload 0 entries, repo: repo (glob)
+  * inserting into streaming clone database, repo: repo (glob)
+  * current max chunk num is Some(2), repo: repo (glob)
 
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
-  * current sizes in database: index: 192, data: 165 (glob)
-  * about to upload 1 entries (glob)
-  * inserting into streaming clone database (glob)
-  * current max chunk num is Some(2) (glob)
+  * current sizes in database: index: 192, data: 165, repo: repo (glob)
+  * about to upload 1 entries, repo: repo (glob)
+  * inserting into streaming clone database, repo: repo (glob)
+  * current max chunk num is Some(2), repo: repo (glob)
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"

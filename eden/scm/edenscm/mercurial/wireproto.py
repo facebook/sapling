@@ -387,6 +387,9 @@ class wirepeer(repository.legacypeer):
             opts = {}
             if self.ui.configbool("treemanifest", "treeonly"):
                 opts["noflatmanifest"] = "True"
+            tag = self.ui.config("stream_out_shallow", "tag")
+            if tag:
+                opts["tag"] = tag
             return self._callstream("stream_out_shallow", **opts)
         if self.capable("stream_option"):
             args = {"fullclone": str(fullclone)}
