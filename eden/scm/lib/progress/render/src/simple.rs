@@ -12,6 +12,7 @@ use progress_model::CacheStats;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+use progress_model::TimeSeriesMode;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -47,8 +48,13 @@ fn render_time_series(lines: &mut Vec<String>, series_list: &[Arc<IoTimeSeries>]
         let ascii = ascii_time_series(&model);
         phrases.push(format!("[{}]", ascii));
 
-        let (rx, tx) = model.bytes_per_second();
-        let speed = human_rx_tx_per_second(rx, tx);
+        let speed = match model.mode() {
+            TimeSeriesMode::BytesSpeed => {
+                let (rx, tx) = model.bytes_per_second();
+                human_rx_tx_per_second(rx, tx)
+            }
+            TimeSeriesMode::ValueNoUnit => format!("{}", model.total_bytes()),
+        };
         if !speed.is_empty() {
             phrases.push(speed);
         }

@@ -35,13 +35,33 @@ pub struct IoTimeSeries {
 
     /// Maximum speed.
     max_bytes_per_second: AtomicU64,
+
+    /// How to render time series.
+    mode: TimeSeriesMode,
+}
+
+#[derive(Clone, Copy)]
+pub enum TimeSeriesMode {
+    /// Convert units to speed and show as human readable bytes/second.
+    BytesSpeed,
+    /// Display values as is, without any units and without converting to speed.
+    ValueNoUnit,
 }
 
 impl IoTimeSeries {
-    /// Create a time series.
+    /// Create a time series showing bytes/sec speed.
     pub fn new(
         topic: impl Into<Cow<'static, str>>,
         count_unit: impl Into<Cow<'static, str>>,
+    ) -> Arc<Self> {
+        Self::new_with_mode(topic, count_unit, TimeSeriesMode::BytesSpeed)
+    }
+
+    /// Creates time series and customizes mode.
+    pub fn new_with_mode(
+        topic: impl Into<Cow<'static, str>>,
+        count_unit: impl Into<Cow<'static, str>>,
+        mode: TimeSeriesMode,
     ) -> Arc<Self> {
         let topic = topic.into();
         let count_unit = count_unit.into();
@@ -53,6 +73,7 @@ impl IoTimeSeries {
             samples: Arc::new(samples),
             samples_head: Default::default(),
             max_bytes_per_second: Default::default(),
+            mode,
         };
         Arc::new(series)
     }
@@ -137,6 +158,22 @@ impl IoTimeSeries {
         new.bytes_per_second(&old)
     }
 
+    /// Obtains current total value.
+    pub fn total_bytes(&self) -> u64 {
+        let samples = &self.samples;
+        let head = self.samples_head.load(Acquire);
+        let len = samples.len();
+
+        let cur = (head + len - 1) % len;
+        let cur = &samples[cur];
+        cur.total_bytes()
+    }
+
+    /// Return speed units of this time series.
+    pub fn mode(&self) -> TimeSeriesMode {
+        self.mode
+    }
+
     /// Get the count associated with the time series (from the last sample).
     pub fn count(&self) -> u64 {
         let len = self.samples.len();
@@ -162,8 +199,13 @@ impl IoTimeSeries {
                 .map(|i| {
                     let prev = (head + i - 1) % len;
                     let cur = (prev + 1) % len;
-                    let (i, o) = samples[cur].bytes_per_second(&samples[prev]);
-                    i + o
+                    match self.mode {
+                        TimeSeriesMode::BytesSpeed => {
+                            let (i, o) = samples[cur].bytes_per_second(&samples[prev]);
+                            i + o
+                        }
+                        TimeSeriesMode::ValueNoUnit => samples[cur].total_bytes(),
+                    }
                 })
                 .collect()
         };

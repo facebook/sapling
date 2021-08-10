@@ -22,3 +22,4 @@ pub use io_sample::IoSample;
 pub use progress_bar::ProgressBar;
 pub use registry::Registry;
 pub use time_series::IoTimeSeries;
+pub use time_series::TimeSeriesMode;

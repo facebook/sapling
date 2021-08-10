@@ -7,7 +7,7 @@
 
 use metrics::{Counter, Registry};
 use progress_model::Registry as ProgressRegistry;
-use progress_model::{IoSample, IoTimeSeries};
+use progress_model::{IoSample, IoTimeSeries, TimeSeriesMode};
 use std::collections::HashSet;
 use std::env;
 use std::sync::Weak;
@@ -128,7 +128,8 @@ impl Renderer {
                 IoSample::from_io_bytes(counter.value() as _, 0)
             };
             let visible_name = format!("{:.<32}", name);
-            let time_series = IoTimeSeries::new(visible_name, "");
+            let time_series =
+                IoTimeSeries::new_with_mode(visible_name, "", TimeSeriesMode::ValueNoUnit);
             let task =
                 time_series.async_sampling(take_sample, IoTimeSeries::default_sample_interval());
             async_runtime::spawn(task);
