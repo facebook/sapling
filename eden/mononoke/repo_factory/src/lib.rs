@@ -66,7 +66,7 @@ use pushrebase_mutation_mapping::{
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::{ArcRedactionConfigBlobstore, RedactionConfigBlobstore};
 use redactedblobstore::{RedactedBlobs, SqlRedactedContentStore};
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArgs};
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
@@ -226,13 +226,12 @@ impl RepoFactory {
 
         let censored_scuba_builder = self.censored_scuba_builder()?;
 
-        let repo_blobstore_args = RepoBlobstoreArgs::new(
+        let repo_blobstore = RepoBlobstore::new(
             blobstore,
             redacted_blobs,
             repo_identity.id(),
             censored_scuba_builder,
         );
-        let (repo_blobstore, _repo_id) = repo_blobstore_args.into_blobrepo_parts();
 
         Ok(Arc::new(repo_blobstore))
     }

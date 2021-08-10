@@ -52,7 +52,7 @@ use pushrebase_mutation_mapping::{
 };
 use redactedblobstore::RedactedBlobs;
 use rendezvous::RendezVousOptions;
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::SqlLongRunningRequestsQueue;
@@ -374,13 +374,12 @@ impl TestRepoFactory {
 
     /// Construct the RepoBlobstore using the blobstore in the factory.
     pub fn repo_blobstore(&self, repo_identity: &ArcRepoIdentity) -> ArcRepoBlobstore {
-        let args = RepoBlobstoreArgs::new(
+        let repo_blobstore = RepoBlobstore::new(
             self.blobstore.clone(),
             self.redacted.clone(),
             repo_identity.id(),
             MononokeScubaSampleBuilder::with_discard(),
         );
-        let (repo_blobstore, _) = args.into_blobrepo_parts();
         Arc::new(repo_blobstore)
     }
 

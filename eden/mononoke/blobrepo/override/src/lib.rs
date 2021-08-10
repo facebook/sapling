@@ -14,7 +14,7 @@ use cacheblob::LeaseOps;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use filenodes::ArcFilenodes;
-use repo_blobstore::RepoBlobstoreArgs;
+use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use std::sync::Arc;
 
@@ -63,15 +63,13 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
     {
-        let (blobstore, repoid) = RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(
+        let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
             self.repo_blobstore.as_ref().clone(),
             self.repoid,
             modify,
-        )
-        .into_blobrepo_parts();
+        );
         let repo_blobstore = Arc::new(blobstore);
         Self {
-            repoid,
             repo_blobstore,
             ..self.clone()
         }

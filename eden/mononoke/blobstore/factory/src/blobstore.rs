@@ -564,7 +564,7 @@ fn make_blobstore_put_ops<'a>(
 
         // NOTE: Do not add wrappers here that should only be added once per repository, since this
         // function will get called recursively for each member of a Multiplex! For those, use
-        // RepoBlobstoreArgs::new instead.
+        // RepoBlobstore::new instead.
 
         Ok(store)
     }

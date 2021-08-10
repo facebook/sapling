@@ -76,7 +76,7 @@ mod test {
     use memblob::Memblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
     use redactedblobstore::RedactedBlobstore;
-    use repo_blobstore::RepoBlobstoreArgs;
+    use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -97,23 +97,19 @@ mod test {
         let inner1 = Arc::new(Memblob::default());
         let inner2 = Arc::new(Memblob::default());
 
-        let bs1 = RepoBlobstoreArgs::new(
+        let bs1 = RepoBlobstore::new(
             inner1,
             None,
             RepositoryId::new(1),
             MononokeScubaSampleBuilder::with_discard(),
-        )
-        .into_blobrepo_parts()
-        .0;
+        );
 
-        let bs2 = RepoBlobstoreArgs::new(
+        let bs2 = RepoBlobstore::new(
             inner2,
             None,
             RepositoryId::new(2),
             MononokeScubaSampleBuilder::with_discard(),
-        )
-        .into_blobrepo_parts()
-        .0;
+        );
 
         borrowed!(ctx, bs1, bs2);
 
@@ -147,23 +143,19 @@ mod test {
         let inner1 = Arc::new(Memblob::default());
         let inner2 = Arc::new(Memblob::default());
 
-        let bs1 = RepoBlobstoreArgs::new(
+        let bs1 = RepoBlobstore::new(
             inner1,
             None,
             RepositoryId::new(1),
             MononokeScubaSampleBuilder::with_discard(),
-        )
-        .into_blobrepo_parts()
-        .0;
+        );
 
-        let bs2 = RepoBlobstoreArgs::new(
+        let bs2 = RepoBlobstore::new(
             inner2,
             None,
             RepositoryId::new(2),
             MononokeScubaSampleBuilder::with_discard(),
-        )
-        .into_blobrepo_parts()
-        .0;
+        );
 
         borrowed!(ctx, bs1, bs2);
 

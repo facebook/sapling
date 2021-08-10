@@ -53,7 +53,7 @@ use pushrebase_mutation_mapping::{
 use rand::Rng;
 use rand_distr::Distribution;
 use rendezvous::RendezVousOptions;
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstoreArgs};
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -116,13 +116,12 @@ impl BenchmarkRepoFactory {
             Arc::new(cache_pool("blobstore-presence")?),
             CachelibBlobstoreOptions::default(),
         ));
-        let args = RepoBlobstoreArgs::new(
+        let repo_blobstore = RepoBlobstore::new(
             blobstore,
             None,
             repo_identity.id(),
             MononokeScubaSampleBuilder::with_discard(),
         );
-        let (repo_blobstore, _) = args.into_blobrepo_parts();
         Ok(Arc::new(repo_blobstore))
     }
 
