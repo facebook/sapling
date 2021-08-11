@@ -169,7 +169,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_factory(exec, move || service)
         .build();
 
-    let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift, port)
+    let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift)
         .context("Failed to create service framework server")?;
 
     service_framework.add_module(BuildModule)?;
