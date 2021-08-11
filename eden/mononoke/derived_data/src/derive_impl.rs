@@ -13,6 +13,7 @@ use blobstore::Loadable;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
+use context::PerfCounters;
 use futures::{
     channel::oneshot,
     future::{abortable, try_join, try_join_all, Aborted, FutureExt, TryFutureExt},
@@ -20,6 +21,8 @@ use futures::{
     TryStreamExt,
 };
 use futures_stats::futures03::TimedFutureExt;
+use futures_stats::FutureStats;
+use futures_stats::TimedTryFutureExt;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
 use slog::debug;
@@ -31,6 +34,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+use time_ext::DurationExt;
 use topo_sort::{sort_topological, TopoSortedDagTraversal};
 
 define_stats! {
@@ -96,6 +100,12 @@ fn emergency_disabled(repo: &BlobRepo, name: &str) -> bool {
     false
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DeriveRes {
+    derived: usize,
+    find_underived_completion_time: Duration,
+}
+
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
 /// nothing will be generated. Otherwise this function will try to find set of commits that's
@@ -130,6 +140,7 @@ pub async fn derive_impl<
     derived_mapping: &Mapping,
     start_csid: ChangesetId,
 ) -> Result<Derivable, DeriveError> {
+    let pc = ctx.clone().fork_perf_counters();
     let derivation = async {
         let derive_and_log = |csid: ChangesetId| {
             cloned!(ctx, derived_mapping, repo);
@@ -162,8 +173,10 @@ pub async fn derive_impl<
 
         // T92169040 - remove get_derived_data_disable_parallel_derivation
         if !tunables::tunables().get_derived_data_disable_parallel_derivation() {
-            let commits_not_derived_to_parents =
-                find_underived(ctx, repo, derived_mapping, Some(start_csid), None).await?;
+            let (stats, commits_not_derived_to_parents) =
+                find_underived(ctx, repo, derived_mapping, Some(start_csid), None)
+                    .try_timed()
+                    .await?;
             let mut dag_traversal = TopoSortedDagTraversal::new(commits_not_derived_to_parents);
             let mut inflight_futs = FuturesUnordered::new();
 
@@ -187,17 +200,25 @@ pub async fn derive_impl<
                 }
             }
 
-            Result::<_, Error>::Ok(count)
+            Result::<_, Error>::Ok(DeriveRes {
+                derived: count,
+                find_underived_completion_time: stats.completion_time,
+            })
         } else {
-            let all_csids =
+            let (stats, all_csids) =
                 find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None)
+                    .try_timed()
                     .await?;
+            let all_csids_len = all_csids.len();
 
             for cs_id in &all_csids {
                 derive_and_log(*cs_id).await?;
             }
 
-            Result::<_, Error>::Ok(all_csids.len())
+            Result::<_, Error>::Ok(DeriveRes {
+                derived: all_csids_len,
+                find_underived_completion_time: stats.completion_time,
+            })
         }
     };
 
@@ -239,32 +260,49 @@ pub async fn derive_impl<
     };
     watcher_abort_handle.abort();
 
-    let count = match res {
-        Ok(ref count) => *count,
-        Err(_) => 0,
-    };
-
     if should_log_slow_derivation(stats.completion_time) {
-        warn!(
-            ctx.logger(),
-            "slow derivation of {} {} for {}, took {:.2?}",
-            count,
-            Derivable::NAME,
-            start_csid,
-            stats.completion_time,
-        );
-        ctx.scuba()
-            .clone()
-            .add_future_stats(&stats)
-            .add("changeset_id", start_csid.to_string())
-            .add("derived_data_type", Derivable::NAME)
-            .log_with_msg("Slow derivation", Some(format!("count={}", count)));
+        log_slow_derivation::<Derivable>(&ctx, &stats, &pc, &res, &start_csid, repo.name().clone());
     }
 
     res?;
 
     let derived = fetch_derived_may_panic(&ctx, start_csid, derived_mapping).await?;
     Ok(derived)
+}
+
+fn log_slow_derivation<Derivable: BonsaiDerivable>(
+    ctx: &CoreContext,
+    stats: &FutureStats,
+    pc: &PerfCounters,
+    res: &Result<DeriveRes, DeriveError>,
+    start_csid: &ChangesetId,
+    repo_name: String,
+) {
+    warn!(
+        ctx.logger(),
+        "slow derivation of {} for {}, took {:.2?}: {:?}",
+        Derivable::NAME,
+        start_csid,
+        stats.completion_time,
+        res,
+    );
+    let mut s = ctx.scuba().clone();
+    pc.insert_perf_counters(&mut s);
+
+    s.add_future_stats(&stats)
+        .add("changeset_id", start_csid.to_string())
+        .add("derived_data_type", Derivable::NAME)
+        .add("repo", repo_name);
+
+    if let Ok(res) = res {
+        s.add("derived", res.derived);
+        s.add(
+            "find_underived_completion_time_ms",
+            res.find_underived_completion_time.as_micros_unchecked(),
+        );
+    }
+
+    s.log_with_msg("Slow derivation", None);
 }
 
 fn should_log_slow_derivation(duration: Duration) -> bool {
