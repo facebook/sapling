@@ -49,9 +49,7 @@ pub async fn streaming_clone<'a>(
     let res = match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
             let tag: Option<&str> = sub_m.value_of(TAG_ARG);
-            if let Some(tag) = tag {
-                scuba.add("tag", tag);
-            }
+            scuba.add_opt("tag", tag);
             let ctx = build_context(fb, &logger, &repo, &tag);
             // This command works only if there are no streaming chunks at all for a give repo.
             // So exit quickly if database is not empty
@@ -68,9 +66,7 @@ pub async fn streaming_clone<'a>(
         }
         (UPDATE_SUB_CMD, Some(sub_m)) => {
             let tag: Option<&str> = sub_m.value_of(TAG_ARG);
-            if let Some(tag) = tag {
-                scuba.add("tag", tag);
-            }
+            scuba.add_opt("tag", tag);
             let ctx = build_context(fb, &logger, &repo, &tag);
             update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher, tag).await
         }
