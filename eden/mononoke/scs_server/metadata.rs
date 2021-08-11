@@ -5,4 +5,4 @@
  * GNU General Public License version 2.
  */
 
-pub use rust_thrift_server_sys::facebook_rust_srserver_RustThriftMetadata;
+pub use srserver::RustThriftMetadata as facebook_rust_srserver_RustThriftMetadata;
