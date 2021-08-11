@@ -65,7 +65,6 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
     {
         let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(
             self.repo_blobstore.as_ref().clone(),
-            self.repoid,
             modify,
         );
         let repo_blobstore = Arc::new(blobstore);

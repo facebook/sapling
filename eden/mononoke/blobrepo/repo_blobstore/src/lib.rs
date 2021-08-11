@@ -32,10 +32,11 @@ type RepoBlobstoreStack<T> = RedactedBlobstore<PrefixBlobstore<T>>;
 pub struct AbstractRepoBlobstore<T>(RepoBlobstoreStack<T>);
 
 impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
-    pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig) {
+    pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig, String) {
         let (blobstore, redacted_blobstore_config) = self.0.as_parts();
+        let prefix = blobstore.prefix();
 
-        (blobstore.into_inner(), redacted_blobstore_config)
+        (blobstore.into_inner(), redacted_blobstore_config, prefix)
     }
 }
 
@@ -44,7 +45,7 @@ impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
 pub struct RepoBlobstore(AbstractRepoBlobstore<Arc<dyn Blobstore>>);
 
 impl RepoBlobstore {
-    pub fn as_parts(&self) -> (Arc<dyn Blobstore>, RedactedBlobstoreConfig) {
+    fn as_parts(&self) -> (Arc<dyn Blobstore>, RedactedBlobstoreConfig, String) {
         self.0.as_parts()
     }
 
@@ -59,30 +60,26 @@ impl RepoBlobstore {
         scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {
         let redacted_blobstore_config = RedactedBlobstoreConfig::new(redacted_blobs, scuba_builder);
-        Self::build(blobstore, repoid, redacted_blobstore_config)
+        Self::build(blobstore, repoid.prefix(), redacted_blobstore_config)
     }
 
-    pub fn new_with_wrapped_inner_blobstore<T, F>(
-        blobstore: RepoBlobstore,
-        repoid: RepositoryId,
-        wrapper: F,
-    ) -> Self
+    pub fn new_with_wrapped_inner_blobstore<T, F>(blobstore: RepoBlobstore, wrapper: F) -> Self
     where
         T: Blobstore + 'static,
         F: FnOnce(Arc<dyn Blobstore>) -> T,
     {
-        let (blobstore, redacted_blobstore_config) = blobstore.0.as_parts();
+        let (blobstore, redacted_blobstore_config, prefix) = blobstore.0.as_parts();
         let new_inner_blobstore = wrapper(blobstore);
-        Self::build(new_inner_blobstore, repoid, redacted_blobstore_config)
+        Self::build(new_inner_blobstore, prefix, redacted_blobstore_config)
     }
 
     fn build<T: Blobstore + 'static>(
         blobstore: T,
-        repoid: RepositoryId,
+        prefix: String,
         redacted_blobstore_config: RedactedBlobstoreConfig,
     ) -> Self {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
-        let blobstore = PrefixBlobstore::new(blobstore, repoid.prefix());
+        let blobstore = PrefixBlobstore::new(blobstore, prefix);
         let blobstore = RedactedBlobstore::new(blobstore, redacted_blobstore_config);
         let blobstore = RepoBlobstore(AbstractRepoBlobstore(blobstore));
 

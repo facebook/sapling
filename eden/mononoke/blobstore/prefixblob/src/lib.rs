@@ -42,6 +42,10 @@ impl<T> PrefixBlobstore<T> {
     pub fn as_inner(&self) -> &T {
         &self.blobstore
     }
+
+    pub fn prefix(&self) -> String {
+        self.prefix.to_string()
+    }
 }
 
 impl<T> PrefixBlobstore<T> {
