@@ -51,7 +51,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Arg::with_name(REPO_ARG)
                 .long(REPO_ARG)
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .multiple(true)
                 .help("Repository name to warm-up, and empty tag is assumed"),
         )
@@ -59,7 +59,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Arg::with_name(REPO_WITH_TAGS_ARG)
                 .long(REPO_WITH_TAGS_ARG)
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .multiple(true)
                 .help("Repository name with a list of tags to warmup in format REPO=tag1,tag2."),
         )
