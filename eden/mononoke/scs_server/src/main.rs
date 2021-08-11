@@ -17,6 +17,7 @@ use anyhow::{Context, Error};
 use clap::{value_t, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::serve_forever};
+use cxx::UniquePtr;
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
@@ -157,17 +158,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
     };
 
-    let mut builder = ThriftServerBuilder::new(fb)
+    let thrift: ThriftServer = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
         .with_address(&host, port, false)?
         .with_tls()
         .expect("failed to enable TLS")
-        .with_cancel_if_client_disconnected();
-
-    builder = unsafe { builder.with_metadata(create_metadata()) };
-
-    let thrift: ThriftServer = builder.with_factory(exec, move || service).build();
+        .with_cancel_if_client_disconnected()
+        .with_metadata(unsafe { UniquePtr::from_raw(create_metadata()) })
+        .with_factory(exec, move || service)
+        .build();
 
     let mut service_framework = ServiceFramework::from_server(SERVICE_NAME, thrift, port)
         .context("Failed to create service framework server")?;
