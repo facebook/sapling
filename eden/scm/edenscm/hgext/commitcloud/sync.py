@@ -919,23 +919,44 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr, maxage):
     )
     foundheads = {nodemod.hex(n) for n in foundheads}
     omittedheads = lastomittedheads - foundheads
+
+    lastbookmarknodes = [
+        lastsyncstate.bookmarks[name]
+        for name in lastomittedbookmarks
+        if name in lastsyncstate.bookmarks
+    ]
+    lastremotebookmarknodes = [
+        lastsyncstate.remotebookmarks[name]
+        for name in lastomittedremotebookmarks
+        if name in lastsyncstate.remotebookmarks
+    ]
+    foundbookmarkslocalnodes = {
+        nodemod.hex(n)
+        for n in repo.changelog.filternodes(
+            [nodemod.bin(n) for n in lastbookmarknodes + lastremotebookmarknodes],
+            local=True,
+        )
+    }
+
     for name in lastomittedbookmarks:
         # bookmark might be removed from cloud workspace by someone else
         if name not in lastsyncstate.bookmarks:
             continue
         node = lastsyncstate.bookmarks[name]
-        if node in unfi:
+        if node in foundbookmarkslocalnodes:
             if unfi[node].mutable() or (unfi[node].date()[0] >= mindate):
                 changes.append((name, nodemod.bin(node)))
             else:
                 omittedbookmarks.add(name)
         else:
             omittedbookmarks.add(name)
+
     for name in lastomittedremotebookmarks:
+        # remotebookmark might be removed from cloud workspace by someone else
         if name not in lastsyncstate.remotebookmarks:
             continue
         node = lastsyncstate.remotebookmarks[name]
-        if node in unfi:
+        if node in foundbookmarkslocalnodes:
             remotechanges[name] = node
         else:
             omittedremotebookmarks.add(name)
