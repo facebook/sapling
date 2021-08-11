@@ -5,19 +5,16 @@
  * GNU General Public License version 2.
  */
 
+#pragma once
+
+#include <memory>
+#include "common/rust/srserver/src/Metadata.h"
+
 namespace facebook {
-namespace rust {
-namespace srserver {
-
-struct RustThriftMetadata;
-
-} // namespace srserver
-} // namespace rust
-
 namespace scm {
 namespace service {
 
-rust::srserver::RustThriftMetadata* create_metadata() noexcept;
+std::unique_ptr<rust::srserver::RustThriftMetadata> create_metadata() noexcept;
 
 } // namespace service
 } // namespace scm

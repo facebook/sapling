@@ -17,14 +17,12 @@ use anyhow::{Context, Error};
 use clap::{value_t, Arg};
 use cloned::cloned;
 use cmdlib::{args, helpers::serve_forever};
-use cxx::UniquePtr;
 use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
 use metaconfig_parser::load_repo_configs;
-use metadata_sys::facebook_scm_service_create_metadata as create_metadata;
 use mononoke_api::{
     BookmarkUpdateDelay, CoreContext, Mononoke, MononokeApiEnvironment,
     WarmBookmarksCacheDerivedData,
@@ -45,6 +43,7 @@ mod facebook;
 mod from_request;
 mod history;
 mod into_response;
+mod metadata;
 mod methods;
 mod monitoring;
 mod scuba_common;
@@ -165,7 +164,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_tls()
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected()
-        .with_metadata(unsafe { UniquePtr::from_raw(create_metadata()) })
+        .with_metadata(metadata::create_metadata())
         .with_factory(exec, move || service)
         .build();
 

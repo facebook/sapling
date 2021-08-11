@@ -5,28 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#include <functional>
+#include "eden/mononoke/scs_server/metadata.h"
 #include "eden/mononoke/scs/if/gen-cpp2/source_control_metadata.h" // @manual=//eden/mononoke/scs/if:source_control-cpp2
 
 namespace facebook {
-namespace rust {
-namespace srserver {
-
-using MetadataFunc = std::function<void(
-    ::apache::thrift::metadata::ThriftServiceMetadataResponse&)>;
-
-struct RustThriftMetadata {
-  MetadataFunc meta_;
-};
-
-} // namespace srserver
-} // namespace rust
-
 namespace scm {
 namespace service {
 
-rust::srserver::RustThriftMetadata* create_metadata() noexcept {
-  auto meta = new rust::srserver::RustThriftMetadata();
+std::unique_ptr<rust::srserver::RustThriftMetadata> create_metadata() noexcept {
+  auto meta = std::make_unique<rust::srserver::RustThriftMetadata>();
   meta->meta_ =
       [](apache::thrift::metadata::ThriftServiceMetadataResponse& response) {
         ::apache::thrift::detail::md::ServiceMetadata<
@@ -37,5 +24,4 @@ rust::srserver::RustThriftMetadata* create_metadata() noexcept {
 
 } // namespace service
 } // namespace scm
-
 } // namespace facebook
