@@ -33,7 +33,7 @@ pub async fn convert_diff_result_into_file_change_for_diamond_merge(
     ctx: &CoreContext,
     repo: &BlobRepo,
     diff_result: BonsaiDiffFileChange<HgFileNodeId>,
-) -> Result<(MPath, Option<FileChange>)> {
+) -> Result<(MPath, FileChange)> {
     match diff_result {
         BonsaiDiffFileChange::Changed(path, ty, node_id)
         | BonsaiDiffFileChange::ChangedReusedId(path, ty, node_id) => {
@@ -45,9 +45,9 @@ pub async fn convert_diff_result_into_file_change_for_diamond_merge(
             // info for a file change, then it might point to one of the
             // ancestors of `onto`, but not necessarily to the onto.
             let file_change =
-                FileChange::new(envelope.content_id(), ty, envelope.content_size(), None);
-            Ok((path, Some(file_change)))
+                FileChange::tracked(envelope.content_id(), ty, envelope.content_size(), None);
+            Ok((path, file_change))
         }
-        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
+        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
     }
 }

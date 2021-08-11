@@ -49,17 +49,17 @@ impl FileHook for CheckNocommitHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let maybe_text = match change {
-            None => None,
-            Some(change) => {
+            FileChange::TrackedChange(change) => {
                 content_manager
                     .get_file_text(ctx, change.content_id())
                     .await?
             }
+            FileChange::Deleted => None,
         };
 
         Ok(match maybe_text {

@@ -62,7 +62,7 @@ pub trait MegarepoOp {
         repo: &BlobRepo,
         cs_id: ChangesetId,
         mover: &MultiMover,
-        linkfiles: BTreeMap<MPath, Option<FileChange>>,
+        linkfiles: BTreeMap<MPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError> {
         let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id)
@@ -81,18 +81,18 @@ pub trait MegarepoOp {
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
             if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
-                file_changes.push((path.clone(), None));
+                file_changes.push((path.clone(), FileChange::Deleted));
             }
 
             file_changes.extend(moved.into_iter().map(|target| {
-                let fc = FileChange::new(
+                let fc = FileChange::tracked(
                     *fsnode.content_id(),
                     *fsnode.file_type(),
                     fsnode.size(),
                     Some((path.clone(), cs_id)),
                 );
 
-                (target, Some(fc))
+                (target, fc)
             }));
         }
         file_changes.extend(linkfiles.into_iter());
@@ -180,7 +180,7 @@ pub trait MegarepoOp {
                     .moved
                     .file_changes()
                     // Do not check deleted files
-                    .filter_map(|(path, maybe_fc)| maybe_fc.map(|_| path)),
+                    .filter_map(|(path, fc)| fc.is_changed().then(|| path)),
             )?;
         }
 
@@ -305,7 +305,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         links: BTreeMap<MPath, Bytes>,
         repo: &BlobRepo,
-    ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+    ) -> Result<BTreeMap<MPath, FileChange>, Error> {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
@@ -317,7 +317,7 @@ pub trait MegarepoOp {
                 );
                 fut.await?;
 
-                let fc = Some(FileChange::new(content_id, FileType::Symlink, size, None));
+                let fc = FileChange::tracked(content_id, FileType::Symlink, size, None);
 
                 Result::<_, Error>::Ok((path, fc))
             })

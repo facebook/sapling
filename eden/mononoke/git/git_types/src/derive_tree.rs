@@ -24,7 +24,7 @@ use derived_data::{
     BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
 };
 use filestore::{self, FetchKey};
-use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 
 use crate::errors::ErrorKind;
 use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
@@ -199,19 +199,19 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
     bcs.into_mut()
         .file_changes
         .into_iter()
-        .map(|(mpath, maybe_file_change)| {
+        .map(|(mpath, file_change)| {
             cloned!(ctx, blobstore);
             async move {
-                match maybe_file_change {
-                    Some(file_change) => {
-                        let t = file_change.file_type();
-                        let k = FetchKey::Canonical(file_change.content_id());
+                match file_change {
+                    FileChange::TrackedChange(tc) => {
+                        let t = tc.file_type();
+                        let k = FetchKey::Canonical(tc.content_id());
 
                         let r = filestore::get_metadata(&blobstore, &ctx, &k).await?;
                         let m = r.ok_or(ErrorKind::ContentMissing(k))?;
                         Ok((mpath, Some(BlobHandle::new(m, t))))
                     }
-                    None => Ok((mpath, None)),
+                    FileChange::Deleted => Ok((mpath, None)),
                 }
             }
         })

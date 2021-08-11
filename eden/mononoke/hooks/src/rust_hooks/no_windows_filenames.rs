@@ -89,7 +89,7 @@ impl FileHook for NoWindowsFilenames {
         &'this self,
         _ctx: &'ctx CoreContext,
         _context_fetcher: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
@@ -99,7 +99,7 @@ impl FileHook for NoWindowsFilenames {
             return Ok(HookExecution::Accepted);
         }
 
-        if change.is_none() {
+        if change.is_removed() {
             return Ok(HookExecution::Accepted);
         }
 

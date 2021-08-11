@@ -119,9 +119,9 @@ async fn create_initial_commit_with_contents<'a>(
                         .store(&ctx, repo.blobstore())
                         .await
                         .unwrap();
-                    Some(FileChange::new(content_id, FileType::Regular, 3, None))
+                    FileChange::tracked(content_id, FileType::Regular, 3, None)
                 }
-                None => None,
+                None => FileChange::Deleted,
             };
             (path, file_change)
         }
@@ -426,12 +426,12 @@ async fn create_commit_from_parent_and_changes<'a>(
     p1: ChangesetId,
     changes: BTreeMap<&'static str, Option<&'static str>>,
 ) -> ChangesetId {
-    let mut proper_changes: BTreeMap<MPath, Option<FileChange>> = BTreeMap::new();
+    let mut proper_changes: BTreeMap<MPath, FileChange> = BTreeMap::new();
     for (path, maybe_content) in changes.into_iter() {
         let mpath = MPath::new(path).unwrap();
         match maybe_content {
             None => {
-                proper_changes.insert(mpath, None);
+                proper_changes.insert(mpath, FileChange::Deleted);
             }
             Some(content) => {
                 let file_contents = FileContents::new_bytes(content.as_bytes());
@@ -441,9 +441,9 @@ async fn create_commit_from_parent_and_changes<'a>(
                     .await
                     .unwrap();
                 let file_change =
-                    FileChange::new(content_id, FileType::Regular, content.len() as u64, None);
+                    FileChange::tracked(content_id, FileType::Regular, content.len() as u64, None);
 
-                proper_changes.insert(mpath, Some(file_change));
+                proper_changes.insert(mpath, file_change);
             }
         }
     }
@@ -483,7 +483,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         .store(&ctx, repo.blobstore())
         .await
         .unwrap();
-    let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
+    let file_change = FileChange::tracked(content_id, FileType::Regular, 3, None);
 
     let bcs = BonsaiChangesetMut {
         parents: vec![p1],
@@ -493,7 +493,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer_date: None,
         message: "Change master_file".to_string(),
         extra: Default::default(),
-        file_changes: sorted_vector_map! {mpath("master_file") => Some(file_change)},
+        file_changes: sorted_vector_map! {mpath("master_file") => file_change},
     }
     .freeze()
     .unwrap();
@@ -647,7 +647,7 @@ async fn megarepo_copy_file(
         .store(&ctx, repo.blobstore())
         .await
         .unwrap();
-    let file_change = FileChange::new(
+    let file_change = FileChange::tracked(
         content_id,
         FileType::Regular,
         3,
@@ -662,7 +662,7 @@ async fn megarepo_copy_file(
         committer_date: None,
         message: "Change 1".to_string(),
         extra: Default::default(),
-        file_changes: sorted_vector_map! {mpath("linear/new_file") => Some(file_change)},
+        file_changes: sorted_vector_map! {mpath("linear/new_file") => file_change},
     }
     .freeze()
     .unwrap();
@@ -750,7 +750,10 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     assert!(file_changes.len() == 1, "Wrong file change count");
     let (path, copy_info) = file_changes.first().unwrap();
     assert_eq!(**path, mpath("new_file"));
-    let (copy_source, copy_bcs) = copy_info.unwrap().copy_from().unwrap();
+    let (copy_source, copy_bcs) = match copy_info {
+        FileChange::TrackedChange(tc) => tc.copy_from().unwrap(),
+        _ => panic!(),
+    };
     assert_eq!(*copy_source, mpath("1"));
     assert_eq!(*copy_bcs, linear_master_bcs_id);
 
@@ -1015,10 +1018,10 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 
     // "dir1" was rewrtitten as "prefix2" and explicitly replaced with file, so the file
     // change should be `Some`
-    assert!(file_changes[&mpath("prefix2")].is_some());
+    assert!(file_changes[&mpath("prefix2")].is_changed());
     // "dir1/subdir1/subsubdir1/file_1" was rewritten as "prefix1/file_1", and became
     // an implicit delete
-    assert!(file_changes[&mpath("prefix1/file_1")].is_none());
+    assert!(file_changes[&mpath("prefix1/file_1")].is_removed());
     // there are no other entries in `file_changes` as other implicit deletes where
     // removed by the minimization process
     assert_eq!(file_changes.len(), 2);
@@ -1040,7 +1043,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         .store(&ctx, repo.blobstore())
         .await
         .unwrap();
-    let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
+    let file_change = FileChange::tracked(content_id, FileType::Regular, 3, None);
 
     let bcs = BonsaiChangesetMut {
         parents: vec![p1],
@@ -1050,7 +1053,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         committer_date: None,
         message: "Change linear/1".to_string(),
         extra: Default::default(),
-        file_changes: sorted_vector_map! {mpath("linear/1") => Some(file_change)},
+        file_changes: sorted_vector_map! {mpath("linear/1") => file_change},
     }
     .freeze()
     .unwrap();

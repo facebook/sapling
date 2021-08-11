@@ -288,7 +288,7 @@ async fn generate_additional_file_changes(
     large_to_small: &CommitSyncer<SqlSyncedCommitMapping>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
-) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error> {
+) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
     let bonsai_diff = find_bonsai_diff(ctx.clone(), &large_repo, root, onto_value)
         .collect()
         .compat()

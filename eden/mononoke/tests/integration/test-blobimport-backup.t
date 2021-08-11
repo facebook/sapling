@@ -57,16 +57,20 @@ setup configuration
   >   "extra": {},
   >   "file_changes": {
   >     "C": {
-  >       "content_id": "896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d",
-  >       "file_type": "Regular",
-  >       "size": 1,
-  >       "copy_from": null
+  >       "TrackedChange": {
+  >         "content_id": "896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d",
+  >         "file_type": "Regular",
+  >         "size": 1,
+  >         "copy_from": null
+  >       }
   >     },
   >     "B": {
-  >       "content_id": "55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f",
-  >       "file_type": "Regular",
-  >       "size": 1,
-  >       "copy_from": null
+  >       "TrackedChange": {
+  >         "content_id": "55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f",
+  >         "file_type": "Regular",
+  >         "size": 1,
+  >         "copy_from": null
+  >       }
   >     }
   >   }
   > }

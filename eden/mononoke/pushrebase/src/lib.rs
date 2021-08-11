@@ -802,12 +802,10 @@ async fn find_changed_files(
 
 fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
     bcs.file_changes()
-        .map(|(path, maybe_file_change)| {
+        .map(|(path, file_change)| {
             let mut v = vec![];
-            if let Some(file_change) = maybe_file_change {
-                if let Some((copy_from_path, _)) = file_change.copy_from() {
-                    v.push(copy_from_path.clone());
-                }
+            if let Some((copy_from_path, _)) = file_change.copy_from() {
+                v.push(copy_from_path.clone());
             }
             v.push(path.clone());
             v.into_iter()
@@ -976,20 +974,23 @@ async fn rebase_changeset(
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
     let mut file_changes = bcs.file_changes;
-    for file_change_opt in file_changes.values_mut() {
-        *file_change_opt = file_change_opt.take().map(|file_change| {
-            FileChange::new(
-                file_change.content_id().clone(),
-                file_change.file_type(),
-                file_change.size(),
-                file_change.copy_from().map(|(path, cs)| {
-                    (
-                        path.clone(),
-                        remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
-                    )
-                }),
-            )
-        });
+    for file_change in file_changes.values_mut() {
+        match file_change {
+            FileChange::TrackedChange(tc) => {
+                *file_change = FileChange::tracked(
+                    tc.content_id().clone(),
+                    tc.file_type(),
+                    tc.size(),
+                    tc.copy_from().map(|(path, cs)| {
+                        (
+                            path.clone(),
+                            remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
+                        )
+                    }),
+                );
+            }
+            FileChange::Deleted => {}
+        }
     }
 
     let new_file_paths: HashSet<_> =
@@ -1073,7 +1074,7 @@ async fn generate_additional_bonsai_file_changes(
     onto: &ChangesetId,
     repo: &BlobRepo,
     rebased_set: &HashSet<ChangesetId>,
-) -> Result<Vec<(MPath, Option<FileChange>)>> {
+) -> Result<Vec<(MPath, FileChange)>> {
     let parents: Vec<_> = bcs.parents().collect();
 
     if parents.len() <= 1 {
@@ -2238,15 +2239,17 @@ mod tests {
                 .await?
                 .ok_or(Error::msg("Root missing"))?;
             let root_bcs = root.load(&ctx, repo.blobstore()).await?;
-            let file_1 = root_bcs
+            let file_1 = match root_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
                 .ok_or(Error::msg("path_1 missing in file_changes"))?
                 .1
-                .ok_or(Error::msg("path_1 change info missing"))?
-                .clone();
+            {
+                FileChange::TrackedChange(tc) => tc.clone(),
+                _ => return Err(Error::msg("path_1 change info missing")),
+            };
             assert_eq!(file_1.file_type(), FileType::Regular);
-            let file_1_exec = FileChange::new(
+            let file_1_exec = FileChange::tracked(
                 file_1.content_id(),
                 FileType::Executable,
                 file_1.size(),
@@ -2272,13 +2275,16 @@ mod tests {
             let result =
                 do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await?;
             let result_bcs = result.head.load(&ctx, repo.blobstore()).await?;
-            let file_1_result = result_bcs
+            let file_1_result = match result_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
                 .ok_or(Error::msg("path_1 missing in file_changes"))?
                 .1
-                .ok_or(Error::msg("path_1 change info missing"))?;
-            assert_eq!(file_1_result, &file_1_exec);
+            {
+                FileChange::TrackedChange(tc) => tc.clone(),
+                _ => return Err(Error::msg("path_1 change info missing")),
+            };
+            assert_eq!(FileChange::TrackedChange(file_1_result), file_1_exec);
 
             let result_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), result.head)

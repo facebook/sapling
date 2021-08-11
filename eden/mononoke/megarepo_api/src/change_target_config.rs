@@ -506,7 +506,10 @@ impl<'a> ChangeTargetConfig<'a> {
         removed_files: HashSet<MPath>,
         new_version: String,
     ) -> Result<ChangesetId, MegarepoError> {
-        let file_changes = removed_files.into_iter().map(|path| (path, None)).collect();
+        let file_changes = removed_files
+            .into_iter()
+            .map(|path| (path, FileChange::Deleted))
+            .collect();
         let old_target_with_removed_files = BonsaiChangesetMut {
             parents: vec![old_target_cs.id()],
             author: "svcscm".to_string(),
@@ -638,12 +641,9 @@ impl<'a> ChangeTargetConfig<'a> {
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 
-                    Ok((
-                        path,
-                        Some(FileChange::new(content_id, ty, size as u64, None)),
-                    ))
+                    Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
                 }
-                BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
+                BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
             }
         })
         .try_buffer_unordered(100)

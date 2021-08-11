@@ -306,7 +306,7 @@ enum Hook {
 
 enum HookInstance<'a> {
     Changeset(&'a dyn ChangesetHook),
-    File(&'a dyn FileHook, &'a MPath, Option<&'a FileChange>),
+    File(&'a dyn FileHook, &'a MPath, &'a FileChange),
 }
 
 impl<'a> HookInstance<'a> {
@@ -428,18 +428,20 @@ impl Hook {
                 cs_id,
                 cross_repo_push_source,
             )),
-            Self::File(hook, _) => futures.extend(cs.file_changes().map(move |(path, change)| {
-                HookInstance::File(&**hook, path, change).run(
-                    ctx,
-                    bookmark,
-                    content_manager,
-                    &hook_name,
-                    scuba.clone(),
-                    cs,
-                    cs_id,
-                    cross_repo_push_source,
-                )
-            })),
+            Self::File(hook, _) => {
+                futures.extend(cs.file_changes_map().iter().map(move |(path, change)| {
+                    HookInstance::File(&**hook, path, change).run(
+                        ctx,
+                        bookmark,
+                        content_manager,
+                        &hook_name,
+                        scuba.clone(),
+                        cs,
+                        cs_id,
+                        cross_repo_push_source,
+                    )
+                }))
+            }
         };
         futures.into_iter()
     }
@@ -463,7 +465,7 @@ pub trait FileHook: Send + Sync {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error>;

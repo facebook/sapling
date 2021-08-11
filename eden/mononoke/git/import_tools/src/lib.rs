@@ -122,7 +122,7 @@ async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
     pool: GitPool,
     changes: S,
     lfs: &GitImportLfs,
-) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error>
+) -> Result<SortedVectorMap<MPath, FileChange>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
 {
@@ -137,10 +137,10 @@ where
                             let meta = do_upload(&ctx, &blobstore, pool, oid, &path, &lfs).await?;
                             Ok((
                                 path,
-                                Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
+                                FileChange::tracked(meta.content_id, ty, meta.total_size, None),
                             ))
                         }
-                        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
                     }
                 }
             })
@@ -396,7 +396,7 @@ pub async fn gitimport(
 fn generate_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     prefs: &GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
     let CommitMetadata {
@@ -436,7 +436,7 @@ async fn import_bonsai_changeset(
     repo: &BlobRepo,
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     prefs: &GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
     let oid = metadata.oid;
@@ -537,13 +537,13 @@ pub async fn import_tree_as_single_bonsai_changeset(
                     let content_metadata =
                         do_upload(&ctx, repo.blobstore(), pool.clone(), oid, &path, &lfs).await?;
                     let file_type = convert_git_filemode(mode)?;
-                    let file_change = FileChange::new(
+                    let file_change = FileChange::tracked(
                         content_metadata.content_id,
                         file_type,
                         content_metadata.total_size,
                         None,
                     );
-                    Result::<_, Error>::Ok((path, Some(file_change)))
+                    Result::<_, Error>::Ok((path, file_change))
                 }
             }
         })

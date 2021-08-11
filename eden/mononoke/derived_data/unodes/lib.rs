@@ -58,7 +58,7 @@ pub async fn find_unode_rename_sources(
     // changeset.
     let mut references: HashMap<ChangesetId, HashMap<&MPath, Vec<&MPath>>> = HashMap::new();
     for (to_path, file_change) in bonsai.file_changes() {
-        if let Some((from_path, csid)) = file_change.and_then(|fc| fc.copy_from()) {
+        if let Some((from_path, csid)) = file_change.copy_from() {
             references
                 .entry(*csid)
                 .or_insert_with(HashMap::new)
@@ -128,7 +128,7 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
 ) -> Result<HashMap<MPath, FileUnodeId>, Error> {
     let mut references: HashMap<ChangesetId, HashMap<MPath, MPath>> = HashMap::new();
     for (to_path, file_change) in bonsai.file_changes() {
-        if let Some((from_path, csid)) = file_change.and_then(|fc| fc.copy_from()) {
+        if let Some((from_path, csid)) = file_change.copy_from() {
             references
                 .entry(*csid)
                 .or_default()

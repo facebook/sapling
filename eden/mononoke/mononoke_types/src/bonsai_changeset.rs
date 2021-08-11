@@ -34,7 +34,7 @@ pub struct BonsaiChangesetMut {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: SortedVectorMap<String, Vec<u8>>,
-    pub file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    pub file_changes: SortedVectorMap<MPath, FileChange>,
 }
 
 impl BonsaiChangesetMut {
@@ -60,7 +60,7 @@ impl BonsaiChangesetMut {
                 .into_iter()
                 .map(|(f, fc_opt)| {
                     let mpath = MPath::from_thrift(f)?;
-                    let fc_opt = FileChange::from_thrift_opt(fc_opt, &mpath)?;
+                    let fc_opt = FileChange::from_thrift(fc_opt, &mpath)?;
                     Ok((mpath, fc_opt))
                 })
                 .collect::<Result<_>>()?,
@@ -84,7 +84,7 @@ impl BonsaiChangesetMut {
             file_changes: self
                 .file_changes
                 .into_iter()
-                .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
+                .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
                 .collect(),
         }
     }
@@ -112,16 +112,14 @@ impl BonsaiChangesetMut {
     /// doesn't exist in its parent is invalid. Instead, it only checks for internal consistency.
     pub fn verify(&self) -> Result<()> {
         // Check that the copy info ID refers to a parent in the parent set.
-        for (path, fc_opt) in &self.file_changes {
-            if let &Some(ref fc) = fc_opt {
-                if let Some(&(ref copy_from_path, ref copy_from_id)) = fc.copy_from() {
-                    if !self.parents.contains(copy_from_id) {
-                        bail!(ErrorKind::InvalidBonsaiChangeset(format!(
-                            "copy information for path '{}' (from '{}') has parent {} which isn't \
+        for (path, fc) in &self.file_changes {
+            if let Some(&(ref copy_from_path, ref copy_from_id)) = fc.copy_from() {
+                if !self.parents.contains(copy_from_id) {
+                    bail!(ErrorKind::InvalidBonsaiChangeset(format!(
+                        "copy information for path '{}' (from '{}') has parent {} which isn't \
                              recognized",
-                            path, copy_from_path, copy_from_id
-                        )));
-                    }
+                        path, copy_from_path, copy_from_id
+                    )));
                 }
             }
         }
@@ -130,7 +128,7 @@ impl BonsaiChangesetMut {
         path::check_pcf(
             self.file_changes
                 .iter()
-                .map(|(path, change)| (path, change.is_some())),
+                .map(|(path, change)| (path, change.is_changed())),
         )
         .with_context(|| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
 
@@ -179,14 +177,11 @@ impl BonsaiChangeset {
     /// Get the files changed in this changeset. The items returned are guaranteed
     /// to be in depth-first traversal order: once all the changes to a particular
     /// tree have been applied, it will never be referred to again.
-    pub fn file_changes(&self) -> impl Iterator<Item = (&MPath, Option<&FileChange>)> {
-        self.inner
-            .file_changes
-            .iter()
-            .map(|(path, fc_opt)| (path, fc_opt.as_ref()))
+    pub fn file_changes(&self) -> impl Iterator<Item = (&MPath, &FileChange)> {
+        self.inner.file_changes.iter()
     }
 
-    pub fn file_changes_map(&self) -> &SortedVectorMap<MPath, Option<FileChange>> {
+    pub fn file_changes_map(&self) -> &SortedVectorMap<MPath, FileChange> {
         &self.inner.file_changes
     }
 
@@ -271,9 +266,9 @@ impl Arbitrary for BonsaiChangeset {
         let file_changes: BTreeMap<_, _> = (0..num_changes)
             .map(|_| {
                 let fc_opt = if g.gen_ratio(1, 3) {
-                    Some(FileChange::arbitrary_from_parents(g, &parents))
+                    FileChange::arbitrary_from_parents(g, &parents)
                 } else {
-                    None
+                    FileChange::Deleted
                 };
                 // XXX be smarter about generating paths here?
                 (MPath::arbitrary(g), fc_opt)
@@ -283,7 +278,7 @@ impl Arbitrary for BonsaiChangeset {
         if path::check_pcf(
             file_changes
                 .iter()
-                .map(|(path, change)| (path, change.is_some())),
+                .map(|(path, change)| (path, change.is_changed())),
         )
         .is_err()
         {
@@ -368,13 +363,13 @@ mod test {
             message: "Commit message".into(),
             extra: SortedVectorMap::new(),
             file_changes: sorted_vector_map![
-                MPath::new("a/b").unwrap() => Some(FileChange::new(
+                MPath::new("a/b").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,
                     42,
                     None,
-                )),
-                MPath::new("c/d").unwrap() => Some(FileChange::new(
+                ),
+                MPath::new("c/d").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([2; 32]),
                     FileType::Executable,
                     84,
@@ -382,9 +377,9 @@ mod test {
                         MPath::new("e/f").unwrap(),
                         ChangesetId::from_byte_array([3; 32]),
                     )),
-                )),
-                MPath::new("g/h").unwrap() => None,
-                MPath::new("i/j").unwrap() => None,
+                ),
+                MPath::new("g/h").unwrap() => FileChange::Deleted,
+                MPath::new("i/j").unwrap() => FileChange::Deleted,
             ],
         };
         let tc = tc.freeze().expect("fixed bonsai changeset must be valid");

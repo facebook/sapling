@@ -186,15 +186,15 @@ where
     for (idx, chunk) in chunks_iter.into_iter().enumerate() {
         let mut file_changes = BTreeMap::new();
         for file_move in chunk {
-            file_changes.insert(file_move.old_path.clone(), None);
+            file_changes.insert(file_move.old_path.clone(), FileChange::Deleted);
             if let Some(to) = file_move.maybe_new_path {
-                let fc = FileChange::new(
+                let fc = FileChange::tracked(
                     file_move.content_id,
                     file_move.file_type,
                     file_move.file_size,
                     Some((file_move.old_path, parent_bcs_id)),
                 );
-                file_changes.insert(to, Some(fc));
+                file_changes.insert(to, fc);
             }
         }
 
@@ -360,7 +360,7 @@ mod test {
         assert_eq!(
             file_changes,
             sorted_vector_map! {
-                MPath::new("dir1/file_1_in_dir1").unwrap() => None
+                MPath::new("dir1/file_1_in_dir1").unwrap() => FileChange::Deleted
             }
         );
     }
@@ -386,8 +386,11 @@ mod test {
         assert_eq!(parents, vec![bcs_id]);
         let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();
         let new_path = MPath::new("newdir/dir1/file_1_in_dir1").unwrap();
-        assert_eq!(file_changes[&old_path], None);
-        let file_change = file_changes[&new_path].as_ref().unwrap();
+        assert_eq!(file_changes[&old_path], FileChange::Deleted);
+        let file_change = match &file_changes[&new_path] {
+            FileChange::TrackedChange(tc) => tc,
+            _ => panic!(),
+        };
         assert_eq!(file_change.copy_from(), Some((old_path, bcs_id)).as_ref());
     }
 

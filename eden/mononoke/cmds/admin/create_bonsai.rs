@@ -69,16 +69,19 @@ pub async fn subcommand_create_bonsai<'a>(
 
     let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
     for (_, change) in bcs.file_changes() {
-        if let Some(change) = change {
-            if filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &change.content_id().into())
-                .await?
-                .is_none()
-            {
-                return Err(SubcommandError::Error(format_err!(
-                    "filenode {} is not found in the filestore",
-                    &change.content_id()
-                )));
+        match change {
+            FileChange::TrackedChange(tc) => {
+                if filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &tc.content_id().into())
+                    .await?
+                    .is_none()
+                {
+                    return Err(SubcommandError::Error(format_err!(
+                        "filenode {} is not found in the filestore",
+                        &tc.content_id()
+                    )));
+                }
             }
+            FileChange::Deleted => {}
         }
     }
     let bcs_id = bcs.get_changeset_id();
@@ -105,7 +108,7 @@ pub struct DeserializableBonsaiChangeset {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, Vec<u8>>,
-    pub file_changes: BTreeMap<String, Option<FileChange>>,
+    pub file_changes: BTreeMap<String, FileChange>,
 }
 
 impl DeserializableBonsaiChangeset {

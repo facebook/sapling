@@ -169,24 +169,24 @@ async fn create_changesets(
 
         let mut fc = BTreeMap::new();
         for (to_path, maybe_fsnode) in path_to_maybe_fsnodes {
-            let maybe_file_change = match maybe_fsnode {
+            let file_change = match maybe_fsnode {
                 Some((from_path, fsnode_file)) => {
                     let copy_from = if record_copy_from {
                         Some((from_path, parent))
                     } else {
                         None
                     };
-                    Some(FileChange::new(
+                    FileChange::tracked(
                         *fsnode_file.content_id(),
                         *fsnode_file.file_type(),
                         fsnode_file.size(),
                         copy_from,
-                    ))
+                    )
                 }
-                None => None,
+                None => FileChange::Deleted,
             };
 
-            fc.insert(to_path, maybe_file_change);
+            fc.insert(to_path, file_change);
         }
 
         info!(ctx.logger(), "creating csid with {} file changes", fc.len());
@@ -298,7 +298,7 @@ async fn list_directory(
 
 fn create_bonsai_changeset(
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     author: String,
     message: String,
 ) -> Result<BonsaiChangeset, Error> {
@@ -772,11 +772,13 @@ mod test {
             .load(&ctx, &repo.get_blobstore())
             .await?;
         let file_changes = copy_bcs.file_changes_map();
-        let a_change = file_changes
+        let a_change = match file_changes
             .get(&MPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
-            .clone()
-            .expect("change to dir_to/a expected to not be None");
+        {
+            FileChange::TrackedChange(tc) => tc,
+            _ => panic!("change to dir_to/a expected to not be None"),
+        };
         // Ensure that there is copy-from inserted when copying within the repo
         assert!(a_change.copy_from().is_some());
 
@@ -972,11 +974,13 @@ mod test {
             .load(&ctx, &target_repo.get_blobstore())
             .await?;
         let file_changes = copy_bcs.file_changes_map();
-        let a_change = file_changes
+        let a_change = match file_changes
             .get(&MPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
-            .clone()
-            .expect("change to dir_to/a expected to not be None");
+        {
+            FileChange::TrackedChange(tc) => tc,
+            _ => panic!("change to dir_to/a expected to not be None"),
+        };
         // Ensure that there's no copy-from inserted when copying from another repo
         assert!(a_change.copy_from().is_none());
 

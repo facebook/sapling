@@ -1188,12 +1188,12 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
     fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
         // we need apply deletion first
         for (path, change) in self.file_changes() {
-            if change.is_none() {
+            if change.is_removed() {
                 trie.remove(path);
             }
         }
         for (path, change) in self.file_changes() {
-            if change.is_some() {
+            if change.is_changed() {
                 if let Some(conflict) = path.apply(trie) {
                     return Some(conflict);
                 }

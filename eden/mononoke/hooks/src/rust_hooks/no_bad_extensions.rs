@@ -57,11 +57,11 @@ impl FileHook for NoBadExtensions {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
-        if change.is_none() {
+        if change.is_removed() {
             return Ok(HookExecution::Accepted);
         }
 

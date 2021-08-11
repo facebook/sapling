@@ -92,10 +92,13 @@ impl LinearStack {
 
     fn push(&mut self, cs_id: ChangesetId, bcs: &BonsaiChangeset) {
         let mut fc = self.get_last_file_changes().cloned().unwrap_or_default();
-        fc.extend(bcs.file_changes().map(|(path, maybe_fc)| {
+        fc.extend(bcs.file_changes().map(|(path, fc)| {
             (
                 path.clone(),
-                maybe_fc.map(|fc| (fc.content_id(), fc.file_type())),
+                match fc {
+                    FileChange::TrackedChange(tc) => Some((tc.content_id(), tc.file_type())),
+                    FileChange::Deleted => None,
+                },
             )
         }));
         self.file_changes.push((cs_id, fc));
@@ -138,7 +141,7 @@ impl LinearStack {
 /// 2) File with the same name was deleted in `left` and added in `right` or vice-versa
 fn has_file_conflict(
     left: &FileToContent,
-    right: BTreeMap<&MPath, Option<&FileChange>>,
+    right: BTreeMap<&MPath, &FileChange>,
     file_conflicts: FileConflicts,
 ) -> bool {
     let mut left = left.iter();
@@ -151,7 +154,7 @@ fn has_file_conflict(
                 CmpOrdering::Equal => {
                     match file_conflicts {
                         FileConflicts::ChangeDelete => {
-                            if l_content.is_some() != r_file_change.is_some() {
+                            if l_content.is_some() != r_file_change.is_changed() {
                                 // File is deleted and modified in two
                                 // different commits - this is a conflict,
                                 // they can't be in the same stack

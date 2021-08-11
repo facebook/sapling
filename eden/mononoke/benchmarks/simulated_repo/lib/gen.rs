@@ -109,7 +109,7 @@ impl GenManifest {
                     let (path, content) = self.gen_change(rng, settings, Vec::new());
                     match content {
                         None => {
-                            file_changes.insert(path, None);
+                            file_changes.insert(path, FileChange::Deleted);
                         }
                         Some(content) => {
                             let content = FileContents::new_bytes(content);
@@ -119,7 +119,7 @@ impl GenManifest {
                             store_changes.push(blob.store(&ctx, blobstore));
                             file_changes.insert(
                                 path,
-                                Some(FileChange::new(id, FileType::Regular, size as u64, None)),
+                                FileChange::tracked(id, FileType::Regular, size as u64, None),
                             );
                         }
                     }

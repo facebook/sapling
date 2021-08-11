@@ -79,7 +79,7 @@ impl FileHook for NoQuestionableFilenames {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
@@ -88,7 +88,7 @@ impl FileHook for NoQuestionableFilenames {
             // running in the original repo
             return Ok(HookExecution::Accepted);
         }
-        if change.is_none() {
+        if change.is_removed() {
             return Ok(HookExecution::Accepted);
         }
 

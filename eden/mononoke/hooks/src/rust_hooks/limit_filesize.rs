@@ -83,7 +83,7 @@ impl FileHook for LimitFilesize {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
@@ -94,8 +94,8 @@ impl FileHook for LimitFilesize {
 
         let path = format!("{}", path);
         let change = match change {
-            Some(c) => c,
-            None => return Ok(HookExecution::Accepted),
+            FileChange::TrackedChange(c) => c,
+            FileChange::Deleted => return Ok(HookExecution::Accepted),
         };
 
         let len = content_manager

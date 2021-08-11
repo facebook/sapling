@@ -34,6 +34,7 @@ use maplit::{hashmap, hashset};
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, PushrebaseFlags};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
+    TrackedFileChange,
 };
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
@@ -1476,24 +1477,21 @@ where
             .parents
             .retain(|p| new_source_parents.contains(&&*p));
 
-        for (_, maybe_file_change) in source_cs.file_changes.iter_mut() {
-            let new_file_change = if let Some(file_change) = maybe_file_change {
-                match file_change.copy_from() {
+        for (_, file_change) in source_cs.file_changes.iter_mut() {
+            match file_change {
+                FileChange::TrackedChange(ref mut tc) => match tc.copy_from() {
                     Some((_, parent)) if !new_source_parents.contains(&parent) => {
-                        Some(FileChange::new(
-                            file_change.content_id(),
-                            file_change.file_type(),
-                            file_change.size(),
+                        *tc = TrackedFileChange::new(
+                            tc.content_id(),
+                            tc.file_type(),
+                            tc.size(),
                             None,
-                        ))
+                        );
                     }
-                    _ => Some(file_change.clone()),
-                }
-            } else {
-                None
-            };
-
-            *maybe_file_change = new_file_change;
+                    _ => {}
+                },
+                FileChange::Deleted => {}
+            }
         }
 
         Ok(source_cs)

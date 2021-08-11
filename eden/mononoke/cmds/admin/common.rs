@@ -16,7 +16,7 @@ use futures::TryStreamExt;
 use futures::{compat::Future01CompatExt, try_join};
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
-use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
+use mononoke_types::{BonsaiChangeset, DateTime, FileChange, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
 use std::collections::HashMap;
@@ -49,11 +49,11 @@ pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
 
     for (path, file_change) in bcs.file_changes() {
         match file_change {
-            Some(file_change) => match file_change.copy_from() {
+            FileChange::TrackedChange(file_change) => match file_change.copy_from() {
                 Some(_) => println!("\t COPY/MOVE: {} {}", path, file_change.content_id()),
                 None => println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id()),
             },
-            None => println!("\t REMOVED: {}", path),
+            FileChange::Deleted => println!("\t REMOVED: {}", path),
         }
     }
 }

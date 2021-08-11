@@ -18,7 +18,7 @@ use derived_data::{
 use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ContentId, FileType, MPath, ManifestUnodeId,
+    BlobstoreBytes, BonsaiChangeset, ContentId, FileChange, FileType, MPath, ManifestUnodeId,
 };
 use repo_blobstore::RepoBlobstore;
 use std::convert::{TryFrom, TryInto};
@@ -138,10 +138,12 @@ pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
 ) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
-        .map(|(mpath, maybe_file_change)| {
-            let content_file_type = match maybe_file_change {
-                Some(file_change) => Some((file_change.content_id(), file_change.file_type())),
-                None => None,
+        .map(|(mpath, file_change)| {
+            let content_file_type = match file_change {
+                FileChange::TrackedChange(file_change) => {
+                    Some((file_change.content_id(), file_change.file_type()))
+                }
+                FileChange::Deleted => None,
             };
             (mpath.clone(), content_file_type)
         })

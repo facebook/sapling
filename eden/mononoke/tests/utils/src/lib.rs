@@ -326,7 +326,7 @@ impl CreateFileContext {
         ctx: &CoreContext,
         repo: &BlobRepo,
         parents: &[ChangesetId],
-    ) -> Result<Option<FileChange>, Error> {
+    ) -> Result<FileChange, Error> {
         let file_change = match self {
             Self::FromHelper(content, file_type, copy_info) => {
                 let content = Bytes::copy_from_slice(content.as_bytes());
@@ -357,15 +357,10 @@ impl CreateFileContext {
                     None => None,
                 };
 
-                Some(FileChange::new(
-                    meta.content_id,
-                    file_type,
-                    meta.total_size,
-                    copy_info,
-                ))
+                FileChange::tracked(meta.content_id, file_type, meta.total_size, copy_info)
             }
-            Self::FromFileChange(file_change) => Some(file_change),
-            Self::Deleted => None,
+            Self::FromFileChange(file_change) => file_change,
+            Self::Deleted => FileChange::Deleted,
         };
 
         Ok(file_change)
@@ -539,7 +534,7 @@ pub async fn store_files<T: AsRef<str>>(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<T>>,
     repo: &BlobRepo,
-) -> BTreeMap<MPath, Option<FileChange>> {
+) -> BTreeMap<MPath, FileChange> {
     let mut res = btreemap! {};
 
     for (path, content) in files {
@@ -555,11 +550,12 @@ pub async fn store_files<T: AsRef<str>>(
                     .await
                     .unwrap();
 
-                let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
-                res.insert(path, Some(file_change));
+                let file_change =
+                    FileChange::tracked(content_id, FileType::Regular, size as u64, None);
+                res.insert(path, file_change);
             }
             None => {
-                res.insert(path, None);
+                res.insert(path, FileChange::Deleted);
             }
         }
     }
@@ -572,7 +568,7 @@ pub async fn store_rename(
     path: &str,
     content: &str,
     repo: &BlobRepo,
-) -> (MPath, Option<FileChange>) {
+) -> (MPath, FileChange) {
     let path = MPath::new(path).unwrap();
     let size = content.len();
     let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
@@ -582,8 +578,9 @@ pub async fn store_rename(
         .await
         .unwrap();
 
-    let file_change = FileChange::new(content_id, FileType::Regular, size as u64, Some(copy_src));
-    (path, Some(file_change))
+    let file_change =
+        FileChange::tracked(content_id, FileType::Regular, size as u64, Some(copy_src));
+    (path, file_change)
 }
 
 pub async fn resolve_cs_id(
@@ -630,7 +627,7 @@ pub async fn create_commit(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: BTreeMap<MPath, FileChange>,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {
         parents,
@@ -656,7 +653,7 @@ pub async fn create_commit_with_date(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: BTreeMap<MPath, FileChange>,
     author_date: DateTime,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {

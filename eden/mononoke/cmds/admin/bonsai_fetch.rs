@@ -64,7 +64,7 @@ pub struct SerializableBonsaiChangeset {
     pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, Vec<u8>>,
-    pub file_changes: BTreeMap<String, Option<FileChange>>,
+    pub file_changes: BTreeMap<String, FileChange>,
 }
 
 impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
@@ -86,11 +86,12 @@ impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
             .collect();
 
         let file_changes = bonsai
-            .file_changes()
+            .file_changes_map()
+            .iter()
             .map(|(k, v)| {
                 (
                     String::from_utf8(k.to_vec()).expect("Found invalid UTF-8"),
-                    v.cloned(),
+                    v.clone(),
                 )
             })
             .collect();

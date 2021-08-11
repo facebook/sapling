@@ -42,7 +42,7 @@ pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
 pub use content_chunk::ContentChunk;
 pub use content_metadata::{ContentAlias, ContentMetadata};
 pub use datetime::{DateTime, Timestamp};
-pub use file_change::{FileChange, FileType};
+pub use file_change::{FileChange, FileType, TrackedFileChange};
 pub use file_contents::{ChunkedFileContents, ContentChunkPointer, FileContents};
 pub use generation::{Generation, FIRST_GENERATION};
 pub use globalrev::Globalrev;

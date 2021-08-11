@@ -78,7 +78,7 @@ impl AliasVerification {
         &self,
         ctx: &CoreContext,
         bcs_id: ChangesetId,
-    ) -> Result<Vec<Option<FileChange>>, Error> {
+    ) -> Result<Vec<FileChange>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
 
         if cs_cnt % 1000 == 0 {
@@ -87,8 +87,9 @@ impl AliasVerification {
 
         let bcs = bcs_id.load(&ctx, self.blobrepo.blobstore()).await?;
         let file_changes: Vec<_> = bcs
-            .file_changes()
-            .map(|(_, file_change)| file_change.cloned())
+            .file_changes_map()
+            .iter()
+            .map(|(_path, fc)| fc.clone())
             .collect();
         Ok(file_changes)
     }
@@ -221,11 +222,12 @@ impl AliasVerification {
             })
             .try_flatten()
             .try_for_each_concurrent(LIMIT, move |file_change| async move {
-                if let Some(file_change) = file_change {
-                    let content_id = file_change.content_id().clone();
-                    self.process_file_content(ctx, content_id).await
-                } else {
-                    Ok(())
+                match file_change {
+                    FileChange::TrackedChange(tc) => {
+                        self.process_file_content(ctx, tc.content_id().clone())
+                            .await
+                    }
+                    FileChange::Deleted => Ok(()),
                 }
             })
             .await?;

@@ -45,10 +45,8 @@ impl ChangedFilesInfo {
         let changed_files_count: u64 = bcs.file_changes_map().len().try_into().unwrap();
 
         let mut changed_files_size = 0;
-        for maybe_fc in bcs.file_changes_map().values() {
-            if let Some(fc) = maybe_fc {
-                changed_files_size += fc.size();
-            }
+        for fc in bcs.file_changes_map().values() {
+            changed_files_size += fc.size().unwrap_or(0);
         }
 
         Self {

@@ -211,7 +211,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
             };
 
             match change {
-                Some(change) => {
+                FileChange::TrackedChange(change) => {
                     let fut = async move {
                         let content = content_manager
                             .get_file_text(ctx, change.content_id())
@@ -234,7 +234,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
                     };
                     futs.push(fut);
                 }
-                None => {
+                FileChange::Deleted => {
                     // If we have a deletion, but expect it to be present, fail
                     if expected_content.is_some() {
                         return Ok(default_rejection());
@@ -281,7 +281,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
             let expected_length = self.expected_lengths.get(path);
 
             match change {
-                Some(change) => {
+                FileChange::TrackedChange(change) => {
                     let fut = async move {
                         let size = content_manager
                             .get_file_size(ctx, change.content_id())
@@ -291,7 +291,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
                     };
                     futs.push(fut);
                 }
-                None => {
+                FileChange::Deleted => {
                     if expected_length.is_some() {
                         return Ok(default_rejection());
                     }
@@ -331,7 +331,7 @@ impl FileHook for FnFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        _change: Option<&'change FileChange>,
+        _change: &'change FileChange,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
@@ -360,7 +360,7 @@ impl FileHook for PathMatchingFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        _change: Option<&'change FileChange>,
+        _change: &'change FileChange,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
@@ -387,12 +387,12 @@ impl FileHook for FileContentMatchingFileHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         match change {
-            Some(change) => {
+            FileChange::TrackedChange(change) => {
                 let content = content_manager
                     .get_file_text(ctx, change.content_id())
                     .await?;
@@ -410,7 +410,7 @@ impl FileHook for FileContentMatchingFileHook {
                 })
             }
 
-            None => Ok(default_rejection()),
+            _ => Ok(default_rejection()),
         }
     }
 }
@@ -430,13 +430,13 @@ impl FileHook for IsSymLinkMatchingFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let is_symlink = match change {
-            Some(change) => change.file_type() == FileType::Symlink,
-            None => false,
+            FileChange::TrackedChange(change) => change.file_type() == FileType::Symlink,
+            _ => false,
         };
         Ok(if self.is_symlink == is_symlink {
             HookExecution::Accepted
@@ -461,17 +461,17 @@ impl FileHook for LengthMatchingFileHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let length = match change {
-            Some(change) => {
+            FileChange::TrackedChange(change) => {
                 content_manager
                     .get_file_size(ctx, change.content_id())
                     .await?
             }
-            None => return Ok(HookExecution::Accepted),
+            _ => return Ok(HookExecution::Accepted),
         };
         if length == self.length {
             return Ok(HookExecution::Accepted);
@@ -1381,9 +1381,9 @@ fn default_changeset() -> BonsaiChangeset {
         message: "This is a commit message".to_string(),
         extra: Default::default(),
         file_changes: sorted_vector_map!{
-            to_mpath("dir1/subdir1/subsubdir1/file_1") => Some(FileChange::new(ONES_CTID, FileType::Symlink, 15, None)),
-            to_mpath("dir1/subdir1/subsubdir2/file_1") => Some(FileChange::new(TWOS_CTID, FileType::Regular, 17, None)),
-            to_mpath("dir1/subdir1/subsubdir2/file_2") => Some(FileChange::new(THREES_CTID, FileType::Regular, 2, None)),
+            to_mpath("dir1/subdir1/subsubdir1/file_1") => FileChange::tracked(ONES_CTID, FileType::Symlink, 15, None),
+            to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None),
+            to_mpath("dir1/subdir1/subsubdir2/file_2") => FileChange::tracked(THREES_CTID, FileType::Regular, 2, None),
         },
     }.freeze().expect("Created changeset")
 }

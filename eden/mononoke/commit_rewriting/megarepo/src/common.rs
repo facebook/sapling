@@ -36,7 +36,7 @@ pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
     let bcs_id = create_and_save_bonsai(ctx, repo, parents, file_changes, changeset_args).await?;
@@ -47,7 +47,7 @@ pub async fn create_and_save_bonsai(
     ctx: &CoreContext,
     repo: &BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
     let ChangesetArgs {
@@ -127,7 +127,7 @@ async fn create_bookmark(
 
 fn create_bonsai_changeset_only(
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, FileChange>,
     author: String,
     message: String,
     datetime: DateTime,
@@ -167,8 +167,10 @@ pub async fn delete_files_in_chunks<'a>(
         }
 
         let changeset_args = delete_commits_changeset_args_factory(StackPosition(i));
-        let file_changes: SortedVectorMap<MPath, _> =
-            mpath_chunk.into_iter().map(|mp| (mp, None)).collect();
+        let file_changes: SortedVectorMap<MPath, _> = mpath_chunk
+            .into_iter()
+            .map(|mp| (mp, FileChange::Deleted))
+            .collect();
         info!(
             ctx.logger(),
             "Creating delete commit #{} with {:?} (deleting {} files)",

@@ -14,7 +14,7 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use mononoke_types::BonsaiChangeset;
+use mononoke_types::{BonsaiChangeset, FileChange};
 use regex::Regex;
 
 #[derive(Default)]
@@ -124,8 +124,8 @@ impl ChangesetHook for LimitCommitsize {
             }
 
             let file = match file_change {
-                None => continue,
-                Some(file) => file,
+                FileChange::Deleted => continue,
+                FileChange::TrackedChange(file) => file,
             };
 
             totalsize += file.size();

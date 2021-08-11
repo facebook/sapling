@@ -20,6 +20,7 @@ use megarepo_configs::types::SourceMappingRules;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange, MPath,
+    TrackedFileChange,
 };
 use sorted_vector_map::SortedVectorMap;
 use std::{collections::HashMap, sync::Arc};
@@ -98,12 +99,13 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
 /// Take an iterator of file changes, which may contain implicit deletes
 /// and produce a `SortedVectorMap` suitable to be used in the `BonsaiChangeset`,
 /// without any implicit deletes.
-fn minimize_file_change_set<FC, I: IntoIterator<Item = (MPath, Option<FC>)>>(
+fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
     file_changes: I,
-) -> SortedVectorMap<MPath, Option<FC>> {
-    let (adds, removes): (Vec<_>, Vec<_>) =
-        file_changes.into_iter().partition(|(_, fc)| fc.is_some());
-    let adds: HashMap<MPath, Option<FC>> = adds.into_iter().collect();
+) -> SortedVectorMap<MPath, FileChange> {
+    let (adds, removes): (Vec<_>, Vec<_>) = file_changes
+        .into_iter()
+        .partition(|(_, fc)| fc.is_changed());
+    let adds: HashMap<MPath, FileChange> = adds.into_iter().collect();
 
     let prefix_path_was_added = |removed_path: MPath| {
         removed_path
@@ -130,12 +132,12 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
     parent_changeset_ids: I,
     mover: MultiMover,
     source_repo: &'a BlobRepo,
-) -> Result<Vec<(MPath, Option<FileChange>)>, Error> {
+) -> Result<Vec<(MPath, FileChange)>, Error> {
     let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
     let file_adds: Vec<_> = cs
         .file_changes
         .iter()
-        .filter_map(|(mpath, maybe_file_change)| maybe_file_change.as_ref().map(|_| mpath.clone()))
+        .filter_map(|(mpath, file_change)| file_change.is_changed().then(|| mpath.clone()))
         .collect();
     let store = source_repo.get_blobstore();
     let implicit_deletes: Vec<MPath> =
@@ -148,7 +150,7 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
     let implicit_delete_file_changes: Vec<_> = maybe_renamed_implicit_deletes
         .into_iter()
         .flatten()
-        .map(|implicit_delete_mpath| (implicit_delete_mpath, None))
+        .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deleted))
         .collect();
 
     Ok(implicit_delete_file_changes)
@@ -220,7 +222,7 @@ pub async fn rewrite_commit<'a>(
 
                 // Extract any copy_from information, and use rewrite_copy_from on it
                 fn rewrite_file_change(
-                    change: FileChange,
+                    change: TrackedFileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
                 ) -> Result<FileChange, Error> {
@@ -231,20 +233,25 @@ pub async fn rewrite_commit<'a>(
                         })
                         .transpose()?;
 
-                    Ok(FileChange::with_new_copy_from(change, new_copy_from))
+                    Ok(FileChange::TrackedChange(
+                        TrackedFileChange::with_new_copy_from(change, new_copy_from),
+                    ))
                 }
 
                 // Rewrite both path and changes
                 fn do_rewrite(
                     path: MPath,
-                    change: Option<FileChange>,
+                    change: FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
-                ) -> Result<Vec<(MPath, Option<FileChange>)>, Error> {
+                ) -> Result<Vec<(MPath, FileChange)>, Error> {
                     let new_paths = mover(&path)?;
-                    let change = change
-                        .map(|change| rewrite_file_change(change, remapped_parents, mover.clone()))
-                        .transpose()?;
+                    let change = match change {
+                        FileChange::TrackedChange(tc) => {
+                            rewrite_file_change(tc, remapped_parents, mover.clone())?
+                        }
+                        FileChange::Deleted => FileChange::Deleted,
+                    };
                     Ok(new_paths
                         .into_iter()
                         .map(|new_path| (new_path, change.clone()))
@@ -306,10 +313,14 @@ pub async fn upload_commits<'a>(
     let mut files_to_sync = vec![];
     for rewritten in &rewritten_list {
         let rewritten_mut = rewritten.clone().into_mut();
-        let new_files_to_sync = rewritten_mut
-            .file_changes
-            .values()
-            .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()));
+        let new_files_to_sync =
+            rewritten_mut
+                .file_changes
+                .values()
+                .filter_map(|change| match change {
+                    FileChange::TrackedChange(tc) => Some(tc.content_id()),
+                    FileChange::Deleted => None,
+                });
         files_to_sync.extend(new_files_to_sync);
     }
     copy_file_contents(ctx, source_repo, target_repo, files_to_sync).await?;
@@ -350,9 +361,11 @@ pub async fn copy_file_contents<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
     use fbinit::FacebookInit;
     use maplit::{btreemap, hashmap};
+    use mononoke_types::{ContentId, FileType};
     use std::collections::BTreeMap;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{list_working_copy_utf8, CreateCommitContext};
@@ -446,10 +459,26 @@ mod test {
     }
 
     fn verify_minimized(changes: Vec<(&str, Option<()>)>, expected: BTreeMap<&str, Option<()>>) {
-        let changes: Vec<_> = changes.into_iter().map(|(p, c)| (path(p), c)).collect();
+        fn to_file_change(o: Option<()>) -> FileChange {
+            match o {
+                Some(_) => FileChange::tracked(
+                    ContentId::from_bytes(&[1; 32]).unwrap(),
+                    FileType::Regular,
+                    0,
+                    None,
+                ),
+                None => FileChange::Deleted,
+            }
+        }
+        let changes: Vec<_> = changes
+            .into_iter()
+            .map(|(p, c)| (path(p), to_file_change(c)))
+            .collect();
         let minimized = minimize_file_change_set(changes);
-        let expected: SortedVectorMap<MPath, Option<()>> =
-            expected.into_iter().map(|(p, c)| (path(p), c)).collect();
+        let expected: SortedVectorMap<MPath, FileChange> = expected
+            .into_iter()
+            .map(|(p, c)| (path(p), to_file_change(c)))
+            .collect();
         assert_eq!(expected, minimized);
     }
 
@@ -539,14 +568,15 @@ mod test {
         let second_bcs = second_rewritten_bcs_id
             .load(&ctx, &repo.get_blobstore())
             .await?;
-        let maybe_copy_from = second_bcs
+        let maybe_copy_from = match second_bcs
             .file_changes_map()
             .get(&MPath::new("prefix/pathsecondcommit")?)
             .ok_or_else(|| anyhow!("path not found"))?
-            .as_ref()
-            .ok_or_else(|| anyhow!("path_is_deleted"))?
-            .copy_from()
-            .cloned();
+        {
+            FileChange::TrackedChange(tc) => tc.copy_from().cloned(),
+            FileChange::Deleted => bail!("path_is_deleted"),
+        };
+
 
         assert_eq!(
             maybe_copy_from,

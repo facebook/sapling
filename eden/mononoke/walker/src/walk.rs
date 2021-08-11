@@ -45,7 +45,7 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, Repo
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
     unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
-    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
+    FileChange, FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -584,13 +584,16 @@ async fn bonsai_changeset_step<V: VisitOne>(
     });
     // File content expands just to meta+aliases 1:~5, with no further steps
     for (mpath, fc) in bcs.file_changes() {
-        if let Some(fc) = fc {
-            checker.add_edge_with_path(
-                &mut edges,
-                EdgeType::ChangesetToFileContent,
-                || Node::FileContent(fc.content_id()),
-                || Some(WrappedPath::from(Some(mpath.clone()))),
-            );
+        match fc {
+            FileChange::TrackedChange(tc) => {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::ChangesetToFileContent,
+                    || Node::FileContent(tc.content_id()),
+                    || Some(WrappedPath::from(Some(mpath.clone()))),
+                );
+            }
+            FileChange::Deleted => {}
         }
     }
     // Phase mapping is 1:[0|1]

@@ -31,7 +31,7 @@ use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameMaybeRejected, BlameRejected},
     blame_v2::{BlameParent, BlameV2},
-    BlameId, ChangesetId, FileUnodeId, MPath,
+    BlameId, ChangesetId, FileChange, FileUnodeId, MPath,
 };
 use slog::Logger;
 use std::collections::HashMap;
@@ -371,7 +371,10 @@ async fn subcommand_compute_blame(
                     let copy_from = bonsai
                         .file_changes_map()
                         .get(&path)
-                        .and_then(|file_change| Some(file_change.as_ref()?.copy_from().clone()?));
+                        .and_then(|file_change| match file_change {
+                            FileChange::TrackedChange(tc) => Some(tc.copy_from().clone()?),
+                            FileChange::Deleted => None,
+                        });
                     if let Some((r_path, r_csid)) = copy_from {
                         let r_parent_index = bonsai
                             .parents()

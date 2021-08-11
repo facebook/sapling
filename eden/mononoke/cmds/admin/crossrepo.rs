@@ -775,7 +775,7 @@ async fn create_file_changes(
     options: MappingCommitOptions,
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
-) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+) -> Result<BTreeMap<MPath, FileChange>, Error> {
     let mut file_changes = btreemap! {};
     if let Some(path) = options.dump_mapping_file {
         // This "dump-mapping-file" is going to be created in the large repo,
@@ -839,9 +839,9 @@ async fn create_file_changes(
         .await?;
 
         let file_change =
-            FileChange::new(content_metadata.content_id, FileType::Regular, size, None);
+            FileChange::tracked(content_metadata.content_id, FileType::Regular, size, None);
 
-        file_changes.insert(path, Some(file_change));
+        file_changes.insert(path, file_change);
     }
 
     Ok(file_changes)

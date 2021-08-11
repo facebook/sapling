@@ -32,7 +32,7 @@ pub async fn store_files(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: &BlobRepo,
-) -> SortedVectorMap<MPath, Option<FileChange>> {
+) -> SortedVectorMap<MPath, FileChange> {
     let mut res = BTreeMap::new();
 
     for (path, content) in files {
@@ -51,11 +51,11 @@ pub async fn store_files(
                 .await
                 .unwrap();
                 let file_change =
-                    FileChange::new(metadata.content_id, FileType::Regular, size, None);
-                res.insert(path, Some(file_change));
+                    FileChange::tracked(metadata.content_id, FileType::Regular, size, None);
+                res.insert(path, file_change);
             }
             None => {
-                res.insert(path, None);
+                res.insert(path, FileChange::Deleted);
             }
         }
     }
@@ -1635,7 +1635,7 @@ pub fn create_bonsai_changeset_with_author(
 
 pub fn create_bonsai_changeset_with_files(
     parents: Vec<ChangesetId>,
-    file_changes: impl Into<SortedVectorMap<MPath, Option<FileChange>>>,
+    file_changes: impl Into<SortedVectorMap<MPath, FileChange>>,
 ) -> BonsaiChangeset {
     BonsaiChangesetMut {
         parents,

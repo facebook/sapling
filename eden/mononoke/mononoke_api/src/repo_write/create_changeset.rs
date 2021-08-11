@@ -107,7 +107,7 @@ impl CreateChange {
         ctx: CoreContext,
         repo: &BlobRepo,
         parents: &Vec<ChangesetContext>,
-    ) -> Result<Option<FileChange>, MononokeError> {
+    ) -> Result<FileChange, MononokeError> {
         match self {
             CreateChange::NewContent(bytes, file_type, copy_info) => {
                 let meta = filestore::store(
@@ -122,12 +122,12 @@ impl CreateChange {
                     Some(copy_info) => Some(copy_info.resolve(parents).await?),
                     None => None,
                 };
-                Ok(Some(FileChange::new(
+                Ok(FileChange::tracked(
                     meta.content_id,
                     file_type,
                     meta.total_size,
                     copy_info,
-                )))
+                ))
             }
             CreateChange::ExistingContent(file_id, file_type, copy_info) => {
                 let meta =
@@ -143,14 +143,14 @@ impl CreateChange {
                     Some(copy_info) => Some(copy_info.resolve(parents).await?),
                     None => None,
                 };
-                Ok(Some(FileChange::new(
+                Ok(FileChange::tracked(
                     meta.content_id,
                     file_type,
                     meta.total_size,
                     copy_info,
-                )))
+                ))
             }
-            CreateChange::Delete => Ok(None),
+            CreateChange::Delete => Ok(FileChange::Deleted),
         }
     }
 
@@ -416,7 +416,7 @@ impl RepoWriteContext {
                     }
                 })
                 .collect::<FuturesUnordered<_>>()
-                .try_collect::<SortedVectorMap<MPath, Option<FileChange>>>()
+                .try_collect::<SortedVectorMap<MPath, FileChange>>()
                 .timed()
                 .await;
             let mut scuba = self.ctx().scuba().clone();

@@ -31,13 +31,13 @@ impl FileHook for ConflictMarkers {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let change = match change {
-            None => return Ok(HookExecution::Accepted),
-            Some(change) => change,
+            FileChange::TrackedChange(change) => change,
+            FileChange::Deleted => return Ok(HookExecution::Accepted),
         };
 
         let mut filename_iter = path.basename().as_ref().rsplit(|c| *c == b'.');

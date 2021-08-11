@@ -94,11 +94,11 @@ impl FileHook for DenyFiles {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: Option<&'change FileChange>,
+        change: &'change FileChange,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
-        if change.is_none() {
+        if change.is_removed() {
             // It is acceptable to delete any file
             return Ok(HookExecution::Accepted);
         }

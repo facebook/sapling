@@ -256,7 +256,7 @@ fn get_title(message: &String) -> &str {
 #[cfg(test)]
 mod test {
     use super::*;
-    use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, MPath};
+    use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
 
     use sorted_vector_map::sorted_vector_map;
 
@@ -304,7 +304,7 @@ mod test {
             committer_date: None,
             message: message.to_string(),
             extra: Default::default(),
-            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => None },
+            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deleted },
         }
         .freeze()
         .unwrap()

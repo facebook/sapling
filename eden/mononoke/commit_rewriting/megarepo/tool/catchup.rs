@@ -21,7 +21,7 @@ use manifest::{Diff, ManifestOps};
 use maplit::hashset;
 use megarepolib::common::{create_and_save_bonsai, ChangesetArgsFactory, StackPosition};
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::{ChangesetId, FileChange, MPath};
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use slog::{error, info};
@@ -51,7 +51,10 @@ pub async fn create_deletion_head_commits<'a>(
         .into_iter()
         .enumerate()
     {
-        let files = chunk.into_iter().map(|path| (path, None)).collect();
+        let files = chunk
+            .into_iter()
+            .map(|path| (path, FileChange::Deleted))
+            .collect();
         let maybe_head_bookmark_val = repo
             .get_bonsai_bookmark(ctx.clone(), &head_bookmark)
             .await?;

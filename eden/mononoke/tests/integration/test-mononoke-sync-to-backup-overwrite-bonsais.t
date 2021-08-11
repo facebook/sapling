@@ -59,16 +59,20 @@ Manually create a bonsai that would not normally be produced because it has unne
   >   "extra": {},
   >   "file_changes": {
   >     "C": {
-  >       "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
-  >       "file_type": "Regular",
-  >       "size": 2,
-  >       "copy_from": null
+  >       "TrackedChange": {
+  >         "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
+  >         "file_type": "Regular",
+  >         "size": 2,
+  >         "copy_from": null
+  >       }
   >     },
   >     "B": {
-  >       "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
-  >       "file_type": "Regular",
-  >       "size": 2,
-  >       "copy_from": null
+  >       "TrackedChange": {
+  >         "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
+  >         "file_type": "Regular",
+  >         "size": 2,
+  >         "copy_from": null
+  >       }
   >     }
   >   }
   > }
@@ -101,16 +105,20 @@ Check that bonsais are the same
     "extra": {},
     "file_changes": {
       "B": {
-        "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
-        "file_type": "Regular",
-        "size": 2,
-        "copy_from": null
+        "TrackedChange": {
+          "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
+          "file_type": "Regular",
+          "size": 2,
+          "copy_from": null
+        }
       },
       "C": {
-        "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
-        "file_type": "Regular",
-        "size": 2,
-        "copy_from": null
+        "TrackedChange": {
+          "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
+          "file_type": "Regular",
+          "size": 2,
+          "copy_from": null
+        }
       }
     }
   }
@@ -127,16 +135,20 @@ Check that bonsais are the same
     "extra": {},
     "file_changes": {
       "B": {
-        "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
-        "file_type": "Regular",
-        "size": 2,
-        "copy_from": null
+        "TrackedChange": {
+          "content_id": "122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14",
+          "file_type": "Regular",
+          "size": 2,
+          "copy_from": null
+        }
       },
       "C": {
-        "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
-        "file_type": "Regular",
-        "size": 2,
-        "copy_from": null
+        "TrackedChange": {
+          "content_id": "2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb",
+          "file_type": "Regular",
+          "size": 2,
+          "copy_from": null
+        }
       }
     }
   }

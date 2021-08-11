@@ -491,7 +491,7 @@ mod tests {
         async fn check_unode_uniqeness(
             ctx: CoreContext,
             repo: BlobRepo,
-            file_changes: BTreeMap<MPath, Option<FileChange>>,
+            file_changes: BTreeMap<MPath, FileChange>,
         ) -> Result<(), Error> {
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
             let bcs_id = bcs.get_changeset_id();
@@ -854,7 +854,7 @@ mod tests {
     async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        file_changes: BTreeMap<MPath, Option<FileChange>>,
+        file_changes: BTreeMap<MPath, FileChange>,
     ) -> Result<BonsaiChangeset, Error> {
         create_bonsai_changeset_with_params(fb, repo, file_changes, "message", vec![]).await
     }
@@ -862,7 +862,7 @@ mod tests {
     async fn create_bonsai_changeset_with_params(
         fb: FacebookInit,
         repo: BlobRepo,
-        file_changes: BTreeMap<MPath, Option<FileChange>>,
+        file_changes: BTreeMap<MPath, FileChange>,
         message: &str,
         parents: Vec<ChangesetId>,
     ) -> Result<BonsaiChangeset, Error> {
@@ -887,7 +887,7 @@ mod tests {
         ctx: CoreContext,
         files: BTreeMap<&str, Option<(&str, FileType)>>,
         repo: BlobRepo,
-    ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+    ) -> Result<BTreeMap<MPath, FileChange>, Error> {
         let mut res = btreemap! {};
 
         for (path, content) in files {
@@ -898,11 +898,11 @@ mod tests {
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
                     let content_id = content.store(&ctx, repo.blobstore()).await?;
-                    let file_change = FileChange::new(content_id, file_type, size as u64, None);
-                    res.insert(path, Some(file_change));
+                    let file_change = FileChange::tracked(content_id, file_type, size as u64, None);
+                    res.insert(path, file_change);
                 }
                 None => {
-                    res.insert(path, None);
+                    res.insert(path, FileChange::Deleted);
                 }
             }
         }

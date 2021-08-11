@@ -160,8 +160,8 @@ impl CommitRemappingState {
         let (content_id, size) = self.save(ctx, repo).await?;
         let path = MPath::new(REMAPPING_STATE_FILE)?;
 
-        let fc = FileChange::new(content_id, FileType::Regular, size, None);
-        if bcs.file_changes.insert(path, Some(fc)).is_some() {
+        let fc = FileChange::tracked(content_id, FileType::Regular, size, None);
+        if bcs.file_changes.insert(path, fc).is_some() {
             return Err(anyhow!("New bonsai changeset already has {} file"));
         }
 

@@ -586,7 +586,7 @@ mod tests {
     async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        file_changes: impl Into<SortedVectorMap<MPath, Option<FileChange>>>,
+        file_changes: impl Into<SortedVectorMap<MPath, FileChange>>,
         parents: Vec<ChangesetId>,
     ) -> BonsaiChangeset {
         let bcs = BonsaiChangesetMut {

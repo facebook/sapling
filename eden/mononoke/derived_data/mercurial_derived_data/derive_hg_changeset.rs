@@ -29,7 +29,9 @@ use mercurial_types::{
     },
     HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
 };
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, FileType, MPath};
+use mononoke_types::{
+    BonsaiChangeset, ChangesetId, FileChange, FileType, MPath, TrackedFileChange,
+};
 use stats::prelude::*;
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
@@ -46,7 +48,7 @@ async fn can_reuse_filenode(
     repo: &BlobRepo,
     ctx: &CoreContext,
     parent: HgFileNodeId,
-    change: &FileChange,
+    change: &TrackedFileChange,
 ) -> Result<Option<HgFileNodeId>, Error> {
     let parent_envelope = parent.load(&ctx, repo.blobstore()).await?;
     let parent_copyfrom_path = File::extract_copied_from(parent_envelope.metadata())?.map(|t| t.0);
@@ -67,7 +69,7 @@ async fn store_file_change(
     p1: Option<HgFileNodeId>,
     p2: Option<HgFileNodeId>,
     path: &MPath,
-    change: &FileChange,
+    change: &TrackedFileChange,
     copy_from: Option<(MPath, HgFileNodeId)>,
 ) -> Result<(FileType, HgFileNodeId), Error> {
     // If we produced a hg change that has copy info, then the Bonsai should have copy info
@@ -200,17 +202,20 @@ pub async fn get_manifest_from_bonsai(
     let mut p1_paths = Vec::new();
     let mut p2_paths = Vec::new();
     for (path, file_change) in bcs.file_changes() {
-        if let Some(file_change) = file_change {
-            if let Some((copy_path, bcsid)) = file_change.copy_from() {
-                if Some(bcsid) == p1.as_ref() {
-                    p1_paths.push(copy_path.clone());
-                }
-                if Some(bcsid) == p2.as_ref() {
-                    p2_paths.push(copy_path.clone());
-                }
-            };
-            p1_paths.push(path.clone());
-            p2_paths.push(path.clone());
+        match file_change {
+            FileChange::TrackedChange(file_change) => {
+                if let Some((copy_path, bcsid)) = file_change.copy_from() {
+                    if Some(bcsid) == p1.as_ref() {
+                        p1_paths.push(copy_path.clone());
+                    }
+                    if Some(bcsid) == p2.as_ref() {
+                        p2_paths.push(copy_path.clone());
+                    }
+                };
+                p1_paths.push(path.clone());
+                p2_paths.push(path.clone());
+            }
+            FileChange::Deleted => {}
         }
     }
 
@@ -227,14 +232,14 @@ pub async fn get_manifest_from_bonsai(
 
     let file_changes: Vec<_> = bcs
         .file_changes()
-        .map(|(path, file_change)| Ok::<_, Error>((path.clone(), file_change.cloned())))
+        .map(|(path, file_change)| Ok::<_, Error>((path.clone(), file_change.clone())))
         .collect();
     let changes: Vec<_> = stream::iter(file_changes)
         .map_ok({
             cloned!(ctx);
             move |(path, file_change)| match file_change {
-                None => future::ok((path, None)).left_future(),
-                Some(file_change) => {
+                FileChange::Deleted => future::ok((path, None)).left_future(),
+                FileChange::TrackedChange(file_change) => {
                     let copy_from = file_change.copy_from().and_then(|(copy_path, bcsid)| {
                         if Some(bcsid) == p1.as_ref() {
                             p1s.get(copy_path).map(|id| (copy_path.clone(), *id))

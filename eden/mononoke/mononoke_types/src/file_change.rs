@@ -19,14 +19,20 @@ use crate::thrift;
 use crate::typed_hash::{ChangesetId, ContentId};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct FileChange {
+pub struct TrackedFileChange {
     content_id: ContentId,
     file_type: FileType,
     size: u64,
     copy_from: Option<(MPath, ChangesetId)>,
 }
 
-impl FileChange {
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum FileChange {
+    TrackedChange(TrackedFileChange),
+    Deleted,
+}
+
+impl TrackedFileChange {
     pub fn new(
         content_id: ContentId,
         file_type: FileType,
@@ -46,14 +52,36 @@ impl FileChange {
         Self::new(self.content_id, self.file_type, self.size, copy_from)
     }
 
-    pub(crate) fn from_thrift_opt(
-        fc_opt: thrift::FileChangeOpt,
-        mpath: &MPath,
-    ) -> Result<Option<Self>> {
-        match fc_opt.change {
-            Some(fc) => Ok(Some(Self::from_thrift(fc, mpath)?)),
-            None => Ok(None),
+    pub(crate) fn into_thrift(self) -> thrift::FileChange {
+        thrift::FileChange {
+            content_id: self.content_id.into_thrift(),
+            file_type: self.file_type.into_thrift(),
+            size: self.size as i64,
+            copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
+                file: file.into_thrift(),
+                cs_id: cs_id.into_thrift(),
+            }),
         }
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.content_id
+    }
+
+    pub fn file_type(&self) -> FileType {
+        self.file_type
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
+        self.copy_from.as_ref()
+    }
+
+    pub fn copy_from_mut(&mut self) -> Option<&mut (MPath, ChangesetId)> {
+        self.copy_from.as_mut()
     }
 
     pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &MPath) -> Result<Self> {
@@ -79,44 +107,70 @@ impl FileChange {
             )
         })?)
     }
+}
 
-    pub fn content_id(&self) -> ContentId {
-        self.content_id
-    }
-
-    pub fn file_type(&self) -> FileType {
-        self.file_type
-    }
-
-    pub fn size(&self) -> u64 {
-        self.size
+impl FileChange {
+    pub fn tracked(
+        content_id: ContentId,
+        file_type: FileType,
+        size: u64,
+        copy_from: Option<(MPath, ChangesetId)>,
+    ) -> Self {
+        Self::TrackedChange(TrackedFileChange::new(
+            content_id, file_type, size, copy_from,
+        ))
     }
 
     pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
-        self.copy_from.as_ref()
+        match &self {
+            Self::TrackedChange(tc) => tc.copy_from(),
+            Self::Deleted => None,
+        }
     }
 
-    pub fn copy_from_mut(&mut self) -> Option<&mut (MPath, ChangesetId)> {
-        self.copy_from.as_mut()
+    pub fn size(&self) -> Option<u64> {
+        match &self {
+            Self::TrackedChange(tc) => Some(tc.size()),
+            Self::Deleted => None,
+        }
+    }
+
+    pub fn is_changed(&self) -> bool {
+        match &self {
+            Self::TrackedChange(_) => true,
+            Self::Deleted => false,
+        }
+    }
+
+    pub fn is_removed(&self) -> bool {
+        match &self {
+            Self::TrackedChange(_) => false,
+            Self::Deleted => true,
+        }
+    }
+
+    pub(crate) fn from_thrift(fc_opt: thrift::FileChangeOpt, mpath: &MPath) -> Result<Self> {
+        if let Some(tc) = fc_opt.change {
+            return Ok(Self::TrackedChange(TrackedFileChange::from_thrift(
+                tc, mpath,
+            )?));
+        } else {
+            return Ok(Self::Deleted);
+        }
     }
 
     #[inline]
-    pub(crate) fn into_thrift_opt(fc_opt: Option<Self>) -> thrift::FileChangeOpt {
-        let fc_opt = fc_opt.map(Self::into_thrift);
-        thrift::FileChangeOpt { change: fc_opt }
+    pub(crate) fn into_thrift(self) -> thrift::FileChangeOpt {
+        let mut fco = thrift::FileChangeOpt { change: None };
+        match self {
+            Self::TrackedChange(tc) => {
+                fco.change = Some(tc.into_thrift());
+            }
+            Self::Deleted => {}
+        }
+        fco
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::FileChange {
-        thrift::FileChange {
-            content_id: self.content_id.into_thrift(),
-            file_type: self.file_type.into_thrift(),
-            size: self.size as i64,
-            copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
-                file: file.into_thrift(),
-                cs_id: cs_id.into_thrift(),
-            }),
-        }
-    }
 
     /// Generate a random FileChange which picks copy-from parents from the list of parents
     /// provided.
@@ -128,12 +182,12 @@ impl FileChange {
         } else {
             None
         };
-        FileChange {
+        Self::TrackedChange(TrackedFileChange {
             content_id: ContentId::arbitrary(g),
             file_type: FileType::arbitrary(g),
             size: u64::arbitrary(g),
             copy_from,
-        }
+        })
     }
 }
 
@@ -144,23 +198,25 @@ impl Arbitrary for FileChange {
         } else {
             None
         };
-        FileChange {
+        Self::TrackedChange(TrackedFileChange {
             content_id: ContentId::arbitrary(g),
             file_type: FileType::arbitrary(g),
             size: u64::arbitrary(g),
             copy_from,
-        }
+        })
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         // The only thing that can be reduced here is copy_from.
-        if self.copy_from.is_some() {
-            single_shrinker(FileChange {
-                content_id: self.content_id,
-                file_type: self.file_type,
-                size: self.size,
-                copy_from: None,
-            })
+        if let Self::TrackedChange(tc) = self {
+            if tc.copy_from.is_some() {
+                single_shrinker(Self::TrackedChange(TrackedFileChange {
+                    copy_from: None,
+                    ..tc.clone()
+                }))
+            } else {
+                empty_shrinker()
+            }
         } else {
             empty_shrinker()
         }
@@ -314,7 +370,7 @@ mod test {
             size: 0,
             copy_from: None,
         };
-        FileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
+        TrackedFileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");
     }
 }

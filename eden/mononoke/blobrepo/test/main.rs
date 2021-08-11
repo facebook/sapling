@@ -378,11 +378,14 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         .unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
-    assert!(!fc[&file].is_some());
+    assert!(fc[&file].is_removed());
     let file_rename = MPath::new("file_rename").unwrap();
-    assert!(fc[&file_rename].is_some());
+    assert!(fc[&file_rename].is_changed());
     assert_eq!(
-        fc[&file_rename].unwrap().copy_from(),
+        match &fc[&file_rename] {
+            FileChange::TrackedChange(tc) => tc.copy_from(),
+            _ => panic!(),
+        },
         Some(&(file, parent_bonsai_cs_id))
     );
 }
@@ -551,7 +554,7 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
 fn make_bonsai_changeset(
     p0: Option<ChangesetId>,
     p1: Option<ChangesetId>,
-    changes: Vec<(&'static str, Option<FileChange>)>,
+    changes: Vec<(&'static str, FileChange)>,
 ) -> BonsaiChangeset {
     BonsaiChangesetMut {
         parents: p0.into_iter().chain(p1).collect(),
@@ -581,7 +584,7 @@ async fn make_file_change<'a>(
         .into_blob()
         .store(ctx, repo.blobstore())
         .await?;
-    Ok(FileChange::new(
+    Ok(FileChange::tracked(
         content_id,
         FileType::Regular,
         content_size,
@@ -707,7 +710,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             &repo,
             ctx.clone(),
-            make_bonsai_changeset(None, None, vec![("base", None)]),
+            make_bonsai_changeset(None, None, vec![("base", FileChange::Deleted)]),
             vec![ms1, ms2],
         ))
         .await
@@ -737,7 +740,8 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let fc = make_file_change(&ctx, content_expected, &repo)
             .await
             .unwrap();
-        let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
+        let bcs =
+            make_bonsai_changeset(None, None, vec![("base", FileChange::Deleted), ("new", fc)]);
         let ms_hash = (get_manifest_from_bonsai(&repo, ctx.clone(), bcs, vec![ms1, ms2]))
             .await
             .expect("adding new file should not produce coflict");

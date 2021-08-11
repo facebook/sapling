@@ -380,9 +380,7 @@ impl ChangesetContext {
     }
 
     /// File changes associated with the commit.
-    pub async fn file_changes(
-        &self,
-    ) -> Result<SortedVectorMap<MPath, Option<FileChange>>, MononokeError> {
+    pub async fn file_changes(&self) -> Result<SortedVectorMap<MPath, FileChange>, MononokeError> {
         let bonsai = self.bonsai_changeset().await?;
         let bonsai = bonsai.into_mut();
         Ok(bonsai.file_changes)
@@ -464,14 +462,18 @@ impl ChangesetContext {
         // For now we only consider copies when comparing with parent.
         if include_copies_renames && self.parents().await?.contains(&other.id) {
             for (to_path, file_change) in file_changes.iter() {
-                if let Some((from_path, csid)) = file_change.as_ref().and_then(|fc| fc.copy_from())
-                {
-                    if *csid == other.id {
-                        copy_path_map
-                            .entry(from_path)
-                            .or_insert_with(Vec::new)
-                            .push(to_path);
+                match file_change {
+                    FileChange::TrackedChange(tc) => {
+                        if let Some((from_path, csid)) = tc.copy_from() {
+                            if *csid == other.id {
+                                copy_path_map
+                                    .entry(from_path)
+                                    .or_insert_with(Vec::new)
+                                    .push(to_path);
+                            }
+                        }
                     }
+                    FileChange::Deleted => {}
                 }
             }
 

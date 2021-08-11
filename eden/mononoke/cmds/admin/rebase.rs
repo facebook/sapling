@@ -17,7 +17,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId};
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, FileChange};
 use slog::Logger;
 
 use crate::error::SubcommandError;
@@ -56,10 +56,14 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn copyfrom_fixup(bcs: &mut BonsaiChangesetMut, new_parent: ChangesetId) {
-    for maybe_file_change in bcs.file_changes.values_mut() {
-        if let Some((_, ref mut cs_id)) = maybe_file_change.as_mut().and_then(|c| c.copy_from_mut())
-        {
-            *cs_id = new_parent;
+    for file_change in bcs.file_changes.values_mut() {
+        match file_change {
+            FileChange::TrackedChange(fc) => {
+                if let Some((_, ref mut csid)) = fc.copy_from_mut() {
+                    *csid = new_parent;
+                }
+            }
+            FileChange::Deleted => {}
         }
     }
 }

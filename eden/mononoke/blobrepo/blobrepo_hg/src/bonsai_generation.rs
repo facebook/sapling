@@ -107,7 +107,7 @@ async fn find_file_changes(
     parent_manifests: Vec<HgManifestId>,
     repo: &BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
-) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error> {
+) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
     let diff: Result<_, Error> =
         find_bonsai_diff(ctx, repo, cs, parent_manifests.iter().cloned().collect())
             .context("While finding bonsai diff")?
@@ -136,7 +136,7 @@ async fn find_file_changes(
                             .context("While fetching copy information")?;
                             Ok((
                                 path,
-                                Some(FileChange::new(content_id, ty, size as u64, copyinfo)),
+                                FileChange::tracked(content_id, ty, size as u64, copyinfo),
                             ))
                         }
                         BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
@@ -149,12 +149,9 @@ async fn find_file_changes(
                             let content_id = envelope.content_id();
 
                             // Reused ID means copy info is *not* stored.
-                            Ok((
-                                path,
-                                Some(FileChange::new(content_id, ty, size as u64, None)),
-                            ))
+                            Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
                         }
-                        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
                     }
                 }
             })

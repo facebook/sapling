@@ -430,7 +430,7 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use megarepo_mapping::REMAPPING_STATE_FILE;
-    use mononoke_types::MPath;
+    use mononoke_types::{FileChange, MPath};
     use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
 
     #[fbinit::test]
@@ -646,12 +646,15 @@ mod test {
 
         let merge_target_cs = merge_target.load(&ctx, &test.blobrepo.blobstore()).await?;
 
-        let copied_file_change_from_bonsai = merge_target_cs
+        let copied_file_change_from_bonsai = match merge_target_cs
             .file_changes()
             .find(|(p, _)| p == &&MPath::new("source_1/copy_of_file").unwrap())
             .unwrap()
             .1
-            .unwrap();
+        {
+            FileChange::TrackedChange(tc) => tc,
+            _ => panic!(),
+        };
         assert_eq!(
             copied_file_change_from_bonsai.copy_from().unwrap().0,
             MPath::new("source_1/file")?
