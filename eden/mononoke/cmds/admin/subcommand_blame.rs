@@ -372,8 +372,10 @@ async fn subcommand_compute_blame(
                         .file_changes_map()
                         .get(&path)
                         .and_then(|file_change| match file_change {
-                            FileChange::TrackedChange(tc) => Some(tc.copy_from().clone()?),
-                            FileChange::Deleted => None,
+                            FileChange::Change(tc) => Some(tc.copy_from().clone()?),
+                            FileChange::Deletion
+                            | FileChange::UntrackedDeletion
+                            | FileChange::UntrackedChange(_) => None,
                         });
                     if let Some((r_path, r_csid)) = copy_from {
                         let r_parent_index = bonsai

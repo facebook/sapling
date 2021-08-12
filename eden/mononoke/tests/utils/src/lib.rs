@@ -360,7 +360,7 @@ impl CreateFileContext {
                 FileChange::tracked(meta.content_id, file_type, meta.total_size, copy_info)
             }
             Self::FromFileChange(file_change) => file_change,
-            Self::Deleted => FileChange::Deleted,
+            Self::Deleted => FileChange::Deletion,
         };
 
         Ok(file_change)
@@ -555,7 +555,7 @@ pub async fn store_files<T: AsRef<str>>(
                 res.insert(path, file_change);
             }
             None => {
-                res.insert(path, FileChange::Deleted);
+                res.insert(path, FileChange::Deletion);
             }
         }
     }

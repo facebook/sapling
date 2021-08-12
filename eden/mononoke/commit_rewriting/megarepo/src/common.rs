@@ -169,7 +169,7 @@ pub async fn delete_files_in_chunks<'a>(
         let changeset_args = delete_commits_changeset_args_factory(StackPosition(i));
         let file_changes: SortedVectorMap<MPath, _> = mpath_chunk
             .into_iter()
-            .map(|mp| (mp, FileChange::Deleted))
+            .map(|mp| (mp, FileChange::Deletion))
             .collect();
         info!(
             ctx.logger(),

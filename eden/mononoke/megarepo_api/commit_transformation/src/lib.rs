@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -150,7 +150,7 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
     let implicit_delete_file_changes: Vec<_> = maybe_renamed_implicit_deletes
         .into_iter()
         .flatten()
-        .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deleted))
+        .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
         .collect();
 
     Ok(implicit_delete_file_changes)
@@ -233,9 +233,7 @@ pub async fn rewrite_commit<'a>(
                         })
                         .transpose()?;
 
-                    Ok(FileChange::TrackedChange(
-                        TrackedFileChange::with_new_copy_from(change, new_copy_from),
-                    ))
+                    Ok(FileChange::Change(change.with_new_copy_from(new_copy_from)))
                 }
 
                 // Rewrite both path and changes
@@ -247,10 +245,13 @@ pub async fn rewrite_commit<'a>(
                 ) -> Result<Vec<(MPath, FileChange)>, Error> {
                     let new_paths = mover(&path)?;
                     let change = match change {
-                        FileChange::TrackedChange(tc) => {
+                        FileChange::Change(tc) => {
                             rewrite_file_change(tc, remapped_parents, mover.clone())?
                         }
-                        FileChange::Deleted => FileChange::Deleted,
+                        FileChange::Deletion => FileChange::Deletion,
+                        FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
+                            bail!("Can't rewrite untracked changes")
+                        }
                     };
                     Ok(new_paths
                         .into_iter()
@@ -318,8 +319,9 @@ pub async fn upload_commits<'a>(
                 .file_changes
                 .values()
                 .filter_map(|change| match change {
-                    FileChange::TrackedChange(tc) => Some(tc.content_id()),
-                    FileChange::Deleted => None,
+                    FileChange::Change(tc) => Some(tc.content_id()),
+                    FileChange::UntrackedChange(uc) => Some(uc.content_id()),
+                    FileChange::Deletion | FileChange::UntrackedDeletion => None,
                 });
         files_to_sync.extend(new_files_to_sync);
     }
@@ -467,7 +469,7 @@ mod test {
                     0,
                     None,
                 ),
-                None => FileChange::Deleted,
+                None => FileChange::Deletion,
             }
         }
         let changes: Vec<_> = changes
@@ -573,8 +575,8 @@ mod test {
             .get(&MPath::new("prefix/pathsecondcommit")?)
             .ok_or_else(|| anyhow!("path not found"))?
         {
-            FileChange::TrackedChange(tc) => tc.copy_from().cloned(),
-            FileChange::Deleted => bail!("path_is_deleted"),
+            FileChange::Change(tc) => tc.copy_from().cloned(),
+            _ => bail!("path_is_deleted"),
         };
 
 

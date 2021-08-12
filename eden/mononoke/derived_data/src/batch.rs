@@ -95,10 +95,7 @@ impl LinearStack {
         fc.extend(bcs.file_changes().map(|(path, fc)| {
             (
                 path.clone(),
-                match fc {
-                    FileChange::TrackedChange(tc) => Some((tc.content_id(), tc.file_type())),
-                    FileChange::Deleted => None,
-                },
+                fc.simplify().map(|bc| (bc.content_id(), bc.file_type())),
             )
         }));
         self.file_changes.push((cs_id, fc));

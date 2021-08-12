@@ -186,7 +186,7 @@ where
     for (idx, chunk) in chunks_iter.into_iter().enumerate() {
         let mut file_changes = BTreeMap::new();
         for file_move in chunk {
-            file_changes.insert(file_move.old_path.clone(), FileChange::Deleted);
+            file_changes.insert(file_move.old_path.clone(), FileChange::Deletion);
             if let Some(to) = file_move.maybe_new_path {
                 let fc = FileChange::tracked(
                     file_move.content_id,
@@ -360,7 +360,7 @@ mod test {
         assert_eq!(
             file_changes,
             sorted_vector_map! {
-                MPath::new("dir1/file_1_in_dir1").unwrap() => FileChange::Deleted
+                MPath::new("dir1/file_1_in_dir1").unwrap() => FileChange::Deletion
             }
         );
     }
@@ -386,9 +386,9 @@ mod test {
         assert_eq!(parents, vec![bcs_id]);
         let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();
         let new_path = MPath::new("newdir/dir1/file_1_in_dir1").unwrap();
-        assert_eq!(file_changes[&old_path], FileChange::Deleted);
+        assert_eq!(file_changes[&old_path], FileChange::Deletion);
         let file_change = match &file_changes[&new_path] {
-            FileChange::TrackedChange(tc) => tc,
+            FileChange::Change(tc) => tc,
             _ => panic!(),
         };
         assert_eq!(file_change.copy_from(), Some((old_path, bcs_id)).as_ref());

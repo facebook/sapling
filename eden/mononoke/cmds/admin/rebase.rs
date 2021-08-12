@@ -58,12 +58,14 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 fn copyfrom_fixup(bcs: &mut BonsaiChangesetMut, new_parent: ChangesetId) {
     for file_change in bcs.file_changes.values_mut() {
         match file_change {
-            FileChange::TrackedChange(fc) => {
+            FileChange::Change(fc) => {
                 if let Some((_, ref mut csid)) = fc.copy_from_mut() {
                     *csid = new_parent;
                 }
             }
-            FileChange::Deleted => {}
+            FileChange::Deletion
+            | FileChange::UntrackedDeletion
+            | FileChange::UntrackedChange(_) => {}
         }
     }
 }

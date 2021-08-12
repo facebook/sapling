@@ -45,7 +45,7 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, Repo
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
     unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
-    FileChange, FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
+    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -583,9 +583,9 @@ async fn bonsai_changeset_step<V: VisitOne>(
         })
     });
     // File content expands just to meta+aliases 1:~5, with no further steps
-    for (mpath, fc) in bcs.file_changes() {
+    for (mpath, fc) in bcs.simplified_file_changes() {
         match fc {
-            FileChange::TrackedChange(tc) => {
+            Some(tc) => {
                 checker.add_edge_with_path(
                     &mut edges,
                     EdgeType::ChangesetToFileContent,
@@ -593,7 +593,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
                     || Some(WrappedPath::from(Some(mpath.clone()))),
                 );
             }
-            FileChange::Deleted => {}
+            None => {}
         }
     }
     // Phase mapping is 1:[0|1]

@@ -48,6 +48,6 @@ pub async fn convert_diff_result_into_file_change_for_diamond_merge(
                 FileChange::tracked(envelope.content_id(), ty, envelope.content_size(), None);
             Ok((path, file_change))
         }
-        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
+        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
     }
 }

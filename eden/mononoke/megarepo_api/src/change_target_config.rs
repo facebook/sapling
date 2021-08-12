@@ -508,7 +508,7 @@ impl<'a> ChangeTargetConfig<'a> {
     ) -> Result<ChangesetId, MegarepoError> {
         let file_changes = removed_files
             .into_iter()
-            .map(|path| (path, FileChange::Deleted))
+            .map(|path| (path, FileChange::Deletion))
             .collect();
         let old_target_with_removed_files = BonsaiChangesetMut {
             parents: vec![old_target_cs.id()],
@@ -643,7 +643,7 @@ impl<'a> ChangeTargetConfig<'a> {
 
                     Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
                 }
-                BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
+                BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
             }
         })
         .try_buffer_unordered(100)

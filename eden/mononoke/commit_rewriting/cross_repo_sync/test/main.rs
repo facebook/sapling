@@ -121,7 +121,7 @@ async fn create_initial_commit_with_contents<'a>(
                         .unwrap();
                     FileChange::tracked(content_id, FileType::Regular, 3, None)
                 }
-                None => FileChange::Deleted,
+                None => FileChange::Deletion,
             };
             (path, file_change)
         }
@@ -431,7 +431,7 @@ async fn create_commit_from_parent_and_changes<'a>(
         let mpath = MPath::new(path).unwrap();
         match maybe_content {
             None => {
-                proper_changes.insert(mpath, FileChange::Deleted);
+                proper_changes.insert(mpath, FileChange::Deletion);
             }
             Some(content) => {
                 let file_contents = FileContents::new_bytes(content.as_bytes());
@@ -751,7 +751,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let (path, copy_info) = file_changes.first().unwrap();
     assert_eq!(**path, mpath("new_file"));
     let (copy_source, copy_bcs) = match copy_info {
-        FileChange::TrackedChange(tc) => tc.copy_from().unwrap(),
+        FileChange::Change(tc) => tc.copy_from().unwrap(),
         _ => panic!(),
     };
     assert_eq!(*copy_source, mpath("1"));

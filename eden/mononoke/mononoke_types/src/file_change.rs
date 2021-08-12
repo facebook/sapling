@@ -20,16 +20,24 @@ use crate::typed_hash::{ChangesetId, ContentId};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct TrackedFileChange {
-    content_id: ContentId,
-    file_type: FileType,
-    size: u64,
+    inner: BasicFileChange,
     copy_from: Option<(MPath, ChangesetId)>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct BasicFileChange {
+    content_id: ContentId,
+    file_type: FileType,
+    size: u64,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum FileChange {
-    TrackedChange(TrackedFileChange),
-    Deleted,
+    Change(TrackedFileChange),
+    Deletion,
+    // TODO(T98053352): Possibly put copy information on untracked changes
+    UntrackedChange(BasicFileChange),
+    UntrackedDeletion,
 }
 
 impl TrackedFileChange {
@@ -39,24 +47,30 @@ impl TrackedFileChange {
         size: u64,
         copy_from: Option<(MPath, ChangesetId)>,
     ) -> Self {
-        // XXX maybe convert this to a builder
         Self {
-            content_id,
-            file_type,
-            size,
+            inner: BasicFileChange {
+                content_id,
+                file_type,
+                size,
+            },
             copy_from,
         }
     }
 
-    pub fn with_new_copy_from(self, copy_from: Option<(MPath, ChangesetId)>) -> Self {
-        Self::new(self.content_id, self.file_type, self.size, copy_from)
+    pub fn with_new_copy_from(&self, copy_from: Option<(MPath, ChangesetId)>) -> Self {
+        Self::new(
+            self.inner.content_id,
+            self.inner.file_type,
+            self.inner.size,
+            copy_from,
+        )
     }
 
     pub(crate) fn into_thrift(self) -> thrift::FileChange {
         thrift::FileChange {
-            content_id: self.content_id.into_thrift(),
-            file_type: self.file_type.into_thrift(),
-            size: self.size as i64,
+            content_id: self.inner.content_id.into_thrift(),
+            file_type: self.inner.file_type.into_thrift(),
+            size: self.inner.size as i64,
             copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
                 file: file.into_thrift(),
                 cs_id: cs_id.into_thrift(),
@@ -65,15 +79,15 @@ impl TrackedFileChange {
     }
 
     pub fn content_id(&self) -> ContentId {
-        self.content_id
+        self.inner.content_id
     }
 
     pub fn file_type(&self) -> FileType {
-        self.file_type
+        self.inner.file_type
     }
 
     pub fn size(&self) -> u64 {
-        self.size
+        self.inner.size
     }
 
     pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
@@ -87,9 +101,11 @@ impl TrackedFileChange {
     pub(crate) fn from_thrift(fc: thrift::FileChange, mpath: &MPath) -> Result<Self> {
         let catch_block = || -> Result<_> {
             Ok(Self {
-                content_id: ContentId::from_thrift(fc.content_id)?,
-                file_type: FileType::from_thrift(fc.file_type)?,
-                size: fc.size as u64,
+                inner: BasicFileChange {
+                    content_id: ContentId::from_thrift(fc.content_id)?,
+                    file_type: FileType::from_thrift(fc.file_type)?,
+                    size: fc.size as u64,
+                },
                 copy_from: match fc.copy_from {
                     Some(copy_info) => Some((
                         MPath::from_thrift(copy_info.file)?,
@@ -109,6 +125,36 @@ impl TrackedFileChange {
     }
 }
 
+impl BasicFileChange {
+    pub fn content_id(&self) -> ContentId {
+        self.content_id
+    }
+
+    pub fn file_type(&self) -> FileType {
+        self.file_type
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub(crate) fn into_thrift_untracked(self) -> thrift::UntrackedFileChange {
+        thrift::UntrackedFileChange {
+            content_id: self.content_id.into_thrift(),
+            file_type: self.file_type.into_thrift(),
+            size: self.size as i64,
+        }
+    }
+
+    pub(crate) fn from_thrift_untracked(uc: thrift::UntrackedFileChange) -> Result<Self> {
+        Ok(Self {
+            content_id: ContentId::from_thrift(uc.content_id)?,
+            file_type: FileType::from_thrift(uc.file_type)?,
+            size: uc.size as u64,
+        })
+    }
+}
+
 impl FileChange {
     pub fn tracked(
         content_id: ContentId,
@@ -116,57 +162,84 @@ impl FileChange {
         size: u64,
         copy_from: Option<(MPath, ChangesetId)>,
     ) -> Self {
-        Self::TrackedChange(TrackedFileChange::new(
+        Self::Change(TrackedFileChange::new(
             content_id, file_type, size, copy_from,
         ))
     }
 
+    /// Convert this to a simple file change, where tracked and untracked
+    /// changes are treated the same way, as well as missing and deleted
+    pub fn simplify(&self) -> Option<&BasicFileChange> {
+        match self {
+            Self::Change(tc) => Some(&tc.inner),
+            Self::UntrackedChange(uc) => Some(uc),
+            Self::Deletion | Self::UntrackedDeletion => None,
+        }
+    }
+
     pub fn copy_from(&self) -> Option<&(MPath, ChangesetId)> {
-        match &self {
-            Self::TrackedChange(tc) => tc.copy_from(),
-            Self::Deleted => None,
+        match self {
+            Self::Change(tc) => tc.copy_from(),
+            Self::Deletion | Self::UntrackedDeletion | Self::UntrackedChange(_) => None,
         }
     }
 
     pub fn size(&self) -> Option<u64> {
         match &self {
-            Self::TrackedChange(tc) => Some(tc.size()),
-            Self::Deleted => None,
+            Self::Change(tc) => Some(tc.size()),
+            Self::UntrackedChange(uc) => Some(uc.size),
+            Self::Deletion | Self::UntrackedDeletion => None,
         }
     }
 
     pub fn is_changed(&self) -> bool {
         match &self {
-            Self::TrackedChange(_) => true,
-            Self::Deleted => false,
+            Self::Change(_) | Self::UntrackedChange(_) => true,
+            Self::Deletion | Self::UntrackedDeletion => false,
         }
     }
 
     pub fn is_removed(&self) -> bool {
         match &self {
-            Self::TrackedChange(_) => false,
-            Self::Deleted => true,
+            Self::Change(_) | Self::UntrackedChange(_) => false,
+            Self::Deletion | Self::UntrackedDeletion => true,
         }
     }
 
     pub(crate) fn from_thrift(fc_opt: thrift::FileChangeOpt, mpath: &MPath) -> Result<Self> {
-        if let Some(tc) = fc_opt.change {
-            return Ok(Self::TrackedChange(TrackedFileChange::from_thrift(
-                tc, mpath,
-            )?));
-        } else {
-            return Ok(Self::Deleted);
+        match (
+            fc_opt.change,
+            fc_opt.untracked_change,
+            fc_opt.untracked_deletion,
+        ) {
+            (Some(tc), None, None) => Ok(Self::Change(TrackedFileChange::from_thrift(tc, mpath)?)),
+            (None, Some(uc), None) => Ok(Self::UntrackedChange(
+                BasicFileChange::from_thrift_untracked(uc)?,
+            )),
+            (None, None, Some(_)) => Ok(Self::UntrackedDeletion),
+            (None, None, None) => Ok(Self::Deletion),
+            _ => bail!("FileChangeOpt has more than one present field"),
         }
     }
 
     #[inline]
     pub(crate) fn into_thrift(self) -> thrift::FileChangeOpt {
-        let mut fco = thrift::FileChangeOpt { change: None };
+        let mut fco = thrift::FileChangeOpt {
+            change: None,
+            untracked_change: None,
+            untracked_deletion: None,
+        };
         match self {
-            Self::TrackedChange(tc) => {
+            Self::Change(tc) => {
                 fco.change = Some(tc.into_thrift());
             }
-            Self::Deleted => {}
+            Self::UntrackedChange(uc) => {
+                fco.untracked_change = Some(uc.into_thrift_untracked());
+            }
+            Self::UntrackedDeletion => {
+                fco.untracked_deletion = Some(thrift::UntrackedDeletion {});
+            }
+            Self::Deletion => {}
         }
         fco
     }
@@ -182,12 +255,12 @@ impl FileChange {
         } else {
             None
         };
-        Self::TrackedChange(TrackedFileChange {
-            content_id: ContentId::arbitrary(g),
-            file_type: FileType::arbitrary(g),
-            size: u64::arbitrary(g),
+        Self::Change(TrackedFileChange::new(
+            ContentId::arbitrary(g),
+            FileType::arbitrary(g),
+            u64::arbitrary(g),
             copy_from,
-        })
+        ))
     }
 }
 
@@ -198,19 +271,19 @@ impl Arbitrary for FileChange {
         } else {
             None
         };
-        Self::TrackedChange(TrackedFileChange {
-            content_id: ContentId::arbitrary(g),
-            file_type: FileType::arbitrary(g),
-            size: u64::arbitrary(g),
+        Self::Change(TrackedFileChange::new(
+            ContentId::arbitrary(g),
+            FileType::arbitrary(g),
+            u64::arbitrary(g),
             copy_from,
-        })
+        ))
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         // The only thing that can be reduced here is copy_from.
-        if let Self::TrackedChange(tc) = self {
+        if let Self::Change(tc) = self {
             if tc.copy_from.is_some() {
-                single_shrinker(Self::TrackedChange(TrackedFileChange {
+                single_shrinker(Self::Change(TrackedFileChange {
                     copy_from: None,
                     ..tc.clone()
                 }))

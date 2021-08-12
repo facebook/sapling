@@ -34,7 +34,7 @@ use futures::{
 use futures_stats::TimedFutureExt;
 pub use hooks_content_stores::{FileContentManager, PathContent};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use mononoke_types::{BasicFileChange, BonsaiChangeset, ChangesetId, MPath};
 use permission_checker::{ArcMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::builder::ServerData;
@@ -306,7 +306,7 @@ enum Hook {
 
 enum HookInstance<'a> {
     Changeset(&'a dyn ChangesetHook),
-    File(&'a dyn FileHook, &'a MPath, &'a FileChange),
+    File(&'a dyn FileHook, &'a MPath, Option<&'a BasicFileChange>),
 }
 
 impl<'a> HookInstance<'a> {
@@ -429,7 +429,7 @@ impl Hook {
                 cross_repo_push_source,
             )),
             Self::File(hook, _) => {
-                futures.extend(cs.file_changes_map().iter().map(move |(path, change)| {
+                futures.extend(cs.simplified_file_changes().map(move |(path, change)| {
                     HookInstance::File(&**hook, path, change).run(
                         ctx,
                         bookmark,
@@ -465,7 +465,7 @@ pub trait FileHook: Send + Sync {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error>;

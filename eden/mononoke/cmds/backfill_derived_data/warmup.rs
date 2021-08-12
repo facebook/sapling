@@ -20,7 +20,7 @@ use futures::{
     TryFutureExt,
 };
 use manifest::find_intersection_of_diffs;
-use mononoke_types::{ChangesetId, FileChange, FileUnodeId};
+use mononoke_types::{ChangesetId, FileUnodeId};
 use std::{collections::HashSet, sync::Arc};
 use unodes::{find_unode_rename_sources, RootUnodeManifestId};
 
@@ -97,12 +97,12 @@ async fn content_metadata_warmup(
                 let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
                 let mut content_ids = HashSet::new();
-                for (_, file_change) in bcs.file_changes() {
+                for (_, file_change) in bcs.simplified_file_changes() {
                     match file_change {
-                        FileChange::TrackedChange(tc) => {
-                            content_ids.insert(tc.content_id());
+                        Some(fc) => {
+                            content_ids.insert(fc.content_id());
                         }
-                        FileChange::Deleted => {}
+                        None => {}
                     }
                 }
                 prefetch_content_metadata(ctx, repo.blobstore(), content_ids).await?;

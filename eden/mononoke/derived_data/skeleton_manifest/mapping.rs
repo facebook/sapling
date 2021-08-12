@@ -20,8 +20,7 @@ use derived_data::{
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileChange, FileType, MPath,
-    SkeletonManifestId,
+    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
 use repo_blobstore::RepoBlobstore;
 
@@ -165,10 +164,9 @@ pub(crate) fn get_file_changes(
         .map(|(mpath, file_change)| {
             (
                 mpath.clone(),
-                match file_change {
-                    FileChange::TrackedChange(tc) => Some((tc.content_id(), tc.file_type())),
-                    FileChange::Deleted => None,
-                },
+                file_change
+                    .simplify()
+                    .map(|bc| (bc.content_id(), bc.file_type())),
             )
         })
         .collect()

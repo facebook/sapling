@@ -49,11 +49,15 @@ pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
 
     for (path, file_change) in bcs.file_changes() {
         match file_change {
-            FileChange::TrackedChange(file_change) => match file_change.copy_from() {
+            FileChange::Change(file_change) => match file_change.copy_from() {
                 Some(_) => println!("\t COPY/MOVE: {} {}", path, file_change.content_id()),
                 None => println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id()),
             },
-            FileChange::Deleted => println!("\t REMOVED: {}", path),
+            FileChange::Deletion => println!("\t REMOVED: {}", path),
+            FileChange::UntrackedChange(fc) => {
+                println!("\t UNTRACKED ADD/MODIFY: {} {}", path, fc.content_id())
+            }
+            FileChange::UntrackedDeletion => println!("\t MISSING: {}", path),
         }
     }
 }

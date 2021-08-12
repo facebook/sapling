@@ -198,12 +198,28 @@ pub async fn get_manifest_from_bonsai(
         (p1, p2)
     };
 
+    let file_changes = bcs
+        .file_changes()
+        .map(|(path, fc)| {
+            Ok((
+                path.clone(),
+                match fc {
+                    FileChange::Change(tc) => Some(tc.clone()),
+                    FileChange::Deletion => None,
+                    FileChange::UntrackedChange(_) | FileChange::UntrackedDeletion => {
+                        bail!("Can't derive manifest for snapshot")
+                    }
+                },
+            ))
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
     // paths *modified* by changeset or *copied from parents*
     let mut p1_paths = Vec::new();
     let mut p2_paths = Vec::new();
-    for (path, file_change) in bcs.file_changes() {
+    for (path, file_change) in file_changes.iter() {
         match file_change {
-            FileChange::TrackedChange(file_change) => {
+            Some(file_change) => {
                 if let Some((copy_path, bcsid)) = file_change.copy_from() {
                     if Some(bcsid) == p1.as_ref() {
                         p1_paths.push(copy_path.clone());
@@ -215,7 +231,7 @@ pub async fn get_manifest_from_bonsai(
                 p1_paths.push(path.clone());
                 p2_paths.push(path.clone());
             }
-            FileChange::Deleted => {}
+            None => {}
         }
     }
 
@@ -230,16 +246,16 @@ pub async fn get_manifest_from_bonsai(
     )
     .await?;
 
-    let file_changes: Vec<_> = bcs
-        .file_changes()
+    let file_changes: Vec<_> = file_changes
+        .into_iter()
         .map(|(path, file_change)| Ok::<_, Error>((path.clone(), file_change.clone())))
         .collect();
     let changes: Vec<_> = stream::iter(file_changes)
         .map_ok({
             cloned!(ctx);
             move |(path, file_change)| match file_change {
-                FileChange::Deleted => future::ok((path, None)).left_future(),
-                FileChange::TrackedChange(file_change) => {
+                None => future::ok((path, None)).left_future(),
+                Some(file_change) => {
                     let copy_from = file_change.copy_from().and_then(|(copy_path, bcsid)| {
                         if Some(bcsid) == p1.as_ref() {
                             p1s.get(copy_path).map(|id| (copy_path.clone(), *id))

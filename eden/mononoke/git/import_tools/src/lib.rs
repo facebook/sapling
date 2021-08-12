@@ -140,7 +140,7 @@ where
                                 FileChange::tracked(meta.content_id, ty, meta.total_size, None),
                             ))
                         }
-                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
                     }
                 }
             })

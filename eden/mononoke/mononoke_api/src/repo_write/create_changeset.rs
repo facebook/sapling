@@ -150,7 +150,7 @@ impl CreateChange {
                     copy_info,
                 ))
             }
-            CreateChange::Delete => Ok(FileChange::Deleted),
+            CreateChange::Delete => Ok(FileChange::Deletion),
         }
     }
 

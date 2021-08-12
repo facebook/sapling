@@ -902,7 +902,7 @@ mod tests {
                     res.insert(path, file_change);
                 }
                 None => {
-                    res.insert(path, FileChange::Deleted);
+                    res.insert(path, FileChange::Deletion);
                 }
             }
         }

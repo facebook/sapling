@@ -53,7 +53,7 @@ pub async fn create_deletion_head_commits<'a>(
     {
         let files = chunk
             .into_iter()
-            .map(|path| (path, FileChange::Deleted))
+            .map(|path| (path, FileChange::Deletion))
             .collect();
         let maybe_head_bookmark_val = repo
             .get_bonsai_bookmark(ctx.clone(), &head_bookmark)

@@ -222,12 +222,12 @@ impl AliasVerification {
             })
             .try_flatten()
             .try_for_each_concurrent(LIMIT, move |file_change| async move {
-                match file_change {
-                    FileChange::TrackedChange(tc) => {
+                match file_change.simplify() {
+                    Some(tc) => {
                         self.process_file_content(ctx, tc.content_id().clone())
                             .await
                     }
-                    FileChange::Deleted => Ok(()),
+                    None => Ok(()),
                 }
             })
             .await?;

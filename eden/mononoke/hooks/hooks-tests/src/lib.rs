@@ -27,7 +27,8 @@ use hooks_content_stores::{
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
+    BasicFileChange, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
+    FileType, MPath,
 };
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
@@ -203,7 +204,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
 
-        for (path, change) in changeset.file_changes() {
+        for (path, change) in changeset.simplified_file_changes() {
             // If we have a change to a path, but no expected change, fail
             let expected_content = match self.expected_content.get(path) {
                 Some(expected) => expected,
@@ -211,7 +212,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
             };
 
             match change {
-                FileChange::TrackedChange(change) => {
+                Some(change) => {
                     let fut = async move {
                         let content = content_manager
                             .get_file_text(ctx, change.content_id())
@@ -234,7 +235,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
                     };
                     futs.push(fut);
                 }
-                FileChange::Deleted => {
+                None => {
                     // If we have a deletion, but expect it to be present, fail
                     if expected_content.is_some() {
                         return Ok(default_rejection());
@@ -277,11 +278,11 @@ impl ChangesetHook for LengthMatchingChangesetHook {
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
-        for (path, change) in changeset.file_changes() {
+        for (path, change) in changeset.simplified_file_changes() {
             let expected_length = self.expected_lengths.get(path);
 
             match change {
-                FileChange::TrackedChange(change) => {
+                Some(change) => {
                     let fut = async move {
                         let size = content_manager
                             .get_file_size(ctx, change.content_id())
@@ -291,7 +292,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
                     };
                     futs.push(fut);
                 }
-                FileChange::Deleted => {
+                None => {
                     if expected_length.is_some() {
                         return Ok(default_rejection());
                     }
@@ -331,7 +332,7 @@ impl FileHook for FnFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        _change: &'change FileChange,
+        _change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
@@ -360,7 +361,7 @@ impl FileHook for PathMatchingFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        _change: &'change FileChange,
+        _change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
@@ -387,12 +388,12 @@ impl FileHook for FileContentMatchingFileHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         match change {
-            FileChange::TrackedChange(change) => {
+            Some(change) => {
                 let content = content_manager
                     .get_file_text(ctx, change.content_id())
                     .await?;
@@ -410,7 +411,7 @@ impl FileHook for FileContentMatchingFileHook {
                 })
             }
 
-            _ => Ok(default_rejection()),
+            None => Ok(default_rejection()),
         }
     }
 }
@@ -430,13 +431,13 @@ impl FileHook for IsSymLinkMatchingFileHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let is_symlink = match change {
-            FileChange::TrackedChange(change) => change.file_type() == FileType::Symlink,
-            _ => false,
+            Some(change) => change.file_type() == FileType::Symlink,
+            None => false,
         };
         Ok(if self.is_symlink == is_symlink {
             HookExecution::Accepted
@@ -461,17 +462,17 @@ impl FileHook for LengthMatchingFileHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let length = match change {
-            FileChange::TrackedChange(change) => {
+            Some(change) => {
                 content_manager
                     .get_file_size(ctx, change.content_id())
                     .await?
             }
-            _ => return Ok(HookExecution::Accepted),
+            None => return Ok(HookExecution::Accepted),
         };
         if length == self.length {
             return Ok(HookExecution::Accepted);

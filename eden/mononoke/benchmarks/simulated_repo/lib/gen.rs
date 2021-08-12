@@ -109,7 +109,7 @@ impl GenManifest {
                     let (path, content) = self.gen_change(rng, settings, Vec::new());
                     match content {
                         None => {
-                            file_changes.insert(path, FileChange::Deleted);
+                            file_changes.insert(path, FileChange::Deletion);
                         }
                         Some(content) => {
                             let content = FileContents::new_bytes(content);

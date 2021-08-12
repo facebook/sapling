@@ -976,7 +976,7 @@ async fn rebase_changeset(
     let mut file_changes = bcs.file_changes;
     for file_change in file_changes.values_mut() {
         match file_change {
-            FileChange::TrackedChange(tc) => {
+            FileChange::Change(tc) => {
                 *file_change = FileChange::tracked(
                     tc.content_id().clone(),
                     tc.file_type(),
@@ -989,7 +989,9 @@ async fn rebase_changeset(
                     }),
                 );
             }
-            FileChange::Deleted => {}
+            FileChange::Deletion
+            | FileChange::UntrackedDeletion
+            | FileChange::UntrackedChange(_) => {}
         }
     }
 
@@ -2245,7 +2247,7 @@ mod tests {
                 .ok_or(Error::msg("path_1 missing in file_changes"))?
                 .1
             {
-                FileChange::TrackedChange(tc) => tc.clone(),
+                FileChange::Change(tc) => tc.clone(),
                 _ => return Err(Error::msg("path_1 change info missing")),
             };
             assert_eq!(file_1.file_type(), FileType::Regular);
@@ -2281,10 +2283,10 @@ mod tests {
                 .ok_or(Error::msg("path_1 missing in file_changes"))?
                 .1
             {
-                FileChange::TrackedChange(tc) => tc.clone(),
+                FileChange::Change(tc) => tc.clone(),
                 _ => return Err(Error::msg("path_1 change info missing")),
             };
-            assert_eq!(FileChange::TrackedChange(file_1_result), file_1_exec);
+            assert_eq!(FileChange::Change(file_1_result), file_1_exec);
 
             let result_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), result.head)

@@ -383,7 +383,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
     assert!(fc[&file_rename].is_changed());
     assert_eq!(
         match &fc[&file_rename] {
-            FileChange::TrackedChange(tc) => tc.copy_from(),
+            FileChange::Change(tc) => tc.copy_from(),
             _ => panic!(),
         },
         Some(&(file, parent_bonsai_cs_id))
@@ -710,7 +710,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let ms_hash = (get_manifest_from_bonsai(
             &repo,
             ctx.clone(),
-            make_bonsai_changeset(None, None, vec![("base", FileChange::Deleted)]),
+            make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
         ))
         .await
@@ -740,8 +740,11 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let fc = make_file_change(&ctx, content_expected, &repo)
             .await
             .unwrap();
-        let bcs =
-            make_bonsai_changeset(None, None, vec![("base", FileChange::Deleted), ("new", fc)]);
+        let bcs = make_bonsai_changeset(
+            None,
+            None,
+            vec![("base", FileChange::Deletion), ("new", fc)],
+        );
         let ms_hash = (get_manifest_from_bonsai(&repo, ctx.clone(), bcs, vec![ms1, ms2]))
             .await
             .expect("adding new file should not produce coflict");

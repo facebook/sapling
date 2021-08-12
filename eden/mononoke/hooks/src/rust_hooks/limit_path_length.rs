@@ -12,7 +12,7 @@ use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::simple_fsencode;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 
 // The filesystem max is 255.
 const MAX_PATH_COMPONENT_LIMIT: usize = 255;
@@ -41,11 +41,11 @@ impl FileHook for LimitPathLengthHook {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
-        if change.is_removed() {
+        if change.is_none() {
             // You can always delete paths
             return Ok(HookExecution::Accepted);
         }

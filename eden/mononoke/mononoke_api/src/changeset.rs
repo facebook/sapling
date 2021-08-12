@@ -463,7 +463,7 @@ impl ChangesetContext {
         if include_copies_renames && self.parents().await?.contains(&other.id) {
             for (to_path, file_change) in file_changes.iter() {
                 match file_change {
-                    FileChange::TrackedChange(tc) => {
+                    FileChange::Change(tc) => {
                         if let Some((from_path, csid)) = tc.copy_from() {
                             if *csid == other.id {
                                 copy_path_map
@@ -473,7 +473,9 @@ impl ChangesetContext {
                             }
                         }
                     }
-                    FileChange::Deleted => {}
+                    FileChange::Deletion
+                    | FileChange::UntrackedDeletion
+                    | FileChange::UntrackedChange(_) => {}
                 }
             }
 

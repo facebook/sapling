@@ -652,7 +652,7 @@ mod test {
             .unwrap()
             .1
         {
-            FileChange::TrackedChange(tc) => tc,
+            FileChange::Change(tc) => tc,
             _ => panic!(),
         };
         assert_eq!(

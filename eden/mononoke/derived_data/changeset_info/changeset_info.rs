@@ -304,7 +304,7 @@ mod test {
             committer_date: None,
             message: message.to_string(),
             extra: Default::default(),
-            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deleted },
+            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
         }
         .freeze()
         .unwrap()

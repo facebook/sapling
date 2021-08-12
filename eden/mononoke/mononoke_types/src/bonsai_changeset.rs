@@ -16,7 +16,7 @@ use sorted_vector_map::SortedVectorMap;
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
 use crate::datetime::DateTime;
 use crate::errors::ErrorKind;
-use crate::file_change::FileChange;
+use crate::file_change::{BasicFileChange, FileChange};
 use crate::path::{self, MPath};
 use crate::thrift;
 use crate::typed_hash::{ChangesetId, ChangesetIdContext};
@@ -181,6 +181,16 @@ impl BonsaiChangeset {
         self.inner.file_changes.iter()
     }
 
+    /// File changes, but untracked and tracked changes are merged together for easy handling
+    pub fn simplified_file_changes(
+        &self,
+    ) -> impl Iterator<Item = (&MPath, Option<&BasicFileChange>)> {
+        self.inner
+            .file_changes
+            .iter()
+            .map(|(path, fc)| (path, fc.simplify()))
+    }
+
     pub fn file_changes_map(&self) -> &SortedVectorMap<MPath, FileChange> {
         &self.inner.file_changes
     }
@@ -268,7 +278,7 @@ impl Arbitrary for BonsaiChangeset {
                 let fc_opt = if g.gen_ratio(1, 3) {
                     FileChange::arbitrary_from_parents(g, &parents)
                 } else {
-                    FileChange::Deleted
+                    FileChange::Deletion
                 };
                 // XXX be smarter about generating paths here?
                 (MPath::arbitrary(g), fc_opt)
@@ -378,8 +388,8 @@ mod test {
                         ChangesetId::from_byte_array([3; 32]),
                     )),
                 ),
-                MPath::new("g/h").unwrap() => FileChange::Deleted,
-                MPath::new("i/j").unwrap() => FileChange::Deleted,
+                MPath::new("g/h").unwrap() => FileChange::Deletion,
+                MPath::new("i/j").unwrap() => FileChange::Deletion,
             ],
         };
         let tc = tc.freeze().expect("fixed bonsai changeset must be valid");

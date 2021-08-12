@@ -151,7 +151,7 @@ async fn find_file_changes(
                             // Reused ID means copy info is *not* stored.
                             Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
                         }
-                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deleted)),
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
                     }
                 }
             })

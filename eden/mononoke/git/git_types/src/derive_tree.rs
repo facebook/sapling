@@ -24,7 +24,7 @@ use derived_data::{
     BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
 };
 use filestore::{self, FetchKey};
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 
 use crate::errors::ErrorKind;
 use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
@@ -114,6 +114,7 @@ impl BonsaiDerivable for TreeHandle {
         parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
+        // TODO(T97939172): Fail if changeset is snapshot (once that field is added)
         let blobstore = repo.get_blobstore();
         let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
         derive_git_manifest(ctx, blobstore, parents, changes).await
@@ -202,16 +203,16 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
         .map(|(mpath, file_change)| {
             cloned!(ctx, blobstore);
             async move {
-                match file_change {
-                    FileChange::TrackedChange(tc) => {
-                        let t = tc.file_type();
-                        let k = FetchKey::Canonical(tc.content_id());
+                match file_change.simplify() {
+                    Some(fc) => {
+                        let t = fc.file_type();
+                        let k = FetchKey::Canonical(fc.content_id());
 
                         let r = filestore::get_metadata(&blobstore, &ctx, &k).await?;
                         let m = r.ok_or(ErrorKind::ContentMissing(k))?;
                         Ok((mpath, Some(BlobHandle::new(m, t))))
                     }
-                    FileChange::Deleted => Ok((mpath, None)),
+                    None => Ok((mpath, None)),
                 }
             }
         })

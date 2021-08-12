@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 
 use super::LuaPattern;
 use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
@@ -94,11 +94,11 @@ impl FileHook for DenyFiles {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
-        if change.is_removed() {
+        if change.is_none() {
             // It is acceptable to delete any file
             return Ok(HookExecution::Accepted);
         }

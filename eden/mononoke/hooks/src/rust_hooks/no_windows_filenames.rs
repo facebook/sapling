@@ -11,7 +11,7 @@ use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 use regex::bytes::Regex;
 
 #[derive(Default)]
@@ -89,7 +89,7 @@ impl FileHook for NoWindowsFilenames {
         &'this self,
         _ctx: &'ctx CoreContext,
         _context_fetcher: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
@@ -99,7 +99,7 @@ impl FileHook for NoWindowsFilenames {
             return Ok(HookExecution::Accepted);
         }
 
-        if change.is_removed() {
+        if change.is_none() {
             return Ok(HookExecution::Accepted);
         }
 

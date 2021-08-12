@@ -12,7 +12,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
 use lazy_static::lazy_static;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 use regex::Regex;
 
 const NOCOMMIT_MARKER: &str = "\x40nocommit";
@@ -49,17 +49,17 @@ impl FileHook for CheckNocommitHook {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let maybe_text = match change {
-            FileChange::TrackedChange(change) => {
+            Some(change) => {
                 content_manager
                     .get_file_text(ctx, change.content_id())
                     .await?
             }
-            FileChange::Deleted => None,
+            None => None,
         };
 
         Ok(match maybe_text {

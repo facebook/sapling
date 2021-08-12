@@ -183,7 +183,7 @@ async fn create_changesets(
                         copy_from,
                     )
                 }
-                None => FileChange::Deleted,
+                None => FileChange::Deletion,
             };
 
             fc.insert(to_path, file_change);
@@ -776,7 +776,7 @@ mod test {
             .get(&MPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
         {
-            FileChange::TrackedChange(tc) => tc,
+            FileChange::Change(tc) => tc,
             _ => panic!("change to dir_to/a expected to not be None"),
         };
         // Ensure that there is copy-from inserted when copying within the repo
@@ -978,7 +978,7 @@ mod test {
             .get(&MPath::new("dir_to/a")?)
             .expect("change to dir_to/a expected to be present in the map")
         {
-            FileChange::TrackedChange(tc) => tc,
+            FileChange::Change(tc) => tc,
             _ => panic!("change to dir_to/a expected to not be None"),
         };
         // Ensure that there's no copy-from inserted when copying from another repo

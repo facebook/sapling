@@ -9,7 +9,7 @@ use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, Ho
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 use regex::Regex;
 
 pub struct NoInsecureFilenames {
@@ -50,11 +50,11 @@ impl FileHook for NoInsecureFilenames {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
-        if change.is_removed() {
+        if change.is_none() {
             return Ok(HookExecution::Accepted);
         }
 

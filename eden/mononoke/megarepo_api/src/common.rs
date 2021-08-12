@@ -81,7 +81,7 @@ pub trait MegarepoOp {
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
             if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
-                file_changes.push((path.clone(), FileChange::Deleted));
+                file_changes.push((path.clone(), FileChange::Deletion));
             }
 
             file_changes.extend(moved.into_iter().map(|target| {

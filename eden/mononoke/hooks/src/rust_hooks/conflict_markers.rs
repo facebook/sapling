@@ -10,7 +10,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
 use maplit::hashset;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::{BasicFileChange, MPath};
 use std::collections::HashSet;
 
 pub struct ConflictMarkers {
@@ -31,13 +31,13 @@ impl FileHook for ConflictMarkers {
         &'this self,
         ctx: &'ctx CoreContext,
         content_manager: &'fetcher dyn FileContentManager,
-        change: &'change FileChange,
+        change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let change = match change {
-            FileChange::TrackedChange(change) => change,
-            FileChange::Deleted => return Ok(HookExecution::Accepted),
+            Some(change) => change,
+            None => return Ok(HookExecution::Accepted),
         };
 
         let mut filename_iter = path.basename().as_ref().rsplit(|c| *c == b'.');

@@ -55,7 +55,7 @@ pub async fn store_files(
                 res.insert(path, file_change);
             }
             None => {
-                res.insert(path, FileChange::Deleted);
+                res.insert(path, FileChange::Deletion);
             }
         }
     }

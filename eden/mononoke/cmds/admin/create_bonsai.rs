@@ -68,9 +68,9 @@ pub async fn subcommand_create_bonsai<'a>(
     };
 
     let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
-    for (_, change) in bcs.file_changes() {
+    for (_, change) in bcs.simplified_file_changes() {
         match change {
-            FileChange::TrackedChange(tc) => {
+            Some(tc) => {
                 if filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &tc.content_id().into())
                     .await?
                     .is_none()
@@ -81,7 +81,7 @@ pub async fn subcommand_create_bonsai<'a>(
                     )));
                 }
             }
-            FileChange::Deleted => {}
+            None => {}
         }
     }
     let bcs_id = bcs.get_changeset_id();

@@ -181,8 +181,25 @@ enum FileType {
 }
 
 struct FileChangeOpt {
-  // The value being absent here means that the file was deleted.
+  // All values being absent here means that the file was marked as deleted.
+  // At most one value can be present.
+
+  // Changes to a tracked file
   1: optional FileChange change,
+  // This is a change to an untracked file in a snapshot commit.
+  2: optional UntrackedFileChange untracked_change,
+  // Present if this is a missing file in a snapshot commit.
+  3: optional UntrackedDeletion untracked_deletion,
+}
+
+struct UntrackedDeletion {
+  // Additional state (if necessary)
+}
+
+struct UntrackedFileChange {
+  1: ContentId content_id,
+  2: FileType file_type,
+  3: i64 size,
 }
 
 struct FileChange {
