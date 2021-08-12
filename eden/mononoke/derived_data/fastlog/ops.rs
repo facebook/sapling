@@ -375,17 +375,16 @@ where
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
-                let ancestors = if parents.is_empty()
-                    && history_across_deletions == HistoryAcrossDeletions::Track
-                {
-                    let (stats, deletion_nodes) =
-                        find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
-                            .timed()
-                            .await;
-                    STATS::find_where_file_was_deleted_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    let deletion_nodes = deletion_nodes?;
-                    process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes).await?
+                let ancestors = if parents.is_empty() {
+                    try_continue_traversal_when_no_parents(
+                        &ctx,
+                        &repo,
+                        cs_id,
+                        &path,
+                        history_across_deletions,
+                        &mut history_graph,
+                    )
+                    .await?
                 } else {
                     parents.clone()
                 };
@@ -437,6 +436,31 @@ where
             visitor,
         },
     )))
+}
+
+async fn try_continue_traversal_when_no_parents(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+    history_across_deletions: HistoryAcrossDeletions,
+    history_graph: &mut CommitGraph,
+) -> Result<Vec<ChangesetId>, FastlogError> {
+    if history_across_deletions == HistoryAcrossDeletions::Track {
+        let (stats, deletion_nodes) = find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
+            .timed()
+            .await;
+        STATS::find_where_file_was_deleted_ms
+            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+        let deletion_nodes = deletion_nodes?;
+        let deleted_nodes =
+            process_deletion_nodes(&ctx, &repo, history_graph, deletion_nodes).await?;
+        if !deleted_nodes.is_empty() {
+            return Ok(deleted_nodes);
+        }
+    }
+
+    Ok(vec![])
 }
 
 // Now let's process commits which have a "path" in their manifests but
