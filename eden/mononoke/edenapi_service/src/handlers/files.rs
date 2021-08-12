@@ -10,6 +10,7 @@ use bytes::Bytes;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
+use hyper::Body;
 use serde::Deserialize;
 use std::str::FromStr;
 
@@ -30,7 +31,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo, get_request_body, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -54,7 +55,7 @@ pub struct UploadFileParams {
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadFileQueryString {
     bubble_id: Option<std::num::NonZeroU64>,
-    content_size: Option<u64>, // Option is temporarily
+    content_size: u64,
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -171,21 +172,21 @@ async fn generate_upload_token(
 async fn store_file(
     repo: HgRepoContext,
     id: AnyFileContentId,
-    bytes: Bytes,
+    data: impl Stream<Item = Result<Bytes, Error>> + Send,
     content_size: u64,
     bubble_id: Option<BubbleId>,
 ) -> Result<(), Error> {
     match id {
         AnyFileContentId::ContentId(id) => {
-            repo.store_file_by_contentid(ContentId::from(id), content_size, bytes, bubble_id)
+            repo.store_file_by_contentid(ContentId::from(id), content_size, data, bubble_id)
                 .await?
         }
         AnyFileContentId::Sha1(id) => {
-            repo.store_file_by_sha1(Sha1::from(id), content_size, bytes, bubble_id)
+            repo.store_file_by_sha1(Sha1::from(id), content_size, data, bubble_id)
                 .await?
         }
         AnyFileContentId::Sha256(id) => {
-            repo.store_file_by_sha256(Sha256::from(id), content_size, bytes, bubble_id)
+            repo.store_file_by_sha256(Sha256::from(id), content_size, data, bubble_id)
                 .await?
         }
     };
@@ -207,8 +208,8 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;
 
-    let body = get_request_body(state).await?;
-    let content_size = query_string.content_size.unwrap_or(body.len() as u64);
+    let body = Body::take_from(state).map_err(Error::from);
+    let content_size = query_string.content_size;
 
     store_file(
         repo.clone(),

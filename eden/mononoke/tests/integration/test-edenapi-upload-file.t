@@ -32,7 +32,7 @@ Start up EdenAPI server.
 
 Create and send file data request.
   $ echo abc > file1
-  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file1 | cut -d' ' -f1)" --data-binary @file1 > res1.cbor
+  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file1 | cut -d' ' -f1)?content_size=$(wc -c file1 | cut -d' ' -f1)" --data-binary @file1 > res1.cbor
   $ echo "{}" | edenapi_make_req ephemeral-prepare > req.cbor
   Reading from stdin
   Generated request: WireEphemeralPrepareRequest
@@ -41,7 +41,7 @@ Create and send file data request.
   Reading from file: "res2.cbor"
   Bubble id: 1
   $ echo def > file2
-  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file2 | cut -d' ' -f1)?bubble_id=1" --data-binary @file2 > res3.cbor
+  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file2 | cut -d' ' -f1)?bubble_id=1&content_size=$(wc -c file1 | cut -d' ' -f1)" --data-binary @file2 > res3.cbor
 
 Check files in response.
   $ edenapi_read_res upload-token res1.cbor

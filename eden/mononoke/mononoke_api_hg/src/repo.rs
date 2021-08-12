@@ -161,7 +161,7 @@ impl HgRepoContext {
         &self,
         content_id: ContentId,
         size: u64,
-        bytes: Bytes,
+        data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
@@ -169,7 +169,7 @@ impl HgRepoContext {
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_canonical(size, content_id),
-            stream::once(future::ok(bytes)),
+            data,
         )
         .await
         .map_err(MononokeError::from)?;
@@ -205,7 +205,7 @@ impl HgRepoContext {
         &self,
         sha1: Sha1,
         size: u64,
-        bytes: Bytes,
+        data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
@@ -213,7 +213,7 @@ impl HgRepoContext {
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_sha1(size, sha1),
-            stream::once(future::ok(bytes)),
+            data,
         )
         .await
         .map_err(MononokeError::from)?;
@@ -231,7 +231,7 @@ impl HgRepoContext {
         &self,
         sha256: Sha256,
         size: u64,
-        bytes: Bytes,
+        data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
     ) -> Result<(), MononokeError> {
         filestore::store(
@@ -239,7 +239,7 @@ impl HgRepoContext {
             self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_sha256(size, sha256),
-            stream::once(future::ok(bytes)),
+            data,
         )
         .await
         .map_err(MononokeError::from)?;
