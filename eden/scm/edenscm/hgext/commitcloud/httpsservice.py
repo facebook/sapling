@@ -99,7 +99,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         # if the token is not set, use the same TLS auth to connect to the Commit Cloud service
         # as it is used to connect to the default path
         if not self.token:
-            path = ccutil.getremotepath(self.ui, None)
+            path = ccutil.getremotepath(self.ui)
             authdata = httpconnection.readauthforuri(self.ui, path, u.user)
             if authdata:
                 (authname, auth) = authdata

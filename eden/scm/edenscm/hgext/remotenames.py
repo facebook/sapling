@@ -1253,10 +1253,6 @@ def activepath(ui, remote):
         candidates.sort(key=len)  # sort is stable so first will be the correct one
         bestpath = candidates[0]
 
-    # XXX: Remove the normalization once Mononoke is rolled out and there is no
-    # paths.infinitepush
-    if bestpath in {"infinitepush", "infinitepushbookmark"}:
-        bestpath = "default"
     renames = _getrenames(ui)
     realpath = renames.get(bestpath, bestpath)
     return realpath

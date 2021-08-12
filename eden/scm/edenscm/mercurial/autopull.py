@@ -41,14 +41,8 @@ class pullattempt(object):
 
     def execute(self, repo):
         """Execute the pull on a repo."""
-        # TODO: Change source to "default" once Mononoke rolls out to
-        # everywhere.
         if self.source:
             source = self.source
-        elif self.bookmarknames and "infinitepushbookmark" in repo.ui.paths:
-            source = "infinitepushbookmark"
-        elif "infinitepush" in repo.ui.paths:
-            source = "infinitepush"
         elif "default" in repo.ui.paths:
             source = "default"
         else:
@@ -212,10 +206,6 @@ def _pullremotebookmarks(repo, x):
         if matchfn(x):
             remotename, name = bookmarks.splitremotename(x)
             if remotename == hoist:
-                # XXX: remotename should be the source, but is ignored here.
-                # This is because "remote/scratch/x" might require special
-                # remote name (ex.  "infinitepushbookmark", not
-                # "remote"/"default") to handle.
                 source = None
             else:
                 source = remotename

@@ -108,31 +108,6 @@ def extsetup(ui):
     )
 
 
-def preparepush(ui, dest):
-    # If the user is saying they want to push to "default", and this is a
-    # scratch push, then we're going to go to the infinitepush destination
-    # instead, if it exists. When you do a scratch push, "default" means the infinitepush path.
-    if dest == pathname.default:
-        try:
-            return ui.paths.getpath(pathname.infinitepush)
-        except error.RepoError:
-            # Fallthrough to the next block.
-            pass
-
-    if dest in {None, pathname.default, pathname.infinitepush}:
-        path = ui.paths.getpath(
-            dest,
-            default=(
-                pathname.infinitepush,
-                pathname.defaultpush,
-                pathname.default,
-            ),
-        )
-        return path
-
-    return ui.paths.getpath(dest)
-
-
 def _push(orig, ui, repo, dest=None, *args, **opts):
     bookmark = opts.get("to") or ""
     create = opts.get("create") or False
@@ -194,8 +169,6 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             "--non-forward-move",
         )
 
-        otherpath = None
-
         if scratchpush:
             ui.setconfig("experimental", "infinitepush-scratchpush", True)
 
@@ -203,11 +176,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 exchange, "_localphasemove", _phasemove
             )
 
-            path = preparepush(ui, dest)
-        else:
-            path = ui.paths.getpath(
-                dest, default=(pathname.defaultpush, pathname.default)
-            )
+        path = ui.paths.getpath(dest, default=(pathname.defaultpush, pathname.default))
 
         # Copy-paste from `push` command
         if not path:
@@ -215,6 +184,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 _("default repository not configured!"),
                 hint=_("see 'hg help config.paths'"),
             )
+
         realdest = path.pushloc or path.loc
         if realdest.startswith("svn+") and scratchpush:
             raise error.Abort(
@@ -222,14 +192,11 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 hint="did you forget to `hg push default`?",
             )
 
-        otherdest = otherpath and (otherpath.pushloc or otherpath.loc)
-
         if scratchpush:
             ui.log(
                 "infinitepush_destinations",
                 dest=dest,
                 real_dest=realdest,
-                other_dest=otherdest,
                 bookmark=bookmark,
             )
 
@@ -237,19 +204,6 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, realdest)
         result = orig(ui, repo, realdest, *args, **opts)
-
-        # If an alternate Infinitepush destination is specified, replicate the
-        # push there. This ensures scratch bookmarks (and their commits) can
-        # properly be replicated to Mononoke.
-
-        if otherdest is not None and otherdest != realdest:
-            m = _(
-                "please wait while we replicate this push to an alternate repository\n"
-            )
-            ui.warn(m)
-            # NOTE: We ignore the result here (which only represents whether
-            # there were changes to land).
-            orig(ui, repo, otherdest, *args, **opts)
 
         if bookmarks.remotebookmarksenabled(ui):
             if bookmark and scratchpush:
@@ -345,80 +299,7 @@ def _http_bookmark_fetch(repo, names):
 
 
 def _pull(orig, ui, repo, source="default", **opts):
-    # If '-r' or '-B' option is set, then prefer to pull from 'infinitepush' path
-    # if it exists. 'infinitepush' path has both infinitepush and non-infinitepush
-    # revisions, so pulling from it is safer.
-    # This is useful for dogfooding other hg backend that stores only public commits
-    # (e.g. Mononoke)
-    if opts.get("rev") or opts.get("bookmark"):
-        with _resetinfinitepushpath(repo, ui, **opts):
-            return _dopull(orig, ui, repo, source, **opts)
-
     return _dopull(orig, ui, repo, source, **opts)
-
-
-@contextlib.contextmanager
-def _resetinfinitepushpath(repo, ui, **opts):
-    """
-    Sets "default" path to "infinitepush" or "infinitepushbookmark" path and
-    deletes "infinitepush"/"infinitepushbookmark" path ("infinitepushbookmark"
-    is always preferred if it's set unless a single commit hash is requested).
-    In some cases (e.g. when testing new hg backend which doesn't have commit cloud
-    commits) we want to do normal `hg pull` from "default" path but `hg pull -r HASH`
-    from "infinitepush" path if it's present. This is better than just setting
-    another path because of "remotenames" extension. Pulling or pushing to
-    another path will add lots of new remote bookmarks and that can be slow
-    and slow down smartlog.
-    """
-
-    overrides = {}
-    defaultpath = pathname.default
-    infinitepushpath = pathname.infinitepush
-    infinitepushbookmarkpath = pathname.infinitepushbookmark
-
-    if opts.get("bookmark"):
-        for b in opts["bookmark"]:
-            if repo._scratchbranchmatcher.match(b):
-                break
-        else:
-            # Bookmarks were requested to pull, but not
-            # a single bookmark matches scratch branch matcher.
-            # Let's pull from normal path instead
-            yield
-            return
-
-    pullingsinglecommithash = False
-    if opts.get("rev"):
-        revs = opts.get("rev")
-        if isinstance(revs, list) and len(revs) == 1 and _definitelyhash(revs[0]):
-            pullingsinglecommithash = True
-
-    if not pullingsinglecommithash and infinitepushbookmarkpath in ui.paths:
-        path = infinitepushbookmarkpath
-    elif infinitepushpath in ui.paths:
-        path = infinitepushpath
-    else:
-        path = None
-
-    if path is not None:
-        overrides[("paths", defaultpath)] = ui.paths[path].loc
-        overrides[("paths", infinitepushpath)] = "!"
-        overrides[("paths", infinitepushbookmarkpath)] = "!"
-        with ui.configoverride(overrides, "infinitepush"):
-            loc, sub = ui.configsuboptions("paths", defaultpath)
-            ui.paths[defaultpath] = uimod.path(
-                ui, defaultpath, rawloc=loc, suboptions=sub
-            )
-            for p in [
-                infinitepushpath,
-                infinitepushbookmarkpath,
-            ]:
-                if p not in ui.paths:
-                    continue
-                del ui.paths[p]
-            yield
-    else:
-        yield
 
 
 def _dopull(orig, ui, repo, source="default", **opts):

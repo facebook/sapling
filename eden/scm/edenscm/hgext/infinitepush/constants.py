@@ -12,5 +12,3 @@ pushrebaseparttype = "b2x:rebase"
 class pathname(object):
     default = "default"
     defaultpush = "default-push"
-    infinitepush = "infinitepush"
-    infinitepushbookmark = "infinitepushbookmark"

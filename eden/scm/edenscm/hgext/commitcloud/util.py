@@ -10,7 +10,7 @@ import os
 from edenscm.mercurial import commands, encoding, error, pycompat, util
 from edenscm.mercurial.i18n import _
 
-from . import dependencies, error as ccerror
+from . import error as ccerror
 
 
 SERVICE = "commitcloud"
@@ -66,19 +66,14 @@ def getreponame(repo):
     return reponame
 
 
-def getremotepath(ui, dest):
+def getremotepath(ui, dest=None):
     """Select an appopriate remote repository to connect to for commit cloud operations.
-
-    If dest is empty, pass in None to get the default path.
-    Priorities: 'infinitepush', 'default'
+    If dest is empty, it is the default path.
     """
-    pathname = dependencies.infinitepush.constants.pathname
-    path = ui.paths.getpath(
-        dest or None, default=(pathname.infinitepush, pathname.default)
-    )
+    path = ui.paths.getpath(dest or None, default="default")
     if not path:
         raise error.Abort(
-            _("none of 'infinitepush', 'default' repositories configured!"),
+            _("'default' repository isn't configured!"),
             hint=_("see 'hg help config.paths'"),
         )
     return path.pushloc or path.loc

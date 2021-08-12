@@ -111,7 +111,7 @@ Configs::
 
     # Use EdenApi Uploads for uploading commit cloud commits during sync
     usehttpupload = True
-    
+
     # The command to download bundles from a backup bundle store
     # the command has to be a formatted string with params: 'filename' and 'handle'
     get_command = bundlefetcher -h {handle} -o {filename}
@@ -302,7 +302,7 @@ def hintcommitcloudswitch(ui, active):
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui, None)).heads
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         backedup = repo.dageval(lambda: draft() & ancestors(heads))
@@ -315,7 +315,7 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui, None)).heads
+    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui)).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         notbackedup = repo.dageval(lambda: draft() - ancestors(heads))

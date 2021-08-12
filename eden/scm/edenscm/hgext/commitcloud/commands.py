@@ -1620,7 +1620,7 @@ def cloudupload(ui, repo, **opts):
     if uploaded:
         with repo.lock():
             backupstate.BackupState(
-                repo, ccutil.getremotepath(ui, None), usehttp=True
+                repo, ccutil.getremotepath(ui), usehttp=True
             ).update(uploaded)
 
     if failed:
