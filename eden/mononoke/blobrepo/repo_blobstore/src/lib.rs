@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
@@ -45,10 +47,6 @@ impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
 pub struct RepoBlobstore(AbstractRepoBlobstore<Arc<dyn Blobstore>>);
 
 impl RepoBlobstore {
-    fn as_parts(&self) -> (Arc<dyn Blobstore>, RedactedBlobstoreConfig, String) {
-        self.0.as_parts()
-    }
-
     pub fn boxed(&self) -> Arc<dyn Blobstore> {
         self.0.0.boxed()
     }
