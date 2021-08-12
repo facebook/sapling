@@ -68,6 +68,7 @@ pub const WRITE_ZSTD_LEVEL_ARG: &str = "blobstore-write-zstd-level";
 pub const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 pub const MANIFOLD_WEAK_CONSISTENCY_MS_ARG: &str = "manifold-weak-consistency-ms";
 pub const MANIFOLD_THRIFT_OPS_ARG: &str = "manifold-thrift-ops";
+pub const MANIFOLD_REQUEST_PRIORITY_OVERRIDE: &str = "manifold-request-priority-override";
 pub const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
@@ -731,6 +732,13 @@ impl MononokeAppBuilder {
                 .possible_values(OperationType::VARIANTS)
                 .number_of_values(1)
                 .help("Override some operations to run via thrift"),
+        )
+        .arg(
+            Arg::with_name(MANIFOLD_REQUEST_PRIORITY_OVERRIDE)
+                .long(MANIFOLD_REQUEST_PRIORITY_OVERRIDE)
+                .takes_value(true)
+                .required(false)
+                .help("Override the default manifold request priority that would otherwise be taken from the tunable"),
         )
         .arg(
             Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)

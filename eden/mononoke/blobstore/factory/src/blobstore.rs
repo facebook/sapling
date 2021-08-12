@@ -50,6 +50,7 @@ pub struct BlobstoreOptions {
     pub manifold_api_key: Option<String>,
     pub manifold_weak_consistency_ms: Option<i64>,
     pub manifold_thrift_ops: Option<HashSet<OperationType>>,
+    pub manifold_request_priority: Option<i64>,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
@@ -64,6 +65,7 @@ impl BlobstoreOptions {
         manifold_api_key: Option<String>,
         manifold_weak_consistency_ms: Option<i64>,
         manifold_thrift_ops: Option<HashSet<OperationType>>,
+        manifold_request_priority: Option<i64>,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
@@ -75,6 +77,7 @@ impl BlobstoreOptions {
             manifold_api_key,
             manifold_weak_consistency_ms,
             manifold_thrift_ops,
+            manifold_request_priority,
             pack_options,
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
@@ -313,6 +316,7 @@ async fn make_manifold_blobstore(
         ttl,
         blobstore_options.manifold_api_key.as_deref(),
         blobstore_options.manifold_weak_consistency_ms,
+        blobstore_options.manifold_request_priority,
         blobstore_options.put_behaviour,
         blobstore_options.manifold_thrift_ops.clone(),
     )

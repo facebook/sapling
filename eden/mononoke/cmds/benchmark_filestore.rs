@@ -192,6 +192,7 @@ async fn get_blob<'a>(
                     TEST_DATA_TTL,
                     blobstore_options.manifold_api_key.as_deref(),
                     blobstore_options.manifold_weak_consistency_ms,
+                    blobstore_options.manifold_request_priority,
                     put_behaviour,
                 )
                 .map_err(|e| -> Error { e })?;
