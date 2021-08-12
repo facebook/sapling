@@ -181,3 +181,32 @@ impl ConvIr<Svnrev> for Svnrev {
 impl FromValue for Svnrev {
     type Intermediate = Svnrev;
 }
+
+impl From<Blake2> for Value {
+    fn from(id: Blake2) -> Self {
+        Value::Bytes(id.as_ref().into())
+    }
+}
+
+impl ConvIr<Blake2> for Blake2 {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(bytes) => {
+                Blake2::from_bytes(&bytes).map_err(move |_| FromValueError(Value::Bytes(bytes)))
+            }
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for Blake2 {
+    type Intermediate = Blake2;
+}

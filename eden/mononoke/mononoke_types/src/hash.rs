@@ -20,6 +20,7 @@ use edenapi_types::{Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
 use faster_hex::{hex_decode, hex_encode};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
+use sql::mysql;
 
 use crate::errors::ErrorKind;
 use crate::thrift;
@@ -52,6 +53,7 @@ pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
     Serialize,
     Deserialize
 )]
+#[derive(mysql::OptTryFromRowField)]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
 impl Blake2 {
