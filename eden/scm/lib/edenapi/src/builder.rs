@@ -243,7 +243,7 @@ impl HttpClientBuilder {
 
 
         let low_speed_grace_period = config
-            .get_or("edenapi", "low-speed-grace-period", || 10_000)
+            .get_or_default("edenapi", "low-speed-grace-period-seconds")
             .map_err(|e| ConfigError::Malformed("edenapi.low-speed-grace-period".into(), e))?;
 
         let min_transfer_speed = config
@@ -253,7 +253,7 @@ impl HttpClientBuilder {
             })?
             .map(|min_bytes_per_second| MinTransferSpeed {
                 min_bytes_per_second,
-                grace_period: Duration::from_millis(low_speed_grace_period),
+                grace_period: Duration::from_secs(low_speed_grace_period),
             });
 
         Ok(HttpClientBuilder {
