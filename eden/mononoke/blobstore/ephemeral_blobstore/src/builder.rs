@@ -7,22 +7,21 @@
 
 //! Ephemeral Blobstore Builder
 
-use std::sync::Arc;
-
-use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
+use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstore;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
-use crate::store::EphemeralBlobstore;
+use crate::store::RepoEphemeralBlobstore;
 
 /// Ephemeral Blobstore Builder.
-pub struct EphemeralBlobstoreBuilder {
+pub struct RepoEphemeralBlobstoreBuilder {
     /// Database used to manage the ephemeral blobstore metadata.
     connections: SqlConnections,
 }
 
-impl SqlConstruct for EphemeralBlobstoreBuilder {
+impl SqlConstruct for RepoEphemeralBlobstoreBuilder {
     const LABEL: &'static str = "ephemeral_blobstore";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-ephemeral-blobstore.sql");
@@ -32,16 +31,18 @@ impl SqlConstruct for EphemeralBlobstoreBuilder {
     }
 }
 
-impl EphemeralBlobstoreBuilder {
+impl RepoEphemeralBlobstoreBuilder {
     pub fn build(
         self,
-        blobstore: Arc<dyn Blobstore>,
+        repo_id: RepositoryId,
+        repo_blobstore: RepoBlobstore,
         initial_bubble_lifespan: ChronoDuration,
         bubble_expiration_grace: ChronoDuration,
-    ) -> EphemeralBlobstore {
-        EphemeralBlobstore::new(
+    ) -> RepoEphemeralBlobstore {
+        RepoEphemeralBlobstore::new(
+            repo_id,
             self.connections,
-            blobstore,
+            repo_blobstore,
             initial_bubble_lifespan,
             bubble_expiration_grace,
         )

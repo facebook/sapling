@@ -16,12 +16,10 @@ mod bubble;
 mod builder;
 mod error;
 mod handle;
-mod repo;
 mod store;
 
 pub use crate::bubble::{Bubble, BubbleId};
-pub use crate::builder::EphemeralBlobstoreBuilder;
+pub use crate::builder::RepoEphemeralBlobstoreBuilder;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
-pub use crate::repo::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
-pub use crate::store::EphemeralBlobstore;
+pub use crate::store::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};

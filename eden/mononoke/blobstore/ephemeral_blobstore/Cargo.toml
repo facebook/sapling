@@ -15,6 +15,7 @@ derivative = "2.1"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
@@ -28,6 +29,7 @@ memblob = { version = "0.1.0", path = "../memblob" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 packblob = { version = "0.1.0", path = "../packblob" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

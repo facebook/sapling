@@ -47,7 +47,7 @@ use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use environment::{Caching, MononokeEnvironment};
 use ephemeral_blobstore::{
-    ArcRepoEphemeralBlobstore, EphemeralBlobstoreBuilder, RepoEphemeralBlobstore,
+    ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore, RepoEphemeralBlobstoreBuilder,
 };
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
@@ -208,7 +208,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<Arc<RepoBlobstore>> {
+    ) -> Result<RepoBlobstore> {
         let mut blobstore = blobstore.clone();
         if self.env.readonly_storage.0 {
             blobstore = Arc::new(ReadOnlyBlobstore::new(blobstore));
@@ -233,7 +233,7 @@ impl RepoFactory {
             censored_scuba_builder,
         );
 
-        Ok(Arc::new(repo_blobstore))
+        Ok(repo_blobstore)
     }
 
     async fn blobstore(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
@@ -753,8 +753,10 @@ impl RepoFactory {
         let blobstore = self
             .blobstore(&repo_config.storage_config.blobstore)
             .await?;
-        self.repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
-            .await
+        Ok(Arc::new(
+            self.repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
+                .await?,
+        ))
     }
 
     pub fn filestore_config(&self, repo_config: &ArcRepoConfig) -> ArcFilestoreConfig {
@@ -781,18 +783,22 @@ impl RepoFactory {
     ) -> Result<ArcRepoEphemeralBlobstore> {
         if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
             let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
-            let ephemeral_blobstore = EphemeralBlobstoreBuilder::with_database_config(
+            let repo_blobstore = self
+                .repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
+                .await?;
+            let ephemeral_blobstore = RepoEphemeralBlobstoreBuilder::with_database_config(
                 self.env.fb,
                 &ephemeral_config.metadata,
                 &self.env.mysql_options,
                 self.env.readonly_storage.0,
             )?
             .build(
-                blobstore,
+                repo_identity.id(),
+                repo_blobstore,
                 ChronoDuration::from_std(ephemeral_config.initial_bubble_lifespan)?,
                 ChronoDuration::from_std(ephemeral_config.bubble_expiration_grace)?,
             );
-            Ok(Arc::new(ephemeral_blobstore.for_repo(repo_identity.id())))
+            Ok(Arc::new(ephemeral_blobstore))
         } else {
             Ok(Arc::new(RepoEphemeralBlobstore::disabled(
                 repo_identity.id(),

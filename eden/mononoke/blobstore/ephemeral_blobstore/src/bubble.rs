@@ -9,20 +9,19 @@
 
 use std::fmt;
 use std::num::NonZeroU64;
-use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
 use context::CoreContext;
 use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
-use mononoke_types::{DateTime, RepositoryId};
+use mononoke_types::DateTime;
 use prefixblob::PrefixBlobstore;
+use repo_blobstore::RepoBlobstore;
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 
 use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
-use crate::store::EphemeralBlobstore;
 
 /// Ephemeral Blobstore Bubble ID.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -85,9 +84,6 @@ impl BubbleId {
 /// that stores blobs just for this ephemeral bubble in a particular repo.
 #[derive(Debug, Clone)]
 pub struct Bubble {
-    /// ID of the repository this bubble applies to.
-    repo_id: RepositoryId,
-
     /// ID of the current bubble.
     bubble_id: BubbleId,
 
@@ -96,11 +92,7 @@ pub struct Bubble {
     expires_at: DateTime,
 
     /// Blobstore to use for accessing blobs in this bubble.
-    blobstore: Arc<dyn Blobstore>,
-
-    /// Ephemeral blobstore this bubble is located in.
-    #[allow(unused)] // will be used to extend bubble lifespan
-    ephemeral_blobstore: EphemeralBlobstore,
+    blobstore: RepoBlobstore,
 }
 
 impl fmt::Display for Bubble {
@@ -110,26 +102,15 @@ impl fmt::Display for Bubble {
 }
 
 impl Bubble {
-    pub(crate) fn new(
-        repo_id: RepositoryId,
-        bubble_id: BubbleId,
-        expires_at: DateTime,
-        ephemeral_blobstore: EphemeralBlobstore,
-    ) -> Self {
-        // Construct a blobstore for accessing blobs within this bubble.
-        // TODO(mbthomas): add redaction
-        let prefix = format!("{}{}", bubble_id.prefix(), repo_id.prefix());
-        let blobstore = Arc::new(PrefixBlobstore::new(
-            ephemeral_blobstore.inner.blobstore.clone(),
-            prefix,
-        ));
+    pub(crate) fn new(bubble_id: BubbleId, expires_at: DateTime, blobstore: RepoBlobstore) -> Self {
+        let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(blobstore, |bs| {
+            PrefixBlobstore::new(bs, bubble_id.prefix())
+        });
 
         Self {
-            repo_id,
             bubble_id,
             expires_at,
             blobstore,
-            ephemeral_blobstore,
         }
     }
 
@@ -139,10 +120,6 @@ impl Bubble {
         } else {
             Err(EphemeralBlobstoreError::BubbleExpired(self.bubble_id).into())
         }
-    }
-
-    pub fn repo_id(&self) -> RepositoryId {
-        self.repo_id
     }
 
     pub fn bubble_id(&self) -> BubbleId {
