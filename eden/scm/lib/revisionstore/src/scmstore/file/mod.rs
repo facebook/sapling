@@ -245,13 +245,16 @@ impl FileStore {
 
     #[instrument(skip(self, entries))]
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
-        // TODO(meyer): Track error metrics too and don't fail the whole batch for a single write error.
+        // TODO(meyer): Don't fail the whole batch for a single write error.
         let mut metrics = FileStoreWriteMetrics::default();
         let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
                 metrics.lfsptr.item(1);
-                self.write_lfsptr(&mut indexedlog_local, key, bytes, meta)?;
+                if let Err(e) = self.write_lfsptr(&mut indexedlog_local, key, bytes, meta) {
+                    metrics.lfsptr.err(1);
+                    return Err(e);
+                }
                 metrics.lfsptr.ok(1);
                 continue;
             }
@@ -262,11 +265,17 @@ impl FileStore {
                 .map_or(false, |threshold| hg_blob_len > threshold)
             {
                 metrics.lfs.item(1);
-                self.write_lfs(key, bytes)?;
+                if let Err(e) = self.write_lfs(key, bytes) {
+                    metrics.lfs.err(1);
+                    return Err(e);
+                }
                 metrics.lfs.ok(1);
             } else {
                 metrics.nonlfs.item(1);
-                self.write_nonlfs(&mut indexedlog_local, key, bytes, meta)?;
+                if let Err(e) = self.write_nonlfs(&mut indexedlog_local, key, bytes, meta) {
+                    metrics.nonlfs.err(1);
+                    return Err(e);
+                }
                 metrics.nonlfs.ok(1);
             }
         }

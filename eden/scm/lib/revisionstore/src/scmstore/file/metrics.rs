@@ -202,8 +202,6 @@ impl WriteMetrics {
         self.ok += keys;
     }
 
-    // TODO(meyer): Add write error tracking.
-    #[allow(dead_code)]
     pub(crate) fn err(&mut self, keys: usize) {
         self.err += keys;
     }
