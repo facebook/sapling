@@ -33,7 +33,7 @@ use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
     fetch_logger::FetchLogger,
     indexedlogauxstore::AuxStore,
-    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
+    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore, IndexedLogHgIdDataStoreWriteGuard},
     indexedlogutil::StoreType,
     lfs::{lfs_from_hg_file_blob, LfsRemote, LfsStore},
     memcache::MEMCACHE_DELAY,
@@ -182,6 +182,67 @@ impl FileStore {
         self.creation_time.elapsed() > MEMCACHE_DELAY
     }
 
+    fn write_lfsptr(
+        &self,
+        indexedlog_local: &mut Option<IndexedLogHgIdDataStoreWriteGuard<'_>>,
+        key: Key,
+        bytes: Bytes,
+        meta: Metadata,
+    ) -> Result<()> {
+        if !self.allow_write_lfs_ptrs {
+            ensure!(
+                std::env::var("TESTTMP").is_ok(),
+                "writing LFS pointers directly is not allowed outside of tests"
+            );
+        }
+        // TODO(meyer): We should try to eliminate directly writing LFS pointers, so we're only supporting it
+        // via ContentStore for now.
+        let contentstore = self.contentstore.as_ref().ok_or_else(|| {
+            anyhow!("trying to write LFS pointer but no ContentStore is available")
+        })?;
+        let delta = Delta {
+            data: bytes,
+            base: None,
+            key,
+        };
+        if let Some(indexedlog_local) = indexedlog_local.as_mut() {
+            indexedlog_local.unlocked(|| contentstore.add(&delta, &meta))
+        } else {
+            contentstore.add(&delta, &meta)
+        }?;
+
+        Ok(())
+    }
+
+    fn write_lfs(&self, key: Key, bytes: Bytes) -> Result<()> {
+        let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
+            anyhow!("trying to write LFS file but no local LfsStore is available")
+        })?;
+        let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
+        let sha256 = lfs_pointer.sha256();
+
+        // TODO(meyer): Do similar LockGuard impl for LfsStore so we can lock across the batch for both
+        lfs_local.add_blob(&sha256, lfs_blob)?;
+        lfs_local.add_pointer(lfs_pointer)?;
+
+        Ok(())
+    }
+
+    fn write_nonlfs(
+        &self,
+        indexedlog_local: &mut Option<IndexedLogHgIdDataStoreWriteGuard<'_>>,
+        key: Key,
+        bytes: Bytes,
+        meta: Metadata,
+    ) -> Result<()> {
+        let indexedlog_local = indexedlog_local.as_mut().ok_or_else(|| {
+            anyhow!("trying to write non-LFS file but no local non-LFS IndexedLog is available")
+        })?;
+        indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+
+        Ok(())
+    }
+
     #[instrument(skip(self, entries))]
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         // TODO(meyer): Track error metrics too and don't fail the whole batch for a single write error.
@@ -190,27 +251,7 @@ impl FileStore {
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
                 metrics.lfsptr.item(1);
-                if !self.allow_write_lfs_ptrs {
-                    ensure!(
-                        std::env::var("TESTTMP").is_ok(),
-                        "writing LFS pointers directly is not allowed outside of tests"
-                    );
-                }
-                // TODO(meyer): We should try to eliminate directly writing LFS pointers, so we're only supporting it
-                // via ContentStore for now.
-                let contentstore = self.contentstore.as_ref().ok_or_else(|| {
-                    anyhow!("trying to write LFS pointer but no ContentStore is available")
-                })?;
-                let delta = Delta {
-                    data: bytes,
-                    base: None,
-                    key,
-                };
-                if let Some(indexedlog_local) = indexedlog_local.as_mut() {
-                    indexedlog_local.unlocked(|| contentstore.add(&delta, &meta))
-                } else {
-                    contentstore.add(&delta, &meta)
-                }?;
+                self.write_lfsptr(&mut indexedlog_local, key, bytes, meta)?;
                 metrics.lfsptr.ok(1);
                 continue;
             }
@@ -221,24 +262,11 @@ impl FileStore {
                 .map_or(false, |threshold| hg_blob_len > threshold)
             {
                 metrics.lfs.item(1);
-                let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
-                    anyhow!("trying to write LFS file but no local LfsStore is available")
-                })?;
-                let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
-                let sha256 = lfs_pointer.sha256();
-
-                // TODO(meyer): Do similar LockGuard impl for LfsStore so we can lock across the batch for both
-                lfs_local.add_blob(&sha256, lfs_blob)?;
-                lfs_local.add_pointer(lfs_pointer)?;
+                self.write_lfs(key, bytes)?;
                 metrics.lfs.ok(1);
             } else {
                 metrics.nonlfs.item(1);
-                let indexedlog_local = indexedlog_local.as_mut().ok_or_else(|| {
-                    anyhow!(
-                        "trying to write non-LFS file but no local non-LFS IndexedLog is available"
-                    )
-                })?;
-                indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+                self.write_nonlfs(&mut indexedlog_local, key, bytes, meta)?;
                 metrics.nonlfs.ok(1);
             }
         }
