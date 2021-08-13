@@ -321,6 +321,12 @@ def _makerage(ui, repo, **opts):
         ),
     ]
 
+    def _edenfs_rage():
+        ragecmd = "edenfsctl rage --stdout"
+        if opts.get("preview"):
+            return shcmd(ragecmd + " --dry-run")
+        return shcmd(ragecmd)
+
     detailed = [
         (
             "disk space usage",
@@ -399,7 +405,7 @@ def _makerage(ui, repo, **opts):
         ("debugstatus", lambda: hgcmd("debugstatus")),
         ("debugtree", lambda: hgcmd("debugtree")),
         ("hg config (all)", lambda: "\n".join(allconfig(ui))),
-        ("edenfs rage", lambda: shcmd("edenfsctl rage --stdout")),
+        ("edenfs rage", _edenfs_rage),
         (
             "environment variables",
             lambda: "\n".join(
