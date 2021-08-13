@@ -69,9 +69,6 @@ pub struct FetchState {
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
 
-    /// Track ContentStore Fallbacks
-    fallbacks: Arc<ContentStoreFallbacks>,
-
     /// Track fetch metrics,
     metrics: FileStoreFetchMetrics,
 
@@ -104,7 +101,6 @@ impl FetchState {
             computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
-            fallbacks: file_store.fallbacks.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
             metrics: FileStoreFetchMetrics::default(),
@@ -537,15 +533,13 @@ impl FetchState {
         }
     }
 
-    // TODO(meyer): Record batch errors correctly.
-    fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
-        let pending = self.pending_storekey(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return Ok(());
-        }
-        self.metrics.contentstore.fetch(pending.len());
+    fn fetch_contentstore_inner(
+        &mut self,
+        store: &ContentStore,
+        pending: &mut Vec<StoreKey>,
+    ) -> Result<()> {
         store.prefetch(&pending)?;
-        for store_key in pending.into_iter() {
+        for store_key in pending.drain(..) {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
             );
@@ -584,8 +578,14 @@ impl FetchState {
 
     #[instrument(skip(self, store))]
     pub(crate) fn fetch_contentstore(&mut self, store: &ContentStore) {
-        if let Err(err) = self.fetch_contentstore_inner(store) {
+        let mut pending = self.pending_storekey(FileAttributes::CONTENT);
+        if pending.is_empty() {
+            return;
+        }
+        self.metrics.contentstore.fetch(pending.len());
+        if let Err(err) = self.fetch_contentstore_inner(store, &mut pending) {
             self.errors.other_error(err);
+            self.metrics.contentstore.err(pending.len());
         }
     }
 
