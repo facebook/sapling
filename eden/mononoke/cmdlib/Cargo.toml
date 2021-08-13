@@ -24,7 +24,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-libc = "0.2.86"
+libc = "0.2.98"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 maybe-owned = "0.3.4"
 megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
@@ -55,7 +55,7 @@ tunables = { version = "0.1.0", path = "../tunables" }
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4c86952f1e799960e736c0b2bb9d2a6d935bf1" }
-object = { git = "https://github.com/andrewjcg/object", rev = "ddbae7208292a13a016e8952c256f69737c763ab" }
+object = { git = "https://github.com/andrewjcg/object", rev = "37e8519ced73fb25821db22d938a021454f186de" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
