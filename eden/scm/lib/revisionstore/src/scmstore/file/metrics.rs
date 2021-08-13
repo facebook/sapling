@@ -70,6 +70,11 @@ impl FetchMetrics {
     }
 }
 
+// TODO(meyer): I don't think this is in any critical paths, but it'd be nicer to rewrite this
+// to use `Item = (Vec<&'static str>, usize)` instead of `Item = (String, usize)`, since all
+// the fields are indeed statically named right now, or, better, just tree of some sort instead of a
+// list of metrics. Probably appropriate for a `SmallVec` too, since the namespace depth is
+// limited.
 fn namespaced(
     namespace: &'static str,
     metrics: impl Iterator<Item = (impl AsRef<str>, usize)>,
@@ -240,10 +245,111 @@ impl FileStoreWriteMetrics {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct ApiMetrics {
+    /// Number of calls to this API
+    calls: usize,
+
+    /// Total number of entities requested across all calls
+    keys: usize,
+
+    /// Number of calls for only a single entity
+    singles: usize,
+}
+
+impl AddAssign for ApiMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.calls += rhs.calls;
+        self.keys += rhs.keys;
+        self.singles += rhs.singles;
+    }
+}
+
+impl ApiMetrics {
+    pub(crate) fn call(&mut self, keys: usize) {
+        self.calls += 1;
+        self.keys += keys;
+        if keys == 1 {
+            self.singles += 1;
+        }
+    }
+
+    fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+        std::array::IntoIter::new([
+            ("calls", self.calls),
+            ("keys", self.keys),
+            ("singles", self.singles),
+        ])
+        .filter(|&(_, v)| v != 0)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct FileStoreApiMetrics {
+    pub(crate) hg_getfilecontent: ApiMetrics,
+    pub(crate) hg_addpending: ApiMetrics,
+    pub(crate) hg_commitpending: ApiMetrics,
+    pub(crate) hg_get: ApiMetrics,
+    pub(crate) hg_getmeta: ApiMetrics,
+    pub(crate) hg_refresh: ApiMetrics,
+    pub(crate) hg_prefetch: ApiMetrics,
+    pub(crate) hg_upload: ApiMetrics,
+    pub(crate) hg_getmissing: ApiMetrics,
+    pub(crate) hg_add: ApiMetrics,
+    pub(crate) hg_flush: ApiMetrics,
+    pub(crate) contentdatastore_blob: ApiMetrics,
+    pub(crate) contentdatastore_metadata: ApiMetrics,
+}
+
+impl AddAssign for FileStoreApiMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.hg_getfilecontent += rhs.hg_getfilecontent;
+        self.hg_addpending += rhs.hg_addpending;
+        self.hg_commitpending += rhs.hg_commitpending;
+        self.hg_get += rhs.hg_get;
+        self.hg_getmeta += rhs.hg_getmeta;
+        self.hg_refresh += rhs.hg_refresh;
+        self.hg_prefetch += rhs.hg_prefetch;
+        self.hg_upload += rhs.hg_upload;
+        self.hg_getmissing += rhs.hg_getmissing;
+        self.hg_add += rhs.hg_add;
+        self.hg_flush += rhs.hg_flush;
+        self.contentdatastore_blob += rhs.contentdatastore_blob;
+        self.contentdatastore_metadata += rhs.contentdatastore_metadata;
+    }
+}
+
+impl FileStoreApiMetrics {
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+        namespaced("hg_getfilecontent", self.hg_getfilecontent.metrics())
+            .chain(namespaced("hg_addpending", self.hg_addpending.metrics()))
+            .chain(namespaced(
+                "hg_commitpending",
+                self.hg_commitpending.metrics(),
+            ))
+            .chain(namespaced("hg_get", self.hg_get.metrics()))
+            .chain(namespaced("hg_getmeta", self.hg_getmeta.metrics()))
+            .chain(namespaced("hg_refresh", self.hg_refresh.metrics()))
+            .chain(namespaced("hg_prefetch", self.hg_prefetch.metrics()))
+            .chain(namespaced("hg_upload", self.hg_upload.metrics()))
+            .chain(namespaced("hg_getmissing", self.hg_getmissing.metrics()))
+            .chain(namespaced("hg_add", self.hg_add.metrics()))
+            .chain(namespaced(
+                "contentdatastore_blob",
+                self.contentdatastore_blob.metrics(),
+            ))
+            .chain(namespaced(
+                "contentdatastore_metadata",
+                self.contentdatastore_metadata.metrics(),
+            ))
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct FileStoreMetrics {
     pub(crate) fetch: FileStoreFetchMetrics,
     pub(crate) write: FileStoreWriteMetrics,
+    pub(crate) api: FileStoreApiMetrics,
 }
 
 impl FileStoreMetrics {
@@ -255,7 +361,8 @@ impl FileStoreMetrics {
         namespaced(
             "scmstore.file",
             namespaced("fetch", self.fetch.metrics())
-                .chain(namespaced("write", self.write.metrics())),
+                .chain(namespaced("write", self.write.metrics()))
+                .chain(namespaced("api", self.api.metrics())),
         )
     }
 }

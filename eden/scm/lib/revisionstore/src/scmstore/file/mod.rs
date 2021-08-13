@@ -456,6 +456,7 @@ impl LegacyStore for FileStore {
 
     #[instrument(skip(self))]
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
+        self.metrics.write().api.hg_getfilecontent.call(0);
         self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT)
             .single()?
             .map(|entry| entry.content.unwrap().file_content())
@@ -471,6 +472,7 @@ impl LegacyStore for FileStore {
         meta: Metadata,
         location: RepackLocation,
     ) -> Result<()> {
+        self.metrics.write().api.hg_addpending.call(0);
         if let Some(contentstore) = self.contentstore.as_ref() {
             contentstore.add_pending(key, data, meta, location)
         } else {
@@ -488,6 +490,7 @@ impl LegacyStore for FileStore {
     }
 
     fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+        self.metrics.write().api.hg_commitpending.call(0);
         if let Some(contentstore) = self.contentstore.as_ref() {
             contentstore.commit_pending(location)
         } else {
@@ -500,6 +503,7 @@ impl LegacyStore for FileStore {
 impl HgIdDataStore for FileStore {
     // Fetch the raw content of a single TreeManifest blob
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        self.metrics.write().api.hg_get.call(0);
         Ok(
             match self
                 .fetch(
@@ -515,6 +519,7 @@ impl HgIdDataStore for FileStore {
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        self.metrics.write().api.hg_getmeta.call(0);
         Ok(
             match self
                 .fetch(
@@ -530,6 +535,7 @@ impl HgIdDataStore for FileStore {
     }
 
     fn refresh(&self) -> Result<()> {
+        self.metrics.write().api.hg_refresh.call(0);
         // AFAIK refresh only matters for DataPack / PackStore
         Ok(())
     }
@@ -537,6 +543,7 @@ impl HgIdDataStore for FileStore {
 
 impl RemoteDataStore for FileStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.metrics.write().api.hg_prefetch.call(keys.len());
         Ok(self
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
@@ -549,6 +556,7 @@ impl RemoteDataStore for FileStore {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.metrics.write().api.hg_upload.call(keys.len());
         // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need memcache + multiplex, etc)
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
@@ -570,6 +578,7 @@ impl RemoteDataStore for FileStore {
 
 impl LocalStore for FileStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.metrics.write().api.hg_getmissing.call(keys.len());
         Ok(self
             .local()
             .fetch(
@@ -585,6 +594,7 @@ impl LocalStore for FileStore {
 
 impl HgIdMutableDeltaStore for FileStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+        self.metrics.write().api.hg_add.call(0);
         if let Delta {
             data,
             base: None,
@@ -598,6 +608,7 @@ impl HgIdMutableDeltaStore for FileStore {
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.metrics.write().api.hg_flush.call(0);
         self.flush()?;
         Ok(None)
     }
@@ -607,6 +618,7 @@ impl HgIdMutableDeltaStore for FileStore {
 // that if available, but I feel like there's probably something wrong if this is called for trees.
 impl ContentDataStore for FileStore {
     fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
+        self.metrics.write().api.contentdatastore_blob.call(0);
         Ok(
             match self
                 .fetch(
@@ -622,6 +634,7 @@ impl ContentDataStore for FileStore {
     }
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        self.metrics.write().api.contentdatastore_metadata.call(0);
         Ok(
             match self
                 .fetch(

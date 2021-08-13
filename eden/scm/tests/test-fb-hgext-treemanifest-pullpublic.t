@@ -24,7 +24,13 @@ Clone it
   fetching tree '' a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   1 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  { metrics : { scmstore : { file : { fetch : { contentstore : { hits : 2,
+  { metrics : { scmstore : { file : { api : { hg : { getfilecontent : { calls : 2},
+                                                     getmeta : { calls : 2},
+                                                     getmissing : { calls : 1,
+                                                                    keys : 2},
+                                                     prefetch : { calls : 3,
+                                                                  keys : 4}}},
+                                      fetch : { contentstore : { hits : 2,
                                                                  keys : 2,
                                                                  requests : 1},
                                                 indexedlog : { cache : { hits : 8,
@@ -86,7 +92,8 @@ Pull exactly up to d into the client
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  { metrics : { ssh : { connections : 1,
+  { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 1}}}}},
+                ssh : { connections : 1,
                         read : { bytes : 1086},
                         write : { bytes : 680}}}}
 
