@@ -511,7 +511,7 @@ def checknoisybranches(repo):
         ) = commitcloudmod.workspace.currentworkspacewithlocallyownedinfo(repo)
         if current_workspace:
             ui.write(
-                _("checking irelevant draft branches for the workspace '%s'\n")
+                _("checking irrelevant draft branches for the workspace '%s'\n")
                 % current_workspace
             )
         if current_workspace and not locally_owned:

@@ -265,7 +265,7 @@ in the new repo, while keeping changelog unchanged.
   checking commit references
   remote/master points to an unknown commit - trying to move it to a known commit
   setting remote/master to 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  checking irelevant draft branches for the workspace 'user/test/default'
+  checking irrelevant draft branches for the workspace 'user/test/default'
 
   $ hg log -GT '{desc}\n'
   @  A
