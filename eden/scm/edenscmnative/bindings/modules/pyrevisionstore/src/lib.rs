@@ -1380,11 +1380,6 @@ py_class!(pub class filescmstore |py| {
         let store = self.store(py);
         mutabledeltastore::create_instance(py, store.get_shared_mutable())
     }
-
-    def fallback_writeptr_count(&self) -> PyResult<PyInt> {
-        let store = self.store(py);
-        Ok(store.fallbacks().write_ptr_count().to_py_object(py))
-    }
 });
 
 impl ExtractInnerRef for filescmstore {

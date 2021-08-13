@@ -8,10 +8,7 @@
 use std::ops::AddAssign;
 use std::sync::Arc;
 
-use parking_lot::{Mutex, RwLock};
-use tracing::instrument;
-
-use types::Key;
+use parking_lot::RwLock;
 
 use crate::indexedlogutil::StoreType;
 
@@ -176,9 +173,79 @@ impl FileStoreFetchMetrics {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct WriteMetrics {
+    /// Numbers of entities we attempted to write
+    items: usize,
+
+    /// Number of successfully written entities
+    ok: usize,
+
+    /// Number of entities which returned a write error (including batch errors)
+    err: usize,
+}
+
+impl AddAssign for WriteMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.items += rhs.items;
+        self.ok += rhs.ok;
+        self.err += rhs.err;
+    }
+}
+
+impl WriteMetrics {
+    pub(crate) fn item(&mut self, keys: usize) {
+        self.items += keys;
+    }
+
+    pub(crate) fn ok(&mut self, keys: usize) {
+        self.ok += keys;
+    }
+
+    // TODO(meyer): Add write error tracking.
+    #[allow(dead_code)]
+    pub(crate) fn err(&mut self, keys: usize) {
+        self.err += keys;
+    }
+
+    fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+        std::array::IntoIter::new([("items", self.items), ("ok", self.ok), ("err", self.err)])
+            .filter(|&(_, v)| v != 0)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct FileStoreWriteMetrics {
+    /// Writes to the local LFS backend
+    pub(crate) lfs: WriteMetrics,
+
+    /// Writes to the local non-LFS backend
+    pub(crate) nonlfs: WriteMetrics,
+
+    /// LFS Pointer-only writes (supported only through fallback)
+    pub(crate) lfsptr: WriteMetrics,
+}
+
+impl AddAssign for FileStoreWriteMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.lfs += rhs.lfs;
+        self.nonlfs += rhs.nonlfs;
+        self.lfsptr += rhs.lfsptr;
+    }
+}
+
+impl FileStoreWriteMetrics {
+    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
+        namespaced("lfs", self.lfs.metrics())
+            .chain(namespaced("nonlfs", self.nonlfs.metrics()))
+            .chain(namespaced("lfsptr", self.lfsptr.metrics()))
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct FileStoreMetrics {
     pub(crate) fetch: FileStoreFetchMetrics,
+    pub(crate) write: FileStoreWriteMetrics,
 }
 
 impl FileStoreMetrics {
@@ -187,33 +254,10 @@ impl FileStoreMetrics {
     }
 
     pub fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
-        namespaced("scmstore.file.fetch", self.fetch.metrics())
-    }
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct ContentStoreFallbacksInner {
-    write_ptr: u64,
-}
-
-#[derive(Debug)]
-pub struct ContentStoreFallbacks {
-    inner: Mutex<ContentStoreFallbacksInner>,
-}
-
-impl ContentStoreFallbacks {
-    pub(crate) fn new() -> Self {
-        ContentStoreFallbacks {
-            inner: Mutex::new(ContentStoreFallbacksInner::default()),
-        }
-    }
-
-    #[instrument(level = "warn", skip(self))]
-    pub(crate) fn write_ptr(&self, _key: &Key) {
-        self.inner.lock().write_ptr += 1;
-    }
-
-    pub fn write_ptr_count(&self) -> u64 {
-        self.inner.lock().write_ptr
+        namespaced(
+            "scmstore.file",
+            namespaced("fetch", self.fetch.metrics())
+                .chain(namespaced("write", self.write.metrics())),
+        )
     }
 }

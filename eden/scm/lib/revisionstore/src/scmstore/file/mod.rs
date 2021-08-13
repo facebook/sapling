@@ -11,7 +11,7 @@ mod types;
 
 pub use self::{
     fetch::FileStoreFetch,
-    metrics::{ContentStoreFallbacks, FileStoreMetrics},
+    metrics::{FileStoreMetrics, FileStoreWriteMetrics},
     types::{FileAttributes, FileAuxData, StoreFile},
 };
 
@@ -77,7 +77,6 @@ pub struct FileStore {
 
     // Legacy ContentStore fallback
     pub(crate) contentstore: Option<Arc<ContentStore>>,
-    pub(crate) fallbacks: Arc<ContentStoreFallbacks>,
 
     // Aux Data Stores
     pub(crate) aux_local: Option<Arc<AuxStore>>,
@@ -185,9 +184,12 @@ impl FileStore {
 
     #[instrument(skip(self, entries))]
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
+        // TODO(meyer): Track error metrics too and don't fail the whole batch for a single write error.
+        let mut metrics = FileStoreWriteMetrics::default();
         let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
+                metrics.lfsptr.item(1);
                 if !self.allow_write_lfs_ptrs {
                     ensure!(
                         std::env::var("TESTTMP").is_ok(),
@@ -199,7 +201,6 @@ impl FileStore {
                 let contentstore = self.contentstore.as_ref().ok_or_else(|| {
                     anyhow!("trying to write LFS pointer but no ContentStore is available")
                 })?;
-                self.fallbacks.write_ptr(&key);
                 let delta = Delta {
                     data: bytes,
                     base: None,
@@ -210,6 +211,7 @@ impl FileStore {
                 } else {
                     contentstore.add(&delta, &meta)
                 }?;
+                metrics.lfsptr.ok(1);
                 continue;
             }
             let hg_blob_len = bytes.len() as u64;
@@ -218,6 +220,7 @@ impl FileStore {
                 .lfs_threshold_bytes
                 .map_or(false, |threshold| hg_blob_len > threshold)
             {
+                metrics.lfs.item(1);
                 let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
                     anyhow!("trying to write LFS file but no local LfsStore is available")
                 })?;
@@ -227,15 +230,19 @@ impl FileStore {
                 // TODO(meyer): Do similar LockGuard impl for LfsStore so we can lock across the batch for both
                 lfs_local.add_blob(&sha256, lfs_blob)?;
                 lfs_local.add_pointer(lfs_pointer)?;
+                metrics.lfs.ok(1);
             } else {
+                metrics.nonlfs.item(1);
                 let indexedlog_local = indexedlog_local.as_mut().ok_or_else(|| {
                     anyhow!(
                         "trying to write non-LFS file but no local non-LFS IndexedLog is available"
                     )
                 })?;
                 indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+                metrics.nonlfs.ok(1);
             }
         }
+        self.metrics.write().write += metrics;
         Ok(())
     }
 
@@ -262,7 +269,6 @@ impl FileStore {
             lfs_remote: None,
 
             contentstore: None,
-            fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
             metrics: self.metrics.clone(),
 
@@ -321,10 +327,6 @@ impl FileStore {
         result
     }
 
-    pub fn fallbacks(&self) -> Arc<ContentStoreFallbacks> {
-        self.fallbacks.clone()
-    }
-
     pub fn metrics(&self) -> Vec<(String, usize)> {
         self.metrics.read().metrics().collect()
     }
@@ -351,7 +353,6 @@ impl FileStore {
             lfs_remote: None,
 
             contentstore: None,
-            fallbacks: Arc::new(ContentStoreFallbacks::new()),
             fetch_logger: None,
             metrics: FileStoreMetrics::new(),
 
@@ -394,7 +395,6 @@ impl LegacyStore for FileStore {
             lfs_remote: None,
 
             contentstore: None,
-            fallbacks: self.fallbacks.clone(),
             fetch_logger: self.fetch_logger.clone(),
             metrics: self.metrics.clone(),
 

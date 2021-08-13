@@ -22,7 +22,7 @@ use crate::{
     indexedlogdatastore::IndexedLogHgIdDataStore,
     indexedlogutil::StoreType,
     lfs::{LfsRemote, LfsStore},
-    scmstore::{file::FileStoreMetrics, ContentStoreFallbacks, FileStore, TreeStore},
+    scmstore::{file::FileStoreMetrics, FileStore, TreeStore},
     util::{
         get_cache_path, get_indexedlogdatastore_aux_path, get_indexedlogdatastore_path,
         get_local_path, get_repo_name,
@@ -359,7 +359,6 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_remote,
 
             contentstore,
-            fallbacks: Arc::new(ContentStoreFallbacks::new()),
             fetch_logger,
             metrics: FileStoreMetrics::new(),
 

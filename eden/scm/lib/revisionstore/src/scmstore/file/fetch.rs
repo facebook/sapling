@@ -27,7 +27,7 @@ use crate::{
     memcache::McData,
     scmstore::{
         file::{metrics::FileStoreFetchMetrics, LazyFile},
-        ContentStoreFallbacks, FileAttributes, FileAuxData, FileStore, StoreFile,
+        FileAttributes, FileAuxData, FileStore, StoreFile,
     },
     util, ContentHash, ContentStore, EdenApiFileStore, ExtStoredPolicy, MemcacheStore, Metadata,
     StoreKey,

@@ -678,8 +678,6 @@ class remotefileslog(filelog.fileslog):
         elif self.filescmstore:
             scmstore = self.filescmstore
         if scmstore:
-            writeptr = self.filescmstore.fallback_writeptr_count()
-            ui.metrics.gauge("fallback_writeptr", writeptr)
             metrics = self.filescmstore.getmetrics()
             for (metric, value) in metrics:
                 ui.metrics.gauge(metric, value)
