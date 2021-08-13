@@ -518,7 +518,7 @@ impl FetchState {
     #[instrument(level = "debug", skip(self, bytes))]
     fn found_contentstore(&mut self, key: Key, bytes: Vec<u8>, meta: Metadata) {
         if meta.is_lfs() {
-            self.fallbacks.fetch_hit_ptr(&key);
+            self.metrics.contentstore.hit_lfsptr(1);
             // Do nothing. We're trying to avoid exposing LFS pointers to the consumer of this API.
             // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
             // ExtStoredPolicy behavior), but hopefully not, and if so we'll need to make it type safe.
@@ -532,11 +532,12 @@ impl FetchState {
                 bytes.len(),
                 meta,
             );
-            self.fallbacks.fetch_hit_content(&key);
+            self.metrics.contentstore.hit(1);
             self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into(), None)
         }
     }
 
+    // TODO(meyer): Record batch errors correctly.
     fn fetch_contentstore_inner(&mut self, store: &ContentStore) -> Result<()> {
         let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -548,7 +549,6 @@ impl FetchState {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
             );
-            self.fallbacks.fetch(&key);
             // Using the ContentStore API, fetch the hg file blob, then, if it's found, also fetch the file metadata.
             // Returns the requested file as Result<(Option<Vec<u8>>, Option<Metadata>)>
             // Produces a Result::Err if either the blob or metadata get returned an error
@@ -568,18 +568,13 @@ impl FetchState {
                 });
 
             match res {
-                Ok((Some(blob), Some(meta))) => {
-                    self.metrics.contentstore.hit(1);
-                    self.found_contentstore(key, blob, meta)
-                }
+                Ok((Some(blob), Some(meta))) => self.found_contentstore(key, blob, meta),
                 Err(err) => {
                     self.metrics.contentstore.err(1);
-                    self.fallbacks.fetch_miss(&key);
                     self.errors.keyed_error(key, err)
                 }
                 _ => {
                     self.metrics.contentstore.miss(1);
-                    self.fallbacks.fetch_miss(&key);
                 }
             }
         }

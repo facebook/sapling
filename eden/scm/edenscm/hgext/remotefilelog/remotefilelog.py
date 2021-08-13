@@ -678,15 +678,7 @@ class remotefileslog(filelog.fileslog):
         elif self.filescmstore:
             scmstore = self.filescmstore
         if scmstore:
-            fetch = self.filescmstore.fallback_fetch_count()
-            fetchmiss = self.filescmstore.fallback_fetchmiss_count()
-            fetchhitptr = self.filescmstore.fallback_fetchhitptr_count()
-            fetchhitcontent = self.filescmstore.fallback_fetchhitcontent_count()
             writeptr = self.filescmstore.fallback_writeptr_count()
-            ui.metrics.gauge("fallback_fetch", fetch)
-            ui.metrics.gauge("fallback_fetchmiss", fetchmiss)
-            ui.metrics.gauge("fallback_fetchhitptr", fetchhitptr)
-            ui.metrics.gauge("fallback_fetchhitcontent", fetchhitcontent)
             ui.metrics.gauge("fallback_writeptr", writeptr)
             metrics = self.filescmstore.getmetrics()
             for (metric, value) in metrics:

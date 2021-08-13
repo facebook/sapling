@@ -107,11 +107,55 @@ impl AddAssign for LocalAndCacheFetchMetrics {
 }
 
 #[derive(Clone, Debug, Default)]
+pub struct ContentStoreFetchMetrics {
+    /// Only content hits are counted by common.hits, LFS pointer hits are only counted below.
+    common: FetchMetrics,
+
+    /// ContentStore returned a serialized LFS pointer instead of file content.
+    lfsptr_hits: usize,
+}
+
+impl ContentStoreFetchMetrics {
+    pub(crate) fn fetch(&mut self, keys: usize) {
+        self.common.fetch(keys)
+    }
+
+    pub(crate) fn hit(&mut self, keys: usize) {
+        self.common.hit(keys)
+    }
+
+    pub(crate) fn miss(&mut self, keys: usize) {
+        self.common.miss(keys)
+    }
+
+    pub(crate) fn err(&mut self, keys: usize) {
+        self.common.err(keys)
+    }
+
+    pub(crate) fn hit_lfsptr(&mut self, keys: usize) {
+        self.lfsptr_hits += keys;
+    }
+
+    fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+        std::iter::once(("lfsptrhits", self.lfsptr_hits))
+            .filter(|&(_, v)| v != 0)
+            .chain(self.common.metrics())
+    }
+}
+
+impl AddAssign for ContentStoreFetchMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.common += rhs.common;
+        self.lfsptr_hits += rhs.lfsptr_hits;
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct FileStoreFetchMetrics {
     pub(crate) indexedlog: LocalAndCacheFetchMetrics,
     pub(crate) lfs: LocalAndCacheFetchMetrics,
     pub(crate) aux: LocalAndCacheFetchMetrics,
-    pub(crate) contentstore: FetchMetrics,
+    pub(crate) contentstore: ContentStoreFetchMetrics,
 }
 
 impl AddAssign for FileStoreFetchMetrics {
@@ -149,10 +193,6 @@ impl FileStoreMetrics {
 
 #[derive(Debug, Default)]
 pub(crate) struct ContentStoreFallbacksInner {
-    fetch: u64,
-    fetch_miss: u64,
-    fetch_hit_ptr: u64,
-    fetch_hit_content: u64,
     write_ptr: u64,
 }
 
@@ -169,44 +209,8 @@ impl ContentStoreFallbacks {
     }
 
     #[instrument(level = "warn", skip(self))]
-    pub(crate) fn fetch(&self, _key: &Key) {
-        self.inner.lock().fetch += 1;
-    }
-
-    #[instrument(level = "warn", skip(self))]
-    pub(crate) fn fetch_miss(&self, _key: &Key) {
-        self.inner.lock().fetch_miss += 1;
-    }
-
-    #[instrument(level = "warn", skip(self))]
-    pub(crate) fn fetch_hit_ptr(&self, _key: &Key) {
-        self.inner.lock().fetch_hit_ptr += 1;
-    }
-
-    #[instrument(level = "warn", skip(self))]
-    pub(crate) fn fetch_hit_content(&self, _key: &Key) {
-        self.inner.lock().fetch_hit_content += 1;
-    }
-
-    #[instrument(level = "warn", skip(self))]
     pub(crate) fn write_ptr(&self, _key: &Key) {
         self.inner.lock().write_ptr += 1;
-    }
-
-    pub fn fetch_count(&self) -> u64 {
-        self.inner.lock().fetch
-    }
-
-    pub fn fetch_miss_count(&self) -> u64 {
-        self.inner.lock().fetch_miss
-    }
-
-    pub fn fetch_hit_ptr_count(&self) -> u64 {
-        self.inner.lock().fetch_hit_ptr
-    }
-
-    pub fn fetch_hit_content_count(&self) -> u64 {
-        self.inner.lock().fetch_hit_content
     }
 
     pub fn write_ptr_count(&self) -> u64 {
