@@ -783,9 +783,6 @@ impl RepoFactory {
     ) -> Result<ArcRepoEphemeralBlobstore> {
         if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
             let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
-            let repo_blobstore = self
-                .repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
-                .await?;
             let ephemeral_blobstore = RepoEphemeralBlobstoreBuilder::with_database_config(
                 self.env.fb,
                 &ephemeral_config.metadata,
@@ -794,7 +791,7 @@ impl RepoFactory {
             )?
             .build(
                 repo_identity.id(),
-                repo_blobstore,
+                blobstore,
                 ChronoDuration::from_std(ephemeral_config.initial_bubble_lifespan)?,
                 ChronoDuration::from_std(ephemeral_config.bubble_expiration_grace)?,
             );

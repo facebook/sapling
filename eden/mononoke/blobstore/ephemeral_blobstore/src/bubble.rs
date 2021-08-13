@@ -9,6 +9,7 @@
 
 use std::fmt;
 use std::num::NonZeroU64;
+use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
@@ -80,6 +81,8 @@ impl BubbleId {
     }
 }
 
+type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn Blobstore>>;
+
 /// An opened ephemeral blobstore bubble.  This is a miniature blobstore
 /// that stores blobs just for this ephemeral bubble in a particular repo.
 #[derive(Debug, Clone)]
@@ -91,8 +94,9 @@ pub struct Bubble {
     /// This includes the grace period from the ephemeral blobstore.
     expires_at: DateTime,
 
-    /// Blobstore to use for accessing blobs in this bubble.
-    blobstore: RepoBlobstore,
+    /// Blobstore to use for accessing blobs in this bubble, without redaction
+    /// or repo prefix wrappers.
+    blobstore: RawBubbleBlobstore,
 }
 
 impl fmt::Display for Bubble {
@@ -102,10 +106,12 @@ impl fmt::Display for Bubble {
 }
 
 impl Bubble {
-    pub(crate) fn new(bubble_id: BubbleId, expires_at: DateTime, blobstore: RepoBlobstore) -> Self {
-        let blobstore = RepoBlobstore::new_with_wrapped_inner_blobstore(blobstore, |bs| {
-            PrefixBlobstore::new(bs, bubble_id.prefix())
-        });
+    pub(crate) fn new(
+        bubble_id: BubbleId,
+        expires_at: DateTime,
+        blobstore: Arc<dyn Blobstore>,
+    ) -> Self {
+        let blobstore = PrefixBlobstore::new(blobstore, bubble_id.prefix());
 
         Self {
             bubble_id,
@@ -126,14 +132,23 @@ impl Bubble {
         self.bubble_id
     }
 
-    pub fn handle<B: Blobstore>(&self, main_blobstore: B) -> EphemeralHandle<B> {
-        EphemeralHandle::new(self.clone(), main_blobstore)
+    /// Return a blobstore that gives priority to accessing the bubble, but falls back
+    /// to the main blobstore.
+    pub fn wrap_repo_blobstore(&self, main_blobstore: RepoBlobstore) -> RepoBlobstore {
+        // Repo prefix/redaction is added only once by RepoBlobstore
+        RepoBlobstore::new_with_wrapped_inner_blobstore(main_blobstore, |bs| {
+            Arc::new(EphemeralHandle::new(self.clone(), bs))
+        })
     }
 
     pub async fn extend_lifespan(&self) -> Result<()> {
         unimplemented!()
     }
+}
 
+// These blobstore methods are not to be used directly as they bypass redaction.
+// Instead use .wrap_repo_blobstore
+impl Bubble {
     pub(crate) async fn get(
         &self,
         ctx: &CoreContext,

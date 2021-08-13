@@ -7,9 +7,11 @@
 
 //! Ephemeral Blobstore Builder
 
+use std::sync::Arc;
+
+use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
 use mononoke_types::RepositoryId;
-use repo_blobstore::RepoBlobstore;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
@@ -35,14 +37,14 @@ impl RepoEphemeralBlobstoreBuilder {
     pub fn build(
         self,
         repo_id: RepositoryId,
-        repo_blobstore: RepoBlobstore,
+        blobstore: Arc<dyn Blobstore>,
         initial_bubble_lifespan: ChronoDuration,
         bubble_expiration_grace: ChronoDuration,
     ) -> RepoEphemeralBlobstore {
         RepoEphemeralBlobstore::new(
             repo_id,
             self.connections,
-            repo_blobstore,
+            blobstore,
             initial_bubble_lifespan,
             bubble_expiration_grace,
         )

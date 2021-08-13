@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, format_err, Error, Result};
-use blobstore::{Blobstore, Loadable};
+use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
@@ -23,9 +23,9 @@ use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId, FileContents,
 };
+use repo_blobstore::RepoBlobstore;
 use slog::{info, Logger};
 use std::str::FromStr;
-use std::sync::Arc;
 use tokio::{
     fs::File,
     io::{AsyncWriteExt, BufReader},
@@ -249,16 +249,13 @@ fn extract_bubble_id(matches: &ArgMatches<'_>) -> Result<Option<BubbleId>> {
         .transpose()
 }
 
-async fn get_blobstore(
-    matches: &ArgMatches<'_>,
-    repo: &'_ InnerRepo,
-) -> Result<Arc<dyn Blobstore>> {
+async fn get_blobstore(matches: &ArgMatches<'_>, repo: &'_ InnerRepo) -> Result<RepoBlobstore> {
     let bubble_id = extract_bubble_id(matches)?;
     let main_blobstore = repo.blob_repo.get_blobstore();
     if let Some(id) = bubble_id {
         let bubble = repo.ephemeral_blobstore.open_bubble(id).await?;
-        Ok(Arc::new(bubble.handle(main_blobstore)))
+        Ok(bubble.wrap_repo_blobstore(main_blobstore))
     } else {
-        Ok(Arc::new(main_blobstore))
+        Ok(main_blobstore)
     }
 }

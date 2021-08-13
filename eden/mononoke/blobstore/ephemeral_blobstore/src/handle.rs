@@ -14,6 +14,9 @@ use context::CoreContext;
 
 use crate::bubble::Bubble;
 
+/// EphemeralHandle is a blobstore that wraps both a bubble blobstore and a
+/// backing "persistent" blobstore. First, it queries the bubble blobstore
+/// and if a blob is not present, it queries the persistent one.
 #[derive(Debug)]
 pub struct EphemeralHandle<B: Blobstore> {
     bubble: Bubble,
@@ -33,7 +36,7 @@ impl<B: Blobstore> fmt::Display for EphemeralHandle<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "ReadOnlyBlobstore<{}, {}>",
+            "EphemeralHandle<{}, {}>",
             self.bubble, self.main_blobstore
         )
     }

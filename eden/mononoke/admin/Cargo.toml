@@ -64,6 +64,7 @@ prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 regex = "1.4.2"
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }

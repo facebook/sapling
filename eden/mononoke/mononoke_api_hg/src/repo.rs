@@ -30,6 +30,7 @@ use mononoke_types::{
     hash::{Sha1, Sha256},
     BonsaiChangeset, ChangesetId, ContentId, MPath, MononokeId, RepoPath,
 };
+use repo_blobstore::RepoBlobstore;
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 use std::collections::HashSet;
@@ -91,11 +92,14 @@ impl HgRepoContext {
     async fn bubble_blobstore(
         &self,
         bubble_id: Option<BubbleId>,
-    ) -> Result<Arc<dyn Blobstore>, MononokeError> {
+    ) -> Result<RepoBlobstore, MononokeError> {
         let main_blobstore = self.blob_repo().blobstore().clone();
         Ok(match bubble_id {
-            Some(id) => Arc::new(self.open_bubble(id).await?.handle(main_blobstore)),
-            None => Arc::new(main_blobstore),
+            Some(id) => self
+                .open_bubble(id)
+                .await?
+                .wrap_repo_blobstore(main_blobstore),
+            None => main_blobstore,
         })
     }
 

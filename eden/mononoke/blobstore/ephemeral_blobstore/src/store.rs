@@ -10,10 +10,10 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
 use derivative::Derivative;
 use mononoke_types::{DateTime, RepositoryId, Timestamp};
-use repo_blobstore::RepoBlobstore;
 use sql::queries;
 use sql_ext::SqlConnections;
 
@@ -24,8 +24,9 @@ use crate::error::EphemeralBlobstoreError;
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct RepoEphemeralBlobstoreInner {
-    /// The backing blobstore where blobs are stored.
-    pub(crate) repo_blobstore: RepoBlobstore,
+    /// The backing blobstore where blobs are stored, without any redaction
+    /// or repo prefix wrappers.
+    pub(crate) blobstore: Arc<dyn Blobstore>,
 
     #[derivative(Debug = "ignore")]
     /// Database used to manage the ephemeral blobstore.
@@ -93,7 +94,7 @@ impl RepoEphemeralBlobstoreInner {
                 Ok(Bubble::new(
                     bubble_id,
                     expires_at + self.bubble_expiration_grace,
-                    self.repo_blobstore.clone(),
+                    self.blobstore.clone(),
                 ))
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
@@ -117,7 +118,7 @@ impl RepoEphemeralBlobstoreInner {
         Ok(Bubble::new(
             bubble_id,
             expires_at + self.bubble_expiration_grace,
-            self.repo_blobstore.clone(),
+            self.blobstore.clone(),
         ))
     }
 }
@@ -126,14 +127,14 @@ impl RepoEphemeralBlobstore {
     pub(crate) fn new(
         repo_id: RepositoryId,
         connections: SqlConnections,
-        repo_blobstore: RepoBlobstore,
+        blobstore: Arc<dyn Blobstore>,
         initial_bubble_lifespan: ChronoDuration,
         bubble_expiration_grace: ChronoDuration,
     ) -> Self {
         Self {
             repo_id,
             inner: Some(Arc::new(RepoEphemeralBlobstoreInner {
-                repo_blobstore,
+                blobstore,
                 connections,
                 initial_bubble_lifespan,
                 bubble_expiration_grace,
@@ -175,6 +176,7 @@ mod test {
     use metaconfig_types::PackFormat;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use packblob::PackBlob;
+    use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
 
@@ -188,14 +190,14 @@ mod test {
             PackFormat::ZstdIndividual(0),
         ));
         let repo_blobstore = RepoBlobstore::new(
-            blobstore.clone(),
+            Arc::new(Memblob::default()),
             None,
             REPO_ZERO,
             MononokeScubaSampleBuilder::with_discard(),
         );
         let eph = RepoEphemeralBlobstoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
-            repo_blobstore,
+            blobstore.clone(),
             ChronoDuration::days(30),
             ChronoDuration::hours(6),
         );
@@ -203,6 +205,8 @@ mod test {
 
         // Create a bubble and put data in it.
         let bubble1 = eph.create_bubble().await?;
+        let bubble1_id = bubble1.bubble_id();
+        let bubble1 = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1
             .put(&ctx, key.clone(), BlobstoreBytes::from_bytes("test data"))
             .await?;
@@ -210,8 +214,10 @@ mod test {
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
         // Re-open the bubble and confirm we can read the data.
-        let bubble1_id = bubble1.bubble_id();
-        let bubble1_read = eph.open_bubble(bubble1_id).await?;
+        let bubble1_read = eph
+            .open_bubble(bubble1_id)
+            .await?
+            .wrap_repo_blobstore(repo_blobstore.clone());
         let data = bubble1_read.get(&ctx, &key).await?.unwrap().into_bytes();
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
@@ -226,6 +232,8 @@ mod test {
 
         // Create a new bubble and put data in it.
         let bubble2 = eph.create_bubble().await?;
+        let bubble2_id = bubble2.bubble_id();
+        let bubble2 = bubble2.wrap_repo_blobstore(repo_blobstore.clone());
         bubble2
             .put(
                 &ctx,
@@ -240,7 +248,6 @@ mod test {
         assert_eq!(data.as_bytes().as_ref(), b"test data");
 
         // There should now be two separate keys.
-        let bubble2_id = bubble2.bubble_id();
         let enumerated = blobstore
             .enumerate(&ctx, &BlobstoreKeyParam::from(..))
             .await?;
