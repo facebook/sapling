@@ -245,6 +245,20 @@ impl TreeStore {
         }))
     }
 
+    /// Returns a TreeStore with only the local subset of backends
+    pub fn local(&self) -> TreeStore {
+        TreeStore {
+            indexedlog_local: self.indexedlog_local.clone(),
+            indexedlog_cache: self.indexedlog_cache.clone(),
+            cache_to_local_cache: false,
+            memcache: None,
+            cache_to_memcache: false,
+            edenapi: None,
+            contentstore: None,
+            creation_time: Instant::now(),
+        }
+    }
+
     pub fn empty() -> Self {
         TreeStore {
             indexedlog_local: None,
