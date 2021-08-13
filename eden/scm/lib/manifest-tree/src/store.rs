@@ -6,6 +6,7 @@
  */
 
 use std::{
+    convert::TryFrom,
     str::{from_utf8, FromStr},
     sync::Arc,
 };
@@ -13,7 +14,7 @@ use std::{
 use anyhow::{format_err, Result};
 use bytes::{Bytes, BytesMut};
 
-use manifest::FileType;
+use manifest::{FileMetadata, FileType, FsNodeMetadata};
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
 
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
@@ -100,7 +101,7 @@ impl InnerStore {
 /// representation. For this serialization format it is important that they don't contain
 /// `\0` or `\n`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Entry(Bytes);
+pub struct Entry(pub Bytes);
 
 pub struct EntryMut(BytesMut);
 
@@ -197,6 +198,27 @@ impl<'a> Iterator for Elements<'a> {
         let result = Element::from_byte_slice(&self.byte_slice[self.position..end]);
         self.position = end + 1;
         Some(result)
+    }
+}
+
+impl TryFrom<Entry> for manifest::List {
+    type Error = anyhow::Error;
+
+    fn try_from(v: Entry) -> Result<Self> {
+        let mut entries = Vec::new();
+        for entry in v.elements() {
+            let entry = entry?;
+            entries.push((
+                entry.component,
+                match entry.flag {
+                    Flag::Directory => FsNodeMetadata::Directory(Some(entry.hgid)),
+                    Flag::File(file_type) => {
+                        FsNodeMetadata::File(FileMetadata::new(entry.hgid, file_type))
+                    }
+                },
+            ))
+        }
+        Ok(manifest::List::Directory(entries))
     }
 }
 

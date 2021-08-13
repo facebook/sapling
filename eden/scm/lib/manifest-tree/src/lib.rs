@@ -29,7 +29,10 @@ use pathmatcher::Matcher;
 use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
 
 pub(crate) use self::link::Link;
-pub use self::{diff::Diff, store::TreeStore};
+pub use self::{
+    diff::Diff,
+    store::{Entry as TreeEntry, TreeStore},
+};
 use crate::{
     iter::{BfsIter, DfsCursor, Step},
     link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
