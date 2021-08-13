@@ -838,6 +838,24 @@ impl FileStoreFetch {
             .chain(self.other_errors.into_iter().map(Err))
     }
 
+    /// Returns a stream of all fetch results, including not found and errors
+    pub fn fetch_results(self) -> impl Iterator<Item = (Key, Result<Option<StoreFile>>)> {
+        self.complete
+            .into_iter()
+            .map(|(key, file)| (key, Ok(Some(file))))
+            .chain(self.incomplete.into_iter().map(|(key, mut errors)| {
+                (
+                    key,
+                    // TODO(meyer): Should we make some VecError type or fan out like in results, above?
+                    if let Some(err) = errors.pop() {
+                        Err(err)
+                    } else {
+                        Ok(None)
+                    },
+                )
+            }))
+    }
+
     pub fn metrics(&self) -> &FileStoreFetchMetrics {
         &self.metrics
     }
