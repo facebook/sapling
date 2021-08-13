@@ -36,6 +36,7 @@ pub struct FileStoreBuilder<'a> {
     suffix: Option<PathBuf>,
     correlator: Option<String>,
     store_aux_data: bool,
+    override_edenapi: Option<bool>,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -56,6 +57,7 @@ impl<'a> FileStoreBuilder<'a> {
             suffix: None,
             correlator: None,
             store_aux_data: false,
+            override_edenapi: None,
             indexedlog_local: None,
             indexedlog_cache: None,
             lfs_local: None,
@@ -83,6 +85,11 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn store_aux_data(mut self) -> Self {
         self.store_aux_data = true;
+        self
+    }
+
+    pub fn override_edenapi(mut self, use_edenapi: bool) -> Self {
+        self.override_edenapi = Some(use_edenapi);
         self
     }
 
@@ -156,9 +163,12 @@ impl<'a> FileStoreBuilder<'a> {
     }
 
     fn use_edenapi(&self) -> Result<bool> {
-        Ok(self
-            .config
-            .get_or_default::<bool>("remotefilelog", "http")?)
+        Ok(if let Some(use_edenapi) = self.override_edenapi {
+            use_edenapi
+        } else {
+            self.config
+                .get_or_default::<bool>("remotefilelog", "http")?
+        })
     }
 
     fn use_lfs(&self) -> Result<bool> {
@@ -374,6 +384,7 @@ pub struct TreeStoreBuilder<'a> {
     config: &'a ConfigSet,
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
+    override_edenapi: Option<bool>,
 
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -388,6 +399,7 @@ impl<'a> TreeStoreBuilder<'a> {
             config,
             local_path: None,
             suffix: None,
+            override_edenapi: None,
             indexedlog_local: None,
             indexedlog_cache: None,
             edenapi: None,
@@ -436,8 +448,17 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
+    pub fn override_edenapi(mut self, use_edenapi: bool) -> Self {
+        self.override_edenapi = Some(use_edenapi);
+        self
+    }
+
     fn use_edenapi(&self) -> Result<bool> {
-        Ok(self.config.get_or_default::<bool>("treemanifest", "http")?)
+        Ok(if let Some(use_edenapi) = self.override_edenapi {
+            use_edenapi
+        } else {
+            self.config.get_or_default::<bool>("treemanifest", "http")?
+        })
     }
 
     fn build_edenapi(&self) -> Result<Arc<EdenApiTreeStore>> {
