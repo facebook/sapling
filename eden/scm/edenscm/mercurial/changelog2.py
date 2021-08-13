@@ -18,6 +18,7 @@ from . import (
     error,
     mdiff,
     progress,
+    pycompat,
     revlog,
     smartset,
     util,
@@ -31,6 +32,7 @@ from .pycompat import encodeutf8
 
 
 SEGMENTS_DIR = "segments/v1"
+SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
 HGCOMMITS_DIR = "hgcommits/v1"
 GIT_DIR_FILE = "gitdir"
 
@@ -81,7 +83,7 @@ class changelog(object):
     @classmethod
     def opensegments(cls, repo, uiconfig):
         svfs = repo.svfs
-        segmentsdir = svfs.join(SEGMENTS_DIR)
+        segmentsdir = _segmentsdir(svfs)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.opensegments(segmentsdir, hgcommitsdir)
         return cls(repo, inner, uiconfig)
@@ -90,7 +92,7 @@ class changelog(object):
     def opendoublewrite(cls, repo, uiconfig):
         svfs = repo.svfs
         revlogdir = svfs.join("")
-        segmentsdir = svfs.join(SEGMENTS_DIR)
+        segmentsdir = _segmentsdir(svfs)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.opendoublewrite(
             revlogdir, segmentsdir, hgcommitsdir
@@ -117,7 +119,7 @@ class changelog(object):
             revlogdir = svfs.join("")
         else:
             revlogdir = None
-        segmentsdir = svfs.join(SEGMENTS_DIR)
+        segmentsdir = _segmentsdir(svfs)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         # special file for testing lazy hash backend
         lazyhashdir = svfs.tryread("lazyhashdir") or None
@@ -135,7 +137,7 @@ class changelog(object):
     @classmethod
     def opengitsegments(cls, repo, uiconfig):
         svfs = repo.svfs
-        segmentsdir = svfs.join(SEGMENTS_DIR)
+        segmentsdir = _segmentsdir(svfs)
         gitdir = svfs.readutf8(GIT_DIR_FILE)
         metalog = svfs.metalog
         inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
@@ -702,6 +704,30 @@ def migrateto(repo, name):
         raise error.Abort(_("invalid changelog format: %s") % name)
 
 
+def _segmentsdir(svfs):
+    """Return the directory for the "segments" data.
+
+    On Windows, this function will attempt to rename left-over directory
+    (SEGMENTS_DIR_NEXT to SEGMENTS_DIR), and return SEGMENTS_DIR_NEXT if
+    the rename fails. See _migratetosparsesegments for details.
+
+    Note: the above rename could cause race conditions where another
+    command might fail. But it is one time so the chance is considered
+    rare.
+    """
+    if pycompat.iswindows and svfs.exists(SEGMENTS_DIR_NEXT):
+        # Attempt to rename SEGMENTS_DIR_NEXT to SEGMENTS_DIR.
+        tmpreldir = "%s.%s" % (SEGMENTS_DIR, time.strftime("%Y%m%d_%H%M%S"))
+        try:
+            if svfs.exists(SEGMENTS_DIR):
+                svfs.rename(SEGMENTS_DIR, tmpreldir)
+            svfs.rename(SEGMENTS_DIR_NEXT, SEGMENTS_DIR)
+        except Exception:
+            # Cannot rename because the files are still being used.
+            return svfs.join(SEGMENTS_DIR_NEXT)
+    return svfs.join(SEGMENTS_DIR)
+
+
 def migratetodoublewrite(repo, requirename="doublewritechangelog"):
     """Migrate to "double write" backend.
 
@@ -762,6 +788,10 @@ def migratetolazy(repo):
         repo.ui.note(_("cannot migrate to lazy backend without edenapi\n"))
         return
 
+    if pycompat.iswindows and repo.svfs.exists(SEGMENTS_DIR_NEXT):
+        repo.ui.note(_("cannot migrate to lazy backend with pending migration\n"))
+        return
+
     # Migrate revlog to segments on demand.
     if repo.changelog.algorithmbackend == "revlog":
         migratetodoublewrite(repo)
@@ -813,8 +843,13 @@ def _migratetosparsesegments(repo):
     except Exception:
         repo.svfs.rmtree(tmpreldir, ignore_errors=True)
         raise
-    repo.svfs.rename(SEGMENTS_DIR, "%s.bak" % tmpreldir)
-    repo.svfs.rename(tmpreldir, SEGMENTS_DIR)
+    if pycompat.iswindows:
+        # On Windows we cannot rename segments/v1 directory easily.
+        # Let's just write a special file so we can use it next time.
+        repo.svfs.rename(tmpreldir, SEGMENTS_DIR_NEXT)
+    else:
+        repo.svfs.rename(SEGMENTS_DIR, "%s.bak" % tmpreldir)
+        repo.svfs.rename(tmpreldir, SEGMENTS_DIR)
 
 
 def migratetohybird(repo):

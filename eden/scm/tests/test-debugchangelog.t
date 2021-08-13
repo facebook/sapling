@@ -310,14 +310,19 @@ Revlog -> Lazy:
   .hg/store/00changelog.i
   $ ls .hg/store/segments
   v1
-  v1.*.bak (glob)
+  v1.* (glob)
 
   $ hg debugchangelog --migrate lazy --remove-backup -v
   removed backup file 00changelog.d
   removed backup file 00changelog.i
   removed backup file 00changelog.len
-  removed backup file segments/v1.*.bak (glob)
+  removed backup file segments/v1.* (glob) (?)
 
+#if windows
   $ ls .hg/store/segments
   v1
-
+  v1* (glob)
+#else
+  $ ls .hg/store/segments
+  v1
+#endif
