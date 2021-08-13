@@ -12,6 +12,7 @@ use futures::future::{self, Future};
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{RepoPath, RepositoryId};
+use path_hash::{PathBytes, PathHashBytes, PathWithHash};
 use rand::{thread_rng, Rng};
 use scopeguard;
 use sql::{queries, Connection};
@@ -31,7 +32,7 @@ use crate::local_cache::{CacheKey, LocalCache};
 use crate::remote_cache::RemoteCache;
 use crate::shards::Shards;
 use crate::sql_timeout_knobs;
-use crate::structs::{CachedFilenode, CachedHistory, PathBytes, PathHashBytes, PathWithHash};
+use crate::structs::{CachedFilenode, CachedHistory};
 
 define_stats! {
     prefix = "mononoke.filenodes";

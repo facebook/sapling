@@ -436,11 +436,11 @@ pub mod test {
     use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
     use mononoke_types::RepoPath;
     use mononoke_types_mocks::repo::REPO_ZERO;
+    use path_hash::PathWithHash;
     use std::time::Duration;
     use tokio::time;
 
     use crate::reader::{filenode_cache_key, history_cache_key};
-    use crate::structs::PathWithHash;
 
     const TIMEOUT_MS: u64 = 100;
     const SLEEP_MS: u64 = 5;

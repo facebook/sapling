@@ -11,13 +11,12 @@ use filenodes::{FilenodeResult, PreparedFilenode};
 use futures::future;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
+use path_hash::{PathBytes, PathHash, PathHashBytes};
 use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::HashSet;
 use thiserror::Error as DeriveError;
 use tunables::tunables;
-
-use crate::structs::{PathBytes, PathHash, PathHashBytes};
 
 define_stats! {
     prefix = "mononoke.filenodes";

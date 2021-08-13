@@ -706,6 +706,13 @@ impl MPath {
     }
 }
 
+pub fn path_bytes_from_mpath(path: Option<&MPath>) -> Vec<u8> {
+    match path {
+        Some(path) => path.to_vec(),
+        None => vec![],
+    }
+}
+
 impl AsRef<[MPathElement]> for MPath {
     fn as_ref(&self) -> &[MPathElement] {
         &self.elements

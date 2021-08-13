@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use path_hash::{PathHashBytes, PathWithHash};
 use sql::Connection;
 use stats::prelude::*;
-
-use crate::structs::{PathHashBytes, PathWithHash};
 
 define_stats! {
     prefix = "mononoke.filenodes";

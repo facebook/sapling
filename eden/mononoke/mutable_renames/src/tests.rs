@@ -27,7 +27,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         ONES_CSID,
         src_path,
         Entry::Leaf(FileUnodeId::new(ONES)),
-    );
+    )?;
 
     mutable_renames
         .add_or_overwrite_renames(&ctx, vec![entry.clone()])
@@ -54,7 +54,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
         ONES_CSID,
         first_src_path,
         Entry::Leaf(FileUnodeId::new(ONES)),
-    );
+    )?;
 
     let second_dst_path = Some(MPath::new("second_dstpath")?);
     let second_src_path = Some(MPath::new("second_srcpath")?);
@@ -64,7 +64,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
         ONES_CSID,
         second_src_path,
         Entry::Leaf(FileUnodeId::new(TWOS)),
-    );
+    )?;
 
     mutable_renames
         .add_or_overwrite_renames(&ctx, vec![first_entry.clone(), second_entry.clone()])
@@ -97,7 +97,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
         ONES_CSID,
         first_src_path.clone(),
         Entry::Leaf(FileUnodeId::new(ONES)),
-    );
+    )?;
 
     mutable_renames
         .add_or_overwrite_renames(&ctx, vec![first_entry.clone()])
@@ -110,7 +110,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
         ONES_CSID,
         second_src_path,
         Entry::Leaf(FileUnodeId::new(TWOS)),
-    );
+    )?;
 
     assert_ne!(first_entry, second_entry);
     mutable_renames

@@ -46,7 +46,10 @@ pub use file_change::{BasicFileChange, FileChange, FileType, TrackedFileChange};
 pub use file_contents::{ChunkedFileContents, ContentChunkPointer, FileContents};
 pub use generation::{Generation, FIRST_GENERATION};
 pub use globalrev::Globalrev;
-pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, PrefixTrie, RepoPath};
+pub use path::{
+    check_case_conflicts, path_bytes_from_mpath, MPath, MPathElement, MPathHash, PrefixTrie,
+    RepoPath,
+};
 pub use rawbundle2::RawBundle2;
 pub use redaction_key_list::RedactionKeyList;
 pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
