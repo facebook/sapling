@@ -45,7 +45,15 @@ class TreeOverlayNonEmptyError : public std::exception {
  */
 class TreeOverlayStore {
  public:
-  explicit TreeOverlayStore(AbsolutePathPiece dir);
+  enum class SynchronousMode : uint8_t {
+    Off = 0,
+    Normal = 1,
+  };
+
+  explicit TreeOverlayStore(
+      AbsolutePathPiece dir,
+      TreeOverlayStore::SynchronousMode mode =
+          TreeOverlayStore::SynchronousMode::Normal);
 
   explicit TreeOverlayStore(std::unique_ptr<SqliteDatabase> db);
 

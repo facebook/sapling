@@ -119,7 +119,9 @@ struct TreeOverlayStore::StatementCache {
   std::array<PersistentSqliteStatement, kBatchInsertSize> batchInsert;
 };
 
-TreeOverlayStore::TreeOverlayStore(AbsolutePathPiece path) {
+TreeOverlayStore::TreeOverlayStore(
+    AbsolutePathPiece path,
+    TreeOverlayStore::SynchronousMode synchronous_mode) {
   ensureDirectoryExists(path);
 
   db_ = std::make_unique<SqliteDatabase>(path + kTreeStorePath);
@@ -128,6 +130,12 @@ TreeOverlayStore::TreeOverlayStore(AbsolutePathPiece path) {
   // https://www.sqlite.org/wal.html
   auto dbLock = db_->lock();
   SqliteStatement(dbLock, "PRAGMA journal_mode=WAL").step();
+
+  if (synchronous_mode == TreeOverlayStore::SynchronousMode::Off) {
+    XLOG(INFO)
+        << "Synchronous mode is off. Data loss may happen when system crashes.";
+    SqliteStatement(dbLock, "PRAGMA synchronous=OFF").step();
+  }
 }
 
 TreeOverlayStore::TreeOverlayStore(std::unique_ptr<SqliteDatabase> db)

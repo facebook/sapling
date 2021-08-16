@@ -665,13 +665,22 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * DANGER: this option is to help investigating performances issues with
-   * EdenFS. Turning this option on in non-debugging environment will result
-   * data loss.
+   * DANGER: this option will put overlay into memory and skip persisting any
+   * actual data to disk. This will guarantee to cause EdenFS corruption after
+   * restart. Use with caution.
    */
   ConfigSetting<bool> unsafeInMemoryOverlay{
       "overlay:unsafe-in-memory-overlay",
       false,
+      this};
+
+  /**
+   * The synchronous mode used when using tree overlay. Currently it only
+   * supports "off" or "normal". Setting this to off may cause data loss.
+   */
+  ConfigSetting<std::string> overlaySynchronousMode{
+      "overlay:synchronous-mode",
+      "normal",
       this};
 
   // [clone]

@@ -26,7 +26,10 @@ struct InodeNumber;
 
 class TreeOverlay : public IOverlay {
  public:
-  explicit TreeOverlay(AbsolutePathPiece path);
+  explicit TreeOverlay(
+      AbsolutePathPiece path,
+      TreeOverlayStore::SynchronousMode mode =
+          TreeOverlayStore::SynchronousMode::Normal);
 
   explicit TreeOverlay(std::unique_ptr<SqliteDatabase> store)
       : store_(std::move(store)) {}

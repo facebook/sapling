@@ -15,8 +15,10 @@
 
 namespace facebook::eden {
 
-TreeOverlay::TreeOverlay(AbsolutePathPiece path)
-    : path_{path.copy()}, store_{path_} {}
+TreeOverlay::TreeOverlay(
+    AbsolutePathPiece path,
+    TreeOverlayStore::SynchronousMode mode)
+    : path_{path.copy()}, store_{path_, mode} {}
 
 std::optional<InodeNumber> TreeOverlay::initOverlay(bool createIfNonExisting) {
   if (createIfNonExisting) {

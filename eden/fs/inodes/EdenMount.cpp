@@ -229,6 +229,9 @@ Overlay::OverlayType EdenMount::getOverlayType() {
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       return Overlay::OverlayType::TreeInMemory;
     }
+    if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
+      return Overlay::OverlayType::TreeSynchronousOff;
+    }
     return Overlay::OverlayType::Tree;
   } else {
     return Overlay::OverlayType::Legacy;

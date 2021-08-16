@@ -48,6 +48,9 @@ std::unique_ptr<IOverlay> makeOverlay(
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
     return std::make_unique<TreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
+  } else if (overlayType == Overlay::OverlayType::TreeSynchronousOff) {
+    return std::make_unique<TreeOverlay>(
+        localDir, TreeOverlayStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
   return std::make_unique<SqliteOverlay>(localDir);
