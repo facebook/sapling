@@ -56,7 +56,6 @@ use futures::future::join_all;
 use futures::future::BoxFuture;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use itertools::Itertools;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -505,8 +504,8 @@ where
     IS: IdDagStore + Persist,
     IdDag<IS>: TryClone,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
-    P: TryClone + Send + Sync + 'static,
-    S: TryClone + Persist + Send + Sync + 'static,
+    P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
+    S: IntVersion + TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         if !self.pending_heads.is_empty() {
@@ -523,7 +522,11 @@ where
             }
         }
 
-        let (lock, map_lock, dag_lock) = self.reload()?;
+        // Constructs a new graph so we don't expose a broken `self` state on error.
+        let mut new: Self = self.path.open()?;
+        let (lock, map_lock, dag_lock) = new.reload()?;
+        new.set_remote_protocol(self.remote_protocol.clone());
+        new.maybe_reuse_caches_from(self);
 
         // Parents that should exist in the local graph. Look them up in 1 round-trip
         // and insert to the local graph.
@@ -583,29 +586,29 @@ where
                 .collect::<Vec<_>>();
             names.sort_unstable();
             names.dedup();
-            let resolved = self.vertex_id_batch(&names).await?;
+            let resolved = new.vertex_id_batch(&names).await?;
             assert_eq!(resolved.len(), names.len());
             for (id, name) in resolved.into_iter().zip(names) {
                 if let Ok(id) = id {
-                    if !self.map.contains_vertex_name(&name).await? {
+                    if !new.map.contains_vertex_name(&name).await? {
                         tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, id);
-                        self.map.insert(id, name.as_ref())?;
+                        new.map.insert(id, name.as_ref())?;
                     }
                 }
             }
 
             for name in root_names {
-                if self.contains_vertex_name(&name).await? {
+                if new.contains_vertex_name(&name).await? {
                     let e = crate::Error::NeedSlowPath(format!("{:?} exists in local graph", name));
                     return Err(e);
                 }
             }
 
-            let client_parents = self.vertex_id_batch(&parent_names).await?;
+            let client_parents = new.vertex_id_batch(&parent_names).await?;
             client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
         }
 
-        let mut next_free_client_id = self.dag.next_free_id(0, Group::MASTER)?;
+        let mut next_free_client_id = new.dag.next_free_id(0, Group::MASTER)?;
         let mut new_client_segments = vec![];
         let server_idmap_tree: BTreeMap<_, _> = clone_data.idmap.clone().into_iter().collect();
         let mut last_server_id = None; // Can't use 0 since server might return segment starting from 0 (for example if pulling from empty repo)
@@ -640,9 +643,9 @@ where
                 parent_names.push(parent_name.clone());
             }
             // Parents should exist in the local graph and can be resolved without looking
-            // up remotely. Either looked up above, or inserted by the `self.map.insert`
+            // up remotely. Either looked up above, or inserted by the `new.map.insert`
             // loop below.
-            let client_parents = self.map.vertex_id_batch(&parent_names).await?;
+            let client_parents = new.map.vertex_id_batch(&parent_names).await?;
             let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
 
             let new_client_id_low = next_free_client_id;
@@ -663,7 +666,7 @@ where
             for (server_id, name) in new_server_ids {
                 let client_id = Id((server_id.0 as i64 + server_to_client_offset) as u64);
                 tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, client_id);
-                self.map.insert(client_id, name.as_ref())?;
+                new.map.insert(client_id, name.as_ref())?;
             }
         }
 
@@ -671,14 +674,16 @@ where
             segments: new_client_segments,
         };
 
-        self.dag
+        new.dag
             .build_segments_volatile_from_prepared_flat_segments(&new_client_segments)?;
 
         if cfg!(debug_assertions) {
-            self.verify_missing().await?;
+            new.verify_missing().await?;
         }
 
-        self.persist(lock, map_lock, dag_lock)
+        new.persist(lock, map_lock, dag_lock)?;
+        *self = new;
+        Ok(())
     }
 }
 
