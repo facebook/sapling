@@ -52,7 +52,7 @@ pub use crate::file::{
 };
 pub use crate::path::MononokePath;
 pub use crate::repo::{BookmarkFreshness, Repo, RepoContext};
-pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};
+pub use crate::repo_write::create_changeset::{CreateChange, CreateChangeFile, CreateCopyInfo};
 pub use crate::repo_write::land_stack::PushrebaseOutcome;
 pub use crate::repo_write::RepoWriteContext;
 pub use crate::specifiers::{

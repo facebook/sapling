@@ -167,6 +167,14 @@ impl FileChange {
         ))
     }
 
+    pub fn untracked(content_id: ContentId, file_type: FileType, size: u64) -> Self {
+        Self::UntrackedChange(BasicFileChange {
+            content_id,
+            file_type,
+            size,
+        })
+    }
+
     /// Convert this to a simple file change, where tracked and untracked
     /// changes are treated the same way, as well as missing and deleted
     pub fn simplify(&self) -> Option<&BasicFileChange> {

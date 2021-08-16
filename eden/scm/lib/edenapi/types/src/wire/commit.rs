@@ -609,12 +609,21 @@ pub struct WireBonsaiExtra {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireBonsaiFileChange {
+pub enum WireBonsaiFileChange {
     #[serde(rename = "1")]
-    pub file_type: WireFileType,
+    Change(WireUploadToken, WireFileType),
 
     #[serde(rename = "2")]
-    pub upload_token: WireUploadToken,
+    UntrackedChange(WireUploadToken, WireFileType),
+
+    #[serde(rename = "3")]
+    UntrackedDeletion,
+
+    #[serde(rename = "4")]
+    Deletion,
+
+    #[serde(other, rename = "0")]
+    Unknown,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -662,9 +671,17 @@ impl ToWire for BonsaiExtra {
 impl ToWire for BonsaiFileChange {
     type Wire = WireBonsaiFileChange;
     fn to_wire(self) -> Self::Wire {
-        WireBonsaiFileChange {
-            file_type: self.file_type.to_wire(),
-            upload_token: self.upload_token.to_wire(),
+        match self {
+            Self::Change {
+                upload_token,
+                file_type,
+            } => WireBonsaiFileChange::Change(upload_token.to_wire(), file_type.to_wire()),
+            Self::UntrackedChange {
+                upload_token,
+                file_type,
+            } => WireBonsaiFileChange::UntrackedChange(upload_token.to_wire(), file_type.to_wire()),
+            Self::UntrackedDeletion => WireBonsaiFileChange::UntrackedDeletion,
+            Self::Deletion => WireBonsaiFileChange::Deletion,
         }
     }
 }
@@ -706,10 +723,23 @@ impl ToApi for WireBonsaiFileChange {
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(BonsaiFileChange {
-            file_type: self.file_type.to_api()?,
-            upload_token: self.upload_token.to_api()?,
-        })
+        match self {
+            Self::Change(upload_token, file_type) => Ok(BonsaiFileChange::Change {
+                upload_token: upload_token.to_api()?,
+                file_type: file_type.to_api()?,
+            }),
+            Self::UntrackedChange(upload_token, file_type) => {
+                Ok(BonsaiFileChange::UntrackedChange {
+                    upload_token: upload_token.to_api()?,
+                    file_type: file_type.to_api()?,
+                })
+            }
+            Self::UntrackedDeletion => Ok(BonsaiFileChange::UntrackedDeletion),
+            Self::Deletion => Ok(BonsaiFileChange::Deletion),
+            Self::Unknown => Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                "WireBonsaiFileChange",
+            )),
+        }
     }
 }
 

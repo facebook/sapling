@@ -20,8 +20,8 @@ use manifest::{Entry, Manifest};
 use maplit::btreemap;
 use mononoke_api::{
     BookmarkFreshness, ChangesetPrefixSpecifier, ChangesetSpecifier,
-    ChangesetSpecifierPrefixResolution, CreateChange, CreateCopyInfo, FileId, FileType,
-    MononokePath,
+    ChangesetSpecifierPrefixResolution, CreateChange, CreateChangeFile, CreateCopyInfo, FileId,
+    FileType, MononokePath,
 };
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::hash::{Sha1, Sha256};
@@ -242,9 +242,12 @@ impl SourceControlServiceImpl {
                                     let file = repo.file(file_id).await?.ok_or_else(|| {
                                         errors::file_not_found(file_id.to_string())
                                     })?;
-                                    CreateChange::ExistingContent(
-                                        file.id().await?,
-                                        file_type,
+                                    CreateChange::Tracked(
+                                        CreateChangeFile::Existing {
+                                            file_id: file.id().await?,
+                                            file_type,
+                                            maybe_size: None,
+                                        },
                                         copy_info,
                                     )
                                 }
@@ -254,9 +257,12 @@ impl SourceControlServiceImpl {
                                         .file_by_content_sha1(sha)
                                         .await?
                                         .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                                    CreateChange::ExistingContent(
-                                        file.id().await?,
-                                        file_type,
+                                    CreateChange::Tracked(
+                                        CreateChangeFile::Existing {
+                                            file_id: file.id().await?,
+                                            file_type,
+                                            maybe_size: None,
+                                        },
                                         copy_info,
                                     )
                                 }
@@ -266,16 +272,21 @@ impl SourceControlServiceImpl {
                                         .file_by_content_sha256(sha)
                                         .await?
                                         .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                                    CreateChange::ExistingContent(
-                                        file.id().await?,
-                                        file_type,
+                                    CreateChange::Tracked(
+                                        CreateChangeFile::Existing {
+                                            file_id: file.id().await?,
+                                            file_type,
+                                            maybe_size: None,
+                                        },
                                         copy_info,
                                     )
                                 }
                                 thrift::RepoCreateCommitParamsFileContent::data(data) => {
-                                    CreateChange::NewContent(
-                                        Bytes::from(data),
-                                        file_type,
+                                    CreateChange::Tracked(
+                                        CreateChangeFile::New {
+                                            bytes: Bytes::from(data),
+                                            file_type,
+                                        },
                                         copy_info,
                                     )
                                 }
@@ -288,7 +299,7 @@ impl SourceControlServiceImpl {
                                 }
                             }
                         }
-                        thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Delete,
+                        thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Deletion,
                         thrift::RepoCreateCommitParamsChange::UnknownField(t) => {
                             return Err(errors::invalid_request(format!(
                                 "file change type not supported: {}",

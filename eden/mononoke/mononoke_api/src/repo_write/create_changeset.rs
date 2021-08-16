@@ -74,17 +74,32 @@ impl CreateCopyInfo {
 #[derive(Clone)]
 pub enum CreateChange {
     /// The file is created or modified to contain new data.
-    NewContent(Bytes, FileType, Option<CreateCopyInfo>),
+    Tracked(CreateChangeFile, Option<CreateCopyInfo>),
 
-    /// The file is created or modified to contain the same contents as an
-    /// existing file
-    // TODO: Possible improvement: Add ExistingUploadToken variant which has the
-    // upload token for the uploaded file, which can save a trip to blobstore
-    // Or just add possible size here.
-    ExistingContent(FileId, FileType, Option<CreateCopyInfo>),
+    /// A new file is modified in the working copy
+    Untracked(CreateChangeFile),
 
-    /// The file is deleted
-    Delete,
+    /// The file is not present in the working copy
+    UntrackedDeletion,
+
+    /// The file is marked as deleted
+    Deletion,
+}
+
+#[derive(Clone)]
+pub enum CreateChangeFile {
+    // Upload content from bytes
+    New {
+        bytes: Bytes,
+        file_type: FileType,
+    },
+    // Use already uploaded content
+    Existing {
+        file_id: FileId,
+        file_type: FileType,
+        // If not present, will be fetched from the blobstore
+        maybe_size: Option<u64>,
+    },
 }
 
 // Enum for recording whether a path is not changed, changed or deleted.
@@ -92,7 +107,7 @@ pub enum CreateChange {
 enum CreateChangeType {
     None,
     Change,
-    Delete,
+    Deletion,
 }
 
 impl Default for CreateChangeType {
@@ -104,12 +119,25 @@ impl Default for CreateChangeType {
 impl CreateChange {
     pub async fn resolve(
         self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo: &BlobRepo,
         parents: &Vec<ChangesetContext>,
     ) -> Result<FileChange, MononokeError> {
-        match self {
-            CreateChange::NewContent(bytes, file_type, copy_info) => {
+        let (file, copy_info, tracked) = match self {
+            CreateChange::Tracked(file, copy_info) => (
+                file,
+                match copy_info {
+                    Some(copy_info) => Some(copy_info.resolve(parents).await?),
+                    None => None,
+                },
+                true,
+            ),
+            CreateChange::Untracked(file) => (file, None, false),
+            CreateChange::UntrackedDeletion => return Ok(FileChange::UntrackedDeletion),
+            CreateChange::Deletion => return Ok(FileChange::Deletion),
+        };
+        let (file_id, file_type, size) = match file {
+            CreateChangeFile::New { bytes, file_type } => {
                 let meta = filestore::store(
                     repo.blobstore(),
                     repo.filestore_config(),
@@ -118,46 +146,46 @@ impl CreateChange {
                     stream::once(async move { Ok(bytes) }),
                 )
                 .await?;
-                let copy_info = match copy_info {
-                    Some(copy_info) => Some(copy_info.resolve(parents).await?),
-                    None => None,
-                };
-                Ok(FileChange::tracked(
-                    meta.content_id,
-                    file_type,
-                    meta.total_size,
-                    copy_info,
-                ))
+                (meta.content_id, file_type, meta.total_size)
             }
-            CreateChange::ExistingContent(file_id, file_type, copy_info) => {
-                let meta =
-                    filestore::get_metadata(repo.blobstore(), &ctx, &FetchKey::Canonical(file_id))
+            CreateChangeFile::Existing {
+                file_id,
+                file_type,
+                maybe_size,
+            } => (
+                file_id,
+                file_type,
+                match maybe_size {
+                    Some(size) => size,
+                    None => {
+                        filestore::get_metadata(
+                            repo.blobstore(),
+                            &ctx,
+                            &FetchKey::Canonical(file_id),
+                        )
                         .await?
                         .ok_or_else(|| {
                             MononokeError::InvalidRequest(format!(
                                 "File id '{}' is not available in this repo",
                                 file_id
                             ))
-                        })?;
-                let copy_info = match copy_info {
-                    Some(copy_info) => Some(copy_info.resolve(parents).await?),
-                    None => None,
-                };
-                Ok(FileChange::tracked(
-                    meta.content_id,
-                    file_type,
-                    meta.total_size,
-                    copy_info,
-                ))
-            }
-            CreateChange::Delete => Ok(FileChange::Deletion),
+                        })?
+                        .total_size
+                    }
+                },
+            ),
+        };
+        if tracked {
+            Ok(FileChange::tracked(file_id, file_type, size, copy_info))
+        } else {
+            Ok(FileChange::untracked(file_id, file_type, size))
         }
     }
 
     fn change_type(&self) -> CreateChangeType {
         match self {
-            CreateChange::Delete => CreateChangeType::Delete,
-            _ => CreateChangeType::Change,
+            CreateChange::Deletion | CreateChange::UntrackedDeletion => CreateChangeType::Deletion,
+            CreateChange::Tracked(..) | CreateChange::Untracked(..) => CreateChangeType::Change,
         }
     }
 }
@@ -238,7 +266,7 @@ async fn verify_prefix_files_deleted(
         .try_for_each(|prefix_path| async move {
             if prefix_path.is_file().await?
                 && path_changes.get(prefix_path.path().as_mpath())
-                    != Some(&CreateChangeType::Delete)
+                    != Some(&CreateChangeType::Deletion)
             {
                 Err(MononokeError::InvalidRequest(format!(
                     "Creating files inside '{}' requires deleting the file at that path",
@@ -329,7 +357,7 @@ impl RepoWriteContext {
         // Extract the set of deleted files.
         let deleted_files: BTreeSet<_> = changes
             .iter()
-            .filter(|(_path, change)| change.change_type() == CreateChangeType::Delete)
+            .filter(|(_path, change)| change.change_type() == CreateChangeType::Deletion)
             .map(|(path, _change)| path.clone())
             .collect();
 
@@ -384,7 +412,7 @@ impl RepoWriteContext {
             // Filter deletions that have a change at a path prefix. The
             // deletion is implicit from the change. (2)
             .filter(|(path, change)| {
-                change.change_type() != CreateChangeType::Delete
+                change.change_type() != CreateChangeType::Deletion
                     || !is_prefix_changed(path, &path_changes)
             })
             // Then convert the paths to MPaths. Do this before we start
@@ -410,7 +438,7 @@ impl RepoWriteContext {
                     let parent_ctxs = &parent_ctxs;
                     async move {
                         let change = change
-                            .resolve(self.ctx().clone(), self.blob_repo(), &parent_ctxs)
+                            .resolve(self.ctx(), self.blob_repo(), &parent_ctxs)
                             .await?;
                         Ok::<_, MononokeError>((path, change))
                     }

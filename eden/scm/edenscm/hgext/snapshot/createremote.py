@@ -22,7 +22,14 @@ def createremote(ui, repo, **opts):
         getreponame(repo),
         {
             "files": {
-                "modified": [(f, filetypefromfile(wctx[f])) for f in wctx.modified()]
+                "modified": [(f, filetypefromfile(wctx[f])) for f in wctx.modified()],
+                "added": [(f, filetypefromfile(wctx[f])) for f in wctx.added()],
+                "untracked": [
+                    (f, filetypefromfile(wctx[f]))
+                    for f in wctx.status(listunknown=True).unknown
+                ],
+                "removed": [f for f in wctx.removed()],
+                "missing": [f for f in wctx.deleted()],
             },
             "author": wctx.user(),
             "time": int(time),

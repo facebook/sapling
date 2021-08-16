@@ -796,14 +796,26 @@ pub trait EdenApiPyExt: EdenApi {
             time,
             tz,
         } = data.0;
-        let (modified, mut upload_data): (Vec<_>, Vec<_>) = files
+        #[derive(PartialEq, Eq)]
+        enum Type {
+            Tracked,
+            Untracked,
+        }
+        use Type::*;
+        let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = files
             .modified
             .into_iter()
-            .map(|(path, file_type)| {
+            .chain(files.added.into_iter())
+            .map(|(p, t)| (p, t, Tracked))
+            .chain(
+                // TODO(yancouto): Don't upload untracked files if they're too big.
+                files.untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
+            )
+            .map(|(path, file_type, tracked)| {
                 let bytes = std::fs::read(path.as_repo_path().as_str())?;
                 let content_id = calc_contentid(&bytes);
                 Ok((
-                    (path, file_type, content_id),
+                    (path, file_type, content_id, tracked),
                     (content_id, Bytes::from_owner(bytes)),
                 ))
             })
@@ -857,12 +869,23 @@ pub trait EdenApiPyExt: EdenApi {
                             time,
                             tz,
                             extra: vec![],
-                            // TODO(yancouto): Also upload new files
-                            file_changes: modified.into_iter().map(|(path, file_type, cid)| {
-                                Ok((path, BonsaiFileChange {
-                                    file_type,
-                                    upload_token: file_content_tokens.get(&cid).ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?.clone()
-                                }))
+                            file_changes: need_upload.into_iter().map(|(path, file_type, cid, tracked)| {
+                                let upload_token = file_content_tokens
+                                    .get(&cid)
+                                    .ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?
+                                    .clone();
+                                let change = if tracked == Tracked {
+                                    BonsaiFileChange::Change {
+                                        file_type,
+                                        upload_token
+                                    }
+                                } else {
+                                    BonsaiFileChange::UntrackedChange {
+                                        file_type,
+                                        upload_token,
+                                    }
+                                };
+                                Ok((path, change))
                             }).collect::<anyhow::Result<_>>()?,
                             message: "THIS IS A SNAPSHOT".to_string(),
                         }

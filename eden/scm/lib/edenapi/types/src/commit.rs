@@ -249,10 +249,18 @@ pub struct BonsaiExtra {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct BonsaiFileChange {
-    pub file_type: FileType,
-    /// Token proving the file was uploaded, and containing its content id and size
-    pub upload_token: UploadToken,
+pub enum BonsaiFileChange {
+    Change {
+        /// Token proving the file was uploaded, and containing its content id and size
+        upload_token: UploadToken,
+        file_type: FileType,
+    },
+    Deletion,
+    UntrackedChange {
+        upload_token: UploadToken,
+        file_type: FileType,
+    },
+    UntrackedDeletion,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -274,8 +282,16 @@ pub struct UploadBonsaiChangesetRequest {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct SnapshotRawFiles {
-    // TODO(yancouto): Add added/removed/missing/untracked files
+    /// Tracked files modified in local changes
     pub modified: Vec<(RepoPathBuf, FileType)>,
+    /// Files added with "hg add"
+    pub added: Vec<(RepoPathBuf, FileType)>,
+    /// Files that are not tracked but are in the local changes
+    pub untracked: Vec<(RepoPathBuf, FileType)>,
+    /// Files removed with "hg rm"
+    pub removed: Vec<RepoPathBuf>,
+    /// Files that are not in the local changes but were tracked
+    pub missing: Vec<RepoPathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

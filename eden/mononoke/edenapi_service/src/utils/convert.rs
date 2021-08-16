@@ -25,15 +25,16 @@ use std::collections::BTreeMap;
 use std::str;
 
 use edenapi_types::{
-    commit::BonsaiFileChange, token::UploadTokenData, AnyFileContentId, AnyId, HgChangesetContent,
-    HgMutationEntryContent,
+    commit::BonsaiFileChange,
+    token::{UploadTokenData, UploadTokenMetadata},
+    AnyFileContentId, AnyId, HgChangesetContent, HgMutationEntryContent,
 };
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
     blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
 };
 use mononoke_api::path::MononokePath;
-use mononoke_api::CreateChange;
+use mononoke_api::{CreateChange, CreateChangeFile};
 use mononoke_types::DateTime;
 use mononoke_types::MPath;
 use types::{RepoPath, RepoPathBuf};
@@ -86,19 +87,59 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
 }
 
 pub fn to_create_change(fc: BonsaiFileChange) -> Result<CreateChange> {
-    // TODO: Verify signature on upload token
-    if let UploadTokenData {
-        id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
-        ..
-    } = fc.upload_token.data
-    {
-        Ok(CreateChange::ExistingContent(
-            content_id.into(),
-            fc.file_type.into(),
-            None,
-        ))
-    } else {
-        bail!("Invalid upload token format, missing content id or file size metadata.")
+    fn extract_size(metadata: Option<UploadTokenMetadata>) -> Option<u64> {
+        match metadata {
+            Some(UploadTokenMetadata::FileContentTokenMetadata(metadata)) => {
+                Some(metadata.content_size)
+            }
+            None => None,
+        }
+    }
+    match fc {
+        BonsaiFileChange::Change {
+            file_type,
+            upload_token,
+        } => {
+            // TODO: Verify signature on upload token
+            if let UploadTokenData {
+                id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
+                metadata,
+            } = upload_token.data
+            {
+                Ok(CreateChange::Tracked(
+                    CreateChangeFile::Existing {
+                        file_id: content_id.into(),
+                        file_type: file_type.into(),
+                        maybe_size: extract_size(metadata),
+                    },
+                    // TODO(yancouto): Add copy info on tracked changes
+                    None,
+                ))
+            } else {
+                bail!("Invalid upload token format, missing content id")
+            }
+        }
+        BonsaiFileChange::UntrackedChange {
+            file_type,
+            upload_token,
+        } => {
+            // TODO: Verify signature on upload token
+            if let UploadTokenData {
+                id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
+                metadata,
+            } = upload_token.data
+            {
+                Ok(CreateChange::Untracked(CreateChangeFile::Existing {
+                    file_id: content_id.into(),
+                    file_type: file_type.into(),
+                    maybe_size: extract_size(metadata),
+                }))
+            } else {
+                bail!("Invalid upload token format, missing content id")
+            }
+        }
+        BonsaiFileChange::UntrackedDeletion => Ok(CreateChange::UntrackedDeletion),
+        BonsaiFileChange::Deletion => Ok(CreateChange::Deletion),
     }
 }
 

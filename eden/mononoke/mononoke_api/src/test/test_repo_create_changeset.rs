@@ -19,8 +19,8 @@ use fixtures::{linear, many_files_dirs};
 use std::str::FromStr;
 
 use crate::{
-    ChangesetContext, ChangesetId, CoreContext, CreateChange, FileType, Mononoke, MononokeError,
-    MononokePath, RepoWriteContext,
+    ChangesetContext, ChangesetId, CoreContext, CreateChange, CreateChangeFile, FileType, Mononoke,
+    MononokeError, MononokePath, RepoWriteContext,
 };
 
 #[fbinit::test]
@@ -58,7 +58,13 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
     changes.insert(
         MononokePath::try_from("TEST_CREATE")?,
-        CreateChange::NewContent(Bytes::from("TEST CREATE\n"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
 
     let cs = repo
@@ -76,7 +82,13 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
 
     changes.insert(
         MononokePath::try_from("TEST_CREATE")?,
-        CreateChange::NewContent(Bytes::from("TEST CREATE2\n"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE2\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
     let second_cs = repo
         .create_changeset(
@@ -196,7 +208,10 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
 
     // Cannot delete a file that is not there
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
-    changes.insert(MononokePath::try_from("TEST_CREATE")?, CreateChange::Delete);
+    changes.insert(
+        MononokePath::try_from("TEST_CREATE")?,
+        CreateChange::Deletion,
+    );
     assert_matches!(
         create_changeset(&repo, changes).await,
         Err(MononokeError::InvalidRequest(_))
@@ -206,7 +221,13 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
     changes.insert(
         MononokePath::try_from("1/TEST_CREATE")?,
-        CreateChange::NewContent(Bytes::from("test"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("test"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
     assert_matches!(
         create_changeset(&repo, changes.clone()).await,
@@ -214,18 +235,30 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Deleting the file means we can now replace it with a directory.
-    changes.insert(MononokePath::try_from("1")?, CreateChange::Delete);
+    changes.insert(MononokePath::try_from("1")?, CreateChange::Deletion);
     assert!(create_changeset(&repo, changes).await.is_ok());
 
     // Changes cannot introduce path conflicts
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
     changes.insert(
         MononokePath::try_from("TEST_CREATE")?,
-        CreateChange::NewContent(Bytes::from("test"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("test"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
     changes.insert(
         MononokePath::try_from("TEST_CREATE/TEST_CREATE")?,
-        CreateChange::NewContent(Bytes::from("test"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("test"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
     assert_matches!(
         create_changeset(&repo, changes).await,
@@ -236,17 +269,23 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
     changes.insert(
         MononokePath::try_from("dir1")?,
-        CreateChange::NewContent(Bytes::from("test"), FileType::Regular, None),
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("test"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
     );
     let cs1 = create_changeset(&repo, changes.clone()).await?;
 
     changes.insert(
         MononokePath::try_from("dir1/file_1_in_dir1")?,
-        CreateChange::Delete,
+        CreateChange::Deletion,
     );
     changes.insert(
         MononokePath::try_from("dir1/subdir1/file_1")?,
-        CreateChange::Delete,
+        CreateChange::Deletion,
     );
     let cs2 = create_changeset(&repo, changes).await?;
 
