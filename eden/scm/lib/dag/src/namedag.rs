@@ -1229,6 +1229,7 @@ async fn calculate_id_name_from_paths(
             x_id
         );
         if x_id >= max_id_plus_1 {
+            crate::failpoint!("dag-error-x-n-overflow");
             let msg = format!(
                 concat!(
                     "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
@@ -1239,7 +1240,7 @@ async fn calculate_id_name_from_paths(
             );
             return programming(msg);
         }
-        let mut id = dag.first_ancestor_nth(x_id, path.n).map_err(|e| {
+        let mut id = match dag.first_ancestor_nth(x_id, path.n).map_err(|e| {
             let msg = format!(
                 concat!(
                     "Cannot resolve x~n (x = {:?} {}, n = {}): {}. ",
@@ -1250,7 +1251,13 @@ async fn calculate_id_name_from_paths(
                 &path.x, x_id, path.n, e
             );
             crate::Error::Programming(msg)
-        })?;
+        }) {
+            Err(e) => {
+                crate::failpoint!("dag-error-x-n-unresolvable");
+                return Err(e);
+            }
+            Ok(id) => id,
+        };
         if names.len() < 30 {
             tracing::debug!("resolved {:?} => {} {:?}", &path, id, &names);
         } else {
