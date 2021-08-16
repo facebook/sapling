@@ -70,6 +70,7 @@ pub async fn create_bonsai_changeset_object(
         message,
         extra,
         file_changes,
+        is_snapshot: false,
     }
     .freeze()
 }

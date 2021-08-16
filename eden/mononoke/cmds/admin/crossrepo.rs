@@ -758,6 +758,7 @@ async fn create_commit_for_mapping_change(
         message: commit_msg,
         extra: extras,
         file_changes: file_changes.into(),
+        is_snapshot: false,
     }
     .freeze()?;
 

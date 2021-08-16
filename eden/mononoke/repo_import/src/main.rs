@@ -554,6 +554,7 @@ async fn merge_imported_commit(
         message: message.to_string(),
         extra: Default::default(),
         file_changes: Default::default(),
+        is_snapshot: false,
     }
     .freeze()?;
 

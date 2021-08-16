@@ -293,6 +293,7 @@ impl<'a> CreateCommitContext<'a> {
             message: self.message.unwrap_or_else(|| String::from("message")),
             extra: self.extra.into(),
             file_changes: Default::default(),
+            is_snapshot: false,
         };
 
         for (path, file_change) in files {
@@ -638,6 +639,7 @@ pub async fn create_commit(
         message: "message".to_string(),
         extra: Default::default(),
         file_changes: file_changes.into(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap();
@@ -665,6 +667,7 @@ pub async fn create_commit_with_date(
         message: "message".to_string(),
         extra: Default::default(),
         file_changes: file_changes.into(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap();

@@ -134,6 +134,7 @@ impl GenManifest {
                     message: "message".to_string(),
                     extra: Default::default(),
                     file_changes: file_changes.into(),
+                    is_snapshot: false,
                 }
                 .freeze()
                 .expect("generated bonsai failed to freeze");

@@ -428,6 +428,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 .unwrap_or("target config change".to_string()),
             extra: SortedVectorMap::new(),
             file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
         };
         state
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
@@ -519,6 +520,7 @@ impl<'a> ChangeTargetConfig<'a> {
             message: format!("Deletion commit for {}", new_version),
             extra: SortedVectorMap::new(),
             file_changes,
+            is_snapshot: false,
         };
         let old_target_with_removed_files = old_target_with_removed_files.freeze()?;
         save_bonsai_changesets(
@@ -659,6 +661,7 @@ impl<'a> ChangeTargetConfig<'a> {
             message: message.unwrap_or("target config change".to_string()),
             extra: SortedVectorMap::new(),
             file_changes: file_changes.into_iter().collect(),
+            is_snapshot: false,
         };
         let merge = bcs.freeze()?;
         save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;

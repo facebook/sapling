@@ -427,6 +427,7 @@ fn generate_bonsai_changeset(
         message,
         extra,
         file_changes,
+        is_snapshot: false,
     }
     .freeze()
 }

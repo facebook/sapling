@@ -478,6 +478,7 @@ impl RepoWriteContext {
             message,
             extra,
             file_changes,
+            is_snapshot: false,
         }
         .freeze()
         .map_err(|e| {

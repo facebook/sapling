@@ -35,6 +35,7 @@ pub struct BonsaiChangesetMut {
     pub message: String,
     pub extra: SortedVectorMap<String, Vec<u8>>,
     pub file_changes: SortedVectorMap<MPath, FileChange>,
+    pub is_snapshot: bool,
 }
 
 impl BonsaiChangesetMut {
@@ -64,6 +65,7 @@ impl BonsaiChangesetMut {
                     Ok((mpath, fc_opt))
                 })
                 .collect::<Result<_>>()?,
+            is_snapshot: tc.snapshot_state.is_some(),
         })
     }
 
@@ -86,6 +88,7 @@ impl BonsaiChangesetMut {
                 .into_iter()
                 .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
                 .collect(),
+            snapshot_state: self.is_snapshot.then(|| thrift::SnapshotState {}),
         }
     }
 
@@ -304,6 +307,7 @@ impl Arbitrary for BonsaiChangeset {
                 committer_date: Option::<DateTime>::arbitrary(g),
                 message: String::arbitrary(g),
                 extra: SortedVectorMap::arbitrary(g),
+                is_snapshot: bool::arbitrary(g),
             }
             .freeze()
             .expect("generated bonsai changeset must be valid")
@@ -328,6 +332,7 @@ impl Arbitrary for BonsaiChangeset {
                     committer_date: cs.committer_date,
                     message: cs.message.clone(),
                     extra,
+                    is_snapshot: cs.is_snapshot,
                 }
                 .freeze()
                 .expect("shrunken bonsai changeset must be valid")
@@ -391,6 +396,7 @@ mod test {
                 MPath::new("g/h").unwrap() => FileChange::Deletion,
                 MPath::new("i/j").unwrap() => FileChange::Deletion,
             ],
+            is_snapshot: false,
         };
         let tc = tc.freeze().expect("fixed bonsai changeset must be valid");
 

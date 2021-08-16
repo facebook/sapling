@@ -129,6 +129,7 @@ impl DeserializableBonsaiChangeset {
             message: self.message,
             extra: self.extra.into(),
             file_changes: files,
+            is_snapshot: false,
         })
     }
 }

@@ -1029,6 +1029,7 @@ mod tests {
             message: "message".to_string(),
             extra: Default::default(),
             file_changes,
+            is_snapshot: false,
         }
         .freeze()
         .unwrap();

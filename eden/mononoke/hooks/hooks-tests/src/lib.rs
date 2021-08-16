@@ -1386,6 +1386,7 @@ fn default_changeset() -> BonsaiChangeset {
             to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None),
             to_mpath("dir1/subdir1/subsubdir2/file_2") => FileChange::tracked(THREES_CTID, FileType::Regular, 2, None),
         },
+        is_snapshot: false,
     }.freeze().expect("Created changeset")
 }
 

@@ -568,6 +568,7 @@ fn make_bonsai_changeset(
             .into_iter()
             .map(|(path, change)| (MPath::new(path).unwrap(), change))
             .collect(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap()

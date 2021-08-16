@@ -305,6 +305,7 @@ mod test {
             message: message.to_string(),
             extra: Default::default(),
             file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
+            is_snapshot: false,
         }
         .freeze()
         .unwrap()

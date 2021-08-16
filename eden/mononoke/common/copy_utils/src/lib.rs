@@ -311,6 +311,7 @@ fn create_bonsai_changeset(
         message,
         extra: Default::default(),
         file_changes,
+        is_snapshot: false,
     }
     .freeze()
 }

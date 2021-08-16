@@ -326,13 +326,8 @@ mod test {
 
         let BonsaiChangesetMut {
             parents,
-            author: _,
-            author_date: _,
-            committer: _,
-            committer_date: _,
-            message: _,
-            extra: _,
             file_changes,
+            ..
         } = newcs.into_mut();
         assert_eq!(parents, vec![bcs_id]);
         assert_eq!(file_changes, Default::default());
@@ -348,13 +343,8 @@ mod test {
 
         let BonsaiChangesetMut {
             parents,
-            author: _,
-            author_date: _,
-            committer: _,
-            committer_date: _,
-            message: _,
-            extra: _,
             file_changes,
+            ..
         } = newcs.into_mut();
         assert_eq!(parents, vec![bcs_id]);
         assert_eq!(
@@ -375,13 +365,8 @@ mod test {
 
         let BonsaiChangesetMut {
             parents,
-            author: _,
-            author_date: _,
-            committer: _,
-            committer_date: _,
-            message: _,
-            extra: _,
             file_changes,
+            ..
         } = newcs.into_mut();
         assert_eq!(parents, vec![bcs_id]);
         let old_path = MPath::new("dir1/file_1_in_dir1").unwrap();

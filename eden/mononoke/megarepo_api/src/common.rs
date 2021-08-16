@@ -107,6 +107,7 @@ pub trait MegarepoOp {
             message: format!("move commit for source {}", source_name.0),
             extra: SortedVectorMap::new(),
             file_changes: file_changes.into_iter().collect(),
+            is_snapshot: false,
         }
         .freeze()?;
 
@@ -433,6 +434,7 @@ pub trait MegarepoOp {
             message,
             extra: SortedVectorMap::new(),
             file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
         };
 
         Ok(bcs)

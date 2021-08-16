@@ -105,6 +105,7 @@ async fn create_bonsai_changeset_from_test_data(
         message: commit_metadata.get("message").unwrap().to_string(),
         extra: Default::default(),
         file_changes,
+        is_snapshot: false,
     }
     .freeze()
     .unwrap();
@@ -1610,6 +1611,7 @@ pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
         message: "message".to_string(),
         extra: Default::default(),
         file_changes: Default::default(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap()
@@ -1628,6 +1630,7 @@ pub fn create_bonsai_changeset_with_author(
         message: "message".to_string(),
         extra: Default::default(),
         file_changes: Default::default(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap()
@@ -1646,6 +1649,7 @@ pub fn create_bonsai_changeset_with_files(
         message: "message".to_string(),
         extra: Default::default(),
         file_changes: file_changes.into(),
+        is_snapshot: false,
     }
     .freeze()
     .unwrap()

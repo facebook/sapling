@@ -120,6 +120,12 @@ struct BonsaiChangeset {
   8: map<MPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
+  // Changeset is a snapshot iff this field is present
+  9: optional SnapshotState snapshot_state;
+}
+
+struct SnapshotState {
+// Additional state for snapshots (if necessary)
 }
 
 // DateTime fields do not have a reasonable default value! They must
