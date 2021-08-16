@@ -311,6 +311,7 @@ impl RepoWriteContext {
         message: String,
         extra: BTreeMap<String, Vec<u8>>,
         changes: BTreeMap<MononokePath, CreateChange>,
+        is_snapshot: bool,
     ) -> Result<ChangesetContext, MononokeError> {
         self.check_method_permitted("create_changeset")?;
         let allowed_no_parents = self
@@ -478,7 +479,7 @@ impl RepoWriteContext {
             message,
             extra,
             file_changes,
-            is_snapshot: false,
+            is_snapshot,
         }
         .freeze()
         .map_err(|e| {

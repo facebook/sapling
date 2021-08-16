@@ -887,7 +887,8 @@ pub trait EdenApiPyExt: EdenApi {
                                 };
                                 Ok((path, change))
                             }).collect::<anyhow::Result<_>>()?,
-                            message: "THIS IS A SNAPSHOT".to_string(),
+                            message: "".to_string(),
+                            is_snapshot: true,
                         }
                     ).await?;
                     let changeset_response = response

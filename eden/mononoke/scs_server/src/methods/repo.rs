@@ -340,6 +340,7 @@ impl SourceControlServiceImpl {
                 message,
                 extra,
                 file_changes,
+                false,
             )
             .await?;
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;

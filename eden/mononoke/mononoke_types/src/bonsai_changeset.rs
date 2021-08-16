@@ -135,6 +135,20 @@ impl BonsaiChangesetMut {
         )
         .with_context(|| ErrorKind::InvalidBonsaiChangeset("invalid file change list".into()))?;
 
+        // Check that this changeset has untracked/missing files only if it is a snapshot
+        if !self.is_snapshot {
+            for (_, fc) in &self.file_changes {
+                match fc {
+                    FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
+                        bail!(ErrorKind::InvalidBonsaiChangeset(
+                            "untracked changes present in non-snapshot changeset".to_string()
+                        ));
+                    }
+                    FileChange::Deletion | FileChange::Change(_) => {}
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -409,5 +423,51 @@ mod test {
                 .unwrap()
             )
         );
+    }
+
+    #[test]
+    fn bonsai_snapshots() {
+        fn create(untracked: bool, missing: bool, is_snapshot: bool) -> Result<BonsaiChangeset> {
+            let mut file_changes = sorted_vector_map! [
+                MPath::new("a").unwrap() => FileChange::tracked(
+                    ContentId::from_byte_array([1; 32]),
+                    FileType::Regular,
+                    42,
+                    None,
+                ),
+                MPath::new("b").unwrap() => FileChange::Deletion,
+            ];
+            if untracked {
+                file_changes.insert(
+                    MPath::new("c").unwrap(),
+                    FileChange::untracked(
+                        ContentId::from_byte_array([2; 32]),
+                        FileType::Regular,
+                        42,
+                    ),
+                );
+            }
+            if missing {
+                file_changes.insert(MPath::new("d").unwrap(), FileChange::UntrackedDeletion);
+            }
+            BonsaiChangesetMut {
+                parents: vec![],
+                author: "foo".into(),
+                author_date: DateTime::from_timestamp(1, 2).unwrap(),
+                committer: None,
+                committer_date: None,
+                message: "a".into(),
+                extra: SortedVectorMap::new(),
+                file_changes,
+                is_snapshot,
+            }
+            .freeze()
+        }
+        create(true, true, true).unwrap();
+        create(false, false, false).unwrap();
+        create(true, false, true).unwrap();
+        create(true, false, false).expect_err("Non-snapshot can't have untracked");
+        create(false, true, false).expect_err("Non-snapshot can't have missing");
+        create(true, true, false).unwrap_err();
     }
 }

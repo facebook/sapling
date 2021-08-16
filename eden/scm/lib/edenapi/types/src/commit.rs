@@ -272,6 +272,7 @@ pub struct BonsaiChangesetContent {
     pub extra: Vec<BonsaiExtra>,
     pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
     pub message: String,
+    pub is_snapshot: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

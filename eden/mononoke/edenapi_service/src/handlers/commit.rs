@@ -357,6 +357,7 @@ async fn upload_bonsai_changeset_impl(
                     Ok((to_mononoke_path(path)?, create_change))
                 })
                 .collect::<anyhow::Result<_>>()?,
+            cs.is_snapshot,
         )
         .await
         .with_context(|| anyhow!("When creating bonsai changeset"))?

@@ -627,6 +627,9 @@ pub enum WireBonsaiFileChange {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireSnapshotState {}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireBonsaiChangesetContent {
     #[serde(rename = "1")]
     pub hg_parents: WireParents,
@@ -648,6 +651,9 @@ pub struct WireBonsaiChangesetContent {
 
     #[serde(rename = "7")]
     pub message: String,
+
+    #[serde(rename = "8")]
+    pub snapshot_state: Option<WireSnapshotState>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -702,6 +708,7 @@ impl ToWire for BonsaiChangesetContent {
                 .map(|(a, b)| (a.to_wire(), b.to_wire()))
                 .collect(),
             message: self.message,
+            snapshot_state: self.is_snapshot.then(|| WireSnapshotState {}),
         }
     }
 }
@@ -760,6 +767,7 @@ impl ToApi for WireBonsaiChangesetContent {
                 .map(|(a, b)| Ok((a.to_api()?, b.to_api()?)))
                 .collect::<Result<_, Self::Error>>()?,
             message: self.message,
+            is_snapshot: self.snapshot_state.is_some(),
         })
     }
 }
