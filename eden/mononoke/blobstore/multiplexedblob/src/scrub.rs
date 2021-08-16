@@ -176,6 +176,7 @@ impl ScrubBlobstore {
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
         mut scuba: MononokeScubaSampleBuilder,
+        multiplex_scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
         scrub_options: ScrubOptions,
         scrub_handler: Arc<dyn ScrubHandler>,
@@ -188,6 +189,7 @@ impl ScrubBlobstore {
             minimum_successful_writes,
             queue.clone(),
             scuba.clone(),
+            multiplex_scuba,
             scuba_sample_rate,
         );
         Self {

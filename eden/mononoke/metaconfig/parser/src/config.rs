@@ -864,6 +864,7 @@ mod test {
         [main.blobstore.multiplexed]
         multiplex_id = 1
         scuba_table = "blobstore_scuba_table"
+        multiplex_scuba_table = "multiplex_scuba_table"
         components = [
             { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
@@ -906,6 +907,7 @@ mod test {
         let multiplex = BlobConfig::Multiplexed {
             multiplex_id: MultiplexId::new(1),
             scuba_table: Some("blobstore_scuba_table".to_string()),
+            multiplex_scuba_table: Some("multiplex_scuba_table".to_string()),
             scuba_sample_rate: nonzero!(100u64),
             blobstores: vec![
                 (
@@ -1392,6 +1394,7 @@ mod test {
                     blobstore: BlobConfig::Multiplexed {
                         multiplex_id: MultiplexId::new(1),
                         scuba_table: None,
+                        multiplex_scuba_table: None,
                         scuba_sample_rate: nonzero!(100u64),
                         blobstores: vec![
                             (BlobstoreId::new(1), MultiplexedStoreType::Normal, BlobConfig::Files {

@@ -301,6 +301,7 @@ async fn scrub_none(
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
@@ -508,6 +509,7 @@ async fn multiplexed(fb: FacebookInit) {
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -659,6 +661,7 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         queue.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
@@ -817,6 +820,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -870,6 +874,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -914,6 +919,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         vec![(bid2, bs2.clone())],
         nonzero!(1usize),
         queue.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         ScrubOptions {
@@ -1016,6 +1022,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         nonzero!(1usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
@@ -1063,6 +1070,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             vec![(bid2, bs2.clone())],
             nonzero!(1usize),
             queue.clone(),
+            MononokeScubaSampleBuilder::with_discard(),
             MononokeScubaSampleBuilder::with_discard(),
             nonzero!(1u64),
             ScrubOptions {

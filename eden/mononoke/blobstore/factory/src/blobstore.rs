@@ -460,6 +460,7 @@ fn make_blobstore_put_ops<'a>(
             Multiplexed {
                 multiplex_id,
                 scuba_table,
+                multiplex_scuba_table,
                 scuba_sample_rate,
                 blobstores,
                 minimum_successful_writes,
@@ -471,6 +472,7 @@ fn make_blobstore_put_ops<'a>(
                     multiplex_id,
                     queue_db,
                     scuba_table,
+                    multiplex_scuba_table,
                     scuba_sample_rate,
                     blobstores,
                     minimum_successful_writes,
@@ -580,6 +582,7 @@ async fn make_blobstore_multiplexed<'a>(
     multiplex_id: MultiplexId,
     queue_db: DatabaseConfig,
     scuba_table: Option<String>,
+    multiplex_scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     minimum_successful_writes: NonZeroUsize,
@@ -669,6 +672,9 @@ async fn make_blobstore_multiplexed<'a>(
             scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)
             }),
+            multiplex_scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                MononokeScubaSampleBuilder::new(fb, &table)
+            }),
             scuba_sample_rate,
             scrub_options.clone(),
             scrub_handler.clone(),
@@ -680,6 +686,9 @@ async fn make_blobstore_multiplexed<'a>(
             minimum_successful_writes,
             Arc::new(queue),
             scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                MononokeScubaSampleBuilder::new(fb, &table)
+            }),
+            multiplex_scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)
             }),
             scuba_sample_rate,

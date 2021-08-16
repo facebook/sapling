@@ -906,8 +906,10 @@ pub enum BlobConfig {
     Multiplexed {
         /// A unique ID that identifies this multiplex configuration
         multiplex_id: MultiplexId,
-        /// A scuba table I guess
+        /// A scuba table to log stats per blobstore
         scuba_table: Option<String>,
+        /// A scuba table for multiplex stats
+        multiplex_scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
         /// The number of writes that must succeed for a `put` to the multiplex to succeed

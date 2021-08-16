@@ -104,6 +104,7 @@ impl Convert for RawBlobstoreConfig {
                         .map(MultiplexId::new)
                         .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
                     scuba_table: raw.scuba_table,
+                    multiplex_scuba_table: raw.multiplex_scuba_table,
                     scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
                     blobstores: raw
                         .components

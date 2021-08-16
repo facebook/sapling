@@ -63,6 +63,17 @@ impl From<OperationType> for ScubaValue {
     }
 }
 
+pub fn add_completion_time(
+    scuba: &mut MononokeScubaSampleBuilder,
+    session: &str,
+    stats: FutureStats,
+) {
+    scuba.add(COMPLETION_TIME, stats.completion_time.as_micros_unchecked());
+    if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
+        scuba.add(SESSION, session);
+    }
+}
+
 fn add_common_values(
     scuba: &mut MononokeScubaSampleBuilder,
     pc: &PerfCounters,
@@ -76,7 +87,6 @@ fn add_common_values(
     scuba
         .add(KEY, key)
         .add(OPERATION, operation)
-        .add(COMPLETION_TIME, stats.completion_time.as_micros_unchecked())
         .add(BLOBSTORE_TYPE, blobstore_type.to_string());
 
     pc.insert_nonzero_perf_counters(scuba);
@@ -85,9 +95,7 @@ fn add_common_values(
         scuba.add(BLOBSTORE_ID, blobstore_id);
     }
 
-    if stats.completion_time >= SLOW_REQUEST_THRESHOLD {
-        scuba.add(SESSION, session);
-    }
+    add_completion_time(scuba, session, stats);
 }
 
 pub fn record_get_stats(

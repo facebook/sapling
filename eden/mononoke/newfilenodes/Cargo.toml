@@ -26,6 +26,7 @@ memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+path_hash = { version = "0.1.0", path = "../common/path_hash" }
 rand = { version = "0.7", features = ["small_rng"] }
 scopeguard = "1.0.0"
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
