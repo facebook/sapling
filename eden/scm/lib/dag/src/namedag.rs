@@ -56,10 +56,12 @@ use futures::future::join_all;
 use futures::future::BoxFuture;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use itertools::Itertools;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::env::var;
 use std::fmt;
 use std::io;
 use std::ops::Deref;
@@ -265,7 +267,32 @@ where
         let id_names =
             calculate_id_name_from_paths(&new.map, &*new.dag, new.overlay_map_next_id, &to_insert)
                 .await?;
+
+        // For testing purpose, skip inserting certain vertexes.
+        let mut skip_vertexes: Option<HashSet<VertexName>> = None;
+        if crate::is_testing() {
+            if let Ok(s) = var("DAG_SKIP_FLUSH_VERTEXES") {
+                skip_vertexes = Some(
+                    s.split(",")
+                        .filter_map(|s| VertexName::from_hex(s.as_bytes()).ok())
+                        .collect(),
+                )
+            }
+        }
+
         for (id, name) in id_names {
+            if let Some(skip) = &skip_vertexes {
+                if skip.contains(&name) {
+                    tracing::info!(
+                        target: "dag::cache",
+                        "skip flushing {:?}-{} to IdMap set by DAG_SKIP_FLUSH_VERTEXES",
+                        &name,
+                        id
+                    );
+                    continue;
+                }
+            }
+            tracing::debug!(target: "dag::cache", "insert {:?}-{} to IdMap", &name, id);
             new.map.insert(id, name.as_ref())?;
         }
 

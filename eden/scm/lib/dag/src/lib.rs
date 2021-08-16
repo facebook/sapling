@@ -86,5 +86,10 @@ macro_rules! failpoint {
     };
 }
 
+/// Whether running inside a test.
+pub(crate) fn is_testing() -> bool {
+    std::env::var("TESTTMP").is_ok()
+}
+
 #[cfg(test)]
 dev_logger::init!();
