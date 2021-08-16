@@ -813,10 +813,15 @@ where
     }
 
     fn invalidate_overlay_map(&mut self) -> Result<()> {
-        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
         self.overlay_map = Default::default();
-        self.overlay_map_next_id = next_id;
+        self.update_overlay_map_next_id()?;
         tracing::debug!(target: "dag::cache", "cleared overlay map cache");
+        Ok(())
+    }
+
+    fn update_overlay_map_next_id(&mut self) -> Result<()> {
+        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
+        self.overlay_map_next_id = next_id;
         Ok(())
     }
 
@@ -2034,6 +2039,10 @@ where
         // Update segments.
         self.dag
             .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
+
+        // The master group might have new vertexes inserted, which will
+        // affect the `overlay_map_next_id`.
+        self.update_overlay_map_next_id()?;
 
         // Rebuild non-master ids and segments.
         if self.need_rebuild_non_master() {

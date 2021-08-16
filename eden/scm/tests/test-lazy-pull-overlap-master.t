@@ -64,14 +64,7 @@ Create commits in the client repo. Make them overlap with the server-side master
     INFO dag::cache: skip flushing 112478962961147124edd43549aedd1a335e44bf-1 to IdMap set by DAG_SKIP_FLUSH_VERTEXES
 
 Pull:
-(On Windows the error message is a bit different)
 
-#if no-windows
   $ hg pull -B master
   pulling from test:e1
   searching for changes
-  transaction abort!
-  rollback completed
-  error.RustError: ProgrammingError: Server returned x~n (x = a31451c3c1debad52cf22ef2aebfc88c75dc899a 7, n = 6). But x exceeds the head in the local master group 5. This is not expected and indicates some logic error on the server side.
-  [255]
-#endif
