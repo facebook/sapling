@@ -431,6 +431,7 @@ where
             return programming("Cannot import clone data for non-empty graph");
         }
         for (id, name) in clone_data.idmap {
+            tracing::debug!(target: "dag::clone", "insert IdMap: {:?}-{:?}", &name, id);
             self.map.insert(id, name.as_ref())?;
         }
         self.dag
@@ -587,6 +588,7 @@ where
             for (id, name) in resolved.into_iter().zip(names) {
                 if let Ok(id) = id {
                     if !self.map.contains_vertex_name(&name).await? {
+                        tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, id);
                         self.map.insert(id, name.as_ref())?;
                     }
                 }
@@ -660,6 +662,7 @@ where
 
             for (server_id, name) in new_server_ids {
                 let client_id = Id((server_id.0 as i64 + server_to_client_offset) as u64);
+                tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, client_id);
                 self.map.insert(client_id, name.as_ref())?;
             }
         }
