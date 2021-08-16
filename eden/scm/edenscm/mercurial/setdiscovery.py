@@ -143,8 +143,8 @@ def findcommonheads(
     ui,
     local,
     remote,
-    initialsamplesize=100,
-    fullsamplesize=200,
+    initialsamplesize=None,
+    fullsamplesize=None,
     abortwhenunrelated=True,
     ancestorsof=None,
     explicitremoteheads=None,
@@ -177,6 +177,10 @@ def findcommonheads(
       remote repo. 'remoteheads' might include commit hashes unknown to the
       local repo.
     """
+    if initialsamplesize is None:
+        initialsamplesize = max(ui.configint("discovery", "initial-sample-size"), 1)
+    if fullsamplesize is None:
+        fullsamplesize = max(ui.configint("discovery", "full-sample-size"), 1)
     return _findcommonheadsnew(
         ui,
         local,
