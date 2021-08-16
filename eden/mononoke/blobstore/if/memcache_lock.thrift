@@ -6,6 +6,6 @@
  */
 
 union LockState {
-  1: string locked_by,
-  2: string uploaded_key,
+  1: string locked_by;
+  2: string uploaded_key;
 }
