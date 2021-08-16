@@ -1557,6 +1557,7 @@ class Test(unittest.TestCase):
             + "NO_PROXY CHGDEBUG HGDETECTRACE RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
+            + " EDENSCM_LOG LOG FAILPOINTS"
             # LD_LIBRARY_PATH is usually set by buck sh_binary wrapper to import
             # Python extensions depending on buck runtime shared objects.
             # However, that breaks system executables like "curl" depending on
