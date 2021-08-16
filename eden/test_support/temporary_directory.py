@@ -150,7 +150,7 @@ class TempFileManager:
     def top_level_tmp_dir(self) -> Path:
         top = self._temp_dir
         if top is None:
-            top = Path(tempfile.mkdtemp(prefix=self._prefix))
+            top = Path(tempfile.mkdtemp(prefix=self._prefix)).resolve()
             self._temp_dir = top
 
         return top
