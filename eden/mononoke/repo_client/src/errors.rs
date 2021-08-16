@@ -24,6 +24,4 @@ pub enum ErrorKind {
         #[source]
         reason: RateLimitReason,
     },
-    #[error("Repo is marked as read-only: {0}")]
-    RepoReadOnly(String),
 }

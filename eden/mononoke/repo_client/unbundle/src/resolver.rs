@@ -259,7 +259,7 @@ pub async fn resolve<'a>(
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BlobRepo>,
-) -> Result<(PostResolveAction, bool), BundleResolverError> {
+) -> Result<PostResolveAction, BundleResolverError> {
     let result = resolve_impl(
         ctx,
         repo,
@@ -286,7 +286,7 @@ async fn resolve_impl<'a>(
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BlobRepo>,
-) -> Result<(PostResolveAction, bool), BundleResolverError> {
+) -> Result<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
     let (stream_header, bundle2) = resolver.resolve_stream_params(bundle2).await?;
     let bundle2 = resolver.resolve_replycaps(bundle2).await?;
@@ -376,38 +376,38 @@ async fn resolve_impl<'a>(
 
     match post_resolve_action {
         Err(e) => Err(e),
-        Ok(val) => Ok((val, bypass_readonly)),
+        Ok(val) => Ok(val),
     }
 }
 
 fn report_unbundle_type(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    post_resolve_action: &Result<(PostResolveAction, bool), BundleResolverError>,
+    post_resolve_action: &Result<PostResolveAction, BundleResolverError>,
 ) {
     let repo_name = repo.name().clone();
     UNBUNDLE_STATS::total_unbundles.add_value(1, (repo_name.clone(),));
     let unbundle_resolved = "Unbundle resolved";
     match post_resolve_action {
-        Ok((PostResolveAction::Push(_), _)) => {
+        Ok(PostResolveAction::Push(_)) => {
             ctx.scuba()
                 .clone()
                 .log_with_msg(unbundle_resolved, Some("push".to_owned()));
             UNBUNDLE_STATS::push.add_value(1, (repo_name,))
         }
-        Ok((PostResolveAction::PushRebase(_), _)) => {
+        Ok(PostResolveAction::PushRebase(_)) => {
             ctx.scuba()
                 .clone()
                 .log_with_msg(unbundle_resolved, Some("pushrebase".to_owned()));
             UNBUNDLE_STATS::pushrebase.add_value(1, (repo_name,))
         }
-        Ok((PostResolveAction::InfinitePush(_), _)) => {
+        Ok(PostResolveAction::InfinitePush(_)) => {
             ctx.scuba()
                 .clone()
                 .log_with_msg(unbundle_resolved, Some("infinitepush".to_owned()));
             UNBUNDLE_STATS::infinitepush.add_value(1, (repo_name,))
         }
-        Ok((PostResolveAction::BookmarkOnlyPushRebase(_), _)) => {
+        Ok(PostResolveAction::BookmarkOnlyPushRebase(_)) => {
             ctx.scuba().clone().log_with_msg(
                 unbundle_resolved,
                 Some("bookmark_only_pushrebase".to_owned()),

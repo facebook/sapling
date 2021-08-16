@@ -276,7 +276,7 @@ async fn maybe_unbundle(
     .await;
 
     let resolution = match resolution {
-        Ok(Ok((resolution, _))) => resolution,
+        Ok(Ok(resolution)) => resolution,
         Ok(Err(e)) => return Ok(UnbundleOutcome::Deferred(bundle, pushrebase_spec, e.into())),
         Err(e) => return Err(e.into()),
     };

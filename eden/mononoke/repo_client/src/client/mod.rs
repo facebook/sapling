@@ -26,8 +26,7 @@ use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, select, Either, FutureExt, TryFutureExt},
-    pin_mut,
+    future::{self, FutureExt, TryFutureExt},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_01_ext::{
@@ -1080,28 +1079,6 @@ where
     .flatten_stream()
 }
 
-async fn check_lock_repo(repo: MononokeRepo) -> Result<Bytes, BundleResolverError> {
-    loop {
-        match repo
-            .readonly()
-            .or_else(|er| {
-                ok::<RepoReadOnly, Error>(RepoReadOnly::ReadOnly(format!(
-                    "Failed to fetch repo lock status: {:#}",
-                    er
-                )))
-            })
-            .compat()
-            .await?
-        {
-            RepoReadOnly::ReadOnly(reason) => {
-                let e = Error::from(ErrorKind::RepoReadOnly(reason));
-                return Err(e.into());
-            }
-            RepoReadOnly::ReadWrite => tokio::time::sleep(Duration::from_secs(1)).await,
-        }
-    }
-}
-
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
     fn between(
@@ -1643,11 +1620,7 @@ impl HgCommands for RepoClient {
         maybereplaydata: Option<String>,
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();
-        cloned!(
-            self.session_bookmarks_cache,
-            self as repoclient,
-            self.repo as mononoke_repo
-        );
+        cloned!(self.session_bookmarks_cache, self as repoclient);
 
         let hook_manager = self.repo.hook_manager();
 
@@ -1682,7 +1655,7 @@ impl HgCommands for RepoClient {
                         let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                         let pushrebase_flags = pushrebase_params.flags.clone();
-                        let res = unbundle::resolve(
+                        let action = unbundle::resolve(
                             &ctx,
                             &blobrepo,
                             infinitepush_writes_allowed,
@@ -1693,129 +1666,101 @@ impl HgCommands for RepoClient {
                             pushrebase_flags,
                             maybe_backup_repo_source,
                         )
-                        .await;
-                        match res {
-                            Err(e) => Err(e),
-                            Ok((action, bypass_readonly)) => {
-                                let unbundle_future = async {
-                                    maybe_validate_pushed_bonsais(&ctx, blobrepo, &maybereplaydata)
-                                        .await?;
+                        .await?;
 
-                                    let response = match client
-                                        .maybe_get_pushredirector_for_action(&ctx, &action)?
-                                    {
-                                        Some(push_redirector) => {
-                                            // Push-redirection will cause
-                                            // hooks to be run in the large
-                                            // repo, but we must also run them
-                                            // in the small repo.
-                                            run_hooks(
-                                                &ctx,
-                                                &blobrepo,
-                                                hook_manager.as_ref(),
-                                                &action,
-                                                CrossRepoPushSource::NativeToThisRepo,
-                                            )
-                                            .await?;
+                        let unbundle_future = async {
+                            maybe_validate_pushed_bonsais(&ctx, blobrepo, &maybereplaydata).await?;
 
-                                            let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                                sample.add(
-                                                    "target_repo_name",
-                                                    push_redirector.repo.reponame().as_ref(),
-                                                );
-                                                sample.add(
-                                                    "target_repo_id",
-                                                    push_redirector.repo.repoid().id(),
-                                                );
-                                                sample
-                                            });
-                                            ctx.scuba().clone().log_with_msg(
-                                                "Push redirected to large repo",
-                                                None,
-                                            );
-                                            push_redirector
-                                                .run_redirected_post_resolve_action(&ctx, action)
-                                                .await
-                                        }
-                                        None => {
-                                            let maybe_reverse_filler_queue =
-                                                client.repo.maybe_reverse_filler_queue();
-                                            let readonly_fetcher = client.repo.readonly_fetcher();
-                                            run_post_resolve_action(
-                                                &ctx,
-                                                &blobrepo,
-                                                &bookmark_attrs,
-                                                &lca_hint,
-                                                &infinitepush_params,
-                                                &pushrebase_params,
-                                                &push_params,
-                                                hook_manager.as_ref(),
-                                                maybe_reverse_filler_queue,
-                                                readonly_fetcher,
-                                                action,
-                                                CrossRepoPushSource::NativeToThisRepo,
-                                            )
-                                            .await
-                                        }
-                                    };
-                                    let response = response?
-                                        .generate_bytes(
-                                            &ctx,
-                                            &blobrepo,
-                                            &reponame,
-                                            pushrebase_params,
-                                            &lca_hint,
-                                            &lfs_params,
-                                            respondlightly,
-                                        )
-                                        .await?;
+                            match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
+                                Some(push_redirector) => {
+                                    // Push-redirection will cause
+                                    // hooks to be run in the large
+                                    // repo, but we must also run them
+                                    // in the small repo.
+                                    run_hooks(
+                                        &ctx,
+                                        &blobrepo,
+                                        hook_manager.as_ref(),
+                                        &action,
+                                        CrossRepoPushSource::NativeToThisRepo,
+                                    )
+                                    .await?;
 
-                                    Ok(response)
-                                };
-
-                                let response = if bypass_readonly {
-                                    unbundle_future.await
-                                } else {
-                                    let repo_lock =
-                                        tokio::task::spawn(check_lock_repo(mononoke_repo))
-                                            .map_err(|e| BundleResolverError::Error(e.into()))
-                                            .flatten_err();
-                                    pin_mut!(repo_lock, unbundle_future);
-                                    select(repo_lock, unbundle_future)
-                                        .then(|either| async move {
-                                            match either {
-                                                Either::Left((repo_locked, _)) => repo_locked,
-                                                Either::Right((unbundle, _)) => unbundle,
-                                            }
-                                        })
-                                        .await
-                                };
-                                if response.is_ok() {
-                                    // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
-                                    // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
-                                    // this is something we need to resolve by sending down the commits we know the client doesn't have,
-                                    // or by getting bookmarks atomically with the commits we send back.
-                                    //
-                                    // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
-                                    // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
-                                    // will just be from this client's push, rather than from a later push that came in during the RTT
-                                    // needed to get the `listkeys` request from the client.
-                                    //
-                                    // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
-                                    // depend on the reply part with a bookmark change in - T57874233
-                                    session_bookmarks_cache
-                                        .update_publishing_bookmarks_after_push(ctx.clone())
-                                        .compat()
-                                        .await?;
+                                    let ctx = ctx.with_mutated_scuba(|mut sample| {
+                                        sample.add(
+                                            "target_repo_name",
+                                            push_redirector.repo.reponame().as_ref(),
+                                        );
+                                        sample.add(
+                                            "target_repo_id",
+                                            push_redirector.repo.repoid().id(),
+                                        );
+                                        sample
+                                    });
+                                    ctx.scuba()
+                                        .clone()
+                                        .log_with_msg("Push redirected to large repo", None);
+                                    push_redirector
+                                        .run_redirected_post_resolve_action(&ctx, action)
+                                        .await?
                                 }
-                                response
+                                None => {
+                                    let maybe_reverse_filler_queue =
+                                        client.repo.maybe_reverse_filler_queue();
+                                    let readonly_fetcher = client.repo.readonly_fetcher();
+                                    run_post_resolve_action(
+                                        &ctx,
+                                        &blobrepo,
+                                        &bookmark_attrs,
+                                        &lca_hint,
+                                        &infinitepush_params,
+                                        &pushrebase_params,
+                                        &push_params,
+                                        hook_manager.as_ref(),
+                                        maybe_reverse_filler_queue,
+                                        readonly_fetcher,
+                                        action,
+                                        CrossRepoPushSource::NativeToThisRepo,
+                                    )
+                                    .await?
+                                }
                             }
-                        }
+                            .generate_bytes(
+                                &ctx,
+                                &blobrepo,
+                                &reponame,
+                                pushrebase_params,
+                                &lca_hint,
+                                &lfs_params,
+                                respondlightly,
+                            )
+                            .await
+                        };
+
+                        let response = unbundle_future.await?;
+
+                        // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
+                        // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
+                        // this is something we need to resolve by sending down the commits we know the client doesn't have,
+                        // or by getting bookmarks atomically with the commits we send back.
+                        //
+                        // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
+                        // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
+                        // will just be from this client's push, rather than from a later push that came in during the RTT
+                        // needed to get the `listkeys` request from the client.
+                        //
+                        // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
+                        // depend on the reply part with a bookmark change in - T57874233
+                        session_bookmarks_cache
+                            .update_publishing_bookmarks_after_push(ctx.clone())
+                            .compat()
+                            .await?;
+                        Ok(response)
                     }
                     .inspect_err({
                         cloned!(reponame);
                         move |err| {
-                            use unbundle::BundleResolverError::*;
+                            use BundleResolverError::*;
                             match err {
                                 HookError(hooks) => {
                                     let failed_hooks: HashSet<String> = hooks
