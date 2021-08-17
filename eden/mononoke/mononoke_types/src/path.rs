@@ -719,6 +719,15 @@ impl AsRef<[MPathElement]> for MPath {
     }
 }
 
+pub fn mpath_element_iter<'a>(
+    mpath: &'a Option<MPath>,
+) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
+    match mpath {
+        Some(ref path) => Box::new(path.into_iter()),
+        None => Box::new(std::iter::empty()),
+    }
+}
+
 /// Iterator over parent directories of a given `MPath`
 pub struct ParentDirIterator {
     current: Option<MPath>,

@@ -19,14 +19,16 @@ use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange, MPath,
-    TrackedFileChange,
+    mpath_element_iter, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange,
+    MPath, TrackedFileChange,
 };
 use sorted_vector_map::SortedVectorMap;
 use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 
 pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
+pub type DirectoryMultiMover =
+    Arc<dyn Fn(&Option<MPath>) -> Result<Vec<Option<MPath>>, Error> + Send + Sync + 'static>;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -72,6 +74,43 @@ pub fn create_source_to_target_multi_mover(
                 .ok_or_else(|| anyhow!("unexpected empty path"))?,
         ])
     }))
+}
+
+pub fn create_directory_source_to_target_multi_mover(
+    mapping_rules: SourceMappingRules,
+) -> Result<DirectoryMultiMover, Error> {
+    // We apply the longest prefix first
+    let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
+    overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
+    overrides.reverse();
+    let prefix = MPath::new_opt(mapping_rules.default_prefix)?;
+
+    Ok(Arc::new(
+        move |path: &Option<MPath>| -> Result<Vec<Option<MPath>>, Error> {
+            for (override_prefix_src, dsts) in &overrides {
+                let override_prefix_src = MPath::new(override_prefix_src.clone())?;
+                if override_prefix_src.is_prefix_of(mpath_element_iter(path)) {
+                    let suffix: Vec<_> = mpath_element_iter(path)
+                        .into_iter()
+                        .skip(override_prefix_src.num_components())
+                        .collect();
+
+                    return dsts
+                        .iter()
+                        .map(|dst| {
+                            let override_prefix = MPath::new_opt(dst)?;
+                            Ok(MPath::join_opt(override_prefix.as_ref(), suffix.clone()))
+                        })
+                        .collect::<Result<_, _>>();
+                }
+            }
+
+            Ok(vec![MPath::join_opt(
+                prefix.as_ref(),
+                mpath_element_iter(path),
+            )])
+        },
+    ))
 }
 
 /// Get `HgManifestId`s for a set of `ChangesetId`s
@@ -667,5 +706,21 @@ mod test {
         save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), repo.clone()).await?;
 
         Ok(rewritten.get_changeset_id())
+    }
+
+    #[test]
+    fn test_directory_multi_mover() -> Result<(), Error> {
+        let mapping_rules = SourceMappingRules {
+            default_prefix: "prefix".to_string(),
+            ..Default::default()
+        };
+        let multi_mover = create_directory_source_to_target_multi_mover(mapping_rules)?;
+        assert_eq!(
+            multi_mover(&Some(MPath::new("path")?))?,
+            vec![Some(MPath::new("prefix/path")?)]
+        );
+
+        assert_eq!(multi_mover(&None)?, vec![Some(MPath::new("prefix")?)]);
+        Ok(())
     }
 }
