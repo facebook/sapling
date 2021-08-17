@@ -15,7 +15,11 @@ from .lib.find_executables import FindExe
 class UserInfoTest(testcase.IntegrationTestCase):
     @unittest.skipIf(not edenclient.can_run_sudo(), "unable to run sudo")
     def test_drop_privs(self):
-        expected_user = os.environ["USER"]
+        try:
+            expected_user = os.environ["USER"]
+        except KeyError:
+            self.skipTest("No USER environment variable available")
+            return
 
         cmd = ["/usr/bin/sudo", FindExe.DROP_PRIVS, "/usr/bin/env"]
         out = subprocess.check_output(cmd)
