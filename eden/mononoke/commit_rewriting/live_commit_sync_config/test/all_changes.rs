@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use cached_config::ModificationTime;
 use fbinit::FacebookInit;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use live_commit_sync_config::{ErrorKind, LiveCommitSyncConfig};
@@ -265,7 +266,7 @@ async fn test_adding_a_new_version(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
         ALL_COMMIT_SYNC_CONFIG_V2,
-        1,
+        ModificationTime::UnixTimestamp(1),
     );
     ensure_all_updated();
 
@@ -289,7 +290,7 @@ async fn test_adding_a_new_version(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
         ALL_COMMIT_SYNC_CONFIG_V3,
-        2,
+        ModificationTime::UnixTimestamp(2),
     );
     ensure_all_updated();
 
@@ -345,7 +346,7 @@ async fn test_query_by_version_name(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
         ALL_COMMIT_SYNC_CONFIG_V2,
-        1,
+        ModificationTime::UnixTimestamp(1),
     );
     ensure_all_updated();
 
@@ -366,7 +367,7 @@ async fn test_query_by_version_name(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
         ALL_COMMIT_SYNC_CONFIG_V3,
-        2,
+        ModificationTime::UnixTimestamp(2),
     );
     ensure_all_updated();
 

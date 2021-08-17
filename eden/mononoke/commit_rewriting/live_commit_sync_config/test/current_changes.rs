@@ -6,6 +6,7 @@
  */
 
 use ascii::AsciiString;
+use cached_config::ModificationTime;
 use fbinit::FacebookInit;
 use live_commit_sync_config::{LiveCommitSyncConfig, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS};
 use mononoke_types::RepositoryId;
@@ -96,7 +97,7 @@ async fn test_changing_commit_sync_config(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
         CURRENT_COMMIT_SYNC_CONFIG_V2,
-        1,
+        ModificationTime::UnixTimestamp(1),
     );
     ensure_all_updated();
 

@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use cached_config::{ConfigStore, TestSource};
+use cached_config::{ConfigStore, ModificationTime, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use live_commit_sync_config::{
@@ -108,13 +108,21 @@ fn get_ctx_source_store_and_live_config(
 ) {
     let ctx = CoreContext::test_mock(fb);
     let test_source = Arc::new(TestSource::new());
-    test_source.insert_config(CONFIGERATOR_PUSHREDIRECT_ENABLE, pushredirector_config, 0);
+    test_source.insert_config(
+        CONFIGERATOR_PUSHREDIRECT_ENABLE,
+        pushredirector_config,
+        ModificationTime::UnixTimestamp(0),
+    );
     test_source.insert_config(
         CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
         current_commit_sync,
-        0,
+        ModificationTime::UnixTimestamp(0),
     );
-    test_source.insert_config(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, all_commit_syncs, 0);
+    test_source.insert_config(
+        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
+        all_commit_syncs,
+        ModificationTime::UnixTimestamp(0),
+    );
 
     // We want to always refresh these paths in the test setting
     test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());

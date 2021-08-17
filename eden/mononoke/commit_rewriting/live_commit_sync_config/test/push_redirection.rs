@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use cached_config::ModificationTime;
 use fbinit::FacebookInit;
 use live_commit_sync_config::*;
 use mononoke_types::RepositoryId;
@@ -46,7 +47,7 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_PUSHREDIRECT_ENABLE,
         PUSHREDIRECTOR_PUBLIC_ENABLED,
-        1,
+        ModificationTime::UnixTimestamp(1),
     );
 
     // Check that push-redirection of public commits has been picked up
@@ -64,7 +65,7 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
     test_source.insert_config(
         CONFIGERATOR_PUSHREDIRECT_ENABLE,
         PUSHREDIRECTOR_BOTH_ENABLED,
-        2,
+        ModificationTime::UnixTimestamp(2),
     );
 
     // Check that push-redirection of public and draft commits has been picked up

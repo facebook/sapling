@@ -19,7 +19,7 @@ mod tests {
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
     use cacheblob::InProcessLease;
-    use cached_config::{ConfigStore, TestSource};
+    use cached_config::{ConfigStore, ModificationTime, TestSource};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
     use derived_data::BonsaiDerivable;
@@ -467,19 +467,19 @@ mod tests {
         test_source.insert_config(
             CONFIGERATOR_PUSHREDIRECT_ENABLE,
             PUSHREDIRECTOR_PUBLIC_ENABLED,
-            0,
+            ModificationTime::UnixTimestamp(0),
         );
 
         test_source.insert_config(
             CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
             CURRENT_COMMIT_SYNC_CONFIG,
-            0,
+            ModificationTime::UnixTimestamp(0),
         );
 
         test_source.insert_config(
             CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
             EMTPY_COMMMIT_SYNC_ALL,
-            0,
+            ModificationTime::UnixTimestamp(0),
         );
 
         test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());

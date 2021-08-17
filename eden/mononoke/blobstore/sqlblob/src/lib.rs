@@ -29,7 +29,7 @@ use blobstore::{
     BlobstoreWithLink, CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::{Bytes, BytesMut};
-use cached_config::{ConfigHandle, ConfigStore, TestSource};
+use cached_config::{ConfigHandle, ConfigStore, ModificationTime, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
@@ -637,7 +637,7 @@ pub fn set_test_generations(
             delete_generation,
         })
         .expect("Invalid input config somehow"),
-        mod_time,
+        ModificationTime::UnixTimestamp(mod_time),
     );
     source.insert_to_refresh(GC_GENERATION_PATH.to_string());
 }
