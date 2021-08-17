@@ -219,6 +219,7 @@ mod tests {
     use requests_table::{ClaimedBy, RequestStatus};
 
     use source_control::{
+        MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
         MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
         MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams,
         MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams,
@@ -228,13 +229,13 @@ mod tests {
     use crate::types::MegarepoAsynchronousRequestResult;
 
     use source_control::{
-        MegarepoAddTargetResult, MegarepoChangeTargetConfigResult, MegarepoRemergeSourceResult,
-        MegarepoSyncChangesetResult,
+        MegarepoAddBranchingTargetResult, MegarepoAddTargetResult,
+        MegarepoChangeTargetConfigResult, MegarepoRemergeSourceResult, MegarepoSyncChangesetResult,
     };
 
     use crate::types::{
-        MegarepoAddSyncTarget, MegarepoChangeTargetConfig, MegarepoRemergeSource,
-        MegarepoSyncChangeset,
+        MegarepoAddBranchingSyncTarget, MegarepoAddSyncTarget, MegarepoChangeTargetConfig,
+        MegarepoRemergeSource, MegarepoSyncChangeset,
     };
 
     macro_rules! test_enqueue_dequeue_and_poll_once {
@@ -316,6 +317,14 @@ mod tests {
         ThriftMegarepoAddTargetParams,
         MegarepoAddTargetResult,
         "megarepo_add_sync_target",
+    }
+
+    test_enqueue_dequeue_and_poll_once! {
+        test_enqueue_dequeue_and_poll_once_add_branching_target,
+        MegarepoAddBranchingSyncTarget,
+        ThriftMegarepoAddBranchingTargetParams,
+        MegarepoAddBranchingTargetResult,
+        "megarepo_add_branching_sync_target",
     }
 
     test_enqueue_dequeue_and_poll_once! {

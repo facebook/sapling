@@ -430,7 +430,7 @@ impl_async_svc_method_types! {
     }
 }
 
-// Params and result types for megarepo_add_sync_target
+// Params and result types for megarepo_add_branching_sync_target
 
 impl_async_svc_method_types! {
     method_name => "megarepo_add_branching_sync_target",

@@ -12,7 +12,7 @@ pub use queue::{AsyncMethodRequestQueue, ClaimedBy, RequestId};
 
 pub mod tokens {
     pub use crate::types::{
-        MegarepoAddTargetToken, MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken,
-        MegarepoSyncChangesetToken,
+        MegarepoAddBranchingTargetToken, MegarepoAddTargetToken, MegarepoChangeTargetConfigToken,
+        MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
     };
 }

@@ -999,6 +999,10 @@ struct MegarepoAddBranchingTargetParams {
   // newly created target. The megarepo config used to create the branching
   // point will be used as the base for the new target config.
   2: megarepo_configs.ChangesetId branching_point;
+  // The specified source target to use as the source of config for this
+  // new target. This call will verify that branching_point is a valid
+  // commit to use with that source target
+  3: megarepo_configs.Target source_target;
 }
 
 // Params for megarepo_change_target_config method

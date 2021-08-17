@@ -310,6 +310,13 @@ impl AddScubaParams for thrift::MegarepoAddTargetToken {
     }
 }
 
+impl AddScubaParams for thrift::MegarepoAddBranchingTargetToken {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Param);
+    }
+}
+
 impl AddScubaParams for thrift::MegarepoChangeConfigToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
@@ -366,6 +373,13 @@ impl AddScubaParams for thrift::MegarepoAddTargetParams {
         );
         scuba.add("param_megarepo_message", self.message.clone());
         report_megarepo_target(&self.config_with_new_target.target, scuba, Reported::Param);
+    }
+}
+
+impl AddScubaParams for thrift::MegarepoAddBranchingTargetParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_megarepo_branching_point", hex(&self.branching_point));
+        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 

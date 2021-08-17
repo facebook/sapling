@@ -87,6 +87,8 @@ impl AddScubaResponse for thrift::MegarepoChangeTargetConfigResult {}
 
 impl AddScubaResponse for thrift::MegarepoAddTargetResult {}
 
+impl AddScubaResponse for thrift::MegarepoAddBranchingTargetResult {}
+
 impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}
 
 // Helper fn to report PollResponse types
@@ -130,6 +132,19 @@ impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {
 }
 
 impl AddScubaResponse for thrift::MegarepoAddTargetToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("megarepo_token", self.id);
+        report_megarepo_target(&self.target, scuba, Reported::Response);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoAddBranchingTargetPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_maybe_result(&self.result, scuba);
+    }
+}
+
+impl AddScubaResponse for thrift::MegarepoAddBranchingTargetToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
         report_megarepo_target(&self.target, scuba, Reported::Response);

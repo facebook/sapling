@@ -659,6 +659,14 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::MegarepoAddTargetToken,
         ) -> Result<thrift::MegarepoAddTargetPollResponse, service::MegarepoAddSyncTargetPollExn>;
 
+        async fn megarepo_add_branching_sync_target(
+            params: thrift::MegarepoAddBranchingTargetParams,
+        ) -> Result<thrift::MegarepoAddBranchingTargetToken, service::MegarepoAddBranchingSyncTargetExn>;
+
+        async fn megarepo_add_branching_sync_target_poll(
+            params: thrift::MegarepoAddBranchingTargetToken,
+        ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, service::MegarepoAddBranchingSyncTargetPollExn>;
+
         async fn megarepo_change_target_config(
             params: thrift::MegarepoChangeTargetConfigParams,
         ) -> Result<thrift::MegarepoChangeConfigToken, service::MegarepoChangeTargetConfigExn>;

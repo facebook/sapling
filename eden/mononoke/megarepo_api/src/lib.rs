@@ -8,6 +8,7 @@
 #![deny(warnings)]
 #![feature(async_closure)]
 
+use add_branching_sync_target::AddBranchingSyncTarget;
 use add_sync_target::AddSyncTarget;
 use anyhow::{bail, Error};
 use async_once_cell::AsyncOnceCell;
@@ -38,6 +39,9 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
+mod add_branching_sync_target;
+#[cfg(test)]
+mod add_branching_sync_target_test;
 mod add_sync_target;
 #[cfg(test)]
 mod add_sync_target_test;
@@ -374,6 +378,31 @@ impl MegarepoApi {
 
         self.call_and_log(ctx, &target, Some(&version), fut, "add_sync_target")
             .await
+    }
+
+    pub async fn add_branching_sync_target(
+        &self,
+        ctx: &CoreContext,
+        target: Target,
+        branching_point: ChangesetId,
+        source_target: Target,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let add_branching_sync_target =
+            AddBranchingSyncTarget::new(&self.megarepo_configs, &self.mononoke);
+        let sync_target_config = add_branching_sync_target
+            .fork_new_sync_target_config(&ctx, target.clone(), branching_point, source_target)
+            .await?;
+
+        let version = sync_target_config.version.clone();
+        let fut = add_branching_sync_target.run(&ctx, sync_target_config, branching_point);
+        self.call_and_log(
+            ctx,
+            &target,
+            Some(&version),
+            fut,
+            "add_branching_sync_target",
+        )
+        .await
     }
 
     /// Syncs single changeset, returns the changeset it in the target.

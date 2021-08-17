@@ -7,8 +7,8 @@
 
 use anyhow::{anyhow, Result};
 use async_requests::tokens::{
-    MegarepoAddTargetToken, MegarepoChangeTargetConfigToken, MegarepoRemergeSourceToken,
-    MegarepoSyncChangesetToken,
+    MegarepoAddBranchingTargetToken, MegarepoAddTargetToken, MegarepoChangeTargetConfigToken,
+    MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
 };
 use async_requests::types::{ThriftParams, Token};
 use context::CoreContext;
@@ -147,6 +147,44 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoAddTargetToken(token);
+        let poll_response = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, token.target())
+            .await?
+            .poll(ctx, token)
+            .await?;
+
+        Ok(poll_response)
+    }
+
+    pub(crate) async fn megarepo_add_branching_sync_target(
+        &self,
+        ctx: CoreContext,
+        params: thrift::MegarepoAddBranchingTargetParams,
+    ) -> Result<thrift::MegarepoAddBranchingTargetToken, errors::ServiceError> {
+        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        self.check_write_allowed(&ctx, target_repo_id).await?;
+
+        let token = self
+            .megarepo_api
+            .async_method_request_queue(&ctx, params.target())
+            .await?
+            .enqueue(ctx, params)
+            .await
+            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+
+        Ok(token.into_thrift())
+    }
+
+    pub(crate) async fn megarepo_add_branching_sync_target_poll(
+        &self,
+        ctx: CoreContext,
+        token: thrift::MegarepoAddBranchingTargetToken,
+    ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, errors::ServiceError> {
+        let target_repo_id = RepositoryId::new(token.target.repo_id.try_into().unwrap());
+        self.check_write_allowed(&ctx, target_repo_id).await?;
+
+        let token = MegarepoAddBranchingTargetToken(token);
         let poll_response = self
             .megarepo_api
             .async_method_request_queue(&ctx, token.target())

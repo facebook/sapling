@@ -62,6 +62,24 @@ async fn megarepo_add_sync_target(
     Ok(thrift::MegarepoAddTargetResponse { cs_id })
 }
 
+async fn megarepo_add_branching_sync_target(
+    ctx: &CoreContext,
+    megarepo_api: &MegarepoApi,
+    params: thrift::MegarepoAddBranchingTargetParams,
+) -> Result<thrift::MegarepoAddBranchingTargetResponse, MegarepoError> {
+    let cs_id = megarepo_api
+        .add_branching_sync_target(
+            &ctx,
+            params.target,
+            ChangesetId::from_bytes(params.branching_point).map_err(MegarepoError::request)?,
+            params.source_target,
+        )
+        .await?
+        .as_ref()
+        .into();
+    Ok(thrift::MegarepoAddBranchingTargetResponse { cs_id })
+}
+
 async fn megarepo_change_target_config(
     ctx: &CoreContext,
     megarepo_api: &MegarepoApi,
@@ -104,11 +122,10 @@ pub(crate) async fn megarepo_async_request_compute(
                 .await
                 .into()
         }
-        megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(_params) => {
-            Err::<thrift::MegarepoChangeTargetConfigResponse, _>(MegarepoError::internal(anyhow!(
-                "add_branching_sync_target is not implemented yet!",
-            )))
-            .into()
+        megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
+            megarepo_add_branching_sync_target(ctx, megarepo_api, params)
+                .await
+                .into()
         }
         megarepo_types_thrift::MegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
             megarepo_change_target_config(ctx, megarepo_api, params)
