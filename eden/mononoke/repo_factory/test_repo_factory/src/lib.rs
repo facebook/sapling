@@ -412,8 +412,8 @@ impl TestRepoFactory {
     }
 
     /// Mutable renames
-    pub fn mutable_renames(&self, repo_config: &ArcRepoConfig) -> Result<ArcMutableRenames> {
+    pub fn mutable_renames(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableRenames> {
         let sql_store = SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone());
-        Ok(Arc::new(MutableRenames::new(repo_config.repoid, sql_store)))
+        Ok(Arc::new(MutableRenames::new(repo_identity.id(), sql_store)))
     }
 }

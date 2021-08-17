@@ -56,7 +56,8 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
         .build(&mut test.configs_storage);
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     change_target_config
         .run(
             &ctx,
@@ -144,7 +145,8 @@ async fn init_megarepo(ctx: &CoreContext, test: &mut MegarepoTest) -> Result<(),
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -195,7 +197,8 @@ async fn test_change_target_config_invalid_config_linkfile(fb: FacebookInit) -> 
         resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let err = change_target_config
         .run(
             &ctx,
@@ -254,7 +257,8 @@ async fn test_change_target_config_invalid_config_normal_file(
         resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let err = change_target_config
         .run(
             &ctx,
@@ -315,7 +319,8 @@ async fn test_change_target_config_invalid_config_file_dir_conflict(
         resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let err = change_target_config
         .run(
             &ctx,
@@ -369,7 +374,8 @@ async fn test_change_target_config_no_file_dir_conflict(fb: FacebookInit) -> Res
         resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     change_target_config
         .run(
             &ctx,
@@ -420,7 +426,8 @@ async fn test_change_target_config_no_file_dir_conflict_2(fb: FacebookInit) -> R
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -451,7 +458,8 @@ async fn test_change_target_config_no_file_dir_conflict_2(fb: FacebookInit) -> R
 
     let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     println!("changing target");
     change_target_config
         .run(
@@ -503,7 +511,8 @@ async fn test_change_target_config_repeat_same_request(fb: FacebookInit) -> Resu
         .build(&mut test.configs_storage);
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     change_target_config
         .run(
             &ctx,
@@ -519,7 +528,8 @@ async fn test_change_target_config_repeat_same_request(fb: FacebookInit) -> Resu
         .await?;
 
     // Now repeat the same request - it should succeed
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     change_target_config
         .run(
             &ctx,
@@ -535,7 +545,8 @@ async fn test_change_target_config_repeat_same_request(fb: FacebookInit) -> Resu
         .await?;
 
     // Now send slightly different request - it should fail
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     assert!(
         change_target_config
             .run(
@@ -588,7 +599,8 @@ async fn test_change_target_config_noop_change(fb: FacebookInit) -> Result<(), E
         .build(&mut test.configs_storage);
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let new_target_cs_id = change_target_config
         .run(
             &ctx,
@@ -604,7 +616,8 @@ async fn test_change_target_config_noop_change(fb: FacebookInit) -> Result<(), E
         .await?;
 
     // Now do a noop change on existing commit
-    let change_target_config = ChangeTargetConfig::new(&configs_storage, &test.mononoke);
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let noop_change = change_target_config
         .run(
             &ctx,

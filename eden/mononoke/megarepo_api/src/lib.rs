@@ -28,6 +28,7 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
+use mutable_renames::MutableRenames;
 use parking_lot::Mutex;
 use repo_factory::RepoFactory;
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
@@ -99,6 +100,7 @@ pub struct MegarepoApi {
     repo_factory: RepoFactory,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     megarepo_mapping_cache: Cache<ArcRepoIdentity, Arc<MegarepoMapping>>,
+    mutable_renames_cache: Cache<ArcRepoIdentity, Arc<MutableRenames>>,
     mononoke: Arc<Mononoke>,
 }
 
@@ -139,6 +141,7 @@ impl MegarepoApi {
             repo_factory,
             queue_cache: Cache::new(),
             megarepo_mapping_cache: Cache::new(),
+            mutable_renames_cache: Cache::new(),
             mononoke,
         })
     }
@@ -151,6 +154,23 @@ impl MegarepoApi {
     /// Get mononoke object
     pub fn mononoke(&self) -> Arc<Mononoke> {
         self.mononoke.clone()
+    }
+
+    /// Get mutable_renames object
+    pub async fn mutable_renames(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+    ) -> Result<Arc<MutableRenames>, MegarepoError> {
+        let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+        let mutable_renames = self
+            .mutable_renames_cache
+            .get_or_try_init(&repo_identity.clone(), || async move {
+                let mutable_renames = self.repo_factory.mutable_renames(&repo_config).await?;
+                Ok(mutable_renames)
+            })
+            .await?;
+        Ok(mutable_renames)
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given target
@@ -365,7 +385,11 @@ impl MegarepoApi {
         changesets_to_merge: HashMap<String, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
-        let add_sync_target = AddSyncTarget::new(&self.megarepo_configs, &self.mononoke);
+        let mutable_renames = self
+            .mutable_renames(ctx, &sync_target_config.target)
+            .await?;
+        let add_sync_target =
+            AddSyncTarget::new(&self.megarepo_configs, &self.mononoke, &mutable_renames);
 
         let changesets_to_merge = changesets_to_merge
             .into_iter()
@@ -414,12 +438,14 @@ impl MegarepoApi {
         target: Target,
         target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
+        let mutable_renames = self.mutable_renames(ctx, &target).await?;
         let target_megarepo_mapping = self.megarepo_mapping(ctx, &target).await?;
         let source_name = SourceName::new(source_name);
         let sync_changeset = sync_changeset::SyncChangeset::new(
             &self.megarepo_configs,
             &self.mononoke,
             &target_megarepo_mapping,
+            &mutable_renames,
         );
         let fut = sync_changeset.sync(ctx, source_cs_id, &source_name, &target, target_location);
 
@@ -437,7 +463,9 @@ impl MegarepoApi {
         changesets_to_merge: HashMap<String, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
-        let change_target_config = ChangeTargetConfig::new(&self.megarepo_configs, &self.mononoke);
+        let mutable_renames = self.mutable_renames(ctx, &target).await?;
+        let change_target_config =
+            ChangeTargetConfig::new(&self.megarepo_configs, &self.mononoke, &mutable_renames);
         let changesets_to_merge = changesets_to_merge
             .into_iter()
             .map(|(source, cs_id)| (SourceName(source), cs_id))

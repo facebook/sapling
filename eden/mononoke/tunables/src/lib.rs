@@ -198,6 +198,8 @@ pub struct MononokeTunables {
     multiplex_blobstore_is_present_do_queue_lookup: AtomicBool,
 
     fastlog_use_mutable_renames: TunableBoolByRepo,
+    megarepo_api_dont_set_file_mutable_renames: AtomicBool,
+    megarepo_api_dont_set_directory_mutable_renames: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

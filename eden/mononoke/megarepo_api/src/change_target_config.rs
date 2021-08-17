@@ -30,6 +30,7 @@ use megarepo_mapping::{CommitRemappingState, SourceName};
 use mercurial_types::HgFileNodeId;
 use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath};
+use mutable_renames::MutableRenames;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
@@ -143,6 +144,7 @@ fn diff_configs(
 pub struct ChangeTargetConfig<'a> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     pub mononoke: &'a Arc<Mononoke>,
+    pub mutable_renames: &'a Arc<MutableRenames>,
 }
 
 impl<'a> MegarepoOp for ChangeTargetConfig<'a> {
@@ -155,10 +157,12 @@ impl<'a> ChangeTargetConfig<'a> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke>,
+        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
+            mutable_renames,
         }
     }
 
@@ -236,6 +240,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 &changesets_to_merge,
                 new_config.version.clone(),
                 message.clone(),
+                &self.mutable_renames,
             )
             .await?;
         let additions_merge = if let Some(additions_merge_cs_id) = additions_merge_cs_id {
@@ -311,6 +316,7 @@ impl<'a> ChangeTargetConfig<'a> {
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
         sync_config_version: SyncConfigVersion,
         message: Option<String>,
+        mutable_renames: &Arc<MutableRenames>,
     ) -> Result<Option<ChangesetId>, MegarepoError> {
         if diff.added.is_empty() {
             return Ok(None);
@@ -322,7 +328,13 @@ impl<'a> ChangeTargetConfig<'a> {
             .map(|(source, _cs_id)| source.clone())
             .collect();
         let moved_commits = self
-            .create_move_commits(ctx, repo.blob_repo(), &sources_to_add, changesets_to_merge)
+            .create_move_commits(
+                ctx,
+                repo.blob_repo(),
+                &sources_to_add,
+                changesets_to_merge,
+                mutable_renames,
+            )
             .await?;
 
         if moved_commits.len() == 1 {

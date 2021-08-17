@@ -65,7 +65,8 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -114,8 +115,12 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .set_to(cs_id)
         .await?;
 
-    let sync_changeset =
-        SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+    let sync_changeset = SyncChangeset::new(
+        &configs_storage,
+        &test.mononoke,
+        &test.megarepo_mapping,
+        &test.mutable_renames,
+    );
 
     sync_changeset
         .sync(&ctx, cs_id, &first_source_name, &target, target_cs_id)
@@ -181,7 +186,8 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -258,7 +264,8 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,
@@ -318,7 +325,8 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -404,7 +412,8 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,
@@ -461,7 +470,8 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,
@@ -487,7 +497,8 @@ async fn test_add_sync_target_invalid_changesets_to_merge(fb: FacebookInit) -> R
             .commit()
             .await?;
 
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,
@@ -539,7 +550,8 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,
@@ -611,7 +623,8 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target, version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -703,7 +716,8 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
     let mut sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let first_result = add_sync_target
         .run(
             &ctx,
@@ -718,7 +732,8 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
 
     // Now repeat the same request again (as if client retries a reqeust that has already
     // succeeded). We should get the same result as the first time.
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let second_result = add_sync_target
         .run(
             &ctx,
@@ -734,7 +749,8 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
     assert_eq!(first_result, second_result);
 
     // Now modify the request - it should fail
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     assert!(
         add_sync_target
             .run(
@@ -751,7 +767,8 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
 
     // Now send different config with the same name - should fail
     sync_target_config.sources = vec![];
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     let res = add_sync_target
         .run(
             &ctx,

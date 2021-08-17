@@ -18,6 +18,7 @@ use megarepo_mapping::{
 };
 use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
+use mutable_renames::MutableRenames;
 use std::path::Path;
 use std::{collections::BTreeMap, sync::Arc};
 use test_repo_factory::TestRepoFactory;
@@ -28,14 +29,19 @@ pub struct MegarepoTest {
     pub megarepo_mapping: Arc<MegarepoMapping>,
     pub mononoke: Arc<Mononoke>,
     pub configs_storage: TestMononokeMegarepoConfigs,
+    pub mutable_renames: Arc<MutableRenames>,
 }
 
 impl MegarepoTest {
     pub async fn new(ctx: &CoreContext) -> Result<Self, Error> {
         let id = RepositoryId::new(0);
         let mut factory = TestRepoFactory::new()?;
+        factory.with_id(id);
         let megarepo_mapping = factory.megarepo_mapping();
-        let blobrepo: BlobRepo = factory.with_id(id).build()?;
+        let config = factory.repo_config();
+        let repo_identity = factory.repo_identity(&config);
+        let mutable_renames = factory.mutable_renames(&repo_identity)?;
+        let blobrepo: BlobRepo = factory.build()?;
         let mononoke = Arc::new(
             Mononoke::new_test(ctx.clone(), vec![("repo".to_string(), blobrepo.clone())]).await?,
         );
@@ -46,6 +52,7 @@ impl MegarepoTest {
             megarepo_mapping,
             mononoke,
             configs_storage,
+            mutable_renames,
         })
     }
 

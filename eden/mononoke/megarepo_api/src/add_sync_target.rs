@@ -15,6 +15,7 @@ use megarepo_error::MegarepoError;
 use megarepo_mapping::SourceName;
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::ChangesetId;
+use mutable_renames::MutableRenames;
 use std::{collections::BTreeMap, sync::Arc};
 
 // Create a new sync target given a config.
@@ -38,6 +39,7 @@ use std::{collections::BTreeMap, sync::Arc};
 pub struct AddSyncTarget<'a> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     pub mononoke: &'a Arc<Mononoke>,
+    pub mutable_renames: &'a Arc<MutableRenames>,
 }
 
 impl<'a> MegarepoOp for AddSyncTarget<'a> {
@@ -50,10 +52,12 @@ impl<'a> AddSyncTarget<'a> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke>,
+        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
+            mutable_renames,
         }
     }
 
@@ -93,6 +97,7 @@ impl<'a> AddSyncTarget<'a> {
                 repo.blob_repo(),
                 &sync_target_config.sources,
                 &changesets_to_merge,
+                &self.mutable_renames,
             )
             .await?;
         scuba.log_with_msg("Created move commits", None);

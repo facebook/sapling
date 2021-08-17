@@ -13,7 +13,10 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
-use commit_transformation::{create_source_to_target_multi_mover, rewrite_commit, upload_commits};
+use commit_transformation::{
+    create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
+    rewrite_commit, upload_commits,
+};
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
 use megarepo_config::{
@@ -24,6 +27,7 @@ use megarepo_mapping::{CommitRemappingState, MegarepoMapping, SourceName};
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mutable_renames::MutableRenames;
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -32,6 +36,7 @@ pub(crate) struct SyncChangeset<'a> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     mononoke: &'a Arc<Mononoke>,
     target_megarepo_mapping: &'a Arc<MegarepoMapping>,
+    mutable_renames: &'a Arc<MutableRenames>,
 }
 
 #[async_trait]
@@ -48,11 +53,13 @@ impl<'a> SyncChangeset<'a> {
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke>,
         target_megarepo_mapping: &'a Arc<MegarepoMapping>,
+        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
             target_megarepo_mapping,
+            mutable_renames,
         }
     }
 
@@ -187,6 +194,8 @@ impl<'a> SyncChangeset<'a> {
         let side_parents = source_cs.parents().filter(|p| *p != latest_synced_cs_id);
         let mover = create_source_to_target_multi_mover(source.mapping.clone())
             .map_err(MegarepoError::request)?;
+        let directory_mover = create_directory_source_to_target_multi_mover(source.mapping.clone())
+            .map_err(MegarepoError::request)?;
         let moved_commits = stream::iter(side_parents)
             .map(|parent| {
                 self.create_single_move_commit(
@@ -194,6 +203,7 @@ impl<'a> SyncChangeset<'a> {
                     target_repo.blob_repo(),
                     parent.clone(),
                     &mover,
+                    &directory_mover,
                     Default::default(),
                     &source_name,
                 )
@@ -208,6 +218,22 @@ impl<'a> SyncChangeset<'a> {
             target_repo.blob_repo().clone(),
         )
         .await?;
+
+        let mutable_renames_count: usize = moved_commits
+            .iter()
+            .map(|css| css.mutable_renames.len())
+            .sum();
+        let mut scuba = ctx.scuba().clone();
+        scuba.add("mutable_renames_count", mutable_renames_count);
+        scuba.log_with_msg("Started saving mutable renames", None);
+        self.save_mutable_renames(
+            ctx,
+            self.mutable_renames,
+            moved_commits.iter().map(|css| &css.mutable_renames),
+        )
+        .await?;
+        scuba.log_with_msg("Saved mutable renames", None);
+
         Ok(moved_commits)
     }
 
@@ -462,8 +488,12 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset =
-            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+        let sync_changeset = SyncChangeset::new(
+            &configs_storage,
+            &test.mononoke,
+            &test.megarepo_mapping,
+            &test.mutable_renames,
+        );
         println!("Trying to sync already synced commit again");
         let res = sync_changeset
             .sync(
@@ -555,8 +585,12 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset =
-            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+        let sync_changeset = SyncChangeset::new(
+            &configs_storage,
+            &test.mononoke,
+            &test.megarepo_mapping,
+            &test.mutable_renames,
+        );
 
         let merge_parent_1_source =
             CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source_cs_id])
@@ -717,8 +751,12 @@ mod test {
 
         print!("Syncing one commit to each of sources... 1");
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset =
-            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+        let sync_changeset = SyncChangeset::new(
+            &configs_storage,
+            &test.mononoke,
+            &test.megarepo_mapping,
+            &test.mutable_renames,
+        );
         let source1_cs_id =
             CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source1_cs_id])
                 .add_file("anotherfile1", "anothercontent")
@@ -842,8 +880,12 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset =
-            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
+        let sync_changeset = SyncChangeset::new(
+            &configs_storage,
+            &test.mononoke,
+            &test.megarepo_mapping,
+            &test.mutable_renames,
+        );
 
         let source_cs_id = CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source_cs_id])
             .add_file("anotherfile", "anothercontent")
