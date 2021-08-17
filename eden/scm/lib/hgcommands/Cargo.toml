@@ -26,7 +26,7 @@ fsyncglob = { path = "../fsyncglob" }
 hg-http = { path = "../hg-http" }
 hgtime = { path = "../hgtime" }
 indexedlog = { path = "../indexedlog" }
-libc = "0.2.86"
+libc = "0.2.98"
 metrics-render = { path = "../metrics/render" }
 mincode = { path = "../mincode" }
 once_cell = "1.4"

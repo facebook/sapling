@@ -25,7 +25,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hg-http = { path = "../hg-http" }
 hgtime = { path = "../hgtime" }
 indexedlog = { path = "../indexedlog" }
-libc = "0.2.86"
+libc = "0.2.98"
 mincode = { path = "../mincode" }
 parking_lot = "0.10.2"
 procinfo = { path = "../procinfo" }

@@ -8,7 +8,7 @@ edition = "2018"
 anyhow = "1.0"
 dirs = "2.0"
 fs2 = "0.4"
-libc = "0.2.86"
+libc = "0.2.98"
 rand = { version = "0.7", features = ["small_rng"] }
 shellexpand = "1.0"
 tempfile = "3.1"

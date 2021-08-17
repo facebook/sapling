@@ -1,0 +1,33 @@
+[package]
+name = "mutable_renames"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+anyhow = "1.0"
+context = { version = "0.1.0", path = "../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+manifest = { version = "0.1.0", path = "../manifest" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+path_hash = { version = "0.1.0", path = "../common/path_hash" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+
+[dev-dependencies]
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+
+[patch.crates-io]
+lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
+mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4c86952f1e799960e736c0b2bb9d2a6d935bf1" }
+object = { git = "https://github.com/andrewjcg/object", rev = "37e8519ced73fb25821db22d938a021454f186de" }
+prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
+toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
