@@ -12,7 +12,6 @@ auto_impl = "0.4"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -22,7 +21,7 @@ itertools = "0.10.1"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-rand = { version = "0.7", features = ["small_rng"] }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_trace"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -35,6 +34,7 @@ tunables = { version = "0.1.0", path = "../tunables" }
 [dev-dependencies]
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }

@@ -15,7 +15,6 @@ use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use filenodes::ArcFilenodes;
 use repo_blobstore::RepoBlobstore;
-use repo_derived_data::RepoDerivedData;
 use std::sync::Arc;
 
 /// Create new instance of implementing object with overridden field of specified type.
@@ -47,10 +46,10 @@ impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepoInner {
         F: FnOnce(Arc<dyn LeaseOps>) -> Arc<dyn LeaseOps>,
     {
         let derived_data_lease = modify(self.repo_derived_data.lease().clone());
-        let repo_derived_data = Arc::new(RepoDerivedData::new(
-            self.repo_derived_data.config().clone(),
-            derived_data_lease,
-        ));
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_lease(derived_data_lease),
+        );
         Self {
             repo_derived_data,
             ..self.clone()

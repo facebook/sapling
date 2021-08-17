@@ -10,12 +10,10 @@ use crate::{BonsaiDerivable, BonsaiDerivedMappingContainer, DeriveError};
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounters;
 use futures::{
-    channel::oneshot,
     future::{abortable, try_join, try_join_all, Aborted, FutureExt, TryFutureExt},
     stream::FuturesUnordered,
     TryStreamExt,
@@ -25,6 +23,7 @@ use futures_stats::FutureStats;
 use futures_stats::TimedTryFutureExt;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
 use slog::warn;
 use stats::prelude::*;
@@ -32,7 +31,7 @@ use std::convert::TryInto;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 use time_ext::DurationExt;
 use topo_sort::{sort_topological, TopoSortedDagTraversal};
@@ -42,8 +41,6 @@ define_stats! {
     derived_data_disabled:
         dynamic_timeseries("{}.{}.derived_data_disabled", (repo_id: i32, derived_data_type: &'static str); Count),
 }
-
-const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 /// Checks that the named derived data type is enabled, and returns the
 /// enabled derived data types config if it is.  Returns an error if the
@@ -426,7 +423,6 @@ where
         bcs_id.to_hex()
     );
 
-    let lease = repo.get_derived_data_lease_ops();
     let lease_key = Arc::new(format!(
         "repo{}.{}.{}",
         repo.get_repoid().id(),
@@ -434,7 +430,7 @@ where
         bcs_id
     ));
 
-    let res = derive_in_loop(ctx, repo, mapping, *bcs_id, &lease, &lease_key).await;
+    let res = derive_in_loop(ctx, repo, mapping, *bcs_id, &lease_key).await;
 
     res
 }
@@ -444,7 +440,6 @@ async fn derive_in_loop<Derivable>(
     repo: &BlobRepo,
     mapping: &BonsaiDerivedMappingContainer<Derivable>,
     bcs_id: ChangesetId,
-    lease: &Arc<dyn LeaseOps>,
     lease_key: &Arc<String>,
 ) -> Result<(), Error>
 where
@@ -465,97 +460,51 @@ where
     let bcs_fut = bcs_id.load(ctx, repo.blobstore()).map_err(Error::from);
     let (parents, bcs) = try_join(parents, bcs_fut).await?;
 
-    let mut lease_start = Instant::now();
-    let mut lease_total = Duration::from_secs(0);
-    let mut backoff_ms = 200;
-
-    loop {
-        let result = lease.try_add_put_lease(&lease_key).await;
-        // In case of lease unavailability we do not want to stall
-        // generation of all derived data, since lease is a soft lock
-        // it is safe to assume that we successfuly acquired it
-        let (leased, ignored) = match result {
-            Ok(leased) => {
-                let elapsed = lease_start.elapsed();
-                if elapsed > LEASE_WARNING_THRESHOLD {
-                    lease_total += elapsed;
-                    lease_start = Instant::now();
-                    warn!(
-                        ctx.logger(),
-                        "Can not acquire lease {} for more than {:?}", lease_key, lease_total
-                    );
-                }
-                (leased, false)
-            }
-            Err(_) => (false, true),
-        };
-
-        let mut vs = mapping.get(ctx, vec![bcs_id]).await?;
-        let derived = vs.remove(&bcs_id);
-
-        match derived {
-            Some(_) => {
-                break;
-            }
-            None => {
-                if leased || ignored {
-                    // Get a new context for derivation. This means derivation won't count against
-                    // the original context's perf counters, but there will still be logs to Scuba
-                    // there to indicate that derivation occcurs. It lets us capture exact perf
-                    // counters for derivation and log those to the derived data table in Scuba.
-                    let ctx = ctx.clone_and_reset();
-
-                    let deriver = async {
-                        let options = mapping.options();
-                        let derived = Derivable::derive_from_parents(
-                            ctx.clone(),
-                            repo.clone(),
-                            bcs,
-                            parents,
-                            &options,
-                        )
-                        .await?;
-                        mapping.put(&ctx, bcs_id, &derived).await?;
-                        let res: Result<_, Error> = Ok(());
-                        res
-                    };
-
-                    let (sender, receiver) = oneshot::channel();
-                    lease.renew_lease_until(ctx.clone(), &lease_key, receiver.map(|_| ()).boxed());
-
-                    let derived_data_config = repo.get_derived_data_config();
-                    let mut derived_data_scuba = init_derived_data_scuba::<Derivable>(
-                        &ctx,
-                        repo.name(),
-                        &derived_data_config.scuba_table,
-                        &bcs_id,
-                    );
-
-                    log_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, &bcs_id);
-                    let (stats, res) = deriver.timed().await;
-                    log_derivation_end::<Derivable>(
-                        &ctx,
-                        &mut derived_data_scuba,
-                        &bcs_id,
-                        &stats,
-                        &res,
-                    );
-                    let _ = sender.send(());
-                    res?;
-                    break;
-                } else {
-                    let sleep = rand::random::<u64>() % backoff_ms;
-                    tokio::time::sleep(Duration::from_millis(sleep)).await;
-
-                    backoff_ms *= 2;
-                    if backoff_ms >= 1000 {
-                        backoff_ms = 1000;
-                    }
-                    continue;
-                }
-            }
-        }
+    // In case of lease unavailability we do not want to stall generation
+    // of all derived data, since the lease is a soft lock it is safe to
+    // continue even if this fails.
+    let guard = repo
+        .repo_derived_data()
+        .manager()
+        .lease()
+        .try_acquire_in_loop(ctx, &lease_key, move || async move {
+            Ok(mapping.get(ctx, vec![bcs_id]).await?.contains_key(&bcs_id))
+        })
+        .await;
+    if matches!(guard, Ok(None)) {
+        // Something else completed derivation
+        return Ok(());
     }
+
+    // Get a new context for derivation. This means derivation won't count
+    // against the original context's perf counters, but there will still be
+    // logs to Scuba there to indicate that derivation occcurs. It lets us
+    // capture exact perf counters for derivation and log those to the derived
+    // data table in Scuba.
+    let ctx = ctx.clone_and_reset();
+
+    let deriver = async {
+        let options = mapping.options();
+        let derived =
+            Derivable::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents, &options)
+                .await?;
+        mapping.put(&ctx, bcs_id, &derived).await?;
+        let res: Result<_, Error> = Ok(());
+        res
+    };
+
+    let derived_data_config = repo.get_derived_data_config();
+    let mut derived_data_scuba = init_derived_data_scuba::<Derivable>(
+        &ctx,
+        repo.name(),
+        &derived_data_config.scuba_table,
+        &bcs_id,
+    );
+
+    log_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, &bcs_id);
+    let (stats, res) = deriver.timed().await;
+    log_derivation_end::<Derivable>(&ctx, &mut derived_data_scuba, &bcs_id, &stats, &res);
+    res?;
     Ok(())
 }
 

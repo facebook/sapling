@@ -255,11 +255,22 @@ impl BenchmarkRepoFactory {
         Arc::new(DisabledSegmentedChangelog::new())
     }
 
-    pub fn repo_derived_data(&self, repo_config: &ArcRepoConfig) -> ArcRepoDerivedData {
-        Arc::new(RepoDerivedData::new(
-            repo_config.derived_data_config.clone(),
+    pub fn repo_derived_data(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changesets: &ArcChangesets,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcRepoDerivedData> {
+        Ok(Arc::new(RepoDerivedData::new(
+            repo_identity.id(),
+            repo_identity.name().to_string(),
+            changesets.clone(),
+            repo_blobstore.as_ref().clone(),
             Arc::new(DummyLease {}),
-        ))
+            MononokeScubaSampleBuilder::with_discard(),
+            repo_config.derived_data_config.clone(),
+        )?))
     }
 
     pub fn filestore_config(&self) -> ArcFilestoreConfig {

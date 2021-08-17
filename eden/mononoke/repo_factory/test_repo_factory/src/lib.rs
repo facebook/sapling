@@ -363,15 +363,26 @@ impl TestRepoFactory {
 
     /// Construct RepoDerivedData.  Derived data uses an in-process lease for
     /// tests.
-    pub fn repo_derived_data(&self, repo_config: &ArcRepoConfig) -> ArcRepoDerivedData {
+    pub fn repo_derived_data(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changesets: &ArcChangesets,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcRepoDerivedData> {
         let lease = self.derived_data_lease.as_ref().map_or_else(
             || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
             |lease| lease(),
         );
-        Arc::new(RepoDerivedData::new(
-            repo_config.derived_data_config.clone(),
+        Ok(Arc::new(RepoDerivedData::new(
+            repo_identity.id(),
+            repo_identity.name().to_string(),
+            changesets.clone(),
+            repo_blobstore.as_ref().clone(),
             lease,
-        ))
+            MononokeScubaSampleBuilder::with_discard(),
+            repo_config.derived_data_config.clone(),
+        )?))
     }
 
     /// Construct the RepoBlobstore using the blobstore in the factory.

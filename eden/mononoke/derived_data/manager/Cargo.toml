@@ -1,20 +1,26 @@
 [package]
-name = "repo_derived_data"
+name = "derived_data_manager"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 anyhow = "1.0"
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changesets = { version = "0.1.0", path = "../../changesets" }
-derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+rand = { version = "0.7", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
+slog = { version = "2.5", features = ["max_level_trace"] }
+tokio = { version = "1.7.1", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

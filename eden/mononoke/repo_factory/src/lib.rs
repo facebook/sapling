@@ -715,7 +715,13 @@ impl RepoFactory {
         Ok(Arc::new(segmented_changelog))
     }
 
-    pub fn repo_derived_data(&self, repo_config: &ArcRepoConfig) -> Result<ArcRepoDerivedData> {
+    pub fn repo_derived_data(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changesets: &ArcChangesets,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
         // Derived data leasing is performed through the cache, so is only
         // available if caching is enabled.
@@ -724,7 +730,19 @@ impl RepoFactory {
         } else {
             Arc::new(InProcessLease::new())
         };
-        Ok(Arc::new(RepoDerivedData::new(config, lease)))
+        let mut scuba =
+            MononokeScubaSampleBuilder::with_opt_table(self.env.fb, config.scuba_table.clone());
+        scuba.add_common_server_data();
+        scuba.add("reponame", repo_identity.name());
+        Ok(Arc::new(RepoDerivedData::new(
+            repo_identity.id(),
+            repo_identity.name().to_string(),
+            changesets.clone(),
+            repo_blobstore.as_ref().clone(),
+            lease,
+            scuba,
+            config,
+        )?))
     }
 
     pub async fn skiplist_index(

@@ -14,7 +14,6 @@ changeset_fetcher = { version = "0.1.0", path = "../changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
