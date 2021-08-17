@@ -62,7 +62,7 @@ samplingblob = { version = "0.1.0", path = "../blobstore/samplingblob" }
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }

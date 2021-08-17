@@ -19,7 +19,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rand = { version = "0.7", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 
 [patch.crates-io]

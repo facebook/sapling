@@ -18,7 +18,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
