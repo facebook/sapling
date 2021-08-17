@@ -95,6 +95,8 @@ COLUMN_REVERSE_SORT = Row(
     command=False,
 )
 
+COUNTER_REGEX = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*))"
+
 
 def format_duration(duration) -> str:
     modulos = (1000, 1000, 1000, 60, 60, 24)
@@ -491,8 +493,7 @@ class Top:
 
     def _update_summary_stats(self, client) -> None:
         client.flushStatsNow()
-        counter_regex = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*))"
-        counters = client.getRegexCounters(counter_regex)
+        counters = client.getRegexCounters(COUNTER_REGEX)
 
         self.pending_imports = self._update_import_stats(counters)
         self.fuse_requests_summary = self._update_fuse_request_stats(counters)

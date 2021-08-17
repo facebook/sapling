@@ -26,6 +26,7 @@ from . import (
     stats as stats_mod,
     ui as ui_mod,
     version as version_mod,
+    top as top_mod,
 )
 from .config import EdenInstance
 
@@ -86,6 +87,8 @@ def print_diagnostic_info(
                 stats_mod.StatsGeneralOptions(out=stats_stream),
             )
             out.write(stats_stream.getvalue().encode())
+
+    print_thrift_counters(instance, out)
 
     print_env_variables(out)
 
@@ -302,6 +305,17 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
     except Exception as e:
         out.write(b"Error getting edenfs redirections %s\n" % str(e).encode())
         out.write(traceback.format_exc().encode() + b"\n")
+
+
+def print_thrift_counters(instance: EdenInstance, out: IO[bytes]) -> None:
+    try:
+        out.write(b"\nedenfs counters:\n")
+        with instance.get_thrift_client_legacy() as client:
+            counters = client.getRegexCounters(top_mod.COUNTER_REGEX)
+            for key, value in counters.items():
+                out.write(f"{key}: {value}\n".encode())
+    except Exception as e:
+        out.write(b"Error getting edenfs Thrift counters: %s\n" % str(e).encode())
 
 
 def print_env_variables(out: IO[bytes]) -> None:
