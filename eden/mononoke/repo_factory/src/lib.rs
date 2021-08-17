@@ -57,6 +57,7 @@ use metaconfig_types::{
     ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, MetadataDatabaseConfig,
     Redaction, RedactionConfig, RepoConfig,
 };
+use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
@@ -431,6 +432,9 @@ pub enum RepoFactoryError {
 
     #[error("Error opening long-running request queue")]
     LongRunningRequestsQueue,
+
+    #[error("Error opening mutable renames")]
+    MutableRenames,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -801,5 +805,15 @@ impl RepoFactory {
                 repo_identity.id(),
             )))
         }
+    }
+
+    pub async fn mutable_renames(&self, repo_config: &ArcRepoConfig) -> Result<ArcMutableRenames> {
+        let sql_factory = self
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let sql_store = sql_factory
+            .open::<SqlMutableRenamesStore>()
+            .context(RepoFactoryError::MutableRenames)?;
+        Ok(Arc::new(MutableRenames::new(repo_config.repoid, sql_store)))
     }
 }

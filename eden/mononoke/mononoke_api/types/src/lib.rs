@@ -7,6 +7,7 @@
 
 use blobrepo::BlobRepo;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
+use mutable_renames::MutableRenames;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
@@ -27,4 +28,7 @@ pub struct InnerRepo {
 
     #[facet]
     pub ephemeral_blobstore: RepoEphemeralBlobstore,
+
+    #[facet]
+    pub mutable_renames: MutableRenames,
 }

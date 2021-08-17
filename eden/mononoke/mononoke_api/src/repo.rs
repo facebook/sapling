@@ -50,6 +50,7 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation, RepositoryId, Svnrev,
 };
+use mutable_renames::{MutableRenames, SqlMutableRenamesStore};
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
@@ -308,6 +309,10 @@ impl Repo {
             skiplist_index: Arc::new(SkiplistIndex::new()),
             segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
             ephemeral_blobstore: Arc::new(RepoEphemeralBlobstore::disabled(repo_id)),
+            mutable_renames: Arc::new(MutableRenames::new(
+                repo_id,
+                SqlMutableRenamesStore::with_sqlite_in_memory()?,
+            )),
         };
 
         let config = RepoConfig {

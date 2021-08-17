@@ -45,6 +45,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
+use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use pushrebase_mutation_mapping::{
@@ -146,6 +147,7 @@ impl TestRepoFactory {
         con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
+        con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
         let metadata_db = SqlConnections::new_single(Connection::with_sqlite(con));
 
         Ok(TestRepoFactory {
@@ -407,5 +409,11 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> ArcRepoEphemeralBlobstore {
         Arc::new(RepoEphemeralBlobstore::disabled(repo_identity.id()))
+    }
+
+    /// Mutable renames
+    pub fn mutable_renames(&self, repo_config: &ArcRepoConfig) -> Result<ArcMutableRenames> {
+        let sql_store = SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone());
+        Ok(Arc::new(MutableRenames::new(repo_config.repoid, sql_store)))
     }
 }
