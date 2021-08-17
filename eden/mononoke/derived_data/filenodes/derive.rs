@@ -278,7 +278,9 @@ mod tests {
     use super::*;
     use anyhow::{anyhow, Context};
     use cloned::cloned;
-    use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping};
+    use derived_data::{
+        BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
+    };
     use fbinit::FacebookInit;
     use filenodes::{FilenodeRangeResult, Filenodes};
     use fixtures::linear;
@@ -462,7 +464,7 @@ mod tests {
 
         // Make sure they are in the mapping
         let maps = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?
-            .get(ctx.clone(), vec![parent_empty, child_empty])
+            .get(&ctx, vec![parent_empty, child_empty])
             .await?;
 
         assert_eq!(maps.len(), 2);
@@ -488,9 +490,7 @@ mod tests {
         FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
 
         // Make sure they are in the mapping
-        let maps = mapping
-            .get(ctx.clone(), vec![child_empty, parent_empty])
-            .await?;
+        let maps = mapping.get(&ctx, vec![child_empty, parent_empty]).await?;
         assert_eq!(maps.len(), 2);
         Ok(())
     }
@@ -520,7 +520,7 @@ mod tests {
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
         let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
-        let res = mapping.get(ctx.clone(), vec![cs]).await?;
+        let res = mapping.get(&ctx, vec![cs]).await?;
 
         assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);
 
@@ -540,7 +540,12 @@ mod tests {
                 .await?;
         cs_ids.reverse();
 
-        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo1)?;
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo1.name(),
+            repo1.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(FilenodesOnlyPublic::default_mapping(&ctx, &repo1)?),
+        );
         let batch =
             FilenodesOnlyPublic::batch_derive(&ctx, &repo1, cs_ids.clone(), &mapping, None).await?;
 
@@ -591,7 +596,12 @@ mod tests {
                 .await?;
         cs_ids.reverse();
 
-        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(FilenodesOnlyPublic::default_mapping(&ctx, &repo)?),
+        );
         match FilenodesOnlyPublic::batch_derive(&ctx, &repo, cs_ids.clone(), &mapping, None).await {
             Ok(_) => {}
             Err(_) => {}
@@ -600,7 +610,7 @@ mod tests {
         // FilenodesWrapper prevents writing of root filenode for a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157 (8th commit in repo)
         // so all children (9, 10, 11) should not have root_filenodes written
         for cs_id in cs_ids.into_iter().skip(8) {
-            let filenodes = mapping.get(ctx.clone(), vec![cs_id]).await?;
+            let filenodes = mapping.get(&ctx, vec![cs_id]).await?;
             assert_eq!(filenodes.len(), 0);
         }
         Ok(())

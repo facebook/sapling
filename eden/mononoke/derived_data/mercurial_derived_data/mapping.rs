@@ -8,10 +8,11 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use repo_identity::RepoIdentityRef;
 
 use std::{collections::HashMap, sync::Arc};
 
@@ -50,20 +51,21 @@ pub struct HgChangesetIdMapping {
     repo_id: RepositoryId,
     mapping: Arc<dyn BonsaiHgMapping>,
     options: HgChangesetDeriveOptions,
-    repo: BlobRepo,
 }
 
 impl HgChangesetIdMapping {
-    pub fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self, DeriveError> {
+    pub fn new(
+        repo: &(impl RepoIdentityRef + BonsaiHgMappingArc),
+        config: &DerivedDataTypesConfig,
+    ) -> Result<Self, DeriveError> {
         let options = HgChangesetDeriveOptions {
             set_committer_field: config.hg_set_committer_extra,
         };
 
         Ok(Self {
-            repo_id: repo.get_repoid(),
-            mapping: repo.bonsai_hg_mapping().clone(),
+            repo_id: repo.repo_identity().id(),
+            mapping: repo.bonsai_hg_mapping_arc(),
             options,
-            repo: repo.clone(),
         })
     }
 }
@@ -74,12 +76,12 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let map = self
             .mapping
-            .get(&ctx, self.repo_id, csids.into())
+            .get(ctx, self.repo_id, csids.into())
             .await?
             .into_iter()
             .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
@@ -87,15 +89,15 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
         Ok(map)
     }
 
-    async fn put_impl(
+    async fn put(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csid: ChangesetId,
-        id: Self::Value,
+        id: &Self::Value,
     ) -> Result<(), Error> {
         self.mapping
             .add(
-                &ctx,
+                ctx,
                 BonsaiHgMappingEntry {
                     repo_id: self.repo_id,
                     hg_cs_id: id.0,
@@ -108,14 +110,6 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
 
     fn options(&self) -> HgChangesetDeriveOptions {
         self.options.clone()
-    }
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
     }
 }
 

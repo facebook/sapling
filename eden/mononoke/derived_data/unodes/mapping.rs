@@ -20,8 +20,8 @@ use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ContentId, FileType, MPath, ManifestUnodeId,
 };
-use repo_blobstore::RepoBlobstore;
 use std::convert::{TryFrom, TryInto};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(ManifestUnodeId);
@@ -87,20 +87,18 @@ impl BonsaiDerivable for RootUnodeManifestId {
 
 #[derive(Clone)]
 pub struct RootUnodeManifestMapping {
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     unode_version: UnodeVersion,
-    repo: BlobRepo,
 }
 
 #[async_trait]
 impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
     type Value = RootUnodeManifestId;
 
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self> {
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
-            blobstore: repo.get_blobstore(),
+            blobstore,
             unode_version: config.unode_version,
-            repo: repo.clone(),
         })
     }
 
@@ -117,14 +115,6 @@ impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
 
     fn options(&self) -> UnodeVersion {
         self.unode_version
-    }
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
     }
 }
 

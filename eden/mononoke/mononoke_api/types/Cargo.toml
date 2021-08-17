@@ -9,6 +9,7 @@ license = "GPLv2+"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 

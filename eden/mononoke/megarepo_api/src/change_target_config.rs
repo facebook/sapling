@@ -287,7 +287,7 @@ impl<'a> ChangeTargetConfig<'a> {
 
         let derivers = FuturesUnordered::new();
         for ty in derived_data_types {
-            let utils = derived_data_utils(target_repo.blob_repo(), ty)?;
+            let utils = derived_data_utils(ctx.fb, target_repo.blob_repo(), ty)?;
             derivers.push(utils.derive(ctx.clone(), target_repo.blob_repo().clone(), final_merge));
         }
         derivers.try_for_each(|_| future::ready(Ok(()))).await?;

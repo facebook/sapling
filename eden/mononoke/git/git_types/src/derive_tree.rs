@@ -32,16 +32,11 @@ use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
 #[derive(Clone)]
 pub struct TreeMapping {
     blobstore: Arc<dyn Blobstore>,
-    repo: BlobRepo,
 }
 
 impl TreeMapping {
-    pub fn new(
-        blobstore: Arc<dyn Blobstore>,
-        _config: &DerivedDataTypesConfig,
-        repo: BlobRepo,
-    ) -> Self {
-        Self { blobstore, repo }
+    pub fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Self {
+        Self { blobstore }
     }
 
     fn root_key(&self, cs_id: ChangesetId) -> String {
@@ -67,38 +62,30 @@ impl BonsaiDerivedMapping for TreeMapping {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         csids
             .into_iter()
-            .map(|cs_id| self.fetch_root(&ctx, cs_id))
+            .map(|cs_id| self.fetch_root(ctx, cs_id))
             .collect::<FuturesUnordered<_>>()
             .try_filter_map(|maybe_handle| async move { Ok(maybe_handle) })
             .try_collect()
             .await
     }
 
-    async fn put_impl(
+    async fn put(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csid: ChangesetId,
-        root: Self::Value,
+        root: &Self::Value,
     ) -> Result<(), Error> {
         self.blobstore
-            .put(&ctx, self.root_key(csid), root.into())
+            .put(ctx, self.root_key(csid), root.clone().into())
             .await
     }
 
     fn options(&self) {}
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
-    }
 }
 
 #[async_trait]
@@ -130,11 +117,7 @@ impl BonsaiDerived for TreeHandle {
         repo: &BlobRepo,
     ) -> Result<Self::DefaultMapping, DeriveError> {
         let config = derived_data::enabled_type_config(repo, Self::NAME)?;
-        Ok(TreeMapping::new(
-            repo.blobstore().boxed(),
-            config,
-            repo.clone(),
-        ))
+        Ok(TreeMapping::new(repo.blobstore().boxed(), config))
     }
 }
 

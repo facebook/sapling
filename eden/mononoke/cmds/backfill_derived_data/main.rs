@@ -613,7 +613,7 @@ async fn subcommand_backfill_all(
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
-        .map(|name| derived_data_utils_for_backfill(&repo.blob_repo, name.as_str()))
+        .map(|name| derived_data_utils_for_backfill(ctx.fb, &repo.blob_repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
 
     let heads = get_most_recent_heads(ctx, &repo.blob_repo).await?;
@@ -706,7 +706,8 @@ async fn subcommand_backfill(
     gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
 ) -> Result<()> {
-    let derived_utils = &derived_data_utils_for_backfill(&repo.blob_repo, derived_data_type)?;
+    let derived_utils =
+        &derived_data_utils_for_backfill(ctx.fb, &repo.blob_repo, derived_data_type)?;
 
     info!(
         ctx.logger(),
@@ -823,7 +824,7 @@ async fn subcommand_tail(
         .enabled
         .types
         .iter()
-        .map(|name| derived_data_utils(&repo, name))
+        .map(|name| derived_data_utils(ctx.fb, &repo, name))
         .collect::<Result<_>>()?;
     slog::info!(
         ctx.logger(),
@@ -854,7 +855,7 @@ async fn subcommand_tail(
                 .enabled
                 .types
                 .union(&derived_data_config.backfilling.types)
-                .map(|name| derived_data_utils_for_backfill(&repo, name))
+                .map(|name| derived_data_utils_for_backfill(ctx.fb, &repo, name))
                 .collect::<Result<_>>()?
         } else {
             backfill = false;
@@ -1150,7 +1151,7 @@ async fn subcommand_single(
         .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let mut derived_utils = vec![];
     for ty in derived_data_types {
-        let utils = derived_data_utils(&repo, ty)?;
+        let utils = derived_data_utils(ctx.fb, &repo, ty)?;
         utils.regenerate(&vec![csid]);
         derived_utils.push(utils);
     }
@@ -1203,7 +1204,7 @@ mod tests {
             .await
             .context("Error creating bookmarks subscription")?;
 
-        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let master = resolve_cs_id(&ctx, &repo, "master").await?;
         assert!(!RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
         tail_one_iteration(&ctx, &repo, &[derived_utils], &mut bookmarks_subscription).await?;
@@ -1257,7 +1258,7 @@ mod tests {
         let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         derived_utils
             .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false, None)
             .await?;
@@ -1283,7 +1284,7 @@ mod tests {
             batch.push(maybe_bcs_id.unwrap());
         }
 
-        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let pending = derived_utils
             .pending(ctx.clone(), repo.clone(), batch.clone())
             .await?;
@@ -1313,7 +1314,7 @@ mod tests {
         let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id).await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
             .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
             .await;

@@ -13,7 +13,7 @@ use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerived, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::ChangesetId;
 use slog::debug;
@@ -22,15 +22,12 @@ use unodes::RootUnodeManifestId;
 use crate::derive_v2::derive_blame_v2;
 use crate::RootBlameV2;
 
-pub async fn derive_blame_v2_in_batch<Mapping>(
+pub async fn derive_blame_v2_in_batch(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    mapping: &Mapping,
+    mapping: &BonsaiDerivedMappingContainer<RootBlameV2>,
     batch: Vec<ChangesetId>,
-) -> Result<HashMap<ChangesetId, RootUnodeManifestId>, Error>
-where
-    Mapping: BonsaiDerivedMapping<Value = RootBlameV2> + 'static,
-{
+) -> Result<HashMap<ChangesetId, RootUnodeManifestId>, Error> {
     let batch_len = batch.len();
     // We must split on any change as blame data must use the parent file.
     let linear_stacks =

@@ -62,14 +62,13 @@ impl BonsaiDerivable for BlameRoot {
 pub struct BlameRootMapping {
     blobstore: Arc<dyn Blobstore>,
     options: BlameDeriveOptions,
-    repo: BlobRepo,
 }
 
 #[async_trait]
 impl BlobstoreExistsMapping for BlameRootMapping {
     type Value = BlameRoot;
 
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self> {
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self> {
         let filesize_limit = config
             .blame_filesize_limit
             .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
@@ -83,11 +82,7 @@ impl BlobstoreExistsMapping for BlameRootMapping {
             filesize_limit,
             blame_version,
         };
-        Ok(Self {
-            blobstore: repo.get_blobstore().boxed(),
-            options,
-            repo: repo.clone(),
-        })
+        Ok(Self { blobstore, options })
     }
 
     fn blobstore(&self) -> &dyn Blobstore {
@@ -100,14 +95,6 @@ impl BlobstoreExistsMapping for BlameRootMapping {
 
     fn options(&self) -> BlameDeriveOptions {
         self.options
-    }
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
     }
 }
 

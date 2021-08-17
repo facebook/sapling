@@ -13,7 +13,7 @@ use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
-use derived_data::{derive_impl, BonsaiDerivedMapping};
+use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, SkeletonManifestId};
 
@@ -26,16 +26,13 @@ use crate::RootSkeletonManifestId;
 ///
 /// This is the same mechanism as fsnodes, see `derive_fsnode_in_batch` for
 /// more details.
-pub async fn derive_skeleton_manifests_in_batch<Mapping>(
+pub async fn derive_skeleton_manifests_in_batch(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    mapping: &Mapping,
+    mapping: &BonsaiDerivedMappingContainer<RootSkeletonManifestId>,
     batch: Vec<ChangesetId>,
     gap_size: Option<usize>,
-) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error>
-where
-    Mapping: BonsaiDerivedMapping<Value = RootSkeletonManifestId> + 'static,
-{
+) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error> {
     let linear_stacks =
         split_batch_in_linear_stacks(ctx, repo, batch, FileConflicts::ChangeDelete).await?;
     let mut res = HashMap::new();
@@ -52,7 +49,7 @@ where
                 async move {
                     match res.get(&p) {
                         Some(sk_mf_id) => Ok::<_, Error>(*sk_mf_id),
-                        None => Ok(derive_impl::derive_impl::<RootSkeletonManifestId, Mapping>(
+                        None => Ok(derive_impl::derive_impl::<RootSkeletonManifestId>(
                             ctx, repo, mapping, p,
                         )
                         .await?
@@ -113,6 +110,7 @@ mod test {
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;
     use revset::AncestorsNodeStream;
+    use std::sync::Arc;
     use tests_utils::resolve_cs_id;
 
     #[fbinit::test]
@@ -122,7 +120,12 @@ mod test {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-            let mapping = RootSkeletonManifestId::default_mapping(&ctx, &repo)?;
+            let mapping = BonsaiDerivedMappingContainer::new(
+                ctx.fb,
+                repo.name(),
+                repo.get_derived_data_config().scuba_table.as_deref(),
+                Arc::new(RootSkeletonManifestId::default_mapping(&ctx, &repo)?),
+            );
             let mut cs_ids =
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
                     .compat()

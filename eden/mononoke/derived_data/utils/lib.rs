@@ -13,6 +13,7 @@ use blame::{BlameRoot, BlameRootMapping, RootBlameV2Mapping};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
+use borrowed::borrowed;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
 use cloned::cloned;
@@ -20,10 +21,12 @@ use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
     derive_impl, BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
-    BonsaiDerivable, BonsaiDerivedMapping, DerivedDataTypesConfig, RegenerateMapping,
+    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
+    RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
+use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{
     future::{self, ready, try_join_all, BoxFuture, FutureExt},
@@ -106,7 +109,7 @@ pub fn derive_data_for_csids(
     let derivations = FuturesUnordered::new();
 
     for data_type in derived_data_types {
-        let derived_utils = derived_data_utils(repo, data_type)?;
+        let derived_utils = derived_data_utils(ctx.fb, repo, data_type)?;
 
         let mut futs = vec![];
         for csid in &csids {
@@ -182,22 +185,40 @@ pub trait DerivedUtils: Send + Sync + 'static {
 }
 
 #[derive(Clone)]
-struct DerivedUtilsFromMapping<M> {
-    mapping: RegenerateMapping<M>,
+struct DerivedUtilsFromMapping<Derivable, Mapping>
+where
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable>,
+{
+    orig_mapping: Arc<RegenerateMapping<Mapping>>,
+    mapping: BonsaiDerivedMappingContainer<Derivable>,
 }
 
-impl<M> DerivedUtilsFromMapping<M> {
-    fn new(mapping: M, repo: BlobRepo) -> Self {
-        let mapping = RegenerateMapping::new(mapping, repo);
-        Self { mapping }
+impl<Derivable, Mapping> DerivedUtilsFromMapping<Derivable, Mapping>
+where
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + 'static,
+{
+    fn new(fb: FacebookInit, mapping: Mapping, repo: BlobRepo) -> Self {
+        let orig_mapping = Arc::new(RegenerateMapping::new(mapping));
+        let mapping = BonsaiDerivedMappingContainer::new(
+            fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            orig_mapping.clone(),
+        );
+        Self {
+            orig_mapping,
+            mapping,
+        }
     }
 }
 
 #[async_trait]
-impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
+impl<Derivable, Mapping> DerivedUtils for DerivedUtilsFromMapping<Derivable, Mapping>
 where
-    M: BonsaiDerivedMapping + Clone + 'static,
-    M::Value: BonsaiDerivable + std::fmt::Debug,
+    Derivable: BonsaiDerivable + std::fmt::Debug,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + 'static,
 {
     fn derive(
         &self,
@@ -211,8 +232,7 @@ where
         // even if it was already generated (see RegenerateMapping call).
         cloned!(self.mapping);
         async move {
-            let result =
-                derive_impl::derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid).await?;
+            let result = derive_impl::derive_impl::<Derivable>(&ctx, &repo, &mapping, csid).await?;
             Ok(format!("{:?}", result))
         }
         .boxed()
@@ -237,10 +257,19 @@ where
         parallel: bool,
         gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        let orig_mapping = self.mapping.clone();
         // With InMemoryMapping we can ensure that mapping entries are written only after
         // all corresponding blobs were successfully saved
-        let in_memory_mapping = InMemoryMapping::new(self.mapping.clone(), repo.clone());
+        let in_memory_mapping_inner = Arc::new(InMemoryMapping::new(
+            self.orig_mapping.clone(),
+            repo.clone(),
+        ));
+        let in_memory_mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            None,
+            in_memory_mapping_inner.clone(),
+        );
+        let mapping = self.mapping.clone();
 
         // Use `MemWritesBlobstore` to avoid blocking on writes to underlying blobstore.
         // `::persist` is later used to bulk write all pending data.
@@ -263,11 +292,11 @@ where
 
             if parallel || gap_size.is_some() {
                 // derive the batch of derived data in parallel
-                M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size).await?;
+                Derivable::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size).await?;
             } else {
                 for csid in csids {
                     // derive each changeset sequentially
-                    derive_impl::derive_impl::<M::Value, _>(&ctx, &repo, &in_memory_mapping, csid)
+                    derive_impl::derive_impl::<Derivable>(&ctx, &repo, &in_memory_mapping, csid)
                         .await?;
                 }
             }
@@ -281,10 +310,14 @@ where
             // flush mapping
             let futs = FuturesUnordered::new();
             {
-                let buffer = in_memory_mapping.into_buffer();
+                let buffer = in_memory_mapping_inner.clone_buffer();
                 let buffer = buffer.lock().unwrap();
                 for (cs_id, value) in buffer.iter() {
-                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
+                    futs.push({
+                        cloned!(value, cs_id);
+                        borrowed!(ctx, mapping);
+                        async move { mapping.put(ctx, cs_id, &value).await }
+                    });
                 }
             }
             futs.try_for_each(|_| future::ok(())).await?;
@@ -299,7 +332,7 @@ where
         _repo: BlobRepo,
         mut csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, Error> {
-        let derived = self.mapping.get(ctx, csids.clone()).await?;
+        let derived = self.mapping.get(&ctx, csids.clone()).await?;
         csids.retain(|csid| !derived.contains_key(&csid));
         Ok(csids)
     }
@@ -310,7 +343,7 @@ where
         repo: &BlobRepo,
         csid: ChangesetId,
     ) -> Result<u64, Error> {
-        let underived = derive_impl::find_topo_sorted_underived::<M::Value, _, _>(
+        let underived = derive_impl::find_topo_sorted_underived::<Derivable, _>(
             ctx,
             repo,
             &self.mapping,
@@ -329,7 +362,7 @@ where
     ) -> Result<Option<BonsaiChangeset>, Error> {
         let mut underived_ancestors = vec![];
         for cs_id in csids {
-            underived_ancestors.push(derive_impl::find_topo_sorted_underived::<M::Value, _, _>(
+            underived_ancestors.push(derive_impl::find_topo_sorted_underived::<Derivable, _>(
                 ctx,
                 repo,
                 &self.mapping,
@@ -365,11 +398,11 @@ where
     }
 
     fn regenerate(&self, csids: &Vec<ChangesetId>) {
-        self.mapping.regenerate(csids.iter().copied())
+        self.orig_mapping.regenerate(csids.iter().copied())
     }
 
     fn name(&self) -> &'static str {
-        M::Value::NAME
+        Derivable::NAME
     }
 }
 
@@ -393,8 +426,8 @@ where
         }
     }
 
-    fn into_buffer(self) -> Arc<Mutex<HashMap<ChangesetId, M::Value>>> {
-        self.buffer
+    fn clone_buffer(&self) -> Arc<Mutex<HashMap<ChangesetId, M::Value>>> {
+        self.buffer.clone()
     }
 }
 
@@ -408,7 +441,7 @@ where
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         mut csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let mut ans = HashMap::new();
@@ -428,33 +461,24 @@ where
         Ok(ans.into_iter().chain(fetched.into_iter()).collect())
     }
 
-    async fn put_impl(
+    async fn put(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         csid: ChangesetId,
-        id: Self::Value,
+        id: &Self::Value,
     ) -> Result<(), Error> {
         let mut buffer = self.buffer.lock().unwrap();
-        buffer.insert(csid, id);
+        buffer.insert(csid, id.clone());
         Ok(())
     }
 
     fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
         self.mapping.options()
     }
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        // Don't log to scuba since the write to the real mapping hasn't
-        // actually happened
-        &None
-    }
 }
 
 pub fn derived_data_utils(
+    fb: FacebookInit,
     repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
@@ -465,10 +489,11 @@ pub fn derived_data_utils(
     } else {
         return Err(anyhow!("Derived data type {} is not configured", name));
     };
-    derived_data_utils_impl(repo, name, types_config)
+    derived_data_utils_impl(fb, repo, name, types_config)
 }
 
 pub fn derived_data_utils_for_backfill(
+    fb: FacebookInit,
     repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
@@ -484,25 +509,29 @@ pub fn derived_data_utils_for_backfill(
             name
         ));
     };
-    derived_data_utils_impl(repo, name, types_config)
+    derived_data_utils_impl(fb, repo, name, types_config)
 }
 
 fn derived_data_utils_impl(
+    fb: FacebookInit,
     repo: &BlobRepo,
     name: &str,
     config: &DerivedDataTypesConfig,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
+    let blobstore = repo.get_blobstore().boxed();
     match name {
         RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(repo, config)?;
+            let mapping = RootUnodeManifestMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         RootFastlog::NAME => {
-            let mapping = RootFastlogMapping::new(repo, config)?;
+            let mapping = RootFastlogMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
@@ -510,43 +539,49 @@ fn derived_data_utils_impl(
         MappedHgChangesetId::NAME => {
             let mapping = HgChangesetIdMapping::new(repo, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         RootFsnodeId::NAME => {
-            let mapping = RootFsnodeMapping::new(repo, config)?;
+            let mapping = RootFsnodeMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         BlameRoot::NAME => match config.blame_version {
             BlameVersion::V1 => {
-                let mapping = BlameRootMapping::new(repo, config)?;
+                let mapping = BlameRootMapping::new(blobstore, config)?;
                 Ok(Arc::new(DerivedUtilsFromMapping::new(
+                    fb,
                     mapping,
                     repo.clone(),
                 )))
             }
             BlameVersion::V2 => {
-                let mapping = RootBlameV2Mapping::new(repo, config)?;
+                let mapping = RootBlameV2Mapping::new(blobstore, config)?;
                 Ok(Arc::new(DerivedUtilsFromMapping::new(
+                    fb,
                     mapping,
                     repo.clone(),
                 )))
             }
         },
         ChangesetInfo::NAME => {
-            let mapping = ChangesetInfoMapping::new(repo, config)?;
+            let mapping = ChangesetInfoMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         RootDeletedManifestId::NAME => {
-            let mapping = RootDeletedManifestMapping::new(repo, config)?;
+            let mapping = RootDeletedManifestMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
@@ -554,20 +589,23 @@ fn derived_data_utils_impl(
         FilenodesOnlyPublic::NAME => {
             let mapping = FilenodesOnlyPublicMapping::new(repo, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         RootSkeletonManifestId::NAME => {
-            let mapping = RootSkeletonManifestMapping::new(repo, config)?;
+            let mapping = RootSkeletonManifestMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
         }
         TreeHandle::NAME => {
-            let mapping = TreeMapping::new(repo.blobstore().boxed(), config, repo.clone());
+            let mapping = TreeMapping::new(blobstore, config);
             Ok(Arc::new(DerivedUtilsFromMapping::new(
+                fb,
                 mapping,
                 repo.clone(),
             )))
@@ -1038,8 +1076,8 @@ mod tests {
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
             .await?
             .unwrap();
-        let blame_deriver = derived_data_utils(&repo, "blame")?;
-        let unodes_deriver = derived_data_utils(&repo, "unodes")?;
+        let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;
+        let unodes_deriver = derived_data_utils(ctx.fb, &repo, "unodes")?;
 
         // make sure we require all dependencies, blame depens on unodes
         let graph = build_derive_graph(
@@ -1219,9 +1257,9 @@ mod tests {
         let c = *dag.get("C").unwrap();
 
         let thin_out = ThinOut::new_keep_all();
-        let blame_deriver = derived_data_utils(&repo, "blame")?;
+        let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;
         let unodes_deriver = {
-            let deriver = derived_data_utils(&repo, "unodes")?;
+            let deriver = derived_data_utils(ctx.fb, &repo, "unodes")?;
             Arc::new(CountedDerivedUtils::new(deriver))
         };
 
@@ -1287,6 +1325,7 @@ mod tests {
 
         // Create utils for both versions of unodes.
         let utils_v1 = derived_data_utils_impl(
+            fb,
             &repo,
             "unodes",
             &DerivedDataTypesConfig {
@@ -1297,6 +1336,7 @@ mod tests {
         )?;
 
         let utils_v2 = derived_data_utils_impl(
+            fb,
             &repo,
             "unodes",
             &DerivedDataTypesConfig {

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -15,14 +16,13 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, BonsaiDerivedMapping,
-    DerivedDataTypesConfig,
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable,
+    BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
 };
-use repo_blobstore::RepoBlobstore;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
@@ -87,23 +87,18 @@ impl BonsaiDerivable for RootFsnodeId {
         Ok(RootFsnodeId(fsnode_id))
     }
 
-    async fn batch_derive_impl<BatchMapping>(
+    async fn batch_derive_impl(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
-        mapping: &BatchMapping,
+        mapping: &BonsaiDerivedMappingContainer<Self>,
         gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
+    ) -> Result<HashMap<ChangesetId, Self>, Error> {
         let derived = derive_fsnode_in_batch(ctx, repo, mapping, csids.clone(), gap_size).await?;
 
         stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
             let derived = RootFsnodeId(derived);
-            mapping
-                .put(ctx.clone(), cs_id.clone(), derived.clone())
-                .await?;
+            mapping.put(ctx, cs_id, &derived).await?;
             Ok((cs_id, derived))
         }))
         .buffered(100)
@@ -114,19 +109,15 @@ impl BonsaiDerivable for RootFsnodeId {
 
 #[derive(Clone)]
 pub struct RootFsnodeMapping {
-    blobstore: RepoBlobstore,
-    repo: BlobRepo,
+    blobstore: Arc<dyn Blobstore>,
 }
 
 #[async_trait]
 impl BlobstoreRootIdMapping for RootFsnodeMapping {
     type Value = RootFsnodeId;
 
-    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self {
-            blobstore: repo.get_blobstore(),
-            repo: repo.clone(),
-        })
+    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
+        Ok(Self { blobstore })
     }
 
     fn blobstore(&self) -> &dyn Blobstore {
@@ -138,14 +129,6 @@ impl BlobstoreRootIdMapping for RootFsnodeMapping {
     }
 
     fn options(&self) {}
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
-    }
 }
 
 impl_bonsai_derived_mapping!(RootFsnodeMapping, BlobstoreRootIdMapping, RootFsnodeId);

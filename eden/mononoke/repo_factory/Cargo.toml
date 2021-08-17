@@ -31,6 +31,7 @@ filestore = { version = "0.1.0", path = "../filestore" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
 parking_lot = "0.10.2"
 phases = { version = "0.1.0", path = "../phases" }

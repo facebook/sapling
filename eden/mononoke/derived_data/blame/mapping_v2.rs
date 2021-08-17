@@ -12,7 +12,7 @@ use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreExistsWithDataMapping, BonsaiDerivable, BonsaiDerived,
-    BonsaiDerivedMapping, DerivedDataTypesConfig,
+    BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
 use metaconfig_types::BlameVersion;
@@ -67,16 +67,13 @@ impl BonsaiDerivable for RootBlameV2 {
         })
     }
 
-    async fn batch_derive_impl<BatchMapping>(
+    async fn batch_derive_impl(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
-        mapping: &BatchMapping,
+        mapping: &BonsaiDerivedMappingContainer<Self>,
         _gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
+    ) -> Result<HashMap<ChangesetId, Self>, Error> {
         let derived = derive_blame_v2_in_batch(ctx, repo, mapping, csids.clone()).await?;
 
         stream::iter(derived.into_iter().map(|(csid, root_manifest)| async move {
@@ -84,9 +81,7 @@ impl BonsaiDerivable for RootBlameV2 {
                 csid,
                 root_manifest,
             };
-            mapping
-                .put(ctx.clone(), csid.clone(), derived.clone())
-                .await?;
+            mapping.put(ctx, csid, &derived).await?;
             Ok((csid, derived))
         }))
         .buffered(100)
@@ -99,14 +94,13 @@ impl BonsaiDerivable for RootBlameV2 {
 pub struct RootBlameV2Mapping {
     blobstore: Arc<dyn Blobstore>,
     options: BlameDeriveOptions,
-    repo: BlobRepo,
 }
 
 #[async_trait]
 impl BlobstoreExistsWithDataMapping for RootBlameV2Mapping {
     type Value = RootBlameV2;
 
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self> {
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self> {
         let filesize_limit = config
             .blame_filesize_limit
             .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
@@ -120,11 +114,7 @@ impl BlobstoreExistsWithDataMapping for RootBlameV2Mapping {
             filesize_limit,
             blame_version,
         };
-        Ok(Self {
-            blobstore: repo.get_blobstore().boxed(),
-            options,
-            repo: repo.clone(),
-        })
+        Ok(Self { blobstore, options })
     }
 
     fn blobstore(&self) -> &dyn Blobstore {
@@ -139,15 +129,7 @@ impl BlobstoreExistsWithDataMapping for RootBlameV2Mapping {
         self.options
     }
 
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
-    }
-
-    fn serialize_value(&self, value: Self::Value) -> Result<BlobstoreBytes> {
+    fn serialize_value(&self, value: &Self::Value) -> Result<BlobstoreBytes> {
         Ok(value.root_manifest.into())
     }
 

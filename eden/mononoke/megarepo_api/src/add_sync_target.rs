@@ -128,7 +128,7 @@ impl<'a> AddSyncTarget<'a> {
 
         let derivers = FuturesUnordered::new();
         for ty in derived_data_types {
-            let utils = derived_data_utils(repo.blob_repo(), ty)?;
+            let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
             derivers.push(utils.derive(ctx.clone(), repo.blob_repo().clone(), top_merge_cs_id));
         }
 

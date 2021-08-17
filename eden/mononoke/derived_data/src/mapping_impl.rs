@@ -7,10 +7,10 @@
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -32,7 +32,7 @@ pub trait BlobstoreRootIdMapping {
         + Sized;
 
     /// Create a new instance of this mapping.
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self>
     where
         Self: Sized;
 
@@ -41,12 +41,6 @@ pub trait BlobstoreRootIdMapping {
 
     /// Returns the blobstore that backs this mapping.
     fn blobstore(&self) -> &dyn Blobstore;
-
-    /// Name of the repository
-    fn repo_name(&self) -> &str;
-
-    /// Name of the scuba table used for logging
-    fn derived_data_scuba_table(&self) -> &Option<String>;
 
     /// Create a key for this mapping for a particular changeset.
     fn format_key(&self, cs_id: ChangesetId) -> String {
@@ -80,9 +74,14 @@ pub trait BlobstoreRootIdMapping {
     }
 
     /// Store a new mapping value.
-    async fn store(&self, ctx: &CoreContext, cs_id: ChangesetId, value: Self::Value) -> Result<()> {
+    async fn store(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        value: &Self::Value,
+    ) -> Result<()> {
         self.blobstore()
-            .put(ctx, self.format_key(cs_id), value.into())
+            .put(ctx, self.format_key(cs_id), value.clone().into())
             .await
     }
 
@@ -97,7 +96,7 @@ pub trait BlobstoreExistsMapping {
     type Value: BonsaiDerived + From<ChangesetId> + Send + Sync + Clone;
 
     /// Create a new instance of this mapping.
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self>
     where
         Self: Sized;
 
@@ -106,12 +105,6 @@ pub trait BlobstoreExistsMapping {
 
     /// Returns the blobstore that backs this mapping.
     fn blobstore(&self) -> &dyn Blobstore;
-
-    /// Name of the repository
-    fn repo_name(&self) -> &str;
-
-    /// Name of the scuba table used for logging
-    fn derived_data_scuba_table(&self) -> &Option<String>;
 
     /// Create a key for this mapping for a particular changeset.
     fn format_key(&self, cs_id: ChangesetId) -> String {
@@ -151,7 +144,7 @@ pub trait BlobstoreExistsMapping {
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-        _value: Self::Value,
+        _value: &Self::Value,
     ) -> Result<()> {
         self.blobstore()
             .put(ctx, self.format_key(cs_id), BlobstoreBytes::empty())
@@ -171,7 +164,7 @@ pub trait BlobstoreExistsWithDataMapping {
     type Value: BonsaiDerived + Send + Sync + Sized;
 
     /// Create a new instance of this mapping.
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
+    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self>
     where
         Self: Sized;
 
@@ -180,12 +173,6 @@ pub trait BlobstoreExistsWithDataMapping {
 
     /// Returns the blobstore that backs this mapping.
     fn blobstore(&self) -> &dyn Blobstore;
-
-    /// Name of the repository
-    fn repo_name(&self) -> &str;
-
-    /// Name of the scuba table used for logging
-    fn derived_data_scuba_table(&self) -> &Option<String>;
 
     /// Create a key for this mapping for a particular changeset.
     fn format_key(&self, cs_id: ChangesetId) -> String {
@@ -219,7 +206,12 @@ pub trait BlobstoreExistsWithDataMapping {
     }
 
     /// Store a new mapping value.
-    async fn store(&self, ctx: &CoreContext, cs_id: ChangesetId, value: Self::Value) -> Result<()> {
+    async fn store(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        value: &Self::Value,
+    ) -> Result<()> {
         self.blobstore()
             .put(ctx, self.format_key(cs_id), self.serialize_value(value)?)
             .await
@@ -229,7 +221,7 @@ pub trait BlobstoreExistsWithDataMapping {
     fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
 
     /// Serialize a value with additional data.
-    fn serialize_value(&self, value: Self::Value) -> Result<BlobstoreBytes>;
+    fn serialize_value(&self, value: &Self::Value) -> Result<BlobstoreBytes>;
 
     /// Deserialize a value with additional data.
     fn deserialize_value(&self, cs_id: ChangesetId, data: BlobstoreGetData) -> Result<Self::Value>;
@@ -264,7 +256,7 @@ macro_rules! impl_bonsai_derived_mapping {
 
             async fn get(
                 &self,
-                ctx: ::context::CoreContext,
+                ctx: &::context::CoreContext,
                 csids: ::std::vec::Vec<::mononoke_types::ChangesetId>,
             ) -> ::anyhow::Result<
                 ::std::collections::HashMap<::mononoke_types::ChangesetId, Self::Value>,
@@ -272,25 +264,17 @@ macro_rules! impl_bonsai_derived_mapping {
                 self.fetch_batch(&ctx, csids).await
             }
 
-            async fn put_impl(
+            async fn put(
                 &self,
-                ctx: ::context::CoreContext,
+                ctx: &::context::CoreContext,
                 csid: ::mononoke_types::ChangesetId,
-                id: Self::Value,
+                id: &Self::Value,
             ) -> ::anyhow::Result<()> {
                 self.store(&ctx, csid, id).await
             }
 
             fn options(&self) -> <Self::Value as $crate::BonsaiDerivable>::Options {
                 <$mapping as $mapping_impl>::options(self)
-            }
-
-            fn repo_name(&self) -> &str {
-                <$mapping as $mapping_impl>::repo_name(self)
-            }
-
-            fn derived_data_scuba_table(&self) -> &Option<String> {
-                <$mapping as $mapping_impl>::derived_data_scuba_table(self)
             }
         }
 
@@ -303,7 +287,10 @@ macro_rules! impl_bonsai_derived_mapping {
                 repo: &::blobrepo::BlobRepo,
             ) -> ::std::result::Result<Self::DefaultMapping, $crate::DeriveError> {
                 let config = $crate::derive_impl::enabled_type_config(repo, Self::NAME)?;
-                ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(repo, config)?)
+                ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(
+                    repo.get_blobstore().boxed(),
+                    config,
+                )?)
             }
         }
     };

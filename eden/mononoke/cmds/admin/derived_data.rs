@@ -210,9 +210,9 @@ async fn check_derived_data_exists(
     backfill: bool,
 ) -> Result<(), SubcommandError> {
     let derived_utils = if backfill {
-        derived_data_utils_for_backfill(&repo, derived_data_type)?
+        derived_data_utils_for_backfill(ctx.fb, &repo, derived_data_type)?
     } else {
-        derived_data_utils(&repo, derived_data_type)?
+        derived_data_utils(ctx.fb, &repo, derived_data_type)?
     };
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks
@@ -245,9 +245,9 @@ async fn count_underived(
     backfill: bool,
 ) -> Result<(), SubcommandError> {
     let derived_utils = if backfill {
-        derived_data_utils_for_backfill(&repo, derived_data_type)?
+        derived_data_utils_for_backfill(ctx.fb, &repo, derived_data_type)?
     } else {
-        derived_data_utils(&repo, derived_data_type)?
+        derived_data_utils(ctx.fb, &repo, derived_data_type)?
     };
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks

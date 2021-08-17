@@ -772,7 +772,7 @@ mod tests {
         let derived_data_types = &repo.get_derived_data_config().enabled.types;
 
         for derived_data_type in derived_data_types {
-            let derived_utils = derived_data_utils(repo, derived_data_type)?;
+            let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
             let pending = derived_utils
                 .pending(ctx.clone(), repo.clone(), cs_ids.to_vec())
                 .await?;

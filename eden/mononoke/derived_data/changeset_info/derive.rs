@@ -14,8 +14,8 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, BonsaiDerivedMapping,
-    DerivedDataTypesConfig,
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable,
+    BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -39,16 +39,13 @@ impl BonsaiDerivable for ChangesetInfo {
         Ok(ChangesetInfo::new(csid, bonsai))
     }
 
-    async fn batch_derive_impl<BatchMapping>(
+    async fn batch_derive_impl(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
-        mapping: &BatchMapping,
+        mapping: &BonsaiDerivedMappingContainer<Self>,
         _gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
+    ) -> Result<HashMap<ChangesetId, Self>, Error> {
         // Derivation with gaps doesn't make much sense for changeset info, so
         // ignore the gap size.
         let cs_infos = stream::iter(csids.into_iter().map(|csid| async move {
@@ -62,7 +59,7 @@ impl BonsaiDerivable for ChangesetInfo {
 
         stream::iter(cs_infos.iter().map(Ok))
             .try_for_each_concurrent(100, |(csid, cs_info)| async move {
-                mapping.put(ctx.clone(), *csid, cs_info.clone()).await
+                mapping.put(ctx, *csid, cs_info).await
             })
             .await?;
 
@@ -73,18 +70,14 @@ impl BonsaiDerivable for ChangesetInfo {
 #[derive(Clone)]
 pub struct ChangesetInfoMapping {
     blobstore: Arc<dyn Blobstore>,
-    repo: BlobRepo,
 }
 
 #[async_trait]
 impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     type Value = ChangesetInfo;
 
-    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self {
-            blobstore: repo.get_blobstore().boxed(),
-            repo: repo.clone(),
-        })
+    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
+        Ok(Self { blobstore })
     }
 
     fn blobstore(&self) -> &dyn Blobstore {
@@ -96,14 +89,6 @@ impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     }
 
     fn options(&self) {}
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        &self.repo.get_derived_data_config().scuba_table
-    }
 }
 
 impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping, ChangesetInfo);
@@ -166,7 +151,12 @@ mod test {
         let repo = linear::getrepo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-        let mapping = ChangesetInfo::default_mapping(&ctx, &repo)?;
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(ChangesetInfo::default_mapping(&ctx, &repo)?),
+        );
         let mut cs_ids =
             AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
                 .compat()

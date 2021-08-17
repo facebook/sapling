@@ -84,24 +84,21 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use context::{CoreContext, SessionClass};
-use futures_stats::TimedFutureExt;
-use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
-};
+use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error;
 
 pub mod batch;
 pub mod derive_impl;
 pub mod logging;
+pub mod mapping;
 pub mod mapping_impl;
 
 pub use derive_impl::enabled_type_config;
+pub use mapping::{BonsaiDerivedMapping, BonsaiDerivedMappingContainer, RegenerateMapping};
 pub use mapping_impl::{
     BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
 };
@@ -155,16 +152,13 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone + std::fmt::Deb
         options: &Self::Options,
     ) -> Result<Self, Error>;
 
-    async fn batch_derive<Mapping>(
+    async fn batch_derive(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
-        mapping: &Mapping,
+        mapping: &BonsaiDerivedMappingContainer<Self>,
         gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
+    ) -> Result<HashMap<ChangesetId, Self>, Error> {
         let ctx = &override_ctx(ctx.clone(), repo);
         Self::batch_derive_impl(ctx, repo, csids, mapping, gap_size).await
     }
@@ -174,23 +168,19 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone + std::fmt::Deb
     ///
     /// Note that the default implementation does not support gapped derivation, and will
     /// derive all items in the batch.
-    async fn batch_derive_impl<Mapping>(
+    async fn batch_derive_impl(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
-        mapping: &Mapping,
+        mapping: &BonsaiDerivedMappingContainer<Self>,
         _gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
+    ) -> Result<HashMap<ChangesetId, Self>, Error> {
         let mut res = HashMap::new();
         // The default implementation must derive sequentially with no
         // parallelism or concurrency, as dependencies between changesets may
         // cause O(n^2) derivations.
         for csid in csids {
-            let derived =
-                derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid).await?;
+            let derived = derive_impl::derive_impl::<Self>(ctx, repo, mapping, csid).await?;
             res.insert(csid, derived);
         }
         Ok(res)
@@ -226,8 +216,13 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
         repo: &BlobRepo,
         csid: ChangesetId,
     ) -> Result<Self, DeriveError> {
-        let mapping = Self::default_mapping(&ctx, &repo)?;
-        derive_impl::derive_impl::<Self, Self::DefaultMapping>(ctx, repo, &mapping, csid).await
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(Self::default_mapping(ctx, repo)?),
+        );
+        derive_impl::derive_impl::<Self>(ctx, repo, &mapping, csid).await
     }
 
     /// Fetch the derived data in cases where we might not want to trigger derivation, e.g. when scrubbing.
@@ -236,8 +231,13 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
         repo: &BlobRepo,
         csid: &ChangesetId,
     ) -> Result<Option<Self>, Error> {
-        let mapping = Self::default_mapping(ctx, repo)?;
-        derive_impl::fetch_derived::<Self, Self::DefaultMapping>(ctx, csid, &mapping).await
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(Self::default_mapping(ctx, repo)?),
+        );
+        derive_impl::fetch_derived::<Self>(ctx, csid, &mapping).await
     }
 
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
@@ -249,8 +249,13 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
         csid: &ChangesetId,
         limit: u64,
     ) -> Result<u64, DeriveError> {
-        let mapping = Self::default_mapping(&ctx, &repo)?;
-        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::DefaultMapping, _>(
+        let mapping = BonsaiDerivedMappingContainer::new(
+            ctx.fb,
+            repo.name(),
+            repo.get_derived_data_config().scuba_table.as_deref(),
+            Arc::new(Self::default_mapping(ctx, repo)?),
+        );
+        let underived = derive_impl::find_topo_sorted_underived::<Self, _>(
             ctx,
             repo,
             &mapping,
@@ -280,115 +285,5 @@ pub fn override_ctx(mut ctx: CoreContext, repo: &BlobRepo) -> CoreContext {
         ctx
     } else {
         ctx
-    }
-}
-
-/// After derived data was generated then it will be stored in BonsaiDerivedMapping, which is
-/// normally a persistent store. This is used to avoid regenerating the same derived data over
-/// and over again.
-#[async_trait]
-#[auto_impl(Arc)]
-pub trait BonsaiDerivedMapping: Send + Sync + Clone {
-    type Value: BonsaiDerivable;
-
-    /// Fetches mapping from bonsai changeset ids to generated value
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error>;
-
-    /// Saves mapping between bonsai changeset and derived data id
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
-        let mut scuba = logging::init_derived_data_scuba::<Self::Value>(
-            &ctx,
-            self.repo_name(),
-            self.derived_data_scuba_table(),
-            &csid,
-        );
-        let (stats, res) = self.put_impl(ctx.clone(), csid, id.clone()).timed().await;
-        logging::log_mapping_insertion::<Self::Value>(&ctx, &mut scuba, &stats, &res, &id);
-
-        res
-    }
-
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
-        csid: ChangesetId,
-        id: Self::Value,
-    ) -> Result<(), Error>;
-
-    /// Get the derivation options that apply for this mapping.
-    fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
-
-    fn repo_name(&self) -> &str;
-
-    fn derived_data_scuba_table(&self) -> &Option<String>;
-}
-
-/// This mapping can be used when we want to ignore values before it was put
-/// again for some specific set of commits. It is useful when we want either
-/// re-backfill derived data or investigate performance problems.
-#[derive(Clone)]
-pub struct RegenerateMapping<M> {
-    regenerate: Arc<Mutex<HashSet<ChangesetId>>>,
-    base: M,
-    repo: BlobRepo,
-}
-
-impl<M> RegenerateMapping<M> {
-    pub fn new(base: M, repo: BlobRepo) -> Self {
-        Self {
-            regenerate: Default::default(),
-            base,
-            repo,
-        }
-    }
-
-    pub fn regenerate<I: IntoIterator<Item = ChangesetId>>(&self, csids: I) {
-        self.regenerate.with(|regenerate| regenerate.extend(csids))
-    }
-}
-
-#[async_trait]
-impl<M> BonsaiDerivedMapping for RegenerateMapping<M>
-where
-    M: BonsaiDerivedMapping,
-{
-    type Value = M::Value;
-
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        mut csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        self.regenerate
-            .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
-        self.base.get(ctx, csids).await
-    }
-
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
-        csid: ChangesetId,
-        id: Self::Value,
-    ) -> Result<(), Error> {
-        self.regenerate.with(|regenerate| regenerate.remove(&csid));
-        self.base.put(ctx, csid, id).await
-    }
-
-    fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
-        self.base.options()
-    }
-
-    fn repo_name(&self) -> &str {
-        self.repo.name()
-    }
-
-    fn derived_data_scuba_table(&self) -> &Option<String> {
-        // Don't log to scuba when using  "RegenerateMapping" scuba table
-        // It will be logged when putting into `base` mapping
-        &None
     }
 }

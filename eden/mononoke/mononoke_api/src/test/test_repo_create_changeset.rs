@@ -154,7 +154,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
         }
-        let utils = derived_data_utils(repo, ty)?;
+        let utils = derived_data_utils(ctx.fb, repo, ty)?;
         let not_derived = utils
             .pending(ctx.clone(), repo.clone(), vec![parent_cs_id, cs_id])
             .await?;
