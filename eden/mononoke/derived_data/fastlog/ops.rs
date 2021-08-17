@@ -22,8 +22,10 @@ use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
+use mutable_renames::MutableRenames;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
@@ -101,6 +103,7 @@ pub async fn list_file_history(
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
+    mutable_renames: Arc<MutableRenames>,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
     let mut top_history = vec![];
     // get unode entry
@@ -152,7 +155,7 @@ pub async fn list_file_history(
                 },
                 // unfold
                 move |state| {
-                    cloned!(ctx, repo, path);
+                    cloned!(ctx, mutable_renames, repo, path);
                     async move {
                         do_history_unfold(
                             ctx.clone(),
@@ -160,6 +163,7 @@ pub async fn list_file_history(
                             path.clone(),
                             state,
                             history_across_deletions,
+                            &mutable_renames,
                         )
                         .await
                     }
@@ -344,6 +348,7 @@ async fn do_history_unfold<V>(
     path: Option<MPath>,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
+    mutable_renames: &MutableRenames,
 ) -> Result<Option<(Vec<ChangesetId>, TraversalState<V>)>, Error>
 where
     V: Visitor,
@@ -383,6 +388,7 @@ where
                         &path,
                         history_across_deletions,
                         &mut history_graph,
+                        &mutable_renames,
                     )
                     .await?
                 } else {
@@ -445,6 +451,7 @@ async fn try_continue_traversal_when_no_parents(
     path: &Option<MPath>,
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
+    mutable_renames: &MutableRenames,
 ) -> Result<Vec<ChangesetId>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
         let (stats, deletion_nodes) = find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
@@ -457,6 +464,17 @@ async fn try_continue_traversal_when_no_parents(
             process_deletion_nodes(&ctx, &repo, history_graph, deletion_nodes).await?;
         if !deleted_nodes.is_empty() {
             return Ok(deleted_nodes);
+        }
+    }
+
+    if tunables::tunables()
+        .get_by_repo_fastlog_use_mutable_renames(repo.name())
+        .unwrap_or(false)
+    {
+        // TODO(stash): mutable_renames also store unode, which can be used to speed up
+        // traversal
+        if let Some(rename) = mutable_renames.get_rename(ctx, cs_id, path.clone()).await? {
+            return Ok(vec![rename.src_cs_id()]);
         }
     }
 
@@ -609,13 +627,28 @@ mod test {
     use crate::mapping::RootFastlog;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::future::TryFutureExt;
+    use futures::future::{FutureExt, TryFutureExt};
+    use maplit::hashmap;
+    use mutable_renames::MutableRenameEntry;
     use tests_utils::CreateCommitContext;
+    use tunables::with_tunables_async;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepoWithMutableRenames {
+        #[delegate()]
+        pub blob_repo: BlobRepo,
+
+        #[facet]
+        pub mutable_renames: MutableRenames,
+    }
 
     #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
         // generate couple of hundreds linear file changes and list history
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -647,6 +680,7 @@ mod test {
             top,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -685,7 +719,9 @@ mod test {
         //           A
         //
 
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -718,6 +754,7 @@ mod test {
             top,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -755,7 +792,9 @@ mod test {
         //           o
         //
 
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -781,6 +820,7 @@ mod test {
             prev_id,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -813,7 +853,9 @@ mod test {
         //        |   |
         //        o   o
         //
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -853,6 +895,7 @@ mod test {
             top.clone(),
             NothingVisitor {},
             HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -881,6 +924,7 @@ mod test {
             top,
             SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
+            mutable_renames,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -898,7 +942,9 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
@@ -935,7 +981,7 @@ mod test {
             .await?;
 
         let history = |cs_id, path| {
-            cloned!(ctx, repo);
+            cloned!(ctx, mutable_renames, repo);
             async move {
                 let history_stream = list_file_history(
                     ctx.clone(),
@@ -944,6 +990,7 @@ mod test {
                     cs_id,
                     (),
                     HistoryAcrossDeletions::Track,
+                    mutable_renames,
                 )
                 .await?;
                 history_stream.try_collect::<Vec<_>>().await
@@ -986,7 +1033,9 @@ mod test {
         //     |
         //     A
         //
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let a = CreateCommitContext::new_root(&ctx, &repo)
@@ -1062,7 +1111,7 @@ mod test {
             .await?;
 
         let history = |cs_id, path| {
-            cloned!(ctx, repo);
+            cloned!(ctx, mutable_renames, repo);
             async move {
                 let history_stream = list_file_history(
                     ctx.clone(),
@@ -1071,6 +1120,7 @@ mod test {
                     cs_id,
                     (),
                     HistoryAcrossDeletions::Track,
+                    mutable_renames,
                 )
                 .await?;
                 history_stream.try_collect::<Vec<_>>().await
@@ -1110,7 +1160,9 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
@@ -1139,6 +1191,7 @@ mod test {
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
         )
         .await?;
         let expected = expected.into_iter().rev().collect::<Vec<_>>();
@@ -1153,6 +1206,7 @@ mod test {
             bcs_id,
             (),
             HistoryAcrossDeletions::DontTrack,
+            mutable_renames,
         )
         .await?;
         let actual = history_stream.try_collect::<Vec<_>>().await?;
@@ -1163,7 +1217,9 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
@@ -1216,6 +1272,7 @@ mod test {
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
         )
         .await?;
         let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
@@ -1231,12 +1288,111 @@ mod test {
             merge,
             (),
             HistoryAcrossDeletions::Track,
+            mutable_renames,
         )
         .await?;
         expected.remove(0);
 
         let actual = history_stream.try_collect::<Vec<_>>().await?;
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_list_history_with_mutable_renames(fb: FacebookInit) -> Result<(), Error> {
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
+        let ctx = CoreContext::test_mock(fb);
+
+        let src_filename = "dir/1";
+        let dst_filename = "dir2/2";
+
+        let first_bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(src_filename, "content1")
+            .commit()
+            .await?;
+        let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
+            .delete_file(src_filename)
+            .add_file(dst_filename, "content1")
+            .commit()
+            .await?;
+
+        //    0 <- removes "dir/1", adds "dir2/2"
+        //    |
+        //    0  <- creates "dir/1"
+
+        // No mutable renames - just a single commit is returned
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(dst_filename)?,
+            second_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, vec![second_bcs_id]);
+
+        // Set mutable rename
+        let src_unode =
+            derive_unode_entry(&ctx, &repo, first_bcs_id, &MPath::new_opt(src_filename)?)
+                .await?
+                .ok_or_else(|| format_err!("not found source unode id"))?;
+
+        mutable_renames
+            .add_or_overwrite_renames(
+                &ctx,
+                vec![MutableRenameEntry::new(
+                    second_bcs_id,
+                    MPath::new_opt(dst_filename)?,
+                    first_bcs_id,
+                    MPath::new_opt(src_filename)?,
+                    src_unode,
+                )?],
+            )
+            .await?;
+
+        // Tunable is not enabled, so result is the same
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(dst_filename)?,
+            second_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, vec![second_bcs_id]);
+
+        // Now enable the tunable
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(dst_filename)?,
+            second_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames,
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>();
+        let tunables = tunables::MononokeTunables::default();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().clone() => hashmap! {
+                "fastlog_use_mutable_renames".to_string() => true,
+            },
+        });
+        let actual = with_tunables_async(tunables, actual.boxed()).await?;
+
+        assert_eq!(actual, vec![second_bcs_id, first_bcs_id]);
         Ok(())
     }
 

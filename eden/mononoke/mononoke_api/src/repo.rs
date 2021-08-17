@@ -450,6 +450,10 @@ impl Repo {
         &self.x_repo_sync_lease
     }
 
+    pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
+        &self.inner.mutable_renames
+    }
+
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         match self.config.source_control_service_monitoring.as_ref() {
             None => {}
@@ -793,6 +797,10 @@ impl RepoContext {
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
         self.repo.config()
+    }
+
+    pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
+        &self.repo.mutable_renames()
     }
 
     pub fn derive_changeset_info_enabled(&self) -> bool {

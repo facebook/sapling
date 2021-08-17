@@ -196,6 +196,8 @@ pub struct MononokeTunables {
     // multiplexed blobstore is_present/get new semantics rollout
     multiplex_blobstore_get_do_queue_lookup: AtomicBool,
     multiplex_blobstore_is_present_do_queue_lookup: AtomicBool,
+
+    fastlog_use_mutable_renames: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

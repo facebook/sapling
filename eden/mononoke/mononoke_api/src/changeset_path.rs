@@ -568,6 +568,7 @@ impl ChangesetPathHistoryContext {
                 skiplist_index: self.repo().skiplist_index().clone(),
             },
             history_across_deletions,
+            self.repo().mutable_renames().clone(),
         )
         .await
         .map_err(|error| match error {
