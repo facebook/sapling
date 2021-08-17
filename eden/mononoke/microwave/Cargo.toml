@@ -18,7 +18,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 microwave_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 
 [patch.crates-io]

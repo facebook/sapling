@@ -16,7 +16,7 @@ megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_confi
 observability = { version = "0.1.0", path = "../../observability" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 

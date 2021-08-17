@@ -20,7 +20,7 @@ openssl = "0.10.35"
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

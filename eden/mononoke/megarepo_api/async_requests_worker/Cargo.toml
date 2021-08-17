@@ -23,7 +23,7 @@ megarepo_types_thrift = { version = "0.1.0", path = "../if" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 

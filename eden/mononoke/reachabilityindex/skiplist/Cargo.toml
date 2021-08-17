@@ -25,7 +25,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = ".." }
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 skiplist_thrift = { version = "0.1.0", path = "../if" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 

@@ -36,7 +36,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.5", features = ["max_level_trace"] }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 unodes = { version = "0.1.0", path = "../unodes" }
