@@ -130,7 +130,7 @@ async fn create_unode_manifest(
             }
         }
     }
-    if unode_version == UnodeVersion::V2 && tree_info.parents.len() > 1 {
+    if can_reuse(unode_version) && tree_info.parents.len() > 1 {
         if let Some(mf_unode_id) =
             reuse_manifest_parent(&ctx, &blobstore, &tree_info.parents, &subentries).await?
         {
@@ -174,7 +174,7 @@ async fn create_unode_file(
         unode_version: UnodeVersion,
     ) -> BoxFuture<'static, Result<FileUnodeId, Error>> {
         async move {
-            if unode_version == UnodeVersion::V2 && parents.len() > 1 {
+            if can_reuse(unode_version) && parents.len() > 1 {
                 if let Some(parent) =
                     reuse_file_parent(&ctx, &blobstore, &parents, &content_id, file_type).await?
                 {
@@ -313,6 +313,10 @@ async fn create_unode_file(
 //
 // In that case it would be ideal to preserve that "file.txt" was modified in both commits.
 // But we consider this case is rare enough to not worry about it.
+
+fn can_reuse(unode_version: UnodeVersion) -> bool {
+    unode_version == UnodeVersion::V2 || tunables::tunables().get_force_unode_v2()
+}
 
 async fn reuse_manifest_parent(
     ctx: &CoreContext,

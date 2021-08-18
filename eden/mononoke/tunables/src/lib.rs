@@ -200,6 +200,8 @@ pub struct MononokeTunables {
     fastlog_use_mutable_renames: TunableBoolByRepo,
     megarepo_api_dont_set_file_mutable_renames: AtomicBool,
     megarepo_api_dont_set_directory_mutable_renames: AtomicBool,
+
+    force_unode_v2: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
