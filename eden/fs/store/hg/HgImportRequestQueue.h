@@ -62,14 +62,13 @@ class HgImportRequestQueue {
         auto* treeImport =
             foundImport->getRequest<HgImportRequest::TreeImport>();
         promises = &treeImport->promises;
-      } else if constexpr (std::is_same_v<T, Blob>) {
+      } else {
+        static_assert(
+            std::is_same_v<T, Blob>,
+            "markImportAsFinished can only be called with Tree or Blob types");
         auto* blobImport =
             foundImport->getRequest<HgImportRequest::BlobImport>();
         promises = &blobImport->promises;
-      } else {
-        // function called with unsupported type
-        throw std::logic_error(
-            "Attempting to call markImportAsFinished with unsupported type");
       }
 
       if (importTry.hasValue()) {
@@ -109,16 +108,15 @@ class HgImportRequestQueue {
         treeImport->promises.emplace_back(std::move(promise));
         realRequest = treeImport->realRequest;
         promises = &treeImport->promises;
-      } else if constexpr (std::is_same_v<T, Blob>) {
+      } else {
+        static_assert(
+            std::is_same_v<T, Blob>,
+            "checkImportInProgress can only be called with a Tree or Blob types");
         auto* blobImport =
             import->second->getRequest<HgImportRequest::BlobImport>();
         blobImport->promises.emplace_back(std::move(promise));
         realRequest = blobImport->realRequest;
         promises = &blobImport->promises;
-      } else {
-        // function called with unsupported type
-        throw std::logic_error(
-            "Attempting to call checkImportInProgress with unsupported type");
       }
 
       // This should always be valid since we insert a dummy request when we see
@@ -148,15 +146,14 @@ class HgImportRequestQueue {
             HgImportRequest::TreeImport{kEmptySha1, id, true, false},
             priority,
             folly::Promise<HgImportRequest::TreeImport::Response>{});
-      } else if constexpr (std::is_same_v<T, Blob>) {
+      } else {
+        static_assert(
+            std::is_same_v<T, Blob>,
+            "checkImportInProgress can only be called with a Tree or Blob types");
         state->requestTracker[id] = std::make_shared<HgImportRequest>(
             HgImportRequest::BlobImport{kEmptySha1, id, false},
             priority,
             folly::Promise<HgImportRequest::BlobImport::Response>{});
-      } else {
-        // function called with unsupported type
-        throw std::logic_error(
-            "Attempting to call checkImportInProgress with unsupported type");
       }
 
       return std::nullopt;
