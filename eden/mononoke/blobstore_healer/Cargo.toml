@@ -30,7 +30,7 @@ lazy_static = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 rand = { version = "0.7", features = ["small_rng"] }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 tokio = { version = "1.7.1", features = ["full", "test-util"] }

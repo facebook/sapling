@@ -8,7 +8,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.4.2"
 
 [patch.crates-io]

@@ -27,7 +27,7 @@ reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_read_write_status" }
 reverse_filler_queue = { version = "0.1.0", path = "../reverse_filler_queue" }
-slog = { version = "2.5", features = ["max_level_trace"] }
+slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 streaming_clone = { version = "0.1.0", path = "../streaming_clone" }
