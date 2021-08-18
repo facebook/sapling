@@ -701,25 +701,6 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
       });
 }
 
-SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
-    const Hash& id,
-    HgProxyHash proxyHash,
-    ObjectFetchContext& /*context*/) {
-  folly::stop_watch<std::chrono::milliseconds> watch;
-  if (auto result = getBlobFromHgCache(id, proxyHash)) {
-    stats_->getHgBackingStoreStatsForCurrentThread()
-        .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-    return folly::makeSemiFuture(std::move(result));
-  }
-
-  return fetchBlobFromHgImporter(std::move(proxyHash))
-      .deferValue([stats = stats_, watch](auto&& blob) {
-        stats->getHgBackingStoreStatsForCurrentThread()
-            .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-        return std::forward<decltype(blob)>(blob);
-      });
-}
-
 SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
     std::vector<HgProxyHash> proxyHashes,
     ObjectFetchContext& /*context*/) {

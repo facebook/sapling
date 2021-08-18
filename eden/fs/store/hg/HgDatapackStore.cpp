@@ -112,18 +112,6 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
   return nullptr;
 }
 
-std::unique_ptr<Blob> HgDatapackStore::getBlobRemote(
-    const Hash& id,
-    const HgProxyHash& hgInfo) {
-  auto content = store_.getBlob(
-      hgInfo.path().stringPiece(), hgInfo.revHash().getBytes(), false);
-  if (content) {
-    return std::make_unique<Blob>(id, *content);
-  }
-
-  return nullptr;
-}
-
 void HgDatapackStore::getBlobBatch(
     const std::vector<Hash>& ids,
     const std::vector<HgProxyHash>& hashes,

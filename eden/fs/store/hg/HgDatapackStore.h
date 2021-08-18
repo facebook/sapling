@@ -28,12 +28,6 @@ class HgDatapackStore {
   // Imports a blob for given hash from local store
   std::unique_ptr<Blob> getBlobLocal(const Hash& id, const HgProxyHash& hgInfo);
 
-  // Imports a blob for given hash from remote store when it does not exist
-  // locally.
-  std::unique_ptr<Blob> getBlobRemote(
-      const Hash& id,
-      const HgProxyHash& hgInfo);
-
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
    * length. Promises passed in will be resolved if a blob is successfully
