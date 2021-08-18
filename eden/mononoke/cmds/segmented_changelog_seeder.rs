@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use clap::Arg;
-use futures::compat::Future01CompatExt;
 use slog::info;
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
@@ -127,8 +126,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let head_arg = matches
         .value_of(HEAD_ARG)
         .unwrap_or(&config.segmented_changelog_config.master_bookmark);
-    let head = helpers::csid_resolve(ctx.clone(), repo.clone(), head_arg)
-        .compat()
+    let head = helpers::csid_resolve(&ctx, repo.clone(), head_arg)
         .await
         .with_context(|| format!("resolving head csid for '{}'", head_arg))?;
     info!(ctx.logger(), "using '{}' for head", head);

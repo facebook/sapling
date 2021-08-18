@@ -10,7 +10,6 @@ use blobrepo::BlobRepo;
 use clap::ArgMatches;
 use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
-use futures_old::{Future, IntoFuture};
 use mononoke_types::ChangesetId;
 
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -20,17 +19,16 @@ use crate::reporting::SCUBA_TABLE;
 
 const DEFAULT_SLEEP_SECS: u64 = 10;
 
-pub fn get_starting_commit<'a>(
-    ctx: CoreContext,
+pub async fn get_starting_commit<'a>(
+    ctx: &CoreContext,
     matches: &ArgMatches<'a>,
     blobrepo: BlobRepo,
-) -> impl Future<Item = ChangesetId, Error = Error> {
-    matches
+) -> Result<ChangesetId, Error> {
+    let str_value = matches
         .value_of(ARG_COMMIT)
         .ok_or_else(|| format_err!("{} argument is required", ARG_COMMIT))
-        .map(|s| s.to_owned())
-        .into_future()
-        .and_then(move |str_value| helpers::csid_resolve(ctx, blobrepo, str_value))
+        .map(|s| s.to_owned())?;
+    helpers::csid_resolve(&ctx, &blobrepo, str_value).await
 }
 
 pub fn get_scuba_sample<'a>(

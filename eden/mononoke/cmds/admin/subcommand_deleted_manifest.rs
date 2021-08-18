@@ -21,10 +21,7 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future, StreamExt, TryStreamExt,
-};
+use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
 use manifest::{get_implicit_deletes, PathOrPrefix};
 use mononoke_types::{ChangesetId, DeletedManifestId, MPath};
 use revset::AncestorsNodeStream;
@@ -98,9 +95,7 @@ pub async fn subcommand_deleted_manifest<'a>(
                 "" => None,
                 p => MPath::new(p).map(Some)?,
             };
-            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_manifest(ctx, repo, cs_id, path).await?;
             Ok(())
         }
@@ -111,9 +106,7 @@ pub async fn subcommand_deleted_manifest<'a>(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
-            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_verify(ctx, repo, cs_id, limit).await?;
             Ok(())
         }

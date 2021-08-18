@@ -19,7 +19,6 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join_all, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -276,9 +275,7 @@ async fn get_ctx_blobrepo_cs_id<'a>(
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 
-    let cs_id = helpers::csid_resolve(ctx.clone(), blobrepo.clone(), rev.to_string())
-        .compat()
-        .await?;
+    let cs_id = helpers::csid_resolve(&ctx, blobrepo.clone(), rev.to_string()).await?;
     let hg_cs_id = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
@@ -525,9 +522,7 @@ async fn check_if_content_is_reachable_from_bookmark(
         ctx.logger(),
         "Checking if redacted content exist in '{}' bookmark...", main_bookmark
     );
-    let csid = helpers::csid_resolve(ctx.clone(), blobrepo.clone(), main_bookmark)
-        .compat()
-        .await?;
+    let csid = helpers::csid_resolve(&ctx, blobrepo, main_bookmark).await?;
     let hg_cs_id = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), csid)
         .await?;

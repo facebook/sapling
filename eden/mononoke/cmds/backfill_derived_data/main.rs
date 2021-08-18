@@ -35,7 +35,6 @@ use derived_data_utils::{
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join, try_join_all, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -587,9 +586,8 @@ async fn run_subcmd<'a>(
                     ));
                 }
             };
-            let csid = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let csid =
+                helpers::csid_resolve(&ctx, repo.blob_repo.clone(), hash_or_bookmark).await?;
             subcommand_single(&ctx, &repo, csid, types).await
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),

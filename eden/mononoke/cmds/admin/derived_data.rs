@@ -22,7 +22,6 @@ use derived_data_utils::{
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join_all, FutureExt as PreviewFutureExt},
     stream, StreamExt, TryStreamExt,
 };
@@ -217,7 +216,7 @@ async fn check_derived_data_exists(
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks
         .into_iter()
-        .map(|hash_or_bm| csid_resolve(ctx.clone(), repo.clone(), hash_or_bm).compat())
+        .map(|hash_or_bm| csid_resolve(&ctx, repo.clone(), hash_or_bm))
         .collect();
 
     let cs_ids = try_join_all(cs_id_futs).await?;
@@ -252,7 +251,7 @@ async fn count_underived(
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks
         .into_iter()
-        .map(|hash_or_bm| csid_resolve(ctx.clone(), repo.clone(), hash_or_bm).compat())
+        .map(|hash_or_bm| csid_resolve(&ctx, repo.clone(), hash_or_bm))
         .collect();
 
     let cs_ids = try_join_all(cs_id_futs).await?;
@@ -283,9 +282,7 @@ async fn verify_manifests(
     hash_or_bookmark: String,
     fetch_derived: bool,
 ) -> Result<(), SubcommandError> {
-    let cs_id = csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-        .compat()
-        .await?;
+    let cs_id = csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
     let mut manifests = HashSet::new();
     let mut futs = vec![];
     for ty in derived_data_types {

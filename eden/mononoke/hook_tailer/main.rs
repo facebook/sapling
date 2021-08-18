@@ -20,7 +20,6 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
@@ -60,7 +59,7 @@ async fn get_changesets<'a>(
 
     let ret = ids
         .into_iter()
-        .map(|cs| csid_resolve(ctx.clone(), repo.clone(), cs).compat())
+        .map(|cs| csid_resolve(&ctx, repo, cs))
         .collect::<FuturesUnordered<_>>()
         .try_collect()
         .await?;

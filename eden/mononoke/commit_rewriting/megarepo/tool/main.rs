@@ -106,9 +106,7 @@ async fn run_move<'a>(
     )
     .await?;
 
-    let parent_bcs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), move_parent)
-        .compat()
-        .await?;
+    let parent_bcs_id = helpers::csid_resolve(&ctx, &repo, move_parent).await?;
 
     if let Some(max_num_of_moves_in_commit) = max_num_of_moves_in_commit {
         perform_stack_move(
@@ -155,10 +153,9 @@ async fn run_merge<'a>(
     )
     .await?;
 
-    let first_parent_fut = helpers::csid_resolve(ctx.clone(), repo.clone(), first_parent);
-    let second_parent_fut = helpers::csid_resolve(ctx.clone(), repo.clone(), second_parent);
-    let (first_parent, second_parent) =
-        try_join(first_parent_fut.compat(), second_parent_fut.compat()).await?;
+    let first_parent_fut = helpers::csid_resolve(&ctx, &repo, first_parent);
+    let second_parent_fut = helpers::csid_resolve(&ctx, &repo, second_parent);
+    let (first_parent, second_parent) = try_join(first_parent_fut, second_parent_fut).await?;
 
     info!(ctx.logger(), "Creating a merge commit");
     perform_merge(
@@ -196,13 +193,8 @@ async fn run_sync_diamond_merge<'a>(
     let (source_repo, target_repo): (InnerRepo, BlobRepo) =
         try_join(source_repo, target_repo).await?;
 
-    let source_merge_cs_id = helpers::csid_resolve(
-        ctx.clone(),
-        source_repo.blob_repo.clone(),
-        merge_commit_hash,
-    )
-    .compat()
-    .await?;
+    let source_merge_cs_id =
+        helpers::csid_resolve(&ctx, &source_repo.blob_repo, merge_commit_hash).await?;
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
@@ -256,17 +248,13 @@ async fn run_pre_merge_delete<'a>(
 
     let parent_bcs_id = {
         let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
-            .compat()
-            .await?
+        helpers::csid_resolve(&ctx, &repo, hash).await?
     };
 
     let base_bcs_id = {
         match sub_m.value_of(BASE_COMMIT_HASH) {
             Some(hash) => {
-                let bcs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
-                    .compat()
-                    .await?;
+                let bcs_id = helpers::csid_resolve(&ctx, &repo, hash).await?;
                 Some(bcs_id)
             }
             None => None,
@@ -315,9 +303,7 @@ async fn run_gradual_delete<'a>(
 
     let parent_bcs_id = {
         let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
-            .compat()
-            .await?
+        helpers::csid_resolve(&ctx, &repo, hash).await?
     };
 
     let path_prefixes: Vec<_> = sub_m
@@ -366,15 +352,11 @@ async fn run_bonsai_merge<'a>(
     let (p1, p2) = try_join(
         async {
             let p1 = sub_m.value_of(BONSAI_MERGE_P1).unwrap().to_owned();
-            helpers::csid_resolve(ctx.clone(), repo.clone(), p1)
-                .compat()
-                .await
+            helpers::csid_resolve(&ctx, &repo, p1).await
         },
         async {
             let p2 = sub_m.value_of(BONSAI_MERGE_P2).unwrap().to_owned();
-            helpers::csid_resolve(ctx.clone(), repo.clone(), p2)
-                .compat()
-                .await
+            helpers::csid_resolve(&ctx, &repo, p2).await
         },
     )
     .await?;
@@ -411,10 +393,8 @@ async fn run_gradual_merge<'a>(
     let limit = args::get_usize_opt(sub_m, LIMIT);
     let (_, repo_config) =
         args::get_config_by_repoid(config_store, &matches, repo.blob_repo.get_repoid())?;
-    let last_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), last_deletion_commit).compat();
-    let pre_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), pre_deletion_commit).compat();
+    let last_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, last_deletion_commit);
+    let pre_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, pre_deletion_commit);
 
     let (last_deletion_commit, pre_deletion_commit) =
         try_join(last_deletion_commit, pre_deletion_commit).await?;
@@ -450,10 +430,8 @@ async fn run_gradual_merge_progress<'a>(
         .value_of(COMMIT_BOOKMARK)
         .ok_or(format_err!("bookmark where to merge is not specified"))?;
 
-    let last_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), last_deletion_commit).compat();
-    let pre_deletion_commit =
-        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), pre_deletion_commit).compat();
+    let last_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, last_deletion_commit);
+    let pre_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, pre_deletion_commit);
 
     let (last_deletion_commit, pre_deletion_commit) =
         try_join(last_deletion_commit, pre_deletion_commit).await?;
@@ -480,29 +458,28 @@ async fn run_manual_commit_sync<'a>(
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
 
     let target_repo = commit_syncer.get_target_repo();
-    let target_repo_parents =
-        if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
-            None
-        } else {
-            let target_repo_parents = sub_m.values_of(PARENTS);
-            match target_repo_parents {
-                Some(target_repo_parents) => Some(
-                    try_join_all(target_repo_parents.into_iter().map(|p| {
-                        helpers::csid_resolve(ctx.clone(), target_repo.clone(), p).compat()
-                    }))
-                    .await?,
-                ),
-                None => Some(vec![]),
-            }
-        };
+    let target_repo_parents = if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
+        None
+    } else {
+        let target_repo_parents = sub_m.values_of(PARENTS);
+        match target_repo_parents {
+            Some(target_repo_parents) => Some(
+                try_join_all(
+                    target_repo_parents
+                        .into_iter()
+                        .map(|p| helpers::csid_resolve(&ctx, target_repo, p)),
+                )
+                .await?,
+            ),
+            None => Some(vec![]),
+        }
+    };
 
     let source_cs = sub_m
         .value_of(CHANGESET)
         .ok_or_else(|| format_err!("{} not set", CHANGESET))?;
     let source_repo = commit_syncer.get_source_repo();
-    let source_cs_id = helpers::csid_resolve(ctx.clone(), source_repo.clone(), source_cs)
-        .compat()
-        .await?;
+    let source_cs_id = helpers::csid_resolve(&ctx, source_repo, source_cs).await?;
 
     let mapping_version_name = sub_m
         .value_of(MAPPING_VERSION_NAME)
@@ -536,13 +513,12 @@ async fn run_check_push_redirection_prereqs<'a>(
         source_repo.name()
     );
     let source_cs_id = helpers::csid_resolve(
-        ctx.clone(),
-        source_repo.clone(),
+        &ctx,
+        source_repo,
         sub_m
             .value_of(SOURCE_CHANGESET)
             .ok_or_else(|| format_err!("{} not set", SOURCE_CHANGESET))?,
     )
-    .compat()
     .await?;
 
     info!(
@@ -551,13 +527,12 @@ async fn run_check_push_redirection_prereqs<'a>(
         target_repo.name()
     );
     let target_cs_id = helpers::csid_resolve(
-        ctx.clone(),
-        target_repo.clone(),
+        &ctx,
+        target_repo,
         sub_m
             .value_of(TARGET_CHANGESET)
             .ok_or_else(|| format_err!("{} not set", TARGET_CHANGESET))?,
     )
-    .compat()
     .await?;
 
     let version = CommitSyncConfigVersion(
@@ -606,9 +581,7 @@ async fn run_catchup_delete_head<'a>(
     let to_merge_cs_id = sub_m
         .value_of(TO_MERGE_CS_ID)
         .ok_or_else(|| format_err!("{} not set", TO_MERGE_CS_ID))?;
-    let to_merge_cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), to_merge_cs_id)
-        .compat()
-        .await?;
+    let to_merge_cs_id = helpers::csid_resolve(&ctx, &repo, to_merge_cs_id).await?;
 
     let path_regex = sub_m
         .value_of(PATH_REGEX)
@@ -667,9 +640,9 @@ async fn run_catchup_validate<'a>(
     let to_merge_cs_id = sub_m
         .value_of(TO_MERGE_CS_ID)
         .ok_or_else(|| format_err!("{} not set", TO_MERGE_CS_ID))?;
-    let result_commit = helpers::csid_resolve(ctx.clone(), repo.clone(), result_commit).compat();
+    let result_commit = helpers::csid_resolve(&ctx, &repo, result_commit);
 
-    let to_merge_cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), to_merge_cs_id).compat();
+    let to_merge_cs_id = helpers::csid_resolve(&ctx, &repo, to_merge_cs_id);
 
     let (result_commit, to_merge_cs_id) = try_join(result_commit, to_merge_cs_id).await?;
 
@@ -706,9 +679,7 @@ async fn run_mark_not_synced<'a>(
     let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok(move |line| async move {
-            let cs_id = helpers::csid_resolve(ctx.clone(), large_repo.clone(), line)
-                .compat()
-                .await?;
+            let cs_id = helpers::csid_resolve(&ctx, large_repo, line).await?;
             let mappings = mapping
                 .get(
                     ctx.clone(),
@@ -788,11 +759,9 @@ async fn run_backfill_noop_mapping<'a>(
         .map_ok({
             borrowed!(ctx, mapping_version_name);
             move |cs_id| async move {
-                let small_cs_id =
-                    helpers::csid_resolve(ctx.clone(), small_repo.clone(), cs_id.clone()).compat();
+                let small_cs_id = helpers::csid_resolve(&ctx, small_repo, cs_id.clone());
 
-                let large_cs_id =
-                    helpers::csid_resolve(ctx.clone(), large_repo.clone(), cs_id).compat();
+                let large_cs_id = helpers::csid_resolve(&ctx, large_repo, cs_id);
 
                 let (small_cs_id, large_cs_id) = try_join(small_cs_id, large_cs_id).await?;
 
@@ -1015,13 +984,8 @@ async fn run_sync_commit_and_ancestors<'a>(
         .value_of(COMMIT_HASH)
         .ok_or_else(|| format_err!("{} not specified", COMMIT_HASH))?;
 
-    let source_cs_id = helpers::csid_resolve(
-        ctx.clone(),
-        commit_syncer.get_source_repo().clone(),
-        source_commit_hash,
-    )
-    .compat()
-    .await?;
+    let source_cs_id =
+        helpers::csid_resolve(&ctx, commit_syncer.get_source_repo(), source_commit_hash).await?;
 
     let (unsynced_ancestors, _) =
         find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, source_cs_id).await?;

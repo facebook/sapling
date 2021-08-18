@@ -17,7 +17,7 @@ use cmdlib::{
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, stream::StreamExt};
+use futures::stream::StreamExt;
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use fsnodes::RootFsnodeId;
@@ -58,9 +58,7 @@ pub async fn subcommand_fsnodes<'a>(
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = matches.value_of(ARG_PATH).map(MPath::new).transpose()?;
 
-            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_tree(&ctx, &repo, csid, path).await?;
             Ok(())
         }

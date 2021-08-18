@@ -133,9 +133,7 @@ pub async fn subcommand_crossrepo<'a>(
             let large_hash = {
                 let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
                 let large_repo = commit_syncer.get_large_repo();
-                helpers::csid_resolve(ctx.clone(), large_repo.clone(), large_hash)
-                    .compat()
-                    .await?
+                helpers::csid_resolve(&ctx, large_repo, large_hash).await?
             };
 
             validation::verify_working_copy_fast_path(
@@ -613,10 +611,7 @@ async fn run_insert_subcommand<'a>(
             let large_repo_hash = sub_m
                 .value_of(LARGE_REPO_HASH_ARG)
                 .ok_or_else(|| anyhow!("{} is not specified", LARGE_REPO_HASH_ARG))?;
-            let large_repo_cs_id =
-                helpers::csid_resolve(ctx.clone(), large_repo.clone(), large_repo_hash)
-                    .compat()
-                    .await?;
+            let large_repo_cs_id = helpers::csid_resolve(&ctx, large_repo, large_repo_hash).await?;
 
             let small_repo_id = commit_syncer.get_small_repo().get_repoid();
             let large_repo_id = commit_syncer.get_large_repo().get_repoid();
@@ -675,9 +670,7 @@ async fn get_source_target_cs_ids_and_version(
         let hash = sub_m
             .value_of(arg)
             .ok_or_else(|| anyhow!("{} is not specified", arg))?;
-        helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
-            .compat()
-            .await
+        helpers::csid_resolve(&ctx, repo, hash).await
     }
 
     let source_cs_id = fetch_cs_id(ctx, sub_m, commit_syncer.get_source_repo(), SOURCE_HASH_ARG);
@@ -997,9 +990,7 @@ async fn subcommand_map(
     hash: String,
 ) -> Result<(), SubcommandError> {
     let source_repo = commit_syncer.get_source_repo();
-    let source_cs_id = helpers::csid_resolve(ctx.clone(), source_repo.clone(), &hash)
-        .compat()
-        .await?;
+    let source_cs_id = helpers::csid_resolve(&ctx, source_repo, &hash).await?;
 
     let plural_commit_sync_outcome = commit_syncer
         .get_plural_commit_sync_outcome(&ctx, source_cs_id)
@@ -1521,9 +1512,7 @@ mod test {
         let another_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
         set_bookmark(fb, small_repo.clone(), another_hash, master.clone()).await;
         let another_bcs_id =
-            helpers::csid_resolve(ctx.clone(), small_repo.clone(), another_hash.to_string())
-                .compat()
-                .await?;
+            helpers::csid_resolve(&ctx, small_repo, another_hash.to_string()).await?;
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
 

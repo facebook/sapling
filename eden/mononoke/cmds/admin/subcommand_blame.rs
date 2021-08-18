@@ -23,7 +23,6 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join, try_join_all},
     Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -138,9 +137,7 @@ pub async fn subcommand_blame<'a>(
             let print_errors = matches.is_present(ARG_PRINT_ERRORS);
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let repo: BlobRepo = args::open_repo(fb, &logger, toplevel_matches).await?;
-            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
 
             let derived_unode = RootUnodeManifestId::derive(&ctx, &repo, cs_id)
                 .map_err(Error::from)
@@ -190,9 +187,7 @@ where
 {
     let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
     let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
-    let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-        .compat()
-        .await?;
+    let csid = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
     fun(ctx, repo, csid, path).await?;
     Ok(())
 }

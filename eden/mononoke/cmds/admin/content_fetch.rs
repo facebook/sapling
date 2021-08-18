@@ -16,7 +16,6 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use manifest::{Entry, Manifest, ManifestOps};
 use mercurial_types::{HgFileNodeId, HgManifestId, MPath};
 use mononoke_types::FileType;
@@ -99,9 +98,7 @@ async fn fetch_entry(
 ) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>, Error> {
     let mpath = MPath::new(path)?;
 
-    let bcs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string())
-        .compat()
-        .await?;
+    let bcs_id = helpers::csid_resolve(&ctx, repo.clone(), rev.to_string()).await?;
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
         .await?;

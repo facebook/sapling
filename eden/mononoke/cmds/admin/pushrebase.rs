@@ -11,7 +11,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, TryFutureExt};
+use futures::TryFutureExt;
 
 use cmdlib::{
     args::{self, MononokeMatches},
@@ -61,9 +61,7 @@ pub async fn subcommand_pushrebase<'a>(
         .value_of(ARG_CSID)
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
 
-    let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id)
-        .compat()
-        .await?;
+    let cs_id = helpers::csid_resolve(&ctx, &repo, cs_id).await?;
 
     let bookmark = sub_matches
         .value_of(ARG_BOOKMARK)

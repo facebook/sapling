@@ -150,9 +150,7 @@ async fn handle_filenodes_at_revision(
     paths: Vec<MPath>,
     log_envelope: bool,
 ) -> Result<(), Error> {
-    let cs_id = helpers::csid_resolve(ctx.clone(), blobrepo.clone(), revision.to_string())
-        .compat()
-        .await?;
+    let cs_id = helpers::csid_resolve(&ctx, &blobrepo, revision.to_string()).await?;
     let cs_id = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
@@ -255,9 +253,7 @@ pub async fn subcommand_filenodes<'a>(
             let rev = matches.value_of(ARG_REVISION).unwrap().to_string();
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-            let mf_id = helpers::get_root_manifest_id(ctx.clone(), repo.clone(), rev)
-                .compat()
-                .await?;
+            let mf_id = helpers::get_root_manifest_id(&ctx, repo.clone(), rev).await?;
             mf_id
                 .list_all_entries(ctx.clone(), repo.get_blobstore())
                 .map_ok(move |(path, entry)| {

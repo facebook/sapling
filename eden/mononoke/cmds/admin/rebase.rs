@@ -9,7 +9,7 @@ use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::try_join};
+use futures::future::try_join;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use cmdlib::{
@@ -92,8 +92,8 @@ pub async fn subcommand_rebase<'a>(
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_DEST))?;
 
     let (cs_id, dest) = try_join(
-        helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id).compat(),
-        helpers::csid_resolve(ctx.clone(), repo.clone(), dest).compat(),
+        helpers::csid_resolve(&ctx, &repo, cs_id),
+        helpers::csid_resolve(&ctx, &repo, dest),
     )
     .await?;
 

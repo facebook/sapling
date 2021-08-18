@@ -8,13 +8,11 @@
 use std::{fs, future::Future, io, path::Path, str::FromStr, time::Duration};
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
-    FutureExt, TryFutureExt,
+    TryFutureExt,
 };
-use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
 use slog::{error, info, Logger};
 use tokio::runtime::{Handle, Runtime};
@@ -28,10 +26,12 @@ use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::{BookmarkName, BookmarksRef};
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use mononoke_types::ChangesetId;
+use repo_identity::RepoIdentityRef;
 use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
@@ -69,72 +69,61 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
     Ok(())
 }
 
-/// Resovle changeset id by either bookmark name, hg hash, or changset id hash
-pub fn csid_resolve(
-    ctx: CoreContext,
-    repo: BlobRepo,
+/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
+pub async fn csid_resolve(
+    ctx: &CoreContext,
+    container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
     hash_or_bookmark: impl ToString,
-) -> impl OldFuture<Item = ChangesetId, Error = Error> {
-    let hash_or_bookmark = hash_or_bookmark.to_string();
-    BookmarkName::new(hash_or_bookmark.clone())
-        .into_future()
-        .and_then({
-            cloned!(repo, ctx);
-            move |name| repo.get_bonsai_bookmark(ctx, &name).compat()
-        })
-        .and_then(|csid| csid.ok_or(Error::msg("invalid bookmark")))
-        .or_else({
-            cloned!(ctx, repo, hash_or_bookmark);
-            move |_| {
-                HgChangesetId::from_str(&hash_or_bookmark)
-                    .into_future()
-                    .and_then(move |hg_csid| {
-                        async move { repo.get_bonsai_from_hg(ctx, hg_csid).await }
-                            .boxed()
-                            .compat()
-                    })
-                    .and_then(|csid| csid.ok_or(Error::msg("invalid hg changeset")))
-            }
-        })
-        .or_else({
-            cloned!(hash_or_bookmark);
-            move |_| ChangesetId::from_str(&hash_or_bookmark)
-        })
-        .inspect(move |csid| {
-            info!(ctx.logger(), "changeset resolved as: {:?}", csid);
-        })
-        .map_err(move |_| {
-            format_err!(
-                "invalid (hash|bookmark) or does not exist in this repository: {}",
-                hash_or_bookmark
-            )
-        })
+) -> Result<ChangesetId, Error> {
+    let res = csid_resolve_impl(ctx, container, hash_or_bookmark).await;
+    if let Ok(csid) = &res {
+        info!(ctx.logger(), "changeset resolved as: {:?}", csid);
+    }
+    res
 }
 
-pub fn get_root_manifest_id(
-    ctx: CoreContext,
+/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
+async fn csid_resolve_impl(
+    ctx: &CoreContext,
+    container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    hash_or_bookmark: impl ToString,
+) -> Result<ChangesetId, Error> {
+    let hash_or_bookmark = hash_or_bookmark.to_string();
+    if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {
+        if let Some(cs_id) = container.bookmarks().get(ctx.clone(), &name).await? {
+            return Ok(cs_id);
+        }
+    }
+    if let Ok(hg_id) = HgChangesetId::from_str(&hash_or_bookmark) {
+        if let Some(cs_id) = container
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, container.repo_identity().id(), hg_id)
+            .await?
+        {
+            return Ok(cs_id);
+        }
+    }
+    if let Ok(cs_id) = ChangesetId::from_str(&hash_or_bookmark) {
+        return Ok(cs_id);
+    }
+    bail!(
+        "invalid (hash|bookmark) or does not exist in this repository: {}",
+        hash_or_bookmark
+    )
+}
+
+pub async fn get_root_manifest_id(
+    ctx: &CoreContext,
     repo: BlobRepo,
     hash_or_bookmark: impl ToString,
-) -> impl OldFuture<Item = HgManifestId, Error = Error> {
-    csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark).and_then(move |bcs_id| {
-        {
-            cloned!(repo, ctx);
-            async move { repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await }
-                .boxed()
-                .compat()
-        }
-        .and_then({
-            cloned!(ctx, repo);
-            move |cs_id| {
-                cloned!(ctx, repo);
-                async move { cs_id.load(&ctx, repo.blobstore()).await }
-                    .boxed()
-                    .compat()
-                    .from_err()
-            }
-        })
-        .map(|cs| cs.manifestid())
-    })
+) -> Result<HgManifestId, Error> {
+    let cs_id = csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
+    Ok(repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .await?
+        .load(&ctx, repo.blobstore())
+        .await?
+        .manifestid())
 }
 
 /// Get a tokio `Runtime` with potentially explicitly set number of core threads

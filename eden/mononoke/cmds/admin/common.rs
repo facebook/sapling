@@ -12,8 +12,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::try_join;
 use futures::TryStreamExt;
-use futures::{compat::Future01CompatExt, try_join};
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, FileChange, Timestamp};
@@ -29,9 +29,7 @@ pub async fn fetch_bonsai_changeset(
     rev: &str,
     repo: &BlobRepo,
 ) -> Result<BonsaiChangeset, Error> {
-    let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string())
-        .compat()
-        .await?;
+    let csid = helpers::csid_resolve(&ctx, repo, rev.to_string()).await?;
     let cs = csid.load(&ctx, repo.blobstore()).await?;
     Ok(cs)
 }

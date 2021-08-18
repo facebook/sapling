@@ -427,9 +427,7 @@ async fn run<'a>(
                 .value_of(ARG_TARGET_BOOKMARK)
                 .map(BookmarkName::new)
                 .transpose()?;
-            let bcs = get_starting_commit(ctx.clone(), &sub_m, source_repo.blob_repo.clone())
-                .compat()
-                .await?;
+            let bcs = get_starting_commit(&ctx, &sub_m, source_repo.blob_repo.clone()).await?;
 
             run_in_single_commit_mode(
                 &ctx,

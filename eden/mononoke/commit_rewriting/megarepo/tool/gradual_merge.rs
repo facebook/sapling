@@ -12,10 +12,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    TryStreamExt,
-};
+use futures::{compat::Stream01CompatExt, TryStreamExt};
 use maplit::hashset;
 use megarepolib::common::{
     create_and_save_bonsai, ChangesetArgs, ChangesetArgsFactory, StackPosition,
@@ -219,9 +216,7 @@ async fn find_unmerged_commits(
     };
 
     let bookmark_value =
-        helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), bookmark_to_merge_into)
-            .compat()
-            .await?;
+        helpers::csid_resolve(&ctx, &repo.blob_repo, bookmark_to_merge_into).await?;
 
     // Let's check if any commits has been merged already - to do that it's enough
     // to check if the first commit has been merged or not i.e. check if this commit
@@ -302,9 +297,7 @@ async fn push_merge_commit(
     pushrebase_flags: &PushrebaseFlags,
 ) -> Result<ChangesetId, Error> {
     info!(ctx.logger(), "Preparing to merge {}", cs_id_to_merge);
-    let bookmark_value = helpers::csid_resolve(ctx.clone(), repo.clone(), bookmark_to_merge_into)
-        .compat()
-        .await?;
+    let bookmark_value = helpers::csid_resolve(&ctx, repo, bookmark_to_merge_into).await?;
 
     let merge_cs_id = create_and_save_bonsai(
         &ctx,
@@ -394,9 +387,7 @@ mod test {
         assert_eq!(commits_to_merge, unmerged_commits);
 
         // Now merge a single commit into "head"
-        let head_value = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), head.clone())
-            .compat()
-            .await?;
+        let head_value = helpers::csid_resolve(&ctx, &repo.blob_repo, head.clone()).await?;
 
         let merge = CreateCommitContext::new(
             &ctx,
@@ -416,9 +407,7 @@ mod test {
         assert_eq!(expected, unmerged_commits);
 
         // Merge next commit into head
-        let head_value = helpers::csid_resolve(ctx.clone(), repo.blob_repo.clone(), head.clone())
-            .compat()
-            .await?;
+        let head_value = helpers::csid_resolve(&ctx, &repo.blob_repo, head.clone()).await?;
 
         let merge = CreateCommitContext::new(
             &ctx,

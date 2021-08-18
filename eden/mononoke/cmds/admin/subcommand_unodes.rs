@@ -19,10 +19,7 @@ use cmdlib::{
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    StreamExt, TryStreamExt,
-};
+use futures::{compat::Stream01CompatExt, StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use mononoke_types::{ChangesetId, MPath};
@@ -90,9 +87,7 @@ pub async fn subcommand_unodes<'a>(
         (COMMAND_TREE, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = path_resolve(matches.value_of(ARG_PATH).unwrap())?;
-            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_tree(&ctx, repo, csid, path)
                 .await
                 .map_err(SubcommandError::Error)
@@ -104,9 +99,7 @@ pub async fn subcommand_unodes<'a>(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
-            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .compat()
-                .await?;
+            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_verify(&ctx, repo, csid, limit)
                 .await
                 .map_err(SubcommandError::Error)
