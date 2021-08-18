@@ -155,6 +155,10 @@ class HgQueuedBackingStore final : public BackingStore {
     return *backingStore_;
   }
 
+  folly::StringPiece getRepoName() {
+    return backingStore_->getRepoName();
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;

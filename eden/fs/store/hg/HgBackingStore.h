@@ -154,6 +154,10 @@ class HgBackingStore {
     return *metadataImporter_;
   }
 
+  folly::StringPiece getRepoName() {
+    return repoName_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;

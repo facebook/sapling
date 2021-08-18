@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <optional>
-#include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 #include <fb303/ServiceData.h>
@@ -1540,11 +1539,6 @@ EdenServiceHandler::future_predictiveGlobFiles(
 #ifdef __linux__
   // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
   // of getTopUsedDirs won't be taken into account
-  auto numResults = params->predictiveGlob_ref().has_value()
-      ? *params->predictiveGlob_ref()->numTopDirectories_ref()
-      : server_->getServerState()
-            ->getEdenConfig()
-            ->predictivePrefetchProfileSize.getValue();
   auto& mountPoint = *params->mountPoint_ref();
   auto& includeDotfiles = *params->includeDotfiles_ref();
   auto& prefetchFiles = *params->prefetchFiles_ref();
@@ -1554,13 +1548,58 @@ EdenServiceHandler::future_predictiveGlobFiles(
   auto& prefetchMetadata = *params->prefetchMetadata_ref();
   auto& searchRoot = *params->searchRoot_ref();
   auto& background = *params->background_ref();
+  /* set predictive glob fetch parameters */
+  // if numResults is not specified, use default predictivePrefetchProfileSize
+  auto numResults = server_->getServerState()
+                        ->getEdenConfig()
+                        ->predictivePrefetchProfileSize.getValue();
+  // if user is not specified, get user info from the server state
+  auto user = folly::StringPiece{
+      server_->getServerState()->getUserInfo().getUsername()};
+  // if repo is not specified, get repository name from the hgBackingStore
+  auto hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+      server_->getMount(resolveCanonicalPath(mountPoint))
+          ->getObjectStore()
+          ->getBackingStore());
+  if (!hgBackingStore) {
+    throw std::runtime_error("Mount must use hg backing store.");
+  }
+  auto repo = hgBackingStore->getRepoName();
+  // currently, predictiveGlobFiles is only supported on Linux
+  // TODO: infer default OS from current OS
+  folly::StringPiece os = "Linux";
+  // sandcastleAlias, startTime, and endTime are optional parameters
+  std::optional<std::string> sandcastleAlias;
+  std::optional<uint64_t> startTime;
+  std::optional<uint64_t> endTime;
+  // check if this is a sandcastle job (getenv will return nullptr if the env
+  // variable is not set)
+  auto scAliasEnv = std::getenv("SANDCASTLE_ALIAS");
+  sandcastleAlias = scAliasEnv ? std::make_optional(std::string(scAliasEnv))
+                               : sandcastleAlias;
+  ;
+  // check specified predictive parameters
+  const auto& predictiveGlob = params->predictiveGlob_ref();
+  if (predictiveGlob.has_value()) {
+    numResults = predictiveGlob->numTopDirectories_ref().value_or(numResults);
+    user = predictiveGlob->user_ref().has_value()
+        ? predictiveGlob->user_ref().value()
+        : user;
+    repo = predictiveGlob->repo_ref().has_value()
+        ? predictiveGlob->repo_ref().value()
+        : repo;
+    os = predictiveGlob->os_ref().has_value() ? predictiveGlob->os_ref().value()
+                                              : os;
+    startTime = predictiveGlob->startTime_ref().has_value()
+        ? predictiveGlob->startTime_ref().value()
+        : startTime;
+    endTime = predictiveGlob->endTime_ref().has_value()
+        ? predictiveGlob->endTime_ref().value()
+        : endTime;
+  }
   return spServiceEndpoint_
       ->getTopUsedDirs(
-          folly::StringPiece{
-              server_->getServerState()->getUserInfo().getUsername()},
-          folly::StringPiece{server_->getMount(resolveCanonicalPath(mountPoint))
-                                 ->getRepoName()},
-          numResults)
+          user, repo, numResults, os, startTime, endTime, sandcastleAlias)
       .thenValue([&, func = __func__, pid = getAndRegisterClientPid(), this](
                      std::vector<std::string>&& globs) {
         return _globFiles(
