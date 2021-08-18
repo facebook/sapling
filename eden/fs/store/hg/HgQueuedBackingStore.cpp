@@ -142,6 +142,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
         continue;
       }
 
+      // The blobs were either not found locally, or, when EdenAPI is enabled,
+      // not found on the server. Let's import the blob through the hg importer.
+      // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
       futures.emplace_back(
           backingStore_->fetchBlobFromHgImporter(*proxyHash)
               .defer([request = std::move(*request), watch, stats = stats_](
@@ -207,6 +210,10 @@ void HgQueuedBackingStore::processTreeImportRequests(
         continue;
       }
 
+      // The trees were either not found locally, or, when EdenAPI is enabled,
+      // not found on the server. Let's import the trees through the hg
+      // importer.
+      // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
       auto* treeImport = (*request)->getRequest<HgImportRequest::TreeImport>();
 
       (*promise)->setWith(
