@@ -409,6 +409,9 @@ def check_mount(
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
 ) -> None:
+    if sys.platform == "win32":
+        check_mount_overlay_type(tracker, checkout)
+
     if checkout.state is None:
         # This checkout is configured but not currently running.
         tracker.add_problem(CheckoutNotMounted(checkout))
@@ -454,6 +457,14 @@ def check_mount(
                 "unknown state {checkout.state}"
             )
         )
+
+
+def check_mount_overlay_type(
+    tracker: ProblemTracker, checkout_info: CheckoutInfo
+) -> None:
+    config = checkout_info.get_checkout().get_config()
+    if not config.enable_tree_overlay:
+        tracker.add_problem(CheckoutLegacyOverlayType(checkout_info))
 
 
 def check_running_mount(
@@ -514,6 +525,18 @@ the on-disk state in Eden's configuration file:
         remediation = """\
 Running `eden restart` will cause Eden to restart and use the data from the
 on-disk configuration."""
+        super().__init__(msg, remediation)
+
+
+class CheckoutLegacyOverlayType(Problem):
+    def __init__(self, checkout_info: CheckoutInfo) -> None:
+        msg = f"""\
+Your checkout '{checkout_info.path}' is still using the legacy version of
+overlay which will be deprecated soon.
+"""
+        remediation = f"""\
+Please reclone your repository. You can do so by running `fbclone <repo_type>
+{checkout_info.path} --eden --reclone` or do it manually."""
         super().__init__(msg, remediation)
 
 
