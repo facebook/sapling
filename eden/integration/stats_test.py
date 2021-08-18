@@ -101,7 +101,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def test_get_blob(self) -> None:
-        TEMPLATE = "object_store.get_blob.{}_store.rate"
+        TEMPLATE = "object_store.get_blob.{}_store.count"
         LOCAL = TEMPLATE.format("local")
         BACKING = TEMPLATE.format("backing")
 
