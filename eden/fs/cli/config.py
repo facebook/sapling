@@ -710,7 +710,11 @@ Do you want to run `eden mount %s` instead?"""
             # On Windows, the mount point contains ProjectedFS placeholder and
             # files, remove all of them.
 
-            shutil.rmtree(path, ignore_errors=True)
+            # Embedded Python somehow cannot handle long path on Windows even if
+            # it is enabled in the system. Prepending `\\?\` will let Windows
+            # API to handle long path.
+            windows_prefix = b"\\\\?\\"
+            shutil.rmtree(windows_prefix + os.fsencode(path), ignore_errors=True)
             if not path.exists():
                 return
 
@@ -722,15 +726,34 @@ Do you want to run `eden mount %s` instead?"""
             def collect_errors(_f, path, ex):
                 errors.append((path, ex[1]))
 
-            shutil.rmtree(path, onerror=collect_errors)
+            shutil.rmtree(windows_prefix + os.fsencode(path), onerror=collect_errors)
             if not path.exists():
                 return
 
             print(f"Removing {path} failed, the following files couldn't be removed:")
             for f in errors:
-                print(f"{f[0]}")
+                print(os.fsdecode(f[0].strip(windows_prefix)))
 
-            raise errors[0][1]
+            print(
+                f"""
+At this point your EdenFS mount is destoryed, but EdenFS is having
+trouble cleaning up leftovers. You will need to manually remove {path}.
+"""
+            )
+
+            error = errors[0][1]
+
+            if isinstance(error, OSError) and error.winerror == 32:
+                print(
+                    f"""\
+It looks like {path} is still in use by another process. If you need help to
+figure out which process, please try `handle.exe` from sysinternals:
+
+  handle.exe {path}
+"""
+                )
+
+            raise error
 
     def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """
