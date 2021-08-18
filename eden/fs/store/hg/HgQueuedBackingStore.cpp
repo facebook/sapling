@@ -346,6 +346,13 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
+  return getBlobImpl(id, context, true);
+}
+
+folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
+    const Hash& id,
+    ObjectFetchContext& context,
+    bool checkForLocalPresence) {
   HgProxyHash proxyHash;
   try {
     proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob");
@@ -358,9 +365,11 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
   logBackingStoreFetch(
       context, proxyHash, ObjectFetchContext::ObjectType::Blob);
 
-  if (auto blob =
-          backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
-    return folly::makeSemiFuture(std::move(blob));
+  if (checkForLocalPresence) {
+    if (auto blob =
+            backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
+      return folly::makeSemiFuture(std::move(blob));
+    }
   }
 
   // Check if we're already making this request.
@@ -412,7 +421,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     std::vector<folly::SemiFuture<std::unique_ptr<Blob>>> futures;
     futures.reserve(ids.size());
     for (auto id : ids) {
-      futures.emplace_back(getBlob(id, context));
+      futures.emplace_back(getBlobImpl(id, context, false));
     }
     return folly::collectAll(futures).deferValue([](const auto& tries) {
       for (const auto& t : tries) {
