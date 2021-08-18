@@ -47,7 +47,8 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -132,7 +133,8 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
     let sync_target_config =
         test.configs_storage
             .get_config_by_version(ctx.clone(), target.clone(), version.clone())?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
@@ -170,7 +172,8 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
         alt_target.clone(),
         alt_version.clone(),
     )?;
-    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
+    let add_sync_target =
+        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
     add_sync_target
         .run(
             &ctx,
