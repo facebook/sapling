@@ -86,7 +86,9 @@ RelativePathPiece ScsProxyHash::path() const {
   XDCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
   StringPiece data{value_.data(), value_.size()};
   data.advance(Hash::RAW_SIZE + sizeof(uint32_t));
-  return RelativePathPiece{data};
+  // value_ was built with a known good RelativePath, thus we don't need to
+  // recheck it when deserializing.
+  return RelativePathPiece{data, detail::SkipPathSanityCheck{}};
 }
 
 } // namespace facebook::eden
