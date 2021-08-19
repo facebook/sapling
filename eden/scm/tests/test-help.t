@@ -350,6 +350,8 @@ Test extension help:
        phabdiff      (no help text available)
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
+       preventpremegarepoupdateshook
+                     (no help text available)
        pullcreatemarkers
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
@@ -1350,22 +1352,23 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
-   debugcommitmessage  (no help text available)
-   debugnetwork        test network connections to the server
-   debugshell          a python shell with repo, changelog & manifest objects
+   debugcommitmessage            (no help text available)
+   debugnetwork                  test network connections to the server
+   debugshell                    a python shell with repo, changelog & manifest
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugcommitmessage  (no help text available)
-   debugnetwork        test network connections to the server
-   debugshell          a python shell with repo, changelog & manifest objects
+   debugcommitmessage            (no help text available)
+   debugnetwork                  test network connections to the server
+   debugshell                    a python shell with repo, changelog & manifest
   Extension Commands:
   $ hg help -c -k dates |egrep '^(Topics|Extensions|Commands):'
   Commands:
   $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'
   Extensions:
   $ hg help -e -c -k date |egrep '^(Topics|Extensions|Commands):'
+  Extensions:
   Commands:
   $ hg help -c commit > /dev/null
   $ hg help -e -c commit > /dev/null
