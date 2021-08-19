@@ -76,11 +76,12 @@ class FuseChannelTest : public ::testing::Test {
         std::move(testDispatcher),
         &straceLogger,
         std::make_shared<ProcessNameCache>(),
+        /*fsEventLogger=*/nullptr,
         std::chrono::seconds(60),
-        nullptr,
+        /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,
-        true,
-        12));
+        /*requireUtf8Path=*/true,
+        /*maximumBackgroundRequests=*/12));
   }
 
   FuseChannel::StopFuture performInit(

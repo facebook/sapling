@@ -1381,6 +1381,7 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       EdenDispatcherFactory::makeFuseDispatcher(mount),
       &mount->getStraceLogger(),
       mount->getServerState()->getProcessNameCache(),
+      mount->getServerState()->getFsEventLogger(),
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifications(),

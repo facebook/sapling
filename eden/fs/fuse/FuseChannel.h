@@ -41,6 +41,7 @@ struct Unit;
 namespace facebook::eden {
 
 class Notifications;
+class FsEventLogger;
 class FuseRequestContext;
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
@@ -205,6 +206,7 @@ class FuseChannel {
   struct OutstandingRequest {
     uint64_t unique;
     FuseTraceEvent::RequestHeader request;
+    std::chrono::steady_clock::time_point requestStartTime;
   };
 
   /**
@@ -225,6 +227,7 @@ class FuseChannel {
       std::unique_ptr<FuseDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
       CaseSensitivity caseSensitive,

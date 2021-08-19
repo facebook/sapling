@@ -27,6 +27,7 @@ class Clock;
 class EdenConfig;
 class FaultInjector;
 class IHiveLogger;
+class FsEventLogger;
 class ProcessNameCache;
 class StructuredLogger;
 class TopLevelIgnores;
@@ -155,6 +156,15 @@ class ServerState {
     return hiveLogger_.get();
   }
 
+  /**
+   * Returns a pointer to the FsEventLogger for logging FS event samples, if the
+   * platform supports it. Otherwise, returns nullptr. The caller is responsible
+   * for null checking.
+   */
+  std::shared_ptr<FsEventLogger> getFsEventLogger() const {
+    return fsEventLogger_;
+  }
+
   FaultInjector& getFaultInjector() {
     return *faultInjector_;
   }
@@ -182,6 +192,7 @@ class ServerState {
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       systemIgnoreFileMonitor_;
   Notifications notifications_;
+  std::shared_ptr<FsEventLogger> fsEventLogger_;
 };
 } // namespace eden
 } // namespace facebook

@@ -16,10 +16,12 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
+#include <chrono>
 #include <type_traits>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
+#include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/Synchronized.h"
@@ -234,8 +236,14 @@ struct HandlerEntry {
       Handler h,
       FuseArgRenderer r,
       ChannelThreadStats::StatPtr s,
-      AccessType at = AccessType::FsChannelOther)
-      : name{n}, handler{h}, argRenderer{r}, stat{s}, accessType{at} {}
+      AccessType at = AccessType::FsChannelOther,
+      SamplingGroup samplingGroup = SamplingGroup::DropAll)
+      : name{n},
+        handler{h},
+        argRenderer{r},
+        stat{s},
+        samplingGroup{samplingGroup},
+        accessType{at} {}
 
   std::string getShortName() const {
     if (name.startsWith("FUSE_")) {
@@ -260,6 +268,7 @@ struct HandlerEntry {
   Handler handler = nullptr;
   FuseArgRenderer argRenderer = nullptr;
   ChannelThreadStats::StatPtr stat = nullptr;
+  SamplingGroup samplingGroup = SamplingGroup::DropAll;
   AccessType accessType = AccessType::FsChannelOther;
 };
 
@@ -351,13 +360,15 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseRead,
       &argrender::read,
       &ChannelThreadStats::read,
-      Read};
+      Read,
+      SamplingGroup::Three};
   handlers[FUSE_WRITE] = {
       "FUSE_WRITE",
       &FuseChannel::fuseWrite,
       &argrender::write,
       &ChannelThreadStats::write,
-      Write};
+      Write,
+      SamplingGroup::Four};
   handlers[FUSE_STATFS] = {
       "FUSE_STATFS",
       &FuseChannel::fuseStatFs,
@@ -415,7 +426,8 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseReadDir,
       &argrender::readdir,
       &ChannelThreadStats::readdir,
-      Read};
+      Read,
+      SamplingGroup::Two};
   handlers[FUSE_RELEASEDIR] = {
       "FUSE_RELEASEDIR",
       &FuseChannel::fuseReleaseDir,
@@ -588,6 +600,11 @@ iovec make_iovec(const T& t) {
   iov.iov_base = const_cast<T*>(&t);
   iov.iov_len = sizeof(t);
   return iov;
+}
+
+SamplingGroup fuseOpcodeSamplingGroup(uint32_t opcode) {
+  auto* entry = lookupFuseHandlerEntry(opcode);
+  return entry ? entry->samplingGroup : SamplingGroup::DropAll;
 }
 
 } // namespace
@@ -779,6 +796,7 @@ FuseChannel::FuseChannel(
     std::unique_ptr<FuseDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration requestTimeout,
     Notifications* notifications,
     CaseSensitivity caseSensitive,
@@ -804,20 +822,43 @@ FuseChannel::FuseChannel(
   installSignalHandler();
 
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
-      "FuseChannel request tracking", [this](const FuseTraceEvent& event) {
+      "FuseChannel request tracking",
+      [this,
+       fsEventLogger = std::move(fsEventLogger)](const FuseTraceEvent& event) {
         switch (event.getType()) {
           case FuseTraceEvent::START: {
             auto state = telemetryState_.wlock();
             auto [iter, inserted] = state->requests.emplace(
                 event.getUnique(),
-                OutstandingRequest{event.getUnique(), event.getRequest()});
+                OutstandingRequest{
+                    event.getUnique(),
+                    event.getRequest(),
+                    event.monotonicTime});
             XCHECK(inserted) << "duplicate fuse start event";
             break;
           }
           case FuseTraceEvent::FINISH: {
-            auto state = telemetryState_.wlock();
-            auto erased = state->requests.erase(event.getUnique());
-            XCHECK(erased) << "duplicate fuse finish event";
+            uint64_t durationNs = 0;
+            {
+              auto state = telemetryState_.wlock();
+              auto it = state->requests.find(event.getUnique());
+              XCHECK(it != state->requests.end())
+                  << "duplicate fuse finish event";
+              durationNs =
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      event.monotonicTime - it->second.requestStartTime)
+                      .count();
+              state->requests.erase(it);
+            }
+
+            if (fsEventLogger) {
+              auto opcode = event.getRequest().opcode;
+              fsEventLogger->log({
+                  durationNs,
+                  fuseOpcodeSamplingGroup(opcode),
+                  fuseOpcodeName(opcode),
+              });
+            }
             break;
           }
         }

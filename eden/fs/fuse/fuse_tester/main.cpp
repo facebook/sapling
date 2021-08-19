@@ -133,11 +133,12 @@ int main(int argc, char** argv) {
       std::move(dispatcher),
       &straceLogger,
       std::make_shared<ProcessNameCache>(),
+      /*fsEventLogger=*/nullptr,
       std::chrono::seconds(60),
-      nullptr,
+      /*notifications=*/nullptr,
       CaseSensitivity::Sensitive,
-      true,
-      12 /* the default on Linux */));
+      /*requireUtf8Path=*/true,
+      /*maximumBackgroundRequests=*/12 /* the default on Linux */));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

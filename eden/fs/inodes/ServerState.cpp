@@ -12,6 +12,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -21,6 +22,14 @@ DEFINE_bool(
     false,
     "Block mount attempts via the fault injection framework.  "
     "Requires --enable_fault_injection.");
+
+namespace {
+#if defined(EDEN_HAVE_HIVE_LOGGER)
+constexpr auto kHasHiveLogger = true;
+#else
+constexpr auto kHasHiveLogger = false;
+#endif
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -58,7 +67,11 @@ ServerState::ServerState(
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
-      notifications_(config_) {
+      notifications_(config_),
+      fsEventLogger_{
+          (kHasHiveLogger && edenConfig->requestSamplesPerMinute.getValue())
+              ? std::make_shared<FsEventLogger>(config_, hiveLogger_)
+              : nullptr} {
   // It would be nice if we eventually built a more generic mechanism for
   // defining faults to be configured on start up.  (e.g., loading this from the
   // EdenConfig).
