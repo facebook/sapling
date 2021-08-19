@@ -1577,7 +1577,7 @@ EdenServiceHandler::future_predictiveGlobFiles(
   auto scAliasEnv = std::getenv("SANDCASTLE_ALIAS");
   sandcastleAlias = scAliasEnv ? std::make_optional(std::string(scAliasEnv))
                                : sandcastleAlias;
-  ;
+
   // check specified predictive parameters
   const auto& predictiveGlob = params->predictiveGlob_ref();
   if (predictiveGlob.has_value()) {
