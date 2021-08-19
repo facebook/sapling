@@ -6,7 +6,6 @@
 
 import argparse
 import asyncio
-import datetime
 import errno
 import inspect
 import json
@@ -16,11 +15,10 @@ import shutil
 import signal
 import subprocess
 import sys
-import time
 import typing
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type
+from typing import Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
 from eden.fs.cli.buck import run_buck_command
@@ -32,7 +30,7 @@ from eden.fs.cli.util import (
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import FuseCall, MountInfo as ThriftMountInfo, MountState
+from facebook.eden.ttypes import FuseCall, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -42,11 +40,9 @@ from . import (
     daemon_util,
     debug as debug_mod,
     doctor as doctor_mod,
-    filesystem,
     mtab,
     prefetch as prefetch_mod,
     prefetch_profile as prefetch_profile_mod,
-    proc_utils,
     rage as rage_mod,
     redirect as redirect_mod,
     stats as stats_mod,
@@ -57,8 +53,8 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import get_eden_instance, require_checkout
-from .config import EdenCheckout, EdenInstance
+from .cmd_util import get_eden_instance, require_checkout, prompt_confirmation
+from .config import EdenCheckout, EdenInstance, ListMountInfo
 from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr, get_environment_suitable_for_subprocess
@@ -569,26 +565,6 @@ class StatusCmd(Subcmd):
         return 1
 
 
-class ListMountInfo(typing.NamedTuple):
-    path: Path
-    data_dir: Path
-    state: Optional[MountState]
-    configured: bool
-    backing_repo: Optional[Path]
-
-    def to_json_dict(self) -> Dict[str, Any]:
-        return {
-            "data_dir": str(self.data_dir),
-            "state": MountState._VALUES_TO_NAMES.get(self.state)
-            if self.state is not None
-            else "NOT_RUNNING",
-            "configured": self.configured,
-            "backing_repo": str(self.backing_repo)
-            if self.backing_repo is not None
-            else None,
-        }
-
-
 @subcmd("list", "List available checkouts")
 class ListCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -602,78 +578,13 @@ class ListCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
-        mounts = self.get_mounts(instance)
+        mounts = instance.get_mounts()
         out = ui.get_output()
         if args.json:
             self.print_mounts_json(out, mounts)
         else:
             self.print_mounts(out, mounts)
         return 0
-
-    @classmethod
-    def get_mounts(cls, instance: EdenInstance) -> Dict[Path, ListMountInfo]:
-        try:
-            with instance.get_thrift_client_legacy() as client:
-                thrift_mounts = client.listMounts()
-        except EdenNotRunningError:
-            thrift_mounts = []
-
-        config_mounts = instance.get_checkouts()
-        return cls.combine_mount_info(thrift_mounts, config_mounts)
-
-    @staticmethod
-    def combine_mount_info(
-        thrift_mounts: List[ThriftMountInfo], config_checkouts: List[EdenCheckout]
-    ) -> Dict[Path, ListMountInfo]:
-        mount_points: Dict[Path, ListMountInfo] = {}
-
-        for thrift_mount in thrift_mounts:
-            path = Path(os.fsdecode(thrift_mount.mountPoint))
-            # Older versions of Eden did not report the state field.
-            # If it is missing, set it to RUNNING.
-            state = (
-                thrift_mount.state
-                if thrift_mount.state is not None
-                else MountState.RUNNING
-            )
-            data_dir = Path(os.fsdecode(thrift_mount.edenClientPath))
-
-            # this line is for pyre :(
-            raw_backing_repo = thrift_mount.backingRepoPath
-            backing_repo = (
-                Path(os.fsdecode(raw_backing_repo))
-                if raw_backing_repo is not None
-                else None
-            )
-
-            mount_points[path] = ListMountInfo(
-                path=path,
-                data_dir=data_dir,
-                state=state,
-                configured=False,
-                backing_repo=backing_repo,
-            )
-
-        # Add all mount points listed in the config that were not reported
-        # in the thrift call.
-        for checkout in config_checkouts:
-            mount_info = mount_points.get(checkout.path, None)
-            if mount_info is not None:
-                if mount_info.backing_repo is None:
-                    mount_info = mount_info._replace(
-                        backing_repo=checkout.get_config().backing_repo
-                    )
-                mount_points[checkout.path] = mount_info._replace(configured=True)
-            else:
-                mount_points[checkout.path] = ListMountInfo(
-                    path=checkout.path,
-                    data_dir=checkout.state_dir,
-                    state=None,
-                    configured=True,
-                    backing_repo=checkout.get_config().backing_repo,
-                )
-
-        return mount_points
 
     @staticmethod
     def print_mounts_json(
@@ -2161,26 +2072,6 @@ def create_parser() -> argparse.ArgumentParser:
     subcmd_mod.add_subcommands(parser, subcmd.commands + subcmd_add_list)
 
     return parser
-
-
-def prompt_confirmation(prompt: str) -> bool:
-    # Import readline lazily here because it conflicts with ncurses's resize support.
-    # https://bugs.python.org/issue2675
-    try:
-        import readline  # noqa: F401 Importing readline improves the behavior of input()
-    except ImportError:
-        # We don't strictly need readline
-        pass
-
-    prompt_str = f"{prompt} [y/N] "
-    while True:
-        response = input(prompt_str)
-        value = response.lower()
-        if value in ("y", "yes"):
-            return True
-        if value in ("", "n", "no"):
-            return False
-        print('Please enter "yes" or "no"')
 
 
 def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) -> str:

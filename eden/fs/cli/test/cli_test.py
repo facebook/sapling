@@ -24,7 +24,7 @@ from .lib.output import TestOutput
 class ListTest(unittest.TestCase):
     def test_no_mounts(self) -> None:
         out = TestOutput()
-        mounts = main_mod.ListCmd.combine_mount_info([], [])
+        mounts = EdenInstance._combine_mount_info([], [])
         main_mod.ListCmd.print_mounts(out, mounts)
         self.assertEqual(out.getvalue(), "")
 
@@ -157,7 +157,7 @@ class ListTest(unittest.TestCase):
             checkout5,
         ]
 
-        mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
+        mounts = EdenInstance._combine_mount_info(thrift_mounts, config_checkouts)
 
         normal_out = TestOutput()
         main_mod.ListCmd.print_mounts(normal_out, mounts)
@@ -316,7 +316,7 @@ class ListTest(unittest.TestCase):
             checkout3,
         ]
 
-        mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
+        mounts = EdenInstance._combine_mount_info(thrift_mounts, config_checkouts)
 
         normal_out = TestOutput()
         main_mod.ListCmd.print_mounts(normal_out, mounts)
@@ -447,7 +447,7 @@ class ListTest(unittest.TestCase):
             checkout2,
         ]
 
-        mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
+        mounts = EdenInstance._combine_mount_info(thrift_mounts, config_checkouts)
 
         normal_out = TestOutput()
         main_mod.ListCmd.print_mounts(normal_out, mounts)

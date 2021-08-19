@@ -35,6 +35,15 @@ enum Opt {
         all: bool,
     },
 
+    /// List APFS volumes that are not mounted and not used by any of the active checkouts.
+    /// The intent is that `all_checkouts` is produced by `edenfsctl list`.
+    #[structopt(name = "list-stale-volumes")]
+    ListStaleVolumes {
+        all_checkouts: Vec<String>,
+        #[structopt(long = "json")]
+        json: bool,
+    },
+
     /// Mount some space at the specified path.
     /// You must be the owner of the path.
     #[structopt(name = "mount")]
@@ -64,6 +73,15 @@ enum Opt {
     /// Unmount and delete all APFS volumes created by this utility
     #[structopt(name = "delete-all")]
     DeleteAll,
+
+    /// Unmount and delete a volume.
+    /// This will only allow deleting volumes that were created
+    /// by this utility
+    #[structopt(name = "delete-volume")]
+    DeleteVolume {
+        /// The volume that you wish to delete
+        volume: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -130,6 +148,16 @@ impl ApfsVolume {
             .preferred_mount_point()
             .ok_or_else(|| anyhow!("this volume is not an edenfs managed volume"))?;
         Ok(preferred == current)
+    }
+
+    /// Returns true if this is an edenfs managed volume and if the preferred location
+    /// is inside the provided checkout path.
+    pub fn is_preferred_checkout(&self, checkout: &str) -> Result<bool> {
+        let preferred = self
+            .preferred_mount_point()
+            .ok_or_else(|| anyhow!("this volume is not an edenfs managed volume"))?;
+        // Append "/" as checkouts can have the same prefix, e.g. fbsource, fbsource2
+        Ok(preferred.starts_with(&(checkout.to_string() + "/")))
     }
 }
 
@@ -604,10 +632,9 @@ fn unmount_scratch(mount_point: &str, force: bool, mount_table: &MountTable) -> 
     bail!("Did not find a volume mounted on {}", mount_point);
 }
 
-fn delete_scratch(mount_point: &str) -> Result<()> {
+fn delete_volume(volume_name: &str) -> Result<()> {
     let containers = apfs_list()?;
-    let name = encode_mount_point_as_volume_name(mount_point);
-    if let Some(volume) = find_existing_volume(&containers, &name) {
+    if let Some(volume) = find_existing_volume(&containers, volume_name) {
         // This will implicitly unmount, so we don't need to deal
         // with that here
         let output = new_cmd_unprivileged(DISKUTIL)
@@ -622,8 +649,13 @@ fn delete_scratch(mount_point: &str) -> Result<()> {
         }
         Ok(())
     } else {
-        bail!("Did not find a volume named {}", name);
+        bail!("Did not find a volume named {}", volume_name);
     }
+}
+
+fn delete_scratch(mount_point: &str) -> Result<()> {
+    let volume_name = encode_mount_point_as_volume_name(mount_point);
+    delete_volume(&volume_name)
 }
 
 fn main() -> Result<()> {
@@ -648,6 +680,53 @@ fn main() -> Result<()> {
             Ok(())
         }
 
+        Opt::ListStaleVolumes {
+            all_checkouts,
+            json,
+        } => {
+            let all_checkouts = all_checkouts
+                .iter()
+                .map(|v| canonicalize_mount_point_path(v.as_ref()))
+                .collect::<Result<Vec<_>>>()?;
+            let containers = apfs_list()?;
+            let mount_table = MountTable::parse_system_mount_table()?;
+
+            let mut stale_volumes = vec![];
+            for container in containers {
+                for vol in container.volumes {
+                    if !vol.is_edenfs_managed_volume()
+                        || vol.get_current_mount_point(Some(&mount_table)).is_some()
+                    {
+                        // ignore currently mounted or volumes not managed by EdenFS
+                        continue;
+                    }
+
+                    if all_checkouts.iter().all(|checkout| {
+                        match vol.is_preferred_checkout(checkout) {
+                            Ok(is_preferred) => !is_preferred,
+                            Err(e) => {
+                                // print the error and do not consider this volume as stale
+                                eprintln!("Failed is_preferred_checkout: {}", e);
+                                false
+                            }
+                        }
+                    }) {
+                        // is an edenfs managed volume but not under any checkouts
+                        stale_volumes
+                            .push(vol.name.ok_or_else(|| format_err!("Volume has no name"))?);
+                    }
+                }
+            }
+            if json {
+                println!("{}", serde_json::to_string(&stale_volumes)?);
+            } else {
+                for stale_volume in stale_volumes.iter() {
+                    println!("{}", stale_volume);
+                }
+            }
+            Ok(())
+        }
+
         Opt::Mount { mount_point } => mount_scratch_space_on(&mount_point),
 
         Opt::UnMount { mount_point, force } => {
@@ -661,6 +740,11 @@ fn main() -> Result<()> {
 
         Opt::Delete { mount_point } => {
             delete_scratch(&mount_point)?;
+            Ok(())
+        }
+
+        Opt::DeleteVolume { volume } => {
+            delete_volume(&volume)?;
             Ok(())
         }
 

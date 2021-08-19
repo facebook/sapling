@@ -10,6 +10,7 @@ import errno
 import json
 import logging
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -22,7 +23,6 @@ from thrift.Thrift import TApplicationException
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 from .buck import is_buckd_running_for_path, stop_buckd_for_path
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
-from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import mkscratch_bin
 
@@ -583,7 +583,7 @@ def run_cmd_quietly(args, check: bool = True) -> int:
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0:
-        cmd = " ".join([str(a) for a in args])
+        cmd = " ".join(shlex.quote(a) for a in args)
         stdout = stdout.decode("utf-8")
         stderr = stderr.decode("utf-8")
         message = f"{cmd}: Failed with status {proc.returncode}: {stdout} {stderr}"
@@ -673,6 +673,59 @@ class ListCmd(Subcmd):
         redirs = get_effective_redirections(checkout, mount_table)
         print_redirection_configs(checkout, redirs.values(), args.json)
         return 0
+
+
+@redirect_cmd("cleanup-apfs", "Delete stale apfs volumes")
+class CleanupApfsCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        if sys.platform != "darwin" or not have_apfs_helper():
+            raise Exception(f"Unsupported platform {sys.platform}")
+
+        instance = cmd_util.get_eden_instance(args)
+        mounts = instance.get_mounts()
+
+        stdout = subprocess.check_output(
+            [
+                APFS_HELPER,
+                "list-stale-volumes",
+            ]
+            + [str(path) for path in mounts]
+            + ["--json"]
+        ).decode("utf-8")
+        stale_volumes = json.loads(stdout)
+        stale_volumes.pop()  # tailing empty string due to split
+        if not stale_volumes:
+            print("No stale volumes detected")
+            return 0
+
+        if sys.stdin.isatty():
+            volumes_str = "\n  ".join(stale_volumes)
+            print(
+                f"""\
+Warning: this operation will permanently delete the following volumes:
+  {volumes_str}
+"""
+            )
+            if not cmd_util.prompt_confirmation("Proceed?"):
+                print("Not deleting volumes")
+                return 2
+
+        return_code = 0
+        for vol in stale_volumes:
+            result = subprocess.run(
+                [
+                    APFS_HELPER,
+                    "delete-volume",
+                    vol,
+                ],
+            )
+            if result.returncode:
+                print(f"Failed to delete volume {vol} due to {result.stderr}")
+                return_code = 1
+            else:
+                print(f"Deleted volume: {vol}")
+
+        return return_code
 
 
 @redirect_cmd(

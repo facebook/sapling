@@ -37,10 +37,11 @@ from typing import (
 import facebook.eden.ttypes as eden_ttypes
 import toml
 from eden.thrift import legacy
+from eden.thrift.legacy import EdenNotRunningError
+from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 
 from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
-    EdenStartError,
     HealthStatus,
     print_stderr,
     write_file_atomically,
@@ -155,6 +156,26 @@ class CheckoutConfig(typing.NamedTuple):
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
     enable_tree_overlay: bool
+
+
+class ListMountInfo(typing.NamedTuple):
+    path: Path
+    data_dir: Path
+    state: Optional[MountState]
+    configured: bool
+    backing_repo: Optional[Path]
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "data_dir": str(self.data_dir),
+            "state": MountState._VALUES_TO_NAMES.get(self.state)
+            if self.state is not None
+            else "NOT_RUNNING",
+            "configured": self.configured,
+            "backing_repo": str(self.backing_repo)
+            if self.backing_repo is not None
+            else None,
+        }
 
 
 class EdenInstance:
@@ -443,6 +464,72 @@ class EdenInstance:
                 ("state_dir", str(checkout.state_dir)),
             ]
         )
+
+    def get_mounts(self) -> Dict[Path, ListMountInfo]:
+        try:
+            with self.get_thrift_client_legacy() as client:
+                thrift_mounts = client.listMounts()
+        except EdenNotRunningError:
+            thrift_mounts = []
+
+        config_mounts = self.get_checkouts()
+        return self._combine_mount_info(thrift_mounts, config_mounts)
+
+    @classmethod
+    def _combine_mount_info(
+        cls,
+        thrift_mounts: List[ThriftMountInfo],
+        config_checkouts: List["EdenCheckout"],
+    ) -> Dict[Path, ListMountInfo]:
+        mount_points: Dict[Path, ListMountInfo] = {}
+
+        for thrift_mount in thrift_mounts:
+            path = Path(os.fsdecode(thrift_mount.mountPoint))
+            # Older versions of Eden did not report the state field.
+            # If it is missing, set it to RUNNING.
+            state = (
+                thrift_mount.state
+                if thrift_mount.state is not None
+                else MountState.RUNNING
+            )
+            data_dir = Path(os.fsdecode(thrift_mount.edenClientPath))
+
+            # this line is for pyre :(
+            raw_backing_repo = thrift_mount.backingRepoPath
+            backing_repo = (
+                Path(os.fsdecode(raw_backing_repo))
+                if raw_backing_repo is not None
+                else None
+            )
+
+            mount_points[path] = ListMountInfo(
+                path=path,
+                data_dir=data_dir,
+                state=state,
+                configured=False,
+                backing_repo=backing_repo,
+            )
+
+        # Add all mount points listed in the config that were not reported
+        # in the thrift call.
+        for checkout in config_checkouts:
+            mount_info = mount_points.get(checkout.path, None)
+            if mount_info is not None:
+                if mount_info.backing_repo is None:
+                    mount_info = mount_info._replace(
+                        backing_repo=checkout.get_config().backing_repo
+                    )
+                mount_points[checkout.path] = mount_info._replace(configured=True)
+            else:
+                mount_points[checkout.path] = ListMountInfo(
+                    path=checkout.path,
+                    data_dir=checkout.state_dir,
+                    state=None,
+                    configured=True,
+                    backing_repo=checkout.get_config().backing_repo,
+                )
+
+        return mount_points
 
     def clone(
         self, checkout_config: CheckoutConfig, path: str, snapshot_id: str
