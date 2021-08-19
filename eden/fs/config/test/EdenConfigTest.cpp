@@ -11,7 +11,9 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <optional>
 
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/Range.h"
@@ -577,4 +579,28 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   edenConfig->clientCertificateLocations.setValue(
       {clientCertificate3}, ConfigSource::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
+}
+
+TEST_F(EdenConfigTest, getValueByFullKey) {
+  auto edenConfig = std::make_shared<EdenConfig>(
+      testUser_,
+      uid_t{},
+      testHomeDir_,
+      defaultUserConfigPath_,
+      AbsolutePath{"/etc/eden"},
+      defaultSystemConfigPath_);
+
+  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "false");
+  edenConfig->useMononoke.setValue(true, ConfigSource::CommandLine);
+  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "true");
+
+  EXPECT_EQ(
+      edenConfig->getValueByFullKey("bad-section:use-mononoke"), std::nullopt);
+  EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:bad-entry"), std::nullopt);
+
+  EdenBugDisabler noCrash;
+  EXPECT_THROW_RE(
+      edenConfig->getValueByFullKey("ill-formed-key"),
+      std::runtime_error,
+      "ill-formed");
 }

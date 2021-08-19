@@ -144,6 +144,13 @@ class EdenConfig : private ConfigSettingManager {
    */
   uid_t getUserID() const;
 
+  /**
+   * Returns the value in optional string for the given config key.
+   * Throws if the config key is ill-formed.
+   */
+  std::optional<std::string> getValueByFullKey(
+      folly::StringPiece configKey) const;
+
  private:
   /**
    * Utility method for converting ConfigSource to the filename (or cli).

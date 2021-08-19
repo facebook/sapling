@@ -9,11 +9,13 @@
 
 #include <cpptoml.h>
 #include <array>
+#include <optional>
 #include <sstream>
 
 #include <boost/filesystem.hpp>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/MapUtil.h>
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
@@ -227,6 +229,19 @@ const std::string& EdenConfig::getUserName() const {
 
 uid_t EdenConfig::getUserID() const {
   return userID_;
+}
+
+std::optional<std::string> EdenConfig::getValueByFullKey(
+    folly::StringPiece configKey) const {
+  // Throws if the config key is ill-formed.
+  auto [sectionKey, entryKey] = parseKey(configKey);
+
+  if (auto* entry =
+          folly::get_ptr(configMap_, sectionKey.str(), entryKey.str())) {
+    return (*entry)->getStringValue();
+  }
+
+  return std::nullopt;
 }
 
 EdenConfig& EdenConfig::operator=(const EdenConfig& source) {
