@@ -10,6 +10,7 @@ path = "src/bin/cli.rs"
 
 [dependencies]
 anyhow = "1.0"
+async-compression = { version = "0.3.8", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 atty = "0.2"
 curl = { version = "0.4", features = ["http2"] }
 curl-sys = "0.4"
@@ -28,9 +29,11 @@ serde_json = { version = "1.0", features = ["float_roundtrip"] }
 structopt = "0.3.21"
 thiserror = "1.0"
 tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio-util = { version = "0.6", features = ["full"] }
 tracing = "0.1"
 url = "2.1.0"
 
 [dev-dependencies]
 crossbeam = "0.8"
 mockito = "0.25"
+zstd = "=0.8.0+zstd.1.4.9"

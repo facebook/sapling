@@ -21,7 +21,7 @@ pub enum HttpClientError {
     #[error(transparent)]
     CallbackAborted(#[from] Abort),
     #[error("Received invalid or malformed HTTP response")]
-    BadResponse,
+    BadResponse(anyhow::Error),
     #[error("The request was dropped before it could complete")]
     RequestDropped(#[from] oneshot::Canceled),
     #[error("The I/O task terminated unexpectedly: {}", .0)]
@@ -30,6 +30,8 @@ pub enum HttpClientError {
     CborError(#[from] serde_cbor::Error),
     #[error(transparent)]
     CborStreamError(#[from] crate::stream::CborStreamError),
+    #[error("Could not decode response: {}", .0)]
+    DecompressionFailed(futures::io::Error),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

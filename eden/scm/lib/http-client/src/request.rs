@@ -19,14 +19,14 @@ use curl::{
     self,
     easy::{Easy2, HttpVersion, List},
 };
+use http::header;
 use once_cell::sync::Lazy;
-use parking_lot::RwLock;
-use serde::Serialize;
-use url::Url;
-
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
 use openssl::x509::X509;
+use parking_lot::RwLock;
+use serde::Serialize;
+use url::Url;
 
 use crate::{
     errors::HttpClientError,
@@ -77,12 +77,9 @@ pub enum Encoding {
 }
 
 impl Encoding {
-    /// If the Accept-Encoding is explicitly set to the empty string, libcurl
-    /// will advertise all supported content encodings (as opposed to the
-    /// default behavior of omitting the Accept-Encoding header). This method
-    /// is provided as a convenient way to specify this.
-    fn all_supported() -> Vec<Self> {
-        vec![Encoding::Other(String::new())]
+    pub fn all() -> Vec<Self> {
+        use Encoding::*;
+        vec![Zstd, Brotli, Gzip, Deflate]
     }
 }
 
@@ -619,6 +616,36 @@ impl Request {
             }
         }
 
+        if !self.accept_encoding.is_empty() {
+            // To maintain compatibility with libcurl, if the Accept-Encoding is explicitly set to
+            // the empty string, advertise all formats the client supports.
+            if self.accept_encoding.len() == 1
+                && self.accept_encoding[0] == Encoding::Other("".into())
+            {
+                self.accept_encoding = Encoding::all()
+            }
+
+            let encoding = self
+                .accept_encoding
+                .iter()
+                .map(|s| s.as_ref())
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            // XXX: Ideally, we should set the Accept-Encoding via the accept_encoding() method
+            // (which corresponds to CURLOPT_ACCEPT_ENCODING). This will cause libcurl to decode
+            // the response body automatically if the received Content-Encoding matches one of the
+            // requested formats.
+            //
+            // Unfortunately, although libcurl can be built to support many compression formats,
+            // the Rust bindings configure it so that only a few formats (e.g., gzip and deflate)
+            // are supported. To work around this, right now we just set the Accept-Encoding header
+            // as a regular header (without setting CURLOPT_ACCEPT_ENCODING) and decode the response
+            // manually. This allows us to ensure support for formats we care about (e.g., zstd).
+            self.headers
+                .push((header::ACCEPT_ENCODING.as_str().into(), encoding));
+        }
+
         // Add headers.
         let mut headers = List::new();
         for (name, value) in self.headers {
@@ -668,21 +695,6 @@ impl Request {
         }
 
         easy.http_version(self.http_version)?;
-
-        // Note that if CURLOPT_ACCEPT_ENCODING is explicitly set to the empty
-        // string, libcurl will advertise all supported formats in the request
-        // header. Since we want to have the option to omit the header entirely,
-        // don't attempt to set it unless we have a non-empty encoding list.
-        if !self.accept_encoding.is_empty() {
-            easy.accept_encoding(
-                &self
-                    .accept_encoding
-                    .iter()
-                    .map(|s| s.as_ref())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            )?;
-        }
 
         if let Some(mts) = self.min_transfer_speed {
             easy.low_speed_limit(mts.min_bytes_per_second)?;

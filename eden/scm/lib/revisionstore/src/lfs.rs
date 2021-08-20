@@ -1160,7 +1160,7 @@ impl LfsRemoteInner {
                     check_status(status)?;
 
                     let start = Instant::now();
-                    let mut body = reply.body();
+                    let mut body = reply.raw_body();
                     let mut chunks: Vec<Vec<u8>> = vec![];
                     while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
                         let chunk = res.map_err(|_| {
