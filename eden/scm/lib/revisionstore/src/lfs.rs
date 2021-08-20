@@ -1145,16 +1145,16 @@ impl LfsRemoteInner {
                         .await
                         .map_err(|_| TransferError::Timeout(request_timeout))?;
 
-                    let mut reply = match reply {
+                    let reply = match reply {
                         Some(r) => r?,
                         None => {
                             return Err(TransferError::EndOfStream);
                         }
                     };
 
-                    let status = reply.status();
-                    let headers = reply.headers().clone();
+                    let (head, body) = reply.into_parts();
 
+                    let status = head.status();
                     if !status.is_success() {
                         return Err(TransferError::HttpStatus(status));
                     }
@@ -1162,11 +1162,12 @@ impl LfsRemoteInner {
                     check_status(status)?;
 
                     let start = Instant::now();
-                    let mut body = reply.body();
+                    let mut body = body.decoded();
                     let mut chunks: Vec<Vec<u8>> = vec![];
                     while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
                         let chunk = res.map_err(|_| {
-                            let request_id = headers
+                            let request_id = head
+                                .headers()
                                 .get("x-request-id")
                                 .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
                                 .unwrap_or("?")

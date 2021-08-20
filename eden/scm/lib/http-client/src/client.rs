@@ -337,7 +337,7 @@ mod tests {
         let client = HttpClient::new();
         let stats = client.send(vec![req1, req2, req3], |res| {
             let res = res.unwrap();
-            assert_eq!(res.status, StatusCode::CREATED);
+            assert_eq!(res.head.status, StatusCode::CREATED);
             assert!(not_received.remove(&*res.body));
             Ok(())
         })?;
@@ -460,8 +460,8 @@ mod tests {
         not_received.insert(body3.to_vec());
 
         for res in responses {
-            assert_eq!(res.status, StatusCode::CREATED);
-            let body = res.body.try_concat().await?;
+            assert_eq!(res.head.status, StatusCode::CREATED);
+            let body = res.into_body().raw().try_concat().await?;
             assert!(not_received.remove(&*body));
         }
 

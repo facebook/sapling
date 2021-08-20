@@ -7,7 +7,6 @@
 
 use std::convert::TryFrom;
 use std::io::Cursor;
-use std::mem;
 use std::pin::Pin;
 
 use anyhow::anyhow;
@@ -28,14 +27,13 @@ use crate::request::Encoding;
 use crate::stream::{BufferedStream, CborStream};
 
 #[derive(Debug)]
-pub struct Response {
+pub struct Head {
     pub(crate) version: Version,
     pub(crate) status: StatusCode,
     pub(crate) headers: HeaderMap,
-    pub(crate) body: Vec<u8>,
 }
 
-impl Response {
+impl Head {
     /// Get the HTTP version of the response.
     pub fn version(&self) -> Version {
         self.version
@@ -51,15 +49,48 @@ impl Response {
         &self.headers
     }
 
+    /// Get the response's encoding from the Content-Encoding header.
+    pub fn encoding(&self) -> Result<Encoding, HttpClientError> {
+        self.headers
+            .get(header::CONTENT_ENCODING)
+            .map(|encoding| Ok(encoding.to_str()?.into()))
+            .unwrap_or(Ok(Encoding::Identity))
+            .map_err(|_: header::ToStrError| {
+                HttpClientError::BadResponse(anyhow!("Invalid Content-Encoding"))
+            })
+    }
+}
+
+#[derive(Debug)]
+pub struct Response {
+    pub(crate) head: Head,
+    pub(crate) body: Vec<u8>,
+}
+
+impl Response {
+    /// Get the HTTP version of the response.
+    pub fn version(&self) -> Version {
+        self.head.version
+    }
+
+    /// Get the HTTP status code of the response.
+    pub fn status(&self) -> StatusCode {
+        self.head.status
+    }
+
+    /// Get the response's headers.
+    pub fn headers(&self) -> &HeaderMap {
+        &self.head.headers
+    }
+
     /// Get the response's body.
     pub fn body(&self) -> &[u8] {
         &self.body
     }
 
-    /// Move the response's body out of the response.
-    /// Subsequent calls will return an empty body.
-    pub fn take_body(&mut self) -> Vec<u8> {
-        mem::take(&mut self.body)
+    /// Split the
+    pub fn into_parts(self) -> (Head, Vec<u8>) {
+        (self.head, self.body)
     }
 
     /// Deserialize the response body from JSON.
@@ -87,9 +118,11 @@ impl TryFrom<&mut Buffered> for Response {
         };
 
         Ok(Self {
-            version,
-            status,
-            headers: buffered.take_headers(),
+            head: Head {
+                version,
+                status,
+                headers: buffered.take_headers(),
+            },
             body: buffered.take_body(),
         })
     }
@@ -108,19 +141,73 @@ macro_rules! decode {
     }};
 }
 
-pub type AsyncBody = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpClientError>> + Send + 'static>>;
-pub type CborStreamBody<T> = CborStream<T, AsyncBody, Vec<u8>, HttpClientError>;
-pub type BufferedStreamBody = BufferedStream<AsyncBody, Vec<u8>, HttpClientError>;
+pub type ByteStream =
+    Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpClientError>> + Send + 'static>>;
+
+pub struct AsyncBody {
+    // This is a `Result` so that an invalid Content-Encoding header does not prevent the caller
+    // from accessing the raw body stream if desired. The error will only be propagated if the
+    // caller actually wants to decode the body stream.
+    encoding: Result<Encoding, HttpClientError>,
+    body: ByteStream,
+}
+
+pub type CborStreamBody<T> = CborStream<T, ByteStream, Vec<u8>, HttpClientError>;
+pub type BufferedStreamBody = BufferedStream<ByteStream, Vec<u8>, HttpClientError>;
+
+impl AsyncBody {
+    /// Get a stream of the response's body content.
+    ///
+    /// This method is the preferred way of accessing the response's body stream. The data will be
+    /// automatically decoded based on the response's Content-Encoding header.
+    pub fn decoded(self) -> ByteStream {
+        let Self { encoding, body } = self;
+        stream::once(async move {
+            Ok(match encoding? {
+                Encoding::Identity => body.boxed(),
+                Encoding::Brotli => decode!(BrotliDecoder, body),
+                Encoding::Deflate => decode!(DeflateDecoder, body),
+                Encoding::Gzip => decode!(GzipDecoder, body),
+                Encoding::Zstd => decode!(ZstdDecoder, body),
+                other => {
+                    return Err(HttpClientError::BadResponse(anyhow!(
+                        "Unsupported Content-Encoding: {:?}",
+                        other
+                    )));
+                }
+            })
+        })
+        .try_flatten()
+        .boxed()
+    }
+
+    /// Get a stream of the response's raw on-the-wire content.
+    ///
+    /// Note that the caller is responsible for decoding the response if it is compressed. Most
+    /// callers will want to use the `decoded` method instead which does this automatically.
+    pub fn raw(self) -> ByteStream {
+        self.body
+    }
+
+    /// Attempt to deserialize the incoming data as a stream of CBOR values.
+    pub fn cbor<T: DeserializeOwned>(self) -> CborStreamBody<T> {
+        CborStream::new(self.decoded())
+    }
+
+    /// Create a buffered body stream that ensures that all yielded chunks
+    /// (except the last) are at least as large as the given chunk size.
+    pub fn buffered(self, size: usize) -> BufferedStreamBody {
+        BufferedStream::new(self.decoded(), size)
+    }
+}
 
 pub struct AsyncResponse {
-    pub(crate) version: Version,
-    pub(crate) status: StatusCode,
-    pub(crate) headers: HeaderMap,
+    pub(crate) head: Head,
     pub(crate) body: AsyncBody,
 }
 
 impl AsyncResponse {
-    pub async fn new(streams: ResponseStreams) -> Result<Self, HttpClientError> {
+    pub(crate) async fn new(streams: ResponseStreams) -> Result<Self, HttpClientError> {
         let ResponseStreams {
             headers_rx,
             body_rx,
@@ -174,77 +261,40 @@ impl AsyncResponse {
             .try_filter(|chunk| future::ready(!chunk.is_empty()))
             .boxed();
 
-        Ok(Self {
+        let head = Head {
             version,
             status,
             headers,
-            body,
-        })
+        };
+        let encoding = head.encoding();
+        let body = AsyncBody { encoding, body };
+
+        Ok(Self { head, body })
     }
 
     /// Get the HTTP version of the response.
     pub fn version(&self) -> Version {
-        self.version
+        self.head.version
     }
 
     /// Get the HTTP status code of the response.
     pub fn status(&self) -> StatusCode {
-        self.status
+        self.head.status
     }
 
     /// Get the response's headers.
     pub fn headers(&self) -> &HeaderMap {
-        &self.headers
+        &self.head.headers
     }
 
-    /// Get the response's raw body stream, consisting of the raw bytes from
-    /// the wire. The data may be compresssed, depending on the value of the
-    /// `Content-Encoding` header.
-    pub fn raw_body(&mut self) -> AsyncBody {
-        mem::replace(&mut self.body, stream::empty().boxed())
+    /// Consume the response and obtain its body stream.
+    pub fn into_body(self) -> AsyncBody {
+        self.body
     }
 
-    /// Get the response's body stream. This will move the body stream out of
-    /// the response; subsequent calls will return an empty body stream.
-    pub fn body(&mut self) -> AsyncBody {
-        let body = self.raw_body();
-        let encoding = self
-            .headers
-            .get(header::CONTENT_ENCODING)
-            .map(|encoding| Ok(encoding.to_str()?.into()))
-            .unwrap_or(Ok(Encoding::Identity))
-            .map_err(|_: header::ToStrError| {
-                HttpClientError::BadResponse(anyhow!("Invalid Content-Encoding"))
-            });
-
-        stream::once(async move {
-            Ok(match encoding? {
-                Encoding::Identity => body.boxed(),
-                Encoding::Brotli => decode!(BrotliDecoder, body),
-                Encoding::Deflate => decode!(DeflateDecoder, body),
-                Encoding::Gzip => decode!(GzipDecoder, body),
-                Encoding::Zstd => decode!(ZstdDecoder, body),
-                other => {
-                    return Err(HttpClientError::BadResponse(anyhow!(
-                        "Unsupported Content-Encoding: {:?}",
-                        other
-                    )));
-                }
-            })
-        })
-        .try_flatten()
-        .boxed()
-    }
-
-    /// Attempt to deserialize the incoming data as a stream of CBOR values.
-    pub fn cbor<T: DeserializeOwned>(&mut self) -> CborStreamBody<T> {
-        CborStream::new(self.body())
-    }
-
-    /// Create a buffered body stream that ensures that all yielded chunks
-    /// (except the last) are at least as large as the given chunk size.
-    pub fn buffered(&mut self, size: usize) -> BufferedStreamBody {
-        BufferedStream::new(self.body(), size)
+    /// Split the response into its head and body.
+    pub fn into_parts(self) -> (Head, AsyncBody) {
+        (self.head, self.body)
     }
 }
 
@@ -272,14 +322,14 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let mut res = Request::get(url)
+        let res = Request::get(url)
             .accept_encoding(Encoding::all())
             .send_async()
             .await?;
 
         mock.assert();
 
-        let body = res.body().try_concat().await?;
+        let body = res.into_body().decoded().try_concat().await?;
         assert_eq!(&*body, &uncompressed[..]);
 
         Ok(())

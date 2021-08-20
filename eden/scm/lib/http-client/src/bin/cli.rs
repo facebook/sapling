@@ -114,11 +114,11 @@ fn read_input() -> Result<Vec<u8>> {
     Ok(buf)
 }
 
-async fn write_response(mut res: AsyncResponse) -> Result<()> {
+async fn write_response(res: AsyncResponse) -> Result<()> {
     eprintln!("Status: {:?} {}", res.version(), res.status());
     eprintln!("{:?}", res.headers());
 
-    let body = res.body().try_concat().await?;
+    let body = res.into_body().decoded().try_concat().await?;
 
     if atty::is(atty::Stream::Stdout) {
         println!("{}", String::from_utf8_lossy(&body).escape_default())

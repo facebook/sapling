@@ -817,14 +817,15 @@ mod tests {
 
         mock.assert();
 
-        assert_eq!(res.status, StatusCode::OK);
+        assert_eq!(res.head.status, StatusCode::OK);
         assert_eq!(&*res.body, &b"Hello, world!"[..]);
         assert_eq!(
-            res.headers.get(header::CONTENT_TYPE).unwrap(),
+            res.head.headers.get(header::CONTENT_TYPE).unwrap(),
             HeaderValue::from_static("text/plain")
         );
         assert_eq!(
-            res.headers
+            res.head
+                .headers
                 .get(HeaderName::from_bytes(b"X-Served-By")?)
                 .unwrap(),
             HeaderValue::from_static("mock")
@@ -851,19 +852,20 @@ mod tests {
 
         mock.assert();
 
-        assert_eq!(res.status, StatusCode::OK);
+        assert_eq!(res.head.status, StatusCode::OK);
         assert_eq!(
-            res.headers.get(header::CONTENT_TYPE).unwrap(),
+            res.head.headers.get(header::CONTENT_TYPE).unwrap(),
             HeaderValue::from_static("text/plain")
         );
         assert_eq!(
-            res.headers
+            res.head
+                .headers
                 .get(HeaderName::from_bytes(b"X-Served-By")?)
                 .unwrap(),
             HeaderValue::from_static("mock")
         );
 
-        let body = res.body.try_concat().await?;
+        let body = res.into_body().raw().try_concat().await?;
         assert_eq!(&*body, &b"Hello, world!"[..]);
 
         Ok(())
@@ -883,14 +885,15 @@ mod tests {
 
         mock.assert();
 
-        assert_eq!(res.status, StatusCode::OK);
+        assert_eq!(res.head.status, StatusCode::OK);
         assert!(res.body.is_empty());
         assert_eq!(
-            res.headers.get(header::CONTENT_TYPE).unwrap(),
+            res.head.headers.get(header::CONTENT_TYPE).unwrap(),
             HeaderValue::from_static("text/plain")
         );
         assert_eq!(
-            res.headers
+            res.head
+                .headers
                 .get(HeaderName::from_bytes(b"X-Served-By")?)
                 .unwrap(),
             HeaderValue::from_static("mock")
@@ -913,7 +916,7 @@ mod tests {
         let res = Request::post(url).body(body.as_bytes()).send()?;
 
         mock.assert();
-        assert_eq!(res.status, StatusCode::CREATED);
+        assert_eq!(res.head.status, StatusCode::CREATED);
 
         Ok(())
     }
@@ -933,7 +936,7 @@ mod tests {
         let res = Request::post(url).body(body_bytes).send()?;
 
         mock.assert();
-        assert_eq!(res.status, StatusCode::CREATED);
+        assert_eq!(res.head.status, StatusCode::CREATED);
 
         Ok(())
     }
@@ -955,7 +958,7 @@ mod tests {
             .send()?;
 
         mock.assert();
-        assert_eq!(res.status, StatusCode::CREATED);
+        assert_eq!(res.head.status, StatusCode::CREATED);
 
         Ok(())
     }
@@ -977,7 +980,7 @@ mod tests {
         let res = Request::post(url).json(&body)?.send()?;
 
         mock.assert();
-        assert_eq!(res.status, StatusCode::CREATED);
+        assert_eq!(res.head.status, StatusCode::CREATED);
 
         Ok(())
     }
@@ -1006,7 +1009,7 @@ mod tests {
         let res = Request::post(url).cbor(&body)?.send()?;
 
         mock.assert();
-        assert_eq!(res.status, StatusCode::CREATED);
+        assert_eq!(res.head.status, StatusCode::CREATED);
 
         Ok(())
     }
