@@ -84,13 +84,13 @@ impl ResponseMeta {
 
 impl From<&Response> for ResponseMeta {
     fn from(res: &Response) -> Self {
-        Self::from_parts(res.version, res.status, &res.headers)
+        Self::from_parts(res.version(), res.status(), res.headers())
     }
 }
 
 impl From<&AsyncResponse> for ResponseMeta {
     fn from(res: &AsyncResponse) -> Self {
-        Self::from_parts(res.version, res.status, &res.headers)
+        Self::from_parts(res.version(), res.status(), res.headers())
     }
 }
 

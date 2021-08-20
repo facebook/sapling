@@ -210,9 +210,9 @@ impl Client {
         // entries. This allows multiplexing the streams using `select_all`.
         let streams = responses.into_iter().map(|fut| {
             stream::once(async move {
-                let res = raise_for_status(fut.await?).await?;
+                let mut res = raise_for_status(fut.await?).await?;
                 tracing::debug!("{:?}", ResponseMeta::from(&res));
-                Ok::<_, EdenApiError>(res.into_cbor_stream::<T>().err_into())
+                Ok::<_, EdenApiError>(res.cbor::<T>().err_into())
             })
             .try_flatten()
             .boxed()
@@ -628,12 +628,12 @@ impl EdenApi for Client {
 
         let url = self.url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
         let req = self.configure(Request::post(url))?;
-        let async_response = req
+        let mut async_response = req
             .send_async()
             .await
             .context("error receiving async response")?;
         let response_bytes = async_response
-            .body
+            .body()
             .try_fold(Vec::new(), |mut acc, v| {
                 if let Some(callback) = &mut progress {
                     // strictly speaking not correct because it does not count overhead
@@ -1103,12 +1103,12 @@ fn split_into_batches<T>(
     }
 }
 
-async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiError> {
-    if res.status.as_u16() < 400 {
+async fn raise_for_status(mut res: AsyncResponse) -> Result<AsyncResponse, EdenApiError> {
+    if res.status().as_u16() < 400 {
         return Ok(res);
     }
 
-    let body = res.body.try_concat().await?;
+    let body = res.body().try_concat().await?;
     let mut message = String::from_utf8_lossy(&body).into_owned();
 
     if message.len() >= 9 && &*message[..9].to_lowercase() == "<!doctype" {
@@ -1119,7 +1119,7 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
     }
 
     Err(EdenApiError::HttpError {
-        status: res.status,
+        status: res.status(),
         message,
     })
 }

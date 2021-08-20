@@ -6,6 +6,7 @@
  */
 
 use std::convert::TryFrom;
+use std::mem;
 use std::pin::Pin;
 
 use futures::prelude::*;
@@ -20,13 +21,39 @@ use crate::stream::{BufferedStream, CborStream};
 
 #[derive(Debug)]
 pub struct Response {
-    pub version: Version,
-    pub status: StatusCode,
-    pub headers: HeaderMap,
-    pub body: Vec<u8>,
+    pub(crate) version: Version,
+    pub(crate) status: StatusCode,
+    pub(crate) headers: HeaderMap,
+    pub(crate) body: Vec<u8>,
 }
 
 impl Response {
+    /// Get the HTTP version of the response.
+    pub fn version(&self) -> Version {
+        self.version
+    }
+
+    /// Get the HTTP status code of the response.
+    pub fn status(&self) -> StatusCode {
+        self.status
+    }
+
+    /// Get the response's headers.
+    pub fn headers(&self) -> &HeaderMap {
+        &self.headers
+    }
+
+    /// Get the response's body.
+    pub fn body(&self) -> &[u8] {
+        &self.body
+    }
+
+    /// Move the response's body out of the response.
+    /// Subsequent calls will return an empty body.
+    pub fn take_body(&mut self) -> Vec<u8> {
+        mem::take(&mut self.body)
+    }
+
     /// Deserialize the response body from JSON.
     pub fn json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_slice(&self.body)
@@ -63,10 +90,10 @@ pub type CborStreamBody<T> = CborStream<T, AsyncBody, Vec<u8>, HttpClientError>;
 pub type BufferedStreamBody = BufferedStream<AsyncBody, Vec<u8>, HttpClientError>;
 
 pub struct AsyncResponse {
-    pub version: Version,
-    pub status: StatusCode,
-    pub headers: HeaderMap,
-    pub body: AsyncBody,
+    pub(crate) version: Version,
+    pub(crate) status: StatusCode,
+    pub(crate) headers: HeaderMap,
+    pub(crate) body: AsyncBody,
 }
 
 impl AsyncResponse {
@@ -130,15 +157,35 @@ impl AsyncResponse {
         })
     }
 
-    /// Consume the response and attempt to deserialize the
-    /// incoming data as a stream of CBOR-serialized values.
-    pub fn into_cbor_stream<T: DeserializeOwned>(self) -> CborStreamBody<T> {
-        CborStream::new(self.body)
+    /// Get the HTTP version of the response.
+    pub fn version(&self) -> Version {
+        self.version
+    }
+
+    /// Get the HTTP status code of the response.
+    pub fn status(&self) -> StatusCode {
+        self.status
+    }
+
+    /// Get the response's headers.
+    pub fn headers(&self) -> &HeaderMap {
+        &self.headers
+    }
+
+    /// Get the response's body stream. This will move the body stream out of
+    /// the response; subsequent calls will return an empty body stream.
+    pub fn body(&mut self) -> AsyncBody {
+        mem::replace(&mut self.body, stream::empty().boxed())
+    }
+
+    /// Attempt to deserialize the incoming data as a stream of CBOR values.
+    pub fn cbor<T: DeserializeOwned>(&mut self) -> CborStreamBody<T> {
+        CborStream::new(self.body())
     }
 
     /// Create a buffered body stream that ensures that all yielded chunks
     /// (except the last) are at least as large as the given chunk size.
-    pub fn buffered(self, size: usize) -> BufferedStreamBody {
-        BufferedStream::new(self.body, size)
+    pub fn buffered(&mut self, size: usize) -> BufferedStreamBody {
+        BufferedStream::new(self.body(), size)
     }
 }
