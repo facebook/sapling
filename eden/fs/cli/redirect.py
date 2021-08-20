@@ -693,7 +693,7 @@ class CleanupApfsCmd(Subcmd):
             + ["--json"]
         ).decode("utf-8")
         stale_volumes = json.loads(stdout)
-        stale_volumes.pop()  # tailing empty string due to split
+
         if not stale_volumes:
             print("No stale volumes detected")
             return 0
