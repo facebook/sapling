@@ -2680,3 +2680,9 @@ sh % "hg log -r '\n. +\n.^ +'" == r"""
     ( . + .^ +
               ^ here)
     [255]"""
+
+# test ancestorspec with multiple base revisions
+
+sh % "log '(. + .^)~1'" == r"""
+    4
+    8"""

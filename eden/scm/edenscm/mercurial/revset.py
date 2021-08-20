@@ -576,9 +576,9 @@ def ancestorspec(repo, subset, x, n, order):
     nullrev = node.nullrev
     for r in s:
         if r != nullrev:
-            n = firstancestornth(tonode(r), n)
-            if n is not None:
-                psadd(torev(n))
+            ancestor = firstancestornth(tonode(r), n)
+            if ancestor is not None:
+                psadd(torev(ancestor))
     return subset & baseset(ps, repo=repo)
 
 
