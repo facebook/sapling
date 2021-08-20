@@ -52,7 +52,6 @@ url = "2.1.0"
 util = { path = "../util" }
 version = { path = "../version" }
 vlqencoding = { path = "../vlqencoding" }
-zstd = "=0.8.0+zstd.1.4.9"
 
 [dev-dependencies]
 lazy_static = "1.0"

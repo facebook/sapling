@@ -10,7 +10,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
     fs::File,
-    io::{Cursor, ErrorKind, Read, Write},
+    io::{ErrorKind, Read, Write},
     iter, mem,
     ops::Range,
     path::{Path, PathBuf},
@@ -46,7 +46,9 @@ use async_runtime::block_on;
 use auth::{AuthGroup, AuthSection};
 use configparser::{config::ConfigSet, convert::ByteCount};
 use hg_http::http_client;
-use http_client::{HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request};
+use http_client::{
+    Encoding, HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request,
+};
 use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -1101,7 +1103,7 @@ impl LfsRemoteInner {
                 }
 
                 if http_options.accept_zstd {
-                    req.set_header("Accept-Encoding", "zstd");
+                    req.set_accept_encoding([Encoding::Zstd]);
                 }
 
                 if let Some(mts) = http_options.min_transfer_speed {
@@ -1160,7 +1162,7 @@ impl LfsRemoteInner {
                     check_status(status)?;
 
                     let start = Instant::now();
-                    let mut body = reply.raw_body();
+                    let mut body = reply.body();
                     let mut chunks: Vec<Vec<u8>> = vec![];
                     while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
                         let chunk = res.map_err(|_| {
@@ -1182,33 +1184,7 @@ impl LfsRemoteInner {
                         chunks.push(chunk);
                     }
 
-                    let result = join_chunks(&chunks);
-
-                    let content_encoding = headers.get("Content-Encoding");
-
-                    let result = match content_encoding
-                        .map(|c| std::str::from_utf8(c.as_bytes()))
-                        .transpose()
-                        .with_context(|| {
-                            format!("Invalid Content-Encoding: {:?}", content_encoding)
-                        })
-                        .map_err(TransferError::InvalidResponse)?
-                    {
-                        Some("identity") | None => result,
-                        Some("zstd") => Bytes::from(
-                            zstd::stream::decode_all(Cursor::new(&result))
-                                .context("Error decoding zstd stream")
-                                .map_err(TransferError::InvalidResponse)?,
-                        ),
-                        Some(other) => {
-                            return Err(TransferError::InvalidResponse(format_err!(
-                                "Unsupported Content-Encoding: {}",
-                                other
-                            )));
-                        }
-                    };
-
-                    Result::<_, TransferError>::Ok(result)
+                    Result::<_, TransferError>::Ok(join_chunks(&chunks))
                 }
                 .await;
 
