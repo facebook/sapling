@@ -586,18 +586,18 @@ static folly::StringPiece getCheckoutModeString(CheckoutMode checkoutMode) {
 }
 
 #ifndef _WIN32
-folly::Future<SetPathRootIdResultAndTimes> EdenMount::setPathRootId(
+folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
     FOLLY_MAYBE_UNUSED RelativePathPiece path,
     FOLLY_MAYBE_UNUSED const RootId& rootId,
-    FOLLY_MAYBE_UNUSED RootType rootType,
+    FOLLY_MAYBE_UNUSED ObjectType objectType,
     FOLLY_MAYBE_UNUSED CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
-  if (rootType != facebook::eden::RootType::TREE) {
-    throw std::runtime_error("setPathRootID only supports Tree type");
+  if (objectType != facebook::eden::ObjectType::TREE) {
+    throw std::runtime_error("setPathObjectId only supports Tree type");
   }
 
   const folly::stop_watch<> stopWatch;
-  auto setPathRootIdTime = std::make_shared<SetPathRootIdTimes>();
+  auto setPathObjectIdTime = std::make_shared<SetPathObjectIdTimes>();
   /**
    * In theory, an exclusive wlock should be issued, but
    * this is not efficent if many calls to this method ran in parallel.
@@ -605,12 +605,12 @@ folly::Future<SetPathRootIdResultAndTimes> EdenMount::setPathRootId(
    * objects are not weaving too much
    */
   auto oldParent = parentCommit_.rlock();
-  setPathRootIdTime->didAcquireParentsLock = stopWatch.elapsed();
+  setPathObjectIdTime->didAcquireParentsLock = stopWatch.elapsed();
   XLOG(DBG3) << "adding " << rootId << " to Eedn mount " << this->getPath()
              << " at path" << path << " on top of " << *oldParent;
 
   auto ctx = std::make_shared<CheckoutContext>(
-      this, checkoutMode, std::nullopt, "setPathRootId");
+      this, checkoutMode, std::nullopt, "setPathObjectId");
 
   /**
    * This will update the timestamp for the entire mount,
@@ -625,33 +625,34 @@ folly::Future<SetPathRootIdResultAndTimes> EdenMount::setPathRootId(
       objectStore_->getRootTree(rootId, ctx->getFetchContext());
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
-      .thenValue([this, ctx, setPathRootIdTime, stopWatch](
+      .thenValue([this, ctx, setPathObjectIdTime, stopWatch](
                      std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
-        setPathRootIdTime->didLookupTreesOrGetInodeByPath = stopWatch.elapsed();
+        setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
+            stopWatch.elapsed();
         auto [targetTreeInode, incomingTree] = results;
         targetTreeInode->unloadChildrenUnreferencedByFs();
         // TODO(@yipu): Remove rename lock
         ctx->start(this->acquireRenameLock());
-        setPathRootIdTime->didAcquireRenameLock = stopWatch.elapsed();
+        setPathObjectIdTime->didAcquireRenameLock = stopWatch.elapsed();
         return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
       })
-      .thenValue([ctx, setPathRootIdTime, stopWatch, rootId](auto&&) {
-        setPathRootIdTime->didCheckout = stopWatch.elapsed();
+      .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
+        setPathObjectIdTime->didCheckout = stopWatch.elapsed();
         // Complete and save the new snapshot
         return ctx->finish(rootId);
       })
-      .thenValue([ctx, setPathRootIdTime, stopWatch](
+      .thenValue([ctx, setPathObjectIdTime, stopWatch](
                      std::vector<CheckoutConflict>&& conflicts) {
-        setPathRootIdTime->didFinish = stopWatch.elapsed();
-        SetPathRootIdResultAndTimes resultAndTimes;
-        resultAndTimes.times = *setPathRootIdTime;
-        SetPathRootIdResult result;
+        setPathObjectIdTime->didFinish = stopWatch.elapsed();
+        SetPathObjectIdResultAndTimes resultAndTimes;
+        resultAndTimes.times = *setPathObjectIdTime;
+        SetPathObjectIdResult result;
         result.conflicts_ref() = std::move(conflicts);
         resultAndTimes.result = std::move(result);
         return resultAndTimes;
       })
       .thenTry([this, ctx, oldParent = *oldParent, rootId](
-                   Try<SetPathRootIdResultAndTimes>&& resultAndTimes) {
+                   Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
         logStats(
             resultAndTimes.hasValue(),
@@ -659,7 +660,7 @@ folly::Future<SetPathRootIdResultAndTimes> EdenMount::setPathRootId(
             oldParent,
             rootId,
             fetchStats,
-            "setPathRootId");
+            "setPathObjectId");
         return std::move(resultAndTimes);
       });
 }

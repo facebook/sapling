@@ -142,9 +142,9 @@ struct CheckoutTimes {
 };
 
 /**
- * Durations of the various stages of setPathRootId.
+ * Durations of the various stages of setPathObjectId.
  */
-struct SetPathRootIdTimes {
+struct SetPathObjectIdTimes {
   using duration = std::chrono::steady_clock::duration;
   duration didAcquireParentsLock{};
   duration didLookupTreesOrGetInodeByPath{};
@@ -158,9 +158,9 @@ struct CheckoutResult {
   CheckoutTimes times;
 };
 
-struct SetPathRootIdResultAndTimes {
-  SetPathRootIdResult result;
-  SetPathRootIdTimes times;
+struct SetPathObjectIdResultAndTimes {
+  SetPathObjectIdResult result;
+  SetPathObjectIdTimes times;
 };
 
 /**
@@ -708,7 +708,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Graft a tree or blob to a path. Returns a folly::Future that will be
-   * fulfilled when the setPathRootId operation is complete. The return result
+   * fulfilled when the setPathObjectId operation is complete. The return result
    * include conflicts if any.
    *
    * CheckoutMode is similar to checkout:
@@ -718,10 +718,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * other contents will disappear
    * 3. In DRYRUN mode, no action action will be executed.
    */
-  FOLLY_NODISCARD folly::Future<SetPathRootIdResultAndTimes> setPathRootId(
+  FOLLY_NODISCARD folly::Future<SetPathObjectIdResultAndTimes> setPathObjectId(
       RelativePathPiece path,
       const RootId& rootId,
-      RootType rootType,
+      ObjectType objectType,
       CheckoutMode checkoutMode,
       ObjectFetchContext& context);
 

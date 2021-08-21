@@ -1166,7 +1166,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
 
-void runTestSetPathRootId(
+void runTestSetPathObjectId(
     folly::StringPiece file,
     folly::StringPiece pathToSet,
     RelativePathPiece expectedFile) {
@@ -1188,19 +1188,19 @@ void runTestSetPathRootId(
   // Insert file2 to pathToSet
   RelativePathPiece path{pathToSet};
 
-  auto setPathRootIdResultAndTimesAndTimes =
-      testMount.getEdenMount()->setPathRootId(
+  auto setPathObjectIdResultAndTimesAndTimes =
+      testMount.getEdenMount()->setPathObjectId(
           path,
           RootId{"2"},
-          facebook::eden::RootType::TREE,
+          facebook::eden::ObjectType::TREE,
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
   auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathRootIdResultAndTimesAndTimes =
-      std::move(setPathRootIdResultAndTimesAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathRootIdResultAndTimesAndTimes.isReady());
-  auto result = std::move(waitedSetPathRootIdResultAndTimesAndTimes).get();
+  auto waitedSetPathObjectIdResultAndTimesAndTimes =
+      std::move(setPathObjectIdResultAndTimesAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimesAndTimes.isReady());
+  auto result = std::move(waitedSetPathObjectIdResultAndTimesAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   // Confirm that the tree has been updated correctly.
@@ -1208,42 +1208,42 @@ void runTestSetPathRootId(
       testMount.getFileInode(expectedFile), "differentcontents", 0644);
 }
 
-TEST(Checkout, testSetPathRootIdSimple) {
-  runTestSetPathRootId(
+TEST(Checkout, testSetPathObjectIdSimple) {
+  runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir",
       "dir/differentdir/differentfile.txt"_relpath);
 }
 
-TEST(Checkout, testSetPathRootIdNewDir) {
-  runTestSetPathRootId(
+TEST(Checkout, testSetPathObjectIdNewDir) {
+  runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir2",
       "dir2/differentdir/differentfile.txt"_relpath);
 }
 
-TEST(Checkout, testSetPathRootIdSetOnRoot) {
-  runTestSetPathRootId(
+TEST(Checkout, testSetPathObjectIdSetOnRoot) {
+  runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "",
       "differentdir/differentfile.txt"_relpath);
 }
 
-TEST(Checkout, testSetPathRootIdMultipleLevelFolder) {
-  runTestSetPathRootId(
+TEST(Checkout, testSetPathObjectIdMultipleLevelFolder) {
+  runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir/dir2/dir3",
       "dir/dir2/dir3/differentdir/differentfile.txt"_relpath);
 }
 
-TEST(Checkout, testSetPathRootIdMultipleLevelFolderAndNewDir) {
-  runTestSetPathRootId(
+TEST(Checkout, testSetPathObjectIdMultipleLevelFolderAndNewDir) {
+  runTestSetPathObjectId(
       "differentdir/differentfile.txt",
       "dir/dir2/dir4",
       "dir/dir2/dir4/differentdir/differentfile.txt"_relpath);
 }
 
-TEST(Checkout, testSetPathRootIdConflict) {
+TEST(Checkout, testSetPathObjectIdConflict) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/dir2/dir3/file.txt", "contents");
   TestMount testMount{builder1, false};
@@ -1261,20 +1261,21 @@ TEST(Checkout, testSetPathRootIdConflict) {
 
   // Insert file2 to pathToSet
   RelativePathPiece path{"dir/dir2/dir3"};
-  SetPathRootIdParams params;
-  params.type_ref() = facebook::eden::RootType::TREE;
-  auto setPathRootIdResultAndTimes = testMount.getEdenMount()->setPathRootId(
-      path,
-      RootId{"2"},
-      facebook::eden::RootType::TREE,
-      facebook::eden::CheckoutMode::NORMAL,
-      ObjectFetchContext::getNullContext());
+  SetPathObjectIdParams params;
+  params.type_ref() = facebook::eden::ObjectType::TREE;
+  auto setPathObjectIdResultAndTimes =
+      testMount.getEdenMount()->setPathObjectId(
+          path,
+          RootId{"2"},
+          facebook::eden::ObjectType::TREE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
 
   auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathRootIdResultAndTimes =
-      std::move(setPathRootIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathRootIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathRootIdResultAndTimes).get();
+  auto waitedSetPathObjectIdResultAndTimes =
+      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
   ASSERT_TRUE(result.result.conflicts_ref().has_value());
   EXPECT_EQ(1, result.result.conflicts_ref()->size());
   EXPECT_THAT(
@@ -1283,7 +1284,7 @@ TEST(Checkout, testSetPathRootIdConflict) {
           ConflictType::UNTRACKED_ADDED, "dir/dir2/dir3/file.txt")));
 }
 
-TEST(Checkout, testSetPathRootIdLastCheckoutTime) {
+TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   TestMount testMount;
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("dir/file.txt", "contents");
@@ -1336,20 +1337,21 @@ TEST(Checkout, testSetPathRootIdLastCheckoutTime) {
 
   // Insert file2 to dir2
   RelativePathPiece path{"dir2"};
-  SetPathRootIdParams params;
-  params.type_ref() = facebook::eden::RootType::TREE;
-  auto setPathRootIdResultAndTimes = testMount.getEdenMount()->setPathRootId(
-      path,
-      RootId{"2"},
-      facebook::eden::RootType::TREE,
-      facebook::eden::CheckoutMode::NORMAL,
-      ObjectFetchContext::getNullContext());
+  SetPathObjectIdParams params;
+  params.type_ref() = facebook::eden::ObjectType::TREE;
+  auto setPathObjectIdResultAndTimes =
+      testMount.getEdenMount()->setPathObjectId(
+          path,
+          RootId{"2"},
+          facebook::eden::ObjectType::TREE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
 
   auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathRootIdResultAndTimes =
-      std::move(setPathRootIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathRootIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathRootIdResultAndTimes).get();
+  auto waitedSetPathObjectIdResultAndTimes =
+      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   struct timespec updatedLastCheckoutTime =

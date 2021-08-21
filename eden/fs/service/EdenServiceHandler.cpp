@@ -1503,29 +1503,29 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
           }));
 }
 
-folly::Future<std::unique_ptr<SetPathRootIdResult>>
-EdenServiceHandler::future_setPathRootId(
-    std::unique_ptr<SetPathRootIdParams> params) {
+folly::Future<std::unique_ptr<SetPathObjectIdResult>>
+EdenServiceHandler::future_setPathObjectId(
+    std::unique_ptr<SetPathObjectIdParams> params) {
 #ifndef _WIN32
   auto mountPoint = params->get_mountPoint();
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, mountPoint);
   auto mountPath = resolveCanonicalPath(mountPoint);
   auto edenMount = server_->getMount(mountPath);
   auto parsedRootId =
-      edenMount->getObjectStore()->parseRootId(params->get_rootId());
+      edenMount->getObjectStore()->parseRootId(params->get_objectId());
   auto& fetchContext = helper->getFetchContext();
 
   return wrapFuture(
       std::move(helper),
       edenMount
-          ->setPathRootId(
+          ->setPathObjectId(
               RelativePathPiece{params->get_path()},
               parsedRootId,
               params->get_type(),
               params->get_mode(),
               fetchContext)
           .thenValue([](auto&& resultAndTimes) {
-            return std::make_unique<SetPathRootIdResult>(
+            return std::make_unique<SetPathObjectIdResult>(
                 std::move(resultAndTimes.result));
           }));
 #else
