@@ -44,6 +44,13 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& commitID,
       ObjectFetchContext& context) override;
+  folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
+      const RootId& /* commitID */,
+      TreeEntryType /* treeEntryType */,
+      facebook::eden::PathComponentPiece /* pathComponentPiece */,
+      ObjectFetchContext& /* context */) override {
+    throw std::domain_error("unimplemented");
+  }
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
       ObjectFetchContext& context) override;

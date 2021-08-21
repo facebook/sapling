@@ -14,6 +14,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>
@@ -25,6 +26,8 @@ namespace facebook::eden {
 class Blob;
 class Hash;
 class Tree;
+class TreeEntry;
+enum class TreeEntryType : uint8_t;
 
 /**
  * Abstract interface for a BackingStore.
@@ -42,6 +45,16 @@ class BackingStore : public RootIdCodec {
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
+      ObjectFetchContext& context) = 0;
+  /**
+   * The API should accept object id instead of rootId. But Object is currently
+   * a fixed 20 bytes, so temporariorly use rootId instead.
+   * TODO: Replace rootID with objectId once objectId is widened.
+   */
+  virtual folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
+      const RootId& rootId,
+      TreeEntryType treeEntryType,
+      facebook::eden::PathComponentPiece pathComponentPiece,
       ObjectFetchContext& context) = 0;
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
