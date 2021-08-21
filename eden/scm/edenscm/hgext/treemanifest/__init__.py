@@ -45,14 +45,6 @@ trees from the server.
     [treemanifest]
     fetchdepth = 65536
 
-`treemanifest.prefetchdraftparents` causes treemanifest to prefetch the parent
-trees for new draft roots added to the repository.
-
-::
-
-    [treemanifest]
-    prefetchdraftparents = True
-
 `treemanifest.bfsprefetch` causes the client to perform a BFS over the
 tree to be prefetched and manually request all missing nodes from the
 server, rather than relying on the server to perform this computation.
@@ -151,7 +143,6 @@ configitem = registrar.configitem(configtable)
 
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
-configitem("treemanifest", "prefetchdraftparents", default=True)
 configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"
@@ -374,42 +365,6 @@ def clientreposetup(repo):
 
 def wraprepo(repo):
     class treerepository(repo.__class__):
-        def transaction(self, *args, **kwargs):
-            tr = super(treerepository, self).transaction(*args, **kwargs)
-            tr.addpostclose("draftparenttreefetch", self._parenttreefetch)
-            return tr
-
-        def _parenttreefetch(self, tr):
-            """Prefetches draft commit parents after draft commits are added to the
-            repository. This is useful for avoiding expensive ondemand downloads when
-            accessing a draft commit for which we have the draft trees but not the
-            public trees."""
-            if not self.ui.configbool("treemanifest", "prefetchdraftparents"):
-                return
-
-            # strip only logically removes commits, the added commits are
-            # pointless and can have issues like invalidated revs. Do nothing
-            # in this case.
-            if self.ui.cmdname == "debugstrip" or "strip" in tr.desc:
-                return
-
-            nodes = tr.changes.get("nodes")
-            if not nodes:
-                return
-
-            # If any draft commits were added, prefetch their public parents.
-            # Note that shelve could've produced a hidden commit, so
-            # we need an unfiltered repo to evaluate the revset
-            try:
-                revset = "parents(%ln & draft() - hidden()) & public()"
-                draftparents = list(self.set(revset, nodes))
-
-                if draftparents:
-                    self.prefetchtrees([c.manifestnode() for c in draftparents])
-            except Exception as ex:
-                # Errors are not fatal.
-                self.ui.warn(_("not prefetching trees for draft parents: %s\n") % ex)
-
         @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None):
             if not treeenabled(self.ui):
