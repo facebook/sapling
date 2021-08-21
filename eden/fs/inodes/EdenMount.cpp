@@ -586,14 +586,31 @@ static folly::StringPiece getCheckoutModeString(CheckoutMode checkoutMode) {
 }
 
 #ifndef _WIN32
+namespace {
+TreeEntryType toEdenTreeEntryType(facebook::eden::ObjectType objectType) {
+  switch (objectType) {
+    case facebook::eden::ObjectType::TREE:
+      return TreeEntryType::TREE;
+    case facebook::eden::ObjectType::REGULAR_FILE:
+      return TreeEntryType::REGULAR_FILE;
+    case facebook::eden::ObjectType::EXECUTABLE_FILE:
+      return TreeEntryType::EXECUTABLE_FILE;
+    case facebook::eden::ObjectType::SYMLINK:
+      return TreeEntryType::SYMLINK;
+  }
+  throw std::runtime_error("unsupported root type");
+}
+
+} // namespace
+
 folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
     FOLLY_MAYBE_UNUSED RelativePathPiece path,
     FOLLY_MAYBE_UNUSED const RootId& rootId,
     FOLLY_MAYBE_UNUSED ObjectType objectType,
     FOLLY_MAYBE_UNUSED CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
-  if (objectType != facebook::eden::ObjectType::TREE) {
-    throw std::runtime_error("setPathObjectId only supports Tree type");
+  if (objectType == facebook::eden::ObjectType::SYMLINK) {
+    throw std::runtime_error("setPathObjectId does not support symlink type");
   }
 
   const folly::stop_watch<> stopWatch;
@@ -618,11 +635,22 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
    * partial node so only affects its children.
    */
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
+  bool isTree = (objectType == facebook::eden::ObjectType::TREE);
 
-  auto getTargetTreeInodeFuture =
-      ensureDirectoryExists(path, ctx->getFetchContext());
-  auto getRootTreeFuture =
-      objectStore_->getRootTree(rootId, ctx->getFetchContext());
+  auto getTargetTreeInodeFuture = ensureDirectoryExists(
+      isTree ? path : path.dirname(), ctx->getFetchContext());
+
+  auto getRootTreeFuture = isTree
+      ? objectStore_->getRootTree(rootId, ctx->getFetchContext())
+      : objectStore_
+            ->getTreeEntryForRootId(
+                rootId,
+                toEdenTreeEntryType(objectType),
+                path.basename(),
+                ctx->getFetchContext())
+            .thenValue([](std::shared_ptr<TreeEntry> treeEntry) {
+              return std::make_shared<Tree>(std::vector<TreeEntry>{*treeEntry});
+            });
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
       .thenValue([this, ctx, setPathObjectIdTime, stopWatch](
