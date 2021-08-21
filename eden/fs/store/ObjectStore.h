@@ -132,6 +132,19 @@ class ObjectStore : public IObjectStore,
       ObjectFetchContext& context) const override;
 
   /**
+   * Get a TreeEntry by ID
+   *
+   * This returns a Future object that will produce the TreeEntry when it is
+   * ready. It may result in a std::domain_error if the specified tree ID does
+   * not exist, or possibly other exceptions on error.
+   */
+  folly::Future<std::shared_ptr<TreeEntry>> getTreeEntryForRootId(
+      const RootId& rootId,
+      facebook::eden::TreeEntryType treeEntryType,
+      facebook::eden::PathComponentPiece pathComponentPiece,
+      ObjectFetchContext& context) const;
+
+  /**
    * Get a Tree by ID.
    *
    * This returns a Future object that will produce the Tree when it is ready.

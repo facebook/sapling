@@ -138,6 +138,21 @@ Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
       });
 }
 
+folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
+    const RootId& rootId,
+    facebook::eden::TreeEntryType treeEntryType,
+    facebook::eden::PathComponentPiece pathComponentPiece,
+    ObjectFetchContext& context) const {
+  XLOG(DBG3) << "getTreeEntryForRootId(" << rootId << ")";
+
+  // TODO: We can cache the treeEntry to the localStore like Tree or
+  // blob
+  return backingStore_
+      ->getTreeEntryForRootId(
+          rootId, treeEntryType, pathComponentPiece, context)
+      .via(executor_);
+}
+
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {
