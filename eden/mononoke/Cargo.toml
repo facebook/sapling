@@ -69,7 +69,7 @@ name = "streaming_clone_warmup"
 path = "cmds/streaming_clone_warmup/main.rs"
 
 [dependencies]
-ahash = "0.4.7"
+ahash = "0.7.4"
 anyhow = "1.0"
 ascii = "1.0"
 async-compression = { version = "0.3.8", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
