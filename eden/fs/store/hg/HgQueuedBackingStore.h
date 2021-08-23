@@ -210,6 +210,24 @@ class HgQueuedBackingStore final : public BackingStore {
       ObjectFetchContext::ObjectType type);
 
   /**
+   * Similarly to logBackingStoreFetch, but on a batch of hashes.
+   */
+  void logBatchedBackingStoreFetch(
+      ObjectFetchContext& context,
+      const std::vector<HgProxyHash>& hashes,
+      ObjectFetchContext::ObjectType type);
+
+  /**
+   * Internally used by the logBackingStoreFetch and
+   * logBatchedBackingStoreFetch to log access to the given path.
+   */
+  void logFetch(
+      ObjectFetchContext& context,
+      RelativePathPiece path,
+      ObjectFetchContext::ObjectType type,
+      const std::optional<std::shared_ptr<RE2>>& logFetchPathRegex);
+
+  /**
    * gets the watches timing `object` imports that are `stage`
    *    ex. HgQueuedBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,

@@ -424,10 +424,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         }
         auto& proxyHashes = tryHashes.value();
 
-        for (const auto& hash : proxyHashes) {
-          logBackingStoreFetch(
-              context, hash, ObjectFetchContext::ObjectType::Blob);
-        }
+        logBatchedBackingStoreFetch(
+            context, proxyHashes, ObjectFetchContext::ObjectType::Blob);
 
         // Do not check for whether blobs are already present locally, this
         // check is useful for latency oriented workflows, not for throughput
@@ -487,30 +485,52 @@ void HgQueuedBackingStore::logMissingProxyHash() {
   }
 }
 
-void HgQueuedBackingStore::logBackingStoreFetch(
+void HgQueuedBackingStore::logFetch(
     ObjectFetchContext& context,
-    const HgProxyHash& proxyHash,
-    ObjectFetchContext::ObjectType type) {
-  if (!config_) {
-    return;
-  }
-  auto& logFetchPathRegex =
-      config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
-  // If we are not logging at least one of these instances, early return
-  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
-    return;
-  }
-  RelativePathPiece path = proxyHash.path();
-
+    RelativePathPiece path,
+    ObjectFetchContext::ObjectType type,
+    const std::optional<std::shared_ptr<RE2>>& logFetchPathRegex) {
   if (type != ObjectFetchContext::ObjectType::Tree) {
     recordFetch(path.stringPiece());
   }
 
   if (logFetchPathRegex) {
+    auto pathPiece = path.stringPiece();
     if (RE2::PartialMatch(
-            path.stringPiece().str(), *logFetchPathRegex.value())) {
+            re2::StringPiece{pathPiece.data(), pathPiece.size()},
+            **logFetchPathRegex)) {
       logger_->logImport(context, path, type);
     }
+  }
+}
+
+void HgQueuedBackingStore::logBackingStoreFetch(
+    ObjectFetchContext& context,
+    const HgProxyHash& proxyHash,
+    ObjectFetchContext::ObjectType type) {
+  const auto& logFetchPathRegex =
+      config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
+  // If we are not logging at least one of these instances, early return
+  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
+    return;
+  }
+
+  logFetch(context, proxyHash.path(), type, logFetchPathRegex);
+}
+
+void HgQueuedBackingStore::logBatchedBackingStoreFetch(
+    ObjectFetchContext& context,
+    const std::vector<HgProxyHash>& hashes,
+    ObjectFetchContext::ObjectType type) {
+  const auto& logFetchPathRegex =
+      config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
+  // If we are not logging at least one of these instances, early return
+  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
+    return;
+  }
+
+  for (const auto& hash : hashes) {
+    logFetch(context, hash.path(), type, logFetchPathRegex);
   }
 }
 
