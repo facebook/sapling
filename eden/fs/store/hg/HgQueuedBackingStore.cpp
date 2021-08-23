@@ -494,11 +494,10 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (!config_) {
     return;
   }
-  auto& logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
   auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
   // If we are not logging at least one of these instances, early return
-  if (!(logFetchPath || logFetchPathRegex || isRecordingFetch_.load())) {
+  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
     return;
   }
   RelativePathPiece path = proxyHash.path();
@@ -510,12 +509,6 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (logFetchPathRegex) {
     if (RE2::PartialMatch(
             path.stringPiece().str(), *logFetchPathRegex.value())) {
-      logger_->logImport(context, path, type);
-    }
-  } else if (logFetchPath) {
-    // TODO: remove once logFetchPathRegex is rolled out everywhere
-    if (RelativePathPiece(logFetchPath.value())
-            .isParentDirOf(RelativePathPiece(path))) {
       logger_->logImport(context, path, type);
     }
   }

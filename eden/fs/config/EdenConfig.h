@@ -515,20 +515,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Legacy to be deleted, once all running eden's are compatible with
-   * log-object-fetch-path-regex.
-   * Controls which paths eden will log data fetches for when this is set (
-   * if logObjectFetchPathRegex is not set). Eden will only log paths which are
-   * subpaths of <checkout root>/<logObjectFetchPath>.
-   */
-  ConfigSetting<std::optional<std::string>> logObjectFetchPath{
-      "telemetry:log-object-fetch-path",
-      std::nullopt,
-      this};
-
-  /**
    * Controls which paths eden will log data fetches for when this is set.
-   * Takes precidence over logObjectFetchPath.
    * Fetches for any paths that match the regex will be logged.
    */
   ConfigSetting<std::optional<std::shared_ptr<RE2>>> logObjectFetchPathRegex{
