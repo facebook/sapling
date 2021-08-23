@@ -491,7 +491,7 @@ void HgQueuedBackingStore::logFetch(
     ObjectFetchContext::ObjectType type,
     const std::optional<std::shared_ptr<RE2>>& logFetchPathRegex) {
   if (type != ObjectFetchContext::ObjectType::Tree) {
-    recordFetch(path.stringPiece());
+    recordFetch(path);
   }
 
   if (logFetchPathRegex) {
@@ -573,9 +573,9 @@ void HgQueuedBackingStore::startRecordingFetch() {
   isRecordingFetch_.store(true);
 }
 
-void HgQueuedBackingStore::recordFetch(folly::StringPiece importPath) {
+void HgQueuedBackingStore::recordFetch(RelativePathPiece importPath) {
   if (isRecordingFetch_.load()) {
-    fetchedFilePaths_.wlock()->emplace(importPath.str());
+    fetchedFilePaths_.wlock()->emplace(importPath.stringPiece().str());
   }
 }
 

@@ -151,7 +151,6 @@ class HgQueuedBackingStore final : public BackingStore {
       RequestMetricsScope::RequestMetric metric) const;
 
   void startRecordingFetch() override;
-  void recordFetch(folly::StringPiece) override;
   std::unordered_set<std::string> stopRecordingFetch() override;
 
   folly::SemiFuture<folly::Unit> importManifestForRoot(
@@ -196,6 +195,13 @@ class HgQueuedBackingStore final : public BackingStore {
       const Hash& id,
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);
+
+  /**
+   * Record an access to the path.
+   *
+   * This is a no-op if no recording is ongoing.
+   */
+  void recordFetch(RelativePathPiece path);
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is

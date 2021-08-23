@@ -78,12 +78,11 @@ class BackingStore : public RootIdCodec {
   virtual void periodicManagementTask() {}
 
   /**
-   * Subclass of BackingStore will override these functions to record file paths
-   * fetched. By default, recordFetch() does nothing. After
-   * startRecordingFetch() is called, recordFetch() starts to records fetched
-   * file paths. stopRecordingFetch() will disable recordFetch()'s function and
-   * return the fetched files since startRecordingFetch() is called and clear
-   * the old records.
+   * Subclass of BackingStore will override these functions to record file
+   * paths fetched. After startRecordingFetch() is called, the BackingStore
+   * will record fetched file paths. stopRecordingFetch() will disable the
+   * recording and return the fetched files since startRecordingFetch() is
+   * called and clear the old records.
    *
    * Currently implemented in HgQueuedBackingStore.
    *
@@ -91,7 +90,6 @@ class BackingStore : public RootIdCodec {
    * startRecordingFetch() a second time has no effect.
    */
   virtual void startRecordingFetch() {}
-  virtual void recordFetch(folly::StringPiece) {}
   virtual std::unordered_set<std::string> stopRecordingFetch() {
     return {};
   }
