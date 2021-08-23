@@ -57,6 +57,52 @@ pub enum HistoryAcrossDeletions {
     DontTrack,
 }
 
+enum TraversalOrder {
+    BfsOrder(VecDeque<ChangesetId>),
+}
+
+impl TraversalOrder {
+    fn new_bfs_order() -> Self {
+        Self::BfsOrder(VecDeque::new())
+    }
+
+    fn push_front(&mut self, cs_id: ChangesetId) {
+        use TraversalOrder::*;
+
+        match self {
+            BfsOrder(q) => {
+                q.push_front(cs_id);
+            }
+        }
+    }
+
+    fn push_back(&mut self, cs_id: ChangesetId) {
+        use TraversalOrder::*;
+
+        match self {
+            BfsOrder(q) => {
+                q.push_back(cs_id);
+            }
+        }
+    }
+
+    fn pop_front(&mut self) -> Option<ChangesetId> {
+        use TraversalOrder::*;
+
+        match self {
+            BfsOrder(q) => q.pop_front(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        use TraversalOrder::*;
+
+        match self {
+            BfsOrder(q) => q.is_empty(),
+        }
+    }
+}
+
 /// Returns a full history of the given path starting from the given unode in BFS order.
 ///
 /// Accepts a `Visitor` object which controls the BFS flow by filtering out the unwanted changesets
@@ -127,7 +173,7 @@ pub async fn list_file_history(
         None => return Ok(stream::iter(vec![]).boxed()),
     };
 
-    let mut bfs = VecDeque::new();
+    let mut bfs = TraversalOrder::new_bfs_order();
     visit(
         &ctx,
         &repo,
@@ -183,7 +229,7 @@ pub trait Visitor: Send + 'static {
     /// traversal result and which should be pursues recursively.
     ///
     /// `descendant_cs_id` is:
-    ///  * None in the first BFS iteration
+    ///  * None in the first iteration
     ///  * common descendant of the ancestors that lead us to processing them.
     async fn visit(
         &mut self,
@@ -229,7 +275,7 @@ async fn visit(
     visitor: &mut impl Visitor,
     cs_id: Option<ChangesetId>,
     ancestors: Vec<ChangesetId>,
-    bfs: &mut VecDeque<ChangesetId>,
+    bfs: &mut TraversalOrder,
     visited: &mut HashSet<ChangesetId>,
     history: &mut Vec<ChangesetId>,
 ) -> Result<(), FastlogError> {
@@ -337,7 +383,7 @@ type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
     visited: HashSet<ChangesetId>,
-    bfs: VecDeque<ChangesetId>,
+    bfs: TraversalOrder,
     prefetch: Option<ChangesetId>,
     visitor: V,
 }
