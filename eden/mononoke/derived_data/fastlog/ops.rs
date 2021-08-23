@@ -66,7 +66,7 @@ impl TraversalOrder {
         Self::BfsOrder(VecDeque::new())
     }
 
-    fn push_front(&mut self, cs_id: ChangesetId) {
+    async fn push_front(&mut self, cs_id: ChangesetId) -> Result<(), Error> {
         use TraversalOrder::*;
 
         match self {
@@ -74,9 +74,11 @@ impl TraversalOrder {
                 q.push_front(cs_id);
             }
         }
+
+        Ok(())
     }
 
-    fn push_back(&mut self, cs_id: ChangesetId) {
+    async fn push_back(&mut self, cs_id: ChangesetId) -> Result<(), Error> {
         use TraversalOrder::*;
 
         match self {
@@ -84,6 +86,8 @@ impl TraversalOrder {
                 q.push_back(cs_id);
             }
         }
+
+        Ok(())
     }
 
     fn pop_front(&mut self) -> Option<ChangesetId> {
@@ -283,7 +287,7 @@ async fn visit(
     for ancestor in ancestors {
         if visited.insert(ancestor) {
             history.push(ancestor.clone());
-            bfs.push_back(ancestor);
+            bfs.push_back(ancestor).await?;
         }
     }
     Ok(())
@@ -464,7 +468,7 @@ where
                 }
                 next_to_fetch = Some(cs_id);
                 // Put it back in the queue so we can process once we fetch its history
-                bfs.push_front(cs_id);
+                bfs.push_front(cs_id).await?;
                 break;
             }
             // this should never happen as the [cs -> parents] mapping is fetched
