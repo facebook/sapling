@@ -155,8 +155,14 @@ class ObjectStore : public IObjectStore,
       const Hash& id,
       ObjectFetchContext& context) const override;
 
+  /**
+   * Prefetch all the blobs represented by the HashRange.
+   *
+   * The caller is responsible for making sure that the HashRange stays valid
+   * for as long as the returned SemiFuture.
+   */
   folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids,
+      HashRange ids,
       ObjectFetchContext& context) const override;
 
   /**

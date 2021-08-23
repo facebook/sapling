@@ -81,7 +81,7 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
 }
 
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
-    const std::vector<Hash>&,
+    HashRange,
     ObjectFetchContext&) const {
   return folly::unit;
 }

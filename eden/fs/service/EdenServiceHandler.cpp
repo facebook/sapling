@@ -1475,24 +1475,20 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
 
               auto store = edenMount->getObjectStore();
               auto blobs = fileBlobsToPrefetch->rlock();
-              std::vector<Hash> batch;
-              bool useEdenNativeFetch =
-                  config->useEdenNativePrefetch.getValue();
+              auto range = folly::Range{blobs->data(), blobs->size()};
 
-              for (auto& hash : *blobs) {
-                if (!useEdenNativeFetch && batch.size() >= 20480) {
-                  futures.emplace_back(
-                      store->prefetchBlobs(batch, fetchContext));
-                  batch.clear();
-                }
-                batch.emplace_back(hash);
+              while (range.size() > 20480) {
+                auto curRange = range.subpiece(0, 20480);
+                range.advance(20480);
+                futures.emplace_back(
+                    store->prefetchBlobs(curRange, fetchContext));
               }
-              if (!batch.empty()) {
-                futures.emplace_back(store->prefetchBlobs(batch, fetchContext));
+              if (!range.empty()) {
+                futures.emplace_back(store->prefetchBlobs(range, fetchContext));
               }
 
               return folly::collectUnsafe(futures).thenValue(
-                  [glob = std::move(out)](auto&&) mutable {
+                  [glob = std::move(out), fileBlobsToPrefetch](auto&&) mutable {
                     return makeFuture(std::move(glob));
                   });
             }

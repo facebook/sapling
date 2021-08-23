@@ -133,7 +133,7 @@ class HgQueuedBackingStore final : public BackingStore {
       ObjectFetchContext& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids,
+      HashRange ids,
       ObjectFetchContext& context) override;
 
   /**

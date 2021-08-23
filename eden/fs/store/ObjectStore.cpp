@@ -224,7 +224,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
-    const std::vector<Hash>& ids,
+    HashRange ids,
     ObjectFetchContext& fetchContext) const {
   // In theory we could/should ask the localStore_ to filter the list
   // of ids down to just the set that we need to load, but there is no

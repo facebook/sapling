@@ -49,8 +49,15 @@ class IObjectStore {
   virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
       ObjectFetchContext& context) const = 0;
+
+  /**
+   * Prefetch all the blobs represented by the HashRange.
+   *
+   * The caller is responsible for making sure that the HashRange stays valid
+   * for as long as the returned SemiFuture.
+   */
   virtual folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids,
+      HashRange ids,
       ObjectFetchContext& context) const = 0;
 };
 

@@ -47,7 +47,7 @@ class FakeObjectStore final : public IObjectStore {
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
   folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids,
+      HashRange ids,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
 

@@ -88,9 +88,15 @@ class HgProxyHash {
     return value_;
   }
 
+  /**
+   * Load all the proxy hashes given.
+   *
+   * The caller is responsible for keeping the HashRange alive for the duration
+   * of the future.
+   */
   static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,
-      const std::vector<Hash>& blobHashes);
+      HashRange blobHashes);
 
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.

@@ -413,14 +413,14 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
-    const std::vector<Hash>& ids,
+    HashRange ids,
     ObjectFetchContext& context) {
   // when useEdenNativePrefetch is true, fetch blobs one by one instead
   // of grouping them and fetching in batches.
   if (config_->getEdenConfig()->useEdenNativePrefetch.getValue()) {
     std::vector<folly::SemiFuture<std::unique_ptr<Blob>>> futures;
     futures.reserve(ids.size());
-    for (auto id : ids) {
+    for (const auto& id : ids) {
       futures.emplace_back(getBlobImpl(id, context, false));
     }
     return folly::collectAll(futures).deferValue([](const auto& tries) {

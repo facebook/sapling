@@ -27,19 +27,18 @@ HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash& hgRevHash) {
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
-    const std::vector<Hash>& blobHashes) {
-  auto hashCopies = std::make_shared<std::vector<Hash>>(blobHashes);
+    HashRange blobHashes) {
   std::vector<ByteRange> byteRanges;
-  for (auto& hash : *hashCopies) {
+  for (const auto& hash : blobHashes) {
     byteRanges.push_back(hash.getBytes());
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-      .thenValue([blobHashes = hashCopies](std::vector<StoreResult>&& data) {
+      .thenValue([blobHashes](std::vector<StoreResult>&& data) {
         std::vector<HgProxyHash> results;
 
-        for (size_t i = 0; i < blobHashes->size(); ++i) {
-          results.emplace_back(HgProxyHash{
-              blobHashes->at(i), data[i], "prefetchFiles getBatch"});
+        for (size_t i = 0; i < blobHashes.size(); ++i) {
+          results.emplace_back(
+              HgProxyHash{blobHashes.at(i), data[i], "prefetchFiles getBatch"});
         }
 
         return results;

@@ -129,6 +129,8 @@ class Hash : boost::totally_ordered<Hash> {
   Storage bytes_;
 };
 
+using HashRange = folly::Range<const Hash*>;
+
 /** A hash object initialized to all zeroes */
 extern const Hash kZeroHash;
 
