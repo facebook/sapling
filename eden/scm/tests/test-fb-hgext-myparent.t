@@ -53,6 +53,15 @@ If the authors do not match the keywords will be empty.
   $ hg log -T '{myparenttitleprefix}' -r .
   $ hg log -T '{myparenttags}' -r .
 
+Ensure multiple prefixes tags are supported
+
+  $ touch baz
+  $ hg commit -qAm '[long tag][ tag2][tag3 ] [tags must be connected] Adding baz'
+  $ touch foobar
+  $ hg commit -qAm 'Child commit'
+  $ hg log -T '{myparenttitleprefix}\n' -r .
+  [long tag][ tag2][tag3 ]
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | grep myparent

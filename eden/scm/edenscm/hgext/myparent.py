@@ -17,8 +17,9 @@ The extension adds five new keywords:
 - *myparentsubscribers* the subscribers of the parent commit
 - *myparenttasks* the tasks of the parent commit
 - *myparenttags* the tags of the parent commit
-- *myparenttitleprefix* the prefix as defined by [] of the parent commit.
-                        E.g. '[e2e automation] foo bar' -> '[e2e automation]'
+- *myparenttitleprefix* the prefix as defined by the list of consecutive [] of
+                        the parent commit.
+                        E.g. '[fbcode][e2e automation] foo bar' -> '[fbcode][e2e automation]'
 
 After enabling the extension, change the default commit template:
 
@@ -96,8 +97,8 @@ def showmyparenttitleprefix(repo, ctx, templ, **args):
         return ""
     descr = ctx.p1().description()
     title = descr.splitlines()[0]
-    prefix_end = title.find("]")
-    return title[0 : prefix_end + 1] if prefix_end > 0 else ""
+    match = re.match(r"(?:\[.*?\])+", title)
+    return match.group(0) if match else ""
 
 
 def extract_from_parent(ctx, pattern):
