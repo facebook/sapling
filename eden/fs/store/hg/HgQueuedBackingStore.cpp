@@ -314,7 +314,9 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
   }
   auto getTreeFuture = folly::makeSemiFutureWith([&] {
     logBackingStoreFetch(
-        context, proxyHash, ObjectFetchContext::ObjectType::Tree);
+        context,
+        folly::Range{&proxyHash, 1},
+        ObjectFetchContext::ObjectType::Tree);
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
@@ -356,7 +358,9 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
   }
 
   logBackingStoreFetch(
-      context, proxyHash, ObjectFetchContext::ObjectType::Blob);
+      context,
+      folly::Range{&proxyHash, 1},
+      ObjectFetchContext::ObjectType::Blob);
 
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
@@ -424,8 +428,10 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         }
         auto& proxyHashes = tryHashes.value();
 
-        logBatchedBackingStoreFetch(
-            context, proxyHashes, ObjectFetchContext::ObjectType::Blob);
+        logBackingStoreFetch(
+            context,
+            folly::Range{proxyHashes.data(), proxyHashes.size()},
+            ObjectFetchContext::ObjectType::Blob);
 
         // Do not check for whether blobs are already present locally, this
         // check is useful for latency oriented workflows, not for throughput
@@ -485,54 +491,31 @@ void HgQueuedBackingStore::logMissingProxyHash() {
   }
 }
 
-void HgQueuedBackingStore::logFetch(
-    ObjectFetchContext& context,
-    RelativePathPiece path,
-    ObjectFetchContext::ObjectType type,
-    const std::optional<std::shared_ptr<RE2>>& logFetchPathRegex) {
-  if (type != ObjectFetchContext::ObjectType::Tree) {
-    recordFetch(path);
-  }
-
-  if (logFetchPathRegex) {
-    auto pathPiece = path.stringPiece();
-    if (RE2::PartialMatch(
-            re2::StringPiece{pathPiece.data(), pathPiece.size()},
-            **logFetchPathRegex)) {
-      logger_->logImport(context, path, type);
-    }
-  }
-}
-
 void HgQueuedBackingStore::logBackingStoreFetch(
     ObjectFetchContext& context,
-    const HgProxyHash& proxyHash,
+    folly::Range<HgProxyHash*> hashes,
     ObjectFetchContext::ObjectType type) {
   const auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
-  // If we are not logging at least one of these instances, early return
-  if (!(logFetchPathRegex ||
-        isRecordingFetch_.load(std::memory_order_relaxed))) {
-    return;
+
+  if (logFetchPathRegex) {
+    for (const auto& hash : hashes) {
+      auto path = hash.path();
+      auto pathPiece = path.stringPiece();
+
+      if (RE2::PartialMatch(
+              re2::StringPiece{pathPiece.data(), pathPiece.size()},
+              **logFetchPathRegex)) {
+        logger_->logImport(context, path, type);
+      }
+    }
   }
 
-  logFetch(context, proxyHash.path(), type, logFetchPathRegex);
-}
-
-void HgQueuedBackingStore::logBatchedBackingStoreFetch(
-    ObjectFetchContext& context,
-    const std::vector<HgProxyHash>& hashes,
-    ObjectFetchContext::ObjectType type) {
-  const auto& logFetchPathRegex =
-      config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
-  // If we are not logging at least one of these instances, early return
-  if (!(logFetchPathRegex ||
-        isRecordingFetch_.load(std::memory_order_relaxed))) {
-    return;
-  }
-
-  for (const auto& hash : hashes) {
-    logFetch(context, hash.path(), type, logFetchPathRegex);
+  if (type != ObjectFetchContext::ObjectType::Tree &&
+      isRecordingFetch_.load(std::memory_order_relaxed)) {
+    for (const auto& hash : hashes) {
+      recordFetch(hash.path());
+    }
   }
 }
 

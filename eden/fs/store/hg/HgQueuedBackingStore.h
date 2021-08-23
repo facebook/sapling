@@ -204,34 +204,13 @@ class HgQueuedBackingStore final : public BackingStore {
   void recordFetch(RelativePathPiece path);
 
   /**
-   * Logs a backing store fetch to scuba if the path being fetched is
-   * in the configured paths to log. If `identifer` is a RelativePathPiece this
-   * will be used as the "path being fetched". If the `identifer` is a Hash
-   * then this will look up the path with HgProxyHash to be used as the
-   * "path being fetched"
+   * Logs a backing store fetch to scuba if the path being fetched is in the
+   * configured paths to log. The path is derived from the proxy hash.
    */
   void logBackingStoreFetch(
       ObjectFetchContext& context,
-      const HgProxyHash& proxyHash,
+      folly::Range<HgProxyHash*> hashes,
       ObjectFetchContext::ObjectType type);
-
-  /**
-   * Similarly to logBackingStoreFetch, but on a batch of hashes.
-   */
-  void logBatchedBackingStoreFetch(
-      ObjectFetchContext& context,
-      const std::vector<HgProxyHash>& hashes,
-      ObjectFetchContext::ObjectType type);
-
-  /**
-   * Internally used by the logBackingStoreFetch and
-   * logBatchedBackingStoreFetch to log access to the given path.
-   */
-  void logFetch(
-      ObjectFetchContext& context,
-      RelativePathPiece path,
-      ObjectFetchContext::ObjectType type,
-      const std::optional<std::shared_ptr<RE2>>& logFetchPathRegex);
 
   /**
    * gets the watches timing `object` imports that are `stage`
