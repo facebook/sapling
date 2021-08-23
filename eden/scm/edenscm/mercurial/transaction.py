@@ -23,6 +23,7 @@ import functools
 
 from . import encoding, error, pycompat, util
 from .i18n import _
+from .node import hex
 from .pycompat import decodeutf8, encodeutf8
 
 
@@ -600,8 +601,9 @@ class transaction(util.transactional):
             command = encoding.unifromlocal(
                 " ".join(map(util.shellquote, pycompat.sysargv[1:]))
             )
+            parent = "Parent: %s" % hex(metalog.root())
             trdesc = "Transaction: %s" % self.desc
-            message = "\n".join([command, trdesc])
+            message = "\n".join([command, parent, trdesc])
 
             util.faultinjection(self.uiconfig, "transaction-metalog-commit")
             metalog.commit(
