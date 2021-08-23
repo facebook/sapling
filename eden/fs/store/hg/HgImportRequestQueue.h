@@ -49,41 +49,46 @@ class HgImportRequestQueue {
   void markImportAsFinished(
       const HgProxyHash& id,
       folly::Try<std::unique_ptr<T>>& importTry) {
-    auto state = state_.lock();
+    std::shared_ptr<HgImportRequest> import;
+    {
+      auto state = state_.lock();
 
-    auto importReq = state->requestTracker.find(id);
-    if (importReq != state->requestTracker.end()) {
-      auto foundImport = std::move(importReq->second);
-      state->requestTracker.erase(importReq);
-
-      std::vector<folly::Promise<std::unique_ptr<T>>>* promises;
-
-      if constexpr (std::is_same_v<T, Tree>) {
-        auto* treeImport =
-            foundImport->getRequest<HgImportRequest::TreeImport>();
-        promises = &treeImport->promises;
-      } else {
-        static_assert(
-            std::is_same_v<T, Blob>,
-            "markImportAsFinished can only be called with Tree or Blob types");
-        auto* blobImport =
-            foundImport->getRequest<HgImportRequest::BlobImport>();
-        promises = &blobImport->promises;
+      auto importReq = state->requestTracker.find(id);
+      if (importReq != state->requestTracker.end()) {
+        import = std::move(importReq->second);
+        state->requestTracker.erase(importReq);
       }
+    }
 
-      if (importTry.hasValue()) {
-        // If we find the id in the map, loop through all of the associated
-        // Promises and fulfill them with the obj. We need to construct a
-        // deep copy of the unique_ptr to fulfill the Promises
-        for (auto& promise : (*promises)) {
-          promise.setValue(std::make_unique<T>(*(importTry.value())));
-        }
-      } else {
-        // If we find the id in the map, loop through all of the associated
-        // Promises and fulfill them with the exception
-        for (auto& promise : (*promises)) {
-          promise.setException(importTry.exception());
-        }
+    if (!import) {
+      return;
+    }
+
+    std::vector<folly::Promise<std::unique_ptr<T>>>* promises;
+
+    if constexpr (std::is_same_v<T, Tree>) {
+      auto* treeImport = import->getRequest<HgImportRequest::TreeImport>();
+      promises = &treeImport->promises;
+    } else {
+      static_assert(
+          std::is_same_v<T, Blob>,
+          "markImportAsFinished can only be called with Tree or Blob types");
+      auto* blobImport = import->getRequest<HgImportRequest::BlobImport>();
+      promises = &blobImport->promises;
+    }
+
+    if (importTry.hasValue()) {
+      // If we find the id in the map, loop through all of the associated
+      // Promises and fulfill them with the obj. We need to construct a
+      // deep copy of the unique_ptr to fulfill the Promises
+      for (auto& promise : (*promises)) {
+        promise.setValue(std::make_unique<T>(*(importTry.value())));
+      }
+    } else {
+      // If we find the id in the map, loop through all of the associated
+      // Promises and fulfill them with the exception
+      for (auto& promise : (*promises)) {
+        promise.setException(importTry.exception());
       }
     }
   }
