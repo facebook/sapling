@@ -9,6 +9,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, LoadableError};
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{resolve_path_state, PathState};
@@ -21,10 +22,11 @@ use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use manifest::{Entry, ManifestOps};
-use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
+use mononoke_types::{ChangesetId, FileUnodeId, Generation, MPath, ManifestUnodeId};
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
@@ -57,7 +59,7 @@ pub enum HistoryAcrossDeletions {
     DontTrack,
 }
 
-enum NextChangeset {
+pub enum NextChangeset {
     // Changeset is new and hasn't been returned
     // yet
     New(ChangesetId),
@@ -66,13 +68,36 @@ enum NextChangeset {
     AlreadyReturned(ChangesetId),
 }
 
-enum TraversalOrder {
+#[derive(Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub struct ParentOrder(usize);
+
+pub enum TraversalOrder {
     BfsOrder(VecDeque<NextChangeset>),
+    GenNumOrder {
+        front_queue: VecDeque<NextChangeset>,
+        // TODO(stash): ParentOrder is very basic at the moment,
+        // and won't work correctly in all cases.
+        heap: BinaryHeap<(Generation, Reverse<ParentOrder>, ChangesetId)>,
+        ctx: CoreContext,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    },
 }
 
 impl TraversalOrder {
-    fn new_bfs_order() -> Self {
+    pub fn new_bfs_order() -> Self {
         Self::BfsOrder(VecDeque::new())
+    }
+
+    pub fn new_gen_num_order(
+        ctx: CoreContext,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    ) -> Self {
+        Self::GenNumOrder {
+            front_queue: VecDeque::new(),
+            heap: BinaryHeap::new(),
+            ctx,
+            changeset_fetcher,
+        }
     }
 
     async fn push_front(&mut self, cs_id: ChangesetId) -> Result<(), Error> {
@@ -82,17 +107,35 @@ impl TraversalOrder {
             BfsOrder(q) => {
                 q.push_front(NextChangeset::AlreadyReturned(cs_id));
             }
+            GenNumOrder { front_queue, .. } => {
+                front_queue.push_front(NextChangeset::AlreadyReturned(cs_id));
+            }
         }
 
         Ok(())
     }
 
-    async fn push_back(&mut self, cs_id: ChangesetId) -> Result<(), Error> {
+    async fn push_ancestors(&mut self, cs_ids: &[ChangesetId]) -> Result<(), Error> {
         use TraversalOrder::*;
 
         match self {
             BfsOrder(q) => {
-                q.push_back(NextChangeset::New(cs_id));
+                for cs_id in cs_ids {
+                    q.push_back(NextChangeset::New(*cs_id));
+                }
+            }
+            GenNumOrder {
+                heap,
+                ctx,
+                changeset_fetcher,
+                ..
+            } => {
+                for (num, cs_id) in cs_ids.iter().enumerate() {
+                    let gen_num = changeset_fetcher
+                        .get_generation_number(ctx.clone(), *cs_id)
+                        .await?;
+                    heap.push((gen_num, Reverse(ParentOrder(num)), *cs_id));
+                }
             }
         }
 
@@ -104,6 +147,15 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => q.pop_front(),
+            GenNumOrder {
+                front_queue, heap, ..
+            } => {
+                let front = front_queue.pop_front();
+                if front.is_some() {
+                    return front;
+                }
+                heap.pop().map(|(_, _, cs_id)| NextChangeset::New(cs_id))
+            }
         }
     }
 
@@ -112,13 +164,16 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => q.is_empty(),
+            GenNumOrder {
+                front_queue, heap, ..
+            } => front_queue.is_empty() && heap.is_empty(),
         }
     }
 }
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
 ///
-/// Accepts a `Visitor` object which controls the BFS flow by filtering out the unwanted changesets
+/// Accepts a `Visitor` object which controls the flow by filtering out the unwanted changesets
 /// before they're added to the queue, see its docs for details. If you don't need to filter the
 /// history you can provide `()` instead for default implementation.
 ///
@@ -129,13 +184,12 @@ impl TraversalOrder {
 /// returned stream is empty.
 ///
 /// Given a unode representing a commit-path `list_file_history` traverses commit history
-/// in BFS order.
 /// In order to do this it keeps:
 ///   - history_graph: commit graph that is constructed from fastlog data and represents
 ///                    'child(cs_id) -> parents(cs_id)' relationship
 ///   - prefetch: changeset id to fetch fastlog batch for
-///   - bfs: BFS queue
-///   - visited: set that marks nodes already enqueued for BFS
+///   - order: queue which stores commit in a valid order
+///   - visited: set that marks nodes already enqueued
 /// For example, for this commit graph where some file is changed in every commit and E - start:
 ///
 ///      o E  - stage: 0        commit_graph: E -> D
@@ -148,7 +202,7 @@ impl TraversalOrder {
 ///
 /// On each step of try_unfold:
 ///   1 - prefetch fastlog batch for the `prefetch` changeset id and fill the commit graph
-///   2 - perform BFS until the node for which parents haven't been prefetched
+///   2 - perform traversal until the node for which parents haven't been prefetched
 ///   3 - stream all the "ready" nodes and set the last node to prefetch
 /// The stream stops when there is nothing to return.
 ///
@@ -163,6 +217,7 @@ pub async fn list_file_history(
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
     mutable_renames: Arc<MutableRenames>,
+    mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
     // get unode entry
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
@@ -185,14 +240,13 @@ pub async fn list_file_history(
         None => return Ok(stream::iter(vec![]).boxed()),
     };
 
-    let mut bfs = TraversalOrder::new_bfs_order();
     visit(
         &ctx,
         &repo,
         &mut visitor,
         None,
         last_changesets.clone(),
-        &mut bfs,
+        &mut order,
         &mut visited,
     )
     .await?;
@@ -203,7 +257,7 @@ pub async fn list_file_history(
         TraversalState {
             history_graph,
             visited,
-            bfs,
+            order,
             prefetch: None,
             visitor,
         },
@@ -282,15 +336,15 @@ async fn visit(
     visitor: &mut impl Visitor,
     cs_id: Option<ChangesetId>,
     ancestors: Vec<ChangesetId>,
-    bfs: &mut TraversalOrder,
+    order: &mut TraversalOrder,
     visited: &mut HashSet<ChangesetId>,
 ) -> Result<(), FastlogError> {
     let ancestors = visitor.visit(ctx, repo, cs_id, ancestors).await?;
-    for ancestor in ancestors {
-        if visited.insert(ancestor) {
-            bfs.push_back(ancestor).await?;
-        }
-    }
+    let ancestors = ancestors
+        .into_iter()
+        .filter(|ancestor| visited.insert(*ancestor))
+        .collect::<Vec<_>>();
+    order.push_ancestors(&ancestors).await?;
     Ok(())
 }
 
@@ -388,7 +442,7 @@ type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
     visited: HashSet<ChangesetId>,
-    bfs: TraversalOrder,
+    order: TraversalOrder,
     prefetch: Option<ChangesetId>,
     visitor: V,
 }
@@ -407,7 +461,7 @@ where
     let TraversalState {
         mut history_graph,
         mut visited,
-        mut bfs,
+        mut order,
         prefetch,
         mut visitor,
     } = state;
@@ -427,7 +481,7 @@ where
     let mut history = vec![];
     // process nodes to yield
     let mut next_to_fetch = None;
-    while let Some(next_changeset) = bfs.pop_front() {
+    while let Some(next_changeset) = order.pop_front() {
         let cs_id = match next_changeset {
             NextChangeset::New(cs_id) => {
                 history.push(cs_id);
@@ -459,7 +513,7 @@ where
                     &mut visitor,
                     Some(cs_id),
                     ancestors,
-                    &mut bfs,
+                    &mut order,
                     &mut visited,
                 )
                 .await?;
@@ -475,7 +529,7 @@ where
                 }
                 next_to_fetch = Some(cs_id);
                 // Put it back in the queue so we can process once we fetch its history
-                bfs.push_front(cs_id).await?;
+                order.push_front(cs_id).await?;
                 break;
             }
             // this should never happen as the [cs -> parents] mapping is fetched
@@ -486,7 +540,7 @@ where
     }
 
     // Terminate when there's nothing to return and nothing on BFS queue.
-    if history.is_empty() && bfs.is_empty() {
+    if history.is_empty() && order.is_empty() {
         return Ok(None);
     }
     Ok(Some((
@@ -494,7 +548,7 @@ where
         TraversalState {
             history_graph,
             visited,
-            bfs,
+            order,
             prefetch: next_to_fetch,
             visitor,
         },
@@ -730,7 +784,8 @@ mod test {
 
         RootFastlog::derive(&ctx, &repo, top).await?;
 
-        let history = list_file_history(
+        expected.reverse();
+        check_history(
             ctx,
             repo,
             path(filename),
@@ -738,12 +793,10 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
+            expected,
         )
         .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
 
-        expected.reverse();
-        assert_eq!(history, expected);
         Ok(())
     }
 
@@ -804,7 +857,8 @@ mod test {
 
         RootFastlog::derive(&ctx, &repo, top).await?;
 
-        let history = list_file_history(
+        let expected = bfs(&graph, top);
+        check_history(
             ctx,
             repo,
             path(filename),
@@ -812,12 +866,9 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
+            expected,
         )
         .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
-
-        let expected = bfs(&graph, top);
-        assert_eq!(history, expected);
 
         Ok(())
     }
@@ -870,7 +921,8 @@ mod test {
 
         RootFastlog::derive(&ctx, &repo, prev_id).await?;
 
-        let history = list_file_history(
+        expected.reverse();
+        check_history(
             ctx,
             repo,
             path(filename),
@@ -878,12 +930,9 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
+            expected,
         )
         .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
-
-        expected.reverse();
-        assert_eq!(history, expected);
 
         Ok(())
     }
@@ -932,6 +981,7 @@ mod test {
         let top = *main_branch.last().unwrap();
         main_branch.reverse();
 
+        #[derive(Clone)]
         struct NothingVisitor;
         #[async_trait]
         impl Visitor for NothingVisitor {
@@ -945,7 +995,8 @@ mod test {
                 Ok(vec![])
             }
         }
-        let history = list_file_history(
+        // history now should be empty - the visitor prevented traversal
+        check_history(
             ctx.clone(),
             repo.clone(),
             filepath.clone(),
@@ -953,12 +1004,9 @@ mod test {
             NothingVisitor {},
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
+            vec![],
         )
         .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
-
-        // history now should be empty - the visitor prevented traversal
-        assert_eq!(history, vec![]);
 
         // prune right branch
         struct SingleBranchOfHistoryVisitor;
@@ -982,6 +1030,7 @@ mod test {
             SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
             mutable_renames,
+            TraversalOrder::new_bfs_order(),
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -1037,10 +1086,10 @@ mod test {
             .commit()
             .await?;
 
-        let history = |cs_id, path| {
+        let history = |cs_id, path, expected| {
             cloned!(ctx, mutable_renames, repo);
             async move {
-                let history_stream = list_file_history(
+                check_history(
                     ctx.clone(),
                     repo.clone(),
                     path,
@@ -1048,17 +1097,19 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
+                    expected,
                 )
                 .await?;
-                history_stream.try_collect::<Vec<_>>().await
+
+                Result::<_, Error>::Ok(())
             }
         };
 
         expected.reverse();
         // check deleted file
-        assert_eq!(history(bcs_id.clone(), path(filename)).await?, expected);
+        history(bcs_id.clone(), path(filename), expected.clone()).await?;
         // check deleted directory
-        assert_eq!(history(bcs_id.clone(), path("dir")).await?, expected);
+        history(bcs_id.clone(), path("dir"), expected.clone()).await?;
 
         // recreate dir and check
         let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
@@ -1068,7 +1119,7 @@ mod test {
 
         let mut res = vec![bcs_id];
         res.extend(expected);
-        assert_eq!(history(bcs_id.clone(), path("dir")).await?, res);
+        history(bcs_id.clone(), path("dir"), res).await?;
 
         Ok(())
     }
@@ -1167,10 +1218,10 @@ mod test {
             .commit()
             .await?;
 
-        let history = |cs_id, path| {
+        let history = |cs_id, path, expected| {
             cloned!(ctx, mutable_renames, repo);
             async move {
-                let history_stream = list_file_history(
+                check_history(
                     ctx.clone(),
                     repo.clone(),
                     path,
@@ -1178,9 +1229,10 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
+                    expected,
                 )
                 .await?;
-                history_stream.try_collect::<Vec<_>>().await
+                Result::<_, Error>::Ok(())
             }
         };
 
@@ -1194,13 +1246,13 @@ mod test {
             e.clone(),
             a.clone(),
         ];
-        assert_eq!(history(l.clone(), path("file")).await?, expected);
+        history(l.clone(), path("file"), expected).await?;
 
         let expected = vec![i.clone(), g.clone(), c.clone(), d.clone()];
-        assert_eq!(history(l.clone(), path("dir/file")).await?, expected);
+        history(l.clone(), path("dir/file"), expected).await?;
 
         let expected = vec![k.clone(), i.clone(), b.clone(), c.clone()];
-        assert_eq!(history(l.clone(), path("dir_1/file_1")).await?, expected);
+        history(l.clone(), path("dir_1/file_1"), expected).await?;
 
         let expected = vec![
             k.clone(),
@@ -1210,7 +1262,7 @@ mod test {
             d.clone(),
             b.clone(),
         ];
-        assert_eq!(history(l.clone(), path("dir_1")).await?, expected);
+        history(l.clone(), path("dir_1"), expected).await?;
 
         Ok(())
     }
@@ -1241,7 +1293,8 @@ mod test {
             .await?;
         expected.push(bcs_id.clone());
 
-        let history_stream = list_file_history(
+        let expected = expected.into_iter().rev().collect::<Vec<_>>();
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(filename)?,
@@ -1249,14 +1302,11 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
+            expected,
         )
         .await?;
-        let expected = expected.into_iter().rev().collect::<Vec<_>>();
 
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, expected);
-
-        let history_stream = list_file_history(
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(filename)?,
@@ -1264,10 +1314,9 @@ mod test {
             (),
             HistoryAcrossDeletions::DontTrack,
             mutable_renames,
+            vec![bcs_id],
         )
         .await?;
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, vec![bcs_id]);
 
         Ok(())
     }
@@ -1322,7 +1371,8 @@ mod test {
         //    |
         //    0  <- creates "dir/1"
 
-        let history_stream = list_file_history(
+        let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(filename)?,
@@ -1330,15 +1380,13 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
+            expected.clone(),
         )
         .await?;
-        let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
-
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, expected);
 
         // Now check the history starting from a merge commit
-        let history_stream = list_file_history(
+        expected.remove(0);
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(filename)?,
@@ -1346,12 +1394,10 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
+            expected,
         )
         .await?;
-        expected.remove(0);
 
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, expected);
         Ok(())
     }
 
@@ -1380,7 +1426,7 @@ mod test {
         //    0  <- creates "dir/1"
 
         // No mutable renames - just a single commit is returned
-        let history_stream = list_file_history(
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(dst_filename)?,
@@ -1388,11 +1434,9 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
+            vec![second_bcs_id],
         )
         .await?;
-
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, vec![second_bcs_id]);
 
         // Set mutable rename
         let src_unode =
@@ -1414,7 +1458,7 @@ mod test {
             .await?;
 
         // Tunable is not enabled, so result is the same
-        let history_stream = list_file_history(
+        check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(dst_filename)?,
@@ -1422,14 +1466,12 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
+            vec![second_bcs_id],
         )
         .await?;
 
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, vec![second_bcs_id]);
-
         // Now enable the tunable
-        let history_stream = list_file_history(
+        let actual = check_history(
             ctx.clone(),
             repo.clone(),
             MPath::new_opt(dst_filename)?,
@@ -1437,19 +1479,106 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-        )
-        .await?;
+            vec![second_bcs_id, first_bcs_id],
+        );
 
-        let actual = history_stream.try_collect::<Vec<_>>();
         let tunables = tunables::MononokeTunables::default();
         tunables.update_by_repo_bools(&hashmap! {
             repo.name().clone() => hashmap! {
                 "fastlog_use_mutable_renames".to_string() => true,
             },
         });
-        let actual = with_tunables_async(tunables, actual.boxed()).await?;
+        with_tunables_async(tunables, actual.boxed()).await?;
 
-        assert_eq!(actual, vec![second_bcs_id, first_bcs_id]);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "dir/1";
+
+        //   O
+        //  / \
+        //  O  |
+        //  |  |
+        //  O  O
+        //  \ /
+        //   O
+
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "content1")
+            .commit()
+            .await?;
+
+        let first_left_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "leftcontent1")
+            .commit()
+            .await?;
+        let second_left_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_left_bcs_id])
+            .add_file(filename, "leftcontent2")
+            .commit()
+            .await?;
+
+        let right_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "rightcontent1")
+            .commit()
+            .await?;
+
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![second_left_bcs_id, right_bcs_id])
+            .add_file(filename, "merge")
+            .commit()
+            .await?;
+
+        let expected_bfs = vec![
+            merge,
+            second_left_bcs_id,
+            right_bcs_id,
+            first_left_bcs_id,
+            bcs_id,
+        ];
+        let expected_gen_num = vec![
+            merge,
+            second_left_bcs_id,
+            first_left_bcs_id,
+            right_bcs_id,
+            bcs_id,
+        ];
+
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            merge,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            TraversalOrder::new_bfs_order(),
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected_bfs);
+
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            merge,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            TraversalOrder::new_gen_num_order(ctx, repo.get_changeset_fetcher()),
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected_gen_num);
+
         Ok(())
     }
 
@@ -1542,5 +1671,63 @@ mod test {
 
     fn path(path_str: &str) -> Option<MPath> {
         MPath::new(path_str).ok()
+    }
+
+    async fn check_history(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        path: Option<MPath>,
+        changeset_id: ChangesetId,
+        visitor: impl Visitor + Clone,
+        history_across_deletions: HistoryAcrossDeletions,
+        mutable_renames: Arc<MutableRenames>,
+        bfs_order: Vec<ChangesetId>,
+    ) -> Result<(), Error> {
+        let history = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            path.clone(),
+            changeset_id,
+            visitor.clone(),
+            history_across_deletions,
+            mutable_renames.clone(),
+            TraversalOrder::new_bfs_order(),
+        )
+        .await?;
+        let history = history.try_collect::<Vec<_>>().await?;
+        assert_eq!(history, bfs_order);
+
+        // Now try with gen num order
+        let history = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            path,
+            changeset_id,
+            visitor,
+            history_across_deletions,
+            mutable_renames,
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
+        )
+        .await?;
+        let history = history.try_collect::<Vec<_>>().await?;
+
+        let mut prev_gen_num = None;
+        for cs_id in &history {
+            let new_gen_num = repo
+                .changeset_fetcher()
+                .get_generation_number(ctx.clone(), *cs_id)
+                .await?;
+            if let Some(prev_gen_num) = prev_gen_num {
+                assert!(prev_gen_num >= new_gen_num);
+            }
+            prev_gen_num = Some(new_gen_num);
+        }
+
+        assert_eq!(
+            history.into_iter().collect::<HashSet<_>>(),
+            bfs_order.into_iter().collect::<HashSet<_>>(),
+        );
+
+        Ok(())
     }
 }

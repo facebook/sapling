@@ -34,4 +34,6 @@ pub use fastlog_impl::{fetch_fastlog_batch_by_unode_id, unode_entry_to_fastlog_b
 pub use mapping::{
     fetch_parent_root_unodes, ErrorKind, FastlogParent, RootFastlog, RootFastlogMapping,
 };
-pub use ops::{list_file_history, FastlogError, HistoryAcrossDeletions, Visitor};
+pub use ops::{
+    list_file_history, FastlogError, HistoryAcrossDeletions, NextChangeset, TraversalOrder, Visitor,
+};

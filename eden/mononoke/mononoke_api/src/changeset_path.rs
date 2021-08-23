@@ -21,7 +21,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, Visitor};
+use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, TraversalOrder, Visitor};
 use filestore::FetchKey;
 use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
@@ -554,6 +554,14 @@ impl ChangesetPathHistoryContext {
         } else {
             HistoryAcrossDeletions::DontTrack
         };
+
+        let use_gen_num_order = tunables::tunables().get_fastlog_use_gen_num_traversal();
+        let traversal_order = if use_gen_num_order {
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher())
+        } else {
+            TraversalOrder::new_bfs_order()
+        };
+
         let history = list_file_history(
             ctx,
             repo,
@@ -569,6 +577,7 @@ impl ChangesetPathHistoryContext {
             },
             history_across_deletions,
             self.repo().mutable_renames().clone(),
+            traversal_order,
         )
         .await
         .map_err(|error| match error {
