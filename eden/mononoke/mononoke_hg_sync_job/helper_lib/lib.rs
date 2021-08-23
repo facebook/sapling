@@ -214,7 +214,21 @@ pub async fn wait_for_latest_log_id_to_be_synced<C>(
 where
     C: MutableCounters + Clone + Sync + 'static,
 {
-    let repo_id = repo.get_repoid();
+    wait_for_latest_log_id_for_repo_to_be_synced(ctx, repo, repo, mutable_counters, sleep_secs)
+        .await
+}
+
+pub async fn wait_for_latest_log_id_for_repo_to_be_synced<C>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    target_repo: &BlobRepo,
+    mutable_counters: &C,
+    sleep_secs: u64,
+) -> Result<(), Error>
+where
+    C: MutableCounters + Clone + Sync + 'static,
+{
+    let target_repo_id = target_repo.get_repoid();
     let largest_id = match repo
         .bookmark_update_log()
         .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
@@ -234,7 +248,7 @@ where
 
     loop {
         let mut_counters_value = match mutable_counters
-            .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+            .get_counter(ctx.clone(), target_repo_id, LATEST_REPLAYED_REQUEST_KEY)
             .compat()
             .await?
         {
@@ -242,16 +256,17 @@ where
             None => {
                 return Err(format_err!(
                     "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
-                    repo_id
+                    target_repo_id
                 ));
             }
         };
         if largest_id > mut_counters_value.try_into().unwrap() {
             info!(
                 ctx.logger(),
-                "Waiting for {} to be replayed to hg, the latest replayed is {}",
+                "Waiting for {} to be replayed to hg, the latest replayed is {}, repo: {}",
                 largest_id,
-                mut_counters_value
+                mut_counters_value,
+                target_repo.name(),
             );
             time::sleep(time::Duration::from_secs(sleep_secs)).await;
         } else {
