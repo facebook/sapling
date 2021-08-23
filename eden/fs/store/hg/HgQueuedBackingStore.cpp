@@ -511,7 +511,8 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   const auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
   // If we are not logging at least one of these instances, early return
-  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
+  if (!(logFetchPathRegex ||
+        isRecordingFetch_.load(std::memory_order_relaxed))) {
     return;
   }
 
@@ -525,7 +526,8 @@ void HgQueuedBackingStore::logBatchedBackingStoreFetch(
   const auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
   // If we are not logging at least one of these instances, early return
-  if (!(logFetchPathRegex || isRecordingFetch_.load())) {
+  if (!(logFetchPathRegex ||
+        isRecordingFetch_.load(std::memory_order_relaxed))) {
     return;
   }
 
@@ -570,17 +572,17 @@ HgQueuedBackingStore::getPendingImportWatches(
 }
 
 void HgQueuedBackingStore::startRecordingFetch() {
-  isRecordingFetch_.store(true);
+  isRecordingFetch_.store(true, std::memory_order_relaxed);
 }
 
 void HgQueuedBackingStore::recordFetch(RelativePathPiece importPath) {
-  if (isRecordingFetch_.load()) {
+  if (isRecordingFetch_.load(std::memory_order_relaxed)) {
     fetchedFilePaths_.wlock()->emplace(importPath.stringPiece().str());
   }
 }
 
 std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
-  isRecordingFetch_.store(false);
+  isRecordingFetch_.store(false, std::memory_order_relaxed);
   std::unordered_set<std::string> paths;
   std::swap(paths, *fetchedFilePaths_.wlock());
   return paths;
