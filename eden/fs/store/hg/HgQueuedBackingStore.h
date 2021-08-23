@@ -197,13 +197,6 @@ class HgQueuedBackingStore final : public BackingStore {
       ObjectFetchContext& context);
 
   /**
-   * Record an access to the path.
-   *
-   * This is a no-op if no recording is ongoing.
-   */
-  void recordFetch(RelativePathPiece path);
-
-  /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
    * configured paths to log. The path is derived from the proxy hash.
    */

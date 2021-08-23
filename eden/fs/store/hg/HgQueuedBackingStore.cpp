@@ -525,8 +525,9 @@ void HgQueuedBackingStore::logBackingStoreFetch(
 
   if (type != ObjectFetchContext::ObjectType::Tree &&
       isRecordingFetch_.load(std::memory_order_relaxed)) {
+    auto guard = fetchedFilePaths_.wlock();
     for (const auto& hash : hashes) {
-      recordFetch(hash.path());
+      guard->emplace(hash.path().stringPiece().str());
     }
   }
 }
@@ -568,12 +569,6 @@ HgQueuedBackingStore::getPendingImportWatches(
 
 void HgQueuedBackingStore::startRecordingFetch() {
   isRecordingFetch_.store(true, std::memory_order_relaxed);
-}
-
-void HgQueuedBackingStore::recordFetch(RelativePathPiece importPath) {
-  if (isRecordingFetch_.load(std::memory_order_relaxed)) {
-    fetchedFilePaths_.wlock()->emplace(importPath.stringPiece().str());
-  }
 }
 
 std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
