@@ -199,11 +199,12 @@ void HgQueuedBackingStore::processTreeImportRequests(
 
   {
     auto request = requests.begin();
-    auto proxyHash = proxyHashes.begin();
     auto promise = promises.begin();
+    std::vector<folly::SemiFuture<folly::Unit>> futures;
+    futures.reserve(requests.size());
 
-    XCHECK_EQ(requests.size(), proxyHashes.size());
-    for (; request != requests.end(); ++request, ++proxyHash, ++promise) {
+    XCHECK_EQ(requests.size(), promises.size());
+    for (; request != requests.end(); ++request, ++promise) {
       if ((*promise)->isFulfilled()) {
         stats_->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetTree.addValue(watch.elapsed().count());
@@ -215,21 +216,19 @@ void HgQueuedBackingStore::processTreeImportRequests(
       // importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
       auto* treeImport = (*request)->getRequest<HgImportRequest::TreeImport>();
-
-      (*promise)->setWith(
-          [store = backingStore_.get(),
-           hash = treeImport->hash,
-           proxyHash = treeImport->proxyHash,
-           prefetchMetadata = treeImport->prefetchMetadata]() mutable {
-            return store
-                ->getTree(
-                    hash,
-                    std::move(proxyHash),
-                    prefetchMetadata,
-                    ObjectFetchContext::getNullContext())
-                .getTry();
-          });
+      futures.emplace_back(
+          backingStore_
+              ->getTree(
+                  treeImport->hash,
+                  treeImport->proxyHash,
+                  treeImport->prefetchMetadata,
+                  ObjectFetchContext::getNullContext())
+              .defer([request = *request, promise = *promise](auto&& result) {
+                promise->setTry(std::move(result));
+              }));
     }
+
+    folly::collectAll(futures).wait();
   }
 }
 
