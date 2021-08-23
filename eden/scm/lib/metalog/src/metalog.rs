@@ -494,8 +494,8 @@ pub mod resolver {
             ) {
                 (false, false, false) => "both changed, diverged",
                 (false, false, true) => "both changed, same",
-                (true, false, _) => "this changed",
-                (false, true, _) => "other changed",
+                (true, false, _) => "other changed",
+                (false, true, _) => "this changed",
                 (true, true, _) => continue,
             };
             conflicts.insert(format!("  {}: {}", key, changed_description));
@@ -588,8 +588,8 @@ mod tests {
         assert_eq!(
             err,
             r#"<path>: conflict detected:
-  01: other changed
-  10: this changed
+  01: this changed
+  10: other changed
   11a: both changed, same
   11b: both changed, diverged"#
         );
