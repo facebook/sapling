@@ -188,16 +188,14 @@ class HgQueuedBackingStore final : public BackingStore {
   /**
    * Fetch a blob from Mercurial.
    *
-   * When checkForLocalPresence is set, the Mercurial backing store will be
-   * queried locally first. In latency sensitive context, this allows a local
-   * blob to be returned immediately. For throughput oriented context, checking
-   * for the local blob limits how much concurrency can be extracted, and it is
-   * thus preferred to clear this flag.
+   * For latency sensitive context, the caller is responsible for checking if
+   * the blob is present locally, as this function will always push the request
+   * at the end of the queue.
    */
   folly::SemiFuture<std::unique_ptr<Blob>> getBlobImpl(
       const Hash& id,
-      ObjectFetchContext& context,
-      bool checkForLocalPresence);
+      const HgProxyHash& proxyHash,
+      ObjectFetchContext& context);
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is
