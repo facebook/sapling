@@ -14,12 +14,15 @@
 
 mod bubble;
 mod builder;
+mod changesets;
 mod error;
 mod handle;
 mod store;
+mod view;
 
 pub use crate::bubble::{Bubble, BubbleId};
 pub use crate::builder::RepoEphemeralBlobstoreBuilder;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
 pub use crate::store::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
+pub use crate::view::EphemeralRepoView;

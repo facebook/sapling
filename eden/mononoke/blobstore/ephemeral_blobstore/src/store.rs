@@ -95,6 +95,7 @@ impl RepoEphemeralBlobstoreInner {
                     bubble_id,
                     expires_at + self.bubble_expiration_grace,
                     self.blobstore.clone(),
+                    self.connections.clone(),
                 ))
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
@@ -119,6 +120,7 @@ impl RepoEphemeralBlobstoreInner {
             bubble_id,
             expires_at + self.bubble_expiration_grace,
             self.blobstore.clone(),
+            self.connections.clone(),
         ))
     }
 }

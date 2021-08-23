@@ -72,8 +72,8 @@ pub trait Changesets: Send + Sync {
 
     /// Enumerate all public changesets in the repository.
     ///
-    /// This retruns a pair of unique integers that are the minimum and
-    /// maxiumum unique changeset ids for this repository.
+    /// This returns a pair of unique integers that are the minimum and
+    /// maximum unique changeset ids for this repository.
     ///
     /// This range can be used in subsequent calls to `list_enumeration_range`
     /// to enumerate the changesets.
