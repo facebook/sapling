@@ -312,7 +312,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     XLOG(DBG4) << "tree " << id << " already being fetched";
     return std::move(inProgress).value();
   }
-  auto getTreeFuture = folly::makeFutureWith([&] {
+  auto getTreeFuture = folly::makeSemiFutureWith([&] {
     logBackingStoreFetch(
         context, proxyHash, ObjectFetchContext::ObjectType::Tree);
 
@@ -330,16 +330,17 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
         HgImportTraceEvent::queue(unique, HgImportTraceEvent::TREE, proxyHash));
 
     queue_.enqueue(std::move(request));
-    return std::move(future).ensure([this, unique, proxyHash] {
+    return std::move(future).defer([this, unique, proxyHash](auto&& result) {
       traceBus_->publish(HgImportTraceEvent::finish(
           unique, HgImportTraceEvent::TREE, proxyHash));
+      return std::move(result);
     });
   });
 
   return std::move(getTreeFuture)
-      .thenTry([this, proxyHash](folly::Try<std::unique_ptr<Tree>>&& result) {
+      .defer([this, proxyHash](folly::Try<std::unique_ptr<Tree>>&& result) {
         this->queue_.markImportAsFinished<Tree>(proxyHash, result);
-        return folly::makeSemiFuture(std::move(result));
+        return std::move(result);
       });
 }
 
@@ -361,7 +362,6 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
     throw;
   }
 
-  auto path = proxyHash.path();
   logBackingStoreFetch(
       context, proxyHash, ObjectFetchContext::ObjectType::Blob);
 
@@ -381,8 +381,9 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
     return std::move(inProgress).value();
   }
 
-  auto getBlobFuture = folly::makeFutureWith([&] {
-    XLOG(DBG4) << "make blob import request for " << path << ", hash is:" << id;
+  auto getBlobFuture = folly::makeSemiFutureWith([&] {
+    XLOG(DBG4) << "make blob import request for " << proxyHash.path()
+               << ", hash is:" << id;
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
@@ -393,16 +394,17 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
         HgImportTraceEvent::queue(unique, HgImportTraceEvent::BLOB, proxyHash));
 
     queue_.enqueue(std::move(request));
-    return std::move(future).ensure([this, unique, proxyHash] {
+    return std::move(future).defer([this, unique, proxyHash](auto&& result) {
       traceBus_->publish(HgImportTraceEvent::finish(
           unique, HgImportTraceEvent::BLOB, proxyHash));
+      return std::move(result);
     });
   });
 
   return std::move(getBlobFuture)
-      .thenTry([this, proxyHash](folly::Try<std::unique_ptr<Blob>>&& result) {
+      .defer([this, proxyHash](folly::Try<std::unique_ptr<Blob>>&& result) {
         this->queue_.markImportAsFinished<Blob>(proxyHash, result);
-        return folly::makeSemiFuture(std::move(result));
+        return std::move(result);
       });
 }
 
