@@ -57,8 +57,17 @@ pub enum HistoryAcrossDeletions {
     DontTrack,
 }
 
+enum NextChangeset {
+    // Changeset is new and hasn't been returned
+    // yet
+    New(ChangesetId),
+    // Changeset has already been returned,
+    // so now we only need to process its parents
+    AlreadyReturned(ChangesetId),
+}
+
 enum TraversalOrder {
-    BfsOrder(VecDeque<ChangesetId>),
+    BfsOrder(VecDeque<NextChangeset>),
 }
 
 impl TraversalOrder {
@@ -71,7 +80,7 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => {
-                q.push_front(cs_id);
+                q.push_front(NextChangeset::AlreadyReturned(cs_id));
             }
         }
 
@@ -83,14 +92,14 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => {
-                q.push_back(cs_id);
+                q.push_back(NextChangeset::New(cs_id));
             }
         }
 
         Ok(())
     }
 
-    fn pop_front(&mut self) -> Option<ChangesetId> {
+    fn pop_front(&mut self) -> Option<NextChangeset> {
         use TraversalOrder::*;
 
         match self {
@@ -155,7 +164,6 @@ pub async fn list_file_history(
     history_across_deletions: HistoryAcrossDeletions,
     mutable_renames: Arc<MutableRenames>,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
-    let mut top_history = vec![];
     // get unode entry
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
 
@@ -186,43 +194,38 @@ pub async fn list_file_history(
         last_changesets.clone(),
         &mut bfs,
         &mut visited,
-        &mut top_history,
     )
     .await?;
 
     // generate file history
-    Ok(stream::iter(top_history)
-        .map(Ok::<_, Error>)
-        .chain({
-            stream::try_unfold(
-                // starting point
-                TraversalState {
-                    history_graph,
-                    visited,
-                    bfs,
-                    prefetch: None,
-                    visitor,
-                },
-                // unfold
-                move |state| {
-                    cloned!(ctx, mutable_renames, repo, path);
-                    async move {
-                        do_history_unfold(
-                            ctx.clone(),
-                            repo.clone(),
-                            path.clone(),
-                            state,
-                            history_across_deletions,
-                            &mutable_renames,
-                        )
-                        .await
-                    }
-                },
-            )
-            .map_ok(|history| stream::iter(history).map(Ok))
-            .try_flatten()
-        })
-        .boxed())
+    Ok(stream::try_unfold(
+        // starting point
+        TraversalState {
+            history_graph,
+            visited,
+            bfs,
+            prefetch: None,
+            visitor,
+        },
+        // unfold
+        move |state| {
+            cloned!(ctx, mutable_renames, repo, path);
+            async move {
+                do_history_unfold(
+                    ctx.clone(),
+                    repo.clone(),
+                    path.clone(),
+                    state,
+                    history_across_deletions,
+                    &mutable_renames,
+                )
+                .await
+            }
+        },
+    )
+    .map_ok(|history| stream::iter(history).map(Ok))
+    .try_flatten()
+    .boxed())
 }
 
 #[async_trait]
@@ -281,12 +284,10 @@ async fn visit(
     ancestors: Vec<ChangesetId>,
     bfs: &mut TraversalOrder,
     visited: &mut HashSet<ChangesetId>,
-    history: &mut Vec<ChangesetId>,
 ) -> Result<(), FastlogError> {
     let ancestors = visitor.visit(ctx, repo, cs_id, ancestors).await?;
     for ancestor in ancestors {
         if visited.insert(ancestor) {
-            history.push(ancestor.clone());
             bfs.push_back(ancestor).await?;
         }
     }
@@ -426,7 +427,14 @@ where
     let mut history = vec![];
     // process nodes to yield
     let mut next_to_fetch = None;
-    while let Some(cs_id) = bfs.pop_front() {
+    while let Some(next_changeset) = bfs.pop_front() {
+        let cs_id = match next_changeset {
+            NextChangeset::New(cs_id) => {
+                history.push(cs_id);
+                cs_id
+            }
+            NextChangeset::AlreadyReturned(cs_id) => cs_id,
+        };
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
@@ -453,7 +461,6 @@ where
                     ancestors,
                     &mut bfs,
                     &mut visited,
-                    &mut history,
                 )
                 .await?;
             }
