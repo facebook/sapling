@@ -622,7 +622,7 @@ mod tests {
         let repo = "repo_-. !@#$% foo \u{1f4a9} bar";
         let path = "path";
 
-        let url = client.url(path, Some(repo))?.into_string();
+        let url: String = client.url(path, Some(repo))?.into();
         let expected =
             "https://example.com/repo_-.%20%21%40%23%24%25%20foo%20%F0%9F%92%A9%20bar/path";
         assert_eq!(&url, &expected);
