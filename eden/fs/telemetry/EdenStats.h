@@ -225,12 +225,12 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  public:
+  Stat hgBackingStoreDequeueBlob{createStat("store.hg.dequeue_blob_us")};
+  Stat hgBackingStoreDequeueTree{createStat("store.hg.dequeue_tree_us")};
   Stat hgBackingStoreGetBlob{createStat("store.hg.get_blob")};
   Stat hgBackingStoreImportBlob{createStat("store.hg.import_blob")};
   Stat hgBackingStoreGetTree{createStat("store.hg.get_tree")};
   Stat hgBackingStoreImportTree{createStat("store.hg.import_tree")};
-  Stat mononokeBackingStoreGetTree{createStat("store.mononoke.get_tree")};
-  Stat mononokeBackingStoreGetBlob{createStat("store.mononoke.get_blob")};
 };
 
 /**
@@ -245,7 +245,6 @@ class HgImporterThreadStats : public EdenThreadStatsBase {
   Stat manifestNodeForCommit{
       createStat("hg_importer.manifest_node_for_commit")};
   Stat prefetchFiles{createStat("hg_importer.prefetch_files")};
-  Stat catTree{createStat("hg_importer.cat_tree")};
 };
 
 class JournalThreadStats : public EdenThreadStatsBase {

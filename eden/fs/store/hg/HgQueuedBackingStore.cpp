@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 
+#include <chrono>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -115,6 +116,12 @@ void HgQueuedBackingStore::processBlobImportRequests(
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
 
+    stats_->getHgBackingStoreStatsForCurrentThread()
+        .hgBackingStoreDequeueBlob.addValue(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - request->getRequestTime())
+                .count());
+
     XLOGF(
         DBG4,
         "Processing blob request for {} ({:p})",
@@ -184,6 +191,12 @@ void HgQueuedBackingStore::processTreeImportRequests(
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
+
+    stats_->getHgBackingStoreStatsForCurrentThread()
+        .hgBackingStoreDequeueTree.addValue(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - request->getRequestTime())
+                .count());
 
     XLOGF(
         DBG4,

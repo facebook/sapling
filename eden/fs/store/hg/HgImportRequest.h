@@ -145,6 +145,10 @@ class HgImportRequest {
     return unique_;
   }
 
+  std::chrono::steady_clock::time_point getRequestTime() const {
+    return requestTime_;
+  }
+
  private:
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;
@@ -159,6 +163,8 @@ class HgImportRequest {
   ImportPriority priority_;
   Response promise_;
   uint64_t unique_ = generateUniqueID();
+  std::chrono::steady_clock::time_point requestTime_ =
+      std::chrono::steady_clock::now();
 
   friend bool operator<(
       const HgImportRequest& lhs,
