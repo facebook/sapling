@@ -39,6 +39,7 @@ define_stats! {
     prefix = "mononoke.fastlog";
     unexpected_existing_unode: timeseries(Sum),
     find_where_file_was_deleted_ms: timeseries(Sum, Average),
+    merge_in_file_history: timeseries(Sum),
 }
 
 #[derive(Debug, Error)]
@@ -73,6 +74,11 @@ pub struct ParentOrder(usize);
 
 pub enum TraversalOrder {
     BfsOrder(VecDeque<NextChangeset>),
+    SimpleGenNumOrder {
+        next: Option<NextChangeset>,
+        ctx: CoreContext,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    },
     GenNumOrder {
         front_queue: VecDeque<NextChangeset>,
         // TODO(stash): ParentOrder is very basic at the moment,
@@ -92,9 +98,8 @@ impl TraversalOrder {
         ctx: CoreContext,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
     ) -> Self {
-        Self::GenNumOrder {
-            front_queue: VecDeque::new(),
-            heap: BinaryHeap::new(),
+        Self::SimpleGenNumOrder {
+            next: None,
             ctx,
             changeset_fetcher,
         }
@@ -107,6 +112,10 @@ impl TraversalOrder {
             BfsOrder(q) => {
                 q.push_front(NextChangeset::AlreadyReturned(cs_id));
             }
+            SimpleGenNumOrder { next, .. } => {
+                debug_assert!(next.is_none());
+                *next = Some(NextChangeset::AlreadyReturned(cs_id));
+            }
             GenNumOrder { front_queue, .. } => {
                 front_queue.push_front(NextChangeset::AlreadyReturned(cs_id));
             }
@@ -118,10 +127,39 @@ impl TraversalOrder {
     async fn push_ancestors(&mut self, cs_ids: &[ChangesetId]) -> Result<(), Error> {
         use TraversalOrder::*;
 
-        match self {
+        if cs_ids.len() > 1 {
+            STATS::merge_in_file_history.add_value(1);
+        }
+
+        let new_state: Option<TraversalOrder> = match self {
             BfsOrder(q) => {
                 for cs_id in cs_ids {
                     q.push_back(NextChangeset::New(*cs_id));
+                }
+                None
+            }
+            SimpleGenNumOrder {
+                next,
+                ctx,
+                changeset_fetcher,
+            } => {
+                if cs_ids.len() <= 1 {
+                    if cs_ids.len() == 1 {
+                        debug_assert!(next.is_none());
+                        *next = Some(NextChangeset::New(cs_ids[0]));
+                    }
+                    None
+                } else {
+                    // convert it to full-blown gen num ordering
+                    let mut heap = BinaryHeap::new();
+                    let cs_ids = Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_ids).await?;
+                    heap.extend(cs_ids);
+                    Some(TraversalOrder::GenNumOrder {
+                        heap,
+                        ctx: ctx.clone(),
+                        changeset_fetcher: changeset_fetcher.clone(),
+                        front_queue: VecDeque::new(),
+                    })
                 }
             }
             GenNumOrder {
@@ -130,13 +168,14 @@ impl TraversalOrder {
                 changeset_fetcher,
                 ..
             } => {
-                for (num, cs_id) in cs_ids.iter().enumerate() {
-                    let gen_num = changeset_fetcher
-                        .get_generation_number(ctx.clone(), *cs_id)
-                        .await?;
-                    heap.push((gen_num, Reverse(ParentOrder(num)), *cs_id));
-                }
+                let cs_ids = Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_ids).await?;
+                heap.extend(cs_ids);
+                None
             }
+        };
+
+        if let Some(new_state) = new_state {
+            *self = new_state;
         }
 
         Ok(())
@@ -147,6 +186,7 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => q.pop_front(),
+            SimpleGenNumOrder { next, .. } => next.take(),
             GenNumOrder {
                 front_queue, heap, ..
             } => {
@@ -164,10 +204,28 @@ impl TraversalOrder {
 
         match self {
             BfsOrder(q) => q.is_empty(),
+            SimpleGenNumOrder { next, .. } => next.is_none(),
             GenNumOrder {
                 front_queue, heap, ..
             } => front_queue.is_empty() && heap.is_empty(),
         }
+    }
+
+    async fn convert_cs_ids(
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        cs_ids: &[ChangesetId],
+    ) -> Result<Vec<(Generation, Reverse<ParentOrder>, ChangesetId)>, Error> {
+        let cs_ids =
+            future::try_join_all(cs_ids.iter().enumerate().map(|(num, cs_id)| async move {
+                let gen_num = changeset_fetcher
+                    .get_generation_number(ctx.clone(), *cs_id)
+                    .await?;
+                Result::<_, Error>::Ok((gen_num, Reverse(ParentOrder(num)), *cs_id))
+            }))
+            .await?;
+
+        Ok(cs_ids)
     }
 }
 
@@ -741,6 +799,7 @@ mod test {
     use futures::future::{FutureExt, TryFutureExt};
     use maplit::hashmap;
     use mutable_renames::MutableRenameEntry;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables_async;
 
@@ -1580,6 +1639,112 @@ mod test {
         assert_eq!(actual, expected_gen_num);
 
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_simple_gen_num(fb: FacebookInit) -> Result<(), Error> {
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let mutable_renames = repo.mutable_renames;
+        let repo = repo.blob_repo;
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "dir/1";
+
+        //   O
+        //   |
+        //   O
+        //   |
+        //   O
+        //   |
+        //   O
+
+        let mut expected = vec![];
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "content1")
+            .commit()
+            .await?;
+        expected.push(bcs_id);
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "content2")
+            .commit()
+            .await?;
+        expected.push(bcs_id);
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "content3")
+            .commit()
+            .await?;
+        expected.push(bcs_id);
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "content4")
+            .commit()
+            .await?;
+        expected.push(bcs_id);
+        expected.reverse();
+
+        let get_gen_number_count = Arc::new(AtomicUsize::new(0));
+        let cs_fetcher = CountingChangesetFetcher::new(
+            repo.get_changeset_fetcher(),
+            get_gen_number_count.clone(),
+        );
+
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            TraversalOrder::new_gen_num_order(ctx, Arc::new(cs_fetcher)),
+        )
+        .await?;
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected);
+
+        assert_eq!(get_gen_number_count.load(Ordering::Relaxed), 0);
+
+        Ok(())
+    }
+
+    struct CountingChangesetFetcher {
+        cs_fetcher: Arc<dyn ChangesetFetcher>,
+        pub get_gen_number_count: Arc<AtomicUsize>,
+    }
+
+    impl CountingChangesetFetcher {
+        fn new(
+            cs_fetcher: Arc<dyn ChangesetFetcher>,
+            get_gen_number_count: Arc<AtomicUsize>,
+        ) -> Self {
+            Self {
+                cs_fetcher,
+                get_gen_number_count,
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ChangesetFetcher for CountingChangesetFetcher {
+        async fn get_generation_number(
+            &self,
+            ctx: CoreContext,
+            cs_id: ChangesetId,
+        ) -> Result<Generation, Error> {
+            self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
+            self.cs_fetcher.get_generation_number(ctx, cs_id).await
+        }
+
+        async fn get_parents(
+            &self,
+            ctx: CoreContext,
+            cs_id: ChangesetId,
+        ) -> Result<Vec<ChangesetId>, Error> {
+            self.cs_fetcher.get_parents(ctx, cs_id).await
+        }
     }
 
     type TestCommitGraph = HashMap<ChangesetId, Vec<ChangesetId>>;
