@@ -287,8 +287,10 @@ py_class!(pub class treemanifest |py| {
         let this_tree = self.underlying(py);
         let other_tree = other.underlying(py);
 
-        for entry in manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher) {
-            let entry = entry.map_pyerr(py)?;
+        let results: Vec<_> = py.allow_threads(move || -> Result<_> {
+            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher).collect()
+        }).map_pyerr(py)?;
+        for entry in results {
             let path = PyPathBuf::from(entry.path);
             let diff_left = convert_side_diff(py, entry.diff_type.left());
             let diff_right = convert_side_diff(py, entry.diff_type.right());

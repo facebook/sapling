@@ -60,18 +60,20 @@ py_class!(class checkoutplan |py| {
             Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
         };
 
-        let current_guard = current_manifest.get_underlying(py);
-        let current = current_guard.read();
-        let target_guard = target_manifest.get_underlying(py);
-        let target = target_guard.read();
+        let current = current_manifest.get_underlying(py);
+        let target = target_manifest.get_underlying(py);
+        let mut actions = py.allow_threads(move || {
+            let target = target.read();
+            let current = current.read();
+            let mut diff = Diff::new(&current, &target, &matcher);
+            let bar = &ProgressBar::new("Calculating", 0, "depth");
+            Registry::main().register_progress_bar(bar);
+            diff.attach_progress_bar(bar);
+            ActionMap::from_diff(diff)
+        }).map_pyerr(py)?;
 
-        let mut diff = Diff::new(&current, &target, &matcher);
-
-        let bar = &ProgressBar::new("Calculating", 0, "depth");
-        Registry::main().register_progress_bar(bar);
-        diff.attach_progress_bar(bar);
-
-        let mut actions = ActionMap::from_diff(diff).map_pyerr(py)?;
+        let target_lock = target_manifest.get_underlying(py);
+        let target = target_lock.read();
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
             let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));
             let new_matcher = Box::new(PythonMatcher::new(py, new_sparse_matcher));
