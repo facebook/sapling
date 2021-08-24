@@ -60,8 +60,10 @@ py_class!(class checkoutplan |py| {
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
 
-        let current = current_manifest.borrow_underlying(py);
-        let target = target_manifest.borrow_underlying(py);
+        let current_guard = current_manifest.get_underlying(py);
+        let current = current_guard.read();
+        let target_guard = target_manifest.get_underlying(py);
+        let target = target_guard.read();
 
         let mut diff = Diff::new(&current, &target, &matcher);
 
@@ -87,12 +89,13 @@ py_class!(class checkoutplan |py| {
     def check_unknown_files(&self, manifest: &treemanifest, scmstore: &filescmstore, state: &PyTreeState) -> PyResult<Vec<String>> {
         let plan = self.plan(py);
         let state = state.get_state(py);
-        let manifest = manifest.borrow_underlying(py).clone();
+        let manifest = manifest.get_underlying(py);
         let store = scmstore.extract_inner(py);
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
+            let manifest = manifest.read();
             try_block_unless_interrupted(
-            plan.check_unknown_files(&manifest, store, &mut state))
+            plan.check_unknown_files(&*manifest, store, &mut state))
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }
@@ -196,9 +199,12 @@ py_class!(class mergeresult |py| {
         // If sparse profile changes, contains Some((old_sparse_matcher, new_sparse_matcher))
         // sparse_change: Option<(PyObject, PyObject)> = None,
     ) -> PyResult<mergeresult> {
-        let src = src_manifest.borrow_underlying(py);
-        let dst = dst_manifest.borrow_underlying(py);
-        let ancestor = ancestor_manifest.borrow_underlying(py);
+        let src_lock = src_manifest.get_underlying(py);
+        let src = src_lock.read();
+        let dst_lock = dst_manifest.get_underlying(py);
+        let dst = dst_lock.read();
+        let ancestor_lock = ancestor_manifest.get_underlying(py);
+        let ancestor = ancestor_lock.read();
         let merge_result = Merge{}.merge(&*src, &*dst, &*ancestor).map_pyerr(py)?;
         mergeresult::create_instance(py, merge_result)
     }

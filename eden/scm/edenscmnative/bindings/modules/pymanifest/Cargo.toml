@@ -10,6 +10,7 @@ cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 manifest = { path = "../../../../lib/manifest" }
 manifest-tree = { path = "../../../../lib/manifest-tree" }
+parking_lot = "0.10"
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
 pyrevisionstore = { path = "../pyrevisionstore" }

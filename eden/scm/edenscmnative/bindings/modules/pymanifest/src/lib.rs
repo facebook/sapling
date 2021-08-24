@@ -7,12 +7,12 @@
 
 #![allow(non_camel_case_types)]
 
-use std::cell::Ref;
 use std::{borrow::Borrow, cell::RefCell, collections::HashSet, ops::Deref, str, sync::Arc};
 
 use anyhow::{format_err, Error};
 use bytes::Bytes;
 use cpython::*;
+use parking_lot::RwLock;
 
 use cpython_ext::{pyset_add, pyset_new, ExtractInner};
 use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
@@ -92,7 +92,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(pub class treemanifest |py| {
-    data underlying: RefCell<TreeManifest>;
+    data underlying: Arc<RwLock<TreeManifest>>;
     data pending_delete: RefCell<HashSet<RepoPathBuf>>;
 
     def __new__(
@@ -108,12 +108,16 @@ py_class!(pub class treemanifest |py| {
             None => TreeManifest::ephemeral(manifest_store),
             Some(value) => TreeManifest::durable(manifest_store, pybytes_to_node(py, value)?),
         };
-        treemanifest::create_instance(py, RefCell::new(underlying), RefCell::new(HashSet::new()))
+        treemanifest::create_instance(py, Arc::new(RwLock::new(underlying)), RefCell::new(HashSet::new()))
     }
 
     // Returns a new instance of treemanifest that contains the same data as the base.
     def copy(&self) -> PyResult<treemanifest> {
-        treemanifest::create_instance(py, self.underlying(py).clone(), self.pending_delete(py).clone())
+        treemanifest::create_instance(
+            py,
+            Arc::new(RwLock::new(self.underlying(py).read().clone())),
+            self.pending_delete(py).clone()
+        )
     }
 
     // Returns (node, flag) for a given `path` in the manifest.
@@ -131,7 +135,7 @@ py_class!(pub class treemanifest |py| {
                 return Err(PyErr::new::<exc::KeyError, _>(py, msg))
             }
         };
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         match tree.get_file(&repo_path).map_pyerr(py)? {
             None => {
                 let msg = format!("cannot find file '{}' in manifest", repo_path);
@@ -143,7 +147,7 @@ py_class!(pub class treemanifest |py| {
 
     def get(&self, path: PyPathBuf, default: Option<PyBytes> = None) -> PyResult<Option<PyBytes>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         let result = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => None,
             Some(file_metadata) => Some(node_to_pybytes(py, file_metadata.hgid)),
@@ -153,7 +157,7 @@ py_class!(pub class treemanifest |py| {
 
     def flags(&self, path: PyPathBuf, default: Option<PyString> = None) -> PyResult<PyString> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         let result = match tree.get_file(&repo_path).map_pyerr(py)? {
             None => None,
             Some(file_metadata) => Some(file_type_to_pystring(py, file_metadata.file_type)),
@@ -163,7 +167,7 @@ py_class!(pub class treemanifest |py| {
 
     def hasdir(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         let result = match tree.get(&repo_path).map_pyerr(py)? {
             Some(FsNodeMetadata::Directory(_)) => true,
             _ => false
@@ -174,7 +178,7 @@ py_class!(pub class treemanifest |py| {
     // Returns a list<path> for all files that match the predicate passed to the function.
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
@@ -185,7 +189,7 @@ py_class!(pub class treemanifest |py| {
     /// Returns [(path, id)] for directories.
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.dirs(&PythonMatcher::new(py, pymatcher)) {
             let dir = entry.map_pyerr(py)?;
             result.push((
@@ -198,7 +202,7 @@ py_class!(pub class treemanifest |py| {
 
     def listdir(&self, path: PyPathBuf) -> PyResult<Vec<PyPathBuf>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         let result = match tree.list(&repo_path).map_pyerr(py)? {
             manifest::List::NotFound | manifest::List::File => vec![],
             manifest::List::Directory(components) =>
@@ -211,7 +215,7 @@ py_class!(pub class treemanifest |py| {
 
     def text(&self, matcher: Option<PyObject> = None) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
@@ -232,7 +236,7 @@ py_class!(pub class treemanifest |py| {
 
     def set(&self, path: PyPathBuf, binnode: &PyBytes, flag: &PyString) -> PyResult<PyNone> {
         // TODO: can the node and flag that are passed in be None?
-        let mut tree = self.underlying(py).borrow_mut();
+        let mut tree = self.underlying(py).write();
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
         let node = pybytes_to_node(py, binnode)?;
         let file_type = pystring_to_file_type(py, flag)?;
@@ -243,7 +247,7 @@ py_class!(pub class treemanifest |py| {
     }
 
     def setflag(&self, path: PyPathBuf, flag: &PyString) -> PyResult<PyObject> {
-        let mut tree = self.underlying(py).borrow_mut();
+        let mut tree = self.underlying(py).write();
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
         let file_type = pystring_to_file_type(py, flag)?;
         let file_metadata = match tree.get_file(&repo_path_buf).map_pyerr(py)? {
@@ -276,14 +280,14 @@ py_class!(pub class treemanifest |py| {
         }
 
         let result = PyDict::new(py);
-        let this_tree = self.underlying(py).borrow();
-        let other_tree = other.underlying(py).borrow();
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
+        let this_tree = self.underlying(py);
+        let other_tree = other.underlying(py);
 
-        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
+        for entry in manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher) {
             let entry = entry.map_pyerr(py)?;
             let path = PyPathBuf::from(entry.path);
             let diff_left = convert_side_diff(py, entry.diff_type.left());
@@ -300,8 +304,8 @@ py_class!(pub class treemanifest |py| {
         matcher: Option<PyObject> = None
     ) -> PyResult<PyObject> {
         let mut result = pyset_new(py)?;
-        let this_tree = self.underlying(py).borrow();
-        let other_tree = other.underlying(py).borrow();
+        let this_tree = self.underlying(py).read();
+        let other_tree = other.underlying(py).read();
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
@@ -326,7 +330,7 @@ py_class!(pub class treemanifest |py| {
     }
 
     def __setitem__(&self, path: PyPathBuf, binnode: &PyBytes) -> PyResult<()> {
-        let mut tree = self.underlying(py).borrow_mut();
+        let mut tree = self.underlying(py).write();
         let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
         let node = pybytes_to_node(py, binnode)?;
         let file_metadata = match tree.get_file(&repo_path_buf).map_pyerr(py)? {
@@ -342,7 +346,7 @@ py_class!(pub class treemanifest |py| {
     }
 
     def __delitem__(&self, path: PyPathBuf) -> PyResult<()> {
-        let mut tree = self.underlying(py).borrow_mut();
+        let mut tree = self.underlying(py).write();
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         tree.remove(&repo_path).map_pyerr(py)?;
         let mut pending_delete = self.pending_delete(py).borrow_mut();
@@ -352,7 +356,7 @@ py_class!(pub class treemanifest |py| {
 
     def __getitem__(&self, path: PyPathBuf) -> PyResult<PyBytes> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         match tree.get_file(&repo_path).map_pyerr(py)? {
             Some(file_metadata) => Ok(node_to_pybytes(py, file_metadata.hgid)),
             None => Err(PyErr::new::<exc::KeyError, _>(py, format!("file {} not found", path))),
@@ -361,7 +365,7 @@ py_class!(pub class treemanifest |py| {
 
     def keys(&self) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
@@ -373,7 +377,7 @@ py_class!(pub class treemanifest |py| {
 
     def __contains__(&self, path: PyPathBuf) -> PyResult<bool> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         match tree.get_file(&repo_path).map_pyerr(py)? {
             Some(_) => Ok(true),
             None => Ok(false),
@@ -382,7 +386,7 @@ py_class!(pub class treemanifest |py| {
 
     def __iter__(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(PyPathBuf::from(file.path));
@@ -396,7 +400,7 @@ py_class!(pub class treemanifest |py| {
 
     def items(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             let tuple = (
@@ -410,7 +414,7 @@ py_class!(pub class treemanifest |py| {
 
     def iterkeys(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).borrow();
+        let tree = self.underlying(py).read();
         for entry in tree.files(&AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(PyPathBuf::from(file.path));
@@ -435,13 +439,13 @@ py_class!(pub class treemanifest |py| {
             ));
         }
         let mut result = Vec::new();
-        let mut tree = self.underlying(py).borrow_mut();
+        let mut tree = self.underlying(py).write();
         let mut parents = vec!();
         if let Some(m1) = p1tree {
-            parents.push(m1.underlying(py).borrow());
+            parents.push(m1.underlying(py).read());
         }
         if let Some(m2) = p2tree {
-            parents.push(m2.underlying(py).borrow());
+            parents.push(m2.underlying(py).read());
         }
         let entries = tree.finalize(
             parents.iter().map(|x| x.deref()).collect()
@@ -466,8 +470,8 @@ py_class!(pub class treemanifest |py| {
 });
 
 impl treemanifest {
-    pub fn borrow_underlying<'a>(&'a self, py: Python<'a>) -> Ref<'a, TreeManifest> {
-        self.underlying(py).borrow()
+    pub fn get_underlying(&self, py: Python) -> Arc<RwLock<TreeManifest>> {
+        self.underlying(py).clone()
     }
 }
 
