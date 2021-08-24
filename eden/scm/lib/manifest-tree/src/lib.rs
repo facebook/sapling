@@ -87,7 +87,7 @@ impl TreeManifest {
     pub fn ephemeral(store: Arc<dyn TreeStore + Send + Sync>) -> Self {
         TreeManifest {
             store: InnerStore::new(store),
-            root: Link::Ephemeral(BTreeMap::new()),
+            root: Link::ephemeral(),
         }
     }
 
@@ -105,9 +105,11 @@ impl Manifest for TreeManifest {
     fn list(&self, path: &RepoPath) -> Result<List> {
         let directory = match self.get_link(path)? {
             None => return Ok(List::NotFound),
-            Some(Leaf(_)) => return Ok(List::File),
-            Some(Ephemeral(content)) => content,
-            Some(Durable(entry)) => entry.materialize_links(&self.store, path)?,
+            Some(l) => match l.as_ref() {
+                Leaf(_) => return Ok(List::File),
+                Ephemeral(content) => content,
+                Durable(entry) => entry.materialize_links(&self.store, path)?,
+            },
         };
 
         let directory = directory
@@ -122,7 +124,7 @@ impl Manifest for TreeManifest {
         let mut cursor = &self.root;
         let mut must_insert = false;
         for (parent, component) in path.parents().zip(path.components()) {
-            let child = match cursor {
+            let child = match cursor.as_ref() {
                 Leaf(_) => Err(InsertError::new(
                     path.clone(), // TODO: get rid of clone (it is borrowed)
                     file_metadata,
@@ -143,7 +145,7 @@ impl Manifest for TreeManifest {
             }
         }
         if must_insert == false {
-            match cursor {
+            match cursor.as_ref() {
                 Leaf(existing_metadata) => {
                     if *existing_metadata == file_metadata {
                         return Ok(()); // nothing to do
@@ -163,17 +165,17 @@ impl Manifest for TreeManifest {
             cursor = cursor
                 .mut_ephemeral_links(&self.store, parent)?
                 .entry(component.to_owned())
-                .or_insert_with(|| Ephemeral(BTreeMap::new()));
+                .or_insert_with(|| Link::ephemeral());
         }
         match cursor
             .mut_ephemeral_links(&self.store, path_parent)?
             .entry(last_component.to_owned())
         {
             Entry::Vacant(entry) => {
-                entry.insert(Link::Leaf(file_metadata));
+                entry.insert(Link::leaf(file_metadata));
             }
             Entry::Occupied(mut entry) => {
-                if let Leaf(ref mut store_ref) = entry.get_mut() {
+                if let Leaf(ref mut store_ref) = entry.get_mut().as_mut_ref()? {
                     *store_ref = file_metadata;
                 } else {
                     unreachable!("Unexpected directory found while insert.");
@@ -192,7 +194,7 @@ impl Manifest for TreeManifest {
         {
             match iter.next() {
                 None => {
-                    if let Leaf(_) = cursor {
+                    if let Leaf(_) = cursor.as_ref() {
                         // We reached the file that we want to remove.
                         Ok(true)
                     } else {
@@ -237,16 +239,16 @@ impl Manifest for TreeManifest {
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
-        ) -> Result<(&'c HgId, store::Flag)> {
+        ) -> Result<(HgId, store::Flag)> {
             loop {
-                match cursor {
+                let new_cursor = match cursor.as_mut_ref()? {
                     Leaf(file_metadata) => {
                         return Ok((
-                            &file_metadata.hgid,
+                            file_metadata.hgid.clone(),
                             store::Flag::File(file_metadata.file_type.clone()),
                         ));
                     }
-                    Durable(entry) => return Ok((&entry.hgid, store::Flag::Directory)),
+                    Durable(entry) => return Ok((entry.hgid.clone(), store::Flag::Directory)),
                     Ephemeral(links) => {
                         let iter = links.iter_mut().map(|(component, link)| {
                             pathbuf.push(component.as_path_component());
@@ -267,9 +269,10 @@ impl Manifest for TreeManifest {
                         cell.set(Ok(links.clone())).unwrap();
 
                         let durable_entry = DurableEntry { hgid, links: cell };
-                        *cursor = Durable(Arc::new(durable_entry));
+                        Link::new(Durable(Arc::new(durable_entry)))
                     }
-                }
+                };
+                *cursor = new_cursor;
             }
         }
         let mut path = RepoPathBuf::new();
@@ -336,15 +339,15 @@ impl fmt::Debug for TreeManifest {
             Ok(())
         }
         fn write_links(f: &mut fmt::Formatter<'_>, link: &Link, indent: usize) -> fmt::Result {
-            match link {
-                Link::Leaf(metadata) => {
+            match link.as_ref() {
+                Leaf(metadata) => {
                     write!(f, "(File, {}, {:?})\n", metadata.hgid, metadata.file_type)
                 }
-                Link::Ephemeral(children) => {
+                Ephemeral(children) => {
                     write!(f, "(Ephemeral)\n")?;
                     write_children(f, children, indent)
                 }
-                Link::Durable(entry) => {
+                Durable(entry) => {
                     write!(f, "(Durable, {})\n", entry.hgid)?;
                     match entry.links.get() {
                         None => Ok(()),
@@ -416,7 +419,7 @@ impl TreeManifest {
                 let mut parent_nodes = Vec::with_capacity(active_parents.len());
                 for id in active_parents {
                     let cursor = &self.parent_trees[*id];
-                    let hgid = match cursor.link() {
+                    let hgid = match cursor.link().as_ref() {
                         Leaf(_) | Ephemeral(_) => unreachable!(),
                         Durable(entry) => entry.hgid,
                     };
@@ -449,7 +452,7 @@ impl TreeManifest {
                         }
                     }
                     if !cursor.finished() && cursor.path() == self.path.as_repo_path() {
-                        match cursor.link() {
+                        match cursor.link().as_ref() {
                             Leaf(_) => {} // files and directories don't share history
                             Durable(_) => result.push(*id),
                             Ephemeral(_) => {
@@ -466,13 +469,13 @@ impl TreeManifest {
                 active_parents: Vec<usize>,
             ) -> Result<(HgId, store::Flag)> {
                 let parent_tree_nodes = self.active_parent_tree_nodes(&active_parents)?;
-                if let Durable(entry) = link {
+                if let Durable(entry) = link.as_ref() {
                     if parent_tree_nodes.contains(&entry.hgid) {
                         return Ok((entry.hgid, store::Flag::Directory));
                     }
                 }
                 self.advance_parents(&active_parents)?;
-                if let Leaf(file_metadata) = link {
+                if let Leaf(file_metadata) = link.as_ref() {
                     return Ok((
                         file_metadata.hgid,
                         store::Flag::File(file_metadata.file_type.clone()),
@@ -500,7 +503,7 @@ impl TreeManifest {
 
                 let durable_entry = DurableEntry { hgid, links: cell };
                 let inner = Arc::new(durable_entry);
-                *link = Durable(inner);
+                *link = Link::new(Durable(inner));
                 let parent_hgid = |id| *parent_tree_nodes.get(id).unwrap_or(HgId::null_id());
                 self.converted_nodes.push((
                     self.path.clone(),
@@ -521,7 +524,7 @@ impl TreeManifest {
     fn get_link(&self, path: &RepoPath) -> Result<Option<&Link>> {
         let mut cursor = &self.root;
         for (parent, component) in path.parents().zip(path.components()) {
-            let child = match cursor {
+            let child = match cursor.as_ref() {
                 Leaf(_) => return Ok(None),
                 Ephemeral(links) => links.get(component),
                 Durable(ref entry) => {
@@ -691,10 +694,10 @@ mod tests {
     }
 
     fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
-        match tree.get_link(path).unwrap().unwrap() {
-            Link::Leaf(file_metadata) => file_metadata.hgid,
-            Link::Durable(ref entry) => entry.hgid,
-            Link::Ephemeral(_) => {
+        match tree.get_link(path).unwrap().unwrap().as_ref() {
+            Leaf(file_metadata) => file_metadata.hgid,
+            Durable(ref entry) => entry.hgid,
+            Ephemeral(_) => {
                 panic!("Asked for hgid on path {} but found ephemeral hgid.", path)
             }
         }

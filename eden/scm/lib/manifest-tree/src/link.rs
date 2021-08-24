@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::ops::Deref;
 use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::{anyhow, bail, format_err, Context, Result};
 use once_cell::sync::OnceCell;
 
 use manifest::{File, FileMetadata, FsNodeMetadata};
@@ -16,10 +17,39 @@ use types::{HgId, Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::{store, store::InnerStore};
 
+// Allows sending link between threads, but disallows general copying.
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct Link {
+    inner: Arc<LinkData>,
+}
+
+impl Deref for Link {
+    type Target = LinkData;
+    fn deref(&self) -> &LinkData {
+        self.inner.as_ref()
+    }
+}
+
+impl AsRef<LinkData> for Link {
+    fn as_ref(&self) -> &LinkData {
+        self.inner.as_ref()
+    }
+}
+
+impl Clone for Link {
+    fn clone(&self) -> Self {
+        // Most code should not be aware of the fact that Link can be cloned as an Arc, so for the
+        // default clone implementation do a deep clone. thread_copy() should be used for explicit
+        // cases that need a shallow copy.
+        Link::new(self.inner.as_ref().clone())
+    }
+}
+
 /// `Link` describes the type of nodes that tree manifest operates on.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub enum Link {
+pub enum LinkData {
     /// `Leaf` nodes store FileMetadata. They are terminal nodes and don't have any other
     /// information.
     Leaf(FileMetadata),
@@ -33,7 +63,7 @@ pub enum Link {
     /// list will be read from storage only when it is accessed.
     Durable(Arc<DurableEntry>),
 }
-pub use self::Link::*;
+pub use self::LinkData::*;
 
 // TODO: Use Vec instead of BTreeMap
 /// The inner structure of a durable link. Of note is that failures are cached "forever".
@@ -51,15 +81,87 @@ pub struct DurableEntry {
 }
 
 impl Link {
+    pub fn new(link: LinkData) -> Self {
+        Link {
+            inner: Arc::new(link),
+        }
+    }
+
     pub fn durable(hgid: HgId) -> Link {
-        Link::Durable(Arc::new(DurableEntry::new(hgid)))
+        Link::new(LinkData::Durable(Arc::new(DurableEntry::new(hgid))))
     }
 
-    #[cfg(test)]
     pub fn ephemeral() -> Link {
-        Link::Ephemeral(BTreeMap::new())
+        Link::new(LinkData::Ephemeral(BTreeMap::new()))
     }
 
+    pub fn leaf(metadata: FileMetadata) -> Link {
+        Link::new(LinkData::Leaf(metadata))
+    }
+
+    pub fn mut_ephemeral_links(
+        &mut self,
+        store: &InnerStore,
+        parent: &RepoPath,
+    ) -> Result<&mut BTreeMap<PathComponentBuf, Link>> {
+        self.as_mut_ref()?.mut_ephemeral_links(store, parent)
+    }
+
+    pub fn to_fs_node(&self) -> FsNodeMetadata {
+        match self.as_ref() {
+            Leaf(metadata) => FsNodeMetadata::File(*metadata),
+            Ephemeral(_) => FsNodeMetadata::Directory(None),
+            Durable(durable) => FsNodeMetadata::Directory(Some(durable.hgid)),
+        }
+    }
+
+    /// Create a file record for a `Link`, failing if the link
+    /// refers to a directory rather than a file.
+    pub fn to_file(&self, path: RepoPathBuf) -> Option<File> {
+        match self.as_ref() {
+            Leaf(metadata) => Some(File::new(path, *metadata)),
+            _ => None,
+        }
+    }
+
+    pub fn matches(&self, matcher: &impl Matcher, path: &RepoPath) -> Result<bool> {
+        match self.as_ref() {
+            Leaf(_) => matcher.matches_file(path),
+            Durable(_) | Ephemeral(_) => {
+                Ok(matcher.matches_directory(path)? != DirectoryMatch::Nothing)
+            }
+        }
+    }
+
+    pub fn thread_copy(&self) -> Self {
+        Link {
+            inner: self.inner.clone(),
+        }
+    }
+
+    pub fn as_mut_ref(&mut self) -> Result<&mut LinkData> {
+        // This introduces an unsual mutability pattern where we allow mutations as long as there
+        // is only one copy of the Link's Arc. That one copy will always be the parent directory.
+        // In normal treemanifest operations, these Links are never shared beween trees (and in
+        // fact the only way to copy the Arc is through the thread_copy function) so it will always
+        // be the case that there is only one copy.
+        //
+        // The one exception, and the reason we use Arc at all, is during tree traversals. In that
+        // case we pass copies of the Arc to other threads for parallel traversals. Therefore we
+        // cannot use as_mut_ref() while traversing the tree.
+        //
+        // Normally we'd use RwLock so the compiler could enforce this, but having a RwLock on
+        // every Link would be expensive and tree reads are a critical hotpath. Using Arc like this
+        // gives us zero-cost reads and standard rust mutable-reference safety, as long as we don't
+        // copy the Arc.
+
+        Arc::get_mut(&mut self.inner).ok_or_else(|| {
+            anyhow!("cannot mutate tree manifest link if there are multiple readers")
+        })
+    }
+}
+
+impl LinkData {
     pub fn mut_ephemeral_links(
         &mut self,
         store: &InnerStore,
@@ -73,33 +175,7 @@ impl Link {
                     let durable_links = entry.materialize_links(store, parent)?;
                     *self = Ephemeral(durable_links.clone());
                 }
-            }
-        }
-    }
-
-    pub fn to_fs_node(&self) -> FsNodeMetadata {
-        match self {
-            &Link::Leaf(metadata) => FsNodeMetadata::File(metadata),
-            Link::Ephemeral(_) => FsNodeMetadata::Directory(None),
-            Link::Durable(durable) => FsNodeMetadata::Directory(Some(durable.hgid)),
-        }
-    }
-
-    /// Create a file record for a `Link`, failing if the link
-    /// refers to a directory rather than a file.
-    pub fn to_file(&self, path: RepoPathBuf) -> Option<File> {
-        match self {
-            Leaf(metadata) => Some(File::new(path, *metadata)),
-            _ => None,
-        }
-    }
-
-    pub fn matches(&self, matcher: &impl Matcher, path: &RepoPath) -> Result<bool> {
-        match self {
-            Link::Leaf(_) => matcher.matches_file(path),
-            Link::Durable(_) | Link::Ephemeral(_) => {
-                Ok(matcher.matches_directory(path)? != DirectoryMatch::Nothing)
-            }
+            };
         }
     }
 }
@@ -133,7 +209,7 @@ impl DurableEntry {
                 })?;
                 let link = match element.flag {
                     store::Flag::File(file_type) => {
-                        Leaf(FileMetadata::new(element.hgid, file_type))
+                        Link::leaf(FileMetadata::new(element.hgid, file_type))
                     }
                     store::Flag::Directory => Link::durable(element.hgid),
                 };
@@ -184,7 +260,7 @@ impl<'a> DirLink<'a> {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
     pub fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
-        if let Link::Leaf(_) = link {
+        if let Leaf(_) = link.as_ref() {
             return None;
         }
         Some(DirLink { path, link })
@@ -197,9 +273,9 @@ impl<'a> DirLink<'a> {
     }
 
     pub fn hgid(&self) -> Option<HgId> {
-        match self.link {
-            Link::Leaf(_) | Link::Ephemeral(_) => None,
-            Link::Durable(entry) => Some(entry.hgid),
+        match self.link.as_ref() {
+            Leaf(_) | Ephemeral(_) => None,
+            Durable(entry) => Some(entry.hgid),
         }
     }
 
@@ -218,20 +294,18 @@ impl<'a> DirLink<'a> {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
-        let links = match &self.link {
-            &Link::Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
-            &Link::Ephemeral(ref links) => links,
-            &Link::Durable(entry) => entry.materialize_links(store, &self.path)?,
+        let links = match self.link.as_ref() {
+            Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
+            Ephemeral(ref links) => links,
+            Durable(entry) => entry.materialize_links(store, &self.path)?,
         };
 
         for (name, link) in links {
             let mut path = self.path.clone();
             path.push(name.as_ref());
-            match link {
-                Link::Leaf(_) => {
-                    files.push(link.to_file(path).expect("leaf node must be a valid file"))
-                }
-                Link::Ephemeral(_) | Link::Durable(_) => dirs.push(
+            match link.as_ref() {
+                Leaf(_) => files.push(link.to_file(path).expect("leaf node must be a valid file")),
+                Ephemeral(_) | Durable(_) => dirs.push(
                     DirLink::from_link(link, path).expect("inner node must be a valid directory"),
                 ),
             }
@@ -286,7 +360,7 @@ mod tests {
         let meta = make_meta("a");
         let path = repo_path_buf("test/leaf");
 
-        let leaf = Link::Leaf(meta.clone());
+        let leaf = Link::leaf(meta.clone());
         let file = leaf.to_file(path.clone()).unwrap();
 
         let expected = File {
@@ -328,7 +402,7 @@ mod tests {
         assert_eq!(dir, expected);
 
         // If the Link is actually a file, we should get None.
-        let leaf = Link::Leaf(meta.clone());
+        let leaf = Link::leaf(meta.clone());
         let dir = DirLink::from_link(&leaf, path.clone());
         assert!(dir.is_none());
     }

@@ -14,7 +14,7 @@ use pathmatcher::Matcher;
 use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::{
-    link::{DurableEntry, Link},
+    link::{Durable, DurableEntry, Ephemeral, Leaf, Link},
     store::InnerStore,
     TreeManifest,
 };
@@ -38,7 +38,7 @@ impl<'a> BfsIter<'a> {
         let mut keys = vec![Key::new(extra.0.to_owned(), extra.1.hgid)];
         let mut entries = vec![extra];
         for (path, link) in self.queue.iter() {
-            if let Link::Durable(durable_entry) = link {
+            if let Durable(durable_entry) = link.as_ref() {
                 keys.push(Key::new(path.clone(), durable_entry.hgid));
                 entries.push((path, durable_entry));
             }
@@ -57,12 +57,12 @@ impl<'a> Iterator for BfsIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let (path, children, hgid) = match self.queue.pop_front() {
             None => return None,
-            Some((path, link)) => match link {
-                Link::Leaf(file_metadata) => {
+            Some((path, link)) => match link.as_ref() {
+                Leaf(file_metadata) => {
                     return Some(Ok((path, FsNodeMetadata::File(*file_metadata))));
                 }
-                Link::Ephemeral(children) => (path, children, None),
-                Link::Durable(entry) => loop {
+                Ephemeral(children) => (path, children, None),
+                Durable(entry) => loop {
                     match entry.get_links() {
                         None => match self.prefetch((&path, &entry)) {
                             Ok(_) => {}
@@ -199,13 +199,13 @@ impl<'a> DfsCursor<'a> {
                     return Step::Success;
                 }
                 State::Push => {
-                    match self.link {
+                    match self.link.as_ref() {
                         // Directories will insert an iterator over their elements in the stack.
-                        Link::Ephemeral(links) => {
+                        Ephemeral(links) => {
                             self.stack.push(links.iter());
                             self.state = State::Next;
                         }
-                        Link::Durable(durable_entry) => {
+                        Durable(durable_entry) => {
                             match durable_entry.materialize_links(&*self.store, &self.path) {
                                 Err(err) => {
                                     self.state = State::Done;
@@ -215,7 +215,7 @@ impl<'a> DfsCursor<'a> {
                             }
                             self.state = State::Next;
                         }
-                        Link::Leaf(_) => {
+                        Leaf(_) => {
                             self.state = State::Pop;
                         }
                     };
