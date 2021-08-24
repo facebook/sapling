@@ -18,7 +18,7 @@ use pathmatcher::{AlwaysMatcher, Matcher};
 use progress_model::{ProgressBar, Registry};
 use pyconfigparser::config;
 use pymanifest::treemanifest;
-use pypathmatcher::PythonMatcher;
+use pypathmatcher::{PythonMatcher, ThreadPythonMatcher};
 use pyrevisionstore::{contentstore, filescmstore};
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
@@ -55,9 +55,9 @@ py_class!(class checkoutplan |py| {
         progress_path: Option<PyPathBuf> = None,
     ) -> PyResult<checkoutplan> {
         let config = config.get_cfg(py);
-        let matcher: Box<dyn Matcher> = match matcher {
+        let matcher: Box<dyn Matcher + Send + Sync> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
-            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+            Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
         };
 
         let current_guard = current_manifest.get_underlying(py);
