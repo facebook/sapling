@@ -96,8 +96,6 @@ class TerminalSettings:
         """
         global _term_settings
         if _term_settings is not None:
-            # pyre-fixme[7]: Expected `TerminalSettings` but got
-            #  `Optional[TerminalSettings]`.
             return _term_settings
 
         import curses
@@ -131,8 +129,6 @@ class TerminalSettings:
             attributes=attributes,
             reset=reset,
         )
-        # pyre-fixme[7]: Expected `TerminalSettings` but got
-        #  `Optional[TerminalSettings]`.
         return _term_settings
 
     def get_attr_codes(
