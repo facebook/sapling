@@ -275,6 +275,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         route
             .post("/:repo/upload/changeset/bonsai")
             .with_path_extractor::<commit::UploadBonsaiChangesetParams>()
+            .with_query_string_extractor::<commit::UploadBonsaiChangesetQueryString>()
             .to(upload_bonsai_changeset_handler);
     })
 }

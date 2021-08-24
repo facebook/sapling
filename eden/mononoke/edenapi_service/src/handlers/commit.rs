@@ -23,6 +23,7 @@ use edenapi_types::{
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, ToWire,
     UploadBonsaiChangesetRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
+use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
@@ -71,6 +72,11 @@ pub struct UploadHgChangesetsParams {
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadBonsaiChangesetParams {
     repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct UploadBonsaiChangesetQueryString {
+    bubble_id: Option<std::num::NonZeroU64>,
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
@@ -328,6 +334,7 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
 async fn upload_bonsai_changeset_impl(
     repo: HgRepoContext,
     request: UploadBonsaiChangesetRequest,
+    _bubble_id: Option<BubbleId>,
 ) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
     let cs = request.changeset;
     let repo_write = repo.clone().write().await?;
@@ -372,6 +379,7 @@ async fn upload_bonsai_changeset_impl(
 /// Upload list of bonsai changesets requested by the client
 pub async fn upload_bonsai_changeset(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let params = UploadBonsaiChangesetParams::take_from(state);
+    let query_string = UploadBonsaiChangesetQueryString::take_from(state);
 
     state.put(HandlerInfo::new(
         &params.repo,
@@ -383,9 +391,10 @@ pub async fn upload_bonsai_changeset(state: &mut State) -> Result<impl TryIntoRe
 
     let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
     let request = parse_wire_request::<WireUploadBonsaiChangesetRequest>(state).await?;
-    let responses = upload_bonsai_changeset_impl(repo, request)
-        .await
-        .map_err(HttpError::e500)?;
+    let responses =
+        upload_bonsai_changeset_impl(repo, request, query_string.bubble_id.map(BubbleId::new))
+            .await
+            .map_err(HttpError::e500)?;
 
     Ok(cbor_stream_filtered_errors(
         stream::iter(responses).map(|r| r.map(|v| v.to_wire())),

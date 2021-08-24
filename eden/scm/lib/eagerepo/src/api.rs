@@ -507,6 +507,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _changeset: BonsaiChangesetContent,
+        _bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_bonsai_changeset endpoint".to_string(),

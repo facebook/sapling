@@ -185,6 +185,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         changeset: BonsaiChangesetContent,
+        bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
 
     async fn ephemeral_prepare(
@@ -414,9 +415,10 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         changeset: BonsaiChangesetContent,
+        bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .upload_bonsai_changeset(repo, changeset)
+            .upload_bonsai_changeset(repo, changeset, bubble_id)
             .await
     }
 

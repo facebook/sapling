@@ -1044,6 +1044,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         changeset: BonsaiChangesetContent,
+        bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         let msg = "Requesting changeset upload";
         tracing::info!("{}", &msg);
@@ -1051,7 +1052,11 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
+        let mut url = self.url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
+        if let Some(bubble_id) = bubble_id {
+            url.query_pairs_mut()
+                .append_pair("bubble_id", &bubble_id.to_string());
+        }
         let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
 
         let request = self

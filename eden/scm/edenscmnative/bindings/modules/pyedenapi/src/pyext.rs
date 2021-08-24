@@ -835,7 +835,7 @@ pub trait EdenApiPyExt: EdenApi {
         let response = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let _prepare_response = {
+                    let prepare_response = {
                         self.ephemeral_prepare(repo.clone())
                             .await?
                             .entries
@@ -889,7 +889,8 @@ pub trait EdenApiPyExt: EdenApi {
                             }).collect::<anyhow::Result<_>>()?,
                             message: "".to_string(),
                             is_snapshot: true,
-                        }
+                        },
+                        Some(prepare_response.bubble_id),
                     ).await?;
                     let changeset_response = response
                         .entries

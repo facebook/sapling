@@ -497,6 +497,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _changeset: BonsaiChangesetContent,
+        _bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
