@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 use crate::AnyId;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -32,6 +34,7 @@ impl From<FileContentTokenMetadata> for UploadTokenMetadata {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadTokenData {
     pub id: AnyId,
+    pub bubble_id: Option<NonZeroU64>,
     pub metadata: Option<UploadTokenMetadata>,
     // TODO: add other data (like expiration time).
 }
@@ -48,18 +51,28 @@ pub struct UploadToken {
 }
 
 impl UploadToken {
-    pub fn new_fake_token(id: AnyId) -> Self {
+    pub fn new_fake_token(id: AnyId, bubble_id: Option<NonZeroU64>) -> Self {
         Self {
-            data: UploadTokenData { id, metadata: None },
+            data: UploadTokenData {
+                id,
+                bubble_id,
+                metadata: None,
+            },
             signature: UploadTokenSignature {
                 signature: "faketokensignature".into(),
             },
         }
     }
-    pub fn new_fake_token_with_metadata(id: AnyId, metadata: UploadTokenMetadata) -> Self {
+
+    pub fn new_fake_token_with_metadata(
+        id: AnyId,
+        bubble_id: Option<NonZeroU64>,
+        metadata: UploadTokenMetadata,
+    ) -> Self {
         Self {
             data: UploadTokenData {
                 id,
+                bubble_id,
                 metadata: Some(metadata),
             },
             signature: UploadTokenSignature {
@@ -85,6 +98,7 @@ impl Arbitrary for UploadTokenData {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
             metadata: None,
         }
     }

@@ -194,7 +194,7 @@ async fn store_tree(
         .await?;
     Ok(UploadTreeResponse {
         index,
-        token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id)),
+        token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id), None),
     })
 }
 

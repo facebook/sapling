@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
@@ -89,6 +91,9 @@ impl ToApi for WireAnyId {
 pub struct WireLookupRequest {
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
     pub id: WireAnyId,
+
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    pub bubble_id: Option<NonZeroU64>,
 }
 
 impl ToWire for LookupRequest {
@@ -97,6 +102,7 @@ impl ToWire for LookupRequest {
     fn to_wire(self) -> Self::Wire {
         WireLookupRequest {
             id: self.id.to_wire(),
+            bubble_id: self.bubble_id,
         }
     }
 }
@@ -108,6 +114,7 @@ impl ToApi for WireLookupRequest {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(LookupRequest {
             id: self.id.to_api()?,
+            bubble_id: self.bubble_id,
         })
     }
 }
@@ -167,6 +174,7 @@ impl Arbitrary for WireLookupRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
         }
     }
 }

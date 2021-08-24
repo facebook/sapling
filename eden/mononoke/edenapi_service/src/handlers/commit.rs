@@ -298,7 +298,7 @@ async fn store_hg_changesets(
                 let hgid = HgId::from(hg_cs_id.into_nodehash());
                 UploadTokensResponse {
                     index: indexes.get(&hgid).cloned().unwrap(), // always present
-                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid)),
+                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
                 }
             })
             .map_err(Error::from)
@@ -359,7 +359,7 @@ async fn upload_bonsai_changeset_impl(
             cs.file_changes
                 .into_iter()
                 .map(|(path, fc)| {
-                    let create_change = to_create_change(fc)
+                    let create_change = to_create_change(fc, bubble_id)
                         .with_context(|| anyhow!("Parsing file changes for {}", path))?;
                     Ok((to_mononoke_path(path)?, create_change))
                 })
@@ -376,7 +376,10 @@ async fn upload_bonsai_changeset_impl(
 
     Ok(vec![Ok(UploadTokensResponse {
         index: 0,
-        token: UploadToken::new_fake_token(AnyId::BonsaiChangesetId(cs_id.into())),
+        token: UploadToken::new_fake_token(
+            AnyId::BonsaiChangesetId(cs_id.into()),
+            bubble_id.map(Into::into),
+        ),
     })])
 }
 

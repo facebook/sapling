@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 use anyhow::{format_err, Context, Error};
 use bytes::Bytes;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
@@ -54,7 +56,7 @@ pub struct UploadFileParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadFileQueryString {
-    bubble_id: Option<std::num::NonZeroU64>,
+    bubble_id: Option<NonZeroU64>,
     content_size: u64,
 }
 
@@ -160,10 +162,12 @@ async fn generate_upload_token(
     _repo: HgRepoContext,
     id: AnyFileContentId,
     content_size: u64,
+    bubble_id: Option<NonZeroU64>,
 ) -> Result<UploadToken, Error> {
     // At first, returns a fake token
     Ok(UploadToken::new_fake_token_with_metadata(
         AnyId::AnyFileContentId(id),
+        bubble_id,
         UploadTokenMetadata::FileContentTokenMetadata(FileContentTokenMetadata { content_size }),
     ))
 }
@@ -221,7 +225,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     .await
     .map_err(HttpError::e500)?;
 
-    let token = generate_upload_token(repo, id, content_size)
+    let token = generate_upload_token(repo, id, content_size, query_string.bubble_id)
         .await
         .map(|v| v.to_wire());
 
@@ -271,13 +275,13 @@ async fn store_hg_filenode(
     })?;
 
     let content_id = repo
-        .convert_file_to_content_id(any_file_content_id)
+        .convert_file_to_content_id(any_file_content_id, None)
         .await?
         .ok_or_else(|| format_err!("File from upload token should be present"))?;
 
     let content_size = match token.data.metadata {
         Some(UploadTokenMetadata::FileContentTokenMetadata(meta)) => meta.content_size,
-        _ => repo.fetch_file_content_size(content_id).await?,
+        _ => repo.fetch_file_content_size(content_id, None).await?,
     };
 
     let metadata = Bytes::from(item.data.metadata);
@@ -287,7 +291,7 @@ async fn store_hg_filenode(
 
     Ok(UploadTokensResponse {
         index,
-        token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id)),
+        token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id), None),
     })
 }
 

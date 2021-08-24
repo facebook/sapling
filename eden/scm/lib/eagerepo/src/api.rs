@@ -58,6 +58,7 @@ use http::StatusCode;
 use http::Version;
 use minibytes::Bytes;
 use std::collections::HashSet;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use tracing::debug;
 use tracing::trace;
@@ -456,6 +457,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<AnyId>,
+        _bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support lookup_batch endpoint".to_string(),
@@ -466,7 +468,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
-        _bubble_id: Option<std::num::NonZeroU64>,
+        _bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support process_file_upload endpoint".to_string(),

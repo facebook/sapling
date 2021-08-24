@@ -51,6 +51,11 @@ pub trait Changesets: Send + Sync {
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error>;
 
+    /// Return whether a changeset is stored in the backend
+    async fn exists(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool, Error> {
+        Ok(self.get(ctx.clone(), cs_id).await?.is_some())
+    }
+
     /// Retrieve the rows for all the commits if available
     async fn get_many(
         &self,

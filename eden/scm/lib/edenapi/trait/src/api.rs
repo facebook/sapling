@@ -151,6 +151,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         items: Vec<AnyId>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError>;
 
     /// Upload files content
@@ -365,9 +366,10 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<AnyId>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .lookup_batch(repo, items)
+            .lookup_batch(repo, items, bubble_id)
             .await
     }
 

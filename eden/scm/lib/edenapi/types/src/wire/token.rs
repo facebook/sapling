@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
@@ -37,6 +39,8 @@ pub struct WireUploadTokenData {
     pub id: WireAnyId,
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
     pub metadata: Option<WireUploadTokenMetadata>,
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
+    pub bubble_id: Option<NonZeroU64>,
     // other data to be added ...
 }
 
@@ -105,6 +109,7 @@ impl ToWire for UploadTokenData {
     fn to_wire(self) -> Self::Wire {
         WireUploadTokenData {
             id: self.id.to_wire(),
+            bubble_id: self.bubble_id,
             metadata: self.metadata.to_wire(),
         }
     }
@@ -117,6 +122,7 @@ impl ToApi for WireUploadTokenData {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(UploadTokenData {
             id: self.id.to_api()?,
+            bubble_id: self.bubble_id,
             metadata: self.metadata.to_api()?,
         })
     }
@@ -185,6 +191,7 @@ impl Arbitrary for WireUploadTokenData {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
             metadata: None,
         }
     }

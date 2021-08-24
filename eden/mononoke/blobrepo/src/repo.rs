@@ -448,9 +448,10 @@ pub async fn save_bonsai_changesets(
         .into_iter()
         .map({
             |p| {
-                cloned!(ctx, complete_changesets);
+                cloned!(complete_changesets);
+                let ctx = &ctx;
                 async move {
-                    let exists = complete_changesets.get(ctx, p).await?.is_some();
+                    let exists = complete_changesets.exists(ctx, p).await?;
                     if exists {
                         Ok(())
                     } else {

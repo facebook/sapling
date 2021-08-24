@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, num::NonZeroU64, path::Path, sync::Arc};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -456,6 +456,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<AnyId>,
+        _bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         unimplemented!();
     }
@@ -464,7 +465,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
-        _bubble_id: Option<std::num::NonZeroU64>,
+        _bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         unimplemented!();
     }

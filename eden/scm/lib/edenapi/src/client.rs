@@ -754,6 +754,7 @@ impl EdenApi for Client {
                     .into_iter()
                     .map(|hgid| AnyId::HgChangesetId(hgid))
                     .collect(),
+                None,
             )
             .await?;
 
@@ -838,6 +839,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<AnyId>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<LookupResponse>, EdenApiError> {
         let msg = format!("Requesting lookup for {} item(s)", items.len());
         tracing::info!("{}", &msg);
@@ -856,7 +858,10 @@ impl EdenApi for Client {
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
             |ids| {
                 let req = Batch::<LookupRequest> {
-                    batch: ids.into_iter().map(|id| LookupRequest { id }).collect(),
+                    batch: ids
+                        .into_iter()
+                        .map(|id| LookupRequest { id, bubble_id })
+                        .collect(),
                 };
                 req.to_wire()
             },
@@ -884,7 +889,10 @@ impl EdenApi for Client {
             .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
             .collect();
 
-        let mut entries = self.lookup_batch(repo.clone(), anyids).await?.entries;
+        let mut entries = self
+            .lookup_batch(repo.clone(), anyids, bubble_id)
+            .await?
+            .entries;
         while let Some(entry) = entries.next().await {
             if let Ok(entry) = entry {
                 if let Some(token) = entry.token {

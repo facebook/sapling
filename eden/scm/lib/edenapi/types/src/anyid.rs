@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 use crate::{AnyFileContentId, UploadToken};
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -32,6 +34,7 @@ impl Default for AnyId {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct LookupRequest {
     pub id: AnyId,
+    pub bubble_id: Option<NonZeroU64>,
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -63,6 +66,7 @@ impl Arbitrary for LookupRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
         }
     }
 }

@@ -13,7 +13,7 @@ use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bookmarks::Freshness;
 use bytes::Bytes;
-use changesets::ChangesetInsert;
+use changesets::{ChangesetInsert, Changesets, ChangesetsArc};
 use context::CoreContext;
 use ephemeral_blobstore::{Bubble, BubbleId};
 use filestore::{self, Alias, FetchKey, StoreRequest};
@@ -118,9 +118,10 @@ impl HgRepoContext {
     pub async fn fetch_file_content_size(
         &self,
         content_id: ContentId,
+        bubble_id: Option<BubbleId>,
     ) -> Result<u64, MononokeError> {
         Ok(filestore::get_metadata(
-            self.blob_repo().blobstore(),
+            &self.bubble_blobstore(bubble_id).await?,
             self.ctx(),
             &FetchKey::Canonical(content_id),
         )
@@ -190,10 +191,11 @@ impl HgRepoContext {
     pub async fn convert_file_to_content_id<H: Into<FetchKey> + Copy + std::fmt::Debug>(
         &self,
         hash: H,
+        bubble_id: Option<BubbleId>,
     ) -> Result<Option<ContentId>, MononokeError> {
         match hash
             .into()
-            .load(self.ctx(), self.blob_repo().blobstore())
+            .load(self.ctx(), &self.bubble_blobstore(bubble_id).await?)
             .await
         {
             Ok(cid) => Ok(Some(cid)),
@@ -261,15 +263,27 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
     }
 
+    async fn changesets(
+        &self,
+        bubble_id: Option<BubbleId>,
+    ) -> Result<Arc<dyn Changesets>, MononokeError> {
+        Ok(match bubble_id {
+            Some(id) => self.open_bubble(id).await?.changesets(self.blob_repo()),
+            None => self.blob_repo().changesets_arc(),
+        })
+    }
+
     /// Look up by bonsai changeset
     pub async fn changeset_exists_by_bonsai(
         &self,
         changeset_id: ChangesetId,
+        bubble_id: Option<BubbleId>,
     ) -> Result<bool, MononokeError> {
-        self.blob_repo()
-            .changeset_exists_by_bonsai(self.ctx().clone(), changeset_id)
-            .await
-            .map_err(MononokeError::from)
+        Ok(self
+            .changesets(bubble_id)
+            .await?
+            .exists(self.ctx(), changeset_id)
+            .await?)
     }
 
     /// Look up in blobstore by `HgFileNodeId`

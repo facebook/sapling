@@ -26,9 +26,10 @@ use std::str;
 
 use edenapi_types::{
     commit::BonsaiFileChange,
-    token::{UploadTokenData, UploadTokenMetadata},
+    token::{UploadToken, UploadTokenData, UploadTokenMetadata},
     AnyFileContentId, AnyId, HgChangesetContent, HgMutationEntryContent,
 };
+use ephemeral_blobstore::BubbleId;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
     blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
@@ -86,7 +87,7 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
     })
 }
 
-pub fn to_create_change(fc: BonsaiFileChange) -> Result<CreateChange> {
+pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Result<CreateChange> {
     fn extract_size(metadata: Option<UploadTokenMetadata>) -> Option<u64> {
         match metadata {
             Some(UploadTokenMetadata::FileContentTokenMetadata(metadata)) => {
@@ -95,14 +96,22 @@ pub fn to_create_change(fc: BonsaiFileChange) -> Result<CreateChange> {
             None => None,
         }
     }
+    let verify = move |token: &UploadToken| -> Result<()> {
+        // TODO: Verify signature on upload token
+        if token.data.bubble_id != bubble_id.map(Into::into) {
+            bail!("Wrong bubble id on upload token")
+        }
+        Ok(())
+    };
     match fc {
         BonsaiFileChange::Change {
             file_type,
             upload_token,
         } => {
-            // TODO: Verify signature on upload token
+            verify(&upload_token)?;
             if let UploadTokenData {
                 id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
+                bubble_id: _,
                 metadata,
             } = upload_token.data
             {
@@ -123,9 +132,11 @@ pub fn to_create_change(fc: BonsaiFileChange) -> Result<CreateChange> {
             file_type,
             upload_token,
         } => {
+            verify(&upload_token)?;
             // TODO: Verify signature on upload token
             if let UploadTokenData {
                 id: AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id)),
+                bubble_id: _,
                 metadata,
             } = upload_token.data
             {

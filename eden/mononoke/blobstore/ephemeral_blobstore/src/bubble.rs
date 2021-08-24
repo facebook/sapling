@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
-use changesets::ChangesetsArc;
+use changesets::{Changesets, ChangesetsArc};
 use context::CoreContext;
 use derivative::Derivative;
 use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
@@ -154,20 +154,36 @@ impl Bubble {
         })
     }
 
-    pub fn repo_view<C: RepoBlobstoreRef + RepoIdentityRef + ChangesetsArc>(
+    fn changesets_with_blobstore(
         &self,
-        container: C,
+        repo_blobstore: RepoBlobstore,
+        container: impl ChangesetsArc + RepoIdentityRef,
+    ) -> EphemeralChangesets {
+        EphemeralChangesets::new(
+            container.repo_identity().id(),
+            self.bubble_id(),
+            repo_blobstore,
+            self.connections.clone(),
+            container.changesets_arc(),
+        )
+    }
+
+    pub fn changesets(
+        &self,
+        container: impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef,
+    ) -> Arc<dyn Changesets> {
+        let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
+        Arc::new(self.changesets_with_blobstore(repo_blobstore, container))
+    }
+
+    pub fn repo_view(
+        &self,
+        container: impl RepoBlobstoreRef + RepoIdentityRef + ChangesetsArc,
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
         EphemeralRepoView {
             repo_blobstore: Arc::new(repo_blobstore.clone()),
-            changesets: Arc::new(EphemeralChangesets::new(
-                container.repo_identity().id(),
-                self.bubble_id(),
-                repo_blobstore,
-                self.connections.clone(),
-                container.changesets_arc(),
-            )),
+            changesets: Arc::new(self.changesets_with_blobstore(repo_blobstore, container)),
         }
     }
 

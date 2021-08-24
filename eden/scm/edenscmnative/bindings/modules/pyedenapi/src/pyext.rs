@@ -505,7 +505,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.lookup_batch(repo, ids).await?;
+                    let response = self.lookup_batch(repo, ids, None).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })

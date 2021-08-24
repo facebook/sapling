@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 use futures::{stream, StreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -16,6 +16,7 @@ use edenapi_types::{
     AnyId, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
     UploadTokenMetadata,
 };
+use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataId, HgRepoContext};
@@ -58,13 +59,15 @@ async fn check_request_item(
             }
         }
     }
+    let bubble_id = item.bubble_id.map(BubbleId::new);
+    let hg_on_bubble_error = "Hg derived data cannot be stored in bubbles";
     let lookup = match item.id {
         AnyId::AnyFileContentId(id) => {
-            let content_id = repo.convert_file_to_content_id(id).await?;
+            let content_id = repo.convert_file_to_content_id(id, bubble_id).await?;
             if let Some(content_id) = content_id {
                 Lookup::Present(Some(
                     FileContentTokenMetadata {
-                        content_size: repo.fetch_file_content_size(content_id).await?,
+                        content_size: repo.fetch_file_content_size(content_id, bubble_id).await?,
                     }
                     .into(),
                 ))
@@ -72,29 +75,44 @@ async fn check_request_item(
                 Lookup::NotPresent
             }
         }
-        AnyId::HgFilenodeId(id) => repo
-            .filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+        AnyId::BonsaiChangesetId(id) => repo
+            .changeset_exists_by_bonsai(id.into(), bubble_id)
             .await?
             .into(),
-        AnyId::HgTreeId(id) => repo
-            .tree_exists(HgManifestId::new(HgNodeHash::from(id)))
-            .await?
-            .into(),
-        AnyId::HgChangesetId(id) => repo
-            .changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
-            .await?
-            .into(),
-        AnyId::BonsaiChangesetId(id) => repo.changeset_exists_by_bonsai(id.into()).await?.into(),
+        // Hg derived data does not exist on bubbles, let's fail fast
+        AnyId::HgFilenodeId(id) => (if bubble_id.is_none() {
+            repo.filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+                .await?
+        } else {
+            bail!(hg_on_bubble_error)
+        })
+        .into(),
+        AnyId::HgTreeId(id) => (if bubble_id.is_none() {
+            repo.tree_exists(HgManifestId::new(HgNodeHash::from(id)))
+                .await?
+        } else {
+            bail!(hg_on_bubble_error)
+        })
+        .into(),
+        AnyId::HgChangesetId(id) => (if bubble_id.is_none() {
+            repo.changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
+                .await?
+        } else {
+            bail!(hg_on_bubble_error)
+        })
+        .into(),
     };
 
     Ok(LookupResponse {
         index,
         token: match lookup {
             Lookup::NotPresent => None,
-            Lookup::Present(None) => Some(UploadToken::new_fake_token(item.id)),
-            Lookup::Present(Some(metadata)) => {
-                Some(UploadToken::new_fake_token_with_metadata(item.id, metadata))
-            }
+            Lookup::Present(None) => Some(UploadToken::new_fake_token(item.id, item.bubble_id)),
+            Lookup::Present(Some(metadata)) => Some(UploadToken::new_fake_token_with_metadata(
+                item.id,
+                item.bubble_id,
+                metadata,
+            )),
         },
     })
 }
