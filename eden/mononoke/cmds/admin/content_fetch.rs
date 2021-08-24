@@ -49,8 +49,28 @@ pub async fn subcommand_content_fetch<'a>(
     let entry = fetch_entry(&ctx, &repo, &rev, &path).await?;
 
     match entry {
-        Entry::Leaf((FileType::Executable, _)) => {
-            println!("Binary file");
+        Entry::Leaf((FileType::Executable, id)) => {
+            let envelope = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
+            let content_id = envelope.content_id();
+            let maybe_metadata =
+                filestore::get_metadata(repo.blobstore(), &ctx, &content_id.into()).await?;
+            let metadata = maybe_metadata.ok_or_else(|| {
+                format_err!(
+                    "Corruption: content id {} for executable file {} in {} not found!",
+                    id,
+                    path,
+                    rev
+                )
+            })?;
+
+            println!(
+                "Binary file. Size: {}\nContent id: {}\nSha1: {}\nSha256: {}\nGit sha1: {}",
+                metadata.total_size,
+                metadata.content_id,
+                metadata.sha1,
+                metadata.sha256,
+                metadata.git_sha1
+            );
         }
         Entry::Leaf((FileType::Symlink, id)) | Entry::Leaf((FileType::Regular, id)) => {
             let envelope = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
