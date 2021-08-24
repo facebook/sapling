@@ -251,24 +251,27 @@ impl PartialEq for DurableEntry {
 /// state on disk. If the directory has in-memory modifications that have not
 /// been persisted to disk, it will not have an hgid.
 #[derive(Clone, Debug)]
-pub struct DirLink<'a> {
+pub struct DirLink {
     pub path: RepoPathBuf,
-    pub link: &'a Link,
+    pub link: Link,
 }
 
-impl<'a> DirLink<'a> {
+impl DirLink {
     /// Create a directory record for a `Link`, failing if the link
     /// refers to a file rather than a directory.
-    pub fn from_link(link: &'a Link, path: RepoPathBuf) -> Option<Self> {
+    pub fn from_link(link: &Link, path: RepoPathBuf) -> Option<Self> {
         if let Leaf(_) = link.as_ref() {
             return None;
         }
-        Some(DirLink { path, link })
+        Some(DirLink {
+            path,
+            link: link.thread_copy(),
+        })
     }
 
     /// Same as `from_link`, but set the directory's path to the empty
     /// path, making this method only useful for the root of the tree.
-    pub fn from_root(link: &'a Link) -> Option<Self> {
+    pub fn from_root(link: &Link) -> Option<Self> {
         Self::from_link(link, RepoPathBuf::new())
     }
 
@@ -290,7 +293,7 @@ impl<'a> DirLink<'a> {
     /// not available locally. As such, algorithms that require fast access to
     /// this data should take care to ensure that this content is present
     /// locally before calling this method.
-    pub fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<DirLink<'a>>)> {
+    pub fn list(&self, store: &InnerStore) -> Result<(Vec<File>, Vec<DirLink>)> {
         let mut files = Vec::new();
         let mut dirs = Vec::new();
 
@@ -322,15 +325,15 @@ impl<'a> DirLink<'a> {
     }
 }
 
-impl Eq for DirLink<'_> {}
+impl Eq for DirLink {}
 
-impl PartialEq for DirLink<'_> {
+impl PartialEq for DirLink {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path && self.hgid() == other.hgid()
     }
 }
 
-impl Ord for DirLink<'_> {
+impl Ord for DirLink {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.path.cmp(&other.path) {
             Ordering::Equal => self.hgid().cmp(&other.hgid()),
@@ -339,7 +342,7 @@ impl Ord for DirLink<'_> {
     }
 }
 
-impl PartialOrd for DirLink<'_> {
+impl PartialOrd for DirLink {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -388,7 +391,7 @@ mod tests {
         let dir = DirLink::from_link(&ephemeral, path.clone()).unwrap();
         let expected = DirLink {
             path: path.clone(),
-            link: &ephemeral,
+            link: ephemeral,
         };
         assert_eq!(dir, expected);
 
@@ -397,7 +400,7 @@ mod tests {
         let dir = DirLink::from_link(&durable, path.clone()).unwrap();
         let expected = DirLink {
             path: path.clone(),
-            link: &durable,
+            link: durable,
         };
         assert_eq!(dir, expected);
 

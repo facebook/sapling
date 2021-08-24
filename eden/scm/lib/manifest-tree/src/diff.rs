@@ -28,18 +28,18 @@ enum Side {
 /// side of the diff, or it may be a pair of directories (with the same
 /// path) whose content is different on either side of the diff.
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum DiffItem<'a> {
-    Single(DirLink<'a>, Side),
-    Changed(DirLink<'a>, DirLink<'a>),
+enum DiffItem {
+    Single(DirLink, Side),
+    Changed(DirLink, DirLink),
 }
 
-impl<'a> DiffItem<'a> {
+impl DiffItem {
     fn process(
         self,
-        next: &mut VecDeque<DiffItem<'a>>,
-        lstore: &'a InnerStore,
-        rstore: &'a InnerStore,
-        matcher: &'a dyn Matcher,
+        next: &mut VecDeque<DiffItem>,
+        lstore: &InnerStore,
+        rstore: &InnerStore,
+        matcher: &dyn Matcher,
     ) -> Result<Vec<DiffEntry>> {
         match self {
             DiffItem::Single(dir, side) => {
@@ -60,11 +60,11 @@ impl<'a> DiffItem<'a> {
         }
     }
 
-    fn left(dir: DirLink<'a>) -> Self {
+    fn left(dir: DirLink) -> Self {
         DiffItem::Single(dir, Side::Left)
     }
 
-    fn right(dir: DirLink<'a>) -> Self {
+    fn right(dir: DirLink) -> Self {
         DiffItem::Single(dir, Side::Right)
     }
 }
@@ -80,8 +80,8 @@ impl<'a> DiffItem<'a> {
 /// only fetching tree nodes that have actually changed.
 pub struct Diff<'a> {
     output: VecDeque<DiffEntry>,
-    current: VecDeque<DiffItem<'a>>,
-    next: VecDeque<DiffItem<'a>>,
+    current: VecDeque<DiffItem>,
+    next: VecDeque<DiffItem>,
     lstore: &'a InnerStore,
     rstore: &'a InnerStore,
     matcher: &'a dyn Matcher,
@@ -209,12 +209,12 @@ impl<'a> Iterator for Diff<'a> {
 ///
 /// Returns diff entries of all of the files in this directory, and
 /// adds any subdirectories to the next layer to be processed.
-fn diff_single<'a>(
-    dir: DirLink<'a>,
-    next: &mut VecDeque<DiffItem<'a>>,
+fn diff_single(
+    dir: DirLink,
+    next: &mut VecDeque<DiffItem>,
     side: Side,
-    store: &'a InnerStore,
-    matcher: &'a dyn Matcher,
+    store: &InnerStore,
+    matcher: &dyn Matcher,
 ) -> Result<Vec<DiffEntry>> {
     let (files, dirs) = dir.list(store)?;
 
@@ -241,13 +241,13 @@ fn diff_single<'a>(
 /// The directories should correspond to the same path on either side of the
 /// diff. Returns diff entries for any changed files, and adds any changed
 /// directories to the next layer to be processed.
-fn diff<'a>(
-    left: DirLink<'a>,
-    right: DirLink<'a>,
-    next: &mut VecDeque<DiffItem<'a>>,
-    lstore: &'a InnerStore,
-    rstore: &'a InnerStore,
-    matcher: &'a dyn Matcher,
+fn diff(
+    left: DirLink,
+    right: DirLink,
+    next: &mut VecDeque<DiffItem>,
+    lstore: &InnerStore,
+    rstore: &InnerStore,
+    matcher: &dyn Matcher,
 ) -> Result<Vec<DiffEntry>> {
     let (lfiles, ldirs) = left.list(lstore)?;
     let (rfiles, rdirs) = right.list(rstore)?;
@@ -256,10 +256,10 @@ fn diff<'a>(
 }
 
 /// Given two sorted file lists, return diff entries for non-matching files.
-fn diff_files<'a>(
+fn diff_files(
     lfiles: Vec<File>,
     rfiles: Vec<File>,
-    matcher: &'a dyn Matcher,
+    matcher: &dyn Matcher,
 ) -> Result<Vec<DiffEntry>> {
     let mut output = Vec::new();
 
@@ -317,14 +317,14 @@ fn diff_files<'a>(
 }
 
 /// Given two sorted directory lists, return diff items for non-matching directories.
-fn diff_dirs<'a>(
-    ldirs: Vec<DirLink<'a>>,
-    rdirs: Vec<DirLink<'a>>,
-    matcher: &'a dyn Matcher,
-) -> Result<Vec<DiffItem<'a>>> {
+fn diff_dirs(
+    ldirs: Vec<DirLink>,
+    rdirs: Vec<DirLink>,
+    matcher: &dyn Matcher,
+) -> Result<Vec<DiffItem>> {
     let mut output = Vec::new();
 
-    let mut add_to_output = |item: DiffItem<'a>| -> Result<()> {
+    let mut add_to_output = |item: DiffItem| -> Result<()> {
         if matcher.matches_directory(item.path())? != DirectoryMatch::Nothing {
             output.push(item);
         }
