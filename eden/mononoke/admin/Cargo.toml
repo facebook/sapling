@@ -18,6 +18,7 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmark_renaming = { version = "0.1.0", path = "../commit_rewriting/bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
@@ -39,6 +40,7 @@ deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_fi
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
@@ -66,6 +68,7 @@ redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore"
 regex = "1.4.2"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }

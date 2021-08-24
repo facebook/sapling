@@ -14,6 +14,7 @@ use context::CoreContext;
 use futures::TryStreamExt;
 use humantime::parse_duration;
 use mononoke_types::Timestamp;
+use repo_blobstore::RepoBlobstoreRef;
 use serde_json::{json, to_string_pretty};
 use slog::{info, Logger};
 
@@ -185,8 +186,13 @@ async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
             Ok(())
         }
         "bonsai" => {
-            let bonsai_cs =
-                fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo).await?;
+            let bonsai_cs = fetch_bonsai_changeset(
+                ctx,
+                bookmark.to_string().as_str(),
+                &repo,
+                repo.repo_blobstore(),
+            )
+            .await?;
             let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
             let output = format_output(json_flag, changeset_id_str, "bonsai");
             println!("{}", output);
@@ -341,7 +347,7 @@ async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let new_bcs = fetch_bonsai_changeset(ctx.clone(), &rev, &repo).await?;
+    let new_bcs = fetch_bonsai_changeset(ctx.clone(), &rev, &repo, repo.repo_blobstore()).await?;
     let maybe_old_bcs_id = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
     info!(
         ctx.logger(),

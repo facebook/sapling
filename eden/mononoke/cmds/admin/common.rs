@@ -8,6 +8,8 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarksRef;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -17,6 +19,8 @@ use futures::TryStreamExt;
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, FileChange, Timestamp};
+use repo_blobstore::RepoBlobstore;
+use repo_identity::RepoIdentityRef;
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
 use std::collections::HashMap;
@@ -27,10 +31,11 @@ pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 pub async fn fetch_bonsai_changeset(
     ctx: CoreContext,
     rev: &str,
-    repo: &BlobRepo,
+    repo: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    blobstore: &RepoBlobstore,
 ) -> Result<BonsaiChangeset, Error> {
     let csid = helpers::csid_resolve(&ctx, repo, rev.to_string()).await?;
-    let cs = csid.load(&ctx, repo.blobstore()).await?;
+    let cs = csid.load(&ctx, blobstore).await?;
     Ok(cs)
 }
 
