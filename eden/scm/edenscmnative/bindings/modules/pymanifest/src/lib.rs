@@ -288,7 +288,7 @@ py_class!(pub class treemanifest |py| {
         let other_tree = other.underlying(py);
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher).collect()
+            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             let path = PyPathBuf::from(entry.path);
@@ -312,7 +312,7 @@ py_class!(pub class treemanifest |py| {
             None => Box::new(AlwaysMatcher::new()),
             Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
         };
-        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
+        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher).map_pyerr(py)? {
             let entry = entry.map_pyerr(py)?;
             match entry.diff_type {
                 DiffType::LeftOnly(_) => {

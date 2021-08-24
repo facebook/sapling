@@ -95,7 +95,7 @@ pub trait Manifest {
         &'a self,
         other: &'a Self,
         matcher: &'a M,
-    ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>;
+    ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
 }
 
 /// The result of a list operation. Given a path, the manifest will return:

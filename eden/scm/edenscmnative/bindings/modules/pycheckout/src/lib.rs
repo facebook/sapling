@@ -65,7 +65,7 @@ py_class!(class checkoutplan |py| {
         let mut actions = py.allow_threads(move || {
             let target = target.read();
             let current = current.read();
-            let mut diff = Diff::new(&current, &target, &matcher);
+            let mut diff = Diff::new(&current, &target, &matcher)?;
             let bar = &ProgressBar::new("Calculating", 0, "depth");
             Registry::main().register_progress_bar(bar);
             diff.attach_progress_bar(bar);
