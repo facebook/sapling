@@ -19,7 +19,7 @@ use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
-use pypathmatcher::PythonMatcher;
+use pypathmatcher::{PythonMatcher, ThreadPythonMatcher};
 use pyrevisionstore::{contentstore, filescmstore, PythonHgIdDataStore};
 use revisionstore::{HgIdDataStore, LegacyStore, RemoteDataStore, StoreKey, StoreResult};
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -280,9 +280,9 @@ py_class!(pub class treemanifest |py| {
         }
 
         let result = PyDict::new(py);
-        let matcher: Box<dyn Matcher> = match matcher {
+        let matcher: Box<dyn Matcher + Sync + Send> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
-            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+            Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
         };
         let this_tree = self.underlying(py);
         let other_tree = other.underlying(py);

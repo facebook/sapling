@@ -107,6 +107,28 @@ impl<'a> Matcher for PythonMatcher<'a> {
     }
 }
 
+pub struct ThreadPythonMatcher {
+    py_matcher: PyObject,
+}
+
+impl ThreadPythonMatcher {
+    pub fn new(py_matcher: PyObject) -> Self {
+        ThreadPythonMatcher { py_matcher }
+    }
+}
+
+impl Matcher for ThreadPythonMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let gil = Python::acquire_gil();
+        matches_directory_impl(gil.python(), &self.py_matcher, &path).into_anyhow_result()
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        let gil = Python::acquire_gil();
+        matches_file_impl(gil.python(), &self.py_matcher, &path).into_anyhow_result()
+    }
+}
+
 // Matcher which does not store py. Should only be used when py cannot be stored in PythonMatcher
 // struct and it is known that the GIL is acquired when calling matcher methods.
 // Otherwise use PythonMatcher struct above
