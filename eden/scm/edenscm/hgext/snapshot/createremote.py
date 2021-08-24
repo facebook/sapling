@@ -16,20 +16,25 @@ def createremote(ui, repo, **opts):
 
     (time, tz) = wctx.date()
 
+    untracked = [f for f in wctx.status(listunknown=True).unknown]
+    removed = []
+    for f in wctx.removed():
+        # If a file is marked as removed but still exists, it means it was hg rm'ed
+        # but then new content was written to it, in which case we consider it as
+        # untracked changes.
+        if wctx[f].exists():
+            untracked.append(f)
+        else:
+            removed.append(f)
+
     response = repo.edenapi.uploadsnapshot(
         getreponame(repo),
         {
             "files": {
                 "modified": [(f, filetypefromfile(wctx[f])) for f in wctx.modified()],
                 "added": [(f, filetypefromfile(wctx[f])) for f in wctx.added()],
-                "untracked": [
-                    (f, filetypefromfile(wctx[f]))
-                    for f in wctx.status(listunknown=True).unknown
-                ],
-                # TODO(yancouto): Files that are deleted and then have untracked modification
-                # are still returned here. Ideally they would be in "untracked", which is a
-                # bit confusing but more correct.
-                "removed": [f for f in wctx.removed()],
+                "untracked": [(f, filetypefromfile(wctx[f])) for f in untracked],
+                "removed": removed,
                 "missing": [f for f in wctx.deleted()],
             },
             "author": wctx.user(),
