@@ -178,8 +178,13 @@ py_class!(pub class treemanifest |py| {
     // Returns a list<path> for all files that match the predicate passed to the function.
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).read();
-        for entry in tree.files(extract_matcher(py, pymatcher)?) {
+        let tree = self.underlying(py);
+        let matcher = extract_matcher(py, pymatcher)?;
+        let files = py.allow_threads(move || -> Vec<_> {
+            let tree = tree.read();
+            tree.files(matcher).collect()
+        });
+        for entry in files.into_iter() {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
         }
@@ -189,8 +194,13 @@ py_class!(pub class treemanifest |py| {
     /// Returns [(path, id)] for directories.
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
-        let tree = self.underlying(py).read();
-        for entry in tree.dirs(extract_matcher(py, pymatcher)?) {
+        let tree = self.underlying(py);
+        let matcher = extract_matcher(py, pymatcher)?;
+        let dirs = py.allow_threads(move || -> Vec<_> {
+            let tree = tree.read();
+            tree.dirs(matcher).collect()
+        });
+        for entry in dirs.into_iter() {
             let dir = entry.map_pyerr(py)?;
             result.push((
                 dir.path.into(),
@@ -215,9 +225,13 @@ py_class!(pub class treemanifest |py| {
 
     def text(&self, matcher: Option<PyObject> = None) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
-        let tree = self.underlying(py).read();
-        let matcher: Arc<dyn Matcher + Send + Sync> = extract_option_matcher(py, matcher)?;
-        for entry in tree.files(matcher) {
+        let tree = self.underlying(py);
+        let matcher = extract_option_matcher(py, matcher)?;
+        let files = py.allow_threads(move || -> Vec<_> {
+            let tree = tree.read();
+            tree.files(matcher).collect()
+        });
+        for entry in files.into_iter() {
             let file = entry.map_pyerr(py)?;
             lines.push(format!(
                 "{}\0{}{}\n",
