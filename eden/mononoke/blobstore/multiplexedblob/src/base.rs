@@ -174,6 +174,10 @@ impl MultiplexedBlobstoreBase {
         }
     }
 
+    pub fn multiplex_id(&self) -> &MultiplexId {
+        &self.multiplex_id
+    }
+
     pub async fn scrub_get(
         &self,
         ctx: &CoreContext,

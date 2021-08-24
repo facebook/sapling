@@ -801,6 +801,12 @@ impl fmt::Display for MultiplexId {
     }
 }
 
+impl From<MultiplexId> for ScubaValue {
+    fn from(multiplex_id: MultiplexId) -> Self {
+        ScubaValue::from(multiplex_id.0)
+    }
+}
+
 impl From<MultiplexId> for Value {
     fn from(id: MultiplexId) -> Self {
         Value::Int(id.0.into())
@@ -914,7 +920,8 @@ pub enum BlobConfig {
         blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
         /// The number of writes that must succeed for a `put` to the multiplex to succeed
         minimum_successful_writes: NonZeroUsize,
-        /// 1 in scuba_sample_rate samples will be logged.
+        /// 1 in scuba_sample_rate samples will be logged for both
+        /// multiplex and per blobstore scuba tables
         scuba_sample_rate: NonZeroU64,
         /// DB config to use for the sync queue
         queue_db: DatabaseConfig,
