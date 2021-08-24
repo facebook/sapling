@@ -80,7 +80,7 @@ impl HgRepoContext {
     }
 
     /// Load bubble from id
-    async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
+    pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
         Ok(self
             .repo()
             .ephemeral_blobstore()

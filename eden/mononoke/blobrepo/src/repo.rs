@@ -20,7 +20,7 @@ use bookmarks::{
 };
 use cacheblob::LeaseOps;
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use changesets::{ChangesetInsert, Changesets};
+use changesets::{ChangesetInsert, Changesets, ChangesetsRef};
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{ArcFilenodes, Filenodes};
@@ -37,7 +37,7 @@ use mononoke_types::{
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
-use repo_blobstore::RepoBlobstore;
+use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use stats::prelude::*;
@@ -430,10 +430,10 @@ impl BlobRepo {
 pub async fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
-    repo: BlobRepo,
+    container: impl ChangesetsRef + RepoBlobstoreRef,
 ) -> Result<(), Error> {
-    let complete_changesets = repo.get_changesets_object();
-    let blobstore = repo.get_blobstore();
+    let complete_changesets = container.changesets();
+    let blobstore = container.repo_blobstore();
 
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
     for bcs in &bonsai_changesets {
@@ -448,9 +448,9 @@ pub async fn save_bonsai_changesets(
         .into_iter()
         .map({
             |p| {
-                cloned!(ctx, repo);
+                cloned!(ctx, complete_changesets);
                 async move {
-                    let exists = repo.changeset_exists_by_bonsai(ctx, p).await?;
+                    let exists = complete_changesets.get(ctx, p).await?.is_some();
                     if exists {
                         Ok(())
                     } else {

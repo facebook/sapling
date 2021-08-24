@@ -334,7 +334,7 @@ pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoRespo
 async fn upload_bonsai_changeset_impl(
     repo: HgRepoContext,
     request: UploadBonsaiChangesetRequest,
-    _bubble_id: Option<BubbleId>,
+    bubble_id: Option<BubbleId>,
 ) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
     let cs = request.changeset;
     let repo_write = repo.clone().write().await?;
@@ -364,7 +364,11 @@ async fn upload_bonsai_changeset_impl(
                     Ok((to_mononoke_path(path)?, create_change))
                 })
                 .collect::<anyhow::Result<_>>()?,
-            cs.is_snapshot,
+            match bubble_id {
+                Some(id) => Some(repo.open_bubble(id).await?),
+                None => None,
+            }
+            .as_ref(),
         )
         .await
         .with_context(|| anyhow!("When creating bonsai changeset"))?

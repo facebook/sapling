@@ -329,6 +329,7 @@ impl SourceControlServiceImpl {
         let committer_date = None;
         let message = params.info.message;
         let extra = params.info.extra;
+        let bubble = None;
 
         let changeset = repo
             .create_changeset(
@@ -340,7 +341,7 @@ impl SourceControlServiceImpl {
                 message,
                 extra,
                 file_changes,
-                false,
+                bubble,
             )
             .await?;
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;

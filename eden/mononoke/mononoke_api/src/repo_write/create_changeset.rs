@@ -8,11 +8,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::iter::FromIterator;
 
-use blobrepo::BlobRepo;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
-use filestore::{FetchKey, StoreRequest};
+use ephemeral_blobstore::Bubble;
+use filestore::{FetchKey, FilestoreConfig, StoreRequest};
 use futures::{
     future::try_join3,
     stream::{self, FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
@@ -23,6 +23,7 @@ use manifest::PathTree;
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,
 };
+use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
@@ -120,7 +121,8 @@ impl CreateChange {
     pub async fn resolve(
         self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        filestore_config: FilestoreConfig,
+        repo_blobstore: RepoBlobstore,
         parents: &Vec<ChangesetContext>,
     ) -> Result<FileChange, MononokeError> {
         let (file, copy_info, tracked) = match self {
@@ -139,8 +141,8 @@ impl CreateChange {
         let (file_id, file_type, size) = match file {
             CreateChangeFile::New { bytes, file_type } => {
                 let meta = filestore::store(
-                    repo.blobstore(),
-                    repo.filestore_config(),
+                    &repo_blobstore,
+                    filestore_config,
                     &ctx,
                     &StoreRequest::new(bytes.len() as u64),
                     stream::once(async move { Ok(bytes) }),
@@ -159,7 +161,7 @@ impl CreateChange {
                     Some(size) => size,
                     None => {
                         filestore::get_metadata(
-                            repo.blobstore(),
+                            &repo_blobstore,
                             &ctx,
                             &FetchKey::Canonical(file_id),
                         )
@@ -311,7 +313,9 @@ impl RepoWriteContext {
         message: String,
         extra: BTreeMap<String, Vec<u8>>,
         changes: BTreeMap<MononokePath, CreateChange>,
-        is_snapshot: bool,
+        // If some, this changeset is a snapshot. Currently unsupported to upload a
+        // normal commit to a bubble, though can be easily added.
+        bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
         self.check_method_permitted("create_changeset")?;
         let allowed_no_parents = self
@@ -439,7 +443,16 @@ impl RepoWriteContext {
                     let parent_ctxs = &parent_ctxs;
                     async move {
                         let change = change
-                            .resolve(self.ctx(), self.blob_repo(), &parent_ctxs)
+                            .resolve(
+                                self.ctx(),
+                                self.blob_repo().filestore_config(),
+                                match &bubble {
+                                    Some(bubble) => bubble
+                                        .wrap_repo_blobstore(self.blob_repo().blobstore().clone()),
+                                    None => self.blob_repo().blobstore().clone(),
+                                },
+                                &parent_ctxs,
+                            )
                             .await?;
                         Ok::<_, MononokeError>((path, change))
                     }
@@ -479,7 +492,7 @@ impl RepoWriteContext {
             message,
             extra,
             file_changes,
-            is_snapshot,
+            is_snapshot: bubble.is_some(),
         }
         .freeze()
         .map_err(|e| {
@@ -487,12 +500,21 @@ impl RepoWriteContext {
         })?;
 
         let new_changeset_id = new_changeset.get_changeset_id();
-        blobrepo::save_bonsai_changesets(
-            vec![new_changeset],
-            self.ctx().clone(),
-            self.blob_repo().clone(),
-        )
-        .await?;
+        if let Some(bubble) = &bubble {
+            blobrepo::save_bonsai_changesets(
+                vec![new_changeset],
+                self.ctx().clone(),
+                bubble.repo_view(self.blob_repo()),
+            )
+            .await?;
+        } else {
+            blobrepo::save_bonsai_changesets(
+                vec![new_changeset],
+                self.ctx().clone(),
+                self.blob_repo().clone(),
+            )
+            .await?;
+        }
         Ok(ChangesetContext::new(self.repo.clone(), new_changeset_id))
     }
 }

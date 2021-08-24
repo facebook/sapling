@@ -55,7 +55,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let committer_date = None;
     let message = String::from("Test Created Commit");
     let extra = BTreeMap::new();
-    let is_snapshot = false;
+    let bubble = None;
     let mut changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
     changes.insert(
         MononokePath::try_from("TEST_CREATE")?,
@@ -78,7 +78,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
             message.clone(),
             extra.clone(),
             changes.clone(),
-            is_snapshot,
+            bubble,
         )
         .await?;
 
@@ -102,7 +102,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
             message,
             extra,
             changes,
-            is_snapshot,
+            bubble,
         )
         .await?;
 
@@ -196,7 +196,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
         let committer_date = None;
         let message = String::from("Test Created Commit");
         let extra = BTreeMap::new();
-        let is_snapshot = false;
+        let bubble = None;
         repo.create_changeset(
             parents,
             author,
@@ -206,7 +206,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             message,
             extra,
             changes,
-            is_snapshot,
+            bubble,
         )
         .await
     }
