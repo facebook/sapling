@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
 use std::iter::FromIterator;
+use std::num::NonZeroU64;
 
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
@@ -302,6 +303,7 @@ impl Client {
         repo: String,
         item: AnyFileContentId,
         raw_content: Bytes,
+        bubble_id: Option<NonZeroU64>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         let mut url = self.url(paths::UPLOAD, Some(&repo))?;
@@ -318,8 +320,13 @@ impl Client {
             }
         }
 
-        url.query_pairs_mut()
-            .append_pair("content_size", &raw_content.len().to_string());
+        {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("content_size", &raw_content.len().to_string());
+            if let Some(bubble_id) = bubble_id {
+                query.append_pair("bubble_id", &bubble_id.to_string());
+            }
+        }
 
         let msg = format!("Requesting upload for {}", url);
         tracing::info!("{}", &msg);
@@ -862,6 +869,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         if data.is_empty() {
             return Ok(Fetch::empty());
@@ -900,7 +908,7 @@ impl EdenApi for Client {
                 .map(|(_, (id, content))| {
                     let repo = repo.clone();
                     async move {
-                        self.process_single_file_upload(repo, id, content, None)
+                        self.process_single_file_upload(repo, id, content, bubble_id, None)
                             .await?
                             .entries
                             .next()

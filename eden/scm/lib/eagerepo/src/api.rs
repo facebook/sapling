@@ -466,6 +466,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
+        _bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support process_file_upload endpoint".to_string(),

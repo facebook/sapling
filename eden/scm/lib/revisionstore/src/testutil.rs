@@ -464,6 +464,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
+        _bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         unimplemented!();
     }

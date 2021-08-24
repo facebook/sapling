@@ -573,7 +573,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.process_files_upload(repo, data).await?;
+                    let response = self.process_files_upload(repo, data, None).await?;
                     let file_content_tokens = response
                         .entries
                         .try_collect::<Vec<_>>()
@@ -675,7 +675,7 @@ pub trait EdenApiPyExt: EdenApi {
                     let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                     // upload file contents first, receiving upload tokens
                     let file_content_tokens = self
-                        .process_files_upload(repo.clone(), upload_data)
+                        .process_files_upload(repo.clone(), upload_data, None)
                         .await?
                         .entries
                         .try_collect::<Vec<_>>()
@@ -849,10 +849,11 @@ pub trait EdenApiPyExt: EdenApi {
                             .await
                             .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))??
                     };
+                    let bubble_id = Some(prepare_response.bubble_id);
                     let file_content_tokens = {
                         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                         // upload file contents first, receiving upload tokens
-                        self.process_files_upload(repo.clone(), upload_data)
+                        self.process_files_upload(repo.clone(), upload_data, bubble_id)
                             .await?
                             .entries
                             .try_collect::<Vec<_>>()
@@ -899,7 +900,7 @@ pub trait EdenApiPyExt: EdenApi {
                             message: "".to_string(),
                             is_snapshot: true,
                         },
-                        Some(prepare_response.bubble_id),
+                        bubble_id,
                     ).await?;
                     let changeset_response = response
                         .entries

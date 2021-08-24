@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Borrow;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -157,6 +158,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError>;
 
     /// Upload list of hg filenodes
@@ -185,7 +187,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         changeset: BonsaiChangesetContent,
-        bubble_id: Option<std::num::NonZeroU64>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
 
     async fn ephemeral_prepare(
@@ -373,9 +375,10 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
+        bubble_id: Option<NonZeroU64>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .process_files_upload(repo, data)
+            .process_files_upload(repo, data, bubble_id)
             .await
     }
 
