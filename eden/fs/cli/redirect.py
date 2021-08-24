@@ -618,6 +618,8 @@ def apply_redirection_configs_to_checkout_config(
         default_revision=config.default_revision,
         redirections=redirections,
         active_prefetch_profiles=config.active_prefetch_profiles,
+        predictive_prefetch_profiles_active=config.predictive_prefetch_profiles_active,
+        predictive_prefetch_num_dirs=config.predictive_prefetch_num_dirs,
         enable_tree_overlay=config.enable_tree_overlay,
     )
 

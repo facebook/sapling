@@ -155,6 +155,8 @@ class CheckoutConfig(typing.NamedTuple):
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
+    predictive_prefetch_profiles_active: bool
+    predictive_prefetch_num_dirs: int
     enable_tree_overlay: bool
 
 
@@ -1098,8 +1100,18 @@ class EdenCheckout:
                 "enable-tree-overlay": checkout_config.enable_tree_overlay,
             },
             "redirections": redirections,
-            "profiles": {"active": checkout_config.active_prefetch_profiles},
+            "profiles": {
+                "active": checkout_config.active_prefetch_profiles,
+            },
+            "predictive-prefetch": {
+                "predictive-prefetch-active": checkout_config.predictive_prefetch_profiles_active,
+            },
         }
+
+        if checkout_config.predictive_prefetch_num_dirs:
+            config_data["predictive-prefetch"][
+                "predictive-prefetch-num-dirs"
+            ] = checkout_config.predictive_prefetch_num_dirs
 
         util.write_file_atomically(
             self._config_path(), toml.dumps(config_data).encode()
@@ -1199,6 +1211,22 @@ class EdenCheckout:
 
                     prefetch_profiles.append(profile)
 
+        predictive_prefetch_active = False
+        predictive_num_dirs = 0
+        predictive_prefetch_profiles_config = config.get("predictive-prefetch")
+
+        if predictive_prefetch_profiles_config is not None:
+            predictive_prefetch_active = predictive_prefetch_profiles_config.get(
+                "predictive-prefetch-active"
+            )
+            predictive_num_dirs = predictive_prefetch_profiles_config.get(
+                "predictive-prefetch-num-dirs"
+            )
+            # if predictive-prefetch-num-dirs is not set in config.toml, set
+            # predictive_num_dirs to 0 to avoid None != 0 comparisons elsewhere
+            if predictive_num_dirs is None:
+                predictive_num_dirs = 0
+
         enable_tree_overlay = repository.get("enable-tree-overlay")
         # Older mount that doesn't have tree overlay setting should remain disabled.
         if not isinstance(enable_tree_overlay, bool):
@@ -1216,6 +1244,8 @@ class EdenCheckout:
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
             active_prefetch_profiles=prefetch_profiles,
+            predictive_prefetch_profiles_active=predictive_prefetch_active,
+            predictive_prefetch_num_dirs=predictive_num_dirs,
             enable_tree_overlay=enable_tree_overlay,
         )
 
@@ -1275,6 +1305,8 @@ class EdenCheckout:
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
+            predictive_prefetch_profiles_active=old_config.predictive_prefetch_profiles_active,
+            predictive_prefetch_num_dirs=old_config.predictive_prefetch_num_dirs,
             enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
@@ -1292,8 +1324,10 @@ class EdenCheckout:
         old_config = self.get_config()
         old_active_profiles = old_config.active_prefetch_profiles
         if profile not in old_active_profiles:
-            print(f"Profile {profile} was not active.")
-            telemetry_sample.fail(f"Profile {profile} was not active.")
+            print(f"Profile {profile} was not deactivated since it wasn't active.")
+            telemetry_sample.fail(
+                f"Profile {profile} was not deactivated since it wasn't active."
+            )
             return 1
 
         new_active_profiles = old_active_profiles.copy()
@@ -1309,6 +1343,87 @@ class EdenCheckout:
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
+            predictive_prefetch_profiles_active=old_config.predictive_prefetch_profiles_active,
+            predictive_prefetch_num_dirs=old_config.predictive_prefetch_num_dirs,
+            enable_tree_overlay=old_config.enable_tree_overlay,
+        )
+
+        self.save_config(new_config)
+        return 0
+
+    def activate_predictive_profile(
+        self, num_dirs: int, telemetry_sample: telemetry.TelemetrySample
+    ) -> int:
+        """Switch on predictive prefetch profiles (read the config file and write it back
+        with predictive_prefetch_profiles_active set to True, set or update predictive_prefetch
+        _num_dirs if specified). Returns 0 on sucess and anything else on failure.
+        Note this should print information on why it failed if this is not
+        returning 0."""
+
+        old_config = self.get_config()
+        # if predictive prefetch is already activated and num_dirs matches the config, skip activation
+        if (
+            old_config.predictive_prefetch_profiles_active
+            and num_dirs == old_config.predictive_prefetch_num_dirs
+        ):
+            if num_dirs:
+                msg = f"Predictive prefetch profile is already activated with {num_dirs} directories configured."
+            else:
+                msg = (
+                    "Predictive prefetch profile is already activated by default args."
+                )
+            print(msg)
+            telemetry_sample.fail(msg)
+            return 1
+
+        new_config = CheckoutConfig(
+            backing_repo=old_config.backing_repo,
+            scm_type=old_config.scm_type,
+            guid=old_config.guid,
+            case_sensitive=old_config.case_sensitive,
+            require_utf8_path=old_config.require_utf8_path,
+            mount_protocol=old_config.mount_protocol,
+            redirections=old_config.redirections,
+            default_revision=old_config.default_revision,
+            active_prefetch_profiles=old_config.active_prefetch_profiles,
+            predictive_prefetch_profiles_active=True,
+            predictive_prefetch_num_dirs=num_dirs,
+            enable_tree_overlay=old_config.enable_tree_overlay,
+        )
+
+        self.save_config(new_config)
+        return 0
+
+    def deactivate_predictive_profile(
+        self, telemetry_sample: telemetry.TelemetrySample
+    ) -> int:
+        """Switch off predictive prefetch profiles (read the config file and write it back
+        with predictive_profile_profiles_active set to False, unset predictive_prefetch_num_dirs).
+        Returns 0 on sucess and anything else on failure. Note this should print information
+        on why it failed if this is not returning 0."""
+
+        old_config = self.get_config()
+        if not old_config.predictive_prefetch_profiles_active:
+            print(
+                "Predictive prefetch profile was not deactivated since it wasn't active."
+            )
+            telemetry_sample.fail(
+                "Predictive prefetch profile was not deactivated since it wasn't active."
+            )
+            return 1
+
+        new_config = CheckoutConfig(
+            backing_repo=old_config.backing_repo,
+            scm_type=old_config.scm_type,
+            guid=old_config.guid,
+            case_sensitive=old_config.case_sensitive,
+            require_utf8_path=old_config.require_utf8_path,
+            mount_protocol=old_config.mount_protocol,
+            redirections=old_config.redirections,
+            default_revision=old_config.default_revision,
+            active_prefetch_profiles=old_config.active_prefetch_profiles,
+            predictive_prefetch_profiles_active=False,
+            predictive_prefetch_num_dirs=0,
             enable_tree_overlay=old_config.enable_tree_overlay,
         )
 

@@ -115,6 +115,8 @@ class FakeEdenInstance:
             default_revision=snapshot,
             redirections={},
             active_prefetch_profiles=[],
+            predictive_prefetch_profiles_active=False,
+            predictive_prefetch_num_dirs=0,
             enable_tree_overlay=True,
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)

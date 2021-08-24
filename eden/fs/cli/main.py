@@ -858,6 +858,8 @@ class CloneCmd(Subcmd):
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],
+            predictive_prefetch_profiles_active=False,
+            predictive_prefetch_num_dirs=0,
             enable_tree_overlay=enable_tree_overlay,
         )
 

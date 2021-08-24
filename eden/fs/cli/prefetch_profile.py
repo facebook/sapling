@@ -12,7 +12,7 @@ import warnings
 from pathlib import Path
 from typing import List, Optional, Set
 
-from facebook.eden.ttypes import Glob, GlobParams
+from facebook.eden.ttypes import Glob, GlobParams, PredictiveFetch
 
 from . import subcmd as subcmd_mod, tabulate
 from .cmd_util import get_eden_instance, require_checkout
@@ -66,6 +66,8 @@ def make_prefetch_request(
     predict_revisions: bool,
     prefetch_metadata: bool,
     background: bool,
+    predictive: bool,
+    predictive_num_dirs: int,
 ) -> Optional[Glob]:
     if predict_revisions:
         # The arc and hg commands need to be run in the mount mount, so we need
@@ -137,18 +139,35 @@ def make_prefetch_request(
         byte_revisions = [bytes.fromhex(revision) for revision in revisions]
 
     with instance.get_thrift_client_legacy() as client:
-        return client.globFiles(
-            GlobParams(
-                mountPoint=bytes(checkout.path),
-                globs=list(all_profile_contents),
-                includeDotfiles=False,
-                prefetchFiles=enable_prefetch,
-                suppressFileList=silent,
-                revisions=byte_revisions,
-                prefetchMetadata=prefetch_metadata,
-                background=background,
+        if predictive:
+            predictiveParams = PredictiveFetch()
+            if predictive_num_dirs > 0:
+                predictiveParams.numTopDirectories = predictive_num_dirs
+            return client.predictiveGlobFiles(
+                GlobParams(
+                    mountPoint=bytes(checkout.path),
+                    includeDotfiles=False,
+                    prefetchFiles=enable_prefetch,
+                    suppressFileList=silent,
+                    revisions=byte_revisions,
+                    prefetchMetadata=prefetch_metadata,
+                    background=background,
+                    predictiveGlob=predictiveParams,
+                )
             )
-        )
+        else:
+            return client.globFiles(
+                GlobParams(
+                    mountPoint=bytes(checkout.path),
+                    globs=list(all_profile_contents),
+                    includeDotfiles=False,
+                    prefetchFiles=enable_prefetch,
+                    suppressFileList=silent,
+                    revisions=byte_revisions,
+                    prefetchMetadata=prefetch_metadata,
+                    background=background,
+                )
+            )
 
 
 # prefetch all of the files specified by a profile in the given checkout
@@ -162,6 +181,8 @@ def prefetch_profiles(
     revisions: Optional[List[str]],
     predict_revisions: bool,
     prefetch_metadata: bool,
+    predictive: bool,
+    predictive_num_dirs: int,
 ) -> Optional[Glob]:
     if not should_prefetch_profiles(instance):
         if not silent:
@@ -183,9 +204,9 @@ def prefetch_profiles(
 
     all_profile_contents = set()
 
-    for profile in profiles:
-        all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
-
+    if not predictive:
+        for profile in profiles:
+            all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
     return make_prefetch_request(
         checkout=checkout,
         instance=instance,
@@ -196,6 +217,8 @@ def prefetch_profiles(
         predict_revisions=predict_revisions,
         prefetch_metadata=prefetch_metadata,
         background=background,
+        predictive=predictive,
+        predictive_num_dirs=predictive_num_dirs,
     )
 
 
@@ -281,6 +304,62 @@ class ListProfileCmd(Subcmd):
         return 0
 
 
+def check_positive_int(value) -> int:
+    err = "Integer > 0 required (got {})".format(value)
+    try:
+        int_value = int(value)
+        if int_value <= 0:
+            raise argparse.ArgumentTypeError(err)
+    except Exception:
+        raise argparse.ArgumentTypeError(err)
+    return int_value
+
+
+def add_common_args(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument(
+        "--verbose",
+        help="Print extra info including warnings and the names of the "
+        "matching files to fetch.",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--checkout",
+        help="The checkout for which you want to activate this profile.",
+        default=None,
+    )
+    parser.add_argument(
+        "--skip-prefetch",
+        help="Do not prefetch profiles only find all the files that match "
+        "them. This will still list the names of matching files when the "
+        "verbose flag is also used, and will activate the profile when running "
+        "`activate`.",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--foreground",
+        help="Run the prefetch in the main thread rather than in the"
+        " background. Normally this command will return once the prefetch"
+        " has been kicked off, but when this flag is used it to block until"
+        " all of the files are prefetched.",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--prefetch-metadata",
+        help="Prefetch file metadata (sha1 and size) for each file in a "
+        + "tree when we fetch trees during this prefetch. This may send a "
+        + "large amount of requests to the server and should only be used if "
+        + "you understand the risks.",
+        default=False,
+        action="store_true",
+    )
+    return parser
+
+
 @prefetch_profile_cmd(
     "activate",
     "Tell EdenFS to smart prefetch the files specified by the prefetch profile."
@@ -289,45 +368,8 @@ class ListProfileCmd(Subcmd):
 )
 class ActivateProfileCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser = add_common_args(parser)
         parser.add_argument("profile_name", help="Profile to activate.")
-        parser.add_argument(
-            "--checkout",
-            help="The checkout for which you want to activate this profile.",
-            default=None,
-        )
-        parser.add_argument(
-            "--verbose",
-            help="Print extra info including warnings and the names of the "
-            "matching files to fetch.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--skip-prefetch",
-            help="Still activate the profile, but do not prefetch profiles. "
-            "This will still list the names of matching files for the profile "
-            "when the verbose flag is also used",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--foreground",
-            help="Run the prefetch in the main thread rather than in the"
-            " background. Normally this command will return once the prefetched"
-            " has been kicked off, but when this flag is used it to block until"
-            " all of the files are prefetched.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--prefetch-metadata",
-            help="Prefetch file metadata (sha1 and size) for each file in a "
-            + "tree when we fetch trees during this prefetch. This may send a "
-            + "large amount of requests to the server and should only be used if "
-            + "you understand the risks.",
-            default=False,
-            action="store_true",
-        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout = args.checkout
@@ -361,13 +403,86 @@ class ActivateProfileCmd(Subcmd):
                     revisions=None,
                     predict_revisions=False,
                     prefetch_metadata=args.prefetch_metadata,
+                    predictive=False,
+                    predictive_num_dirs=0,
                 )
                 # there will only every be one commit used to query globFiles here,
                 # so no need to list which commit a file is fetched for, it will
                 # be the current commit.
                 if args.verbose and result is not None:
                     print_prefetch_results(result, False)
+            return 0
 
+
+# help=None hides this from users in `eden prefetch-profile --help`
+@prefetch_profile_cmd(
+    "activate-predictive",
+    None,
+)
+class ActivatePredictiveProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser = add_common_args(parser)
+        parser.add_argument(
+            "--num-dirs",
+            help="Optionally set the number of top accessed directories to"
+            " prefetch, overriding the default.",
+            type=check_positive_int,
+            default=0,
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        checkout = args.checkout
+
+        instance, checkout, _rel_path = require_checkout(args, checkout)
+
+        with instance.get_telemetry_logger().new_sample(
+            "prefetch_profile"
+        ) as telemetry_sample:
+            telemetry_sample.add_string("action", "activate-predictive")
+            telemetry_sample.add_string("checkout", args.checkout)
+            telemetry_sample.add_bool("skip_prefetch", args.skip_prefetch)
+            if args.num_dirs:
+                telemetry_sample.add_bool("num_dirs", args.num_dirs)
+
+            activation_result = checkout.activate_predictive_profile(
+                args.num_dirs, telemetry_sample
+            )
+
+            # error in activation, no point in continuing, so exit early
+            if activation_result:
+                return activation_result
+
+            if not args.skip_prefetch:
+                try:
+                    result = prefetch_profiles(
+                        checkout,
+                        instance,
+                        [],
+                        background=not args.foreground,
+                        enable_prefetch=True,
+                        silent=not args.verbose,
+                        revisions=None,
+                        predict_revisions=False,
+                        prefetch_metadata=args.prefetch_metadata,
+                        predictive=True,
+                        predictive_num_dirs=args.num_dirs,
+                    )
+                    # there will only every be one commit used to query globFiles here,
+                    # so no need to list which commit a file is fetched for, it will
+                    # be the current commit.
+                    if args.verbose and result is not None:
+                        print_prefetch_results(result, False)
+                    return 0
+                except Exception as error:
+                    # in case of a timeout or other error sending a request to the smartservice
+                    # for predictive prefetch profiles, the config will be updated but fetch
+                    # may not run
+                    if args.verbose:
+                        print(
+                            "Error in predictive fetch: " + str(error) + "\n"
+                            "Predictive prefetch is activated but fetch did not run. To retry, run: "
+                            "`eden prefetch-profile fetch-predictive`"
+                        )
             return 0
 
 
@@ -378,10 +493,10 @@ class ActivateProfileCmd(Subcmd):
 )
 class DeactivateProfileCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("profile_name", help="Profile to activate.")
+        parser.add_argument("profile_name", help="Profile to deactivate.")
         parser.add_argument(
             "--checkout",
-            help="The checkout for which you want to activate this profile.",
+            help="The checkout for which you want to deactivate this profile.",
             default=None,
         )
 
@@ -400,6 +515,56 @@ class DeactivateProfileCmd(Subcmd):
             return checkout.deactivate_profile(args.profile_name, telemetry_sample)
 
 
+# help=None hides this from users in `eden prefetch-profile --help`
+@prefetch_profile_cmd(
+    "deactivate-predictive",
+    None,
+)
+class DeactivatePredictiveProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--checkout",
+            help="The checkout for which you want to deactivate predictive prefetch.",
+            default=None,
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        checkout = args.checkout
+        instance, checkout, _rel_path = require_checkout(args, checkout)
+        with instance.get_telemetry_logger().new_sample(
+            "prefetch_profile"
+        ) as telemetry_sample:
+            telemetry_sample.add_string("action", "deactivate-predictive")
+            telemetry_sample.add_string("checkout", args.checkout)
+
+            return checkout.deactivate_predictive_profile(telemetry_sample)
+
+
+def add_common_fetch_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    add_common_args(parser)
+    parser.add_argument(
+        "--commits",
+        nargs="+",
+        help="Commit hashes of the commits for which globs should be"
+        " evaluated. Note that the current commit in the checkout is used"
+        " if this is not specified. Note that the prefetch profiles are"
+        " always read from the current commit, not the commits specified"
+        " here.",
+        default=None,
+    )
+    parser.add_argument(
+        "--predict-commits",
+        help="Predict the commits a user is likely to checkout. Evaluate"
+        " the active prefetch profiles against those commits and fetch the"
+        " resulting files in those commits. Note that the prefetch profiles "
+        " are always read from the current commit, not the commits "
+        " predicted here. This is intended to be used post pull.",
+        default=False,
+        action="store_true",
+    )
+    return parser
+
+
 @prefetch_profile_cmd(
     "fetch",
     "Prefetch all the active prefetch profiles or specified prefetch profiles. "
@@ -407,71 +572,13 @@ class DeactivateProfileCmd(Subcmd):
 )
 class FetchProfileCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "--checkout",
-            help="The checkout for which the profiles should be fetched.",
-            default=None,
-        )
-        parser.add_argument(
-            "--verbose",
-            help="Print extra info including warnings and the names of the "
-            "matching files to fetch. Note that the matching files fetched"
-            "will not be printed when the foreground flag is passed.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--skip-prefetch",
-            help="Do not prefetch profiles only find all the files that match "
-            "them. This will still list the names of matching files when the "
-            "verbose flag is also used",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--foreground",
-            help="Run the prefetch in the main thread rather than in the"
-            " background. Normally this command will return once the prefetched"
-            " has been kicked off, but when this flag is used it to block until"
-            " all of the files are prefetched.",
-            default=False,
-            action="store_true",
-        )
+        parser = add_common_fetch_args(parser)
         parser.add_argument(
             "--profile-names",
             nargs="*",
             help="Fetch only these named profiles instead of the active set of "
             "profiles.",
             default=None,
-        )
-        parser.add_argument(
-            "--commits",
-            nargs="+",
-            help="Commit hashes of the commits for which globs should be"
-            " evaluated. Note that the current commit in the checkout is used"
-            " if this is not specified. Note that the prefetch profiles are"
-            " always read from the current commit, not the commits specified"
-            " here.",
-            default=None,
-        )
-        parser.add_argument(
-            "--predict-commits",
-            help="Predict the commits a user is likely to checkout. Evaluate"
-            " the active prefetch profiles against those commits and fetch the"
-            " resulting files in those commits. Note that the prefetch profiles "
-            " are always read from the current commit, not the commits "
-            " predicted here. This is intended to be used post pull.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--prefetch-metadata",
-            help="Prefetch file metadata (sha1 and size) for each file in a "
-            + "tree when we fetch trees during this prefetch. This may send a "
-            + "large amount of requests to the server and should only be used if "
-            + "you understand the risks.",
-            default=False,
-            action="store_true",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -499,12 +606,94 @@ class FetchProfileCmd(Subcmd):
             revisions=args.commits,
             predict_revisions=args.predict_commits,
             prefetch_metadata=args.prefetch_metadata,
+            predictive=False,
+            predictive_num_dirs=0,
         )
 
         if args.verbose and result is not None:
             # Can just print names it's clear which commit they come from
             # i.e. the current commit is used or only one commit passed.
             print_prefetch_results(result, args.commits and len(args.commits) > 1)
+
+        return 0
+
+
+# help=None hides this from users in `eden prefetch-profile --help`
+@prefetch_profile_cmd(
+    "fetch-predictive",
+    None,
+)
+class FetchPredictiveProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser = add_common_fetch_args(parser)
+        parser.add_argument(
+            "--num-dirs",
+            help="Optionally set the number of top accessed directories to"
+            " prefetch. If not specified, num_dirs saved from activate-predictive"
+            " or the default is used.",
+            type=check_positive_int,
+            default=0,
+        )
+        parser.add_argument(
+            "--if-active",
+            help="Only run the fetch if activate-predictive has been run. Uses"
+            " num_dirs set by activate-predictive, or the default.",
+            default=False,
+            action="store_true",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+
+        checkout = args.checkout
+
+        instance, checkout, _rel_path = require_checkout(args, checkout)
+
+        # if the --if-active flag is set, don't run fetch unless predictive prefetch
+        # is active in the checkout config
+        if (
+            args.if_active
+            and not checkout.get_config().predictive_prefetch_profiles_active
+        ):
+            if args.verbose:
+                print(
+                    "Predictive prefetch profiles have not been activated and "
+                    "--if-active was specified. Skipping fetch."
+                )
+            return 1
+
+        # If num_dirs is given, use the specified num_dirs. If num_dirs is not given
+        # (args.num_dirs == 0), predictive fetch with default num dirs unless there
+        # is an active num dirs saved in the checkout config.
+        predictive_num_dirs = args.num_dirs
+        if (
+            not predictive_num_dirs
+            and checkout.get_config().predictive_prefetch_num_dirs
+        ):
+            predictive_num_dirs = checkout.get_config().predictive_prefetch_num_dirs
+        try:
+            result = prefetch_profiles(
+                checkout,
+                instance,
+                [],
+                background=not args.foreground,
+                enable_prefetch=not args.skip_prefetch,
+                silent=not args.verbose,
+                revisions=args.commits,
+                predict_revisions=args.predict_commits,
+                prefetch_metadata=args.prefetch_metadata,
+                predictive=True,
+                predictive_num_dirs=predictive_num_dirs,
+            )
+
+            if args.verbose and result is not None:
+                # Can just print names it's clear which commit they come from
+                # i.e. the current commit is used or only one commit passed.
+                print_prefetch_results(result, args.commits and len(args.commits) > 1)
+        except Exception as error:
+            # in case of a timeout or other error sending a request to the smartplatform
+            # service for predictive prefetch profiles
+            if args.verbose:
+                print("Error in predictive fetch: " + str(error))
 
         return 0
 
