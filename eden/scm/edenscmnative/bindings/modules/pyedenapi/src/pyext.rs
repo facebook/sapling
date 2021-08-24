@@ -25,8 +25,8 @@ use edenapi_types::{
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
     HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    SnapshotRawData, TreeEntry, UploadHgChangeset, UploadSnapshotResponse, UploadTokensResponse,
-    UploadTreeResponse,
+    SnapshotRawData, SnapshotRawFiles, TreeEntry, UploadHgChangeset, UploadSnapshotResponse,
+    UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use minibytes::Bytes;
@@ -796,20 +796,26 @@ pub trait EdenApiPyExt: EdenApi {
             time,
             tz,
         } = data.0;
+        let SnapshotRawFiles {
+            modified,
+            added,
+            removed,
+            untracked,
+            missing,
+        } = files;
         #[derive(PartialEq, Eq)]
         enum Type {
             Tracked,
             Untracked,
         }
         use Type::*;
-        let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = files
-            .modified
+        let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = modified
             .into_iter()
-            .chain(files.added.into_iter())
+            .chain(added.into_iter())
             .map(|(p, t)| (p, t, Tracked))
             .chain(
                 // TODO(yancouto): Don't upload untracked files if they're too big.
-                files.untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
+                untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
             )
             .map(|(path, file_type, tracked)| {
                 let bytes = std::fs::read(path.as_repo_path().as_str())?;
@@ -886,7 +892,10 @@ pub trait EdenApiPyExt: EdenApi {
                                     }
                                 };
                                 Ok((path, change))
-                            }).collect::<anyhow::Result<_>>()?,
+                            })
+                            .chain(removed.into_iter().map(|path| Ok((path, BonsaiFileChange::Deletion))))
+                            .chain(missing.into_iter().map(|path| Ok((path, BonsaiFileChange::UntrackedDeletion))))
+                            .collect::<anyhow::Result<_>>()?,
                             message: "".to_string(),
                             is_snapshot: true,
                         },

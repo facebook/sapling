@@ -360,16 +360,19 @@ impl RepoWriteContext {
         //
 
         // Extract the set of deleted files.
-        let deleted_files: BTreeSet<_> = changes
+        let tracked_deletion_files: BTreeSet<_> = changes
             .iter()
-            .filter(|(_path, change)| change.change_type() == CreateChangeType::Deletion)
+            .filter(|(_path, change)| matches!(change, CreateChange::Deletion))
             .map(|(path, _change)| path.clone())
             .collect();
 
         // Check deleted files existed in a parent. (1)
         let fut_verify_deleted_files_existed = async {
+            // This does NOT consider "missing" (untracked deletion) files as it is NOT
+            // necessary for them to exist in a parent. If they don't exist on a parent,
+            // this means the file was "hg added" and then manually deleted.
             let (stats, result) =
-                verify_deleted_files_existed_in_a_parent(&parent_ctxs, deleted_files)
+                verify_deleted_files_existed_in_a_parent(&parent_ctxs, tracked_deletion_files)
                     .timed()
                     .await;
             let mut scuba = self.ctx().scuba().clone();

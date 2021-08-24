@@ -16,8 +16,6 @@ def createremote(ui, repo, **opts):
 
     (time, tz) = wctx.date()
 
-    # Until we get a functional snapshot end to end, let's only consider modifed
-    # files. Later, we'll add all other types of files.
     response = repo.edenapi.uploadsnapshot(
         getreponame(repo),
         {
@@ -28,6 +26,9 @@ def createremote(ui, repo, **opts):
                     (f, filetypefromfile(wctx[f]))
                     for f in wctx.status(listunknown=True).unknown
                 ],
+                # TODO(yancouto): Files that are deleted and then have untracked modification
+                # are still returned here. Ideally they would be in "untracked", which is a
+                # bit confusing but more correct.
                 "removed": [f for f in wctx.removed()],
                 "missing": [f for f in wctx.deleted()],
             },
