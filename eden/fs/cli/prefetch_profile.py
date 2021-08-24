@@ -29,6 +29,14 @@ def should_prefetch_profiles(instance: EdenInstance) -> bool:
     return instance.get_config_bool("prefetch-profiles.prefetching-enabled", False)
 
 
+# consults the global kill switch to check if this user should run a predictive
+# profile prefetch
+def should_prefetch_predictive_profiles(instance: EdenInstance) -> bool:
+    return instance.get_config_bool(
+        "prefetch-profiles.predictive-prefetching-enabled", False
+    )
+
+
 # consults the global kill switch to check if this user should prefetch the
 # metadata for the specified prefetch profile(s).
 def should_prefetch_metadata(instance: EdenInstance) -> bool:
@@ -184,7 +192,16 @@ def prefetch_profiles(
     predictive: bool,
     predictive_num_dirs: int,
 ) -> Optional[Glob]:
-    if not should_prefetch_profiles(instance):
+
+    if predictive and not should_prefetch_predictive_profiles(instance):
+        if not silent:
+            print(
+                "Skipping Predictive Prefetch Profiles fetch due to global kill switch. "
+                "This means prefetch-profiles.predictive-prefetching-enabled is not set in "
+                "the EdenFS configs."
+            )
+        return None
+    if not should_prefetch_profiles(instance) and not predictive:
         if not silent:
             print(
                 "Skipping Prefetch Profiles fetch due to global kill switch. "
@@ -732,6 +749,48 @@ class EnableProfileCmd(Subcmd):
                 config.get_section_str_to_any("prefetch-profiles")
             )
         prefetch_profiles_section["prefetching-enabled"] = True
+        config["prefetch-profiles"] = prefetch_profiles_section
+        instance.write_local_config(config)
+
+        return 0
+
+
+# help=None hides this from users in `eden prefetch-profile --help`
+@prefetch_profile_cmd(
+    "enable-predictive",
+    None,
+)
+class EnablePredictiveProfileCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        config = instance.read_local_config()
+        prefetch_profiles_section = {}
+        if config.has_section("prefetch-profiles"):
+            prefetch_profiles_section.update(
+                config.get_section_str_to_any("prefetch-profiles")
+            )
+        prefetch_profiles_section["predictive-prefetching-enabled"] = True
+        config["prefetch-profiles"] = prefetch_profiles_section
+        instance.write_local_config(config)
+
+        return 0
+
+
+# help=None hides this from users in `eden prefetch-profile --help`
+@prefetch_profile_cmd(
+    "disable-predictive",
+    None,
+)
+class DisablePredictiveProfileCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        config = instance.read_local_config()
+        prefetch_profiles_section = {}
+        if config.has_section("prefetch-profiles"):
+            prefetch_profiles_section.update(
+                config.get_section_str_to_any("prefetch-profiles")
+            )
+        prefetch_profiles_section["predictive-prefetching-enabled"] = False
         config["prefetch-profiles"] = prefetch_profiles_section
         instance.write_local_config(config)
 

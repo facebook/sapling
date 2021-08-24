@@ -664,6 +664,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Kill switch for predictive prefetch profiles feature.
+   */
+  ConfigSetting<bool> enablePredictivePrefetchProfiles{
+      "prefetch-profiles:predictive-prefetching-enabled",
+      false,
+      this};
+
+  /**
    * Used to control file access logging for predicitve prefetch
    * profiles.
    */
