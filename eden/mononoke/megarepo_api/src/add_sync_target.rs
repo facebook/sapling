@@ -119,20 +119,41 @@ impl<'a> AddSyncTarget<'a> {
             Some(format!("{}", top_merge_cs_id)),
         );
 
-        let derived_data_types = repo
-            .blob_repo()
-            .get_derived_data_config()
-            .enabled
-            .types
-            .iter();
 
-        let derivers = FuturesUnordered::new();
-        for ty in derived_data_types {
-            let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
-            derivers.push(utils.derive(ctx.clone(), repo.blob_repo().clone(), top_merge_cs_id));
+        // add_sync_target might need to derive a lot of data, and it takes a long time to
+        // do it. We don't have any resumability, so if it fails for any reason, then we'd
+        // need to start over.
+
+        // For now let's just retry a few times so that we don't have to start over
+        // because of flakiness
+        let mut i = 0;
+        loop {
+            i += 1;
+            let derived_data_types = repo
+                .blob_repo()
+                .get_derived_data_config()
+                .enabled
+                .types
+                .iter();
+            let derivers = FuturesUnordered::new();
+            for ty in derived_data_types {
+                let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
+                derivers.push(utils.derive(ctx.clone(), repo.blob_repo().clone(), top_merge_cs_id));
+            }
+
+            let res = derivers.try_for_each(|_| future::ready(Ok(()))).await;
+            match res {
+                Ok(()) => {
+                    break;
+                }
+                Err(err) => {
+                    scuba.log_with_msg("Derived data failed, retrying", Some(format!("{:#}", err)));
+                    if i >= 5 {
+                        return Err(err.into());
+                    }
+                }
+            }
         }
-
-        derivers.try_for_each(|_| future::ready(Ok(()))).await?;
 
         scuba.log_with_msg("Derived data", None);
 
