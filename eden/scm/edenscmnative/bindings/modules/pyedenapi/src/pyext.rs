@@ -11,7 +11,7 @@ use cpython::*;
 use futures::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::{anyhow, bail, format_err};
+use anyhow::{bail, format_err};
 use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -19,17 +19,18 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
-use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
+use edenapi::{
+    ext::{calc_contentid, upload_snapshot},
+    EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats,
+};
 use edenapi_types::{
-    AnyFileContentId, AnyId, BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry,
-    CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry,
-    HgChangesetContent, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    SnapshotRawData, SnapshotRawFiles, TreeEntry, UploadHgChangeset, UploadSnapshotResponse,
-    UploadTokensResponse, UploadTreeResponse,
+    AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
+    HistoryEntry, LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset,
+    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
-use minibytes::Bytes;
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
 use revisionstore::{
@@ -40,8 +41,8 @@ use revisionstore::{
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, calc_contentid, meta_to_dict, to_contentid, to_hgid, to_hgids,
-    to_keys, to_keys_with_parents, to_path, to_tree_attrs, to_trees_upload_items, wrap_callback,
+    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_hgid, to_hgids, to_keys,
+    to_keys_with_parents, to_path, to_tree_attrs, to_trees_upload_items, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -789,133 +790,10 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         data: Serde<SnapshotRawData>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        let SnapshotRawData {
-            files,
-            author,
-            hg_parents,
-            time,
-            tz,
-        } = data.0;
-        let SnapshotRawFiles {
-            modified,
-            added,
-            removed,
-            untracked,
-            missing,
-        } = files;
-        #[derive(PartialEq, Eq)]
-        enum Type {
-            Tracked,
-            Untracked,
-        }
-        use Type::*;
-        let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = modified
-            .into_iter()
-            .chain(added.into_iter())
-            .map(|(p, t)| (p, t, Tracked))
-            .chain(
-                // TODO(yancouto): Don't upload untracked files if they're too big.
-                untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
-            )
-            .map(|(path, file_type, tracked)| {
-                let bytes = std::fs::read(path.as_repo_path().as_str())?;
-                let content_id = calc_contentid(&bytes);
-                Ok((
-                    (path, file_type, content_id, tracked),
-                    (content_id, Bytes::from_owner(bytes)),
-                ))
-            })
-            .collect::<Result<Vec<_>, std::io::Error>>()
+        py.allow_threads(|| block_unless_interrupted(upload_snapshot(self, repo, data.0)))
             .map_pyerr(py)?
-            .into_iter()
-            .unzip();
-
-        // Deduplicate upload data
-        let mut uniques = BTreeSet::new();
-        upload_data.retain(|(content_id, _)| uniques.insert(*content_id));
-        let upload_data = upload_data
-            .into_iter()
-            .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
-            .collect();
-
-        let response = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let prepare_response = {
-                        self.ephemeral_prepare(repo.clone())
-                            .await?
-                            .entries
-                            .next()
-                            .await
-                            .ok_or_else(|| anyhow!("Failed to create ephemeral bubble"))??
-                    };
-                    let bubble_id = Some(prepare_response.bubble_id);
-                    let file_content_tokens = {
-                        let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
-                        // upload file contents first, receiving upload tokens
-                        self.process_files_upload(repo.clone(), upload_data, bubble_id)
-                            .await?
-                            .entries
-                            .try_collect::<Vec<_>>()
-                            .await?
-                            .into_iter()
-                            .map(|token| {
-                                let content_id = match token.data.id {
-                                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
-                                    _ => bail!(EdenApiError::Other(format_err!(downcast_error))),
-                                };
-                                Ok((content_id, token))
-                            })
-                            .collect::<Result<BTreeMap<_, _>, _>>()?
-                    };
-                    let mut response = self.upload_bonsai_changeset(
-                        repo, 
-                        BonsaiChangesetContent {
-                            hg_parents,
-                            author,
-                            time,
-                            tz,
-                            extra: vec![],
-                            file_changes: need_upload.into_iter().map(|(path, file_type, cid, tracked)| {
-                                let upload_token = file_content_tokens
-                                    .get(&cid)
-                                    .ok_or_else(|| anyhow!("unexpected error: upload token is missing for ContentId({})", cid))?
-                                    .clone();
-                                let change = if tracked == Tracked {
-                                    BonsaiFileChange::Change {
-                                        file_type,
-                                        upload_token
-                                    }
-                                } else {
-                                    BonsaiFileChange::UntrackedChange {
-                                        file_type,
-                                        upload_token,
-                                    }
-                                };
-                                Ok((path, change))
-                            })
-                            .chain(removed.into_iter().map(|path| Ok((path, BonsaiFileChange::Deletion))))
-                            .chain(missing.into_iter().map(|path| Ok((path, BonsaiFileChange::UntrackedDeletion))))
-                            .collect::<anyhow::Result<_>>()?,
-                            message: "".to_string(),
-                            is_snapshot: true,
-                        },
-                        bubble_id,
-                    ).await?;
-                    let changeset_response = response
-                        .entries
-                        .next()
-                        .await
-                        .ok_or_else(|| anyhow!("Failed to create changeset"))??;
-                    Ok::<_, EdenApiError>(UploadSnapshotResponse {
-                        changeset_token: changeset_response.token,
-                    })
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?;
-
-        Ok(Serde(response))
+            .map_pyerr(py)
+            .map(Serde)
     }
 }
 

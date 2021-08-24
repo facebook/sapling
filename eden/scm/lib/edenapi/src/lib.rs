@@ -8,6 +8,7 @@
 mod blocking;
 mod builder;
 mod client;
+pub mod ext;
 mod response;
 
 pub use edenapi_trait::api;
