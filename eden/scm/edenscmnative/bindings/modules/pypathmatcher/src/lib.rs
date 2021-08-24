@@ -8,13 +8,14 @@
 #![allow(non_camel_case_types)]
 
 use std::path::Path;
+use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::error::{AnyhowResultExt, ResultPyErrExt};
 use cpython_ext::{PyPath, PyPathBuf, Str};
 
 use anyhow::Result;
-use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
+use pathmatcher::{AlwaysMatcher, DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -194,4 +195,18 @@ fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> PyRe
     // it crashes the rust stuff and returns a rust exception to Python.
     let matches = py_matcher.call(py, (py_path,), None)?.is_true(py)?;
     Ok(matches)
+}
+
+pub fn extract_matcher(_py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
+    Ok(Arc::new(ThreadPythonMatcher::new(matcher)))
+}
+
+pub fn extract_option_matcher(
+    py: Python,
+    matcher: Option<PyObject>,
+) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
+    match matcher {
+        None => Ok(Arc::new(AlwaysMatcher::new())),
+        Some(m) => extract_matcher(py, m),
+    }
 }
