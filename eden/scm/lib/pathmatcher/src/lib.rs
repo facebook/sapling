@@ -115,6 +115,36 @@ impl<A: Matcher, B: Matcher> Matcher for XorMatcher<A, B> {
     }
 }
 
+pub struct DifferenceMatcher<A, B> {
+    include: A,
+    exclude: B,
+}
+
+impl<A, B> DifferenceMatcher<A, B> {
+    pub fn new(include: A, exclude: B) -> Self {
+        DifferenceMatcher { include, exclude }
+    }
+}
+
+impl<A: Matcher, B: Matcher> Matcher for DifferenceMatcher<A, B> {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let include = self.include.matches_directory(path)?;
+        let exclude = self.exclude.matches_directory(path)?;
+
+        Ok(match exclude {
+            DirectoryMatch::Nothing => include,
+            DirectoryMatch::Everything => DirectoryMatch::Nothing,
+            DirectoryMatch::ShouldTraverse => match include {
+                DirectoryMatch::Everything => DirectoryMatch::ShouldTraverse,
+                _ => include,
+            },
+        })
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.include.matches_file(path)? && !self.exclude.matches_file(path)?)
+    }
+}
 pub use gitignore_matcher::GitignoreMatcher;
 pub use tree_matcher::TreeMatcher;
 pub use utils::{expand_curly_brackets, normalize_glob, plain_to_glob};
