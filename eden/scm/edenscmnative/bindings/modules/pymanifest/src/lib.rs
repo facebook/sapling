@@ -14,14 +14,14 @@ use anyhow::{format_err, Error};
 use bytes::Bytes;
 use cpython::*;
 
-use cpython_ext::{pyset_add, pyset_new};
+use cpython_ext::{pyset_add, pyset_new, ExtractInner};
 use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
-use pyrevisionstore::PythonHgIdDataStore;
-use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
+use pyrevisionstore::{contentstore, filescmstore, PythonHgIdDataStore};
+use revisionstore::{HgIdDataStore, LegacyStore, RemoteDataStore, StoreKey, StoreResult};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -100,7 +100,9 @@ py_class!(pub class treemanifest |py| {
         store: PyObject,
         node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
-        let store = PythonHgIdDataStore::new(store);
+        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+            .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))
+            .unwrap_or_else(|_| Arc::new(PythonHgIdDataStore::new(store)) as Arc<dyn LegacyStore>);
         let manifest_store = Arc::new(ManifestStore::new(store));
         let underlying = match node {
             None => TreeManifest::ephemeral(manifest_store),

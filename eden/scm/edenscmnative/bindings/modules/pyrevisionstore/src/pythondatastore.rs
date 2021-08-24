@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use anyhow::Result;
 use cpython::{
     exc, FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
@@ -12,7 +16,11 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey, StoreResult};
+use revisionstore::{
+    Delta, HgIdDataStore, HgIdMutableDeltaStore, LegacyStore, LocalStore, Metadata,
+    RemoteDataStore, RepackLocation, StoreKey, StoreResult,
+};
+use types::{Key, RepoPathBuf};
 
 use crate::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_metadata};
 
@@ -157,5 +165,46 @@ impl LocalStore for PythonHgIdDataStore {
             })
             .collect::<Result<Vec<StoreKey>>>()?;
         Ok(missing)
+    }
+}
+
+// Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
+// which PythonHgIdDataStore already implements. This is only required for tests.
+impl LegacyStore for PythonHgIdDataStore {
+    fn get_file_content(&self, key: &Key) -> Result<Option<minibytes::Bytes>> {
+        unimplemented!("")
+    }
+
+    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+        unimplemented!("")
+    }
+
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+        unimplemented!("")
+    }
+
+    fn add_pending(
+        &self,
+        key: &Key,
+        data: minibytes::Bytes,
+        meta: Metadata,
+        location: RepackLocation,
+    ) -> Result<()> {
+        unimplemented!("")
+    }
+
+    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+        unimplemented!("")
+    }
+}
+
+// Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
+// which PythonHgIdDataStore already implements. This is only required for tests.
+impl HgIdMutableDeltaStore for PythonHgIdDataStore {
+    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+        unimplemented!()
+    }
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        unimplemented!()
     }
 }
