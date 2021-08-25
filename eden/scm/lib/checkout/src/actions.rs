@@ -185,20 +185,18 @@ fn pyflags(t: &FileType) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use manifest_tree::testutil::{make_tree_manifest_from_meta, TestStore};
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use pathmatcher::TreeMatcher;
-    use std::sync::Arc;
     use types::HgId;
 
     #[test]
     fn test_with_sparse_profile_change() -> Result<()> {
-        let store = Arc::new(TestStore::new());
         let a = (rp("a"), FileMetadata::regular(hgid(1)));
         let b = (rp("b"), FileMetadata::regular(hgid(2)));
         let c = (rp("c"), FileMetadata::regular(hgid(3)));
         let ab_profile = TreeMatcher::from_rules(["a", "b"].iter())?;
         let ac_profile = TreeMatcher::from_rules(["a", "c"].iter())?;
-        let manifest = make_tree_manifest_from_meta(store, vec![a, b, c]);
+        let manifest = make_tree_manifest_from_meta(vec![a, b, c]);
 
         let actions =
             ActionMap::empty().with_sparse_profile_change(&ab_profile, &ab_profile, &manifest)?;

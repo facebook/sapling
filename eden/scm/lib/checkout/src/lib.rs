@@ -811,7 +811,7 @@ mod test {
     use super::*;
     use anyhow::ensure;
     use anyhow::Context;
-    use manifest_tree::testutil::{make_tree_manifest_from_meta, TestStore};
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::Diff;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::{Arbitrary, StdGen};
@@ -955,10 +955,9 @@ mod test {
         let vfs = VFS::new(working_path.clone())?;
         roll_out_fs(&vfs, from)?;
 
-        let store = Arc::new(TestStore::new());
         let matcher = AlwaysMatcher::new();
-        let left_tree = make_tree_manifest_from_meta(store.clone(), from.iter().cloned());
-        let right_tree = make_tree_manifest_from_meta(store, to.iter().cloned());
+        let left_tree = make_tree_manifest_from_meta(from.iter().cloned());
+        let right_tree = make_tree_manifest_from_meta(to.iter().cloned());
         let diff = Diff::new(&left_tree, &right_tree, &matcher).unwrap();
         let vfs = VFS::new(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);

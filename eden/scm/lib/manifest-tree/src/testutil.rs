@@ -17,10 +17,9 @@ use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
 use crate::{FileMetadata, TreeManifest, TreeStore};
 
 pub fn make_tree_manifest<'a>(
-    store: Arc<TestStore>,
     paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>,
 ) -> TreeManifest {
-    let mut tree = TreeManifest::ephemeral(store);
+    let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
     for (path, filenode) in paths {
         tree.insert(repo_path_buf(path), make_meta(filenode))
             .unwrap();
@@ -29,10 +28,9 @@ pub fn make_tree_manifest<'a>(
 }
 
 pub fn make_tree_manifest_from_meta(
-    store: Arc<TestStore>,
     paths: impl IntoIterator<Item = (RepoPathBuf, FileMetadata)>,
 ) -> TreeManifest {
-    let mut tree = TreeManifest::ephemeral(store);
+    let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
     for (path, meta) in paths {
         tree.insert(path, meta).unwrap();
     }
