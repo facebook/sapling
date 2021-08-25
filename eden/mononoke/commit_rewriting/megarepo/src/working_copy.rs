@@ -11,6 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use fsnodes::RootFsnodeId;
 use futures::{future::try_join, TryStreamExt};
 use manifest::{Diff, ManifestOps};
 use mercurial_types::MPath;
@@ -37,6 +38,39 @@ pub async fn get_working_copy_paths(
         .await?;
     paths.sort();
     info!(ctx.logger(), "Done getting working copy contents");
+    Ok(paths)
+}
+
+pub async fn get_colliding_paths_between_commits(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: ChangesetId,
+    base_cs_id: ChangesetId,
+) -> Result<Vec<MPath>, Error> {
+    let unode_id = RootFsnodeId::derive(ctx, repo, bcs_id);
+    let base_unode_id = RootFsnodeId::derive(ctx, repo, base_cs_id);
+
+    let (unode_id, base_unode_id) = try_join(unode_id, base_unode_id).await?;
+
+    let mut paths = base_unode_id
+        .fsnode_id()
+        .diff(ctx.clone(), repo.get_blobstore(), *unode_id.fsnode_id())
+        .try_filter_map(|diff| async move {
+            use Diff::*;
+            let maybe_path = match diff {
+                Added(_maybe_path, _entry) => None,
+                Removed(_maybe_path, _entry) => None,
+                Changed(maybe_path, _old_entry, new_entry) => {
+                    new_entry.into_leaf().and_then(|_| maybe_path)
+                }
+            };
+
+            Ok(maybe_path)
+        })
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    paths.sort();
     Ok(paths)
 }
 

@@ -165,7 +165,6 @@ async fn run_merge<'a>(
         second_parent,
         resulting_changeset_args,
     )
-    .compat()
     .await
     .map(|_| ())
 }
