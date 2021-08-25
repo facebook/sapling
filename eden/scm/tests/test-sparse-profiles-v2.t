@@ -64,3 +64,9 @@ test sparse
   
   ./inc/exc:
   incfile.txt
+
+  $ hg debugsparseprofilev2 main.sparse
+  V1 includes 4 files
+  V2 includes 5 files
+  + inc/exc/incfile.txt
+

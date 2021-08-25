@@ -967,7 +967,7 @@ def _wraprepo(ui, repo):
             }
             return RawSparseConfig(filename, lines, profiles, metadata)
 
-        def getsparsepatterns(self, rev, rawconfig=None):
+        def getsparsepatterns(self, rev, rawconfig=None, debugversion=None):
             """Produce the full sparse config for a revision as a SparseConfig
 
             This includes all patterns from included profiles, transitively.
@@ -1006,7 +1006,7 @@ def _wraprepo(ui, repo):
                         # v1 config's put all includes before all excludes, so
                         # just create a big set of include/exclude rules and
                         # we'll append them later.
-                        version = profile.metadata.get("version", "1")
+                        version = debugversion or profile.metadata.get("version", "1")
                         if version == "1":
                             for value in profile.rules:
                                 if value.startswith("!"):
@@ -1887,6 +1887,43 @@ def show(ui, repo, **opts):
                 fm.startitem()
                 fm.data(type="exclude")
                 fm.write("name", "  %s\n", fname, label="sparse.exclude")
+
+
+@command(
+    "debugsparseprofilev2",
+    [],
+    _(""),
+)
+def debugsparseprofilev2(ui, repo, profile, **opts):
+    """compares v1 and v2 computations of the sparse profile, printing the
+    number of files matched by each, and the files that are different between
+    the two.
+    """
+    rev = repo["."].rev()
+    mf = repo["."].manifest()
+    raw = (
+        """
+%%include %s
+"""
+        % profile
+    )
+    rawconfig = repo.readsparseconfig(raw, "<debug temp sparse config>")
+
+    config1 = repo.getsparsepatterns(rev, rawconfig=rawconfig, debugversion="1")
+    matcherv1 = matchmod.rulesmatch(repo.root, "", config1.rules)
+    files1 = set(mf.walk(matcherv1))
+    print("V1 includes %s files" % len(files1))
+
+    config2 = repo.getsparsepatterns(rev, rawconfig=rawconfig, debugversion="2")
+    matcherv2 = matchmod.rulesmatch(repo.root, "", config2.rules)
+    files2 = set(mf.walk(matcherv2))
+    print("V2 includes %s files" % len(files2))
+
+    if files1 != files2:
+        for file in files1 - files2:
+            print("- %s" % file)
+        for file in files2 - files1:
+            print("+ %s" % file)
 
 
 @command(
