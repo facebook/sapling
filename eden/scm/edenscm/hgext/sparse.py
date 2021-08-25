@@ -844,7 +844,10 @@ class SparseConfig(object):
     # In particular, don't compare path or metadata.
     def equivalent(self, other_config):
         return (
-            self.rules == other_config.rules and self.profiles == other_config.profiles
+            self.rules == other_config.rules
+            and self.profiles == other_config.profiles
+            and self.metadata.get("version", "1")
+            == other_config.metadata.get("version", "1")
         )
 
 
@@ -993,38 +996,46 @@ def _wraprepo(ui, repo):
 
             includes = set()
             excludes = set()
+            rules = [".hg*"]
             profiles = set()
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profiles.add(value)
-                    profile = self.readsparseprofile(rev, value)
+                    profile = self.readsparseprofile(rev, value, version=None)
                     if profile is not None:
-                        for value in profile.rules:
-                            if value.startswith("!"):
-                                excludes.add(value[1:])
-                            else:
-                                includes.add(value)
-                        for subprofile in profile.profiles:
-                            profiles.add(subprofile)
+                        # v1 config's put all includes before all excludes, so
+                        # just create a big set of include/exclude rules and
+                        # we'll append them later.
+                        version = profile.metadata.get("version", "1")
+                        if version == "1":
+                            for value in profile.rules:
+                                if value.startswith("!"):
+                                    excludes.add(value[1:])
+                                else:
+                                    includes.add(value)
+                            for subprofile in profile.profiles:
+                                profiles.add(subprofile)
+                        elif version == "2":
+                            rules.extend(profile.rules)
+                        else:
+                            raise error.ProgrammingError(
+                                _("unexpected sparse profile version '%s'") % version
+                            )
                 elif kind == "include":
                     includes.add(value)
                 elif kind == "exclude":
                     excludes.add(value)
 
-            rules = []
             if includes:
-                rules.append(".hg*")
-                # In v1 configs, excludes always take precedence over includes, so
-                # put them after.
                 rules.extend(includes)
-            else:
-                rules.append("**")
 
             if excludes:
                 rules.extend("!" + value for value in excludes)
 
-            if not rules:
-                self._warnfullcheckout()
+            # If all rules (excluding the default '.hg*') are exclude rules, add
+            # an initial "**" to provide the default include of everything.
+            if all(rule[0] == "!" for rule in rules[1:]):
+                rules.insert(0, "**")
 
             return SparseConfig(
                 "<aggregated from %s>".format(rawconfig.path),
@@ -1033,7 +1044,7 @@ def _wraprepo(ui, repo):
                 rawconfig.metadata,
             )
 
-        def readsparseprofile(self, rev, name):
+        def readsparseprofile(self, rev, name, version):
             ctx = self[rev]
             try:
                 raw = self.getrawprofile(name, ctx.hex())
@@ -1050,13 +1061,15 @@ def _wraprepo(ui, repo):
                 return None
 
             rawconfig = self.readsparseconfig(raw, filename=name)
+            if version is None:
+                version = rawconfig.metadata.get("version", "1")
 
             rules = []
             profiles = set()
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profiles.add(value)
-                    profile = self.readsparseprofile(rev, value)
+                    profile = self.readsparseprofile(rev, value, version)
                     if profile is not None:
                         for rule in profile.rules:
                             rules.append(rule)
@@ -1067,7 +1080,7 @@ def _wraprepo(ui, repo):
                 elif kind == "exclude":
                     rules.append("!" + value)
 
-            return SparseProfile(name, rules, profiles)
+            return SparseProfile(name, rules, profiles, rawconfig.metadata)
 
         def _warnfullcheckout(self):
             # Only warn once per command
