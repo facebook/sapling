@@ -151,8 +151,8 @@ pub async fn delete_files_in_chunks<'a>(
     repo: &'a BlobRepo,
     parent_bcs_id: ChangesetId,
     mpaths: Vec<MPath>,
-    chunker: Chunker<MPath>,
-    delete_commits_changeset_args_factory: impl ChangesetArgsFactory,
+    chunker: &Chunker<MPath>,
+    delete_commits_changeset_args_factory: &impl ChangesetArgsFactory,
     skip_last_chunk: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "Chunking mpaths");

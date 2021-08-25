@@ -324,8 +324,8 @@ async fn run_gradual_delete<'a>(
         &repo,
         parent_bcs_id,
         paths,
-        chunker,
-        delete_cs_args_factory,
+        &chunker,
+        &delete_cs_args_factory,
         false, /* skip_last_chunk */
     )
     .await?;

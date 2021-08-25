@@ -59,8 +59,8 @@ pub async fn create_pre_merge_delete<'a>(
         repo,
         parent_bcs_id,
         mpaths,
-        chunker,
-        delete_commits_changeset_args_factory,
+        &chunker,
+        &delete_commits_changeset_args_factory,
         true, /* skip_last_chunk */
     )
     .await?;

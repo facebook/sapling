@@ -29,6 +29,7 @@ use std::num::NonZeroU64;
 pub mod chunking;
 pub mod commit_sync_config_utils;
 pub mod common;
+pub mod history_fixup_delete;
 pub mod pre_merge_delete;
 pub mod working_copy;
 
