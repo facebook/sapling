@@ -28,6 +28,7 @@ pub const COMMIT_AUTHOR: &str = "commit-author";
 pub const COMMIT_BOOKMARK: &str = "bookmark";
 pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const COMMIT_HASH: &str = "commit-hash";
+pub const COMMIT_HASH_CORRECT_HISTORY: &str = "commit-hash-correct-history";
 pub const COMMIT_MESSAGE: &str = "commit-message";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DIFF_MAPPING_VERSIONS: &str = "diff-mapping-versions";
@@ -38,6 +39,7 @@ pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
 pub const GRADUAL_DELETE: &str = "gradual-delete";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
+pub const HISTORY_FIXUP_DELETE: &str = "history-fixup-deletes";
 pub const INPUT_FILE: &str = "input-file";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
 pub const LIMIT: &str = "limit";
@@ -52,6 +54,7 @@ pub const ORIGIN_REPO: &str = "origin-repo";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
 pub const PATH: &str = "path";
+pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
 pub const RUN_MOVER: &str = "run-mover";
@@ -300,6 +303,44 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(false)
         );
+
+    let history_fixup_delete_subcommand =
+        add_light_resulting_commit_args(SubCommand::with_name(HISTORY_FIXUP_DELETE))
+            .about("create a set of delete commits before the path fixup.")
+            .arg(
+                Arg::with_name(COMMIT_HASH)
+                    .help(
+                        "commit which we want to fixup (the
+                         files specified in paths file will be deleted there)",
+                    )
+                    .takes_value(true)
+                    .required(true),
+            )
+            .arg(
+                Arg::with_name(COMMIT_HASH_CORRECT_HISTORY)
+                    .help(
+                        "commit hash containing the files with correct
+                         history (the files specified in path files will be
+                         preserved there; all the other files will be deleted)",
+                    )
+                    .takes_value(true)
+                    .required(true),
+            )
+            .arg(
+                Arg::with_name(EVEN_CHUNK_SIZE)
+                    .help("chunk size for even chunking")
+                    .long(EVEN_CHUNK_SIZE)
+                    .takes_value(true)
+                    .required(true),
+            )
+            .arg(
+                Arg::with_name(PATHS_FILE)
+                    .long(PATHS_FILE)
+                    .help("file containing paths to fixup separated by newlines")
+                    .takes_value(true)
+                    .required(true)
+                    .multiple(true),
+            );
 
     // PLease don't move `add_light_resulting_commit_args` to be applied
     // after `PATH` arg is added, as in that case `PATH` won't be the last
@@ -638,6 +679,7 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(add_resulting_commit_args(merge_subcommand))
         .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
+        .subcommand(history_fixup_delete_subcommand)
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)

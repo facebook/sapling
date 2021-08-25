@@ -50,7 +50,7 @@ use synced_commit_mapping::{
     SyncedCommitMappingEntry,
 };
 use tokio::{
-    fs::File,
+    fs::{read_to_string, File},
     io::{AsyncBufReadExt, BufReader},
 };
 
@@ -66,13 +66,14 @@ use crate::cli::{
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
     BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
     CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
-    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS,
-    DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
-    HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
-    MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
-    ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
-    SECOND_PARENT, SELECT_PARENTS_AUTOMATICALLY, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS,
-    SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, COMMIT_HASH_CORRECT_HISTORY,
+    DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT,
+    GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, HISTORY_FIXUP_DELETE,
+    INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME,
+    MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH,
+    PATHS_FILE, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT,
+    SELECT_PARENTS_AUTOMATICALLY, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE,
+    TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -80,6 +81,7 @@ use megarepolib::chunking::{
 };
 use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::{create_and_save_bonsai, delete_files_in_chunks};
+use megarepolib::history_fixup_delete::{create_history_fixup_deletes, HistoryFixupDeletes};
 use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
@@ -277,6 +279,82 @@ async fn run_pre_merge_delete<'a>(
     );
     delete_commits.reverse();
     for delete_commit in delete_commits {
+        println!("{}", delete_commit);
+    }
+
+    Ok(())
+}
+
+async fn run_history_fixup_delete<'a>(
+    ctx: CoreContext,
+    matches: &MononokeMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+
+    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
+
+    let even_chunk_size: usize = sub_m
+        .value_of(EVEN_CHUNK_SIZE)
+        .ok_or_else(|| {
+            format_err!(
+                "either {} or {} is required",
+                CHUNKING_HINT_FILE,
+                EVEN_CHUNK_SIZE
+            )
+        })?
+        .parse::<usize>()?;
+    let chunker = even_chunker_with_max_size(even_chunk_size)?;
+
+    let fixup_bcs_id = {
+        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
+        helpers::csid_resolve(&ctx, repo.clone(), hash).await?
+    };
+
+    let correct_bcs_id = {
+        let hash = sub_m
+            .value_of(COMMIT_HASH_CORRECT_HISTORY)
+            .unwrap()
+            .to_owned();
+        helpers::csid_resolve(&ctx, repo.clone(), hash).await?
+    };
+    let paths_file = sub_m.value_of(PATHS_FILE).unwrap().to_owned();
+    let s = read_to_string(&paths_file).await?;
+    let paths: Vec<MPath> = s
+        .lines()
+        .map(|path| MPath::new(path))
+        .collect::<Result<Vec<MPath>>>()?;
+    let hfd = create_history_fixup_deletes(
+        &ctx,
+        &repo,
+        fixup_bcs_id,
+        chunker,
+        delete_cs_args_factory,
+        correct_bcs_id,
+        paths,
+    )
+    .await?;
+
+    let HistoryFixupDeletes {
+        mut delete_commits_fixup_branch,
+        mut delete_commits_correct_branch,
+    } = hfd;
+
+    info!(
+        ctx.logger(),
+        "Listing deletion commits for fixup branch in top-to-bottom order (first commit is a descendant of the last)"
+    );
+    delete_commits_fixup_branch.reverse();
+    for delete_commit in delete_commits_fixup_branch {
+        println!("{}", delete_commit);
+    }
+
+    info!(
+        ctx.logger(),
+        "Listing deletion commits for branch with correct history in top-to-bottom order (first commit is a descendant of the last)"
+    );
+    delete_commits_correct_branch.reverse();
+    for delete_commit in delete_commits_correct_branch {
         println!("{}", delete_commit);
     }
 
@@ -1089,6 +1167,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await
             }
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
+            (HISTORY_FIXUP_DELETE, Some(sub_m)) => {
+                run_history_fixup_delete(ctx, &matches, sub_m).await
+            }
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };
