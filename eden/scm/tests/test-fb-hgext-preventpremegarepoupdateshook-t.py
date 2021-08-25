@@ -39,3 +39,6 @@ sh % "hg update --config ui.interactive=true .^" << r"""n
 sh % "hg update --config ui.interactive=false .^" == r"""
     Checking out commits from before megarepo merge is discouraged. The resulting checkout will contain just the contents of one git subrepo. Many tools might not work as expected. Do you want to continue (Yn)?   y
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
+
+sh % "hg update tip^" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "HGPLAIN=1 hg update --config ui.interactive=true .^" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"

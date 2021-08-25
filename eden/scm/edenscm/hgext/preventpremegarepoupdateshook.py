@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import registrar, scmutil
+from edenscm.mercurial import registrar
 
 
 configtable = {}
@@ -20,7 +20,9 @@ configitem(
     ),
 )
 configitem(
-    "preventpremegarepoupdates", "statefile", default=".megarepo/remapping_state"
+    "preventpremegarepoupdates",
+    "dangerrevset",
+    default="not(contains('.megarepo/remapping_state'))",
 )
 
 
@@ -36,16 +38,17 @@ def preventpremegarepoupdates(ui, repo, **kwargs):
     Those commits might be confusing as they reflect only single subrepo.
     """
 
-    if kwargs["parent1"] == "000000000000":
-        # scmutil.revsingle(repo, "000000000000") complains that such changeset
-        # doesn't exist
+    if ui.plain():
+        # When you've set `HGPLAIN`, we trust you to know what you're doing
         return False
 
-    ctx = scmutil.revsingle(repo, kwargs["parent1"])
-    statusfile = ui.config("preventpremegarepoupdates", "statefile")
+    revset = "id('{}') and ({})".format(
+        kwargs["parent1"], ui.config("preventpremegarepoupdates", "dangerrevset")
+    )
+    isbadrev = repo.anyrevs([revset])
     message = ui.config("preventpremegarepoupdates", "message")
 
-    if statusfile not in ctx.manifest():
+    if isbadrev:
         return ui.promptchoice(message)
 
     # False means success
