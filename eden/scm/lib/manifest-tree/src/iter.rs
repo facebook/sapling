@@ -19,14 +19,14 @@ use crate::{
     TreeManifest,
 };
 
-pub struct BfsIter<'a, M: 'static + Matcher + Sync + Send> {
+pub struct BfsIter<'a> {
     queue: VecDeque<(RepoPathBuf, &'a Link)>,
     store: &'a InnerStore,
-    matcher: M,
+    matcher: &'a dyn Matcher,
 }
 
-impl<'a, M: 'static + Matcher + Sync + Send> BfsIter<'a, M> {
-    pub fn new(tree: &'a TreeManifest, matcher: M) -> Self {
+impl<'a> BfsIter<'a> {
+    pub fn new(tree: &'a TreeManifest, matcher: &'a dyn Matcher) -> Self {
         BfsIter {
             queue: vec![(RepoPathBuf::new(), &tree.root)].into(),
             store: &tree.store,
@@ -51,7 +51,7 @@ impl<'a, M: 'static + Matcher + Sync + Send> BfsIter<'a, M> {
     }
 }
 
-impl<'a, M: 'static + Matcher + Sync + Send> Iterator for BfsIter<'a, M> {
+impl<'a> Iterator for BfsIter<'a> {
     type Item = Result<(RepoPathBuf, FsNodeMetadata)>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -273,8 +273,8 @@ mod tests {
     #[test]
     fn test_items_empty() {
         let tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
-        assert!(tree.files(AlwaysMatcher::new()).next().is_none());
-        assert_eq!(dirs(&tree, AlwaysMatcher::new()), ["Ephemeral ''"]);
+        assert!(tree.files(&AlwaysMatcher::new()).next().is_none());
+        assert_eq!(dirs(&tree, &AlwaysMatcher::new()), ["Ephemeral ''"]);
     }
 
     #[test]
@@ -288,7 +288,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            tree.files(AlwaysMatcher::new())
+            tree.files(&AlwaysMatcher::new())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -299,7 +299,7 @@ mod tests {
         );
 
         assert_eq!(
-            dirs(&tree, AlwaysMatcher::new()),
+            dirs(&tree, &AlwaysMatcher::new()),
             [
                 "Ephemeral ''",
                 "Ephemeral 'a1'",
@@ -325,7 +325,7 @@ mod tests {
         let tree = TreeManifest::durable(store.clone(), hgid);
 
         assert_eq!(
-            tree.files(AlwaysMatcher::new())
+            tree.files(&AlwaysMatcher::new())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(
@@ -336,7 +336,7 @@ mod tests {
         );
 
         assert_eq!(
-            dirs(&tree, AlwaysMatcher::new()),
+            dirs(&tree, &AlwaysMatcher::new()),
             [
                 "Durable   ''",
                 "Durable   'a1'",
@@ -363,19 +363,19 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            tree.files(TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap())
+            tree.files(&TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(make_file("a2/b2/c2", "30"), make_file("a2/b2/c3", "40"))
         );
         assert_eq!(
-            tree.files(TreeMatcher::from_rules(["a1/*/c1/**"].iter()).unwrap())
+            tree.files(&TreeMatcher::from_rules(["a1/*/c1/**"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(make_file("a1/b1/c1/d1", "10"),)
         );
         assert_eq!(
-            tree.files(TreeMatcher::from_rules(["**/c3"].iter()).unwrap())
+            tree.files(&TreeMatcher::from_rules(["**/c3"].iter()).unwrap())
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
             vec!(make_file("a2/b2/c3", "40"), make_file("a3/b2/c3", "50"))
@@ -383,7 +383,7 @@ mod tests {
 
         // A prefix matcher works as expected.
         assert_eq!(
-            dirs(&tree, TreeMatcher::from_rules(["a1/**"].iter()).unwrap()),
+            dirs(&tree, &TreeMatcher::from_rules(["a1/**"].iter()).unwrap()),
             [
                 "Ephemeral ''",
                 "Ephemeral 'a1'",
@@ -394,7 +394,7 @@ mod tests {
 
         // A suffix matcher is not going to be effective.
         assert_eq!(
-            dirs(&tree, TreeMatcher::from_rules(["**/c2"].iter()).unwrap()),
+            dirs(&tree, &TreeMatcher::from_rules(["**/c2"].iter()).unwrap()),
             [
                 "Ephemeral ''",
                 "Ephemeral 'a1'",
@@ -411,16 +411,18 @@ mod tests {
     #[test]
     fn test_files_finish_on_error_when_collecting_to_vec() {
         let tree = TreeManifest::durable(Arc::new(TestStore::new()), hgid("1"));
-        let file_results = tree.files(AlwaysMatcher::new()).collect::<Vec<_>>();
+        let file_results = tree.files(&AlwaysMatcher::new()).collect::<Vec<_>>();
         assert_eq!(file_results.len(), 1);
         assert!(file_results[0].is_err());
 
-        let files_result = tree.files(AlwaysMatcher::new()).collect::<Result<Vec<_>>>();
+        let files_result = tree
+            .files(&AlwaysMatcher::new())
+            .collect::<Result<Vec<_>>>();
         assert!(files_result.is_err());
     }
 
-    fn dirs<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Vec<String> {
-        tree.dirs(matcher)
+    fn dirs(tree: &TreeManifest, matcher: &dyn Matcher) -> Vec<String> {
+        tree.dirs(&matcher)
             .map(|t| {
                 let t = t.unwrap();
                 format!(

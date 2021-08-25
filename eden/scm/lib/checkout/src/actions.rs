@@ -11,7 +11,6 @@ use pathmatcher::{Matcher, XorMatcher};
 use std::collections::{hash_map::Entry, HashMap};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
@@ -66,13 +65,10 @@ impl ActionMap {
         Ok(Self { map })
     }
 
-    pub fn with_sparse_profile_change<
-        M1: 'static + Matcher + Send + Sync,
-        M2: 'static + Matcher + Send + Sync,
-    >(
+    pub fn with_sparse_profile_change(
         mut self,
-        old_matcher: M1,
-        new_matcher: M2,
+        old_matcher: &impl Matcher,
+        new_matcher: &impl Matcher,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
         // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
@@ -95,9 +91,8 @@ impl ActionMap {
         result?;
 
         // Second - handle files in a new manifest, that were affected by sparse profile change
-        let new_matcher = Arc::new(new_matcher);
-        let xor_matcher = XorMatcher::new(old_matcher, new_matcher.clone());
-        for file in new_manifest.files(xor_matcher) {
+        let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
+        for file in new_manifest.files(&xor_matcher) {
             let file = file?;
             if new_matcher.matches_file(&file.path)? {
                 match self.map.entry(file.path) {
@@ -201,15 +196,12 @@ mod tests {
         let a = (rp("a"), FileMetadata::regular(hgid(1)));
         let b = (rp("b"), FileMetadata::regular(hgid(2)));
         let c = (rp("c"), FileMetadata::regular(hgid(3)));
-        let ab_profile = Arc::new(TreeMatcher::from_rules(["a", "b"].iter())?);
-        let ac_profile = Arc::new(TreeMatcher::from_rules(["a", "c"].iter())?);
+        let ab_profile = TreeMatcher::from_rules(["a", "b"].iter())?;
+        let ac_profile = TreeMatcher::from_rules(["a", "c"].iter())?;
         let manifest = make_tree_manifest_from_meta(store, vec![a, b, c]);
 
-        let actions = ActionMap::empty().with_sparse_profile_change(
-            ab_profile.clone(),
-            ab_profile.clone(),
-            &manifest,
-        )?;
+        let actions =
+            ActionMap::empty().with_sparse_profile_change(&ab_profile, &ab_profile, &manifest)?;
         assert_eq!("", &actions.to_string());
 
         let mut expected_actions = ActionMap::empty();
@@ -219,11 +211,8 @@ mod tests {
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
         );
 
-        let actions = ActionMap::empty().with_sparse_profile_change(
-            ab_profile.clone(),
-            ac_profile.clone(),
-            &manifest,
-        )?;
+        let actions =
+            ActionMap::empty().with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
         assert_eq!(expected_actions, actions);
 
         let mut actions = ActionMap::empty();
@@ -232,11 +221,7 @@ mod tests {
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(10)))),
         );
         actions.map.insert(rp("b"), Action::UpdateExec(true));
-        let actions = actions.with_sparse_profile_change(
-            ab_profile.clone(),
-            ac_profile.clone(),
-            &manifest,
-        )?;
+        let actions = actions.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
         assert_eq!(expected_actions, actions);
 
         let mut actions = ActionMap::empty();
@@ -244,11 +229,7 @@ mod tests {
             rp("c"),
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
         );
-        let actions = actions.with_sparse_profile_change(
-            ab_profile.clone(),
-            ac_profile.clone(),
-            &manifest,
-        )?;
+        let actions = actions.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
 
         assert_eq!(expected_actions, actions);
 

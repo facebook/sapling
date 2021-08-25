@@ -280,9 +280,9 @@ impl Manifest for TreeManifest {
         Ok(hgid.clone())
     }
 
-    fn files<'a, M: 'static + Matcher + Sync + Send>(
+    fn files<'a, M: Matcher>(
         &'a self,
-        matcher: M,
+        matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
         let files = BfsIter::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNodeMetadata::File(metadata))) => Some(Ok(File::new(path, metadata))),
@@ -297,9 +297,9 @@ impl Manifest for TreeManifest {
     ///
     /// Note: the matcher should be a prefix matcher, other kinds of matchers
     /// could be less effective than expected.
-    fn dirs<'a, M: 'static + Matcher + Sync + Send>(
+    fn dirs<'a, M: Matcher>(
         &'a self,
-        matcher: M,
+        matcher: &'a M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
         let dirs = BfsIter::new(&self, matcher).filter_map(|result| match result {
             Ok((path, FsNodeMetadata::Directory(metadata))) => {
