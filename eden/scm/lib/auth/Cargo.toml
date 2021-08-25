@@ -8,12 +8,12 @@ edition = "2018"
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { path = "../configmodel" }
-indexmap = { version = "1.6", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 pem = "0.8"
 simple_asn1 = "0.4"
 thiserror = "1.0"
 tracing = "0.1"
-url = "2.1.0"
+url = "2.2.2"
 util = { path = "../util" }
 
 [dev-dependencies]

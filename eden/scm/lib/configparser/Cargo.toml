@@ -19,7 +19,7 @@ filetime = "0.2.9"
 hgtime = { path = "../hgtime" }
 hostcaps = { path = "../../../../common/rust/shed/hostcaps" }
 hostname = "0.3"
-indexmap = { version = "1.6", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 minibytes = { path = "../minibytes" }
 os_info = "=3.0.6"
 pest = "2.1"

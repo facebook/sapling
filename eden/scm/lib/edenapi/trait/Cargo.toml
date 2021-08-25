@@ -17,4 +17,4 @@ minibytes = { path = "../../minibytes" }
 serde_cbor = "0.11"
 thiserror = "1.0"
 types = { path = "../../types" }
-url = "2.1.0"
+url = "2.2.2"

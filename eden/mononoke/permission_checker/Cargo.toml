@@ -17,10 +17,11 @@ tokio = { version = "1.7.1", features = ["full", "test-util"] }
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 mysql_common = { git = "https://github.com/iammxt/rust_mysql_common", rev = "0e4c86952f1e799960e736c0b2bb9d2a6d935bf1" }
-object = { git = "https://github.com/andrewjcg/object", rev = "37e8519ced73fb25821db22d938a021454f186de" }
+object = { git = "https://github.com/gimli-rs/object", rev = "9271d2cd06d1fed11259225d915178fe3824a56d" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
