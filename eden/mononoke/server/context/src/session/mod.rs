@@ -117,6 +117,10 @@ impl SessionContainer {
         self.metadata().identities().is_quicksand()
     }
 
+    pub fn is_hg_sync_job(&self) -> bool {
+        self.metadata().identities().is_hg_sync_job()
+    }
+
     pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {
         &self.inner.blobstore_read_limiter
     }

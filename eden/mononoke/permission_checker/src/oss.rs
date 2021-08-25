@@ -51,6 +51,10 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         false
     }
 
+    fn is_hg_sync_job(&self) -> bool {
+        false
+    }
+
     fn hostprefix(&self) -> Option<&str> {
         None
     }
