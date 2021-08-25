@@ -958,7 +958,7 @@ mod test {
         let matcher = AlwaysMatcher::new();
         let left_tree = make_tree_manifest_from_meta(from.iter().cloned());
         let right_tree = make_tree_manifest_from_meta(to.iter().cloned());
-        let diff = Diff::new(&left_tree, &right_tree, &matcher).unwrap();
+        let diff = Diff::new(&left_tree, &right_tree, &matcher);
         let vfs = VFS::new(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);
         let plan = checkout
