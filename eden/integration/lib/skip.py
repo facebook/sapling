@@ -84,7 +84,6 @@ if sys.platform == "win32":
         "takeover_test.TakeoverRocksDBStressTestHg": True,
         "takeover_test.TakeoverTestHg": True,
         "thrift_test.ThriftTestHg": [
-            "test_get_sha1_symlinked",
             "test_get_sha1_throws_for_symlink",
             "test_pid_fetch_counts",
             "test_unload_free_inodes",

@@ -101,19 +101,6 @@ class ThriftTest(testcase.EdenRepoTest):
                 client.getSHA1(self.mount_path_bytes, [b"hello", b"adir/file"]),
             )
 
-    def test_get_sha1_symlinked(self) -> None:
-        symlink_path = Path(self.mounts_dir) / "symlink_path"
-        os.symlink(self.mount, symlink_path, target_is_directory=True)
-
-        expected_sha1_for_hello = hashlib.sha1(b"hola\n").digest()
-        result_for_hello = SHA1Result(expected_sha1_for_hello)
-
-        with self.get_thrift_client() as client:
-            self.assertEqual(
-                [result_for_hello],
-                client.getSHA1(bytes(symlink_path), [b"hello"]),
-            )
-
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b"./hello"])
