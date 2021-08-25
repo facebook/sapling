@@ -121,9 +121,10 @@ Verify error checking includes filename and line numbers
   $ hg ci -m 'Adding a broken file'
   $ hg sparse enableprofile broken.sparse
   warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
-  abort: A sparse file cannot have includes after excludes in broken.sparse:5
-  [255]
   $ hg -q debugstrip . --no-backup
+  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
+  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
+  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
 
 Verify that a profile is updated across multiple commits
 
@@ -698,8 +699,7 @@ We can look at invididual profiles:
   $ hg sparse explain profiles/bar/ham -T json
   [
    {
-    "excludes": [],
-    "includes": ["interesting"],
+    "lines": [["profile", "profiles/bar/eggs"], ["include", "interesting"]],
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
@@ -710,8 +710,7 @@ We can look at invididual profiles:
   $ hg sparse explain profiles/bar/ham -T json --verbose
   [
    {
-    "excludes": [],
-    "includes": ["interesting"],
+    "lines": [["profile", "profiles/bar/eggs"], ["include", "interesting"]],
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],

@@ -805,15 +805,19 @@ class RawSparseConfig(object):
     """Represents a raw, unexpanded sparse config file"""
 
     path = attr.ib()
-    includes = attr.ib(convert=frozenset)
-    excludes = attr.ib(convert=frozenset)
+    lines = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
     def toincludeexclude(self):
-        # A later commit will change this implementation and make use of the
-        # toincludeexclude abstraction.
-        return self.includes, self.excludes
+        include = []
+        exclude = []
+        for kind, value in self.lines:
+            if kind == "include":
+                include.append(value)
+            elif kind == "exclude":
+                exclude.append(value)
+        return include, exclude
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
@@ -822,23 +826,25 @@ class SparseConfig(object):
     rules and profile rules."""
 
     path = attr.ib()
-    includes = attr.ib(convert=frozenset)
-    excludes = attr.ib(convert=frozenset)
+    rules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
     def toincludeexclude(self):
-        # A later commit will change this implementation and make use of the
-        # toincludeexclude abstraction.
-        return self.includes, self.excludes
+        include = []
+        exclude = []
+        for rule in self.rules:
+            if rule[0] == "!":
+                exclude.append(rule[1:])
+            else:
+                include.append(rule)
+        return include, exclude
 
     # Return whether self and other_config are effectively equivalent.
     # In particular, don't compare path or metadata.
     def equivalent(self, other_config):
         return (
-            self.includes == other_config.includes
-            and self.excludes == other_config.excludes
-            and self.profiles == other_config.profiles
+            self.rules == other_config.rules and self.profiles == other_config.profiles
         )
 
 
@@ -847,8 +853,7 @@ class SparseProfile(object):
     """Represents a single sparse profile, with subprofiles expanded."""
 
     path = attr.ib()
-    includes = attr.ib(convert=frozenset)
-    excludes = attr.ib(convert=frozenset)
+    rules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
@@ -871,17 +876,15 @@ def _wraprepo(ui, repo):
             filename = filename or "<sparse profile>"
             metadata = {}
             last_key = None
-            includes = set()
-            excludes = set()
-
-            sections = {
-                "[include]": includes,
-                "[exclude]": excludes,
-                "[metadata]": metadata,
-            }
-            current = includes  # no sections == includes
-
+            lines = []
             profiles = []
+
+            includesection = "[include]"
+            excludesection = "[exclude]"
+            metadatasection = "[metadata]"
+            sections = set([includesection, excludesection, metadatasection])
+            current = includesection  # no sections == includes
+
             uiwarn = self.ui.warn if warn else (lambda *ignored: None)
 
             for i, line in enumerate(raw.splitlines(), start=1):
@@ -894,22 +897,15 @@ def _wraprepo(ui, repo):
                     # include another profile
                     stripped = stripped[9:].strip()
                     if stripped:
+                        lines.append(("profile", stripped))
                         profiles.append(stripped)
                     continue
 
                 if stripped in sections:
-                    if sections[stripped] is includes and current is excludes:
-                        raise error.Abort(
-                            _(
-                                "A sparse file cannot have includes after excludes "
-                                "in %s:%i"
-                            )
-                            % (filename, i)
-                        )
-                    current = sections[stripped]
+                    current = stripped
                     continue
 
-                if current is metadata:
+                if current == metadatasection:
                     # Metadata parsing, INI-style format
                     if line.startswith((" ", "\t")):  # continuation
                         if last_key is None:
@@ -953,12 +949,20 @@ def _wraprepo(ui, repo):
                         % (line, filename, i)
                     )
                     continue
-                current.add(line)
+                if current == includesection:
+                    lines.append(("include", line))
+                elif current == excludesection:
+                    lines.append(("exclude", line))
+                else:
+                    self.ui.warn(
+                        _("unknown sparse config line: '%s' section: '%s'\n")
+                        % (line, current)
+                    )
 
             metadata = {
                 key: "\n".join(value).strip() for key, value in metadata.items()
             }
-            return RawSparseConfig(filename, includes, excludes, profiles, metadata)
+            return RawSparseConfig(filename, lines, profiles, metadata)
 
         def getsparsepatterns(self, rev, rawconfig=None):
             """Produce the full sparse config for a revision as a SparseConfig
@@ -972,11 +976,10 @@ def _wraprepo(ui, repo):
             if rev is None:
                 raise error.Abort(_("cannot parse sparse patterns from working copy"))
 
-            repo = self
             if rawconfig is None:
                 if not self.localvfs.exists("sparse"):
                     self._warnfullcheckout()
-                    return SparseConfig(None, set(), set(), [])
+                    return SparseConfig(None, [], [])
 
                 raw = self.localvfs.readutf8("sparse")
                 rawconfig = self.readsparseconfig(
@@ -988,33 +991,44 @@ def _wraprepo(ui, repo):
                     "be a RawSparseConfig, not: %s" % rawconfig
                 )
 
-            # create copies, as these datastructures are updated further on
-            includes, excludes, profiles = (
-                set(rawconfig.includes),
-                set(rawconfig.excludes),
-                set(rawconfig.profiles),
-            )
+            includes = set()
+            excludes = set()
+            profiles = set()
+            for kind, value in rawconfig.lines:
+                if kind == "profile":
+                    profiles.add(value)
+                    profile = self.readsparseprofile(rev, value)
+                    if profile is not None:
+                        for value in profile.rules:
+                            if value.startswith("!"):
+                                excludes.add(value[1:])
+                            else:
+                                includes.add(value)
+                        for subprofile in profile.profiles:
+                            profiles.add(subprofile)
+                elif kind == "include":
+                    includes.add(value)
+                elif kind == "exclude":
+                    excludes.add(value)
 
-            ctx = repo[rev]
-
-            for name in rawconfig.profiles:
-                profile = self.readsparseprofile(rev, name)
-                if profile is not None:
-                    includes.update(profile.includes)
-                    excludes.update(profile.excludes)
-                    for subprofile in profile.profiles:
-                        profiles.add(subprofile)
-
+            rules = []
             if includes:
-                includes.add(".hg*")
+                rules.append(".hg*")
+                # In v1 configs, excludes always take precedence over includes, so
+                # put them after.
+                rules.extend(includes)
+            else:
+                rules.append("**")
 
-            if not includes and not excludes and not profiles:
+            if excludes:
+                rules.extend("!" + value for value in excludes)
+
+            if not rules:
                 self._warnfullcheckout()
 
             return SparseConfig(
                 "<aggregated from %s>".format(rawconfig.path),
-                includes,
-                excludes,
+                rules,
                 profiles,
                 rawconfig.metadata,
             )
@@ -1037,18 +1051,23 @@ def _wraprepo(ui, repo):
 
             rawconfig = self.readsparseconfig(raw, filename=name)
 
-            includes = set(rawconfig.includes)
-            excludes = set(rawconfig.excludes)
-            profiles = set(rawconfig.profiles)
-            for name in rawconfig.profiles:
-                profile = self.readsparseprofile(rev, name)
-                if profile is not None:
-                    includes.update(profile.includes)
-                    excludes.update(profile.excludes)
-                    for subprofile in profile.profiles:
-                        profiles.add(subprofile)
+            rules = []
+            profiles = set()
+            for kind, value in rawconfig.lines:
+                if kind == "profile":
+                    profiles.add(value)
+                    profile = self.readsparseprofile(rev, value)
+                    if profile is not None:
+                        for rule in profile.rules:
+                            rules.append(rule)
+                        for subprofile in profile.profiles:
+                            profiles.add(subprofile)
+                elif kind == "include":
+                    rules.append(value)
+                elif kind == "exclude":
+                    rules.append("!" + value)
 
-            return SparseProfile(name, includes, excludes, profiles)
+            return SparseProfile(name, rules, profiles)
 
         def _warnfullcheckout(self):
             # Only warn once per command
@@ -2688,7 +2707,7 @@ def _clear(ui, repo, files, force=False):
             raw = repo.localvfs.readutf8("sparse")
         rawconfig = repo.readsparseconfig(raw)
 
-        if rawconfig.includes or rawconfig.excludes:
+        if rawconfig.lines:
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
             repo.writesparseconfig(set(), set(), rawconfig.profiles)
