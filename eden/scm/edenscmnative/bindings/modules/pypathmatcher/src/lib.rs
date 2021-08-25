@@ -12,12 +12,10 @@ use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::error::{AnyhowResultExt, ResultPyErrExt};
-use cpython_ext::{ExtractInner, ExtractInnerRef, PyPath, PyPathBuf, Str};
+use cpython_ext::{PyPath, PyPathBuf, Str};
 
 use anyhow::Result;
-use pathmatcher::{
-    AlwaysMatcher, DifferenceMatcher, DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher,
-};
+use pathmatcher::{AlwaysMatcher, DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -53,12 +51,12 @@ py_class!(class gitignorematcher |py| {
     }
 });
 
-py_class!(pub class treematcher |py| {
-    data matcher: Arc<TreeMatcher>;
+py_class!(class treematcher |py| {
+    data matcher: TreeMatcher;
 
     def __new__(_cls, rules: Vec<String>) -> PyResult<Self> {
         let matcher = TreeMatcher::from_rules(rules.into_iter()).map_pyerr(py)?;
-        Self::create_instance(py, Arc::new(matcher))
+        Self::create_instance(py, matcher)
     }
 
     def matches(&self, path: &PyPath) -> PyResult<bool> {
@@ -73,14 +71,6 @@ py_class!(pub class treematcher |py| {
         }
     }
 });
-
-impl ExtractInnerRef for treematcher {
-    type Inner = Arc<TreeMatcher>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.matcher(py)
-    }
-}
 
 fn normalize_glob(_py: Python, path: &str) -> PyResult<Str> {
     Ok(pathmatcher::normalize_glob(path).into())
@@ -207,21 +197,7 @@ fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> PyRe
     Ok(matches)
 }
 
-/// Extracts a Rust matcher from a Python Object
-/// When possible it converts it into a pure-Rust matcher.
-pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
-    if let Ok(matcher) = treematcher::downcast_from(py, matcher.clone_ref(py)) {
-        return Ok(matcher.extract_inner(py));
-    }
-    if matcher.get_type(py).name(py).as_ref() == "treematcher" {
-        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
-    }
-    if matcher.get_type(py).name(py).as_ref() == "differencematcher" {
-        let include = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
-        let exclude = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
-        return Ok(Arc::new(DifferenceMatcher::new(include, exclude)));
-    }
-
+pub fn extract_matcher(_py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matcher + Sync + Send>> {
     Ok(Arc::new(ThreadPythonMatcher::new(matcher)))
 }
 
