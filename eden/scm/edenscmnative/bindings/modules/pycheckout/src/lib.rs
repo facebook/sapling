@@ -14,11 +14,11 @@ use cpython::*;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
-use pathmatcher::Matcher;
+use pathmatcher::{AlwaysMatcher, Matcher};
 use progress_model::{ProgressBar, Registry};
 use pyconfigparser::config;
 use pymanifest::treemanifest;
-use pypathmatcher::{extract_matcher, extract_option_matcher};
+use pypathmatcher::{PythonMatcher, ThreadPythonMatcher};
 use pyrevisionstore::{contentstore, filescmstore};
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
@@ -55,7 +55,10 @@ py_class!(class checkoutplan |py| {
         progress_path: Option<PyPathBuf> = None,
     ) -> PyResult<checkoutplan> {
         let config = config.get_cfg(py);
-        let matcher: Arc<dyn Matcher + Send + Sync> = extract_option_matcher(py, matcher)?;
+        let matcher: Box<dyn Matcher + Send + Sync> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
+        };
 
         let current = current_manifest.get_underlying(py);
         let target = target_manifest.get_underlying(py);
@@ -72,8 +75,8 @@ py_class!(class checkoutplan |py| {
         let target_lock = target_manifest.get_underlying(py);
         let target = target_lock.read();
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
-            let old_matcher = extract_matcher(py, old_sparse_matcher)?;
-            let new_matcher = extract_matcher(py, new_sparse_matcher)?;
+            let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));
+            let new_matcher = Box::new(PythonMatcher::new(py, new_sparse_matcher));
             actions = actions.with_sparse_profile_change(&old_matcher, &new_matcher, &*target).map_pyerr(py)?;
         }
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;

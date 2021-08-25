@@ -19,7 +19,7 @@ use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
-use pypathmatcher::{extract_matcher, extract_option_matcher, PythonMatcher};
+use pypathmatcher::{PythonMatcher, ThreadPythonMatcher};
 use pyrevisionstore::{contentstore, filescmstore, PythonHgIdDataStore};
 use revisionstore::{HgIdDataStore, LegacyStore, RemoteDataStore, StoreKey, StoreResult};
 use types::{Key, Node, RepoPath, RepoPathBuf};
@@ -179,7 +179,7 @@ py_class!(pub class treemanifest |py| {
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&extract_matcher(py, pymatcher)?) {
+        for entry in tree.files(&PythonMatcher::new(py, pymatcher)) {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
         }
@@ -190,7 +190,7 @@ py_class!(pub class treemanifest |py| {
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.dirs(&extract_matcher(py, pymatcher)?) {
+        for entry in tree.dirs(&PythonMatcher::new(py, pymatcher)) {
             let dir = entry.map_pyerr(py)?;
             result.push((
                 dir.path.into(),
@@ -216,7 +216,10 @@ py_class!(pub class treemanifest |py| {
     def text(&self, matcher: Option<PyObject> = None) -> PyResult<PyBytes> {
         let mut lines = Vec::new();
         let tree = self.underlying(py).read();
-        let matcher: Arc<dyn Matcher + Send + Sync> = extract_option_matcher(py, matcher)?;
+        let matcher: Box<dyn Matcher> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+        };
         for entry in tree.files(&matcher) {
             let file = entry.map_pyerr(py)?;
             lines.push(format!(
@@ -277,7 +280,10 @@ py_class!(pub class treemanifest |py| {
         }
 
         let result = PyDict::new(py);
-        let matcher: Arc<dyn Matcher + Sync + Send> = extract_option_matcher(py, matcher)?;
+        let matcher: Box<dyn Matcher + Sync + Send> = match matcher {
+            None => Box::new(AlwaysMatcher::new()),
+            Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
+        };
         let this_tree = self.underlying(py);
         let other_tree = other.underlying(py);
 
