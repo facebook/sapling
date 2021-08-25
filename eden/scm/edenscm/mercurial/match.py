@@ -764,6 +764,39 @@ class gitignorematcher(basematcher):
         return "<gitignorematcher>"
 
 
+def rulesmatch(root, cwd, rules):
+    # Strip the exclude indicator from the rules, then reapply it later after
+    # normalizing everything.
+    excludeindexes = set()
+    strippedrules = []
+    for i, rule in enumerate(rules):
+        if rule[0] == "!":
+            excludeindexes.add(i)
+            strippedrules.append(rule[1:])
+        else:
+            strippedrules.append(rule)
+
+    auditor = pathutil.pathauditor(root)
+    kindpats = _donormalize(strippedrules, "glob", root, cwd, auditor, None)
+    globs = _kindpatstoglobs(kindpats, recursive=True)
+    if globs is None:
+        raise error.Abort(
+            _(
+                "treematcher does not support regular expressions or relpath matchers: %s"
+            )
+            % rules
+        )
+
+    rules = []
+    for i, glob in enumerate(globs):
+        if i in excludeindexes:
+            rules.append("!" + glob)
+        else:
+            rules.append(glob)
+
+    return treematcher(root, "", rules=rules)
+
+
 class treematcher(basematcher):
     """Match glob patterns with negative pattern support.
     Have a smarter 'visitdir' implementation.

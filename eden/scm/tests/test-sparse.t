@@ -515,3 +515,25 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   excluded
   excludednomanifest
   
+  $ cat >> $HGRCPATH << EOF
+  > [sparse]
+  > largecheckouthint=False
+  > EOF
+
+Verify regular expressions are no longer supported
+  $ newremoterepo rerepo
+  $ enable sparse
+
+  $ echo a > show
+  $ echo x > hide
+  $ cat >> sparse.profile <<EOF
+  > [include]
+  > re:s.ow
+  > EOF
+  $ hg ci -Aqm 'initial'
+  $ hg sparse include re:sh.w
+  abort: treematcher does not support regular expressions or relpath matchers: ['.hg*', 're:sh.w']
+  [255]
+  $ hg sparse enable sparse.profile
+  abort: treematcher does not support regular expressions or relpath matchers: ['.hg*', 're:s.ow']
+  [255]

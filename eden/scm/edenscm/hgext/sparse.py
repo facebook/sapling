@@ -1222,17 +1222,9 @@ def _wraprepo(ui, repo):
             for rev in revs:
                 try:
                     config = self.getsparsepatterns(rev, rawconfig=rawconfig)
-                    includes, excludes = config.toincludeexclude()
 
-                    if includes or excludes:
-                        matcher = matchmod.match(
-                            self.root,
-                            "",
-                            [],
-                            include=includes,
-                            exclude=excludes,
-                            default="relpath",
-                        )
+                    if config.rules:
+                        matcher = matchmod.rulesmatch(self.root, "", config.rules)
                         matchers.append(matcher)
                     else:
                         isalways = True
