@@ -801,17 +801,36 @@ def _setupdiff(ui):
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
-class SparseConfig(object):
+class RawSparseConfig(object):
+    """Represents a raw, unexpanded sparse config file"""
+
     path = attr.ib()
     includes = attr.ib(convert=frozenset)
     excludes = attr.ib(convert=frozenset)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
-    def __iter__(self):
-        # The metadata field is deliberately not included
-        for field in (self.includes, self.excludes, self.profiles):
-            yield field
+    def toincludeexclude(self):
+        # A later commit will change this implementation and make use of the
+        # toincludeexclude abstraction.
+        return self.includes, self.excludes
+
+
+@attr.s(frozen=True, slots=True, cmp=False)
+class SparseConfig(object):
+    """Represents the full sparse config as seen by the user, including config
+    rules and profile rules."""
+
+    path = attr.ib()
+    includes = attr.ib(convert=frozenset)
+    excludes = attr.ib(convert=frozenset)
+    profiles = attr.ib(convert=tuple)
+    metadata = attr.ib(default=attr.Factory(dict))
+
+    def toincludeexclude(self):
+        # A later commit will change this implementation and make use of the
+        # toincludeexclude abstraction.
+        return self.includes, self.excludes
 
     # Return whether self and other_config are effectively equivalent.
     # In particular, don't compare path or metadata.
@@ -821,6 +840,17 @@ class SparseConfig(object):
             and self.excludes == other_config.excludes
             and self.profiles == other_config.profiles
         )
+
+
+@attr.s(frozen=True, slots=True, cmp=False)
+class SparseProfile(object):
+    """Represents a single sparse profile, with subprofiles expanded."""
+
+    path = attr.ib()
+    includes = attr.ib(convert=frozenset)
+    excludes = attr.ib(convert=frozenset)
+    profiles = attr.ib(convert=tuple)
+    metadata = attr.ib(default=attr.Factory(dict))
 
 
 def _wraprepo(ui, repo):
@@ -928,9 +958,9 @@ def _wraprepo(ui, repo):
             metadata = {
                 key: "\n".join(value).strip() for key, value in metadata.items()
             }
-            return SparseConfig(filename, includes, excludes, profiles, metadata)
+            return RawSparseConfig(filename, includes, excludes, profiles, metadata)
 
-        def getsparsepatterns(self, rev, config=None):
+        def getsparsepatterns(self, rev, rawconfig=None):
             """Produce the full sparse config for a revision as a SparseConfig
 
             This includes all patterns from included profiles, transitively.
@@ -943,54 +973,37 @@ def _wraprepo(ui, repo):
                 raise error.Abort(_("cannot parse sparse patterns from working copy"))
 
             repo = self
-            if config is None:
+            if rawconfig is None:
                 if not self.localvfs.exists("sparse"):
                     self._warnfullcheckout()
                     return SparseConfig(None, set(), set(), [])
 
                 raw = self.localvfs.readutf8("sparse")
-                config = self.readsparseconfig(
+                rawconfig = self.readsparseconfig(
                     raw, filename=self.localvfs.join("sparse")
+                )
+            elif not isinstance(rawconfig, RawSparseConfig):
+                raise error.ProgrammingError(
+                    "getsparsepatterns.rawconfig must "
+                    "be a RawSparseConfig, not: %s" % rawconfig
                 )
 
             # create copies, as these datastructures are updated further on
             includes, excludes, profiles = (
-                set(config.includes),
-                set(config.excludes),
-                list(config.profiles),
+                set(rawconfig.includes),
+                set(rawconfig.excludes),
+                set(rawconfig.profiles),
             )
 
             ctx = repo[rev]
-            if profiles:
-                visited = set()
-                while profiles:
-                    profile = profiles.pop()
-                    if profile in visited:
-                        continue
-                    visited.add(profile)
 
-                    try:
-                        raw = self.getrawprofile(profile, ctx.hex())
-                    except error.ManifestLookupError:
-                        msg = (
-                            "warning: sparse profile '%s' not found "
-                            "in rev %s - ignoring it\n" % (profile, ctx)
-                        )
-                        # experimental config: sparse.missingwarning
-                        if self.ui.configbool("sparse", "missingwarning"):
-                            self.ui.warn(msg)
-                        else:
-                            self.ui.debug(msg)
-                        continue
-                    pincludes, pexcludes, subprofs = self.readsparseconfig(
-                        raw, filename=profile
-                    )
-                    includes.update(pincludes)
-                    excludes.update(pexcludes)
-                    for subprofile in subprofs:
-                        profiles.append(subprofile)
-
-                profiles = visited
+            for name in rawconfig.profiles:
+                profile = self.readsparseprofile(rev, name)
+                if profile is not None:
+                    includes.update(profile.includes)
+                    excludes.update(profile.excludes)
+                    for subprofile in profile.profiles:
+                        profiles.add(subprofile)
 
             if includes:
                 includes.add(".hg*")
@@ -999,8 +1012,43 @@ def _wraprepo(ui, repo):
                 self._warnfullcheckout()
 
             return SparseConfig(
-                "<aggregated from %s>".format(config.path), includes, excludes, profiles
+                "<aggregated from %s>".format(rawconfig.path),
+                includes,
+                excludes,
+                profiles,
+                rawconfig.metadata,
             )
+
+        def readsparseprofile(self, rev, name):
+            ctx = self[rev]
+            try:
+                raw = self.getrawprofile(name, ctx.hex())
+            except error.ManifestLookupError:
+                msg = (
+                    "warning: sparse profile '%s' not found "
+                    "in rev %s - ignoring it\n" % (name, ctx)
+                )
+                # experimental config: sparse.missingwarning
+                if self.ui.configbool("sparse", "missingwarning"):
+                    self.ui.warn(msg)
+                else:
+                    self.ui.debug(msg)
+                return None
+
+            rawconfig = self.readsparseconfig(raw, filename=name)
+
+            includes = set(rawconfig.includes)
+            excludes = set(rawconfig.excludes)
+            profiles = set(rawconfig.profiles)
+            for name in rawconfig.profiles:
+                profile = self.readsparseprofile(rev, name)
+                if profile is not None:
+                    includes.update(profile.includes)
+                    excludes.update(profile.excludes)
+                    for subprofile in profile.profiles:
+                        profiles.add(subprofile)
+
+            return SparseProfile(name, includes, excludes, profiles)
 
         def _warnfullcheckout(self):
             # Only warn once per command
@@ -1139,9 +1187,9 @@ def _wraprepo(ui, repo):
                 revs = [nullrev]
 
             includetemp = kwargs.get("includetemp", True)
-            config = kwargs.get("config")
+            rawconfig = kwargs.get("config")
             signature = self._sparsesignature(
-                includetemp=includetemp, config=config, revs=revs
+                includetemp=includetemp, config=rawconfig, revs=revs
             )
 
             key = "%s:%s" % (signature, ":".join([str(r) for r in revs]))
@@ -1154,7 +1202,8 @@ def _wraprepo(ui, repo):
             isalways = False
             for rev in revs:
                 try:
-                    includes, excludes, profiles = self.getsparsepatterns(rev, config)
+                    config = self.getsparsepatterns(rev, rawconfig=rawconfig)
+                    includes, excludes = config.toincludeexclude()
 
                     if includes or excludes:
                         matcher = matchmod.match(
@@ -1743,7 +1792,9 @@ def show(ui, repo, **opts):
     repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
     raw = repo.localvfs.readutf8("sparse")
-    include, exclude, profiles = list(map(set, repo.readsparseconfig(raw)))
+    rawconfig = repo.readsparseconfig(raw)
+    profiles = rawconfig.profiles
+    include, exclude = rawconfig.toincludeexclude()
 
     LOOKUP_SUCCESS, LOOKUP_NOT_FOUND = range(0, 2)
 
@@ -2093,8 +2144,8 @@ def _explainprofile(ui, repo, *profiles, **opts):
             ui.warn(_("The profile %s was not found\n") % p)
             exitcode = 255
             continue
-        profile = repo.readsparseconfig(raw, p)
-        configs.append(profile)
+        rawconfig = repo.readsparseconfig(raw, p)
+        configs.append(rawconfig)
 
     stats = _profilesizeinfo(ui, repo, *configs, rev=rev, collectsize=ui.verbose)
     filecount, totalsize = stats[None]
@@ -2171,8 +2222,14 @@ def _explainprofile(ui, repo, *profiles, **opts):
                     ("excludes", _("Exclusion rules")),
                 )
 
+                includes, excludes = profile.toincludeexclude()
                 for attrib, label in sections:
-                    section = getattr(profile, attrib)
+                    if attrib == "includes":
+                        section = includes
+                    elif attrib == "excludes":
+                        section = excludes
+                    else:
+                        section = getattr(profile, attrib)
                     if not section:
                         continue
                     lines += (minirst.subsection(label), "::\n\n")
@@ -2408,9 +2465,11 @@ def _config(
 
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.readutf8("sparse")
-            oldinclude, oldexclude, oldprofiles = list(
-                map(set, repo.readsparseconfig(raw))
-            )
+            rawconfig = repo.readsparseconfig(raw)
+            oldinclude, oldexclude = rawconfig.toincludeexclude()
+            oldinclude = set(oldinclude)
+            oldexclude = set(oldexclude)
+            oldprofiles = set(rawconfig.profiles)
         else:
             oldinclude = set()
             oldexclude = set()
@@ -2563,13 +2622,17 @@ def _import(ui, repo, files, opts, force=False):
         raw = ""
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.readutf8("sparse")
-        oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
+        orawconfig = repo.readsparseconfig(raw)
+        oincludes, oexcludes = orawconfig.toincludeexclude()
+        oprofiles = orawconfig.profiles
         includes, excludes, profiles = list(map(set, (oincludes, oexcludes, oprofiles)))
 
         # all active rules
         aincludes, aexcludes, aprofiles = set(), set(), set()
         for rev in revs:
-            rincludes, rexcludes, rprofiles = repo.getsparsepatterns(rev)
+            rsparseconfig = repo.getsparsepatterns(rev)
+            rprofiles = rsparseconfig.profiles
+            rincludes, rexcludes = rsparseconfig.toincludeexclude()
             aincludes.update(rincludes)
             aexcludes.update(rexcludes)
             aprofiles.update(rprofiles)
@@ -2579,12 +2642,14 @@ def _import(ui, repo, files, opts, force=False):
         changed = False
         for file in files:
             with util.posixfile(util.expandpath(file), "rb") as importfile:
-                iincludes, iexcludes, iprofiles = repo.readsparseconfig(
+                irawconfig = repo.readsparseconfig(
                     pycompat.decodeutf8(importfile.read()), filename=file
                 )
+                iincludes, iexcludes = irawconfig.toincludeexclude()
+                iprofiles = irawconfig.profiles
                 oldsize = len(includes) + len(excludes) + len(profiles)
-                includes.update(iincludes - aincludes)
-                excludes.update(iexcludes - aexcludes)
+                includes.update(set(iincludes) - aincludes)
+                excludes.update(set(iexcludes) - aexcludes)
                 profiles.update(set(iprofiles) - aprofiles)
                 if len(includes) + len(excludes) + len(profiles) > oldsize:
                     changed = True
@@ -2621,12 +2686,12 @@ def _clear(ui, repo, files, force=False):
         raw = ""
         if repo.localvfs.exists("sparse"):
             raw = repo.localvfs.readutf8("sparse")
-        includes, excludes, profiles = repo.readsparseconfig(raw)
+        rawconfig = repo.readsparseconfig(raw)
 
-        if includes or excludes:
+        if rawconfig.includes or rawconfig.excludes:
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
-            repo.writesparseconfig(set(), set(), profiles)
+            repo.writesparseconfig(set(), set(), rawconfig.profiles)
             _refresh(ui, repo, oldstatus, oldsparsematch, force)
 
 
