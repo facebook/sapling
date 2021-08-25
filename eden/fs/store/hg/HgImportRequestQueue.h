@@ -26,12 +26,12 @@ class HgImportRequestQueue {
   explicit HgImportRequestQueue(std::shared_ptr<ReloadableConfig> config)
       : config_(std::move(config)) {}
 
-  /*
+  /**
    * Puts an item into the queue.
    */
   void enqueue(HgImportRequest request);
 
-  /*
+  /**
    * Returns a list of requests from the queue. It returns an empty list while
    * the queue is being destructed. This function will block when there is no
    * item available in the queue.
@@ -42,6 +42,13 @@ class HgImportRequestQueue {
    */
   std::vector<std::shared_ptr<HgImportRequest>> dequeue();
 
+  /**
+   * Destroy the queue.
+   *
+   * Intended to be called in the destructor of the owner of the queue as
+   * subsequent enqueue will never be handled. Future dequeue calls will
+   * return an empty list.
+   */
   void stop();
 
   /* ====== De-duplication methods ====== */

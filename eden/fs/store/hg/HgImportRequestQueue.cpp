@@ -26,11 +26,6 @@ void HgImportRequestQueue::enqueue(HgImportRequest request) {
   {
     auto state = state_.lock();
 
-    if (!state->running) {
-      // if the queue is stopped, no need to enqueue
-      return;
-    }
-
     state->queue.emplace_back(
         std::make_shared<HgImportRequest>(std::move(request)));
     auto& requestPtr = state->queue.back();
