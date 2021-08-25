@@ -676,7 +676,7 @@ class FetchPredictiveProfileCmd(Subcmd):
                     "Predictive prefetch profiles have not been activated and "
                     "--if-active was specified. Skipping fetch."
                 )
-            return 1
+            return 0
 
         # If num_dirs is given, use the specified num_dirs. If num_dirs is not given
         # (args.num_dirs == 0), predictive fetch with default num dirs unless there
