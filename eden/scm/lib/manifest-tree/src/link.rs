@@ -219,6 +219,13 @@ impl DurableEntry {
         });
         result.as_ref().map_err(|e| format_err!("{:?}", e))
     }
+
+    pub fn get_links(&self) -> Option<Result<&BTreeMap<PathComponentBuf, Link>>> {
+        self.links
+            .get()
+            .as_ref()
+            .map(|result| result.as_ref().map_err(|e| format_err!("{:?}", e)))
+    }
 }
 
 // `PartialEq` can't be derived because `fallible::Error` does not implement `PartialEq`.
