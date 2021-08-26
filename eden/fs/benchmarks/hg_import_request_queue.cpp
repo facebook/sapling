@@ -23,7 +23,8 @@ Hash uniqueHash() {
   return Hash{bytes};
 }
 
-HgImportRequest makeBlobImportRequest(ImportPriority priority) {
+std::shared_ptr<HgImportRequest> makeBlobImportRequest(
+    ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = proxyHash.sha1();
@@ -38,7 +39,7 @@ void enqueue(benchmark::State& state) {
 
   auto queue = HgImportRequestQueue{edenConfig};
 
-  std::vector<HgImportRequest> requests;
+  std::vector<std::shared_ptr<HgImportRequest>> requests;
   requests.reserve(state.max_iterations);
   for (size_t i = 0; i < state.max_iterations; i++) {
     requests.emplace_back(makeBlobImportRequest(ImportPriority::kNormal()));

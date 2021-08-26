@@ -31,14 +31,16 @@ class HgImportRequestQueue {
    *
    * Return a future that will complete when the blob request completes.
    */
-  folly::Future<std::unique_ptr<Blob>> enqueueBlob(HgImportRequest request);
+  folly::Future<std::unique_ptr<Blob>> enqueueBlob(
+      std::shared_ptr<HgImportRequest> request);
 
   /**
    * Enqueue a tree request to the queue.
    *
    * Return a future that will complete when the blob request completes.
    */
-  folly::Future<std::unique_ptr<Tree>> enqueueTree(HgImportRequest request);
+  folly::Future<std::unique_ptr<Tree>> enqueueTree(
+      std::shared_ptr<HgImportRequest> request);
 
   /**
    * Enqueue a prefetch request to the queue
@@ -46,7 +48,8 @@ class HgImportRequestQueue {
    * Return a future that will complete when the prefetch request
    * completes.
    */
-  folly::Future<folly::Unit> enqueuePrefetch(HgImportRequest request);
+  folly::Future<folly::Unit> enqueuePrefetch(
+      std::shared_ptr<HgImportRequest> request);
 
   /**
    * Returns a list of requests from the queue. It returns an empty list while
@@ -122,7 +125,7 @@ class HgImportRequestQueue {
    * Puts an item into the queue.
    */
   template <typename Ret, typename ImportType = void>
-  folly::Future<Ret> enqueue(HgImportRequest&& request);
+  folly::Future<Ret> enqueue(std::shared_ptr<HgImportRequest> request);
 
   HgImportRequestQueue(HgImportRequestQueue&&) = delete;
   HgImportRequestQueue& operator=(HgImportRequestQueue&&) = delete;

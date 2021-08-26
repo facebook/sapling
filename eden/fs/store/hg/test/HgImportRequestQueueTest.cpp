@@ -46,7 +46,7 @@ Hash uniqueHash() {
   return Hash{bytes};
 }
 
-std::pair<Hash, HgImportRequest> makeBlobImportRequest(
+std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -57,7 +57,7 @@ std::pair<Hash, HgImportRequest> makeBlobImportRequest(
           hash, std::move(proxyHash), priority));
 }
 
-std::pair<Hash, HgImportRequest> makeBlobImportRequestWithHash(
+std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequestWithHash(
     ImportPriority priority,
     HgProxyHash proxyHash) {
   auto hash = proxyHash.sha1();
@@ -67,7 +67,7 @@ std::pair<Hash, HgImportRequest> makeBlobImportRequestWithHash(
           hash, std::move(proxyHash), priority));
 }
 
-std::pair<Hash, HgImportRequest> makeTreeImportRequest(
+std::pair<Hash, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};

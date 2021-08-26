@@ -21,28 +21,29 @@ void HgImportRequestQueue::stop() {
 }
 
 folly::Future<std::unique_ptr<Blob>> HgImportRequestQueue::enqueueBlob(
-    HgImportRequest request) {
+    std::shared_ptr<HgImportRequest> request) {
   return enqueue<std::unique_ptr<Blob>, HgImportRequest::BlobImport>(
       std::move(request));
 }
 
 folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
-    HgImportRequest request) {
+    std::shared_ptr<HgImportRequest> request) {
   return enqueue<std::unique_ptr<Tree>, HgImportRequest::TreeImport>(
       std::move(request));
 }
 
 folly::Future<folly::Unit> HgImportRequestQueue::enqueuePrefetch(
-    HgImportRequest request) {
+    std::shared_ptr<HgImportRequest> request) {
   return enqueue<folly::Unit>(std::move(request));
 }
 
 template <typename Ret, typename ImportType>
-folly::Future<Ret> HgImportRequestQueue::enqueue(HgImportRequest&& request) {
+folly::Future<Ret> HgImportRequestQueue::enqueue(
+    std::shared_ptr<HgImportRequest> request) {
   auto state = state_.lock();
 
   if constexpr (!std::is_same_v<ImportType, void>) {
-    const auto& proxyHash = request.getRequest<ImportType>()->proxyHash;
+    const auto& proxyHash = request->getRequest<ImportType>()->proxyHash;
 
     if (auto* existingRequestPtr =
             folly::get_ptr(state->requestTracker, proxyHash)) {
@@ -52,8 +53,8 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(HgImportRequest&& request) {
       auto [promise, future] = folly::makePromiseContract<Ret>();
       trackedImport->promises.emplace_back(std::move(promise));
 
-      if (existingRequest->getPriority() < request.getPriority()) {
-        existingRequest->setPriority(request.getPriority());
+      if (existingRequest->getPriority() < request->getPriority()) {
+        existingRequest->setPriority(request->getPriority());
 
         // Since the new request has a higher priority than the already present
         // one, we need to re-order the heap.
@@ -73,13 +74,12 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(HgImportRequest&& request) {
     }
   }
 
-  auto& inserted = state->queue.emplace_back(
-      std::make_shared<HgImportRequest>(std::move(request)));
-  auto promise = inserted->getPromise<Ret>();
+  state->queue.emplace_back(request);
+  auto promise = request->getPromise<Ret>();
 
   if constexpr (!std::is_same_v<ImportType, void>) {
-    const auto& proxyHash = inserted->getRequest<ImportType>()->proxyHash;
-    state->requestTracker.emplace(proxyHash, inserted);
+    const auto& proxyHash = request->getRequest<ImportType>()->proxyHash;
+    state->requestTracker.emplace(proxyHash, std::move(request));
   }
 
   std::push_heap(

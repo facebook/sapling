@@ -319,7 +319,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 
     auto request = HgImportRequest::makeTreeImportRequest(
         id, proxyHash, context.getPriority(), context.prefetchMetadata());
-    uint64_t unique = request.getUnique();
+    uint64_t unique = request->getUnique();
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
@@ -377,7 +377,7 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
 
     auto request = HgImportRequest::makeBlobImportRequest(
         id, proxyHash, context.getPriority());
-    auto unique = request.getUnique();
+    auto unique = request->getUnique();
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);

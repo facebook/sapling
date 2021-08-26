@@ -66,20 +66,39 @@ class HgImportRequest {
     std::vector<HgProxyHash> proxyHashes;
   };
 
-  static HgImportRequest makeBlobImportRequest(
+  /**
+   * Allocate a blob request.
+   */
+  static std::shared_ptr<HgImportRequest> makeBlobImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority);
 
-  static HgImportRequest makeTreeImportRequest(
+  /**
+   * Allocate a tree request.
+   */
+  static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority,
       bool prefetchMetadata);
 
-  static HgImportRequest makePrefetchRequest(
+  /**
+   * Allocate a prefetch request.
+   */
+  static std::shared_ptr<HgImportRequest> makePrefetchRequest(
       std::vector<HgProxyHash> hashes,
       ImportPriority priority);
+
+  /**
+   * Implementation detail of the make*Request functions from above. Do not use
+   * directly.
+   */
+  template <typename RequestType>
+  HgImportRequest(
+      RequestType request,
+      ImportPriority priority,
+      folly::Promise<typename RequestType::Response>&& promise);
 
   ~HgImportRequest() = default;
 
@@ -131,13 +150,9 @@ class HgImportRequest {
    * Implementation detail of the various make*Request functions.
    */
   template <typename Request, typename... Input>
-  static HgImportRequest makeRequest(ImportPriority priority, Input&&... input);
-
-  template <typename RequestType>
-  HgImportRequest(
-      RequestType request,
+  static std::shared_ptr<HgImportRequest> makeRequest(
       ImportPriority priority,
-      folly::Promise<typename RequestType::Response>&& promise);
+      Input&&... input);
 
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;

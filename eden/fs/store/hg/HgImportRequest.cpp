@@ -25,22 +25,22 @@ HgImportRequest::HgImportRequest(
       promise_(std::move(promise)) {}
 
 template <typename RequestType, typename... Input>
-HgImportRequest HgImportRequest::makeRequest(
+std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
     ImportPriority priority,
     Input&&... input) {
   auto promise = folly::Promise<typename RequestType::Response>{};
-  return HgImportRequest{
-      RequestType{std::forward<Input>(input)...}, priority, std::move(promise)};
+  return std::make_shared<HgImportRequest>(
+      RequestType{std::forward<Input>(input)...}, priority, std::move(promise));
 }
 
-HgImportRequest HgImportRequest::makeBlobImportRequest(
+std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
     ImportPriority priority) {
   return makeRequest<BlobImport>(priority, hash, std::move(proxyHash));
 }
 
-HgImportRequest HgImportRequest::makeTreeImportRequest(
+std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
     ImportPriority priority,
@@ -49,7 +49,7 @@ HgImportRequest HgImportRequest::makeTreeImportRequest(
       priority, hash, std::move(proxyHash), prefetchMetadata);
 }
 
-HgImportRequest HgImportRequest::makePrefetchRequest(
+std::shared_ptr<HgImportRequest> HgImportRequest::makePrefetchRequest(
     std::vector<HgProxyHash> hashes,
     ImportPriority priority) {
   return makeRequest<Prefetch>(priority, std::move(hashes));
