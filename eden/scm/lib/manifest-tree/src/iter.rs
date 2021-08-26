@@ -5,87 +5,147 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{btree_map, VecDeque};
+use std::collections::btree_map;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
+use std::time::Duration;
 
 use anyhow::{Error, Result};
+use futures::channel::mpsc::unbounded;
+use futures::{stream, StreamExt};
+use futures_batch::ChunksTimeoutStreamExt;
 
+use async_runtime::{RunStream, RunStreamOptions};
 use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
 use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
 
 use crate::{
-    link::{Durable, DurableEntry, Ephemeral, Leaf, Link},
+    link::{Durable, Ephemeral, Leaf, Link},
     store::InnerStore,
     TreeManifest,
 };
 
-pub struct BfsIter<'a, M: 'static + Matcher + Sync + Send> {
-    queue: VecDeque<(RepoPathBuf, &'a Link)>,
-    store: &'a InnerStore,
-    matcher: M,
+pub struct BfsIter {
+    iter: RunStream<Result<(RepoPathBuf, FsNodeMetadata)>>,
+    pending: Arc<AtomicU64>,
 }
 
-impl<'a, M: 'static + Matcher + Sync + Send> BfsIter<'a, M> {
-    pub fn new(tree: &'a TreeManifest, matcher: M) -> Self {
+impl BfsIter {
+    pub fn new<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Self {
+        let matcher = Arc::new(matcher);
+        let store1 = tree.store.clone();
+        let store2 = tree.store.clone();
+        let (sender, receiver) = unbounded();
+        let pending = Arc::new(AtomicU64::new(1));
+        sender
+            .unbounded_send((RepoPathBuf::new(), tree.root.thread_copy()))
+            .expect("unbounded send should always succeed");
+        let inner_pending = pending.clone();
+        let stream = receiver
+            .chunks_timeout(500, Duration::from_millis(1))
+            .map(move |chunk| {
+                let store = store1.clone();
+                async_runtime::spawn_blocking(move || {
+                    let keys: Vec<_> = chunk
+                        .iter()
+                        .filter_map(|(path, link)| {
+                            if let Durable(entry) = link.as_ref() {
+                                Some(Key::new(path.clone(), entry.hgid.clone()))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    let _ = store.prefetch(keys.clone());
+                    stream::iter(chunk.into_iter())
+                })
+            })
+            .buffer_unordered(10)
+            .map(|r| match r {
+                Ok(r) => r,
+                Err(e) => {
+                    // The child thread paniced.
+                    panic!("{:?}", e)
+                }
+            })
+            .flatten()
+            .chunks_timeout(200, Duration::from_millis(1))
+            .map(move |chunk| {
+                let pending = inner_pending.clone();
+                let store = store2.clone();
+                let matcher = matcher.clone();
+                let sender = sender.clone();
+                async_runtime::spawn_blocking(move || {
+                    let mut results = vec![];
+                    'outer: for item in chunk.into_iter() {
+                        let (path, link): (RepoPathBuf, Link) = item;
+                        let (children, hgid) = match link.as_ref() {
+                            Leaf(file_metadata) => {
+                                results.push(Ok((path, FsNodeMetadata::File(*file_metadata))));
+                                continue;
+                            }
+                            Ephemeral(children) => (children, None),
+                            Durable(entry) => loop {
+                                match entry.materialize_links(&store, &path) {
+                                    Ok(children) => break (children, Some(entry.hgid)),
+                                    Err(e) => {
+                                        results.push(Err(e));
+                                        continue 'outer;
+                                    }
+                                };
+                            },
+                        };
+                        for (component, link) in children.iter() {
+                            let mut child_path = path.clone();
+                            child_path.push(component.as_ref());
+                            match link.matches(&matcher, &child_path) {
+                                Ok(true) => {
+                                    pending.fetch_add(1, Ordering::SeqCst);
+                                    sender
+                                        .unbounded_send((child_path, link.thread_copy()))
+                                        .expect("unbounded_send should always succeed")
+                                }
+                                Ok(false) => {}
+                                Err(e) => {
+                                    results.push(Err(e));
+                                    continue 'outer;
+                                }
+                            };
+                        }
+                        results.push(Ok((path, FsNodeMetadata::Directory(hgid))));
+                    }
+                    stream::iter(results.into_iter())
+                })
+            })
+            .buffer_unordered(10)
+            .map(|r| match r {
+                Ok(r) => r,
+                Err(e) => {
+                    // The child thread paniced.
+                    panic!("{:?}", e)
+                }
+            })
+            .flatten();
+
         BfsIter {
-            queue: vec![(RepoPathBuf::new(), &tree.root)].into(),
-            store: &tree.store,
-            matcher,
+            iter: RunStreamOptions::new().buffer_size(5000).run(stream),
+            pending,
         }
-    }
-
-    fn prefetch(&self, extra: (&RepoPath, &DurableEntry)) -> Result<()> {
-        let mut keys = vec![Key::new(extra.0.to_owned(), extra.1.hgid)];
-        let mut entries = vec![extra];
-        for (path, link) in self.queue.iter() {
-            if let Durable(durable_entry) = link.as_ref() {
-                keys.push(Key::new(path.clone(), durable_entry.hgid));
-                entries.push((path, durable_entry));
-            }
-        }
-        self.store.prefetch(keys)?;
-        for (path, entry) in entries {
-            entry.materialize_links(self.store, path)?;
-        }
-        Ok(())
     }
 }
 
-impl<'a, M: 'static + Matcher + Sync + Send> Iterator for BfsIter<'a, M> {
+impl Iterator for BfsIter {
     type Item = Result<(RepoPathBuf, FsNodeMetadata)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (path, children, hgid) = match self.queue.pop_front() {
-            None => return None,
-            Some((path, link)) => match link.as_ref() {
-                Leaf(file_metadata) => {
-                    return Some(Ok((path, FsNodeMetadata::File(*file_metadata))));
-                }
-                Ephemeral(children) => (path, children, None),
-                Durable(entry) => loop {
-                    match entry.get_links() {
-                        None => match self.prefetch((&path, &entry)) {
-                            Ok(_) => {}
-                            Err(e) => return Some(Err(e)),
-                        },
-                        Some(children_result) => match children_result {
-                            Ok(children) => break (path, children, Some(entry.hgid)),
-                            Err(e) => return Some(Err(e)),
-                        },
-                    };
-                },
-            },
-        };
-        for (component, link) in children.iter() {
-            let mut child_path = path.clone();
-            child_path.push(component.as_ref());
-            match link.matches(&self.matcher, &child_path) {
-                Ok(true) => self.queue.push_back((child_path, &link)),
-                Ok(false) => {}
-                Err(e) => return Some(Err(e)),
-            }
+        // If the previous value was 0, then we've already yielded all the values.
+        if self.pending.fetch_sub(1, Ordering::SeqCst) == 0 {
+            return None;
         }
-        Some(Ok((path, FsNodeMetadata::Directory(hgid))))
+        self.iter.next()
     }
 }
 
