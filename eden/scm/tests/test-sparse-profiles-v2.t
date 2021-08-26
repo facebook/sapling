@@ -30,14 +30,12 @@ test sparse
   $ hg sparse enable main.sparse
 
 # Verify inc/exc/incfile.txt is not included.
-  $ ls -R
-  .:
+  $ ls -R | grep -v :
   base.sparse
   file.txt
   inc
   main.sparse
   
-  ./inc:
   file.txt
 
 # Upgrade main.sparse to v2
@@ -51,18 +49,15 @@ test sparse
   $ hg commit -qm "v2 sparse"
 
 # Verify inc/exc/incfile.txt is now included.
-  $ ls -R
-  .:
+  $ ls -R | grep -v :
   base.sparse
   file.txt
   inc
   main.sparse
   
-  ./inc:
   exc
   file.txt
   
-  ./inc/exc:
   incfile.txt
 
   $ hg debugsparseprofilev2 main.sparse
