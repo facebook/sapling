@@ -415,7 +415,6 @@ async fn run_and_check_if_lfs(
     let blob_repo = repo.blob_repo().clone();
     let mononoke_repo = MononokeRepo::new_from_parts(
         ctx.fb,
-        ctx.logger().clone(),
         Arc::new(repo),
         SqlStreamingCloneConfig {
             blobstore: blob_repo.get_blobstore(),

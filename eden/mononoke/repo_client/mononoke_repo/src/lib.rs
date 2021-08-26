@@ -30,20 +30,16 @@ use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
 use reverse_filler_queue::SqlReverseFillerQueue;
-use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::{
-    collections::{hash_map::DefaultHasher, HashSet},
+    collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
 use streaming_clone::SqlStreamingChunksFetcher;
 use warm_bookmarks_cache::WarmBookmarksCache;
-
-#[cfg(fbcode_build)]
-mod facebook;
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
@@ -58,8 +54,6 @@ pub struct MononokeRepo {
     bookmark_attrs: BookmarkAttrs,
     streaming_clone: SqlStreamingCloneConfig,
     mutable_counters: Arc<dyn MutableCounters>,
-    // Hostnames that always get lfs pointers.
-    lfs_rolled_out_hostnames: Arc<RwLock<HashSet<String>>>,
     // Reverse filler queue for recording accepted infinitepush bundles
     // This field is `None` if we don't want recording to happen
     maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
@@ -68,7 +62,6 @@ pub struct MononokeRepo {
 impl MononokeRepo {
     pub async fn new(
         fb: FacebookInit,
-        logger: Logger,
         repo: Arc<Repo>,
         mysql_options: &MysqlOptions,
         readonly_storage: ReadOnlyStorage,
@@ -117,7 +110,6 @@ impl MononokeRepo {
 
         Self::new_from_parts(
             fb,
-            logger,
             repo,
             streaming_clone,
             mutable_counters,
@@ -128,31 +120,11 @@ impl MononokeRepo {
 
     pub async fn new_from_parts(
         fb: FacebookInit,
-        logger: Logger,
         repo: Arc<Repo>,
         streaming_clone: SqlStreamingCloneConfig,
         mutable_counters: Arc<dyn MutableCounters>,
         maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
     ) -> Result<Self, Error> {
-        let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
-
-        if let Some(rollout_smc_tier) = repo.config().lfs.rollout_smc_tier.as_ref() {
-            #[cfg(fbcode_build)]
-            {
-                crate::facebook::spawn_smc_tier_fetcher(
-                    fb,
-                    &logger,
-                    lfs_rolled_out_hostnames.clone(),
-                    rollout_smc_tier.clone(),
-                )
-                .await;
-            }
-            #[cfg(not(fbcode_build))]
-            {
-                let _ = (fb, logger, rollout_smc_tier);
-            }
-        }
-
         // TODO: Update Metaconfig so we just have this in config:
         let bookmark_attrs = BookmarkAttrs::new(fb, repo.config().bookmarks.clone()).await?;
 
@@ -161,7 +133,6 @@ impl MononokeRepo {
             streaming_clone,
             mutable_counters,
             maybe_reverse_filler_queue,
-            lfs_rolled_out_hostnames,
             bookmark_attrs,
         })
     }
@@ -213,14 +184,9 @@ impl MononokeRepo {
 
         let allowed = match client_hostname {
             Some(client_hostname) => {
-                let rolled_out_hostnames = self.lfs_rolled_out_hostnames.read().unwrap();
-                if rolled_out_hostnames.contains(client_hostname) {
-                    true
-                } else {
-                    let mut hasher = DefaultHasher::new();
-                    client_hostname.hash(&mut hasher);
-                    hasher.finish() % 100 < percentage.into()
-                }
+                let mut hasher = DefaultHasher::new();
+                client_hostname.hash(&mut hasher);
+                hasher.finish() % 100 < percentage.into()
             }
             None => {
                 // Randomize in case source hostname is not set to avoid

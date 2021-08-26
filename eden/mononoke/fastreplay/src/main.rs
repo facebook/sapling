@@ -312,15 +312,10 @@ async fn bootstrap_repositories<'a>(
             let repo = Repo::new(&env, name.clone(), config)
                 .await
                 .context("Error opening Repo")?;
-            let repo = MononokeRepo::new(
-                fb,
-                logger.clone(),
-                Arc::new(repo),
-                &mysql_options,
-                readonly_storage.clone(),
-            )
-            .await
-            .context("Error opening MononokeRepo")?;
+            let repo =
+                MononokeRepo::new(fb, Arc::new(repo), &mysql_options, readonly_storage.clone())
+                    .await
+                    .context("Error opening MononokeRepo")?;
 
             let warmup = if no_cache_warmup {
                 None
