@@ -9,35 +9,48 @@ use std::fmt;
 use std::pin::Pin;
 
 use anyhow::{Context, Error};
-use futures::FutureExt;
+use edenapi_types::ToWire;
+use futures::{
+    stream::{self, StreamExt},
+    FutureExt,
+};
 use gotham::{
-    handler::HandlerFuture,
+    handler::{HandlerError, HandlerFuture},
     middleware::state::StateMiddleware,
     pipeline::{new_pipeline, single::single_pipeline},
     router::{
+        builder::RouterBuilder,
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
     state::{request_id, FromState, State},
 };
 use gotham_derive::StateData;
+use gotham_ext::{
+    error::{ErrorFormatter, HttpError},
+    response::build_response,
+};
+use hyper::{Body, Response};
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 
-use gotham_ext::{error::ErrorFormatter, response::build_response};
-
 use crate::context::ServerContext;
+use crate::middleware::RequestContext;
+use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
 
 mod bookmarks;
 mod clone;
 mod commit;
 mod complete_trees;
 mod files;
+mod handler;
 mod history;
 mod lookup;
 mod pull;
 mod repos;
 mod trees;
+
+pub(crate) use handler::{EdenApiHandler, PathExtractorWithRepo};
 
 /// Enum identifying the EdenAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
@@ -178,7 +191,6 @@ define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
 define_handler!(upload_trees_handler, trees::upload_trees);
 define_handler!(upload_hg_changesets_handler, commit::upload_hg_changesets);
-define_handler!(ephemeral_prepare_handler, commit::ephemeral_prepare);
 define_handler!(
     upload_bonsai_changeset_handler,
     commit::upload_bonsai_changeset
@@ -192,6 +204,56 @@ fn health_handler(state: State) -> (State, &'static str) {
     }
 }
 
+async fn handler_wrapper<Handler: EdenApiHandler>(
+    mut state: State,
+) -> Result<(State, Response<Body>), (State, HandlerError)> {
+    let res = async {
+        let path = Handler::PathExtractor::take_from(&mut state);
+        let query_string = Handler::QueryStringExtractor::take_from(&mut state);
+
+        state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
+
+        let rctx = RequestContext::borrow_from(&mut state).clone();
+        let sctx = ServerContext::borrow_from(&mut state);
+
+        let repo = get_repo(&sctx, &rctx, path.repo(), None).await?;
+        let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
+        match Handler::handler(repo, path, query_string, request).await {
+            Ok(responses) => Ok(cbor_stream_filtered_errors(
+                stream::iter(responses).map(|r| r.map(ToWire::to_wire)),
+            )),
+            Err(err) => Err(HttpError::e500(err)),
+        }
+    }
+    .await;
+
+    build_response(res, state, &JsonErrorFomatter)
+}
+
+// We use a struct here (rather than just a global function) just for the convenience
+// of writing `Handlers::setup::<MyHandler>(route)`
+// instead of `setup_handler::<MyHandler, _, _>(route)`, to make things clearer.
+struct Handlers<C, P> {
+    _phantom: (std::marker::PhantomData<C>, std::marker::PhantomData<P>),
+}
+
+impl<C, P> Handlers<C, P>
+where
+    C: gotham::pipeline::chain::PipelineHandleChain<P> + Copy + Send + Sync + 'static,
+    P: std::panic::RefUnwindSafe + Send + Sync + 'static,
+{
+    fn setup<Handler: EdenApiHandler>(route: &mut RouterBuilder<C, P>) {
+        route
+            .request(
+                vec![Handler::HTTP_METHOD],
+                &format!("/:repo{}", Handler::ENDPOINT),
+            )
+            .with_path_extractor::<Handler::PathExtractor>()
+            .with_query_string_extractor::<Handler::QueryStringExtractor>()
+            .to_async(handler_wrapper::<Handler>);
+    }
+}
+
 pub fn build_router(ctx: ServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
     let (chain, pipelines) = single_pipeline(pipeline);
@@ -199,6 +261,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
     gotham_build_router(chain, pipelines, |route| {
         route.get("/health_check").to(health_handler);
         route.get("/repos").to(repos_handler);
+        Handlers::setup::<commit::EphemeralPrepareHandler>(route);
         route
             .post("/:repo/files")
             .with_path_extractor::<files::FileParams>()
@@ -268,10 +331,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/upload/changesets")
             .with_path_extractor::<commit::UploadHgChangesetsParams>()
             .to(upload_hg_changesets_handler);
-        route
-            .post("/:repo/ephemeral/prepare")
-            .with_path_extractor::<commit::EphemeralPrepareParams>()
-            .to(ephemeral_prepare_handler);
         route
             .post("/:repo/upload/changeset/bonsai")
             .with_path_extractor::<commit::UploadBonsaiChangesetParams>()

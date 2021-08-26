@@ -6,6 +6,7 @@
  */
 
 use anyhow::{anyhow, Context, Error};
+use async_trait::async_trait;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -15,8 +16,8 @@ use std::collections::BTreeMap;
 use edenapi_types::{
     wire::{
         WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
-        WireCommitLocationToHashRequestBatch, WireEphemeralPrepareRequest,
-        WireUploadBonsaiChangesetRequest, WireUploadHgChangesetsRequest,
+        WireCommitLocationToHashRequestBatch, WireUploadBonsaiChangesetRequest,
+        WireUploadHgChangesetsRequest,
     },
     AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
@@ -38,7 +39,7 @@ use crate::utils::{
     parse_wire_request, to_create_change, to_mononoke_path, to_mutation_entry, to_revlog_changeset,
 };
 
-use super::{EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
@@ -77,11 +78,6 @@ pub struct UploadBonsaiChangesetParams {
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadBonsaiChangesetQueryString {
     bubble_id: Option<std::num::NonZeroU64>,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct EphemeralPrepareParams {
-    repo: String,
 }
 
 pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -408,34 +404,26 @@ pub async fn upload_bonsai_changeset(state: &mut State) -> Result<impl TryIntoRe
     ))
 }
 
-async fn ephemeral_prepare_impl(
-    repo: HgRepoContext,
-    _request: EphemeralPrepareRequest,
-) -> Result<EphemeralPrepareResponse, Error> {
-    Ok(EphemeralPrepareResponse {
-        bubble_id: repo.create_bubble().await?.bubble_id().into(),
-    })
-}
+/// Creates an ephemeral bubble and return its id
+pub struct EphemeralPrepareHandler;
 
-// Creates an ephemeral bubble and return its id
-pub async fn ephemeral_prepare(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = EphemeralPrepareParams::take_from(state);
+#[async_trait]
+impl EdenApiHandler for EphemeralPrepareHandler {
+    type Request = EphemeralPrepareRequest;
+    type Response = EphemeralPrepareResponse;
 
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::EphemeralPrepare,
-    ));
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::EphemeralPrepare;
+    const ENDPOINT: &'static str = "/ephemeral/prepare";
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
-
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireEphemeralPrepareRequest>(state).await?;
-    let response = ephemeral_prepare_impl(repo, request)
-        .await
-        .map_err(HttpError::e500)?;
-
-    Ok(cbor_stream_filtered_errors(stream::once(async move {
-        Ok(response.to_wire())
-    })))
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        _request: EphemeralPrepareRequest,
+    ) -> anyhow::Result<Vec<anyhow::Result<EphemeralPrepareResponse>>> {
+        Ok(vec![Ok(EphemeralPrepareResponse {
+            bubble_id: repo.create_bubble().await?.bubble_id().into(),
+        })])
+    }
 }

@@ -217,6 +217,15 @@ mod tests {
         }
     }
 
+    impl ToApi for CustomWireResult {
+        type Api = CustomResult;
+        type Error = std::convert::Infallible;
+
+        fn to_api(self) -> Result<Self::Api, Self::Error> {
+            unimplemented!()
+        }
+    }
+
     #[tokio::test]
     async fn test_monitor_err() {
         let results = vec![

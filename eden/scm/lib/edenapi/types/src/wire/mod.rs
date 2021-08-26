@@ -137,15 +137,15 @@ impl From<RepoPathParseError> for WireToApiConversionError {
 
 /// Convert from an EdenAPI API type to Wire type
 pub trait ToWire: Sized {
-    type Wire: serde::Serialize + serde::de::DeserializeOwned;
+    type Wire: ToApi<Api = Self> + serde::Serialize + serde::de::DeserializeOwned;
 
     fn to_wire(self) -> Self::Wire;
 }
 
 /// Covnert from an EdenAPI Wire type to API type
-pub trait ToApi: Sized {
-    type Api;
-    type Error: Into<WireToApiConversionError>;
+pub trait ToApi: Send + Sized {
+    type Api: ToWire<Wire = Self>;
+    type Error: Into<WireToApiConversionError> + Send + Sync + std::error::Error;
 
     fn to_api(self) -> Result<Self::Api, Self::Error>;
 }

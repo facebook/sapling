@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![feature(associated_type_defaults)]
 
 mod context;
 mod errors;
