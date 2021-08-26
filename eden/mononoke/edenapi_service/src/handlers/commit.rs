@@ -390,7 +390,7 @@ impl EdenApiHandler for EphemeralPrepareHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         _request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<EphemeralPrepareResponse>>> {
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
                 bubble_id: repo.create_bubble().await?.bubble_id().into(),

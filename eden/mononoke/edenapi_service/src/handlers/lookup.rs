@@ -6,33 +6,23 @@
  */
 
 use anyhow::{bail, Error};
-use futures::{stream, StreamExt};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
-use serde::Deserialize;
+use async_trait::async_trait;
+use futures::{
+    stream::{self, BoxStream},
+    StreamExt,
+};
 
 use edenapi_types::{
-    wire::{ToWire, WireBatch, WireLookupRequest},
-    AnyId, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
+    AnyId, Batch, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
     UploadTokenMetadata,
 };
 use ephemeral_blobstore::BubbleId;
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataId, HgRepoContext};
 
-use crate::context::ServerContext;
-use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
-
-use super::{EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod};
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct LookupParams {
-    repo: String,
-}
 
 /// Check if the item is present already and generate a token if it is.
 /// Return None if the item has to be uploaded
@@ -118,26 +108,31 @@ async fn check_request_item(
 }
 
 /// Process lookup (batched) request.
-pub async fn lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = LookupParams::take_from(state);
+pub struct LookupHandler;
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Lookup));
+#[async_trait]
+impl EdenApiHandler for LookupHandler {
+    type Request = Batch<LookupRequest>;
+    type Response = LookupResponse;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::Lookup;
+    const ENDPOINT: &'static str = "/lookup";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireBatch<WireLookupRequest>>(state).await?;
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let tokens = request
+            .batch
+            .into_iter()
+            .enumerate()
+            .map(move |(i, item)| check_request_item(repo.clone(), item, i));
 
-    let tokens = request
-        .batch
-        .into_iter()
-        .enumerate()
-        .map(move |(i, item)| check_request_item(repo.clone(), item, i));
-
-    Ok(cbor_stream_filtered_errors(
-        stream::iter(tokens)
+        Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_LOOKUPS_PER_REQUEST)
-            .map(|r| r.map(|v| v.to_wire())),
-    ))
+            .boxed())
+    }
 }

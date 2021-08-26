@@ -8,80 +8,65 @@
 use std::convert::TryFrom;
 
 use anyhow::{Context, Error};
+use async_trait::async_trait;
 use futures::{
     stream::{self, BoxStream},
-    Stream, StreamExt, TryStreamExt,
+    StreamExt, TryStreamExt,
 };
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
-use serde::Deserialize;
 
 use cloned::cloned;
-use edenapi_types::{
-    wire::WireHistoryRequest, HistoryRequest, HistoryResponseChunk, ToWire, WireHistoryEntry,
-};
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use edenapi_types::{HistoryRequest, HistoryResponseChunk, WireHistoryEntry};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
-use crate::context::ServerContext;
 use crate::errors::ErrorKind;
-use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request, to_mpath};
+use crate::utils::to_mpath;
 
-use super::{EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod};
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 10;
 
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct HistoryParams {
-    repo: String,
-}
+pub struct HistoryHandler;
 
-pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = HistoryParams::take_from(state);
+#[async_trait]
+impl EdenApiHandler for HistoryHandler {
+    type Request = HistoryRequest;
+    type Response = HistoryResponseChunk;
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::History));
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::History;
+    const ENDPOINT: &'static str = "/history";
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let HistoryRequest { keys, length } = request;
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireHistoryRequest>(state).await?;
+        let fetches = keys.into_iter().map(move |key| {
+            // Construct a Future that buffers the full history for this key.
+            // This should be OK since the history entries are relatively
+            // small, so unless the history is extremely long, the total
+            // amount of buffered data should be reasonable.
+            cloned!(repo);
+            async move {
+                let path = key.path.clone();
+                let stream = fetch_history_for_key(repo, key, length).await?;
+                let entries = stream.try_collect().await?;
+                Ok(HistoryResponseChunk { path, entries })
+            }
+        });
 
-    Ok(cbor_stream_filtered_errors(
-        fetch_history(repo, request)
-            .await
-            .map(|r| r.map(|e| e.to_wire())),
-    ))
-}
-
-/// Fetch history for all of the requested files concurrently.
-async fn fetch_history(
-    repo: HgRepoContext,
-    request: HistoryRequest,
-) -> impl Stream<Item = Result<HistoryResponseChunk, Error>> {
-    let HistoryRequest { keys, length } = request;
-
-    let fetches = keys.into_iter().map(move |key| {
-        // Construct a Future that buffers the full history for this key.
-        // This should be OK since the history entries are relatively
-        // small, so unless the history is extremely long, the total
-        // amount of buffered data should be reasonable.
-        cloned!(repo);
-        async move {
-            let path = key.path.clone();
-            let stream = fetch_history_for_key(repo, key, length).await?;
-            let entries = stream.try_collect().await?;
-            Ok(HistoryResponseChunk { path, entries })
-        }
-    });
-
-    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+        Ok(stream::iter(fetches)
+            .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+            .boxed())
+    }
 }
 
 async fn fetch_history_for_key(

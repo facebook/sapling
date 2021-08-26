@@ -8,8 +8,12 @@
 use std::num::NonZeroU64;
 
 use anyhow::{format_err, Context, Error};
+use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{stream, Stream, StreamExt, TryStreamExt};
+use futures::{
+    stream::{self, BoxStream},
+    Stream, StreamExt, TryStreamExt,
+};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::Body;
@@ -17,10 +21,9 @@ use serde::Deserialize;
 use std::str::FromStr;
 
 use edenapi_types::{
-    wire::{ToWire, WireBatch, WireFileRequest, WireUploadHgFilenodeRequest},
-    AnyFileContentId, AnyId, FileAttributes, FileAuxData, FileContent, FileContentTokenMetadata,
-    FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata,
-    UploadTokensResponse,
+    wire::ToWire, AnyFileContentId, AnyId, Batch, FileAttributes, FileAuxData, FileContent,
+    FileContentTokenMetadata, FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest,
+    UploadToken, UploadTokenMetadata, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -33,19 +36,14 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
+use crate::utils::{cbor_stream_filtered_errors, get_repo};
 
-use super::{EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
 
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct FileParams {
-    repo: String,
-}
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadFileParams {
@@ -60,53 +58,46 @@ pub struct UploadFileQueryString {
     content_size: u64,
 }
 
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct UploadHgFilenodesParams {
-    repo: String,
-}
-
 /// Fetch the content of the files requested by the client.
-pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = FileParams::take_from(state);
+pub struct FilesHandler;
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Files));
+#[async_trait]
+impl EdenApiHandler for FilesHandler {
+    type Request = FileRequest;
+    type Response = FileEntry;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::Files;
+    const ENDPOINT: &'static str = "/files";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::GetpackFiles).await?;
-    let request = parse_wire_request::<WireFileRequest>(state).await?;
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let ctx = repo.ctx().clone();
 
-    Ok(cbor_stream_filtered_errors(
-        fetch_all_files(repo, request).map(|r| r.map(|v| v.to_wire())),
-    ))
-}
+        let reqs = request
+            .keys
+            .into_iter()
+            .map(|key| FileSpec {
+                key,
+                attrs: FileAttributes {
+                    content: true,
+                    aux_data: false,
+                },
+            })
+            .chain(request.reqs.into_iter());
+        let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
 
-/// Fetch files for all of the requested keys concurrently.
-fn fetch_all_files(
-    repo: HgRepoContext,
-    request: FileRequest,
-) -> impl Stream<Item = Result<FileEntry, Error>> {
-    let ctx = repo.ctx().clone();
-
-    let reqs = request
-        .keys
-        .into_iter()
-        .map(|key| FileSpec {
-            key,
-            attrs: FileAttributes {
-                content: true,
-                aux_data: false,
-            },
-        })
-        .chain(request.reqs.into_iter());
-    let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
-
-    stream::iter(fetches)
-        .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
-        .inspect_ok(move |_| {
-            ctx.session().bump_load(Metric::GetpackFiles, 1.0);
-        })
+        Ok(stream::iter(fetches)
+            .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
+            .inspect_ok(move |_| {
+                ctx.session().bump_load(Metric::GetpackFiles, 1.0);
+            })
+            .boxed())
+    }
 }
 
 /// Fetch requested file for a single key.
@@ -296,29 +287,30 @@ async fn store_hg_filenode(
 }
 
 /// Upload list of hg filenodes requested by the client (batch request).
-pub async fn upload_hg_filenodes(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = UploadHgFilenodesParams::take_from(state);
+pub struct UploadHgFilenodesHandler;
 
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::UploadHgFilenodes,
-    ));
+#[async_trait]
+impl EdenApiHandler for UploadHgFilenodesHandler {
+    type Request = Batch<UploadHgFilenodeRequest>;
+    type Response = UploadTokensResponse;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadHgFilenodes;
+    const ENDPOINT: &'static str = "/upload/filenodes";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireBatch<WireUploadHgFilenodeRequest>>(state).await?;
-
-    let tokens = request
-        .batch
-        .into_iter()
-        .enumerate()
-        .map(move |(i, item)| store_hg_filenode(repo.clone(), item, i));
-
-    Ok(cbor_stream_filtered_errors(
-        stream::iter(tokens)
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let tokens = request
+            .batch
+            .into_iter()
+            .enumerate()
+            .map(move |(i, item)| store_hg_filenode(repo.clone(), item, i));
+        Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST)
-            .map(|r| r.map(|v| v.to_wire())),
-    ))
+            .boxed())
+    }
 }

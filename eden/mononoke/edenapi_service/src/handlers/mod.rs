@@ -171,20 +171,14 @@ macro_rules! define_handler {
 }
 
 define_handler!(repos_handler, repos::repos);
-define_handler!(files_handler, files::files);
 define_handler!(trees_handler, trees::trees);
 define_handler!(complete_trees_handler, complete_trees::complete_trees);
-define_handler!(history_handler, history::history);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
-define_handler!(bookmarks_handler, bookmarks::bookmarks);
-define_handler!(lookup_handler, lookup::lookup);
 define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
-define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
-define_handler!(upload_trees_handler, trees::upload_trees);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -256,10 +250,12 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::UploadBonsaiChangesetHandler>(route);
         Handlers::setup::<commit::LocationToHashHandler>(route);
         Handlers::setup::<commit::HashLookupHandler>(route);
-        route
-            .post("/:repo/files")
-            .with_path_extractor::<files::FileParams>()
-            .to(files_handler);
+        Handlers::setup::<files::FilesHandler>(route);
+        Handlers::setup::<files::UploadHgFilenodesHandler>(route);
+        Handlers::setup::<bookmarks::BookmarksHandler>(route);
+        Handlers::setup::<history::HistoryHandler>(route);
+        Handlers::setup::<lookup::LookupHandler>(route);
+        Handlers::setup::<trees::UploadTreesHandler>(route);
         route
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()
@@ -268,10 +264,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/trees/complete")
             .with_path_extractor::<complete_trees::CompleteTreesParams>()
             .to(complete_trees_handler);
-        route
-            .post("/:repo/history")
-            .with_path_extractor::<history::HistoryParams>()
-            .to(history_handler);
         route
             .post("/:repo/commit/hash_to_location")
             .with_path_extractor::<commit::HashToLocationParams>()
@@ -293,25 +285,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<clone::CloneParams>()
             .to(full_idmap_clone_handler);
         route
-            .post("/:repo/bookmarks")
-            .with_path_extractor::<bookmarks::BookmarksParams>()
-            .to(bookmarks_handler);
-        route
-            .post("/:repo/lookup")
-            .with_path_extractor::<lookup::LookupParams>()
-            .to(lookup_handler);
-        route
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
             .with_query_string_extractor::<files::UploadFileQueryString>()
             .to(upload_file_handler);
-        route
-            .post("/:repo/upload/filenodes")
-            .with_path_extractor::<files::UploadHgFilenodesParams>()
-            .to(upload_hg_filenodes_handler);
-        route
-            .post("/:repo/upload/trees")
-            .with_path_extractor::<trees::UploadTreesParams>()
-            .to(upload_trees_handler);
     })
 }

@@ -6,16 +6,19 @@
  */
 
 use anyhow::{Context, Error};
+use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
+use futures::{
+    stream::{self, BoxStream},
+    Future, FutureExt, Stream, StreamExt, TryStreamExt,
+};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::WireBatch, wire::WireTreeRequest, wire::WireUploadTreeRequest, AnyId, EdenApiServerError,
-    FileMetadata, ToWire, TreeChildEntry, TreeEntry, TreeRequest, UploadToken, UploadTreeRequest,
-    UploadTreeResponse,
+    wire::WireTreeRequest, AnyId, Batch, EdenApiServerError, FileMetadata, TreeChildEntry,
+    TreeEntry, TreeRequest, UploadToken, UploadTreeRequest, UploadTreeResponse,
 };
 use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
@@ -29,9 +32,9 @@ use types::{Key, RepoPathBuf};
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_wire_request};
+use crate::utils::{custom_cbor_stream, get_repo, parse_wire_request};
 
-use super::{EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
@@ -40,11 +43,6 @@ const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 100;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct TreeParams {
-    repo: String,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct UploadTreesParams {
     repo: String,
 }
 
@@ -199,26 +197,31 @@ async fn store_tree(
 }
 
 /// Upload list of trees requested by the client (batch request).
-pub async fn upload_trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = UploadTreesParams::take_from(state);
+pub struct UploadTreesHandler;
 
-    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::UploadTrees));
+#[async_trait]
+impl EdenApiHandler for UploadTreesHandler {
+    type Request = Batch<UploadTreeRequest>;
+    type Response = UploadTreeResponse;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadTrees;
+    const ENDPOINT: &'static str = "/upload/trees";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireBatch<WireUploadTreeRequest>>(state).await?;
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let tokens = request
+            .batch
+            .into_iter()
+            .enumerate()
+            .map(move |(i, item)| store_tree(repo.clone(), item, i));
 
-    let tokens = request
-        .batch
-        .into_iter()
-        .enumerate()
-        .map(move |(i, item)| store_tree(repo.clone(), item, i));
-
-    Ok(cbor_stream_filtered_errors(
-        stream::iter(tokens)
+        Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
-            .map(|r| r.map(|v| v.to_wire())),
-    ))
+            .boxed())
+    }
 }
