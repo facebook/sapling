@@ -179,7 +179,7 @@ py_class!(pub class treemanifest |py| {
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&extract_matcher(py, pymatcher)?) {
+        for entry in tree.files(extract_matcher(py, pymatcher)?) {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
         }
@@ -190,7 +190,7 @@ py_class!(pub class treemanifest |py| {
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.dirs(&extract_matcher(py, pymatcher)?) {
+        for entry in tree.dirs(extract_matcher(py, pymatcher)?) {
             let dir = entry.map_pyerr(py)?;
             result.push((
                 dir.path.into(),
@@ -217,7 +217,7 @@ py_class!(pub class treemanifest |py| {
         let mut lines = Vec::new();
         let tree = self.underlying(py).read();
         let matcher: Arc<dyn Matcher + Send + Sync> = extract_option_matcher(py, matcher)?;
-        for entry in tree.files(&matcher) {
+        for entry in tree.files(matcher) {
             let file = entry.map_pyerr(py)?;
             lines.push(format!(
                 "{}\0{}{}\n",
@@ -362,7 +362,7 @@ py_class!(pub class treemanifest |py| {
     def keys(&self) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&AlwaysMatcher::new()) {
+        for entry in tree.files(AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(file.path.into());
         }
@@ -383,7 +383,7 @@ py_class!(pub class treemanifest |py| {
     def __iter__(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&AlwaysMatcher::new()) {
+        for entry in tree.files(AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(PyPathBuf::from(file.path));
         }
@@ -397,7 +397,7 @@ py_class!(pub class treemanifest |py| {
     def items(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&AlwaysMatcher::new()) {
+        for entry in tree.files(AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             let tuple = (
                 PyPathBuf::from(file.path),
@@ -411,7 +411,7 @@ py_class!(pub class treemanifest |py| {
     def iterkeys(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py).read();
-        for entry in tree.files(&AlwaysMatcher::new()) {
+        for entry in tree.files(AlwaysMatcher::new()) {
             let file = entry.map_pyerr(py)?;
             result.push(PyPathBuf::from(file.path));
         }
@@ -547,7 +547,7 @@ fn insert(
         }
         manifest_tree::InsertErrorCause::DirectoryExistsForPath => {
             let files: Vec<File> = tree
-                .files(&TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
+                .files(TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
                 .collect::<Result<_>>()?;
             for file in files {
                 tree.remove(&file.path)?;

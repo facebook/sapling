@@ -75,17 +75,17 @@ pub trait Manifest {
     }
 
     /// Returns an iterator over all the files in the Manifest that satisfy the given Matcher.
-    fn files<'a, M: Matcher>(
+    fn files<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a>;
 
     /// Returns an iterator over all directories found in the paths of the files in the Manifest
     /// that satisfy the given Matcher.
     // TODO: add default implementation
-    fn dirs<'a, M: Matcher>(
+    fn dirs<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a>;
 
     /// Retuns an iterator of all the differences in files between two Manifest instances of the
