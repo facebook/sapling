@@ -7,21 +7,20 @@
 
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
-use futures::{stream, Stream, StreamExt, TryStreamExt};
+use futures::{
+    stream::{self, BoxStream},
+    Stream, StreamExt, TryStreamExt,
+};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
 use edenapi_types::{
-    wire::{
-        WireBatch, WireCommitHashLookupRequest, WireCommitHashToLocationRequestBatch,
-        WireCommitLocationToHashRequestBatch, WireUploadBonsaiChangesetRequest,
-        WireUploadHgChangesetsRequest,
-    },
-    AnyId, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, ToWire,
+    wire::WireCommitHashToLocationRequestBatch, AnyId, Batch, CommitHashLookupRequest,
+    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
     UploadBonsaiChangesetRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
@@ -46,11 +45,6 @@ const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct LocationToHashParams {
-    repo: String,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HashToLocationParams {
     repo: String,
 }
@@ -61,47 +55,52 @@ pub struct RevlogDataParams {
 }
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct HashLookupParams {
-    repo: String,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct UploadHgChangesetsParams {
-    repo: String,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct UploadBonsaiChangesetParams {
-    repo: String,
-}
-
-#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadBonsaiChangesetQueryString {
     bubble_id: Option<std::num::NonZeroU64>,
 }
 
-pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = LocationToHashParams::take_from(state);
+pub struct LocationToHashHandler;
 
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::CommitLocationToHash,
-    ));
+async fn translate_location(
+    hg_repo_ctx: HgRepoContext,
+    request: CommitLocationToHashRequest,
+) -> Result<CommitLocationToHashResponse, Error> {
+    let location = request.location.map_descendant(|x| x.into());
+    let ancestors: Vec<HgChangesetId> = hg_repo_ctx
+        .location_to_hg_changeset_id(location, request.count)
+        .await
+        .context(ErrorKind::CommitLocationToHashRequestFailed)?;
+    let hgids = ancestors.into_iter().map(|x| x.into()).collect();
+    let answer = CommitLocationToHashResponse {
+        location: request.location,
+        count: request.count,
+        hgids,
+    };
+    Ok(answer)
+}
 
-    let sctx = ServerContext::borrow_from(state);
-    let rctx = RequestContext::borrow_from(state).clone();
+#[async_trait]
+impl EdenApiHandler for LocationToHashHandler {
+    type Request = CommitLocationToHashRequestBatch;
+    type Response = CommitLocationToHashResponse;
 
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitLocationToHash;
+    const ENDPOINT: &'static str = "/commit/location_to_hash";
 
-    let batch = parse_wire_request::<WireCommitLocationToHashRequestBatch>(state).await?;
-    let hgid_list = batch
-        .requests
-        .into_iter()
-        .map(move |location| translate_location(hg_repo_ctx.clone(), location));
-    let response = stream::iter(hgid_list)
-        .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
-        .map_ok(|response| response.to_wire());
-    Ok(cbor_stream_filtered_errors(response))
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        let hgid_list = request
+            .requests
+            .into_iter()
+            .map(move |location| translate_location(repo.clone(), location));
+        let response = stream::iter(hgid_list).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
+        Ok(response.boxed())
+    }
 }
 
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -195,56 +194,6 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     Ok(cbor_stream_filtered_errors(response))
 }
 
-pub async fn hash_lookup(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    use CommitHashLookupRequest::*;
-    let params = HashLookupParams::take_from(state);
-
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::CommitHashLookup,
-    ));
-
-    let sctx = ServerContext::borrow_from(state);
-    let rctx = RequestContext::borrow_from(state).clone();
-
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
-
-    let batch_request = parse_wire_request::<WireBatch<WireCommitHashLookupRequest>>(state).await?;
-    let stream = stream::iter(batch_request.batch.into_iter()).then(move |request| {
-        let hg_repo_ctx = hg_repo_ctx.clone();
-        async move {
-            let changesets = match request {
-                InclusiveRange(low, high) => {
-                    hg_repo_ctx.get_hg_in_range(low.into(), high.into()).await?
-                }
-            };
-            let hgids = changesets.into_iter().map(|x| x.into()).collect();
-            let response = CommitHashLookupResponse { request, hgids };
-            Ok(response.to_wire())
-        }
-    });
-
-    Ok(cbor_stream_filtered_errors(stream))
-}
-
-async fn translate_location(
-    hg_repo_ctx: HgRepoContext,
-    request: CommitLocationToHashRequest,
-) -> Result<CommitLocationToHashResponse, Error> {
-    let location = request.location.map_descendant(|x| x.into());
-    let ancestors: Vec<HgChangesetId> = hg_repo_ctx
-        .location_to_hg_changeset_id(location, request.count)
-        .await
-        .context(ErrorKind::CommitLocationToHashRequestFailed)?;
-    let hgids = ancestors.into_iter().map(|x| x.into()).collect();
-    let answer = CommitLocationToHashResponse {
-        location: request.location,
-        count: request.count,
-        hgids,
-    };
-    Ok(answer)
-}
-
 async fn commit_revlog_data(
     hg_repo_ctx: HgRepoContext,
     hg_id: HgId,
@@ -258,150 +207,170 @@ async fn commit_revlog_data(
     Ok(answer)
 }
 
-/// Store list of HgChangesets
-async fn store_hg_changesets(
-    repo: HgRepoContext,
-    request: UploadHgChangesetsRequest,
-) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
-    let changesets = request.changesets;
-    let mutations = request.mutations;
-    let indexes = changesets
-        .iter()
-        .enumerate()
-        .map(|(index, cs)| (cs.node_id.clone(), index))
-        .collect::<BTreeMap<_, _>>();
-    let changesets_data = changesets
-        .into_iter()
-        .map(|changeset| {
-            Ok((
-                HgChangesetId::new(HgNodeHash::from(changeset.node_id)),
-                to_revlog_changeset(changeset.changeset_content)?,
-            ))
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
+pub struct HashLookupHandler;
 
-    let mutation_data = mutations
-        .into_iter()
-        .map(to_mutation_entry)
-        .collect::<Result<Vec<_>, Error>>()?;
+#[async_trait]
+impl EdenApiHandler for HashLookupHandler {
+    type Request = Batch<CommitHashLookupRequest>;
+    type Response = CommitHashLookupResponse;
 
-    let results = repo
-        .store_hg_changesets(changesets_data, mutation_data)
-        .await?
-        .into_iter()
-        .map(|r| {
-            r.map(|(hg_cs_id, _bonsai_cs_id)| {
-                let hgid = HgId::from(hg_cs_id.into_nodehash());
-                UploadTokensResponse {
-                    index: indexes.get(&hgid).cloned().unwrap(), // always present
-                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitHashLookup;
+    const ENDPOINT: &'static str = "/commit/hash_lookup";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+        use CommitHashLookupRequest::*;
+        Ok(stream::iter(request.batch.into_iter())
+            .then(move |request| {
+                let hg_repo_ctx = repo.clone();
+                async move {
+                    let changesets = match request {
+                        InclusiveRange(low, high) => {
+                            hg_repo_ctx.get_hg_in_range(low.into(), high.into()).await?
+                        }
+                    };
+                    let hgids = changesets.into_iter().map(|x| x.into()).collect();
+                    let response = CommitHashLookupResponse { request, hgids };
+                    Ok(response)
                 }
             })
-            .map_err(Error::from)
-        })
-        .collect();
-
-    Ok(results)
+            .boxed())
+    }
 }
 
 /// Upload list of HgChangesets requested by the client
-pub async fn upload_hg_changesets(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = UploadHgChangesetsParams::take_from(state);
+pub struct UploadHgChangesetsHandler;
 
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::UploadHgChangesets,
-    ));
+#[async_trait]
+impl EdenApiHandler for UploadHgChangesetsHandler {
+    type Request = UploadHgChangesetsRequest;
+    type Response = UploadTokensResponse;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadHgChangesets;
+    const ENDPOINT: &'static str = "/upload/changesets";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireUploadHgChangesetsRequest>(state).await?;
-    let responses = store_hg_changesets(repo, request)
-        .await
-        .map_err(HttpError::e500)?;
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<UploadTokensResponse>>> {
+        let changesets = request.changesets;
+        let mutations = request.mutations;
+        let indexes = changesets
+            .iter()
+            .enumerate()
+            .map(|(index, cs)| (cs.node_id.clone(), index))
+            .collect::<BTreeMap<_, _>>();
+        let changesets_data = changesets
+            .into_iter()
+            .map(|changeset| {
+                Ok((
+                    HgChangesetId::new(HgNodeHash::from(changeset.node_id)),
+                    to_revlog_changeset(changeset.changeset_content)?,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
 
-    Ok(cbor_stream_filtered_errors(
-        stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
-    ))
-}
-/// Store list of HgChangesets
-async fn upload_bonsai_changeset_impl(
-    repo: HgRepoContext,
-    request: UploadBonsaiChangesetRequest,
-    bubble_id: Option<BubbleId>,
-) -> Result<Vec<Result<UploadTokensResponse, Error>>, Error> {
-    let cs = request.changeset;
-    let repo_write = repo.clone().write().await?;
-    let repo = &repo;
-    let parents = stream::iter(cs.hg_parents)
-        .then(|hgid| async move {
-            repo.get_bonsai_from_hg(hgid.into())
-                .await?
-                .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
-        })
-        .try_collect()
-        .await?;
-    let cs_id = repo_write
-        .create_changeset(
-            parents,
-            cs.author,
-            DateTime::from_timestamp(cs.time, cs.tz)?.into(),
-            None,
-            None,
-            cs.message,
-            cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
-            cs.file_changes
-                .into_iter()
-                .map(|(path, fc)| {
-                    let create_change = to_create_change(fc, bubble_id)
-                        .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                    Ok((to_mononoke_path(path)?, create_change))
+        let mutation_data = mutations
+            .into_iter()
+            .map(to_mutation_entry)
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        let results = repo
+            .store_hg_changesets(changesets_data, mutation_data)
+            .await?
+            .into_iter()
+            .map(move |r| {
+                r.map(|(hg_cs_id, _bonsai_cs_id)| {
+                    let hgid = HgId::from(hg_cs_id.into_nodehash());
+                    UploadTokensResponse {
+                        index: indexes.get(&hgid).cloned().unwrap(), // always present
+                        token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
+                    }
                 })
-                .collect::<anyhow::Result<_>>()?,
-            match bubble_id {
-                Some(id) => Some(repo.open_bubble(id).await?),
-                None => None,
-            }
-            .as_ref(),
-        )
-        .await
-        .with_context(|| anyhow!("When creating bonsai changeset"))?
-        .id();
+                .map_err(Error::from)
+            });
 
-    Ok(vec![Ok(UploadTokensResponse {
-        index: 0,
-        token: UploadToken::new_fake_token(
-            AnyId::BonsaiChangesetId(cs_id.into()),
-            bubble_id.map(Into::into),
-        ),
-    })])
+        Ok(stream::iter(results.into_iter()).boxed())
+    }
 }
 
 /// Upload list of bonsai changesets requested by the client
-pub async fn upload_bonsai_changeset(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    let params = UploadBonsaiChangesetParams::take_from(state);
-    let query_string = UploadBonsaiChangesetQueryString::take_from(state);
+pub struct UploadBonsaiChangesetHandler;
 
-    state.put(HandlerInfo::new(
-        &params.repo,
-        EdenApiMethod::UploadBonsaiChangeset,
-    ));
+#[async_trait]
+impl EdenApiHandler for UploadBonsaiChangesetHandler {
+    type QueryStringExtractor = UploadBonsaiChangesetQueryString;
+    type Request = UploadBonsaiChangesetRequest;
+    type Response = UploadTokensResponse;
 
-    let rctx = RequestContext::borrow_from(state).clone();
-    let sctx = ServerContext::borrow_from(state);
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::UploadBonsaiChangeset;
+    const ENDPOINT: &'static str = "/upload/changeset/bonsai";
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
-    let request = parse_wire_request::<WireUploadBonsaiChangesetRequest>(state).await?;
-    let responses =
-        upload_bonsai_changeset_impl(repo, request, query_string.bubble_id.map(BubbleId::new))
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<UploadTokensResponse>>> {
+        let bubble_id = query.bubble_id.map(BubbleId::new);
+        let cs = request.changeset;
+        let repo_write = repo.clone().write().await?;
+        let repo = &repo;
+        let parents = stream::iter(cs.hg_parents)
+            .then(|hgid| async move {
+                repo.get_bonsai_from_hg(hgid.into())
+                    .await?
+                    .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
+            })
+            .try_collect()
+            .await?;
+        let cs_id = repo_write
+            .create_changeset(
+                parents,
+                cs.author,
+                DateTime::from_timestamp(cs.time, cs.tz)?.into(),
+                None,
+                None,
+                cs.message,
+                cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+                cs.file_changes
+                    .into_iter()
+                    .map(|(path, fc)| {
+                        let create_change = to_create_change(fc, bubble_id)
+                            .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                        Ok((to_mononoke_path(path)?, create_change))
+                    })
+                    .collect::<anyhow::Result<_>>()?,
+                match bubble_id {
+                    Some(id) => Some(repo.open_bubble(id).await?),
+                    None => None,
+                }
+                .as_ref(),
+            )
             .await
-            .map_err(HttpError::e500)?;
+            .with_context(|| anyhow!("When creating bonsai changeset"))?
+            .id();
 
-    Ok(cbor_stream_filtered_errors(
-        stream::iter(responses).map(|r| r.map(|v| v.to_wire())),
-    ))
+        Ok(stream::once(async move {
+            Ok(UploadTokensResponse {
+                index: 0,
+                token: UploadToken::new_fake_token(
+                    AnyId::BonsaiChangesetId(cs_id.into()),
+                    bubble_id.map(Into::into),
+                ),
+            })
+        })
+        .boxed())
+    }
 }
 
 /// Creates an ephemeral bubble and return its id
@@ -420,10 +389,13 @@ impl EdenApiHandler for EphemeralPrepareHandler {
         repo: HgRepoContext,
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
-        _request: EphemeralPrepareRequest,
-    ) -> anyhow::Result<Vec<anyhow::Result<EphemeralPrepareResponse>>> {
-        Ok(vec![Ok(EphemeralPrepareResponse {
-            bubble_id: repo.create_bubble().await?.bubble_id().into(),
-        })])
+        _request: Self::Request,
+    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<EphemeralPrepareResponse>>> {
+        Ok(stream::once(async move {
+            Ok(EphemeralPrepareResponse {
+                bubble_id: repo.create_bubble().await?.bubble_id().into(),
+            })
+        })
+        .boxed())
     }
 }

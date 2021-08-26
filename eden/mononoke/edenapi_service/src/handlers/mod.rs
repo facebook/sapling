@@ -10,10 +10,7 @@ use std::pin::Pin;
 
 use anyhow::{Context, Error};
 use edenapi_types::ToWire;
-use futures::{
-    stream::{self, StreamExt},
-    FutureExt,
-};
+use futures::{stream::TryStreamExt, FutureExt};
 use gotham::{
     handler::{HandlerError, HandlerFuture},
     middleware::state::StateMiddleware,
@@ -178,10 +175,8 @@ define_handler!(files_handler, files::files);
 define_handler!(trees_handler, trees::trees);
 define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
-define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
-define_handler!(commit_hash_lookup_handler, commit::hash_lookup);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 define_handler!(bookmarks_handler, bookmarks::bookmarks);
@@ -190,11 +185,6 @@ define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 define_handler!(upload_hg_filenodes_handler, files::upload_hg_filenodes);
 define_handler!(upload_trees_handler, trees::upload_trees);
-define_handler!(upload_hg_changesets_handler, commit::upload_hg_changesets);
-define_handler!(
-    upload_bonsai_changeset_handler,
-    commit::upload_bonsai_changeset
-);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -220,7 +210,7 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
         let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
         match Handler::handler(repo, path, query_string, request).await {
             Ok(responses) => Ok(cbor_stream_filtered_errors(
-                stream::iter(responses).map(|r| r.map(ToWire::to_wire)),
+                responses.map_ok(ToWire::to_wire),
             )),
             Err(err) => Err(HttpError::e500(err)),
         }
@@ -262,6 +252,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
         route.get("/health_check").to(health_handler);
         route.get("/repos").to(repos_handler);
         Handlers::setup::<commit::EphemeralPrepareHandler>(route);
+        Handlers::setup::<commit::UploadHgChangesetsHandler>(route);
+        Handlers::setup::<commit::UploadBonsaiChangesetHandler>(route);
+        Handlers::setup::<commit::LocationToHashHandler>(route);
+        Handlers::setup::<commit::HashLookupHandler>(route);
         route
             .post("/:repo/files")
             .with_path_extractor::<files::FileParams>()
@@ -279,10 +273,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<history::HistoryParams>()
             .to(history_handler);
         route
-            .post("/:repo/commit/location_to_hash")
-            .with_path_extractor::<commit::LocationToHashParams>()
-            .to(commit_location_to_hash_handler);
-        route
             .post("/:repo/commit/hash_to_location")
             .with_path_extractor::<commit::HashToLocationParams>()
             .to(commit_hash_to_location_handler);
@@ -290,10 +280,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()
             .to(commit_revlog_data_handler);
-        route
-            .post("/:repo/commit/hash_lookup")
-            .with_path_extractor::<commit::HashLookupParams>()
-            .to(commit_hash_lookup_handler);
         route
             .post("/:repo/clone")
             .with_path_extractor::<clone::CloneParams>()
@@ -327,14 +313,5 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/upload/trees")
             .with_path_extractor::<trees::UploadTreesParams>()
             .to(upload_trees_handler);
-        route
-            .post("/:repo/upload/changesets")
-            .with_path_extractor::<commit::UploadHgChangesetsParams>()
-            .to(upload_hg_changesets_handler);
-        route
-            .post("/:repo/upload/changeset/bonsai")
-            .with_path_extractor::<commit::UploadBonsaiChangesetParams>()
-            .with_query_string_extractor::<commit::UploadBonsaiChangesetQueryString>()
-            .to(upload_bonsai_changeset_handler);
     })
 }

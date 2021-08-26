@@ -9,6 +9,7 @@ use super::EdenApiMethod;
 use anyhow::Result;
 use async_trait::async_trait;
 use edenapi_types::ToWire;
+use futures::stream::BoxStream;
 use gotham::extractor::{PathExtractor, QueryStringExtractor};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::body::Body;
@@ -49,5 +50,5 @@ pub trait EdenApiHandler: 'static {
         path: Self::PathExtractor,
         query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> Result<Vec<Result<Self::Response>>>;
+    ) -> Result<BoxStream<'async_trait, Result<Self::Response>>>;
 }
