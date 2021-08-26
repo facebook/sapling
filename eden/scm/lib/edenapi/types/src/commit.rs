@@ -10,11 +10,12 @@ use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
+use std::num::NonZeroU64;
 
 use dag_types::Location;
 use types::{hgid::HgId, Parents, RepoPathBuf};
 
-use crate::{FileType, ServerError, UploadToken};
+use crate::{BonsaiChangesetId, FileType, ServerError, UploadToken};
 
 /// Given a graph location, return `count` hashes following first parent links.
 ///
@@ -305,6 +306,18 @@ pub struct SnapshotRawData {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FetchSnapshotRequest {
+    pub cs_id: BonsaiChangesetId,
+    pub bubble_id: NonZeroU64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FetchSnapshotResponse {
+    pub hg_parents: Parents,
+    pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadSnapshotResponse {
     pub changeset_token: UploadToken,
 }
@@ -314,7 +327,7 @@ pub struct EphemeralPrepareRequest {}
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareResponse {
-    pub bubble_id: std::num::NonZeroU64,
+    pub bubble_id: NonZeroU64,
 }
 
 #[cfg(any(test, feature = "for-tests"))]

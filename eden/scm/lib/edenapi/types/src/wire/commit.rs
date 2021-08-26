@@ -8,6 +8,7 @@
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
+use std::num::NonZeroU64;
 
 use dag_types::Location;
 use types::HgId;
@@ -16,13 +17,13 @@ use crate::commit::{
     BonsaiChangesetContent, BonsaiExtra, BonsaiFileChange, CommitHashLookupRequest,
     CommitHashLookupResponse, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, HgChangesetContent,
-    HgMutationEntryContent, UploadBonsaiChangesetRequest, UploadHgChangeset,
-    UploadHgChangesetsRequest,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, FetchSnapshotRequest,
+    FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
+    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
 };
 use crate::wire::{
-    is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents, WireRepoPathBuf, WireResult,
-    WireToApiConversionError, WireUploadToken,
+    anyid::WireBonsaiChangesetId, is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents,
+    WireRepoPathBuf, WireResult, WireToApiConversionError, WireUploadToken,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -799,7 +800,7 @@ pub struct WireEphemeralPrepareRequest {}
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireEphemeralPrepareResponse {
     #[serde(rename = "1")]
-    pub bubble_id: Option<std::num::NonZeroU64>,
+    pub bubble_id: Option<NonZeroU64>,
 }
 
 impl ToWire for EphemeralPrepareRequest {
@@ -853,6 +854,68 @@ impl ToApi for WireEphemeralPrepareResponse {
 impl Arbitrary for WireEphemeralPrepareResponse {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         EphemeralPrepareResponse::arbitrary(g).to_wire()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireFetchSnapshotRequest {
+    #[serde(rename = "1")]
+    pub cs_id: WireBonsaiChangesetId,
+    #[serde(rename = "2")]
+    pub bubble_id: NonZeroU64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct WireFetchSnapshotResponse {
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    pub hg_parents: WireParents,
+    #[serde(rename = "2")]
+    pub file_changes: Vec<(WireRepoPathBuf, WireBonsaiFileChange)>,
+}
+
+impl ToWire for FetchSnapshotRequest {
+    type Wire = WireFetchSnapshotRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFetchSnapshotRequest {
+            cs_id: self.cs_id.to_wire(),
+            bubble_id: self.bubble_id,
+        }
+    }
+}
+
+impl ToApi for WireFetchSnapshotRequest {
+    type Api = FetchSnapshotRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FetchSnapshotRequest {
+            cs_id: self.cs_id.to_api()?,
+            bubble_id: self.bubble_id,
+        })
+    }
+}
+
+impl ToWire for FetchSnapshotResponse {
+    type Wire = WireFetchSnapshotResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        WireFetchSnapshotResponse {
+            hg_parents: self.hg_parents.to_wire(),
+            file_changes: self.file_changes.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireFetchSnapshotResponse {
+    type Api = FetchSnapshotResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(FetchSnapshotResponse {
+            hg_parents: self.hg_parents.to_api()?,
+            file_changes: self.file_changes.to_api()?,
+        })
     }
 }
 

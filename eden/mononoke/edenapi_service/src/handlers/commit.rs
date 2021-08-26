@@ -12,27 +12,32 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 use std::collections::BTreeMap;
+use std::iter::FromIterator;
+use std::num::NonZeroU64;
 
+use blobstore::Loadable;
 use edenapi_types::{
-    wire::WireCommitHashToLocationRequestBatch, AnyId, Batch, CommitHashLookupRequest,
-    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    UploadBonsaiChangesetRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
+    wire::WireCommitHashToLocationRequestBatch, AnyFileContentId, AnyId, Batch, BonsaiFileChange,
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitRevlogData, CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
+    UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
-use mononoke_types::DateTime;
-use types::HgId;
+use mononoke_types::{ChangesetId, DateTime, FileChange};
+use types::{HgId, Parents};
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
     cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
-    parse_wire_request, to_create_change, to_mononoke_path, to_mutation_entry, to_revlog_changeset,
+    parse_wire_request, to_create_change, to_hg_path, to_mononoke_path, to_mutation_entry,
+    to_revlog_changeset,
 };
 
 use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
@@ -53,7 +58,7 @@ pub struct RevlogDataParams {
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadBonsaiChangesetQueryString {
-    bubble_id: Option<std::num::NonZeroU64>,
+    bubble_id: Option<NonZeroU64>,
 }
 
 pub struct LocationToHashHandler;
@@ -367,6 +372,82 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
             })
         })
         .boxed())
+    }
+}
+
+/// Get information about a snapshot changeset
+pub struct FetchSnapshotHandler;
+
+#[async_trait]
+impl EdenApiHandler for FetchSnapshotHandler {
+    type Request = FetchSnapshotRequest;
+    type Response = FetchSnapshotResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::FetchSnapshot;
+    const ENDPOINT: &'static str = "/snapshot";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = &repo;
+        let blobstore = repo
+            .bubble_blobstore(Some(BubbleId::new(request.bubble_id)))
+            .await?;
+        let cs = ChangesetId::from(request.cs_id)
+            .load(repo.ctx(), &blobstore)
+            .await?
+            .into_mut();
+        let response = FetchSnapshotResponse {
+            hg_parents: Parents::from_iter(
+                stream::iter(
+                    cs.parents
+                        .into_iter()
+                        .map(|cs_id| repo.get_hg_from_bonsai(cs_id)),
+                )
+                .buffered(2)
+                .try_collect::<Vec<_>>()
+                .await?
+                .into_iter()
+                .map(|id| id.into()),
+            )
+            .into(),
+            file_changes: cs
+                .file_changes
+                .into_iter()
+                .map(|(path, fc)| {
+                    Ok((
+                        to_hg_path(&path.clone().into())?,
+                        match fc {
+                            FileChange::Deletion => BonsaiFileChange::Deletion,
+                            FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,
+                            FileChange::Change(tc) => BonsaiFileChange::Change {
+                                upload_token: UploadToken::new_fake_token(
+                                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(
+                                        tc.content_id().into(),
+                                    )),
+                                    Some(request.bubble_id),
+                                ),
+                                file_type: tc.file_type().into(),
+                            },
+                            FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
+                                upload_token: UploadToken::new_fake_token(
+                                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(
+                                        uc.content_id().into(),
+                                    )),
+                                    Some(request.bubble_id),
+                                ),
+                                file_type: uc.file_type().into(),
+                            },
+                        },
+                    ))
+                })
+                .collect::<Result<_, Error>>()?,
+        };
+        Ok(stream::once(async move { Ok(response) }).boxed())
     }
 }
 

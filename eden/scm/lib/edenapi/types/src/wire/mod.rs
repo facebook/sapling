@@ -74,9 +74,9 @@ pub use crate::wire::{
         WireCommitHashToLocationRequestBatch, WireCommitHashToLocationResponse, WireCommitLocation,
         WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse, WireEphemeralPrepareRequest,
-        WireEphemeralPrepareResponse, WireExtra, WireHgChangesetContent,
-        WireHgMutationEntryContent, WireUploadBonsaiChangesetRequest, WireUploadHgChangeset,
-        WireUploadHgChangesetsRequest,
+        WireEphemeralPrepareResponse, WireExtra, WireFetchSnapshotRequest,
+        WireFetchSnapshotResponse, WireHgChangesetContent, WireHgMutationEntryContent,
+        WireUploadBonsaiChangesetRequest, WireUploadHgChangeset, WireUploadHgChangesetsRequest,
     },
     complete_tree::WireCompleteTreeRequest,
     errors::{WireError, WireResult},
@@ -142,7 +142,7 @@ pub trait ToWire: Sized {
     fn to_wire(self) -> Self::Wire;
 }
 
-/// Covnert from an EdenAPI Wire type to API type
+/// Convert from an EdenAPI Wire type to API type
 pub trait ToApi: Send + Sized {
     type Api: ToWire<Wire = Self>;
     type Error: Into<WireToApiConversionError> + Send + Sync + std::error::Error;
@@ -172,6 +172,27 @@ impl<W: ToApi> ToApi for Vec<W> {
             out.push(v.to_api()?)
         }
         Ok(out)
+    }
+}
+
+// if needed, use macros to implement for more tuples
+impl<A: ToWire, B: ToWire> ToWire for (A, B) {
+    type Wire = (<A as ToWire>::Wire, <B as ToWire>::Wire);
+
+    fn to_wire(self) -> Self::Wire {
+        (self.0.to_wire(), self.1.to_wire())
+    }
+}
+
+impl<A: ToApi, B: ToApi> ToApi for (A, B) {
+    type Api = (<A as ToApi>::Api, <B as ToApi>::Api);
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok((
+            self.0.to_api().map_err(|e| e.into())?,
+            self.1.to_api().map_err(|e| e.into())?,
+        ))
     }
 }
 

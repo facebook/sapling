@@ -50,9 +50,9 @@ pub use crate::commit::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
     CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
-    HgChangesetContent, HgMutationEntryContent, SnapshotRawData, SnapshotRawFiles,
-    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadSnapshotResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
+    SnapshotRawData, SnapshotRawFiles, UploadBonsaiChangesetRequest, UploadHgChangeset,
+    UploadHgChangesetsRequest, UploadSnapshotResponse,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;

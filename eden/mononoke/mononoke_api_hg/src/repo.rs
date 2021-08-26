@@ -89,7 +89,7 @@ impl HgRepoContext {
     }
 
     /// Get blobstore. If bubble id is present, this is the ephemeral blobstore
-    async fn bubble_blobstore(
+    pub async fn bubble_blobstore(
         &self,
         bubble_id: Option<BubbleId>,
     ) -> Result<RepoBlobstore, MononokeError> {
@@ -489,6 +489,16 @@ impl HgRepoContext {
                     }
                 }
             })
+    }
+
+    pub async fn get_hg_from_bonsai(
+        &self,
+        cs_id: ChangesetId,
+    ) -> Result<HgChangesetId, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .get_hg_from_bonsai_changeset(self.ctx().clone(), cs_id)
+            .await?)
     }
 
     /// This provides the same functionality as

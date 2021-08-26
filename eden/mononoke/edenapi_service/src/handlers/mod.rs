@@ -72,6 +72,7 @@ pub enum EdenApiMethod {
     Bookmarks,
     PullFastForwardMaster,
     EphemeralPrepare,
+    FetchSnapshot,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -96,6 +97,7 @@ impl fmt::Display for EdenApiMethod {
             Self::UploadHgChangesets => "upload_hg_changesets",
             Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
             Self::EphemeralPrepare => "ephemeral_prepare",
+            Self::FetchSnapshot => "fetch_snapshot",
         };
         write!(f, "{}", name)
     }
@@ -257,6 +259,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
+        Handlers::setup::<commit::FetchSnapshotHandler>(route);
         route
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()
