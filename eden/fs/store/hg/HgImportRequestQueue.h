@@ -8,11 +8,11 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/Try.h>
+#include <folly/container/F14Map.h>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
-
-#include <folly/Try.h>
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "folly/futures/Future.h"
@@ -134,7 +134,7 @@ class HgImportRequestQueue {
     /*
      * Map of a HgProxyHash to an element in the queue
      */
-    std::unordered_map<HgProxyHash, std::shared_ptr<HgImportRequest>>
+    folly::F14FastMap<HgProxyHash, std::shared_ptr<HgImportRequest>>
         requestTracker;
   };
   std::shared_ptr<ReloadableConfig> config_;
