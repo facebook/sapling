@@ -6,7 +6,6 @@
  */
 
 use super::EdenApiMethod;
-use anyhow::Result;
 use async_trait::async_trait;
 use edenapi_types::ToWire;
 use futures::stream::BoxStream;
@@ -31,6 +30,24 @@ impl PathExtractorWithRepo for BasicPathExtractor {
     }
 }
 
+pub enum HandlerError {
+    E500(anyhow::Error),
+    E400(anyhow::Error),
+}
+
+// Default errors to 500
+impl<E> From<E> for HandlerError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(e: E) -> Self {
+        Self::E500(e.into())
+    }
+}
+
+pub type HandlerResult<'a, Response> =
+    Result<BoxStream<'a, anyhow::Result<Response>>, HandlerError>;
+
 #[async_trait]
 pub trait EdenApiHandler: 'static {
     type PathExtractor: PathExtractorWithRepo = BasicPathExtractor;
@@ -50,5 +67,5 @@ pub trait EdenApiHandler: 'static {
         path: Self::PathExtractor,
         query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> Result<BoxStream<'async_trait, Result<Self::Response>>>;
+    ) -> HandlerResult<'async_trait, Self::Response>;
 }

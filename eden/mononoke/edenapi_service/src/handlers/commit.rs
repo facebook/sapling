@@ -7,10 +7,7 @@
 
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
-use futures::{
-    stream::{self, BoxStream},
-    Stream, StreamExt, TryStreamExt,
-};
+use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -38,7 +35,7 @@ use crate::utils::{
     parse_wire_request, to_create_change, to_mononoke_path, to_mutation_entry, to_revlog_changeset,
 };
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
@@ -93,7 +90,7 @@ impl EdenApiHandler for LocationToHashHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let hgid_list = request
             .requests
             .into_iter()
@@ -223,7 +220,7 @@ impl EdenApiHandler for HashLookupHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         use CommitHashLookupRequest::*;
         Ok(stream::iter(request.batch.into_iter())
             .then(move |request| {
@@ -260,7 +257,7 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<UploadTokensResponse>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let changesets = request.changesets;
         let mutations = request.mutations;
         let indexes = changesets
@@ -320,7 +317,7 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
         _path: Self::PathExtractor,
         query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<UploadTokensResponse>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let bubble_id = query.bubble_id.map(BubbleId::new);
         let cs = request.changeset;
         let repo_write = repo.clone().write().await?;
@@ -390,7 +387,7 @@ impl EdenApiHandler for EphemeralPrepareHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         _request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
                 bubble_id: repo.create_bubble().await?.bubble_id().into(),

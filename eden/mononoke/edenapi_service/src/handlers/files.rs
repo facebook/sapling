@@ -10,10 +10,7 @@ use std::num::NonZeroU64;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{
-    stream::{self, BoxStream},
-    Stream, StreamExt, TryStreamExt,
-};
+use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::Body;
@@ -38,7 +35,7 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream_filtered_errors, get_repo};
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
@@ -75,7 +72,7 @@ impl EdenApiHandler for FilesHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let ctx = repo.ctx().clone();
 
         let reqs = request
@@ -303,7 +300,7 @@ impl EdenApiHandler for UploadHgFilenodesHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let tokens = request
             .batch
             .into_iter()

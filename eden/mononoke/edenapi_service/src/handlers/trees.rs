@@ -8,10 +8,7 @@
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{
-    stream::{self, BoxStream},
-    Future, FutureExt, Stream, StreamExt, TryStreamExt,
-};
+use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -34,7 +31,7 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{custom_cbor_stream, get_repo, parse_wire_request};
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo};
+use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
@@ -213,7 +210,7 @@ impl EdenApiHandler for UploadTreesHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let tokens = request
             .batch
             .into_iter()

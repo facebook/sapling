@@ -9,15 +9,12 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::Freshness;
 use edenapi_types::{BookmarkEntry, BookmarkRequest, HgId};
-use futures::{
-    stream::{self, BoxStream},
-    StreamExt,
-};
+use futures::{stream, StreamExt};
 use mononoke_api_hg::HgRepoContext;
 
 use crate::errors::ErrorKind;
 
-use super::{EdenApiHandler, EdenApiMethod};
+use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
@@ -39,7 +36,7 @@ impl EdenApiHandler for BookmarksHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let fetches = request
             .bookmarks
             .into_iter()

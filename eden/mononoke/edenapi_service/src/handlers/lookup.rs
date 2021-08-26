@@ -7,10 +7,7 @@
 
 use anyhow::{bail, Error};
 use async_trait::async_trait;
-use futures::{
-    stream::{self, BoxStream},
-    StreamExt,
-};
+use futures::{stream, StreamExt};
 
 use edenapi_types::{
     AnyId, Batch, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
@@ -20,7 +17,7 @@ use ephemeral_blobstore::BubbleId;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataId, HgRepoContext};
 
-use super::{EdenApiHandler, EdenApiMethod};
+use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 
@@ -124,7 +121,7 @@ impl EdenApiHandler for LookupHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let tokens = request
             .batch
             .into_iter()

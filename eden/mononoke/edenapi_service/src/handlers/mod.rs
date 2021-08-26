@@ -12,7 +12,7 @@ use anyhow::{Context, Error};
 use edenapi_types::ToWire;
 use futures::{stream::TryStreamExt, FutureExt};
 use gotham::{
-    handler::{HandlerError, HandlerFuture},
+    handler::{HandlerError as GothamHandlerError, HandlerFuture},
     middleware::state::StateMiddleware,
     pipeline::{new_pipeline, single::single_pipeline},
     router::{
@@ -47,7 +47,7 @@ mod pull;
 mod repos;
 mod trees;
 
-pub(crate) use handler::{EdenApiHandler, PathExtractorWithRepo};
+pub(crate) use handler::{EdenApiHandler, HandlerError, HandlerResult, PathExtractorWithRepo};
 
 /// Enum identifying the EdenAPI method that each handler corresponds to.
 /// Used to identify the handler for logging and stats collection.
@@ -172,7 +172,6 @@ macro_rules! define_handler {
 
 define_handler!(repos_handler, repos::repos);
 define_handler!(trees_handler, trees::trees);
-define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
@@ -190,7 +189,7 @@ fn health_handler(state: State) -> (State, &'static str) {
 
 async fn handler_wrapper<Handler: EdenApiHandler>(
     mut state: State,
-) -> Result<(State, Response<Body>), (State, HandlerError)> {
+) -> Result<(State, Response<Body>), (State, GothamHandlerError)> {
     let res = async {
         let path = Handler::PathExtractor::take_from(&mut state);
         let query_string = Handler::QueryStringExtractor::take_from(&mut state);
@@ -206,7 +205,8 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
             Ok(responses) => Ok(cbor_stream_filtered_errors(
                 responses.map_ok(ToWire::to_wire),
             )),
-            Err(err) => Err(HttpError::e500(err)),
+            Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
+            Err(HandlerError::E400(err)) => Err(HttpError::e400(err)),
         }
     }
     .await;
@@ -253,6 +253,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<files::FilesHandler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
+        Handlers::setup::<complete_trees::CompleteTreesHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
@@ -260,10 +261,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()
             .to(trees_handler);
-        route
-            .post("/:repo/trees/complete")
-            .with_path_extractor::<complete_trees::CompleteTreesParams>()
-            .to(complete_trees_handler);
         route
             .post("/:repo/commit/hash_to_location")
             .with_path_extractor::<commit::HashToLocationParams>()

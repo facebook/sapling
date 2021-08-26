@@ -23,7 +23,7 @@ use types::Key;
 use crate::errors::ErrorKind;
 use crate::utils::to_mpath;
 
-use super::{EdenApiHandler, EdenApiMethod};
+use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
 
@@ -46,7 +46,7 @@ impl EdenApiHandler for HistoryHandler {
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
         request: Self::Request,
-    ) -> anyhow::Result<BoxStream<'async_trait, anyhow::Result<Self::Response>>> {
+    ) -> HandlerResult<'async_trait, Self::Response> {
         let HistoryRequest { keys, length } = request;
 
         let fetches = keys.into_iter().map(move |key| {
