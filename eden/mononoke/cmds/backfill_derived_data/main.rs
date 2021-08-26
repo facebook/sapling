@@ -113,9 +113,14 @@ async fn open_repo_maybe_unredacted(
     fb: FacebookInit,
     logger: &Logger,
     matches: &MononokeMatches<'_>,
-    data_type: &str,
+    data_types: &[impl AsRef<str>],
 ) -> Result<InnerRepo> {
-    if UNREDACTED_TYPES.contains(&data_type) {
+    let mut unredacted = false;
+    for data_type in data_types {
+        unredacted |= UNREDACTED_TYPES.contains(&data_type.as_ref());
+    }
+
+    if unredacted {
         args::open_repo_unredacted(fb, logger, matches).await
     } else {
         args::open_repo(fb, logger, matches).await
@@ -289,6 +294,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                         Arg::with_name(ARG_DERIVED_DATA_TYPE)
                             .required(false)
                             .index(2)
+                            .multiple(true)
                             .conflicts_with(ARG_ALL_TYPES)
                             .possible_values(POSSIBLE_DERIVED_TYPES)
                             .help("derived data type for which backfill will be run"),
@@ -423,7 +429,7 @@ async fn run_subcmd<'a>(
                 .transpose()?;
 
             let repo =
-                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type).await?;
+                open_repo_maybe_unredacted(fb, &logger, &matches, &[&derived_data_type]).await?;
 
             info!(
                 ctx.logger(),
@@ -551,8 +557,8 @@ async fn run_subcmd<'a>(
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_CHANGESET))?
                 .to_string();
             let all = sub_m.is_present(ARG_ALL_TYPES);
-            let derived_data_type = sub_m.value_of(ARG_DERIVED_DATA_TYPE);
-            let (repo, types): (_, Vec<String>) = match (all, derived_data_type) {
+            let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
+            let (repo, types): (_, Vec<String>) = match (all, derived_data_types) {
                 (true, None) => {
                     let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
@@ -565,11 +571,15 @@ async fn run_subcmd<'a>(
                         .collect();
                     (repo, types)
                 }
-                (false, Some(derived_data_type)) => {
+                (false, Some(derived_data_types)) => {
+                    let derived_data_types = derived_data_types
+                        .into_iter()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<_>>();
                     let repo =
-                        open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
+                        open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_types)
                             .await?;
-                    (repo, vec![derived_data_type.to_string()])
+                    (repo, derived_data_types)
                 }
                 (true, Some(_)) => {
                     return Err(format_err!(
