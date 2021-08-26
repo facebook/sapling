@@ -4,8 +4,9 @@
 # GNU General Public License version 2.
 
 from edenscm.mercurial import error, registrar
+from edenscm.mercurial.i18n import _
 
-from . import createremote
+from . import createremote, restore
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -20,10 +21,17 @@ def snapshot(ui, repo, **opts):
     )
 
 
-subcmd = snapshot.subcommand(categories=[("Manage snapshots", ["createremote"])])
+subcmd = snapshot.subcommand(
+    categories=[("Manage snapshots", ["createremote", "restore"])]
+)
 
 
 @subcmd("createremote", [])
 def createremotecmd(*args, **kwargs):
     """upload to the server a snapshot of the current uncommitted changes"""
     createremote.createremote(*args, **kwargs)
+
+
+@subcmd("restore", [], _("ID"))
+def restorecmd(*args, **kwargs):
+    restore.restore(*args, **kwargs)
