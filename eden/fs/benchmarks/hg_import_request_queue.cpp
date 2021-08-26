@@ -52,7 +52,32 @@ void enqueue(benchmark::State& state) {
   }
 }
 
+void dequeue(benchmark::State& state) {
+  auto rawEdenConfig = EdenConfig::createTestEdenConfig();
+  auto edenConfig = std::make_shared<ReloadableConfig>(
+      rawEdenConfig, ConfigReloadBehavior::NoReload);
+
+  auto queue = HgImportRequestQueue{edenConfig};
+
+  for (size_t i = 0; i < state.max_iterations; i++) {
+    queue.enqueueBlob(makeBlobImportRequest(ImportPriority::kNormal()));
+  }
+
+  for (auto _ : state) {
+    auto dequeued = queue.dequeue();
+  }
+}
+
 BENCHMARK(enqueue)
+    ->Unit(benchmark::kNanosecond)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32);
+
+BENCHMARK(dequeue)
     ->Unit(benchmark::kNanosecond)
     ->Threads(1)
     ->Threads(2)
