@@ -196,27 +196,18 @@ where
     if names.peek().is_some() {
         match ty {
             TunableType::I64 | TunableType::Bool => {
-                body.extend(
-                    quote! {
-                        for (name, val) in tunables.iter() {
-                            match name.as_ref() {
-                                #(stringify!(#names) => self.#names.store(*val, std::sync::atomic::Ordering::Relaxed), )*
-                                _ => {}
-                            }
-                        }
-                    }
-                );
+                body.extend(quote! {
+                    #(self.#names.store(
+                      tunables.get(stringify!(#names)).cloned().unwrap_or_default(),
+                      std::sync::atomic::Ordering::Relaxed
+                    );)*
+                });
             }
             TunableType::String => {
                 body.extend(quote! {
-                    for (name, val) in tunables {
-                        match name.as_ref() {
-                            #(stringify!(#names) => {
-                                self.#names.swap(Arc::new(val.clone()));
-                            }, )*
-                            _ => {}
-                        }
-                    }
+                    #(self.#names.swap(
+                      Arc::new(tunables.get(stringify!(#names)).cloned().unwrap_or_default())
+                    );)*
                 });
             }
             TunableType::ByRepoBool

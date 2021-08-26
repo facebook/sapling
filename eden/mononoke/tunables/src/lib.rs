@@ -414,6 +414,56 @@ mod test {
     }
 
     #[test]
+    fn test_revert_update() {
+        // booleans
+        let mut d = hashmap! {};
+        d.insert(s("boolean"), true);
+
+        let test = TestTunables::default();
+        assert_eq!(test.get_boolean(), false);
+        test.update_bools(&d);
+        assert_eq!(test.get_boolean(), true);
+
+        test.update_bools(&hashmap! {});
+        assert_eq!(test.get_boolean(), false);
+
+        // ints
+        let test = TestTunables::default();
+        test.update_ints(&hashmap! { s("num") => 1});
+        assert_eq!(test.get_num(), 1);
+
+        test.update_ints(&hashmap! {});
+        assert_eq!(test.get_num(), 0);
+
+        // strings
+        let test = TestTunables::default();
+        test.update_strings(&hashmap! { s("string") => s("string")});
+        assert_eq!(test.get_string(), Arc::new(s("string")));
+
+        test.update_strings(&hashmap! {});
+        assert_eq!(test.get_string(), Arc::new(s("")));
+
+        // by repo bools
+        assert_eq!(test.get_by_repo_repobool("repo"), None);
+        assert_eq!(test.get_by_repo_repobool("repo2"), None);
+
+        test.update_by_repo_bools(&hashmap! {
+            s("repo") => hashmap! {
+                s("repobool") => true,
+            },
+            s("repo2") => hashmap! {
+                s("repobool") => false,
+            }
+        });
+        assert_eq!(test.get_by_repo_repobool("repo"), Some(true));
+        assert_eq!(test.get_by_repo_repobool("repo2"), Some(false));
+
+        test.update_by_repo_bools(&hashmap! {});
+        assert_eq!(test.get_by_repo_repobool("repo"), None);
+        assert_eq!(test.get_by_repo_repobool("repo2"), None);
+    }
+
+    #[test]
     fn test_update_int() {
         let mut d = HashMap::new();
         d.insert(s("num"), 10);
