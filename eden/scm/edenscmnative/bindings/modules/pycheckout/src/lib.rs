@@ -65,7 +65,7 @@ py_class!(class checkoutplan |py| {
         let mut actions = py.allow_threads(move || {
             let target = target.read();
             let current = current.read();
-            let mut diff = Diff::new(&current, &target, &matcher);
+            let mut diff = Diff::new(&current, &target, &matcher)?;
             let bar = &ProgressBar::new("Calculating", 0, "depth");
             Registry::main().register_progress_bar(bar);
             diff.attach_progress_bar(bar);
@@ -202,12 +202,14 @@ py_class!(class mergeresult |py| {
         // sparse_change: Option<(PyObject, PyObject)> = None,
     ) -> PyResult<mergeresult> {
         let src_lock = src_manifest.get_underlying(py);
-        let src = src_lock.read();
         let dst_lock = dst_manifest.get_underlying(py);
-        let dst = dst_lock.read();
         let ancestor_lock = ancestor_manifest.get_underlying(py);
-        let ancestor = ancestor_lock.read();
-        let merge_result = Merge{}.merge(&*src, &*dst, &*ancestor).map_pyerr(py)?;
+        let merge_result = py.allow_threads(move || -> Result<_> {
+            let src = src_lock.read();
+            let dst = dst_lock.read();
+            let ancestor = ancestor_lock.read();
+            Merge{}.merge(&*src, &*dst, &*ancestor)
+        }).map_pyerr(py)?;
         mergeresult::create_instance(py, merge_result)
     }
 

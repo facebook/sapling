@@ -288,7 +288,7 @@ py_class!(pub class treemanifest |py| {
         let other_tree = other.underlying(py);
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher).collect()
+            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             let path = PyPathBuf::from(entry.path);
@@ -306,14 +306,17 @@ py_class!(pub class treemanifest |py| {
         matcher: Option<PyObject> = None
     ) -> PyResult<PyObject> {
         let mut result = pyset_new(py)?;
-        let this_tree = self.underlying(py).read();
-        let other_tree = other.underlying(py).read();
-        let matcher: Box<dyn Matcher> = match matcher {
+        let this_tree = self.underlying(py);
+        let other_tree = other.underlying(py);
+        let matcher: Box<dyn Matcher + Sync + Send> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
-            Some(pyobj) => Box::new(PythonMatcher::new(py, pyobj)),
+            Some(pyobj) => Box::new(ThreadPythonMatcher::new(pyobj)),
         };
-        for entry in manifest_tree::Diff::new(&this_tree, &other_tree, &matcher) {
-            let entry = entry.map_pyerr(py)?;
+
+        let results: Vec<_> = py.allow_threads(move || -> Result<_> {
+            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher)?.collect()
+        }).map_pyerr(py)?;
+        for entry in results {
             match entry.diff_type {
                 DiffType::LeftOnly(_) => {
                     pyset_add(py, &mut result, PyPathBuf::from(entry.path))?;

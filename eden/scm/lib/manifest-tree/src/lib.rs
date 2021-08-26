@@ -315,8 +315,8 @@ impl Manifest for TreeManifest {
         &'a self,
         other: &'a Self,
         matcher: &'a M,
-    ) -> Box<dyn Iterator<Item = Result<DiffEntry>> + 'a> {
-        Box::new(Diff::new(self, other, matcher))
+    ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
+        Ok(Box::new(Diff::new(self, other, matcher)?))
     }
 }
 
