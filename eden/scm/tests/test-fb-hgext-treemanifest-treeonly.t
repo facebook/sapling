@@ -416,10 +416,7 @@ Test pulling to a treeonly client from a treeonly server
   1 trees fetched over 0.00s
   fetching tree '' e249b5cd4abe985a0e7ecd0af4d66d60e560ef4c
   1 trees fetched over 0.00s
-  fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
-  fetching tree 'subdir' 986e3ffada22fd23777f362487d1077a8d8a0aa4
-  1 trees fetched over 0.00s
+  2 trees fetched over 0.00s
   modify subdir/x again
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)

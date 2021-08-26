@@ -67,12 +67,8 @@ Fetch without designated nodes
   fetching tree for ('', 1595f1646547518ea8bb6f15db03fcaed5f98ab0)
   fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0
   1 trees fetched over 0.00s
-  fetching tree for ('root', a36092105bfeca1ee6283de2b3027138e51f0a89)
-  fetching tree 'root' a36092105bfeca1ee6283de2b3027138e51f0a89
-  1 trees fetched over 0.00s
-  fetching tree for ('root', 9aa1e4737597a611854828dcaca116ae50301412)
-  fetching tree 'root' 9aa1e4737597a611854828dcaca116ae50301412
-  1 trees fetched over 0.00s
+  fetching 2 trees
+  2 trees fetched over 0.00s
   fetching tree for ('root/d,', 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c)
   fetching tree 'root/d,' 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c
   1 trees fetched over 0.00s
@@ -88,12 +84,8 @@ Fetch with designated ndoes
   fetching tree for ('', 1595f1646547518ea8bb6f15db03fcaed5f98ab0)
   fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0
   1 trees fetched over * (glob)
-  fetching tree for ('root', a36092105bfeca1ee6283de2b3027138e51f0a89)
-  fetching tree 'root' a36092105bfeca1ee6283de2b3027138e51f0a89
-  1 trees fetched over * (glob)
-  fetching tree for ('root', 9aa1e4737597a611854828dcaca116ae50301412)
-  fetching tree 'root' 9aa1e4737597a611854828dcaca116ae50301412
-  1 trees fetched over * (glob)
+  fetching 2 trees
+  2 trees fetched over * (glob)
   fetching tree for ('root/d,', 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c)
   fetching tree 'root/d,' 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c
   1 trees fetched over * (glob)
@@ -102,7 +94,7 @@ Fetch with designated ndoes
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
-  42
+  40
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 

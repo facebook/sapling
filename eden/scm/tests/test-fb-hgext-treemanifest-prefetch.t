@@ -122,10 +122,7 @@ Test prefetching when a draft commit is marked public
   1 trees fetched over 0.00s
   fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
   1 trees fetched over 0.00s
-  fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
-  fetching tree 'dir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
-  1 trees fetched over 0.00s
+  2 trees fetched over 0.00s
   M dir/x
   $ hg debugstrip -r 3
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd (?)
@@ -147,10 +144,7 @@ Test auto prefetch during normal access
   1 trees fetched over 0.00s
   fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
   1 trees fetched over 0.00s
-  fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
-  1 trees fetched over 0.00s
-  fetching tree 'dir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
-  1 trees fetched over 0.00s
+  2 trees fetched over 0.00s
   commit:      311cac64787d
   bookmark:    default/master
   hoistedname: master

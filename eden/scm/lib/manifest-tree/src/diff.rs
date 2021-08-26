@@ -44,22 +44,13 @@ impl DiffItem {
     fn process(
         self,
         fetcher: &mut Sender<DiffItem>,
-        lstore: &InnerStore,
-        rstore: &InnerStore,
+        store: &InnerStore,
         matcher: &dyn Matcher,
         pending: &mut u64,
     ) -> Result<Vec<DiffEntry>> {
         match self {
-            DiffItem::Single(dir, side) => {
-                let store = match side {
-                    Side::Left => lstore,
-                    Side::Right => rstore,
-                };
-                diff_single(dir, fetcher, side, store, matcher, pending)
-            }
-            DiffItem::Changed(left, right) => {
-                diff(left, right, fetcher, lstore, rstore, matcher, pending)
-            }
+            DiffItem::Single(dir, side) => diff_single(dir, fetcher, side, store, matcher, pending),
+            DiffItem::Changed(left, right) => diff(left, right, fetcher, store, matcher, pending),
         }
     }
 
@@ -90,8 +81,7 @@ impl DiffItem {
 /// only fetching tree nodes that have actually changed.
 pub struct Diff<'a> {
     output: VecDeque<DiffEntry>,
-    lstore: &'a InnerStore,
-    rstore: &'a InnerStore,
+    store: &'a InnerStore,
     matcher: &'a dyn Matcher,
     progress_bar: Option<&'a Arc<ProgressBar>>,
     #[allow(dead_code)]
@@ -114,11 +104,9 @@ impl<'a> Diff<'a> {
         let (send_done, receive_done) = channel();
         let mut pending = 0;
 
-        let lstore = left.store.clone();
-        let rstore = right.store.clone();
-        let fetch_thread = std::thread::spawn(move || {
-            prefetch_thread(receive_prefetch, send_done, lstore, rstore)
-        });
+        let store = left.store.clone();
+        let fetch_thread =
+            std::thread::spawn(move || prefetch_thread(receive_prefetch, send_done, store));
 
         // Don't even attempt to perform a diff if these trees are the same.
         if lroot.hgid() != rroot.hgid() || lroot.hgid().is_none() {
@@ -128,8 +116,7 @@ impl<'a> Diff<'a> {
 
         Ok(Diff {
             output: VecDeque::new(),
-            lstore: &left.store,
-            rstore: &right.store,
+            store: &left.store,
             matcher,
             progress_bar: None,
             fetch_thread,
@@ -163,8 +150,7 @@ impl<'a> Diff<'a> {
 
         let entries = item.process(
             &mut self.sender,
-            &self.lstore,
-            &self.rstore,
+            &self.store,
             self.matcher,
             &mut self.pending,
         )?;
@@ -179,12 +165,7 @@ impl<'a> Diff<'a> {
     }
 }
 
-fn prefetch_thread<'a>(
-    receiver: Receiver<DiffItem>,
-    sender: Sender<DiffItem>,
-    lstore: InnerStore,
-    rstore: InnerStore,
-) {
+fn prefetch_thread<'a>(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store: InnerStore) {
     let limit = 100000;
     let timeout = Duration::from_millis(1);
     let mut received = Vec::with_capacity(limit);
@@ -211,28 +192,24 @@ fn prefetch_thread<'a>(
         }
 
         // Prefetch them
-        let mut lkeys = Vec::with_capacity(received.len());
-        let mut rkeys = Vec::with_capacity(received.len());
+        let mut keys = Vec::with_capacity(received.len());
         for item in received.iter() {
             match item {
                 DiffItem::Single(dir, side) => {
                     match side {
-                        Side::Left => dir.key().map(|key| lkeys.push(key)),
-                        Side::Right => dir.key().map(|key| rkeys.push(key)),
+                        Side::Left => dir.key().map(|key| keys.push(key)),
+                        Side::Right => dir.key().map(|key| keys.push(key)),
                     };
                 }
                 DiffItem::Changed(left, right) => {
-                    left.key().map(|key| lkeys.push(key));
-                    right.key().map(|key| rkeys.push(key));
+                    left.key().map(|key| keys.push(key));
+                    right.key().map(|key| keys.push(key));
                 }
             }
         }
 
-        if !lkeys.is_empty() {
-            let _ = lstore.prefetch(lkeys);
-        }
-        if !rkeys.is_empty() {
-            let _ = rstore.prefetch(rkeys);
+        if !keys.is_empty() {
+            let _ = store.prefetch(keys);
         }
 
         // Notify that we finished
@@ -309,13 +286,12 @@ fn diff(
     left: DirLink,
     right: DirLink,
     fetcher: &mut Sender<DiffItem>,
-    lstore: &InnerStore,
-    rstore: &InnerStore,
+    store: &InnerStore,
     matcher: &dyn Matcher,
     pending: &mut u64,
 ) -> Result<Vec<DiffEntry>> {
-    let (lfiles, ldirs) = left.list(lstore)?;
-    let (rfiles, rdirs) = right.list(rstore)?;
+    let (lfiles, ldirs) = left.list(store)?;
+    let (rfiles, rdirs) = right.list(store)?;
     for item in diff_dirs(ldirs, rdirs, matcher)? {
         *pending += 1;
         fetcher.send(item)?;
@@ -504,7 +480,8 @@ mod tests {
 
     #[test]
     fn test_diff_single() {
-        let tree = make_tree_manifest(&[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
+        let store = Arc::new(TestStore::new());
+        let tree = make_tree_manifest(store, &[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
         let (mut sender, receiver) = channel();
         let mut pending = 0;
@@ -606,28 +583,35 @@ mod tests {
 
     #[test]
     fn test_diff() {
-        let ltree = make_tree_manifest(&[
-            ("changed", "1"),
-            ("d1/changed", "1"),
-            ("d1/leftonly", "1"),
-            ("d1/same", "1"),
-            ("d2/changed", "1"),
-            ("d2/leftonly", "1"),
-            ("d2/same", "1"),
-            ("leftonly", "1"),
-            ("same", "1"),
-        ]);
-        let rtree = make_tree_manifest(&[
-            ("changed", "2"),
-            ("d1/changed", "2"),
-            ("d1/rightonly", "1"),
-            ("d1/same", "1"),
-            ("d2/changed", "2"),
-            ("d2/rightonly", "1"),
-            ("d2/same", "1"),
-            ("rightonly", "1"),
-            ("same", "1"),
-        ]);
+        let store = Arc::new(TestStore::new());
+        let ltree = make_tree_manifest(
+            store.clone(),
+            &[
+                ("changed", "1"),
+                ("d1/changed", "1"),
+                ("d1/leftonly", "1"),
+                ("d1/same", "1"),
+                ("d2/changed", "1"),
+                ("d2/leftonly", "1"),
+                ("d2/same", "1"),
+                ("leftonly", "1"),
+                ("same", "1"),
+            ],
+        );
+        let rtree = make_tree_manifest(
+            store,
+            &[
+                ("changed", "2"),
+                ("d1/changed", "2"),
+                ("d1/rightonly", "1"),
+                ("d1/same", "1"),
+                ("d2/changed", "2"),
+                ("d2/rightonly", "1"),
+                ("d2/same", "1"),
+                ("rightonly", "1"),
+                ("same", "1"),
+            ],
+        );
 
         let matcher = AlwaysMatcher::new();
         let diff = Diff::new(&ltree, &rtree, &matcher).unwrap();
@@ -654,28 +638,35 @@ mod tests {
 
     #[test]
     fn test_diff_matcher() {
-        let ltree = make_tree_manifest(&[
-            ("changed", "1"),
-            ("d1/changed", "1"),
-            ("d1/leftonly", "1"),
-            ("d1/same", "1"),
-            ("d2/changed", "1"),
-            ("d2/leftonly", "1"),
-            ("d2/same", "1"),
-            ("leftonly", "1"),
-            ("same", "1"),
-        ]);
-        let rtree = make_tree_manifest(&[
-            ("changed", "2"),
-            ("d1/changed", "2"),
-            ("d1/rightonly", "1"),
-            ("d1/same", "1"),
-            ("d2/changed", "2"),
-            ("d2/rightonly", "1"),
-            ("d2/same", "1"),
-            ("rightonly", "1"),
-            ("same", "1"),
-        ]);
+        let store = Arc::new(TestStore::new());
+        let ltree = make_tree_manifest(
+            store.clone(),
+            &[
+                ("changed", "1"),
+                ("d1/changed", "1"),
+                ("d1/leftonly", "1"),
+                ("d1/same", "1"),
+                ("d2/changed", "1"),
+                ("d2/leftonly", "1"),
+                ("d2/same", "1"),
+                ("leftonly", "1"),
+                ("same", "1"),
+            ],
+        );
+        let rtree = make_tree_manifest(
+            store,
+            &[
+                ("changed", "2"),
+                ("d1/changed", "2"),
+                ("d1/rightonly", "1"),
+                ("d1/same", "1"),
+                ("d2/changed", "2"),
+                ("d2/rightonly", "1"),
+                ("d2/same", "1"),
+                ("rightonly", "1"),
+                ("same", "1"),
+            ],
+        );
 
         let matcher = TreeMatcher::from_rules(["d1/**"].iter()).unwrap();
         let diff = Diff::new(&ltree, &rtree, &matcher).unwrap();
@@ -696,9 +687,15 @@ mod tests {
 
     #[test]
     fn test_diff_generic() {
-        let mut left =
-            make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
-        let mut right = make_tree_manifest(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+        let store = Arc::new(TestStore::new());
+        let mut left = make_tree_manifest(
+            store.clone(),
+            &[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")],
+        );
+        let mut right = make_tree_manifest(
+            store,
+            &[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")],
+        );
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -811,9 +808,12 @@ mod tests {
 
     #[test]
     fn test_diff_left_empty() {
-        let mut left = TreeManifest::ephemeral(Arc::new(TestStore::new()));
-        let mut right =
-            make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")]);
+        let store = Arc::new(TestStore::new());
+        let mut left = TreeManifest::ephemeral(store.clone());
+        let mut right = make_tree_manifest(
+            store,
+            &[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a2/b2/c2", "30")],
+        );
 
         assert_eq!(
             Diff::new(&left, &right, &AlwaysMatcher::new())
@@ -857,8 +857,15 @@ mod tests {
 
     #[test]
     fn test_diff_matcher_2() {
-        let left = make_tree_manifest(&[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")]);
-        let right = make_tree_manifest(&[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")]);
+        let store = Arc::new(TestStore::new());
+        let left = make_tree_manifest(
+            store.clone(),
+            &[("a1/b1/c1/d1", "10"), ("a1/b2", "20"), ("a3/b1", "40")],
+        );
+        let right = make_tree_manifest(
+            store,
+            &[("a1/b2", "40"), ("a2/b2/c2", "30"), ("a3/b1", "40")],
+        );
 
         assert_eq!(
             Diff::new(
@@ -936,7 +943,11 @@ mod tests {
 
     #[test]
     fn test_diff_on_sort_order_edge() {
-        let left = make_tree_manifest(&[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")]);
+        let store = Arc::new(TestStore::new());
+        let left = make_tree_manifest(
+            store,
+            &[("foo/bar-test/a.txt", "10"), ("foo/bartest/b.txt", "20")],
+        );
         let mut right = left.clone();
         right
             .insert(repo_path_buf("foo/bar/c.txt"), make_meta("30"))
