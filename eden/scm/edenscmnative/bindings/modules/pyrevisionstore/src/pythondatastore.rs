@@ -171,7 +171,7 @@ impl LocalStore for PythonHgIdDataStore {
 // Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
 // which PythonHgIdDataStore already implements. This is only required for tests.
 impl LegacyStore for PythonHgIdDataStore {
-    fn get_file_content(&self, key: &Key) -> Result<Option<minibytes::Bytes>> {
+    fn get_file_content(&self, _key: &Key) -> Result<Option<minibytes::Bytes>> {
         unimplemented!("")
     }
 
@@ -185,15 +185,15 @@ impl LegacyStore for PythonHgIdDataStore {
 
     fn add_pending(
         &self,
-        key: &Key,
-        data: minibytes::Bytes,
-        meta: Metadata,
-        location: RepackLocation,
+        _key: &Key,
+        _data: minibytes::Bytes,
+        _meta: Metadata,
+        _location: RepackLocation,
     ) -> Result<()> {
         unimplemented!("")
     }
 
-    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         unimplemented!("")
     }
 }
@@ -201,7 +201,7 @@ impl LegacyStore for PythonHgIdDataStore {
 // Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
 // which PythonHgIdDataStore already implements. This is only required for tests.
 impl HgIdMutableDeltaStore for PythonHgIdDataStore {
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
+    fn add(&self, _delta: &Delta, _metadata: &Metadata) -> Result<()> {
         unimplemented!()
     }
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
