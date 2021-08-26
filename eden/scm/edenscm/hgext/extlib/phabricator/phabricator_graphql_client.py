@@ -43,7 +43,7 @@ class PhabricatorGraphQLClient(object):
                 "For humans, follow the instructions at "
                 "https://our.intern.facebook.com/intern/jf/authenticate/ "
                 "to get a Phabricator OAuth token. "
-                "For bots, see http://fburl.com/botsdiffs for more info."
+                "For bots, see http://fburl.com/botdiffs for more info."
             )
 
         return self.urllib.sendpost(
