@@ -32,29 +32,23 @@ class HgImportRequest {
  public:
   struct BlobImport {
     using Response = std::unique_ptr<Blob>;
-    BlobImport(Hash hash, HgProxyHash proxyHash, bool realRequest = true)
-        : hash(hash), proxyHash(proxyHash), realRequest(realRequest) {}
+    BlobImport(Hash hash, HgProxyHash proxyHash)
+        : hash(hash), proxyHash(proxyHash) {}
 
     Hash hash;
     HgProxyHash proxyHash;
 
-    // These two variables are used in the HgQueuedBackingStore while
-    // deduplicating requests
-    bool realRequest;
+    // In the case where requests de-duplicate to this one, the requests
+    // promise will be enqueued to the following vector.
     std::vector<folly::Promise<Response>> promises;
   };
 
   struct TreeImport {
     using Response = std::unique_ptr<Tree>;
-    TreeImport(
-        Hash hash,
-        HgProxyHash proxyHash,
-        bool prefetchMetadata = true,
-        bool realRequest = true)
+    TreeImport(Hash hash, HgProxyHash proxyHash, bool prefetchMetadata = true)
         : hash(hash),
           proxyHash(proxyHash),
-          prefetchMetadata(prefetchMetadata),
-          realRequest(realRequest) {}
+          prefetchMetadata(prefetchMetadata) {}
 
     Hash hash;
     HgProxyHash proxyHash;
@@ -62,9 +56,7 @@ class HgImportRequest {
     // we do not want to
     bool prefetchMetadata;
 
-    // These two variables are used in the HgQueuedBackingStore while
-    // deduplicating requests
-    bool realRequest;
+    // See the comment above for BlobImport::promises
     std::vector<folly::Promise<Response>> promises;
   };
 
@@ -74,35 +66,20 @@ class HgImportRequest {
     std::vector<HgProxyHash> proxyHashes;
   };
 
-  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Blob>>>
-  makeBlobImportRequest(
+  static HgImportRequest makeBlobImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
-      ImportPriority priority,
-      std::unique_ptr<RequestMetricsScope> metricsScope);
+      ImportPriority priority);
 
-  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Tree>>>
-  makeTreeImportRequest(
+  static HgImportRequest makeTreeImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority,
-      std::unique_ptr<RequestMetricsScope> metricsScope,
       bool prefetchMetadata);
 
-  static std::pair<HgImportRequest, folly::Future<folly::Unit>>
-  makePrefetchRequest(
+  static HgImportRequest makePrefetchRequest(
       std::vector<HgProxyHash> hashes,
-      ImportPriority priority,
-      std::unique_ptr<RequestMetricsScope> metricsScope);
-
-  template <typename RequestType>
-  HgImportRequest(
-      RequestType request,
-      ImportPriority priority,
-      folly::Promise<typename RequestType::Response>&& promise)
-      : request_(std::move(request)),
-        priority_(priority),
-        promise_(std::move(promise)) {}
+      ImportPriority priority);
 
   ~HgImportRequest() = default;
 
@@ -150,6 +127,18 @@ class HgImportRequest {
   }
 
  private:
+  /**
+   * Implementation detail of the various make*Request functions.
+   */
+  template <typename Request, typename... Input>
+  static HgImportRequest makeRequest(ImportPriority priority, Input&&... input);
+
+  template <typename RequestType>
+  HgImportRequest(
+      RequestType request,
+      ImportPriority priority,
+      folly::Promise<typename RequestType::Response>&& promise);
+
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;
 

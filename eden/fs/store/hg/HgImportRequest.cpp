@@ -15,54 +15,44 @@
 
 namespace facebook::eden {
 
-namespace {
-template <typename Request, typename... Input>
-std::pair<HgImportRequest, folly::Future<typename Request::Response>>
-makeRequest(
+template <typename RequestType>
+HgImportRequest::HgImportRequest(
+    RequestType request,
     ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope,
+    folly::Promise<typename RequestType::Response>&& promise)
+    : request_(std::move(request)),
+      priority_(priority),
+      promise_(std::move(promise)) {}
+
+template <typename RequestType, typename... Input>
+HgImportRequest HgImportRequest::makeRequest(
+    ImportPriority priority,
     Input&&... input) {
-  auto promise = folly::Promise<typename Request::Response>{};
-  auto future = promise.getFuture();
-  return std::make_pair(
-      HgImportRequest{
-          Request{std::forward<Input>(input)...}, priority, std::move(promise)},
-      std::move(future).ensure([metrics = std::move(metricsScope)]() {}));
+  auto promise = folly::Promise<typename RequestType::Response>{};
+  return HgImportRequest{
+      RequestType{std::forward<Input>(input)...}, priority, std::move(promise)};
 }
-} // namespace
 
-std::pair<HgImportRequest, folly::Future<std::unique_ptr<Blob>>>
-HgImportRequest::makeBlobImportRequest(
+HgImportRequest HgImportRequest::makeBlobImportRequest(
+    Hash hash,
+    HgProxyHash proxyHash,
+    ImportPriority priority) {
+  return makeRequest<BlobImport>(priority, hash, std::move(proxyHash));
+}
+
+HgImportRequest HgImportRequest::makeTreeImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
     ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope) {
-  return makeRequest<BlobImport>(
-      priority, std::move(metricsScope), hash, std::move(proxyHash));
-}
-
-std::pair<HgImportRequest, folly::Future<std::unique_ptr<Tree>>>
-HgImportRequest::makeTreeImportRequest(
-    Hash hash,
-    HgProxyHash proxyHash,
-    ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope,
     bool prefetchMetadata) {
   return makeRequest<TreeImport>(
-      priority,
-      std::move(metricsScope),
-      hash,
-      std::move(proxyHash),
-      prefetchMetadata);
+      priority, hash, std::move(proxyHash), prefetchMetadata);
 }
 
-std::pair<HgImportRequest, folly::Future<folly::Unit>>
-HgImportRequest::makePrefetchRequest(
+HgImportRequest HgImportRequest::makePrefetchRequest(
     std::vector<HgProxyHash> hashes,
-    ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope) {
-  return makeRequest<Prefetch>(
-      priority, std::move(metricsScope), std::move(hashes));
+    ImportPriority priority) {
+  return makeRequest<Prefetch>(priority, std::move(hashes));
 }
 
 } // namespace facebook::eden

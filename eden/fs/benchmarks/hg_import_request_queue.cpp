@@ -23,17 +23,12 @@ Hash uniqueHash() {
   return Hash{bytes};
 }
 
-HgImportRequest makeBlobImportRequest(
-    ImportPriority priority,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
+HgImportRequest makeBlobImportRequest(ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = proxyHash.sha1();
-  auto importTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return HgImportRequest::makeBlobImportRequest(
-             hash, std::move(proxyHash), priority, std::move(importTracker))
-      .first;
+      hash, std::move(proxyHash), priority);
 }
 
 void enqueue(benchmark::State& state) {
@@ -41,24 +36,18 @@ void enqueue(benchmark::State& state) {
   auto edenConfig = std::make_shared<ReloadableConfig>(
       rawEdenConfig, ConfigReloadBehavior::NoReload);
 
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
   auto queue = HgImportRequestQueue{edenConfig};
 
   std::vector<HgImportRequest> requests;
   requests.reserve(state.max_iterations);
   for (size_t i = 0; i < state.max_iterations; i++) {
-    requests.emplace_back(
-        makeBlobImportRequest(ImportPriority::kNormal(), pendingImportWatches));
+    requests.emplace_back(makeBlobImportRequest(ImportPriority::kNormal()));
   }
 
   auto requestIter = requests.begin();
   for (auto _ : state) {
     auto& request = *requestIter++;
-    auto inProgress = queue.checkImportInProgress<Blob>(
-        request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-        ImportPriority::kNormal());
-    XDCHECK(!inProgress.has_value());
-    queue.enqueue(std::move(request));
+    queue.enqueueBlob(std::move(request));
   }
 }
 

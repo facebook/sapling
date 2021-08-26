@@ -47,111 +47,71 @@ Hash uniqueHash() {
 }
 
 std::pair<Hash, HgImportRequest> makeBlobImportRequest(
-    ImportPriority priority,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
+    ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
   auto hash = proxyHash.sha1();
-  auto importTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobImportRequest(
-          hash, std::move(proxyHash), priority, std::move(importTracker))
-          .first);
+          hash, std::move(proxyHash), priority));
 }
 
 std::pair<Hash, HgImportRequest> makeBlobImportRequestWithHash(
     ImportPriority priority,
-    HgProxyHash proxyHash,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
+    HgProxyHash proxyHash) {
   auto hash = proxyHash.sha1();
-  auto importTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobImportRequest(
-          hash, std::move(proxyHash), priority, std::move(importTracker))
-          .first);
+          hash, std::move(proxyHash), priority));
 }
 
 std::pair<Hash, HgImportRequest> makeTreeImportRequest(
-    ImportPriority priority,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
+    ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
   auto hash = proxyHash.sha1();
-  auto importTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
       hash,
       HgImportRequest::makeTreeImportRequest(
-          hash, std::move(proxyHash), priority, std::move(importTracker), true)
-          .first);
+          hash, std::move(proxyHash), priority, true));
 }
 
 Hash insertBlobImportRequest(
     HgImportRequestQueue& queue,
-    ImportPriority priority,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
-  auto [hash, request] = makeBlobImportRequest(priority, pendingImportWatches);
-
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          priority));
-
+    ImportPriority priority) {
+  auto [hash, request] = makeBlobImportRequest(priority);
   XLOG(INFO) << "enqueuing blob:" << hash;
-  queue.enqueue(std::move(request));
+  queue.enqueueBlob(std::move(request));
   return hash;
 }
 
 Hash insertTreeImportRequest(
     HgImportRequestQueue& queue,
-    ImportPriority priority,
-    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
-  auto [hash, request] = makeTreeImportRequest(priority, pendingImportWatches);
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Tree>(
-          request.getRequest<HgImportRequest::TreeImport>()->proxyHash,
-          priority));
-
+    ImportPriority priority) {
+  auto [hash, request] = makeTreeImportRequest(priority);
   XLOG(INFO) << "enqueuing tree:" << hash;
-  queue.enqueue(std::move(request));
+  queue.enqueueTree(std::move(request));
   return hash;
 }
 
 TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   for (int i = 0; i < 10; i++) {
-    auto [hash, request] = makeBlobImportRequest(
-        ImportPriority(ImportPriorityKind::Normal, i), pendingImportWatches);
+    auto [hash, request] =
+        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
 
-    EXPECT_EQ(
-        std::nullopt,
-        queue.checkImportInProgress<Blob>(
-            request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-            ImportPriority(ImportPriorityKind::Normal, i)));
-
-    queue.enqueue(std::move(request));
+    queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
-  auto [smallHash, smallRequest] = makeBlobImportRequest(
-      ImportPriority(ImportPriorityKind::Low, 0), pendingImportWatches);
+  auto [smallHash, smallRequest] =
+      makeBlobImportRequest(ImportPriority(ImportPriorityKind::Low, 0));
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          smallRequest.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Low, 0)));
-
-  queue.enqueue(std::move(smallRequest));
+  queue.enqueueBlob(std::move(smallRequest));
 
   // the queue should give requests in the reverse order of pushing
   while (!enqueued.empty()) {
@@ -187,33 +147,19 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
 TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::deque<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   for (int i = 0; i < 10; i++) {
     auto [hash, request] = makeBlobImportRequest(
-        ImportPriority(ImportPriorityKind::Normal, 10 - i),
-        pendingImportWatches);
+        ImportPriority(ImportPriorityKind::Normal, 10 - i));
 
-    EXPECT_EQ(
-        std::nullopt,
-        queue.checkImportInProgress<Blob>(
-            request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-            ImportPriority(ImportPriorityKind::Normal, 10 - i)));
-
-    queue.enqueue(std::move(request));
+    queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
-  auto [largeHash, largeRequest] = makeBlobImportRequest(
-      ImportPriority(ImportPriority::kHigh()), pendingImportWatches);
+  auto [largeHash, largeRequest] =
+      makeBlobImportRequest(ImportPriority(ImportPriority::kHigh()));
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          largeRequest.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriority::kHigh())));
-
-  queue.enqueue(std::move(largeRequest));
+  queue.enqueueBlob(std::move(largeRequest));
 
   auto largeHashDequeue = queue.dequeue().at(0);
   EXPECT_EQ(
@@ -246,7 +192,6 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
 }
 
 TEST_F(HgImportRequestQueueTest, mixedPriority) {
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
   auto queue = HgImportRequestQueue{edenConfig};
   std::set<Hash> enqueued_blob;
   std::set<Hash> enqueued_tree;
@@ -254,15 +199,11 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
   for (int i = 0; i < 10; i++) {
     {
       auto hash = insertBlobImportRequest(
-          queue,
-          ImportPriority(ImportPriorityKind::Normal, i),
-          pendingImportWatches);
+          queue, ImportPriority(ImportPriorityKind::Normal, i));
       enqueued_blob.emplace(hash);
     }
     auto hash = insertTreeImportRequest(
-        queue,
-        ImportPriority(ImportPriorityKind::Normal, 10 - i),
-        pendingImportWatches);
+        queue, ImportPriority(ImportPriorityKind::Normal, 10 - i));
     enqueued_tree.emplace(hash);
   }
 
@@ -322,8 +263,6 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
 }
 
 TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
-
   auto queue = HgImportRequestQueue{edenConfig};
   std::set<Hash> enqueued_blob;
   std::set<Hash> enqueued_tree;
@@ -331,15 +270,11 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
   for (int i = 0; i < 10; i++) {
     {
       auto hash = insertBlobImportRequest(
-          queue,
-          ImportPriority(ImportPriorityKind::Normal, 0),
-          pendingImportWatches);
+          queue, ImportPriority(ImportPriorityKind::Normal, 0));
       enqueued_blob.emplace(hash);
     }
     auto hash = insertTreeImportRequest(
-        queue,
-        ImportPriority(ImportPriorityKind::Normal, 0),
-        pendingImportWatches);
+        queue, ImportPriority(ImportPriorityKind::Normal, 0));
     enqueued_tree.emplace(hash);
   }
 
@@ -387,93 +322,22 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
   }
 }
 
-TEST_F(HgImportRequestQueueTest, duplicateRequestBeforeEnqueue) {
-  auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
-
-  auto hgRevHash = uniqueHash();
-  auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
-
-  auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
-
-  auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
-
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request2.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  queue.enqueue(std::move(request));
-  enqueued.push_back(hash);
-
-  auto expected = enqueued.back();
-  enqueued.pop_back();
-  auto dequeuedRequest = queue.dequeue().at(0);
-  EXPECT_EQ(
-      1,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()
-          ->promises.size());
-  EXPECT_EQ(
-      expected,
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
-
-  folly::Try<std::unique_ptr<Blob>> blob =
-      folly::makeTryWith([hash = proxyHash.sha1()]() {
-        return std::make_unique<Blob>(hash, folly::IOBuf{});
-      });
-  queue.markImportAsFinished<Blob>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-      blob);
-}
-
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  queue.enqueue(std::move(request));
+  queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
-
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request2.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
+  queue.enqueueBlob(std::move(request2));
 
   auto expected = enqueued.back();
   enqueued.pop_back();
@@ -498,28 +362,17 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  queue.enqueue(std::move(request));
+  queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
 
   auto expected = enqueued.back();
@@ -529,12 +382,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
       expected,
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request2.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
+  queue.enqueueBlob(std::move(request2));
 
   EXPECT_EQ(
       1,
@@ -553,28 +401,17 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  queue.enqueue(std::move(request));
+  queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
 
   auto expected = enqueued.back();
@@ -595,64 +432,31 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   queue.markImportAsFinished<Blob>(
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
       blob);
-
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request2.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
 }
 
 TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash3, request3] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
   auto [hash4, request4] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
 
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request2.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
-
-  queue.enqueue(std::move(request));
+  queue.enqueueBlob(std::move(request2));
+  queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
-
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request3.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
+  queue.enqueueBlob(std::move(request3));
 
   auto expected = enqueued.back();
   enqueued.pop_back();
@@ -661,12 +465,7 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
       expected,
       dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash);
 
-  // duplicate request
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          request4.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 5)));
+  queue.enqueueBlob(std::move(request4));
 
   EXPECT_EQ(
       3,
@@ -685,65 +484,38 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
 TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
   auto queue = HgImportRequestQueue{edenConfig};
   std::vector<Hash> enqueued;
-  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [midPriHash, midPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 6),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 6), proxyHash);
 
   auto [lowPriHash, lowPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 0),
-      proxyHash,
-      pendingImportWatches);
+      ImportPriority(ImportPriorityKind::Normal, 0), proxyHash);
 
   for (int i = 1; i < 6; i++) {
-    auto [hash, request] = makeBlobImportRequest(
-        ImportPriority(ImportPriorityKind::Normal, i), pendingImportWatches);
+    auto [hash, request] =
+        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
 
-    EXPECT_EQ(
-        std::nullopt,
-        queue.checkImportInProgress<Blob>(
-            request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-            ImportPriority(ImportPriorityKind::Normal, i)));
-
-    queue.enqueue(std::move(request));
+    queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
   for (int i = 7; i < 11; i++) {
-    auto [hash, request] = makeBlobImportRequest(
-        ImportPriority(ImportPriorityKind::Normal, i), pendingImportWatches);
+    auto [hash, request] =
+        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
 
-    EXPECT_EQ(
-        std::nullopt,
-        queue.checkImportInProgress<Blob>(
-            request.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-            ImportPriority(ImportPriorityKind::Normal, i)));
-
-    queue.enqueue(std::move(request));
+    queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
   // first check the low pri, which will be marked "in flight"
-  EXPECT_EQ(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          lowPriRequest.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 0)));
+  queue.enqueueBlob(std::move(lowPriRequest));
 
   // now check the mid pri, which will be turned away, but we expect the
   // priority to be respected
-  EXPECT_NE(
-      std::nullopt,
-      queue.checkImportInProgress<Blob>(
-          midPriRequest.getRequest<HgImportRequest::BlobImport>()->proxyHash,
-          ImportPriority(ImportPriorityKind::Normal, 6)));
-
-  queue.enqueue(std::move(lowPriRequest));
+  queue.enqueueBlob(std::move(midPriRequest));
 
   // Now lets dequeue everything and make sure the smallHash now has middle
   // priority. We need to walk through the enqueued list backwards since we

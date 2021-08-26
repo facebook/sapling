@@ -27,9 +27,26 @@ class HgImportRequestQueue {
       : config_(std::move(config)) {}
 
   /**
-   * Puts an item into the queue.
+   * Enqueue a blob request to the queue.
+   *
+   * Return a future that will complete when the blob request completes.
    */
-  void enqueue(HgImportRequest request);
+  folly::Future<std::unique_ptr<Blob>> enqueueBlob(HgImportRequest request);
+
+  /**
+   * Enqueue a tree request to the queue.
+   *
+   * Return a future that will complete when the blob request completes.
+   */
+  folly::Future<std::unique_ptr<Tree>> enqueueTree(HgImportRequest request);
+
+  /**
+   * Enqueue a prefetch request to the queue
+   *
+   * Return a future that will complete when the prefetch request
+   * completes.
+   */
+  folly::Future<folly::Unit> enqueuePrefetch(HgImportRequest request);
 
   /**
    * Returns a list of requests from the queue. It returns an empty list while
@@ -100,79 +117,13 @@ class HgImportRequestQueue {
     }
   }
 
-  template <typename T>
-  std::optional<folly::Future<std::unique_ptr<T>>> checkImportInProgress(
-      const HgProxyHash& id,
-      ImportPriority priority) {
-    auto state = state_.lock();
-    auto import = state->requestTracker.find(id);
-    if (import != state->requestTracker.end()) {
-      // Make empty promise, insert it into the vector, and return a
-      // Future made from the reference to that promise in the map.
-      auto promise = folly::Promise<std::unique_ptr<T>>();
-
-      bool realRequest = false;
-      std::vector<folly::Promise<std::unique_ptr<T>>>* promises;
-
-      if constexpr (std::is_same_v<T, Tree>) {
-        auto* treeImport =
-            import->second->getRequest<HgImportRequest::TreeImport>();
-        treeImport->promises.emplace_back(std::move(promise));
-        realRequest = treeImport->realRequest;
-        promises = &treeImport->promises;
-      } else {
-        static_assert(
-            std::is_same_v<T, Blob>,
-            "checkImportInProgress can only be called with a Tree or Blob types");
-        auto* blobImport =
-            import->second->getRequest<HgImportRequest::BlobImport>();
-        blobImport->promises.emplace_back(std::move(promise));
-        realRequest = blobImport->realRequest;
-        promises = &blobImport->promises;
-      }
-
-      // This should always be valid since we insert a dummy request when we see
-      // the first import request
-      if (import->second->getPriority() < priority) {
-        import->second->setPriority(priority);
-
-        // Only do this while the request is not a dummy request
-        if (realRequest) {
-          std::make_heap(
-              state->queue.begin(),
-              state->queue.end(),
-              [](std::shared_ptr<HgImportRequest> lhs,
-                 std::shared_ptr<HgImportRequest> rhs) {
-                return (*lhs) < (*rhs);
-              });
-        }
-      }
-
-      return std::make_optional(promises->back().getFuture());
-
-    } else {
-      // Insert a dummy request into the requestTracker to keep track of the
-      // priorities we've set for the corresponding id
-      if constexpr (std::is_same_v<T, Tree>) {
-        state->requestTracker[id] = std::make_shared<HgImportRequest>(
-            HgImportRequest::TreeImport{kEmptySha1, id, true, false},
-            priority,
-            folly::Promise<HgImportRequest::TreeImport::Response>{});
-      } else {
-        static_assert(
-            std::is_same_v<T, Blob>,
-            "checkImportInProgress can only be called with a Tree or Blob types");
-        state->requestTracker[id] = std::make_shared<HgImportRequest>(
-            HgImportRequest::BlobImport{kEmptySha1, id, false},
-            priority,
-            folly::Promise<HgImportRequest::BlobImport::Response>{});
-      }
-
-      return std::nullopt;
-    }
-  }
-
  private:
+  /**
+   * Puts an item into the queue.
+   */
+  template <typename Ret, typename ImportType = void>
+  folly::Future<Ret> enqueue(HgImportRequest&& request);
+
   HgImportRequestQueue(HgImportRequestQueue&&) = delete;
   HgImportRequestQueue& operator=(HgImportRequestQueue&&) = delete;
 

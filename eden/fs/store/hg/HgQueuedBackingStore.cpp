@@ -311,43 +311,29 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     throw;
   }
 
-  // TODO: Merge checkTreeImportInProgress and enqueue into one call that
-  // acquires the lock, and then atomically either schedules work or
-  // attaches to the in-flight work. This would remove all of the complexity
-  // around dummy requests and kZeroHash. The logic around
-  // InodeMap::shouldLoadChild is similar.
-  // Check if we're already making this request.
-  auto inProgress =
-      queue_.checkImportInProgress<Tree>(proxyHash, context.getPriority());
-
-  if (inProgress.has_value()) {
-    XLOG(DBG4) << "tree " << id << " already being fetched";
-    return std::move(inProgress).value();
-  }
   auto getTreeFuture = folly::makeFutureWith([&] {
     logBackingStoreFetch(
         context,
         folly::Range{&proxyHash, 1},
         ObjectFetchContext::ObjectType::Tree);
 
-    auto importTracker =
-        std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
-    auto [request, future] = HgImportRequest::makeTreeImportRequest(
-        id,
-        proxyHash,
-        context.getPriority(),
-        std::move(importTracker),
-        context.prefetchMetadata());
+    auto request = HgImportRequest::makeTreeImportRequest(
+        id, proxyHash, context.getPriority(), context.prefetchMetadata());
     uint64_t unique = request.getUnique();
 
+    auto importTracker =
+        std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
     traceBus_->publish(
         HgImportTraceEvent::queue(unique, HgImportTraceEvent::TREE, proxyHash));
 
-    queue_.enqueue(std::move(request));
-    return std::move(future).ensure([this, unique, proxyHash]() {
-      traceBus_->publish(HgImportTraceEvent::finish(
-          unique, HgImportTraceEvent::TREE, proxyHash));
-    });
+    return queue_.enqueueTree(std::move(request))
+        .ensure([this,
+                 unique,
+                 proxyHash,
+                 importTracker = std::move(importTracker)]() {
+          traceBus_->publish(HgImportTraceEvent::finish(
+              unique, HgImportTraceEvent::TREE, proxyHash));
+        });
   });
 
   return std::move(getTreeFuture)
@@ -385,31 +371,27 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
     const Hash& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
-  // Check if we're already making this request.
-  auto inProgress =
-      queue_.checkImportInProgress<Blob>(proxyHash, context.getPriority());
-  if (inProgress.has_value()) {
-    XLOG(DBG4) << "blob " << id << " already being fetched";
-    return std::move(inProgress).value();
-  }
-
   auto getBlobFuture = folly::makeFutureWith([&] {
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
 
+    auto request = HgImportRequest::makeBlobImportRequest(
+        id, proxyHash, context.getPriority());
+    auto unique = request.getUnique();
+
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
-    auto [request, future] = HgImportRequest::makeBlobImportRequest(
-        id, proxyHash, context.getPriority(), std::move(importTracker));
-    auto unique = request.getUnique();
     traceBus_->publish(
         HgImportTraceEvent::queue(unique, HgImportTraceEvent::BLOB, proxyHash));
 
-    queue_.enqueue(std::move(request));
-    return std::move(future).ensure([this, unique, proxyHash]() {
-      traceBus_->publish(HgImportTraceEvent::finish(
-          unique, HgImportTraceEvent::BLOB, proxyHash));
-    });
+    return queue_.enqueueBlob(std::move(request))
+        .ensure([this,
+                 unique,
+                 proxyHash,
+                 importTracker = std::move(importTracker)]() {
+          traceBus_->publish(HgImportTraceEvent::finish(
+              unique, HgImportTraceEvent::BLOB, proxyHash));
+        });
   });
 
   return std::move(getBlobFuture)
@@ -469,15 +451,14 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
           });
         } else {
           // TODO: deduplicate prefetches
+          auto request = HgImportRequest::makePrefetchRequest(
+              std::move(proxyHashes), ImportPriority::kNormal());
+
           auto importTracker = std::make_unique<RequestMetricsScope>(
               &pendingImportPrefetchWatches_);
-          auto [request, future] = HgImportRequest::makePrefetchRequest(
-              std::move(proxyHashes),
-              ImportPriority::kNormal(),
-              std::move(importTracker));
-          queue_.enqueue(std::move(request));
-
-          return std::move(future).semi();
+          return queue_.enqueuePrefetch(std::move(request))
+              .ensure([importTracker = std::move(importTracker)]() {})
+              .semi();
         }
       });
 }

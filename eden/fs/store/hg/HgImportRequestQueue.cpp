@@ -6,11 +6,9 @@
  */
 
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
-#include "eden/fs/config/ReloadableConfig.h"
-
 #include <folly/futures/Future.h>
 #include <algorithm>
-#include <complex>
+#include "eden/fs/config/ReloadableConfig.h"
 
 namespace facebook::eden {
 
@@ -22,64 +20,79 @@ void HgImportRequestQueue::stop() {
   }
 }
 
-void HgImportRequestQueue::enqueue(HgImportRequest request) {
-  {
-    auto state = state_.lock();
+folly::Future<std::unique_ptr<Blob>> HgImportRequestQueue::enqueueBlob(
+    HgImportRequest request) {
+  return enqueue<std::unique_ptr<Blob>, HgImportRequest::BlobImport>(
+      std::move(request));
+}
 
-    state->queue.emplace_back(
-        std::make_shared<HgImportRequest>(std::move(request)));
-    auto& requestPtr = state->queue.back();
+folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
+    HgImportRequest request) {
+  return enqueue<std::unique_ptr<Tree>, HgImportRequest::TreeImport>(
+      std::move(request));
+}
 
-    // Put our request in the request tracker if the request not a
-    // PrefetchRequest
-    if (requestPtr->isType<HgImportRequest::BlobImport>()) {
-      auto* blobImport = requestPtr->getRequest<HgImportRequest::BlobImport>();
-      auto& proxyHash = blobImport->proxyHash;
+folly::Future<folly::Unit> HgImportRequestQueue::enqueuePrefetch(
+    HgImportRequest request) {
+  return enqueue<folly::Unit>(std::move(request));
+}
 
-      auto& trackedRequest = state->requestTracker[proxyHash];
-      auto* trackedBlobImport =
-          trackedRequest->getRequest<HgImportRequest::BlobImport>();
+template <typename Ret, typename ImportType>
+folly::Future<Ret> HgImportRequestQueue::enqueue(HgImportRequest&& request) {
+  auto state = state_.lock();
 
-      // If we get multiple requests at once, it is possible that we call
-      // checkImportInProgress multiple times before we enqueue the request. In
-      // this case, we "send away" the duplicate requests, but we still keep
-      // track of the highest priority we've seen. We need to update the
-      // enqueued request's priority with the highest priority we've seen so far
-      if (requestPtr->getPriority() < trackedRequest->getPriority()) {
-        requestPtr->setPriority(trackedRequest->getPriority());
+  if constexpr (!std::is_same_v<ImportType, void>) {
+    const auto& proxyHash = request.getRequest<ImportType>()->proxyHash;
+
+    if (auto* existingRequestPtr =
+            folly::get_ptr(state->requestTracker, proxyHash)) {
+      auto& existingRequest = *existingRequestPtr;
+      auto* trackedImport = existingRequest->template getRequest<ImportType>();
+
+      auto [promise, future] = folly::makePromiseContract<Ret>();
+      trackedImport->promises.emplace_back(std::move(promise));
+
+      if (existingRequest->getPriority() < request.getPriority()) {
+        existingRequest->setPriority(request.getPriority());
+
+        // Since the new request has a higher priority than the already present
+        // one, we need to re-order the heap.
+        //
+        // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
+        // duplicated requests will thus lead to a quadratic complexity.
+        std::make_heap(
+            state->queue.begin(),
+            state->queue.end(),
+            [](const std::shared_ptr<HgImportRequest>& lhs,
+               const std::shared_ptr<HgImportRequest>& rhs) {
+              return (*lhs) < (*rhs);
+            });
       }
 
-      // std::move the vector of already generated promises from the dummy
-      // request to the new "real" request. The dummy request collects promises
-      // for duplicate requests that come in before we enqueue the first request
-      blobImport->promises = std::move(trackedBlobImport->promises);
-      trackedRequest = requestPtr;
-    } else if (requestPtr->isType<HgImportRequest::TreeImport>()) {
-      auto* treeImport = requestPtr->getRequest<HgImportRequest::TreeImport>();
-      auto& proxyHash = treeImport->proxyHash;
-
-      auto& trackedRequest = state->requestTracker[proxyHash];
-      auto* trackedTreeImport =
-          trackedRequest->getRequest<HgImportRequest::TreeImport>();
-
-      if (requestPtr->getPriority() < trackedRequest->getPriority()) {
-        requestPtr->setPriority(trackedRequest->getPriority());
-      }
-
-      treeImport->promises = std::move(trackedTreeImport->promises);
-      trackedRequest = requestPtr;
+      return std::move(future).toUnsafeFuture();
     }
-
-    std::push_heap(
-        state->queue.begin(),
-        state->queue.end(),
-        [](const std::shared_ptr<HgImportRequest>& lhs,
-           const std::shared_ptr<HgImportRequest>& rhs) {
-          return (*lhs) < (*rhs);
-        });
   }
 
+  auto& inserted = state->queue.emplace_back(
+      std::make_shared<HgImportRequest>(std::move(request)));
+  auto promise = inserted->getPromise<Ret>();
+
+  if constexpr (!std::is_same_v<ImportType, void>) {
+    const auto& proxyHash = inserted->getRequest<ImportType>()->proxyHash;
+    state->requestTracker.emplace(proxyHash, inserted);
+  }
+
+  std::push_heap(
+      state->queue.begin(),
+      state->queue.end(),
+      [](const std::shared_ptr<HgImportRequest>& lhs,
+         const std::shared_ptr<HgImportRequest>& rhs) {
+        return (*lhs) < (*rhs);
+      });
+
   queueCV_.notify_one();
+
+  return promise->getFuture();
 }
 
 std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
