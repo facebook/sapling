@@ -197,6 +197,15 @@ class FindExeClass(object):
             "HG_ETC_MERCURIAL", "eden/scm", "fb/staticfiles/etc/mercurial"
         )
 
+    @cached_property
+    def SOURCE_BUILT_BUCK(self) -> str:
+        return self._find_exe(
+            "buck",
+            env="SOURCE_BUILT_BUCK",
+            buck_path="programs/buck.pex",
+            buck_cell_path="dev/cells/buck",
+        )
+
     def _find_hg(self) -> str:
         hg_bin = self._find_exe_optional(
             "hg", env="EDEN_HG_BINARY", buck_path="scm/telemetry/hg/hg#binary/hg"
@@ -234,6 +243,7 @@ class FindExeClass(object):
         env: str,
         buck_path: Optional[str] = None,
         cmake_path: Optional[str] = None,
+        buck_cell_path: Optional[str] = None,
     ) -> str:
         exe = self._find_exe_optional(
             name=name,
@@ -241,6 +251,7 @@ class FindExeClass(object):
             buck_path=buck_path,
             cmake_path=cmake_path,
             require_found=True,
+            buck_cell_path=buck_cell_path,
         )
         assert exe is not None
         return exe
@@ -252,6 +263,7 @@ class FindExeClass(object):
         buck_path: Optional[str] = None,
         cmake_path: Optional[str] = None,
         require_found: bool = False,
+        buck_cell_path: Optional[str] = None,
     ) -> Optional[str]:
         if env is not None:
             path = os.environ.get(env)
@@ -266,7 +278,10 @@ class FindExeClass(object):
         candidates = []
         if self.is_buck_build():
             if buck_path is not None:
-                candidates.append(os.path.join(self.BUCK_OUT, "gen", buck_path))
+                buck_out = self.BUCK_OUT
+                if buck_cell_path is not None:
+                    buck_out = os.path.join(buck_out, buck_cell_path)
+                candidates.append(os.path.join(buck_out, "gen", buck_path))
         else:
             # If an explicit CMake output was specified use it,
             # otherwise use the same path as for Buck.

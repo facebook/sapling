@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
-from eden.fs.cli.buck import run_buck_command
+from eden.fs.cli.buck import run_buck_command, get_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
@@ -453,7 +453,7 @@ space by running:
                         self.writeln_ui(
                             f"\nReclaiming space from redirection: {redir_full_path}"
                         )
-                        result = run_buck_command(["buck", "clean"], parent)
+                        result = run_buck_command([get_buck_command(), "clean"], parent)
                         result.check_returncode()
                         self.writeln_ui("Space reclaimed.\n")
 

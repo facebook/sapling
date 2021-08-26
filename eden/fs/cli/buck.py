@@ -11,10 +11,46 @@ import glob
 import os
 import subprocess
 import sys
-from typing import List
+from typing import Dict, List
 
 from . import proc_utils
 from .util import get_environment_suitable_for_subprocess
+
+# In the EdenFS buck integration tests we build buck from source
+# in these tests we need to use the source built buck. The path for
+# this will be in the SOURCE_BUILT_BUCK environment variable. Otherwise we use
+# the default buck in our path.
+def get_buck_command() -> str:
+    return os.environ.get("SOURCE_BUILT_BUCK", "buck")
+
+
+def get_env_with_buck_version() -> Dict[str, str]:
+    env = get_environment_suitable_for_subprocess()
+    if os.environ.get("SOURCE_BUILT_BUCK") is not None:
+        # If we are going to use locally built buck we don't need to set a buck
+        # version. The locally build buck will only use the locally built
+        # version
+        return env
+
+    # Using BUCKVERSION=last here to avoid triggering a download of a new
+    # version of buck just to kill off buck.  This is specific to Facebook's
+    # deployment of buck, and has no impact on the behavior of the opensource
+    # buck executable.
+    # On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
+    if sys.platform != "win32":
+        buckversion = "last"
+    else:
+        buckversion = subprocess.run(
+            [get_buck_command(), "--version-fast"],
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ).stdout.strip()
+
+    # Buck's version selection is currently having problems on macOS
+    if sys.platform != "darwin":
+        env["BUCKVERSION"] = buckversion
+
+    return env
 
 
 def find_buck_projects_in_repo(path: str) -> List[str]:
@@ -51,24 +87,8 @@ def is_buckd_running_for_path(path: str) -> bool:
 def run_buck_command(
     buck_command: List[str], path: str
 ) -> "subprocess.CompletedProcess[bytes]":
-    # Using BUCKVERSION=last here to avoid triggering a download of a new
-    # version of buck just to kill off buck.  This is specific to Facebook's
-    # deployment of buck, and has no impact on the behavior of the opensource
-    # buck executable.
-    # On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
-    if sys.platform != "win32":
-        buckversion = "last"
-    else:
-        buckversion = subprocess.run(
-            ["buck", "--version-fast"], stdout=subprocess.PIPE, encoding="utf-8"
-        ).stdout.strip()
 
-    env = get_environment_suitable_for_subprocess()
-
-    # Buck's version selection is currently having problems on macOS
-    if sys.platform != "darwin":
-        env["BUCKVERSION"] = buckversion
-
+    env = get_env_with_buck_version()
     return subprocess.run(
         buck_command,
         stdout=subprocess.PIPE,
@@ -82,7 +102,7 @@ def run_buck_command(
 def stop_buckd_for_path(path: str) -> None:
     print(f"Stopping buck in {path}...")
 
-    run_buck_command(["buck", "kill"], path)
+    run_buck_command([get_buck_command(), "kill"], path)
 
 
 def stop_buckd_for_repo(path: str) -> None:
@@ -100,7 +120,7 @@ def buck_clean_repo(path: str) -> None:
             # of a new version of buck just to remove some dirs
             # This is specific to Facebook's deployment of buck, and has
             # no impact on the behavior of the opensource buck executable.
-            ["env", "NO_BUCKD=true", "BUCKVERSION=last", "buck", "clean"],
+            ["env", "NO_BUCKD=true", "BUCKVERSION=last", get_buck_command(), "clean"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=project,
