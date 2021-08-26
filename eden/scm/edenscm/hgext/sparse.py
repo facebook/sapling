@@ -2309,7 +2309,20 @@ def _explainprofile(ui, repo, *profiles, **opts):
     return exitcode
 
 
-@subcmd("files", commands.templateopts, _("[OPTION]... PROFILE [FILES]..."))
+@subcmd(
+    "files",
+    [
+        (
+            "r",
+            "rev",
+            "",
+            _("show the files in the specified revision"),
+            _("REV"),
+        ),
+    ]
+    + commands.templateopts,
+    _("[OPTION]... PROFILE [FILES]..."),
+)
 def _listfilessubcmd(ui, repo, profile, *files, **opts):
     """list all files included in a sparse profile
 
@@ -2322,13 +2335,14 @@ def _listfilessubcmd(ui, repo, profile, *files, **opts):
     # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
     repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
+    rev = opts.get("rev", ".")
     try:
-        raw = repo.getrawprofile(profile, ".")
+        raw = repo.getrawprofile(profile, rev)
     except KeyError:
         raise error.Abort(_("The profile %s was not found\n") % profile)
 
     config = repo.readsparseconfig(raw, profile)
-    ctx = repo["."]
+    ctx = repo[rev]
     matcher = matchmod.intersectmatchers(
         matchmod.match(repo.root, repo.getcwd(), files),
         repo.sparsematch(ctx.hex(), includetemp=False, config=config),
