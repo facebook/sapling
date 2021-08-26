@@ -74,14 +74,14 @@ class HgImportRequest {
     std::vector<HgProxyHash> proxyHashes;
   };
 
-  static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
+  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Blob>>>
   makeBlobImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority,
       std::unique_ptr<RequestMetricsScope> metricsScope);
 
-  static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
+  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Tree>>>
   makeTreeImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
@@ -89,7 +89,7 @@ class HgImportRequest {
       std::unique_ptr<RequestMetricsScope> metricsScope,
       bool prefetchMetadata);
 
-  static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
+  static std::pair<HgImportRequest, folly::Future<folly::Unit>>
   makePrefetchRequest(
       std::vector<HgProxyHash> hashes,
       ImportPriority priority,

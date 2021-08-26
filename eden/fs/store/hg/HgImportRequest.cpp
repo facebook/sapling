@@ -17,24 +17,21 @@ namespace facebook::eden {
 
 namespace {
 template <typename Request, typename... Input>
-std::pair<HgImportRequest, folly::SemiFuture<typename Request::Response>>
+std::pair<HgImportRequest, folly::Future<typename Request::Response>>
 makeRequest(
     ImportPriority priority,
     std::unique_ptr<RequestMetricsScope> metricsScope,
     Input&&... input) {
   auto promise = folly::Promise<typename Request::Response>{};
-  auto future = promise.getSemiFuture();
+  auto future = promise.getFuture();
   return std::make_pair(
       HgImportRequest{
           Request{std::forward<Input>(input)...}, priority, std::move(promise)},
-      std::move(future).defer(
-          [metrics = std::move(metricsScope)](auto&& result) {
-            return std::move(result);
-          }));
+      std::move(future).ensure([metrics = std::move(metricsScope)]() {}));
 }
 } // namespace
 
-std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
+std::pair<HgImportRequest, folly::Future<std::unique_ptr<Blob>>>
 HgImportRequest::makeBlobImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
@@ -44,7 +41,7 @@ HgImportRequest::makeBlobImportRequest(
       priority, std::move(metricsScope), hash, std::move(proxyHash));
 }
 
-std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
+std::pair<HgImportRequest, folly::Future<std::unique_ptr<Tree>>>
 HgImportRequest::makeTreeImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
@@ -59,7 +56,7 @@ HgImportRequest::makeTreeImportRequest(
       prefetchMetadata);
 }
 
-std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
+std::pair<HgImportRequest, folly::Future<folly::Unit>>
 HgImportRequest::makePrefetchRequest(
     std::vector<HgProxyHash> hashes,
     ImportPriority priority,
