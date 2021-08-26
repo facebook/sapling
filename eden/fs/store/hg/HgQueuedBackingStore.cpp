@@ -337,8 +337,8 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
   });
 
   return std::move(getTreeFuture)
-      .thenTry([this, proxyHash](folly::Try<std::unique_ptr<Tree>>&& result) {
-        this->queue_.markImportAsFinished<Tree>(proxyHash, result);
+      .thenTry([this, id](folly::Try<std::unique_ptr<Tree>>&& result) {
+        this->queue_.markImportAsFinished<Tree>(id, result);
         return folly::makeSemiFuture(std::move(result));
       });
 }
@@ -395,8 +395,8 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
   });
 
   return std::move(getBlobFuture)
-      .thenTry([this, proxyHash](folly::Try<std::unique_ptr<Blob>>&& result) {
-        this->queue_.markImportAsFinished<Blob>(proxyHash, result);
+      .thenTry([this, id](folly::Try<std::unique_ptr<Blob>>&& result) {
+        this->queue_.markImportAsFinished<Blob>(id, result);
         return folly::makeSemiFuture(std::move(result));
       });
 }

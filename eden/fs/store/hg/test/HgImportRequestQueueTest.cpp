@@ -126,7 +126,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
     });
 
     queue.markImportAsFinished<Blob>(
-        request->getRequest<HgImportRequest::BlobImport>()->proxyHash, blob);
+        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
 
   auto smallRequestDequeue = queue.dequeue().at(0);
@@ -140,7 +140,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
       });
 
   queue.markImportAsFinished<Blob>(
-      smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->proxyHash,
+      smallRequestDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
       smallBlob);
 }
 
@@ -171,7 +171,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
         return std::make_unique<Blob>(largeHash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->proxyHash,
+      largeHashDequeue->getRequest<HgImportRequest::BlobImport>()->hash,
       largeBlob);
 
   while (!enqueued.empty()) {
@@ -187,7 +187,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
       return std::make_unique<Blob>(expected, folly::IOBuf{});
     });
     queue.markImportAsFinished<Blob>(
-        request->getRequest<HgImportRequest::BlobImport>()->proxyHash, blob);
+        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
 }
 
@@ -232,8 +232,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
           return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
         });
     queue.markImportAsFinished<Tree>(
-        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->proxyHash,
-        tree);
+        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
   }
 
   // Pre dequeue, queue has tree requests from priority 1 to 8 and blob
@@ -257,8 +256,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
           return std::make_unique<Blob>(hash, folly::IOBuf{});
         });
     queue.markImportAsFinished<Blob>(
-        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-        blob);
+        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
 }
 
@@ -295,8 +293,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
           return std::make_unique<Blob>(hash, folly::IOBuf{});
         });
     queue.markImportAsFinished<Blob>(
-        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-        blob);
+        dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
 
   rawEdenConfig->importBatchSizeTree.setValue(
@@ -317,8 +314,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
           return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
         });
     queue.markImportAsFinished<Tree>(
-        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->proxyHash,
-        tree);
+        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
   }
 }
 
@@ -355,8 +351,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
         return std::make_unique<Blob>(hash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-      blob);
+      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
 
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
@@ -394,8 +389,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
         return std::make_unique<Blob>(hash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-      blob);
+      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
 
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
@@ -430,8 +424,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
         return std::make_unique<Blob>(hash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-      blob);
+      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
 
 TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
@@ -477,8 +470,7 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
         return std::make_unique<Blob>(hash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash,
-      blob);
+      dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 }
 
 TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
@@ -533,7 +525,7 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
       return std::make_unique<Blob>(expected, folly::IOBuf{});
     });
     queue.markImportAsFinished<Blob>(
-        request->getRequest<HgImportRequest::BlobImport>()->proxyHash, blob);
+        request->getRequest<HgImportRequest::BlobImport>()->hash, blob);
   }
 
   auto expLowPri = queue.dequeue().at(0);
@@ -546,7 +538,7 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
         return std::make_unique<Blob>(lowPriHash, folly::IOBuf{});
       });
   queue.markImportAsFinished<Blob>(
-      expLowPri->getRequest<HgImportRequest::BlobImport>()->proxyHash, blob);
+      expLowPri->getRequest<HgImportRequest::BlobImport>()->hash, blob);
 
   for (int i = 5; i > 0; i--) {
     auto expected = enqueued.back();
@@ -562,6 +554,6 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
           return std::make_unique<Blob>(expected, folly::IOBuf{});
         });
     queue.markImportAsFinished<Blob>(
-        request->getRequest<HgImportRequest::BlobImport>()->proxyHash, expBlob);
+        request->getRequest<HgImportRequest::BlobImport>()->hash, expBlob);
   }
 }

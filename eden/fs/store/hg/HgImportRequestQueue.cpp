@@ -43,10 +43,10 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
   auto state = state_.lock();
 
   if constexpr (!std::is_same_v<ImportType, void>) {
-    const auto& proxyHash = request->getRequest<ImportType>()->proxyHash;
+    const auto& hash = request->getRequest<ImportType>()->hash;
 
     if (auto* existingRequestPtr =
-            folly::get_ptr(state->requestTracker, proxyHash)) {
+            folly::get_ptr(state->requestTracker, hash)) {
       auto& existingRequest = *existingRequestPtr;
       auto* trackedImport = existingRequest->template getRequest<ImportType>();
 
@@ -78,8 +78,8 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
   auto promise = request->getPromise<Ret>();
 
   if constexpr (!std::is_same_v<ImportType, void>) {
-    const auto& proxyHash = request->getRequest<ImportType>()->proxyHash;
-    state->requestTracker.emplace(proxyHash, std::move(request));
+    const auto& hash = request->getRequest<ImportType>()->hash;
+    state->requestTracker.emplace(hash, std::move(request));
   }
 
   std::push_heap(
