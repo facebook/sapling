@@ -12,6 +12,7 @@ pub use self::{
     util::file_to_async_key_stream,
 };
 
+pub mod attrs;
 pub mod builder;
 pub mod file;
 pub mod tree;

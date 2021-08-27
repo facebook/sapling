@@ -26,6 +26,7 @@ use crate::{
     lfs::{LfsPointersEntry, LfsRemoteInner, LfsStore, LfsStoreEntry},
     memcache::McData,
     scmstore::{
+        attrs::StoreAttrs,
         fetch::{FetchErrors, FetchResults},
         file::{metrics::FileStoreFetchMetrics, LazyFile},
         FileAttributes, FileAuxData, FileStore, StoreFile,

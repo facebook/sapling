@@ -9,6 +9,8 @@ use std::ops::{BitAnd, BitOr, Not, Sub};
 
 use edenapi_types::FileAttributes as EdenApiFileAttributes;
 
+use crate::scmstore::attrs::StoreAttrs;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FileAttributes {
     pub content: bool,
@@ -24,41 +26,23 @@ impl From<FileAttributes> for EdenApiFileAttributes {
     }
 }
 
-impl FileAttributes {
+impl StoreAttrs for FileAttributes {
+    const NONE: Self = FileAttributes {
+        content: false,
+        aux_data: false,
+    };
+
     /// Returns all the attributes which are present or can be computed from present attributes.
-    pub(crate) fn with_computable(&self) -> FileAttributes {
+    fn with_computable(&self) -> FileAttributes {
         if self.content {
             *self | FileAttributes::AUX
         } else {
             *self
         }
     }
+}
 
-    /// Returns true if all the specified attributes are set, otherwise false.
-    pub fn has(&self, attrs: FileAttributes) -> bool {
-        (attrs - *self).none()
-    }
-
-    /// Returns true if no attributes are set, otherwise false.
-    pub fn none(&self) -> bool {
-        *self == FileAttributes::NONE
-    }
-
-    /// Returns true if at least one attribute is set, otherwise false.
-    pub fn any(&self) -> bool {
-        *self != FileAttributes::NONE
-    }
-
-    /// Returns true if all attributes are set, otherwise false.
-    pub fn all(&self) -> bool {
-        !*self == FileAttributes::NONE
-    }
-
-    pub const NONE: Self = FileAttributes {
-        content: false,
-        aux_data: false,
-    };
-
+impl FileAttributes {
     pub const CONTENT: Self = FileAttributes {
         content: true,
         aux_data: false,
