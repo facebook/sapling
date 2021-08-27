@@ -197,6 +197,18 @@ class HgQueuedBackingStore final : public BackingStore {
       ObjectFetchContext& context);
 
   /**
+   * Fetch a tree from Mercurial.
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the tree is present locally, as this function will always push the request
+   * at the end of the queue.
+   */
+  folly::SemiFuture<std::unique_ptr<Tree>> getTreeImpl(
+      const Hash& id,
+      const HgProxyHash& proxyHash,
+      ObjectFetchContext& context);
+
+  /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
    * configured paths to log. The path is derived from the proxy hash.
    */

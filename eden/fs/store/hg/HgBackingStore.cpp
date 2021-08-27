@@ -671,13 +671,23 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
   });
 }
 
-unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
-    const Hash& id,
-    const HgProxyHash& hgInfo) {
-  if (auto content = datapackStore_.getBlobLocal(id, hgInfo)) {
-    XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
-               << hgInfo.revHash().toString() << " from datapack store";
-    return content;
+unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(
+    const Hash& edenTreeId,
+    const HgProxyHash& proxyHash,
+    bool prefetchMetadata) {
+  if (auto tree =
+          datapackStore_.getTreeLocal(edenTreeId, proxyHash, *localStore_)) {
+    XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
+               << proxyHash.revHash().toString() << " from hgcache";
+
+    auto treeMetadataFuture =
+        folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
+    if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata) {
+      treeMetadataFuture =
+          metadataImporter_->getTreeMetadata(edenTreeId, proxyHash.revHash());
+    }
+    this->processTreeMetadata(std::move(treeMetadataFuture), *tree);
+    return tree;
   }
 
   return nullptr;

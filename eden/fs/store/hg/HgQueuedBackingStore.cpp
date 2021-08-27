@@ -116,12 +116,6 @@ void HgQueuedBackingStore::processBlobImportRequests(
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
 
-    stats_->getHgBackingStoreStatsForCurrentThread()
-        .hgBackingStoreDequeueBlob.addValue(
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - request->getRequestTime())
-                .count());
-
     XLOGF(
         DBG4,
         "Processing blob request for {} ({:p})",
@@ -191,12 +185,6 @@ void HgQueuedBackingStore::processTreeImportRequests(
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
-
-    stats_->getHgBackingStoreStatsForCurrentThread()
-        .hgBackingStoreDequeueTree.addValue(
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::steady_clock::now() - request->getRequestTime())
-                .count());
 
     XLOGF(
         DBG4,
@@ -311,12 +299,24 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     throw;
   }
 
-  auto getTreeFuture = folly::makeFutureWith([&] {
-    logBackingStoreFetch(
-        context,
-        folly::Range{&proxyHash, 1},
-        ObjectFetchContext::ObjectType::Tree);
+  logBackingStoreFetch(
+      context,
+      folly::Range{&proxyHash, 1},
+      ObjectFetchContext::ObjectType::Tree);
 
+  if (auto tree = backingStore_->getTreeFromHgCache(
+          id, proxyHash, context.prefetchMetadata())) {
+    return folly::makeSemiFuture(std::move(tree));
+  }
+
+  return getTreeImpl(id, proxyHash, context);
+}
+
+folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeImpl(
+    const Hash& id,
+    const HgProxyHash& proxyHash,
+    ObjectFetchContext& context) {
+  auto getTreeFuture = folly::makeFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
         id, proxyHash, context.getPriority(), context.prefetchMetadata());
     uint64_t unique = request->getUnique();

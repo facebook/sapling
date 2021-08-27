@@ -86,6 +86,16 @@ class HgBackingStore {
   void processTreeMetadata(
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
       const Tree& tree);
+
+  /**
+   * Retrieve a tree from hgcache. This function may return `nullptr` when it
+   * couldn't fetch the tree.
+   */
+  std::unique_ptr<Tree> getTreeFromHgCache(
+      const Hash& edenTreeId,
+      const HgProxyHash& proxyHash,
+      bool prefetchMetadata);
+
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       std::vector<HgProxyHash> ids,
       ObjectFetchContext& context);
@@ -134,13 +144,6 @@ class HgBackingStore {
 
   // Get blob step functions
 
-  /**
-   * Retrieve a blob from hgcache. This function may return `nullptr` when it
-   * couldn't fetch the blob.
-   */
-  std::unique_ptr<Blob> getBlobFromHgCache(
-      const Hash& id,
-      const HgProxyHash& hgInfo);
   folly::SemiFuture<std::unique_ptr<Blob>> fetchBlobFromHgImporter(
       HgProxyHash hgInfo);
 

@@ -112,6 +112,23 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
   return nullptr;
 }
 
+std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
+    const Hash& edenTreeId,
+    const HgProxyHash& proxyHash,
+    LocalStore& localStore) {
+  auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
+  if (tree) {
+    return fromRawTree(
+        tree.get(),
+        edenTreeId,
+        proxyHash.path(),
+        localStore.beginWrite().get(),
+        std::nullopt);
+  }
+
+  return nullptr;
+}
+
 void HgDatapackStore::getBlobBatch(
     const std::vector<Hash>& ids,
     const std::vector<HgProxyHash>& hashes,

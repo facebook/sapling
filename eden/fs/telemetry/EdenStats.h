@@ -225,8 +225,6 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  public:
-  Stat hgBackingStoreDequeueBlob{createStat("store.hg.dequeue_blob_us")};
-  Stat hgBackingStoreDequeueTree{createStat("store.hg.dequeue_tree_us")};
   Stat hgBackingStoreGetBlob{createStat("store.hg.get_blob")};
   Stat hgBackingStoreImportBlob{createStat("store.hg.import_blob")};
   Stat hgBackingStoreGetTree{createStat("store.hg.get_tree")};
