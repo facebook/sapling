@@ -112,6 +112,7 @@ impl MetaLog {
             orig_root_id,
             root,
         };
+        tracing::debug!("opened with root {}", orig_root_id.to_hex());
         Ok(metalog)
     }
 
@@ -185,6 +186,7 @@ impl MetaLog {
 
     /// Lookup a blob by key.
     pub fn get(&self, name: &str) -> Result<Option<Bytes>> {
+        tracing::trace!("get {}", name);
         match self.root.map.get(name) {
             Some(SerId20(id)) => Ok(self.blobs.get(*id)?),
             None => Ok(None),
@@ -195,6 +197,7 @@ impl MetaLog {
     ///
     /// Changes are not flushed to disk. Use `flush` to write them.
     pub fn set(&mut self, name: &str, value: &[u8]) -> Result<Id20> {
+        tracing::trace!("set {}", name);
         let delta_base_candidates = match self.root.map.get(name) {
             Some(SerId20(id)) => vec![*id],
             None => Vec::new(),
@@ -208,6 +211,7 @@ impl MetaLog {
     ///
     /// Changes are not flushed to disk. Use `flush` to write them.
     pub fn remove(&mut self, name: &str) -> Result<()> {
+        tracing::trace!("remove {}", name);
         self.root.map.remove(name);
         Ok(())
     }
@@ -233,7 +237,9 @@ impl MetaLog {
             // Nothing changed.
             return Ok(self.orig_root_id);
         }
+        tracing::trace!("commit (before lock)");
         let _lock = ScopedDirLock::new(&self.path);
+        tracing::debug!("commit (locked, detached = {})", options.detached);
         let (_, actual_compaction_epoch) = resolve_compaction_epoch(&self.path)?;
         if self.compaction_epoch != actual_compaction_epoch {
             return Err(Error(format!(
@@ -253,6 +259,7 @@ impl MetaLog {
         self.root.message = options.message.to_string();
         self.root.timestamp = options.timestamp;
         let bytes = mincode::serialize(&self.root)?;
+        let orig_root_id = self.orig_root_id;
         let id = self.blobs.insert(&bytes, &vec![self.orig_root_id])?;
         self.blobs.flush()?;
         if !options.detached {
@@ -281,7 +288,7 @@ impl MetaLog {
                 }
             }
         }
-
+        tracing::debug!("committed {} => {}", orig_root_id.to_hex(), id.to_hex());
         Ok(id)
     }
 
