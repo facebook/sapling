@@ -19,16 +19,6 @@ macro_rules! fb_unimplemented {
     };
 }
 
-impl PoolSizeConfig {
-    pub fn for_regular_connection() -> Self {
-        fb_unimplemented!()
-    }
-
-    pub fn for_sharded_connection() -> Self {
-        fb_unimplemented!()
-    }
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PoolConfig;
 
@@ -65,16 +55,6 @@ pub fn create_mysql_connections_unsharded(
     _tier: String,
     _readonly: bool,
 ) -> Result<SqlConnections, Error> {
-    fb_unimplemented!()
-}
-
-pub fn deprecated_create_mysql_pool_unsharded(
-    _fb: FacebookInit,
-    _tier: String,
-    _read_con_type: ReadConnectionType,
-    _pool_size_config: PoolSizeConfig,
-    _readonly: bool,
-) -> Result<SqlConnections> {
     fb_unimplemented!()
 }
 

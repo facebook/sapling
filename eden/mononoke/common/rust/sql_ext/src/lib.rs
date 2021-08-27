@@ -30,16 +30,14 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     pub use r#impl::{
         create_mysql_connections_sharded, create_mysql_connections_unsharded,
-        deprecated_create_mysql_pool_unsharded,
         myadmin::{MyAdmin, MyAdminLagMonitor},
         PoolConfig, SharedConnectionPool,
     };
 
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{
-        create_mysql_connections_sharded, create_mysql_connections_unsharded,
-        deprecated_create_mysql_pool_unsharded, MyAdmin, MyAdminLagMonitor, PoolConfig,
-        SharedConnectionPool,
+        create_mysql_connections_sharded, create_mysql_connections_unsharded, MyAdmin,
+        MyAdminLagMonitor, PoolConfig, SharedConnectionPool,
     };
 
     /// MySQL global shared connection pool configuration.
@@ -91,12 +89,5 @@ pub mod facebook {
     pub enum ReadConnectionType {
         Replica,
         Master,
-    }
-
-    #[derive(Copy, Clone, Debug)]
-    pub struct PoolSizeConfig {
-        pub write_pool_size: usize,
-        pub read_pool_size: usize,
-        pub read_master_pool_size: usize,
     }
 }
