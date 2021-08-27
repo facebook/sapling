@@ -11,7 +11,7 @@ use cpython::*;
 use futures::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::{bail, format_err};
+use anyhow::{bail, format_err, Context};
 use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
@@ -26,9 +26,9 @@ use edenapi::{
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
     CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
-    HistoryEntry, LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset,
-    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
+    EdenApiServerError, FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, HgChangesetContent,
+    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, SnapshotRawData,
+    TreeEntry, UploadHgChangeset, UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -794,6 +794,28 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(Serde)
+    }
+
+    fn fetchsnapshot_py(
+        &self,
+        py: Python,
+        repo: String,
+        data: Serde<FetchSnapshotRequest>,
+    ) -> PyResult<Serde<FetchSnapshotResponse>> {
+        py.allow_threads(|| {
+            block_unless_interrupted(async move {
+                let cs_id = data.0.cs_id;
+                self.fetch_snapshot(repo, data.0)
+                    .await?
+                    .entries
+                    .next()
+                    .await
+                    .with_context(|| format_err!("Failed to find snapshot {}", cs_id))?
+            })
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)
+        .map(Serde)
     }
 }
 

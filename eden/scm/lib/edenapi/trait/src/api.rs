@@ -16,10 +16,10 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FileEntry, FileSpec,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
-    UploadTreeResponse,
+    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FetchSnapshotRequest,
+    FetchSnapshotResponse, FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent,
+    HistoryEntry, LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadToken,
+    UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -195,6 +195,13 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
     ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError>;
+
+    /// Fetch information about the requested snapshot
+    async fn fetch_snapshot(
+        &self,
+        repo: String,
+        request: FetchSnapshotRequest,
+    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -433,6 +440,16 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .ephemeral_prepare(repo)
+            .await
+    }
+
+    async fn fetch_snapshot(
+        &self,
+        repo: String,
+        request: FetchSnapshotRequest,
+    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .fetch_snapshot(repo, request)
             .await
     }
 }

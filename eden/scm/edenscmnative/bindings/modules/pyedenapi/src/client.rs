@@ -20,8 +20,9 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData,
-    HgChangesetContent, HgMutationEntryContent, LookupResponse, SnapshotRawData,
-    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
+    LookupResponse, SnapshotRawData, UploadSnapshotResponse, UploadTokensResponse,
+    UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -330,6 +331,15 @@ py_class!(pub class client |py| {
         data: Serde<SnapshotRawData>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         self.inner(py).clone().uploadsnapshot_py(py, repo, data)
+    }
+
+    /// Fetch snapshot information
+    def fetchsnapshot(
+        &self,
+        repo: String,
+        data: Serde<FetchSnapshotRequest>,
+    ) -> PyResult<Serde<FetchSnapshotResponse>> {
+        self.inner(py).clone().fetchsnapshot_py(py, repo, data)
     }
 });
 

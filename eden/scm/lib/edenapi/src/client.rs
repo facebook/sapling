@@ -29,20 +29,21 @@ use edenapi_types::{
     json::ToJson,
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
-        WireCommitLocationToHashResponse, WireEphemeralPrepareResponse, WireFileEntry,
-        WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse, WireToApiConversionError,
-        WireTreeEntry, WireUploadToken, WireUploadTokensResponse, WireUploadTreeResponse,
+        WireCommitLocationToHashResponse, WireEphemeralPrepareResponse, WireFetchSnapshotResponse,
+        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse,
+        WireToApiConversionError, WireTreeEntry, WireUploadToken, WireUploadTokensResponse,
+        WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
     CloneData, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
     CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
     CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, FileEntry, FileRequest, FileSpec,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
-    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
-    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgFilenodeRequest, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeRequest,
-    UploadTreeResponse,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse,
+    FileEntry, FileRequest, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
+    HistoryRequest, LookupRequest, LookupResponse, ServerError, ToApi, ToWire, TreeAttributes,
+    TreeEntry, TreeRequest, UploadBonsaiChangesetRequest, UploadHgChangeset,
+    UploadHgChangesetsRequest, UploadHgFilenodeRequest, UploadToken, UploadTokensResponse,
+    UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -89,6 +90,7 @@ mod paths {
     pub const UPLOAD_CHANGESETS: &str = "upload/changesets";
     pub const UPLOAD_BONSAI_CHANGESET: &str = "upload/changeset/bonsai";
     pub const EPHEMERAL_PREPARE: &str = "ephemeral/prepare";
+    pub const FETCH_SNAPSHOT: &str = "snapshot";
 }
 
 pub struct Client {
@@ -1106,6 +1108,32 @@ impl EdenApi for Client {
             .boxed();
 
         Ok(fetch)
+    }
+
+    async fn fetch_snapshot(
+        &self,
+        repo: String,
+        request: FetchSnapshotRequest,
+    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+        tracing::info!(
+            "Fetching snapshot {} from bubble {}",
+            request.cs_id,
+            request.bubble_id
+        );
+        if self.config.debug {
+            eprintln!(
+                "Fetching snapshot {} from bubble {}",
+                request.cs_id, request.bubble_id
+            );
+        }
+        let url = self.url(paths::FETCH_SNAPSHOT, Some(&repo))?;
+        let req = request.to_wire();
+        let request = self
+            .configure(Request::post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        Ok(self.fetch::<WireFetchSnapshotResponse>(vec![request], None)?)
     }
 }
 

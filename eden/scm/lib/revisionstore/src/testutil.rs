@@ -14,10 +14,10 @@ use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stat
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FileAttributes, FileContent,
-    FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse,
-    TreeAttributes, TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse,
-    UploadTreeEntry, UploadTreeResponse,
+    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FetchSnapshotRequest,
+    FetchSnapshotResponse, FileAttributes, FileContent, FileEntry, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -508,6 +508,14 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
     ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+        unimplemented!()
+    }
+
+    async fn fetch_snapshot(
+        &self,
+        _repo: String,
+        _request: FetchSnapshotRequest,
+    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
         unimplemented!()
     }
 }
