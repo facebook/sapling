@@ -16,3 +16,9 @@ pub mod builder;
 pub mod file;
 pub mod tree;
 pub mod util;
+
+pub(crate) use self::metrics::{
+    namespaced, ApiMetrics, FetchMetrics, LocalAndCacheFetchMetrics, WriteMetrics,
+};
+
+pub(crate) mod metrics;
