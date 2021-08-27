@@ -10,8 +10,8 @@ mod metrics;
 mod types;
 
 pub use self::{
-    fetch::FileStoreFetch,
-    metrics::{FileStoreMetrics, FileStoreWriteMetrics},
+    fetch::FetchResults,
+    metrics::{FileStoreFetchMetrics, FileStoreMetrics, FileStoreWriteMetrics},
     types::{FileAttributes, FileAuxData, StoreFile},
 };
 
@@ -97,7 +97,11 @@ impl Drop for FileStore {
 }
 impl FileStore {
     #[instrument(skip(self, keys))]
-    pub fn fetch(&self, keys: impl Iterator<Item = Key>, attrs: FileAttributes) -> FileStoreFetch {
+    pub fn fetch(
+        &self,
+        keys: impl Iterator<Item = Key>,
+        attrs: FileAttributes,
+    ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
         let mut state = FetchState::new(keys, attrs, &self);
 
         if let Some(ref aux_cache) = self.aux_cache {

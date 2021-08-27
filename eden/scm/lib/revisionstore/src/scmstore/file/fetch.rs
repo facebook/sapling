@@ -713,7 +713,7 @@ impl FetchState {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn finish(mut self) -> FileStoreFetch {
+    pub(crate) fn finish(mut self) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
         // Combine and collect errors
         let mut incomplete = self.errors.fetch_errors;
         for key in self.pending.into_iter() {
@@ -729,7 +729,7 @@ impl FetchState {
             incomplete.remove(key);
         }
 
-        FileStoreFetch {
+        FetchResults {
             complete: self.found,
             incomplete,
             other_errors: self.errors.other_errors,
@@ -769,14 +769,14 @@ impl FetchErrors {
 }
 
 #[derive(Debug)]
-pub struct FileStoreFetch {
-    pub complete: HashMap<Key, StoreFile>,
+pub struct FetchResults<T, M> {
+    pub complete: HashMap<Key, T>,
     pub incomplete: HashMap<Key, Vec<Error>>,
     other_errors: Vec<Error>,
-    metrics: FileStoreFetchMetrics,
+    metrics: M,
 }
 
-impl FileStoreFetch {
+impl<T, M> FetchResults<T, M> {
     /// Return the list of keys which could not be fetched, or any errors encountered
     pub fn missing(mut self) -> Result<Vec<Key>> {
         if let Some(err) = self.other_errors.pop() {
@@ -795,7 +795,7 @@ impl FileStoreFetch {
     }
 
     /// Return the single requested file if found, or any errors encountered
-    pub fn single(mut self) -> Result<Option<StoreFile>> {
+    pub fn single(mut self) -> Result<Option<T>> {
         if let Some(err) = self.other_errors.pop() {
             return Err(err).into();
         }
@@ -818,7 +818,7 @@ impl FileStoreFetch {
     }
 
     /// Returns a stream of all successful fetches and errors, for compatibility with old scmstore
-    pub fn results(self) -> impl Iterator<Item = Result<(Key, StoreFile)>> {
+    pub fn results(self) -> impl Iterator<Item = Result<(Key, T)>> {
         self.complete
             .into_iter()
             .map(Ok)
@@ -839,10 +839,10 @@ impl FileStoreFetch {
     }
 
     /// Returns a stream of all fetch results, including not found and errors
-    pub fn fetch_results(self) -> impl Iterator<Item = (Key, Result<Option<StoreFile>>)> {
+    pub fn fetch_results(self) -> impl Iterator<Item = (Key, Result<Option<T>>)> {
         self.complete
             .into_iter()
-            .map(|(key, file)| (key, Ok(Some(file))))
+            .map(|(key, item)| (key, Ok(Some(item))))
             .chain(self.incomplete.into_iter().map(|(key, mut errors)| {
                 (
                     key,
@@ -856,7 +856,7 @@ impl FileStoreFetch {
             }))
     }
 
-    pub fn metrics(&self) -> &FileStoreFetchMetrics {
+    pub fn metrics(&self) -> &M {
         &self.metrics
     }
 }
