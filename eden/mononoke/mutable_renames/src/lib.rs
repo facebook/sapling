@@ -48,6 +48,7 @@ pub struct MutableRenameEntry {
     dst_cs_id: ChangesetId,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
+    src_path: Option<MPath>,
     src_path_hash: PathHash,
     src_unode: Blake2,
     is_tree: i8,
@@ -74,6 +75,7 @@ impl MutableRenameEntry {
             dst_cs_id,
             dst_path_hash,
             src_cs_id,
+            src_path,
             src_path_hash,
             src_unode,
             is_tree,
@@ -84,12 +86,24 @@ impl MutableRenameEntry {
         &self.dst_path_hash
     }
 
+    pub fn src_path(&self) -> &Option<MPath> {
+        &self.src_path
+    }
+
     fn src_path_hash(&self) -> &PathHash {
         &self.src_path_hash
     }
 
     pub fn src_cs_id(&self) -> ChangesetId {
         self.src_cs_id
+    }
+
+    pub fn get_src_unode(&self) -> Entry<ManifestUnodeId, FileUnodeId> {
+        if self.is_tree == 1 {
+            Entry::Tree(ManifestUnodeId::new(self.src_unode))
+        } else {
+            Entry::Leaf(FileUnodeId::new(self.src_unode))
+        }
     }
 }
 

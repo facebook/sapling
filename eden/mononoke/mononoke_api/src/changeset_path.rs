@@ -21,7 +21,9 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, TraversalOrder, Visitor};
+use fastlog::{
+    list_file_history, CsAndPath, FastlogError, HistoryAcrossDeletions, TraversalOrder, Visitor,
+};
 use filestore::FetchKey;
 use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
@@ -367,7 +369,7 @@ impl ChangesetPathHistoryContext {
             until_timestamp: Option<i64>,
             descendants_of: Option<(ChangesetId, Generation)>,
             exclude_changeset_and_ancestors: Option<(ChangesetId, Generation)>,
-            cache: HashMap<(Option<ChangesetId>, Vec<ChangesetId>), Vec<ChangesetId>>,
+            cache: HashMap<(Option<CsAndPath>, Vec<CsAndPath>), Vec<CsAndPath>>,
             skiplist_index: Arc<SkiplistIndex>,
         }
         impl FilterVisitor {
@@ -375,13 +377,13 @@ impl ChangesetPathHistoryContext {
                 &self,
                 ctx: &CoreContext,
                 repo: &BlobRepo,
-                descendant_cs_id: Option<ChangesetId>,
-                mut cs_ids: Vec<ChangesetId>,
-            ) -> Result<Vec<ChangesetId>, Error> {
+                descendant_cs_id: Option<CsAndPath>,
+                mut cs_ids: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
                 let cs_info_enabled = self.cs_info_enabled;
                 let skiplist_index = self.skiplist_index.clone();
                 if let Some(until_ts) = self.until_timestamp {
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| async move {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
                         let info = if cs_info_enabled {
                             ChangesetInfo::derive(ctx, repo, cs_id).await
                         } else {
@@ -389,7 +391,7 @@ impl ChangesetPathHistoryContext {
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
                         let timestamp = info.author_date().as_chrono().timestamp();
-                        Ok::<_, Error>((timestamp >= until_ts).then_some(cs_id))
+                        Ok::<_, Error>((timestamp >= until_ts).then_some((cs_id, path)))
                     }))
                     .await?
                     .into_iter()
@@ -397,8 +399,8 @@ impl ChangesetPathHistoryContext {
                     .collect();
                 }
                 if let Some((descendants_of, descendants_of_gen)) = self.descendants_of {
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| {
-                        cloned!(skiplist_index);
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| {
+                        cloned!(descendant_cs_id, skiplist_index);
                         async move {
                             let changeset_fetcher = repo.get_changeset_fetcher();
                             let cs_gen = changeset_fetcher
@@ -408,7 +410,7 @@ impl ChangesetPathHistoryContext {
                                 return Ok(None);
                             }
                             let ancestry_check_needed =
-                                if let Some(descendant_cs_id) = descendant_cs_id {
+                                if let Some((descendant_cs_id, _)) = descendant_cs_id {
                                     let merges = skiplist_index
                                         .find_merges_between(
                                             ctx,
@@ -432,7 +434,7 @@ impl ChangesetPathHistoryContext {
                                     )
                                     .await?;
                             }
-                            Ok::<_, Error>(is_descendant.then_some(cs_id))
+                            Ok::<_, Error>(is_descendant.then_some((cs_id, path)))
                         }
                     }))
                     .await?
@@ -457,7 +459,7 @@ impl ChangesetPathHistoryContext {
                     let changeset_fetcher = &repo.get_changeset_fetcher();
                     let skiplist_index = &skiplist_index;
 
-                    let descendant_cs_gen = if let Some(descendant_cs_id) = descendant_cs_id {
+                    let descendant_cs_gen = if let Some((descendant_cs_id, _)) = descendant_cs_id {
                         Some(
                             changeset_fetcher
                                 .get_generation_number(ctx.clone(), descendant_cs_id)
@@ -467,7 +469,7 @@ impl ChangesetPathHistoryContext {
                         None
                     };
 
-                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| {
                         async move {
                             let cs_gen = changeset_fetcher
                                 .get_generation_number(ctx.clone(), cs_id)
@@ -495,7 +497,7 @@ impl ChangesetPathHistoryContext {
                                     }
                                 }
                             }
-                            Ok(Some(cs_id))
+                            Ok(Some((cs_id, path)))
                         }
                     }))
                     .await?
@@ -512,9 +514,9 @@ impl ChangesetPathHistoryContext {
                 &mut self,
                 ctx: &CoreContext,
                 repo: &BlobRepo,
-                descendant_cs_id: Option<ChangesetId>,
-                cs_ids: Vec<ChangesetId>,
-            ) -> Result<Vec<ChangesetId>, Error> {
+                descendant_cs_id: Option<CsAndPath>,
+                cs_ids: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
                 if let Some(res) = self
                     .cache
                     .remove(&(descendant_cs_id.clone(), cs_ids.clone()))
@@ -529,7 +531,7 @@ impl ChangesetPathHistoryContext {
                 &mut self,
                 ctx: &CoreContext,
                 repo: &BlobRepo,
-                descendant_id_cs_ids: Vec<(Option<ChangesetId>, Vec<ChangesetId>)>,
+                descendant_id_cs_ids: Vec<(Option<CsAndPath>, Vec<CsAndPath>)>,
             ) -> Result<(), Error> {
                 try_join_all(
                     descendant_id_cs_ids

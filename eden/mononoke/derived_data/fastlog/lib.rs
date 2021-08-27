@@ -35,5 +35,6 @@ pub use mapping::{
     fetch_parent_root_unodes, ErrorKind, FastlogParent, RootFastlog, RootFastlogMapping,
 };
 pub use ops::{
-    list_file_history, FastlogError, HistoryAcrossDeletions, NextChangeset, TraversalOrder, Visitor,
+    list_file_history, CsAndPath, FastlogError, HistoryAcrossDeletions, NextChangeset,
+    TraversalOrder, Visitor,
 };

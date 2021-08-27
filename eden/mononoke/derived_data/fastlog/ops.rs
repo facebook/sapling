@@ -60,13 +60,15 @@ pub enum HistoryAcrossDeletions {
     DontTrack,
 }
 
+pub type CsAndPath = (ChangesetId, Arc<Option<MPath>>);
+
 pub enum NextChangeset {
     // Changeset is new and hasn't been returned
     // yet
-    New(ChangesetId),
+    New(CsAndPath),
     // Changeset has already been returned,
     // so now we only need to process its parents
-    AlreadyReturned(ChangesetId),
+    AlreadyReturned(CsAndPath),
 }
 
 #[derive(Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -83,7 +85,7 @@ pub enum TraversalOrder {
         front_queue: VecDeque<NextChangeset>,
         // TODO(stash): ParentOrder is very basic at the moment,
         // and won't work correctly in all cases.
-        heap: BinaryHeap<(Generation, Reverse<ParentOrder>, ChangesetId)>,
+        heap: BinaryHeap<(Generation, Reverse<ParentOrder>, CsAndPath)>,
         ctx: CoreContext,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
     },
@@ -105,7 +107,7 @@ impl TraversalOrder {
         }
     }
 
-    async fn push_front(&mut self, cs_id: ChangesetId) -> Result<(), Error> {
+    async fn push_front(&mut self, cs_id: CsAndPath) -> Result<(), Error> {
         use TraversalOrder::*;
 
         match self {
@@ -124,17 +126,17 @@ impl TraversalOrder {
         Ok(())
     }
 
-    async fn push_ancestors(&mut self, cs_ids: &[ChangesetId]) -> Result<(), Error> {
+    async fn push_ancestors(&mut self, cs_and_paths: &[CsAndPath]) -> Result<(), Error> {
         use TraversalOrder::*;
 
-        if cs_ids.len() > 1 {
+        if cs_and_paths.len() > 1 {
             STATS::merge_in_file_history.add_value(1);
         }
 
         let new_state: Option<TraversalOrder> = match self {
             BfsOrder(q) => {
-                for cs_id in cs_ids {
-                    q.push_back(NextChangeset::New(*cs_id));
+                for cs_and_path in cs_and_paths {
+                    q.push_back(NextChangeset::New(cs_and_path.clone()));
                 }
                 None
             }
@@ -143,17 +145,18 @@ impl TraversalOrder {
                 ctx,
                 changeset_fetcher,
             } => {
-                if cs_ids.len() <= 1 {
-                    if cs_ids.len() == 1 {
+                if cs_and_paths.len() <= 1 {
+                    if cs_and_paths.len() == 1 {
                         debug_assert!(next.is_none());
-                        *next = Some(NextChangeset::New(cs_ids[0]));
+                        *next = Some(NextChangeset::New(cs_and_paths[0].clone()));
                     }
                     None
                 } else {
                     // convert it to full-blown gen num ordering
                     let mut heap = BinaryHeap::new();
-                    let cs_ids = Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_ids).await?;
-                    heap.extend(cs_ids);
+                    let cs_and_paths =
+                        Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_and_paths).await?;
+                    heap.extend(cs_and_paths);
                     Some(TraversalOrder::GenNumOrder {
                         heap,
                         ctx: ctx.clone(),
@@ -168,8 +171,9 @@ impl TraversalOrder {
                 changeset_fetcher,
                 ..
             } => {
-                let cs_ids = Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_ids).await?;
-                heap.extend(cs_ids);
+                let cs_and_paths =
+                    Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_and_paths).await?;
+                heap.extend(cs_and_paths);
                 None
             }
         };
@@ -214,16 +218,17 @@ impl TraversalOrder {
     async fn convert_cs_ids(
         ctx: &CoreContext,
         changeset_fetcher: &Arc<dyn ChangesetFetcher>,
-        cs_ids: &[ChangesetId],
-    ) -> Result<Vec<(Generation, Reverse<ParentOrder>, ChangesetId)>, Error> {
-        let cs_ids =
-            future::try_join_all(cs_ids.iter().enumerate().map(|(num, cs_id)| async move {
+        cs_ids: &[CsAndPath],
+    ) -> Result<Vec<(Generation, Reverse<ParentOrder>, CsAndPath)>, Error> {
+        let cs_ids = future::try_join_all(cs_ids.iter().enumerate().map(
+            |(num, (cs_id, path))| async move {
                 let gen_num = changeset_fetcher
                     .get_generation_number(ctx.clone(), *cs_id)
                     .await?;
-                Result::<_, Error>::Ok((gen_num, Reverse(ParentOrder(num)), *cs_id))
-            }))
-            .await?;
+                Result::<_, Error>::Ok((gen_num, Reverse(ParentOrder(num)), (*cs_id, path.clone())))
+            },
+        ))
+        .await?;
 
         Ok(cs_ids)
     }
@@ -277,6 +282,7 @@ pub async fn list_file_history(
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
+    let path = Arc::new(path);
     // get unode entry
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
 
@@ -289,11 +295,17 @@ pub async fn list_file_history(
     let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes).await?
+            process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes, path).await?
         }
         Some(PathState::Exists(unode_entry)) => {
-            fetch_linknodes_and_update_graph(&ctx, &repo, vec![unode_entry], &mut history_graph)
-                .await?
+            fetch_linknodes_and_update_graph(
+                &ctx,
+                &repo,
+                vec![unode_entry],
+                &mut history_graph,
+                path,
+            )
+            .await?
         }
         None => return Ok(stream::iter(vec![]).boxed()),
     };
@@ -321,12 +333,11 @@ pub async fn list_file_history(
         },
         // unfold
         move |state| {
-            cloned!(ctx, mutable_renames, repo, path);
+            cloned!(ctx, mutable_renames, repo);
             async move {
                 do_history_unfold(
                     ctx.clone(),
                     repo.clone(),
-                    path.clone(),
                     state,
                     history_across_deletions,
                     &mutable_renames,
@@ -354,9 +365,9 @@ pub trait Visitor: Send + 'static {
         &mut self,
         ctx: &CoreContext,
         repo: &BlobRepo,
-        descendant_cs_id: Option<ChangesetId>,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<ChangesetId>, Error>;
+        descendant_cs_id: Option<CsAndPath>,
+        cs_and_paths: Vec<CsAndPath>,
+    ) -> Result<Vec<CsAndPath>, Error>;
 
     /// May be called before visiting node so the visitor can prefetch neccesary
     /// data to make the visit faster.
@@ -367,7 +378,7 @@ pub trait Visitor: Send + 'static {
         &mut self,
         _ctx: &CoreContext,
         _repo: &BlobRepo,
-        _descendant_id_cs_ids: Vec<(Option<ChangesetId>, Vec<ChangesetId>)>,
+        _descendant_id_cs_ids: Vec<(Option<CsAndPath>, Vec<CsAndPath>)>,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -379,10 +390,10 @@ impl Visitor for () {
         &mut self,
         _ctx: &CoreContext,
         _repo: &BlobRepo,
-        _descentant_cs_id: Option<ChangesetId>,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<ChangesetId>, Error> {
-        Ok(cs_ids)
+        _descentant_cs_id: Option<CsAndPath>,
+        cs_and_paths: Vec<CsAndPath>,
+    ) -> Result<Vec<CsAndPath>, Error> {
+        Ok(cs_and_paths)
     }
 }
 
@@ -392,15 +403,15 @@ async fn visit(
     ctx: &CoreContext,
     repo: &BlobRepo,
     visitor: &mut impl Visitor,
-    cs_id: Option<ChangesetId>,
-    ancestors: Vec<ChangesetId>,
+    cs_id: Option<CsAndPath>,
+    ancestors: Vec<CsAndPath>,
     order: &mut TraversalOrder,
-    visited: &mut HashSet<ChangesetId>,
+    visited: &mut HashSet<CsAndPath>,
 ) -> Result<(), FastlogError> {
     let ancestors = visitor.visit(ctx, repo, cs_id, ancestors).await?;
     let ancestors = ancestors
         .into_iter()
-        .filter(|ancestor| visited.insert(*ancestor))
+        .filter(|ancestor| visited.insert(ancestor.clone()))
         .collect::<Vec<_>>();
     order.push_ancestors(&ancestors).await?;
     Ok(())
@@ -415,19 +426,22 @@ async fn process_deletion_nodes(
     repo: &BlobRepo,
     history_graph: &mut CommitGraph,
     deletion_nodes: Vec<(ChangesetId, UnodeEntry)>,
-) -> Result<Vec<ChangesetId>, FastlogError> {
+    path: Arc<Option<MPath>>,
+) -> Result<Vec<CsAndPath>, FastlogError> {
     let mut deleted_linknodes = vec![];
     let mut last_unodes = vec![];
 
     for (deleted_linknode, last_unode_entry) in deletion_nodes {
-        deleted_linknodes.push(deleted_linknode);
+        deleted_linknodes.push((deleted_linknode, path.clone()));
         last_unodes.push(last_unode_entry);
     }
 
     let last_linknodes =
-        fetch_linknodes_and_update_graph(&ctx, &repo, last_unodes, history_graph).await?;
+        fetch_linknodes_and_update_graph(&ctx, &repo, last_unodes, history_graph, path.clone())
+            .await?;
     let mut deleted_to_last_mapping: Vec<_> = deleted_linknodes
         .iter()
+        .map(|(cs_id, _)| cs_id)
         .zip(last_linknodes.into_iter())
         .collect();
     deleted_to_last_mapping.sort_by_key(|(deleted_linknode, _)| *deleted_linknode);
@@ -437,7 +451,7 @@ async fn process_deletion_nodes(
         .into_iter()
         .for_each(|(deleted_linknode, grouped_last)| {
             history_graph.insert(
-                deleted_linknode,
+                (deleted_linknode, path.clone()),
                 Some(grouped_last.map(|(_, last)| last).collect()),
             );
         });
@@ -449,19 +463,21 @@ async fn fetch_linknodes_and_update_graph(
     repo: &BlobRepo,
     unode_entries: Vec<UnodeEntry>,
     history_graph: &mut CommitGraph,
-) -> Result<Vec<ChangesetId>, FastlogError> {
+    path: Arc<Option<MPath>>,
+) -> Result<Vec<CsAndPath>, FastlogError> {
     let linknodes = unode_entries.into_iter().map({
+        let path = &path;
         move |entry| async move {
             let unode = entry.load(ctx, repo.blobstore()).await?;
             Ok::<_, FastlogError>(match unode {
-                Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                Entry::Leaf(file_unode) => file_unode.linknode().clone(),
+                Entry::Tree(mf_unode) => (*mf_unode.linknode(), path.clone()),
+                Entry::Leaf(file_unode) => (*file_unode.linknode(), path.clone()),
             })
         }
     });
     let linknodes = future::try_join_all(linknodes).await?;
     for linknode in &linknodes {
-        history_graph.insert(*linknode, None);
+        history_graph.insert(linknode.clone(), None);
     }
     Ok(linknodes)
 }
@@ -495,20 +511,19 @@ async fn derive_unode_entry(
         .await
 }
 
-type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
+type CommitGraph = HashMap<CsAndPath, Option<Vec<CsAndPath>>>;
 
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
-    visited: HashSet<ChangesetId>,
+    visited: HashSet<CsAndPath>,
     order: TraversalOrder,
-    prefetch: Option<ChangesetId>,
+    prefetch: Option<CsAndPath>,
     visitor: V,
 }
 
 async fn do_history_unfold<V>(
     ctx: CoreContext,
     repo: BlobRepo,
-    path: Option<MPath>,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
     mutable_renames: &MutableRenames,
@@ -524,12 +539,11 @@ where
         mut visitor,
     } = state;
 
-    if let Some(prefetch) = prefetch {
+    if let Some(ref prefetch) = prefetch {
         prefetch_and_process_history(
             &ctx,
             &repo,
             &mut visitor,
-            &path,
             prefetch.clone(),
             &mut history_graph,
         )
@@ -540,22 +554,21 @@ where
     // process nodes to yield
     let mut next_to_fetch = None;
     while let Some(next_changeset) = order.pop_front() {
-        let cs_id = match next_changeset {
-            NextChangeset::New(cs_id) => {
-                history.push(cs_id);
-                cs_id
+        let cs_and_path = match next_changeset {
+            NextChangeset::New(cs_and_path) => {
+                history.push(cs_and_path.0);
+                cs_and_path
             }
-            NextChangeset::AlreadyReturned(cs_id) => cs_id,
+            NextChangeset::AlreadyReturned(cs_and_path) => cs_and_path,
         };
-        match history_graph.get(&cs_id) {
+        match history_graph.get(&cs_and_path) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
                 let ancestors = if parents.is_empty() {
                     try_continue_traversal_when_no_parents(
                         &ctx,
                         &repo,
-                        cs_id,
-                        &path,
+                        cs_and_path.clone(),
                         history_across_deletions,
                         &mut history_graph,
                         &mutable_renames,
@@ -569,7 +582,7 @@ where
                     &ctx,
                     &repo,
                     &mut visitor,
-                    Some(cs_id),
+                    Some(cs_and_path),
                     ancestors,
                     &mut order,
                     &mut visited,
@@ -579,15 +592,15 @@ where
             Some(None) => {
                 // parents haven't been fetched yet
                 // we want to proceed to next iteration to fetch the parents
-                if Some(cs_id) == prefetch {
+                if Some(&cs_and_path) == prefetch.as_ref() {
                     return Err(format_err!(
                         "internal error: infinite loop while traversing history for {:?}",
-                        path
+                        cs_and_path.1
                     ));
                 }
-                next_to_fetch = Some(cs_id);
+                next_to_fetch = Some(cs_and_path.clone());
                 // Put it back in the queue so we can process once we fetch its history
-                order.push_front(cs_id).await?;
+                order.push_front(cs_and_path).await?;
                 break;
             }
             // this should never happen as the [cs -> parents] mapping is fetched
@@ -616,12 +629,11 @@ where
 async fn try_continue_traversal_when_no_parents(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    cs_id: ChangesetId,
-    path: &Option<MPath>,
+    (cs_id, path): (ChangesetId, Arc<Option<MPath>>),
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
     mutable_renames: &MutableRenames,
-) -> Result<Vec<ChangesetId>, FastlogError> {
+) -> Result<Vec<CsAndPath>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
         let (stats, deletion_nodes) = find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
             .timed()
@@ -630,7 +642,8 @@ async fn try_continue_traversal_when_no_parents(
             .add_value(stats.completion_time.as_millis_unchecked() as i64);
         let deletion_nodes = deletion_nodes?;
         let deleted_nodes =
-            process_deletion_nodes(&ctx, &repo, history_graph, deletion_nodes).await?;
+            process_deletion_nodes(&ctx, &repo, history_graph, deletion_nodes, path.clone())
+                .await?;
         if !deleted_nodes.is_empty() {
             return Ok(deleted_nodes);
         }
@@ -640,10 +653,20 @@ async fn try_continue_traversal_when_no_parents(
         .get_by_repo_fastlog_use_mutable_renames(repo.name())
         .unwrap_or(false)
     {
-        // TODO(stash): mutable_renames also store unode, which can be used to speed up
-        // traversal
-        if let Some(rename) = mutable_renames.get_rename(ctx, cs_id, path.clone()).await? {
-            return Ok(vec![rename.src_cs_id()]);
+        if let Some(rename) = mutable_renames
+            .get_rename(ctx, cs_id, (path.as_ref()).clone())
+            .await?
+        {
+            let src_path = Arc::new(rename.src_path().clone());
+            // TODO(stash): this unode can be used to avoid unode manifest traversal
+            // later while doing prefetching
+            let src_unode = rename.get_src_unode().load(ctx, repo.blobstore()).await?;
+            let linknode = match src_unode {
+                Entry::Tree(tree_unode) => *tree_unode.linknode(),
+                Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+            };
+            history_graph.insert((linknode, src_path.clone()), None);
+            return Ok(vec![(linknode, src_path)]);
         }
     }
 
@@ -699,13 +722,12 @@ async fn prefetch_and_process_history(
     ctx: &CoreContext,
     repo: &BlobRepo,
     visitor: &mut impl Visitor,
-    path: &Option<MPath>,
-    changeset_id: ChangesetId,
+    (changeset_id, path): (ChangesetId, Arc<Option<MPath>>),
     history_graph: &mut CommitGraph,
 ) -> Result<(), Error> {
-    let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).await?;
+    let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, &path).await?;
     let affected_changesets: Vec<_> = fastlog_batch.iter().map(|(cs_id, _)| *cs_id).collect();
-    process_unode_batch(fastlog_batch, history_graph);
+    process_unode_batch(fastlog_batch, history_graph, path.clone());
 
     visitor
         .preprocess(
@@ -715,10 +737,10 @@ async fn prefetch_and_process_history(
                 .into_iter()
                 .filter_map(|cs_id| {
                     history_graph
-                        .get(&cs_id)
+                        .get(&(cs_id, path.clone()))
                         .cloned()
                         .flatten()
-                        .map(|parents| (Some(cs_id), parents))
+                        .map(|parents| (Some((cs_id, path.clone())), parents))
                 })
                 .collect(),
         )
@@ -729,26 +751,27 @@ async fn prefetch_and_process_history(
 fn process_unode_batch(
     unode_batch: Vec<(ChangesetId, Vec<FastlogParent>)>,
     graph: &mut CommitGraph,
+    path: Arc<Option<MPath>>,
 ) {
     for (cs_id, parents) in unode_batch {
         let has_unknown_parent = parents.iter().any(|parent| match parent {
             FastlogParent::Unknown => true,
             _ => false,
         });
-        let known_parents: Vec<ChangesetId> = parents
+        let known_parents: Vec<CsAndPath> = parents
             .into_iter()
             .filter_map(|parent| match parent {
-                FastlogParent::Known(cs_id) => Some(cs_id),
+                FastlogParent::Known(cs_id) => Some((cs_id, path.clone())),
                 _ => None,
             })
             .collect();
 
-        if let Some(maybe_parents) = graph.get(&cs_id) {
+        if let Some(maybe_parents) = graph.get(&(cs_id, path.clone())) {
             // history graph has the changeset
             if maybe_parents.is_none() && !has_unknown_parent {
                 // the node was visited but had unknown parents
                 // let's update the graph
-                graph.insert(cs_id, Some(known_parents.clone()));
+                graph.insert((cs_id, path.clone()), Some(known_parents.clone()));
             }
         } else {
             // we haven't seen this changeset before
@@ -758,9 +781,9 @@ fn process_unode_batch(
                 //
                 // let's add to the graph with None parents, this way we mark the
                 // changeset as visited for other traversal branches
-                graph.insert(cs_id, None);
+                graph.insert((cs_id, path.clone()), None);
             } else {
-                graph.insert(cs_id, Some(known_parents.clone()));
+                graph.insert((cs_id, path.clone()), Some(known_parents.clone()));
             }
         }
     }
@@ -801,7 +824,7 @@ mod test {
     use mutable_renames::MutableRenameEntry;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use tests_utils::CreateCommitContext;
-    use tunables::with_tunables_async;
+    use tunables::with_tunables_async_arc;
 
     #[facet::container]
     #[derive(Clone)]
@@ -1048,9 +1071,9 @@ mod test {
                 &mut self,
                 _ctx: &CoreContext,
                 _repo: &BlobRepo,
-                _descendant_cs_id: Option<ChangesetId>,
-                _cs_ids: Vec<ChangesetId>,
-            ) -> Result<Vec<ChangesetId>, Error> {
+                _descendant_cs_id: Option<CsAndPath>,
+                _cs_and_paths: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
                 Ok(vec![])
             }
         }
@@ -1075,10 +1098,10 @@ mod test {
                 &mut self,
                 _ctx: &CoreContext,
                 _repo: &BlobRepo,
-                _descendant_cs_id: Option<ChangesetId>,
-                cs_ids: Vec<ChangesetId>,
-            ) -> Result<Vec<ChangesetId>, Error> {
-                Ok(cs_ids.into_iter().next().into_iter().collect())
+                _descendant_cs_id: Option<CsAndPath>,
+                cs_and_paths: Vec<CsAndPath>,
+            ) -> Result<Vec<CsAndPath>, Error> {
+                Ok(cs_and_paths.into_iter().next().into_iter().collect())
             }
         }
         let history = list_file_history(
@@ -1467,52 +1490,98 @@ mod test {
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
 
-        let src_filename = "dir/1";
-        let dst_filename = "dir2/2";
+        let first_src_filename = "dir/1";
+        let first_dst_filename = "dir2/2";
+
+        let second_src_filename = "file";
+        let second_dst_filename = "moved_file";
 
         let first_bcs_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file(src_filename, "content1")
+            .add_file(first_src_filename, "content1")
+            .add_file(second_src_filename, "content1")
             .commit()
             .await?;
         let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
-            .delete_file(src_filename)
-            .add_file(dst_filename, "content1")
+            .add_file(first_src_filename, "content2")
+            .commit()
+            .await?;
+        let third_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![second_bcs_id])
+            .delete_file(first_src_filename)
+            .delete_file(second_src_filename)
+            .add_file(first_dst_filename, "content3")
+            .add_file(second_dst_filename, "content3")
             .commit()
             .await?;
 
-        //    0 <- removes "dir/1", adds "dir2/2"
+        //    0 <- removes "dir/1", "file"; adds "dir2/2", "moved_file"
         //    |
-        //    0  <- creates "dir/1"
+        //    0  <- modifies "dir/1"
+        //    |
+        //    0  <- creates "dir/1", "file"
 
         // No mutable renames - just a single commit is returned
         check_history(
             ctx.clone(),
             repo.clone(),
-            MPath::new_opt(dst_filename)?,
-            second_bcs_id,
+            MPath::new_opt(first_dst_filename)?,
+            third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            vec![second_bcs_id],
+            vec![third_bcs_id],
         )
         .await?;
 
-        // Set mutable rename
-        let src_unode =
-            derive_unode_entry(&ctx, &repo, first_bcs_id, &MPath::new_opt(src_filename)?)
-                .await?
-                .ok_or_else(|| format_err!("not found source unode id"))?;
+        check_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(second_dst_filename)?,
+            third_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            vec![third_bcs_id],
+        )
+        .await?;
+
+        // Set mutable renames
+        let first_src_unode = derive_unode_entry(
+            &ctx,
+            &repo,
+            second_bcs_id,
+            &MPath::new_opt(first_src_filename)?,
+        )
+        .await?
+        .ok_or_else(|| format_err!("not found source unode id"))?;
+
+        let second_src_unode = derive_unode_entry(
+            &ctx,
+            &repo,
+            second_bcs_id,
+            &MPath::new_opt(second_src_filename)?,
+        )
+        .await?
+        .ok_or_else(|| format_err!("not found source unode id"))?;
 
         mutable_renames
             .add_or_overwrite_renames(
                 &ctx,
-                vec![MutableRenameEntry::new(
-                    second_bcs_id,
-                    MPath::new_opt(dst_filename)?,
-                    first_bcs_id,
-                    MPath::new_opt(src_filename)?,
-                    src_unode,
-                )?],
+                vec![
+                    MutableRenameEntry::new(
+                        third_bcs_id,
+                        MPath::new_opt(first_dst_filename)?,
+                        second_bcs_id,
+                        MPath::new_opt(first_src_filename)?,
+                        first_src_unode,
+                    )?,
+                    MutableRenameEntry::new(
+                        third_bcs_id,
+                        MPath::new_opt(second_dst_filename)?,
+                        second_bcs_id,
+                        MPath::new_opt(second_src_filename)?,
+                        second_src_unode,
+                    )?,
+                ],
             )
             .await?;
 
@@ -1520,26 +1589,25 @@ mod test {
         check_history(
             ctx.clone(),
             repo.clone(),
-            MPath::new_opt(dst_filename)?,
-            second_bcs_id,
+            MPath::new_opt(first_dst_filename)?,
+            third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            vec![second_bcs_id],
+            vec![third_bcs_id],
         )
         .await?;
-
-        // Now enable the tunable
-        let actual = check_history(
+        check_history(
             ctx.clone(),
             repo.clone(),
-            MPath::new_opt(dst_filename)?,
-            second_bcs_id,
+            MPath::new_opt(second_dst_filename)?,
+            third_bcs_id,
             (),
             HistoryAcrossDeletions::Track,
-            mutable_renames,
-            vec![second_bcs_id, first_bcs_id],
-        );
+            mutable_renames.clone(),
+            vec![third_bcs_id],
+        )
+        .await?;
 
         let tunables = tunables::MononokeTunables::default();
         tunables.update_by_repo_bools(&hashmap! {
@@ -1547,7 +1615,32 @@ mod test {
                 "fastlog_use_mutable_renames".to_string() => true,
             },
         });
-        with_tunables_async(tunables, actual.boxed()).await?;
+        let tunables = Arc::new(tunables);
+        // Now enable the tunable
+        let actual = check_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(first_dst_filename)?,
+            third_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            vec![third_bcs_id, second_bcs_id, first_bcs_id],
+        );
+
+        with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
+
+        let actual = check_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(second_dst_filename)?,
+            third_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames,
+            vec![third_bcs_id, first_bcs_id],
+        );
+        with_tunables_async_arc(tunables, actual.boxed()).await?;
 
         Ok(())
     }

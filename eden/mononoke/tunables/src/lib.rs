@@ -325,9 +325,15 @@ pub fn with_tunables<T>(new_tunables: MononokeTunables, f: impl FnOnce() -> T) -
 
 pub fn with_tunables_async<Out, Fut: Future<Output = Out> + Unpin>(
     new_tunables: MononokeTunables,
+    fut: Fut,
+) -> impl Future<Output = Out> {
+    with_tunables_async_arc(Arc::new(new_tunables), fut)
+}
+
+pub fn with_tunables_async_arc<Out, Fut: Future<Output = Out> + Unpin>(
+    new_tunables: Arc<MononokeTunables>,
     mut fut: Fut,
 ) -> impl Future<Output = Out> {
-    let new_tunables = Arc::new(new_tunables);
     poll_fn(move |cx| {
         TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = Some(new_tunables.clone()));
 
