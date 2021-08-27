@@ -32,6 +32,7 @@ pydirs = { path = "modules/pydirs" }
 pyeagerepo = { path = "modules/pyeagerepo" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
+pyfail = { path = "modules/pyfail" }
 pyfs = { path = "modules/pyfs" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }

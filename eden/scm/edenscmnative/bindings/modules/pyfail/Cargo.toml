@@ -1,0 +1,14 @@
+[package]
+name = "pyfail"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.5", default-features = false }
+fail = "0.4"
+
+[features]
+default = []
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
