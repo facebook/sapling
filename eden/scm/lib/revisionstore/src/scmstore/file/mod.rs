@@ -10,7 +10,6 @@ mod metrics;
 mod types;
 
 pub use self::{
-    fetch::FetchResults,
     metrics::{FileStoreFetchMetrics, FileStoreMetrics, FileStoreWriteMetrics},
     types::{FileAttributes, FileAuxData, StoreFile},
 };
@@ -38,6 +37,7 @@ use crate::{
     lfs::{lfs_from_hg_file_blob, LfsRemote, LfsStore},
     memcache::MEMCACHE_DELAY,
     remotestore::HgIdRemoteStore,
+    scmstore::fetch::FetchResults,
     ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiFileStore, ExtStoredPolicy,
     LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore, RepackLocation,
     StoreKey, StoreResult,
