@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::remotestore::FakeRemoteStore;
-use crate::treecontentstore::TreeContentStore;
-use crate::utils::key_from_path_node_slice;
+use std::path::Path;
+use std::sync::Arc;
+
 use anyhow::Result;
-use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use log::warn;
+use tracing::{event, instrument, Level};
+
+use configparser::config::ConfigSet;
+use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use progress::null::NullProgressFactory;
@@ -18,22 +21,21 @@ use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
     LegacyStore, LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
 };
-use std::path::Path;
-use std::sync::Arc;
-use tracing::{event, instrument, Level};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 
-pub struct BackingStore {
+use crate::remotestore::FakeRemoteStore;
+use crate::treecontentstore::TreeContentStore;
+use crate::utils::key_from_path_node_slice;
+
+pub struct BackingContentStores {
     blobstore: ContentStore,
     treestore: Arc<TreeContentStore>,
 }
 
-impl BackingStore {
-    pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool) -> Result<Self> {
-        let hg = repository.as_ref().join(".hg");
-        let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
+impl BackingContentStores {
+    pub fn new(config: &ConfigSet, hg: impl AsRef<Path>, use_edenapi: bool) -> Result<Self> {
+        let store_path = hg.as_ref().join("store");
 
-        let store_path = hg.join("store");
         #[allow(unused_mut)]
         let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
         let treestore = ContentStoreBuilder::new(&config)
@@ -43,7 +45,7 @@ impl BackingStore {
         // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
         // not even try to initialize it then.
         if !cfg!(debug_assertions) {
-            match MemcacheStore::new(&config, NullProgressFactory::arc()) {
+            match MemcacheStore::new(config, NullProgressFactory::arc()) {
                 Ok(memcache) => {
                     // XXX: Add the memcachestore for the treestore.
                     blobstore = blobstore.memcachestore(Arc::new(memcache));
@@ -54,7 +56,7 @@ impl BackingStore {
 
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
             Some(repo) if use_edenapi => {
-                let edenapi = EdenApiBuilder::from_config(&config)?.build()?;
+                let edenapi = EdenApiBuilder::from_config(config)?.build()?;
                 let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
                 let fileremotestore = EdenApiFileStore::new(repo.clone(), edenapi.clone(), None);
                 let treeremotestore = EdenApiTreeStore::new(repo, edenapi, None);
