@@ -73,6 +73,16 @@ class HgProxyHash {
 
   RelativePathPiece path() const noexcept;
 
+  /**
+   * Extract the hash part of the HgProxyHash and return a slice of it.
+   *
+   * The returned slice will live as long as this HgProxyHash.
+   */
+  folly::ByteRange byteHash() const noexcept;
+
+  /**
+   * Extract the hash part of the HgProxyHash and return a copy of it.
+   */
   Hash revHash() const noexcept;
 
   /**

@@ -137,13 +137,17 @@ RelativePathPiece HgProxyHash::path() const noexcept {
   }
 }
 
-Hash HgProxyHash::revHash() const noexcept {
+ByteRange HgProxyHash::byteHash() const noexcept {
   if (value_.empty()) {
-    return kZeroHash;
+    return kZeroHash.getBytes();
   } else {
     XDCHECK_GE(value_.size(), Hash::RAW_SIZE);
-    return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
+    return ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}};
   }
+}
+
+Hash HgProxyHash::revHash() const noexcept {
+  return Hash{byteHash()};
 }
 
 Hash HgProxyHash::sha1() const noexcept {
