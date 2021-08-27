@@ -44,6 +44,7 @@ pub fn hook_name_to_changeset_hook<'a>(
     name: &'a str,
     config: &'a HookConfig,
     _reviewers_membership: ArcMembershipChecker,
+    _repo_name: &str,
 ) -> impl Future<Output = Result<Option<Box<dyn ChangesetHook + 'static>>>> + 'a {
     async move {
         Ok(match name {

@@ -49,6 +49,7 @@ pub async fn load_hooks(
                 &hook.name,
                 &hook.config,
                 hook_manager.get_reviewers_perm_checker(),
+                hook_manager.repo_name(),
             )
             .await?
             {
