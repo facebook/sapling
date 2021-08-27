@@ -121,7 +121,7 @@ def debugrebuildchangelog(ui, repo, **opts):
                     # Pull. This is a code path that accesses a lot of stuffs and
                     # can go wrong in various ways. So it's protected by "try".
                     ui.write(_("pulling latest commits\n"))
-                    util.faultinjection(ui, "debugrebuildchangelog-before-pull")
+                    util.failpoint("debugrebuildchangelog-before-pull")
                     repo.pull(bookmarknames=[main])
 
                     # Re-add the commits. Note: In rare cases (ex. server master

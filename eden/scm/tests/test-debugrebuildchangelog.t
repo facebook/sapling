@@ -125,12 +125,12 @@ Unshelve works:
 
 Test pull error does not end up with a broken repo:
 
-  $ hg debugrebuildchangelog --config fault-injection.debugrebuildchangelog-before-pull=1
+  $ FAILPOINTS=debugrebuildchangelog-before-pull=return hg debugrebuildchangelog
   backed up 3 commits to commits-3-0000.bak
   imported clone data with tip 26805aba1e600a82e93661149f2313866a221a7b
   pulling latest commits
   restoring changelog from previous state
-  abort: injected error by tests: debugrebuildchangelog-before-pull
+  abort: failpoint 'debugrebuildchangelog-before-pull' set by FAILPOINTS
   [255]
 
   $ hg log -r 'all()' --git -T '{desc} {remotenames} {bookmarks}' -G

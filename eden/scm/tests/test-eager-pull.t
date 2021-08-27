@@ -121,11 +121,11 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   pulling from test:e1
 
   $ setconfig paths.default=test:e2
-  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True --config fault-injection.transaction-metalog-commit=True
+  $ FAILPOINTS=transaction-metalog-commit=return LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
   pulling from test:e2
    DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
   imported commit graph for 2 commits (1 segment)
-  abort: injected error by tests: transaction-metalog-commit
+  abort: failpoint 'transaction-metalog-commit' set by FAILPOINTS
   transaction abort!
   rollback completed
   [255]
