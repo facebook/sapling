@@ -279,8 +279,13 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
 
             self->updateProcessFetch(fetchContext);
 
-            auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
-            self->metadataCache_.wlock()->set(id, metadata);
+            // Quick check in-memory cache first, before doing expensive
+            // calculations. If metadata is present in cache, it most certainly
+            // exists in local store too
+            if (!self->metadataCache_.rlock()->exists(id)) {
+              auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
+              self->metadataCache_.wlock()->set(id, metadata);
+            }
             return shared_ptr<const Blob>(std::move(loadedBlob));
           }
 
