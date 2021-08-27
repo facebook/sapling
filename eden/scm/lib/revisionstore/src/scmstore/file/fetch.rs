@@ -29,6 +29,7 @@ use crate::{
         attrs::StoreAttrs,
         fetch::{FetchErrors, FetchResults},
         file::{metrics::FileStoreFetchMetrics, LazyFile},
+        value::StoreValue,
         FileAttributes, FileAuxData, FileStore, StoreFile,
     },
     util, ContentHash, ContentStore, EdenApiFileStore, ExtStoredPolicy, MemcacheStore, Metadata,

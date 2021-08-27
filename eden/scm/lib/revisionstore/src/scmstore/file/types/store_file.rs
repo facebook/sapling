@@ -12,7 +12,7 @@ use tracing::instrument;
 
 use minibytes::Bytes;
 
-use crate::scmstore::{file::LazyFile, FileAttributes, FileAuxData};
+use crate::scmstore::{file::LazyFile, value::StoreValue, FileAttributes, FileAuxData};
 
 #[derive(Debug)]
 pub struct StoreFile {
@@ -21,9 +21,11 @@ pub struct StoreFile {
     pub(crate) aux_data: Option<FileAuxData>,
 }
 
-impl StoreFile {
+impl StoreValue for StoreFile {
+    type Attrs = FileAttributes;
+
     /// Returns which attributes are present in this StoreFile
-    pub fn attrs(&self) -> FileAttributes {
+    fn attrs(&self) -> FileAttributes {
         FileAttributes {
             content: self.content.is_some(),
             aux_data: self.aux_data.is_some(),
@@ -31,13 +33,15 @@ impl StoreFile {
     }
 
     /// Return a StoreFile with only the specified subset of attributes
-    pub(crate) fn mask(self, attrs: FileAttributes) -> Self {
+    fn mask(self, attrs: FileAttributes) -> Self {
         StoreFile {
             content: if attrs.content { self.content } else { None },
             aux_data: if attrs.aux_data { self.aux_data } else { None },
         }
     }
+}
 
+impl StoreFile {
     pub fn aux_data(&self) -> Option<FileAuxData> {
         self.aux_data.clone()
     }

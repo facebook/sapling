@@ -17,6 +17,7 @@ pub mod builder;
 pub mod file;
 pub mod tree;
 pub mod util;
+pub mod value;
 
 pub(crate) mod fetch;
 pub(crate) mod metrics;
