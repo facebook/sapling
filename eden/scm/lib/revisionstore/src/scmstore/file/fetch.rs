@@ -278,7 +278,6 @@ impl FetchState {
         }
         self.metrics.aux.store(typ).fetch(pending.len());
 
-        let store = store.read();
         for key in pending.into_iter() {
             let res = store.get(key.hgid);
             match res {
@@ -644,9 +643,6 @@ impl FetchState {
         aux_cache: Option<&AuxStore>,
         aux_local: Option<&AuxStore>,
     ) {
-        let mut aux_cache = aux_cache.map(|s| s.write());
-        let mut aux_local = aux_local.map(|s| s.write());
-
         {
             let span = tracing::trace_span!("edenapi");
             let _guard = span.enter();
@@ -686,7 +682,7 @@ impl FetchState {
             for key in self.found_remote_aux.drain() {
                 let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
 
-                if let Some(ref mut aux_cache) = aux_cache {
+                if let Some(ref aux_cache) = aux_cache {
                     let _ = aux_cache.put(key.hgid, &entry);
                 }
             }
@@ -699,12 +695,12 @@ impl FetchState {
                 let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
                 match origin {
                     StoreType::Shared => {
-                        if let Some(ref mut aux_cache) = aux_cache {
+                        if let Some(ref aux_cache) = aux_cache {
                             let _ = aux_cache.put(key.hgid, &entry);
                         }
                     }
                     StoreType::Local => {
-                        if let Some(ref mut aux_local) = aux_local {
+                        if let Some(ref aux_local) = aux_local {
                             let _ = aux_local.put(key.hgid, &entry);
                         }
                     }

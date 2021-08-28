@@ -336,13 +336,13 @@ impl FileStore {
         if let Some(ref aux_local) = self.aux_local {
             let span = tracing::info_span!("aux_local");
             let _guard = span.enter();
-            aux_local.write().flush().map_err(&mut handle_error);
+            aux_local.flush().map_err(&mut handle_error);
         }
 
         if let Some(ref aux_cache) = self.aux_cache {
             let span = tracing::info_span!("aux_cache");
             let _guard = span.enter();
-            aux_cache.write().flush().map_err(&mut handle_error);
+            aux_cache.flush().map_err(&mut handle_error);
         }
 
         result

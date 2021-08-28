@@ -13,7 +13,7 @@ use std::{
 use anyhow::{bail, Result};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use minibytes::Bytes;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::RwLock;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi_types::{ContentId, FileAuxData, Sha1, Sha256};
@@ -114,45 +114,7 @@ impl Entry {
     }
 }
 
-pub struct AuxStoreInner(Store);
-
-impl AuxStoreInner {
-    pub fn get(&self, hgid: HgId) -> Result<Option<Entry>> {
-        let mut entries = self.0.lookup(0, &hgid)?;
-
-        let slice = match entries.next() {
-            None => return Ok(None),
-            Some(slice) => slice?,
-        };
-        let bytes = self.0.slice_to_bytes(slice);
-
-        Entry::deserialize(bytes).map(|(_hgid, entry)| Some(entry))
-    }
-
-    pub fn put(&mut self, hgid: HgId, entry: &Entry) -> Result<()> {
-        self.0.append(&entry.serialize(hgid)?)?;
-        Ok(())
-    }
-
-    pub fn flush(&mut self) -> Result<()> {
-        self.0.flush()?;
-        Ok(())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
-        let inner = &self.0;
-        inner
-            .iter()
-            .map(|slice| {
-                let bytes = inner.slice_to_bytes(slice?);
-                Entry::deserialize(bytes).map(|(hgid, _entry)| hgid)
-            })
-            .collect()
-    }
-}
-
-pub struct AuxStore(RwLock<AuxStoreInner>);
+pub struct AuxStore(RwLock<Store>);
 
 impl AuxStore {
     pub fn new(path: impl AsRef<Path>, config: &ConfigSet, store_type: StoreType) -> Result<Self> {
@@ -164,15 +126,7 @@ impl AuxStore {
             StoreType::Shared => open_options.shared(&path),
         }?;
 
-        Ok(AuxStore(RwLock::new(AuxStoreInner(log))))
-    }
-
-    pub fn read<'a>(&'a self) -> AuxStoreReadGuard<'a> {
-        AuxStoreReadGuard(self.0.read())
-    }
-
-    pub fn write<'a>(&'a self) -> AuxStoreWriteGuard<'a> {
-        AuxStoreWriteGuard(self.0.write())
+        Ok(AuxStore(RwLock::new(log)))
     }
 
     fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
@@ -203,41 +157,39 @@ impl AuxStore {
         }
         Ok(open_options)
     }
-}
 
-pub struct AuxStoreReadGuard<'a>(RwLockReadGuard<'a, AuxStoreInner>);
-
-impl AuxStoreReadGuard<'_> {
     pub fn get(&self, hgid: HgId) -> Result<Option<Entry>> {
-        self.0.get(hgid)
+        let log = self.0.read();
+        let mut entries = log.lookup(0, &hgid)?;
+
+        let slice = match entries.next() {
+            None => return Ok(None),
+            Some(slice) => slice?,
+        };
+        let bytes = log.slice_to_bytes(slice);
+        drop(log);
+
+        Entry::deserialize(bytes).map(|(_hgid, entry)| Some(entry))
+    }
+
+    pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
+        let serialized = entry.serialize(hgid)?;
+        self.0.write().append(&serialized)
+    }
+
+    pub fn flush(&self) -> Result<()> {
+        self.0.write().flush()
     }
 
     #[cfg(test)]
     pub(crate) fn hgids(&self) -> Result<Vec<HgId>> {
-        self.0.hgids()
-    }
-}
-
-pub struct AuxStoreWriteGuard<'a>(RwLockWriteGuard<'a, AuxStoreInner>);
-
-impl AuxStoreWriteGuard<'_> {
-    /// Run a function with the write guard temporarily unlocked
-    ///
-    /// Used when calling recursively into contentstore during add
-    pub fn unlocked<U>(&mut self, f: impl FnOnce() -> U) -> U {
-        RwLockWriteGuard::unlocked(&mut self.0, f)
-    }
-
-    pub fn get(&self, hgid: HgId) -> Result<Option<Entry>> {
-        self.0.get(hgid)
-    }
-
-    pub fn put(&mut self, hgid: HgId, entry: &Entry) -> Result<()> {
-        self.0.put(hgid, entry)
-    }
-
-    pub fn flush(&mut self) -> Result<()> {
-        self.0.flush()
+        let log = self.0.read();
+        log.iter()
+            .map(|slice| {
+                let bytes = log.slice_to_bytes(slice?);
+                Entry::deserialize(bytes).map(|(hgid, _entry)| hgid)
+            })
+            .collect()
     }
 }
 
@@ -269,7 +221,7 @@ mod tests {
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
         let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
-        store.write().flush()?;
+        store.flush()?;
         Ok(())
     }
 
@@ -284,10 +236,10 @@ mod tests {
 
         let k = key("a", "1");
 
-        store.write().put(k.hgid, &entry)?;
-        store.write().flush()?;
+        store.put(k.hgid, &entry)?;
+        store.flush()?;
 
-        let found = store.read().get(k.hgid)?;
+        let found = store.get(k.hgid)?;
         assert_eq!(Some(entry), found);
         Ok(())
     }
@@ -303,12 +255,12 @@ mod tests {
 
         let k = key("a", "1");
 
-        store.write().put(k.hgid, &entry)?;
-        store.write().flush()?;
+        store.put(k.hgid, &entry)?;
+        store.flush()?;
 
         let k2 = key("b", "2");
 
-        let found = store.read().get(k2.hgid)?;
+        let found = store.get(k2.hgid)?;
         assert_eq!(None, found);
         Ok(())
     }
@@ -323,8 +275,8 @@ mod tests {
         entry.total_size = 2;
         entry.content_sha1 = single_byte_sha1(2);
 
-        store.write().put(k.hgid, &entry)?;
-        store.write().flush()?;
+        store.put(k.hgid, &entry)?;
+        store.flush()?;
         drop(store);
 
         // Corrupt the log by removing the "log" file.
@@ -340,11 +292,11 @@ mod tests {
         entry.total_size = 3;
         entry.content_sha1 = single_byte_sha1(3);
 
-        store.write().put(k.hgid, &entry)?;
-        store.write().flush()?;
+        store.put(k.hgid, &entry)?;
+        store.flush()?;
 
         // There should be only one key in the store.
-        assert_eq!(store.read().hgids().into_iter().count(), 1);
+        assert_eq!(store.hgids().into_iter().count(), 1);
         Ok(())
     }
 
@@ -359,8 +311,8 @@ mod tests {
 
         let k = key("a", "1");
 
-        aux.write().put(k.hgid, &entry)?;
-        aux.write().flush()?;
+        aux.put(k.hgid, &entry)?;
+        aux.flush()?;
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
@@ -419,7 +371,7 @@ mod tests {
         assert_eq!(Some(expected), fetched.aux_data().map(|a| a.into()));
 
         // Verify we can read it directly too
-        let found = aux.read().get(k.hgid)?;
+        let found = aux.get(k.hgid)?;
         assert_eq!(Some(expected), found);
         Ok(())
     }
