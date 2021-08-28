@@ -246,7 +246,6 @@ impl FetchState {
             return;
         }
         self.metrics.indexedlog.store(typ).fetch(pending.len());
-        let store = store.read_lock();
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
             match res {
@@ -645,7 +644,6 @@ impl FetchState {
         aux_cache: Option<&AuxStore>,
         aux_local: Option<&AuxStore>,
     ) {
-        let mut indexedlog_cache = indexedlog_cache.map(|s| s.write_lock());
         let mut aux_cache = aux_cache.map(|s| s.write());
         let mut aux_local = aux_local.map(|s| s.write());
 
@@ -660,7 +658,7 @@ impl FetchState {
                                 memcache.add_mcdata(mcdata)
                             }
                         }
-                        if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                        if let Some(ref indexedlog_cache) = indexedlog_cache {
                             let _ = indexedlog_cache.put_entry(cache_entry);
                         }
                     }
@@ -674,7 +672,7 @@ impl FetchState {
             for key in self.found_in_memcache.drain() {
                 if let Some(lazy_file) = self.found[&key].content.as_ref() {
                     if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
-                        if let Some(ref mut indexedlog_cache) = indexedlog_cache {
+                        if let Some(ref indexedlog_cache) = indexedlog_cache {
                             let _ = indexedlog_cache.put_entry(cache_entry);
                         }
                     }

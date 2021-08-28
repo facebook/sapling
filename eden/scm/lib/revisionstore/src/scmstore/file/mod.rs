@@ -32,7 +32,7 @@ use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
     fetch_logger::FetchLogger,
     indexedlogauxstore::AuxStore,
-    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore, IndexedLogHgIdDataStoreWriteGuard},
+    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     indexedlogutil::StoreType,
     lfs::{lfs_from_hg_file_blob, LfsRemote, LfsStore},
     memcache::MEMCACHE_DELAY,
@@ -186,13 +186,7 @@ impl FileStore {
         self.creation_time.elapsed() > MEMCACHE_DELAY
     }
 
-    fn write_lfsptr(
-        &self,
-        indexedlog_local: &mut Option<IndexedLogHgIdDataStoreWriteGuard<'_>>,
-        key: Key,
-        bytes: Bytes,
-        meta: Metadata,
-    ) -> Result<()> {
+    fn write_lfsptr(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
         if !self.allow_write_lfs_ptrs {
             ensure!(
                 std::env::var("TESTTMP").is_ok(),
@@ -209,13 +203,7 @@ impl FileStore {
             base: None,
             key,
         };
-        if let Some(indexedlog_local) = indexedlog_local.as_mut() {
-            indexedlog_local.unlocked(|| contentstore.add(&delta, &meta))
-        } else {
-            contentstore.add(&delta, &meta)
-        }?;
-
-        Ok(())
+        contentstore.add(&delta, &meta)
     }
 
     fn write_lfs(&self, key: Key, bytes: Bytes) -> Result<()> {
@@ -225,21 +213,14 @@ impl FileStore {
         let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
         let sha256 = lfs_pointer.sha256();
 
-        // TODO(meyer): Do similar LockGuard impl for LfsStore so we can lock across the batch for both
         lfs_local.add_blob(&sha256, lfs_blob)?;
         lfs_local.add_pointer(lfs_pointer)?;
 
         Ok(())
     }
 
-    fn write_nonlfs(
-        &self,
-        indexedlog_local: &mut Option<IndexedLogHgIdDataStoreWriteGuard<'_>>,
-        key: Key,
-        bytes: Bytes,
-        meta: Metadata,
-    ) -> Result<()> {
-        let indexedlog_local = indexedlog_local.as_mut().ok_or_else(|| {
+    fn write_nonlfs(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
+        let indexedlog_local = self.indexedlog_local.as_ref().ok_or_else(|| {
             anyhow!("trying to write non-LFS file but no local non-LFS IndexedLog is available")
         })?;
         indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
@@ -251,11 +232,10 @@ impl FileStore {
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         // TODO(meyer): Don't fail the whole batch for a single write error.
         let mut metrics = FileStoreWriteMetrics::default();
-        let mut indexedlog_local = self.indexedlog_local.as_ref().map(|l| l.write_lock());
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
                 metrics.lfsptr.item(1);
-                if let Err(e) = self.write_lfsptr(&mut indexedlog_local, key, bytes, meta) {
+                if let Err(e) = self.write_lfsptr(key, bytes, meta) {
                     metrics.lfsptr.err(1);
                     return Err(e);
                 }
@@ -276,7 +256,7 @@ impl FileStore {
                 metrics.lfs.ok(1);
             } else {
                 metrics.nonlfs.item(1);
-                if let Err(e) = self.write_nonlfs(&mut indexedlog_local, key, bytes, meta) {
+                if let Err(e) = self.write_nonlfs(key, bytes, meta) {
                     metrics.nonlfs.err(1);
                     return Err(e);
                 }

@@ -86,7 +86,6 @@ impl TreeStore {
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             let pending: Vec<_> = incomplete.iter().cloned().collect();
-            let indexedlog_cache = indexedlog_cache.read_lock();
             for key in pending.into_iter() {
                 if let Some(entry) = indexedlog_cache.get_entry(key)? {
                     incomplete.remove(entry.key());
@@ -97,7 +96,6 @@ impl TreeStore {
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
             let pending: Vec<_> = incomplete.iter().cloned().collect();
-            let indexedlog_local = indexedlog_local.read_lock();
             for key in pending.into_iter() {
                 if let Some(entry) = indexedlog_local.get_entry(key)? {
                     incomplete.remove(entry.key());
@@ -193,7 +191,6 @@ impl TreeStore {
         // TODO(meyer): We shouldn't fail the batch on write failures here.
         if self.cache_to_local_cache {
             if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-                let mut indexedlog_cache = indexedlog_cache.write_lock();
                 for key in write_to_local_cache.iter() {
                     indexedlog_cache.put_entry(complete[key].clone())?
                 }
@@ -222,7 +219,6 @@ impl TreeStore {
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            let mut indexedlog_local = indexedlog_local.write_lock();
             for (key, bytes, meta) in entries {
                 indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
             }
@@ -332,7 +328,6 @@ impl LocalStore for TreeStore {
         let mut missing: Vec<_> = keys.to_vec();
 
         missing = if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let indexedlog_cache = indexedlog_cache.read_lock();
             missing
                 .into_iter()
                 .filter(
@@ -347,7 +342,6 @@ impl LocalStore for TreeStore {
         };
 
         missing = if let Some(ref indexedlog_local) = self.indexedlog_local {
-            let indexedlog_local = indexedlog_local.read_lock();
             missing
                 .into_iter()
                 .filter(

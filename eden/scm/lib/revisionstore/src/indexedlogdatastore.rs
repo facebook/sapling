@@ -13,7 +13,7 @@ use std::{
 use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use minibytes::Bytes;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::RwLock;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi_types::{FileEntry, TreeEntry};
@@ -32,21 +32,11 @@ use crate::{
     types::StoreKey,
 };
 
-struct IndexedLogHgIdDataStoreInner {
-    pub log: Store,
-}
-
 pub struct IndexedLogHgIdDataStore {
-    inner: RwLock<IndexedLogHgIdDataStoreInner>,
+    store: RwLock<Store>,
     extstored_policy: ExtStoredPolicy,
     missing: MissingInjection,
 }
-
-pub struct IndexedLogHgIdDataStoreReadGuard<'a>(RwLockReadGuard<'a, IndexedLogHgIdDataStoreInner>);
-
-pub struct IndexedLogHgIdDataStoreWriteGuard<'a>(
-    RwLockWriteGuard<'a, IndexedLogHgIdDataStoreInner>,
-);
 
 #[derive(Clone, Debug)]
 pub struct Entry {
@@ -121,19 +111,21 @@ impl Entry {
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub fn from_log(key: &Key, log: &Store) -> Result<Option<Self>> {
-        let mut log_entry = log.lookup(0, key.hgid.as_ref().to_vec())?;
+    pub fn from_log(key: &Key, log: &RwLock<Store>) -> Result<Option<Self>> {
+        let locked_log = log.read();
+        let mut log_entry = locked_log.lookup(0, key.hgid.as_ref().to_vec())?;
         let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
         };
 
-        let bytes = log.slice_to_bytes(buf);
+        let bytes = locked_log.slice_to_bytes(buf);
+        drop(locked_log);
         Entry::from_bytes(bytes).map(Some)
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
-    pub fn write_to_log(self, log: &mut Store) -> Result<()> {
+    pub fn write_to_log(self, log: &RwLock<Store>) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.hgid.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -154,7 +146,7 @@ impl Entry {
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        Ok(log.append(buf)?)
+        Ok(log.write().append(buf)?)
     }
 
     fn content_inner(&self) -> Result<Bytes> {
@@ -211,7 +203,7 @@ impl IndexedLogHgIdDataStore {
         }?;
 
         Ok(IndexedLogHgIdDataStore {
-            inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
+            store: RwLock::new(log),
             extstored_policy,
             missing: MissingInjection::new_from_env("MISSING_FILES"),
         })
@@ -260,82 +252,18 @@ impl IndexedLogHgIdDataStore {
     // TODO(meyer): Make IndexedLogHgIdDataStore "directly" lockable so we can lock and do a batch of operations (RwLock Guard pattern)
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
     pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
-        let inner = self.inner.read();
-        Entry::from_log(key, &inner.log)
+        Entry::from_log(key, &self.store)
     }
 
     /// Write an entry to the IndexedLog
     pub fn put_entry(&self, entry: Entry) -> Result<()> {
-        let mut inner = self.inner.write();
-        entry.write_to_log(&mut inner.log)
+        entry.write_to_log(&self.store)
     }
 
     /// Flush the underlying IndexedLog
     pub fn flush_log(&self) -> Result<()> {
-        self.inner.write().log.flush()?;
+        self.store.write().flush()?;
         Ok(())
-    }
-
-    pub fn read_lock<'a>(&'a self) -> IndexedLogHgIdDataStoreReadGuard<'a> {
-        IndexedLogHgIdDataStoreReadGuard(self.inner.read())
-    }
-
-    pub fn write_lock<'a>(&'a self) -> IndexedLogHgIdDataStoreWriteGuard<'a> {
-        IndexedLogHgIdDataStoreWriteGuard(self.inner.write())
-    }
-}
-
-impl<'a> IndexedLogHgIdDataStoreReadGuard<'a> {
-    /// Write an entry to the IndexedLog
-    ///
-    /// Like IndexedLogHgIdDataStore::get_entry, but uses the already-acquired read lock.
-    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
-        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
-    }
-
-    /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
-    ///
-    /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired read lock.
-    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
-        Entry::from_log(key, &self.0.log)
-    }
-}
-
-impl<'a> IndexedLogHgIdDataStoreWriteGuard<'a> {
-    /// Write an entry to the IndexedLog
-    ///
-    /// Like IndexedLogHgIdDataStore::get_entry, but uses the already-acquired write lock.
-    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
-        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
-    }
-
-    /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
-    ///
-    /// Like IndexedLogHgIdDataStore::get_raw_entry, but uses the already-acquired write lock.
-    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
-        Entry::from_log(key, &self.0.log)
-    }
-
-    /// Write an entry to the IndexedLog
-    ///
-    /// Like IndexedLogHgIdDataStore::put_entry, but uses the already-acquired write lock.
-    pub fn put_entry(&mut self, entry: Entry) -> Result<()> {
-        entry.write_to_log(&mut self.0.log)
-    }
-
-    /// Flush the underlying IndexedLog
-    ///
-    /// Like IndexedLogHgIdDataStore::flush_log, but uses the already-acquired write lock.
-    pub fn flush_log(&mut self) -> Result<()> {
-        self.0.log.flush()?;
-        Ok(())
-    }
-
-    /// Run a function with the write guard temporarily unlocked
-    ///
-    /// Used when calling recursively into contentstore during add
-    pub fn unlocked<U>(&mut self, f: impl FnOnce() -> U) -> U {
-        RwLockWriteGuard::unlocked(&mut self.0, f)
     }
 }
 
@@ -400,7 +328,6 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
 
 impl LocalStore for IndexedLogHgIdDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let inner = self.inner.read();
         let missing: Vec<StoreKey> = keys
             .iter()
             .filter(|k| match k {
@@ -409,7 +336,7 @@ impl LocalStore for IndexedLogHgIdDataStore {
                         warn!("Force missing: {}", k.path);
                         return true;
                     }
-                    match Entry::from_log(k, &inner.log) {
+                    match Entry::from_log(k, &self.store) {
                         Ok(None) | Err(_) => true,
                         Ok(Some(_)) => false,
                     }
@@ -468,7 +395,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
 
 impl ToKeys for IndexedLogHgIdDataStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        let log = &self.inner.read().log;
+        let log = &self.store.read();
         log.iter()
             .map(|entry| {
                 let bytes = log.slice_to_bytes(entry?);
