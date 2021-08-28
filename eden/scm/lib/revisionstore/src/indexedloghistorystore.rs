@@ -8,15 +8,16 @@
 use std::{
     io::{Cursor, Write},
     path::{Path, PathBuf},
-    sync::RwLock,
 };
 
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use parking_lot::RwLock;
 use sha1::{Digest, Sha1};
 
 use configparser::{config::ConfigSet, convert::ByteCount};
 use indexedlog::log::IndexOutput;
+use minibytes::Bytes;
 use types::{
     hgid::{ReadHgIdExt, WriteHgIdExt},
     HgId, Key, NodeInfo, RepoPath, RepoPathBuf,
@@ -31,12 +32,8 @@ use crate::{
     types::StoreKey,
 };
 
-struct IndexedLogHgIdHistoryStoreInner {
-    log: Store,
-}
-
 pub struct IndexedLogHgIdHistoryStore {
-    inner: RwLock<IndexedLogHgIdHistoryStoreInner>,
+    log: RwLock<Store>,
 }
 
 struct Entry {
@@ -96,7 +93,8 @@ impl Entry {
     /// Optionally:
     /// - copy from len: 2 unsigned bytes, big-endian
     /// - copy from: <copy from len> bytes
-    fn from_slice(data: &[u8]) -> Result<Self> {
+    fn from_slice(bytes: Bytes) -> Result<Self> {
+        let data: &[u8] = bytes.as_ref();
         let mut cur = Cursor::new(data);
         let hgid = cur.read_hgid()?;
 
@@ -134,20 +132,23 @@ impl Entry {
     }
 
     /// Read an entry from the `IndexedLog` and deserialize it.
-    pub fn from_log(key: &Key, log: &Store) -> Result<Option<Self>> {
+    pub fn from_log(key: &Key, log: &RwLock<Store>) -> Result<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
+
+        let log = log.read();
         let mut log_entry = log.lookup(0, index_key)?;
         let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
         };
-
+        let buf = log.slice_to_bytes(buf);
+        drop(log);
         Self::from_slice(buf).map(Some)
     }
 
     /// Write an entry to the `IndexedLog`. See [`from_slice`] for the detail about the on-disk
     /// format.
-    pub fn write_to_log(self, log: &mut Store) -> Result<()> {
+    pub fn write_to_log(self, log: &RwLock<Store>) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(Self::key_to_index_key(&self.key).as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -163,7 +164,7 @@ impl Entry {
             buf.write_all(copy_from_slice)?;
         }
 
-        Ok(log.append(buf)?)
+        Ok(log.write().append(buf)?)
     }
 
     pub fn node_info(&self) -> NodeInfo {
@@ -192,7 +193,7 @@ impl IndexedLogHgIdHistoryStore {
             StoreType::Shared => open_options.shared(&path),
         }?;
         Ok(IndexedLogHgIdHistoryStore {
-            inner: RwLock::new(IndexedLogHgIdHistoryStoreInner { log }),
+            log: RwLock::new(log),
         })
     }
 
@@ -231,11 +232,10 @@ impl IndexedLogHgIdHistoryStore {
 
 impl LocalStore for IndexedLogHgIdHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let inner = self.inner.read().unwrap();
         Ok(keys
             .iter()
             .filter(|k| match k {
-                StoreKey::HgId(k) => match Entry::from_log(k, &inner.log) {
+                StoreKey::HgId(k) => match Entry::from_log(k, &self.log) {
                     Ok(None) | Err(_) => true,
                     Ok(Some(_)) => false,
                 },
@@ -248,8 +248,7 @@ impl LocalStore for IndexedLogHgIdHistoryStore {
 
 impl HgIdHistoryStore for IndexedLogHgIdHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        let inner = self.inner.read().unwrap();
-        let entry = match Entry::from_log(key, &inner.log)? {
+        let entry = match Entry::from_log(key, &self.log)? {
             None => return Ok(None),
             Some(entry) => entry,
         };
@@ -263,25 +262,24 @@ impl HgIdHistoryStore for IndexedLogHgIdHistoryStore {
 
 impl HgIdMutableHistoryStore for IndexedLogHgIdHistoryStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        let mut inner = self.inner.write().unwrap();
         let entry = Entry::new(key, info);
-        entry.write_to_log(&mut inner.log)
+        entry.write_to_log(&self.log)
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        self.inner.write().unwrap().log.flush()?;
+        self.log.write().flush()?;
         Ok(None)
     }
 }
 
 impl ToKeys for IndexedLogHgIdHistoryStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
-        self.inner
-            .read()
-            .unwrap()
-            .log
-            .iter()
-            .map(|entry| Entry::from_slice(entry?))
+        let log = &self.log.read();
+        log.iter()
+            .map(|entry| {
+                let bytes = log.slice_to_bytes(entry?);
+                Entry::from_slice(bytes)
+            })
             .map(|entry| Ok(entry?.key))
             .collect()
     }
