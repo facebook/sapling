@@ -42,7 +42,7 @@ pub fn run(opts: GraphOpts, io: &IO, repo: Repo) -> Result<u8> {
     let mut out = io.output();
     write!(out, "{}, Level: {}\n", group, level)?;
 
-    let dag = dag::Dag::open(repo.path().join(".hg/store/segments/v1"))?;
+    let dag = dag::Dag::open(repo.store_path().join("segments/v1"))?;
     render_segment_dag(out, &dag, level, group)?;
 
     Ok(0)
