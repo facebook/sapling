@@ -19,7 +19,7 @@ define_flags! {
     pub struct GraphOpts {
         /// segment level (0 is flat)
         #[short('l')]
-        level: i64 = 3,
+        level: i64 = 0,
 
         /// segment group (master|non_master)
         #[short('g')]
