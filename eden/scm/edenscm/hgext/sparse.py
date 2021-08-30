@@ -819,6 +819,9 @@ class RawSparseConfig(object):
                 exclude.append(value)
         return include, exclude
 
+    def version(self):
+        return self.metadata.get("version", "1")
+
 
 @attr.s(frozen=True, slots=True, cmp=False)
 class SparseConfig(object):
@@ -849,8 +852,6 @@ class SparseConfig(object):
             and all(
                 x.equivalent(y) for (x, y) in zip(self.profiles, other_config.profiles)
             )
-            and self.metadata.get("version", "1")
-            == other_config.metadata.get("version", "1")
         )
 
     def allprofiles(self):
@@ -877,8 +878,11 @@ class SparseProfile(object):
         return (
             self.rules == other.rules
             and self.profiles == other.profiles
-            and self.metadata.get("version", "1") == other.metadata.get("version", "1")
+            and self.version() == other.version()
         )
+
+    def version(self):
+        return self.metadata.get("version", "1")
 
 
 def _wraprepo(ui, repo):
@@ -1027,7 +1031,7 @@ def _wraprepo(ui, repo):
                         # v1 config's put all includes before all excludes, so
                         # just create a big set of include/exclude rules and
                         # we'll append them later.
-                        version = debugversion or profile.metadata.get("version", "1")
+                        version = debugversion or profile.version()
                         if version == "1":
                             for value in profile.rules:
                                 if value.startswith("!"):
@@ -1084,7 +1088,7 @@ def _wraprepo(ui, repo):
 
             rawconfig = self.readsparseconfig(raw, filename=name)
             if version is None:
-                version = rawconfig.metadata.get("version", "1")
+                version = rawconfig.version()
 
             rules = []
             profiles = set()
@@ -1292,9 +1296,7 @@ def _wraprepo(ui, repo):
                         for profile in config.profiles:
                             # v1 profiles are already rolled up into the
                             # mainrules above.
-                            version = debugversion or profile.metadata.get(
-                                "version", "1"
-                            )
+                            version = debugversion or profile.version()
                             if version != "1":
                                 matchers.append(
                                     matchmod.rulesmatch(self.root, "", profile.rules)
