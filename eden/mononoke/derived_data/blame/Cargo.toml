@@ -24,7 +24,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]

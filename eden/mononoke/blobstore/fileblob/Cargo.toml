@@ -13,7 +13,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 tempfile = "3.1"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 walkdir = "2.2.9"
 
 [dev-dependencies]

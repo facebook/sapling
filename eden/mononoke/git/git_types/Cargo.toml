@@ -29,7 +29,7 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-util = "0.3.7"
 git2 = "0.13"
 tempdir = "0.3"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

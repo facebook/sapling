@@ -49,7 +49,7 @@ skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 thiserror = "1.0"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
 

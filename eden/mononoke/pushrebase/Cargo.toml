@@ -43,7 +43,7 @@ sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

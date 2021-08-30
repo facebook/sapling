@@ -21,7 +21,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

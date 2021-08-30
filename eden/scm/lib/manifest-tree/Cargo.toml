@@ -25,7 +25,7 @@ quickcheck = { version = "0.9", optional = true }
 rand = { version = "0.7", features = ["small_rng"], optional = true }
 sha-1 = "0.8"
 thiserror = "1.0"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 tracing = "0.1"
 types = { path = "../types" }
 

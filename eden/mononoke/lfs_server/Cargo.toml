@@ -50,7 +50,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 thiserror = "1.0"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

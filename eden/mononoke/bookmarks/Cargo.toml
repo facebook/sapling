@@ -26,7 +26,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 quickcheck = "0.9"
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }

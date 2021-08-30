@@ -18,7 +18,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.7.1", features = ["full", "test-util"] }
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [patch.crates-io]
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
