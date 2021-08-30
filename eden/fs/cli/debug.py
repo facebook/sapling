@@ -896,44 +896,38 @@ class FlushCacheCmd(Subcmd):
 @debug_cmd("log", "Display/Gather the EdenFS log file. Defaults to Display mode.")
 class LogCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        upload_parser = parser.add_subparsers().add_parser(
-            "upload",
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
+            "--upload",
+            action="store_true",
             help=(
                 "Gather logs from eden and uploads them externally. "
                 "This uses the upload tool specified by the rage.reporter config value"
             ),
         )
-
-        upload_parser.add_argument(
+        group.add_argument(
             "--stdout",
             action="store_true",
             help="Print the logs to stdout: ignore reporter.",
         )
-        upload_parser.add_argument(
+        parser.add_argument(
             "--full",
             action="store_true",
-            help="Gather the full logs from eden.",
+            help="Gather the full logs from eden. Works with the upload and stdout options",
         )
-        upload_parser.add_argument(
+        parser.add_argument(
             "--size",
             type=int,
             default=1000000,
             help=(
-                "The amount of the logs we should gather. "
-                "If --full is passed in, we will ignore this value. Default to 1M"
+                "The amount of the logs we should gather in bytes. "
+                "Size is ignored if --full is set. Defaults to 1M. Works with --upload and --stdout"
             ),
         )
 
-        upload_parser.set_defaults(func=self.upload_logs)
-
-    def upload_logs(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-
-        eden_log_path = instance.get_log_path()
-        if not eden_log_path.exists():
-            print(f"No log file found at {eden_log_path}", file=sys.stderr)
-            return 1
-
+    def upload_logs(
+        self, args: argparse.Namespace, instance: EdenInstance, eden_log_path: Path
+    ) -> int:
         # For ease of use, just use the same rage reporter
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
@@ -955,8 +949,6 @@ class LogCmd(Subcmd):
         return 0
 
     def run(self, args: argparse.Namespace) -> int:
-        # Display eden's log with the system pager if possible.  We could
-        # add a --tail option.
         instance = cmd_util.get_eden_instance(args)
 
         eden_log_path = instance.get_log_path()
@@ -964,15 +956,20 @@ class LogCmd(Subcmd):
             print(f"No log file found at {eden_log_path}", file=sys.stderr)
             return 1
 
-        pager_env = os.getenv("PAGER")
-        if pager_env:
-            pager_cmd = shlex.split(pager_env)
+        if args.stdout or args.upload:
+            return self.upload_logs(args, instance, eden_log_path)
         else:
-            pager_cmd = ["less", "+G"]
-        pager_cmd.append(str(eden_log_path))
+            # Display eden's log with the system pager if possible.  We could
+            # add a --tail option.
+            pager_env = os.getenv("PAGER")
+            if pager_env:
+                pager_cmd = shlex.split(pager_env)
+            else:
+                pager_cmd = ["less", "+G"]
+            pager_cmd.append(str(eden_log_path))
 
-        os.execvp(pager_cmd[0], pager_cmd)
-        raise Exception("we should never reach here")
+            os.execvp(pager_cmd[0], pager_cmd)
+            raise Exception("we should never reach here")
 
 
 @debug_cmd("logging", "Display or modify logging configuration for the edenfs daemon")
