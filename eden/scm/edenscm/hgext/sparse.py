@@ -826,14 +826,14 @@ class SparseConfig(object):
     rules and profile rules."""
 
     path = attr.ib()
-    rules = attr.ib(convert=list)
+    mainrules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
     def toincludeexclude(self):
         include = []
         exclude = []
-        for rule in self.rules:
+        for rule in self.mainrules:
             if rule[0] == "!":
                 exclude.append(rule[1:])
             else:
@@ -844,7 +844,7 @@ class SparseConfig(object):
     # In particular, don't compare path or metadata.
     def equivalent(self, other_config):
         return (
-            self.rules == other_config.rules
+            self.mainrules == other_config.mainrules
             and len(self.profiles) == len(other_config.profiles)
             and all(
                 x.equivalent(y) for (x, y) in zip(self.profiles, other_config.profiles)
@@ -1018,6 +1018,7 @@ def _wraprepo(ui, repo):
             excludes = set()
             rules = [".hg*"]
             profiles = []
+            onlyv1 = True
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profile = self.readsparseprofile(rev, value, version=None)
@@ -1034,7 +1035,10 @@ def _wraprepo(ui, repo):
                                 else:
                                     includes.add(value)
                         elif version == "2":
-                            rules.extend(profile.rules)
+                            # Do nothing. A higher layer will turn profile.rules
+                            # into a matcher and compose it with the other
+                            # profiles.
+                            onlyv1 = False
                         else:
                             raise error.ProgrammingError(
                                 _("unexpected sparse profile version '%s'") % version
@@ -1052,7 +1056,7 @@ def _wraprepo(ui, repo):
 
             # If all rules (excluding the default '.hg*') are exclude rules, add
             # an initial "**" to provide the default include of everything.
-            if all(rule[0] == "!" for rule in rules[1:]):
+            if not includes and onlyv1:
                 rules.insert(0, "**")
 
             return SparseConfig(
@@ -1097,6 +1101,11 @@ def _wraprepo(ui, repo):
                     rules.append(value)
                 elif kind == "exclude":
                     rules.append("!" + value)
+
+            # If all rules (excluding the default '.hg*') are exclude rules, add
+            # an initial "**" to provide the default include of everything.
+            if version != "1" and all(rule[0] == "!" for rule in rules):
+                rules.insert(0, "**")
 
             return SparseProfile(name, rules, profiles, rawconfig.metadata)
 
@@ -1248,24 +1257,7 @@ def _wraprepo(ui, repo):
             if result:
                 return result, key
 
-            matchers = []
-            isalways = False
-            for rev in revs:
-                try:
-                    config = self.getsparsepatterns(rev, rawconfig=rawconfig)
-
-                    if config.rules:
-                        matcher = matchmod.rulesmatch(self.root, "", config.rules)
-                        matchers.append(matcher)
-                    else:
-                        isalways = True
-                except IOError:
-                    pass
-
-            if isalways:
-                result = matchmod.always(self.root, "")
-            else:
-                result = matchmod.union(matchers, self.root, "")
+            result = self._computesparsematcher(revs, rawconfig=rawconfig)
 
             if kwargs.get("includetemp", True):
                 tempincludes = self.gettemporaryincludes()
@@ -1275,6 +1267,48 @@ def _wraprepo(ui, repo):
             self.sparsecache[key] = result
 
             return result, key
+
+        def _computesparsematcher(self, revs, rawconfig=None, debugversion=None):
+            matchers = []
+            isalways = False
+            for rev in revs:
+                try:
+                    config = self.getsparsepatterns(
+                        rev, rawconfig=rawconfig, debugversion=debugversion
+                    )
+
+                    if config.mainrules:
+                        matchers.append(
+                            matchmod.rulesmatch(self.root, "", config.mainrules)
+                        )
+
+                    if config.profiles:
+                        # Keep each profile separate, so the end result is a
+                        # union of matchers instead of a single matcher with all
+                        # the rules in order. This allows users to enable
+                        # a profile for each product they work on, and the
+                        # excludes in one product won't prevent the files from
+                        # being included by another product.
+                        for profile in config.profiles:
+                            # v1 profiles are already rolled up into the
+                            # mainrules above.
+                            version = debugversion or profile.metadata.get(
+                                "version", "1"
+                            )
+                            if version != "1":
+                                matchers.append(
+                                    matchmod.rulesmatch(self.root, "", profile.rules)
+                                )
+
+                    if not config.mainrules and not config.profiles:
+                        isalways = True
+                except IOError:
+                    pass
+
+            if isalways:
+                return matchmod.always(self.root, "")
+            else:
+                return matchmod.union(matchers, self.root, "")
 
         def getactiveprofiles(self):
             # Use unfiltered to avoid computing hidden commits
@@ -1927,13 +1961,11 @@ def debugsparseprofilev2(ui, repo, profile, **opts):
     )
     rawconfig = repo.readsparseconfig(raw, "<debug temp sparse config>")
 
-    config1 = repo.getsparsepatterns(rev, rawconfig=rawconfig, debugversion="1")
-    matcherv1 = matchmod.rulesmatch(repo.root, "", config1.rules)
+    matcherv1 = repo._computesparsematcher([rev], rawconfig=rawconfig, debugversion="1")
     files1 = set(mf.walk(matcherv1))
     print("V1 includes %s files" % len(files1))
 
-    config2 = repo.getsparsepatterns(rev, rawconfig=rawconfig, debugversion="2")
-    matcherv2 = matchmod.rulesmatch(repo.root, "", config2.rules)
+    matcherv2 = repo._computesparsematcher([rev], rawconfig=rawconfig, debugversion="2")
     files2 = set(mf.walk(matcherv2))
     print("V2 includes %s files" % len(files2))
 
