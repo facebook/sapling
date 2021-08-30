@@ -442,8 +442,8 @@ def _setupcommit(ui):
 
         if util.safehasattr(repo, "getsparsepatterns"):
             ctx = repo[node]
-            profiles = repo.getsparsepatterns(ctx.rev()).profiles
-            if set(profiles) & set(ctx.files()):
+            profiles = repo.getsparsepatterns(ctx.rev()).allprofiles()
+            if profiles & set(ctx.files()):
                 origstatus = repo.status()
                 origsparsematch = repo.sparsematch()
                 _refresh(repo.ui, repo, origstatus, origsparsematch, True)
@@ -845,10 +845,21 @@ class SparseConfig(object):
     def equivalent(self, other_config):
         return (
             self.rules == other_config.rules
-            and self.profiles == other_config.profiles
+            and len(self.profiles) == len(other_config.profiles)
+            and all(
+                x.equivalent(y) for (x, y) in zip(self.profiles, other_config.profiles)
+            )
             and self.metadata.get("version", "1")
             == other_config.metadata.get("version", "1")
         )
+
+    def allprofiles(self):
+        allprofiles = set()
+        for profile in self.profiles:
+            allprofiles.add(profile.path)
+            for subprofile in profile.profiles:
+                allprofiles.add(subprofile)
+        return allprofiles
 
 
 @attr.s(frozen=True, slots=True, cmp=False)
@@ -859,6 +870,15 @@ class SparseProfile(object):
     rules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
+
+    # Return whether self and other_config are effectively equivalent.
+    # In particular, don't compare path or metadata.
+    def equivalent(self, other):
+        return (
+            self.rules == other.rules
+            and self.profiles == other.profiles
+            and self.metadata.get("version", "1") == other.metadata.get("version", "1")
+        )
 
 
 def _wraprepo(ui, repo):
@@ -997,12 +1017,12 @@ def _wraprepo(ui, repo):
             includes = set()
             excludes = set()
             rules = [".hg*"]
-            profiles = set()
+            profiles = []
             for kind, value in rawconfig.lines:
                 if kind == "profile":
-                    profiles.add(value)
                     profile = self.readsparseprofile(rev, value, version=None)
                     if profile is not None:
+                        profiles.append(profile)
                         # v1 config's put all includes before all excludes, so
                         # just create a big set of include/exclude rules and
                         # we'll append them later.
@@ -1013,8 +1033,6 @@ def _wraprepo(ui, repo):
                                     excludes.add(value[1:])
                                 else:
                                     includes.add(value)
-                            for subprofile in profile.profiles:
-                                profiles.add(subprofile)
                         elif version == "2":
                             rules.extend(profile.rules)
                         else:
@@ -1269,7 +1287,7 @@ def _wraprepo(ui, repo):
 
             activeprofiles = set()
             for rev in revs:
-                profiles = self.getsparsepatterns(rev).profiles
+                profiles = self.getsparsepatterns(rev).allprofiles()
                 activeprofiles.update(profiles)
 
             return activeprofiles
@@ -2706,7 +2724,7 @@ def _import(ui, repo, files, opts, force=False):
         aincludes, aexcludes, aprofiles = set(), set(), set()
         for rev in revs:
             rsparseconfig = repo.getsparsepatterns(rev)
-            rprofiles = rsparseconfig.profiles
+            rprofiles = rsparseconfig.allprofiles()
             rincludes, rexcludes = rsparseconfig.toincludeexclude()
             aincludes.update(rincludes)
             aexcludes.update(rexcludes)
