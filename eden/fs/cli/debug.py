@@ -924,6 +924,11 @@ class LogCmd(Subcmd):
                 "Size is ignored if --full is set. Defaults to 1M. Works with --upload and --stdout"
             ),
         )
+        parser.add_argument(
+            "--path",
+            action="store_true",
+            help="Print the location of the EdenFS log file",
+        )
 
     def upload_logs(
         self, args: argparse.Namespace, instance: EdenInstance, eden_log_path: Path
@@ -955,6 +960,10 @@ class LogCmd(Subcmd):
         if not eden_log_path.exists():
             print(f"No log file found at {eden_log_path}", file=sys.stderr)
             return 1
+
+        if args.path:
+            print(eden_log_path, file=sys.stdout)
+            return 0
 
         if args.stdout or args.upload:
             return self.upload_logs(args, instance, eden_log_path)
