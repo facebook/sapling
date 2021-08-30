@@ -17,6 +17,7 @@ use cpython_ext::{ExtractInner, ExtractInnerRef, PyPath, PyPathBuf, Str};
 use anyhow::Result;
 use pathmatcher::{
     AlwaysMatcher, DifferenceMatcher, DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher,
+    UnionMatcher,
 };
 use types::RepoPath;
 
@@ -215,6 +216,16 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     }
     if matcher.get_type(py).name(py).as_ref() == "treematcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
+    }
+    if matcher.get_type(py).name(py).as_ref() == "unionmatcher" {
+        let py_matchers = matcher.getattr(py, "_matchers")?;
+        let py_matchers = PyList::extract(py, &py_matchers)?;
+        let mut matchers: Vec<Arc<dyn Matcher + Sync + Send>> = vec![];
+        for matcher in py_matchers.iter(py) {
+            matchers.push(extract_matcher(py, matcher)?);
+        }
+
+        return Ok(Arc::new(UnionMatcher::new(matchers)));
     }
     if matcher.get_type(py).name(py).as_ref() == "differencematcher" {
         let include = extract_matcher(py, matcher.getattr(py, "_m1")?)?;

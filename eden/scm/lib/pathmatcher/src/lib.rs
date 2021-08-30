@@ -10,6 +10,7 @@ mod tree_matcher;
 mod utils;
 
 use std::ops::Deref;
+use std::sync::Arc;
 
 use anyhow::Result;
 
@@ -145,6 +146,42 @@ impl<A: Matcher, B: Matcher> Matcher for DifferenceMatcher<A, B> {
         Ok(self.include.matches_file(path)? && !self.exclude.matches_file(path)?)
     }
 }
+
+pub struct UnionMatcher {
+    matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>,
+}
+
+impl UnionMatcher {
+    pub fn new(matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>) -> Self {
+        UnionMatcher { matchers }
+    }
+}
+
+impl Matcher for UnionMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let mut current = DirectoryMatch::Nothing;
+        for matcher in self.matchers.iter() {
+            current = match matcher.matches_directory(path)? {
+                DirectoryMatch::Nothing => current,
+                DirectoryMatch::Everything => {
+                    return Ok(DirectoryMatch::Everything);
+                }
+                DirectoryMatch::ShouldTraverse => DirectoryMatch::ShouldTraverse,
+            };
+        }
+        Ok(current)
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        for matcher in self.matchers.iter() {
+            if matcher.matches_file(path)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
 pub use gitignore_matcher::GitignoreMatcher;
 pub use tree_matcher::TreeMatcher;
 pub use utils::{expand_curly_brackets, normalize_glob, plain_to_glob};
