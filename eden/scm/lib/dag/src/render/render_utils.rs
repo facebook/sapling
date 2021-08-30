@@ -93,11 +93,16 @@ pub fn render_segment_dag(
         }
 
         let span = seg.span()?;
+        let get_hex = |id| -> String {
+            non_blocking_result(dag.vertex_name(id))
+                .map(|s| format!("{:.12?}", s))
+                .unwrap_or_default()
+        };
         let name = format!(
-            "{:.12?}({})-{:.12?}({})",
-            non_blocking_result(dag.vertex_name(span.low))?,
+            "{}({})-{}({})",
+            get_hex(span.low),
             span.low,
-            non_blocking_result(dag.vertex_name(span.high))?,
+            get_hex(span.high),
             span.high,
         );
         let row = renderer.next_row(seg, parents, String::from("o"), name);
