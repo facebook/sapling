@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import errno
+import json
 import os
 import stat
 import subprocess
@@ -80,6 +81,18 @@ class BasicTest(BasicTestBase):
         # During the integration tests we expect to always be running the same version
         # of edenfsctl and the edenfs daemon.
         self.assertEqual(cli_version, running_version)
+
+    def test_version_json(self) -> None:
+        output = self.eden.run_cmd("version", "--json", cwd=self.mount)
+        json_out = json.loads(output)
+        self.assertTrue("installed" in json_out)
+        self.assertTrue("running" in json_out)
+        installed_version = json_out["installed"]
+        running_version = json_out["running"]
+
+        # During the integration tests we expect to always be running the same
+        # version of edenfsctl and the edenfs daemon.
+        self.assertEqual(installed_version, running_version)
 
     def test_file_list(self) -> None:
         self.assert_checkout_root_entries(self.expected_mount_entries)

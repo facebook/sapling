@@ -79,24 +79,44 @@ except AttributeError:  # On a non-unix system
     EX_OSFILE = 72
 
 
-def do_version(args: argparse.Namespace) -> int:
+def do_version(args: argparse.Namespace, format_json: bool = False) -> int:
     instance = get_eden_instance(args)
-    print("Installed: %s" % version_mod.get_current_version())
+    installed_version = version_mod.get_current_version()
+    running_version = "-"
 
     try:
-        rv = instance.get_running_version()
-        print("Running:   %s" % rv)
-        if rv.startswith("-") or rv.endswith("-"):
-            print("(Dev version of edenfs seems to be running)")
+        running_version = instance.get_running_version()
     except EdenNotRunningError:
-        print("Running:   Unknown (edenfs does not appear to be running)")
+        if not format_json:
+            running_version = "Unknown (EdenFS does not appear to be running)"
+
+    if format_json:
+        if installed_version == "-":
+            installed_version = None
+        if running_version == "-":
+            running_version = None
+        info = {"installed": installed_version, "running": running_version}
+        json.dump(info, sys.stdout, indent=2)
+    else:
+        print(f"Installed: {installed_version}")
+        print(f"Running:   {running_version}")
+        if running_version.startswith("-") or running_version.endswith("-"):
+            print("(Dev version of EdenFS seems to be running)")
+
     return 0
 
 
 @subcmd("version", "Print EdenFS's version information.")
 class VersionCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            help="Print the running and installed versions in json format",
+        )
+
     def run(self, args: argparse.Namespace) -> int:
-        return do_version(args)
+        return do_version(args, args.json)
 
 
 @subcmd("info", "Get details about a checkout")
