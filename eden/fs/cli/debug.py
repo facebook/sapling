@@ -777,11 +777,7 @@ class ListRecordingsCmd(Subcmd):
                 for recording in result.recordings:
                     path = recording.path
                     print(
-                        "ID: %s Output file: %s"
-                        % (
-                            recording.unique,
-                            "" if path is None else path.decode("utf-8"),
-                        ),
+                        f"ID: {recording.unique} Output file: {'' if path is None else path.decode()}"
                     )
         return 0
 

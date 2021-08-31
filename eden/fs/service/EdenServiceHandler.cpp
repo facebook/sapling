@@ -2090,9 +2090,8 @@ void EdenServiceHandler::debugStopRecordingActivity(
 void EdenServiceHandler::debugListActivityRecordings(
     ListActivityRecordingsResult& result,
     std::unique_ptr<std::string> mountPoint) {
-  auto lockedPtr = server_->getMount(AbsolutePathPiece{*mountPoint})
-                       ->getActivityRecorder()
-                       .rlock();
+  auto mount = server_->getMount(AbsolutePathPiece{*mountPoint});
+  auto lockedPtr = mount->getActivityRecorder().rlock();
   auto* activityRecorder = lockedPtr->get();
   if (!activityRecorder) {
     return;
