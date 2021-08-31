@@ -34,6 +34,8 @@ class IHiveLogger {
       : sessionInfo_{std::move(sessionInfo)}, reloadableConfig_{edenConfig} {}
   virtual ~IHiveLogger() = default;
 
+  virtual void log(std::string_view category, std::string&& message) = 0;
+
   virtual void logFileAccess(FileAccess access) = 0;
 
   /**
@@ -54,6 +56,8 @@ class NullHiveLogger : public IHiveLogger {
   std::unique_ptr<IHiveLogger> create() override {
     return std::make_unique<NullHiveLogger>();
   }
+
+  void log(std::string_view /*category*/, std::string&& /*message*/) override {}
 
   void logFileAccess(FileAccess /* access */) override {}
 };

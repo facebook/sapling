@@ -1114,7 +1114,7 @@ void FileInode::logAccess(ObjectFetchContext& fetchContext) {
     fetchDetail.emplace(detail.value().str());
   }
 
-  getMount()->getServerState()->getHiveLogger()->logFileAccess(FileAccess{
+  getMount()->getServerState()->getRawHiveLogger()->logFileAccess(FileAccess{
       ino,
       fetchContext.getCause(),
       std::move(fetchDetail),

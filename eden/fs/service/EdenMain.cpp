@@ -339,6 +339,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     // failed.  Continue and re-run the server in this case.
   }
 
+  main.cleanup();
+
   XLOG(INFO) << "EdenFS exiting successfully";
   return kExitCodeSuccess;
 }

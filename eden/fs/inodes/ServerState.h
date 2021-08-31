@@ -150,9 +150,21 @@ class ServerState {
 
   /**
    * Returns a HiveLogger that can be used to send log events to external
-   * long term storage for offline consumption.
+   * long term storage for offline consumption. Prefer this method if the
+   * caller needs to own a reference due to lifetime mismatch with the
+   * ServerState
    */
-  IHiveLogger* getHiveLogger() const {
+  std::shared_ptr<IHiveLogger> getHiveLogger() const {
+    return hiveLogger_;
+  }
+
+  /**
+   * Returns a HiveLogger that can be used to send log events to external
+   * long term storage for offline consumption. This should only be used if
+   * the caller ensures that they will not outlive the ServerState, but should
+   * be preferred in that case for performance considerations
+   */
+  IHiveLogger* getRawHiveLogger() const {
     return hiveLogger_.get();
   }
 
