@@ -1020,7 +1020,7 @@ def _wraprepo(ui, repo):
 
             includes = set()
             excludes = set()
-            rules = [".hg*"]
+            rules = ["glob:.hg*"]
             profiles = []
             onlyv1 = True
             for kind, value in rawconfig.lines:

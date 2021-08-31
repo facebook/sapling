@@ -532,8 +532,8 @@ Verify regular expressions are no longer supported
   > EOF
   $ hg ci -Aqm 'initial'
   $ hg sparse include re:sh.w
-  abort: treematcher does not support regular expressions or relpath matchers: ['.hg*', 're:sh.w']
+  abort: treematcher does not support regular expressions or relpath matchers: ['glob:.hg*', 're:sh.w']
   [255]
   $ hg sparse enable sparse.profile
-  abort: treematcher does not support regular expressions or relpath matchers: ['.hg*', 're:s.ow']
+  abort: treematcher does not support regular expressions or relpath matchers: ['glob:.hg*', 're:s.ow']
   [255]
