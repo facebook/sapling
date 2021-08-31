@@ -8,6 +8,7 @@
 //! Command-line client for the Source Control Service.
 #![feature(process_exitcode_placeholder)]
 
+use std::env;
 use std::process::ExitCode;
 
 use ansi_term::Colour;
@@ -55,10 +56,16 @@ async fn main(fb: FacebookInit) -> ExitCode {
     app = connection::add_args(app);
     app = commands::add_args(app);
     if let Err(e) = commands::dispatch(fb, app.get_matches()).await {
+        let prog_name = env::args().next().unwrap_or("scsc".to_string());
         if atty::is(Stream::Stderr) {
-            eprintln!("{} {}", Colour::Red.bold().paint("error:"), e);
+            eprintln!(
+                "{}: {} {}",
+                prog_name,
+                Colour::Red.bold().paint("error:"),
+                e
+            );
         } else {
-            eprintln!("error: {}", e);
+            eprintln!("{}: error: {}", prog_name, e);
         }
         return ExitCode::FAILURE;
     }
