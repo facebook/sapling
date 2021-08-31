@@ -15,9 +15,9 @@ use anyhow::{anyhow, Context};
 
 use edenfs_config::EdenFsConfig;
 use edenfs_error::{EdenFsError, Result, ResultExt};
+use fb303_core::types::fb303_status;
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
-use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
 
