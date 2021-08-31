@@ -10,7 +10,6 @@ use blobstore::{
     Blobstore, BlobstorePutOps, BlobstoreWithLink, DisabledBlob, ErrorKind, PutBehaviour,
     DEFAULT_PUT_BEHAVIOUR,
 };
-use blobstore_stats::OperationType;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
@@ -35,7 +34,6 @@ use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::{CountedSqlblob, Sqlblob};
-use std::collections::HashSet;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,10 +45,8 @@ use crate::ReadOnlyStorage;
 pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
     pub throttle_options: ThrottleOptions,
-    pub manifold_api_key: Option<String>,
-    pub manifold_weak_consistency_ms: Option<i64>,
-    pub manifold_thrift_ops: Option<HashSet<OperationType>>,
-    pub manifold_request_priority: Option<i64>,
+    #[cfg(fbcode_build)]
+    pub manifold_options: crate::facebook::ManifoldOptions,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
@@ -62,10 +58,7 @@ impl BlobstoreOptions {
     pub fn new(
         chaos_options: ChaosOptions,
         throttle_options: ThrottleOptions,
-        manifold_api_key: Option<String>,
-        manifold_weak_consistency_ms: Option<i64>,
-        manifold_thrift_ops: Option<HashSet<OperationType>>,
-        manifold_request_priority: Option<i64>,
+        #[cfg(fbcode_build)] manifold_options: crate::facebook::ManifoldOptions,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
@@ -74,10 +67,8 @@ impl BlobstoreOptions {
         Self {
             chaos_options,
             throttle_options,
-            manifold_api_key,
-            manifold_weak_consistency_ms,
-            manifold_thrift_ops,
-            manifold_request_priority,
+            #[cfg(fbcode_build)]
+            manifold_options,
             pack_options,
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
@@ -314,11 +305,8 @@ async fn make_manifold_blobstore(
         &prefix,
         &bucket,
         ttl,
-        blobstore_options.manifold_api_key.as_deref(),
-        blobstore_options.manifold_weak_consistency_ms,
-        blobstore_options.manifold_request_priority,
+        &blobstore_options.manifold_options,
         blobstore_options.put_behaviour,
-        blobstore_options.manifold_thrift_ops.clone(),
     )
 }
 

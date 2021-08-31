@@ -14,9 +14,7 @@ use clap::{App, Arg, ArgGroup};
 use fbinit::FacebookInit;
 use once_cell::sync::OnceCell;
 
-use blobstore_factory::{
-    OperationType, PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR,
-};
+use blobstore_factory::{PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR};
 use repo_factory::ReadOnlyStorage;
 use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
@@ -65,10 +63,6 @@ pub const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 pub const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 pub const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd";
 pub const WRITE_ZSTD_LEVEL_ARG: &str = "blobstore-write-zstd-level";
-pub const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
-pub const MANIFOLD_WEAK_CONSISTENCY_MS_ARG: &str = "manifold-weak-consistency-ms";
-pub const MANIFOLD_THRIFT_OPS_ARG: &str = "manifold-thrift-ops";
-pub const MANIFOLD_REQUEST_PRIORITY_OVERRIDE: &str = "manifold-request-priority-override";
 pub const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
@@ -710,37 +704,6 @@ impl MononokeAppBuilder {
                 .help("Override the zstd compression leve used for writes via packblob."),
         )
         .arg(
-            Arg::with_name(MANIFOLD_API_KEY_ARG)
-                .long(MANIFOLD_API_KEY_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Manifold API key"),
-        )
-        .arg(
-            Arg::with_name(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
-                .long(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Manifold Weak Consistency max age millis. This overrides the value set via tunables"),
-        )
-        .arg(
-            Arg::with_name(MANIFOLD_THRIFT_OPS_ARG)
-                .long(MANIFOLD_THRIFT_OPS_ARG)
-                .takes_value(true)
-                .required(false)
-                .multiple(true)
-                .possible_values(OperationType::VARIANTS)
-                .number_of_values(1)
-                .help("Override some operations to run via thrift"),
-        )
-        .arg(
-            Arg::with_name(MANIFOLD_REQUEST_PRIORITY_OVERRIDE)
-                .long(MANIFOLD_REQUEST_PRIORITY_OVERRIDE)
-                .takes_value(true)
-                .required(false)
-                .help("Override the default manifold request priority that would otherwise be taken from the tunable"),
-        )
-        .arg(
             Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
                 .long(CACHELIB_ATTEMPT_ZSTD_ARG)
                 .takes_value(true)
@@ -760,6 +723,9 @@ impl MononokeAppBuilder {
                 .default_value(bool_as_str(self.readonly_storage_default.0))
                 .help("Error on any attempts to write to storage if set to true"),
         );
+
+        #[cfg(fbcode_build)]
+        let app = blobstore_factory::ManifoldOptions::add_args(app);
 
         if self.arg_types.contains(&ArgType::Scrub) {
             let mut scrub_action_arg = Arg::with_name(BLOBSTORE_SCRUB_ACTION_ARG)

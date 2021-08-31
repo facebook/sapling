@@ -8,7 +8,6 @@
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::iter::FromIterator;
 use std::num::{NonZeroU32, NonZeroUsize};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -30,8 +29,8 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use tokio::runtime::{Handle, Runtime};
 
 use blobstore_factory::{
-    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, OperationType, PackOptions,
-    PutBehaviour, ScrubAction, ScrubWriteMostly, ThrottleOptions,
+    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
+    ScrubAction, ScrubWriteMostly, ThrottleOptions,
 };
 use environment::{Caching, MononokeEnvironment};
 use metaconfig_types::PackFormat;
@@ -53,11 +52,10 @@ use super::{
         BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG, BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG,
         CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER,
         LOCAL_CONFIGERATOR_PATH_ARG, LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY,
-        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MANIFOLD_API_KEY_ARG, MANIFOLD_REQUEST_PRIORITY_OVERRIDE,
-        MANIFOLD_THRIFT_OPS_ARG, MANIFOLD_WEAK_CONSISTENCY_MS_ARG, MYSQL_CONN_OPEN_TIMEOUT,
-        MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT,
-        MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM,
-        MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
+        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
+        MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT,
+        MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
         MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
         READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
         TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
@@ -589,31 +587,8 @@ fn parse_blobstore_options(
         .transpose()
         .context("Provided chaos is not u32")?;
 
-    let manifold_api_key: Option<String> = matches
-        .value_of(MANIFOLD_API_KEY_ARG)
-        .map(|api_key| api_key.to_string());
-
-    let manifold_thrift_ops: Option<HashSet<OperationType>> =
-        match matches.values_of(MANIFOLD_THRIFT_OPS_ARG) {
-            None => None,
-            Some(values) => Some(HashSet::from_iter(
-                values
-                    .map(|v| OperationType::from_str(v).map_err(Error::from))
-                    .collect::<Result<Vec<OperationType>>>()?,
-            )),
-        };
-
-    let manifold_weak_consistency_ms: Option<i64> = matches
-        .value_of(MANIFOLD_WEAK_CONSISTENCY_MS_ARG)
-        .map(|v| v.parse())
-        .transpose()
-        .context("Provided value is not i64")?;
-
-    let manifold_request_priority: Option<i64> = matches
-        .value_of(MANIFOLD_REQUEST_PRIORITY_OVERRIDE)
-        .map(|v| v.parse())
-        .transpose()
-        .context("Provided value is not i64")?;
+    #[cfg(fbcode_build)]
+    let manifold_options = blobstore_factory::ManifoldOptions::parse_args(matches)?;
 
     let write_zstd: Option<bool> = matches
         .value_of(WRITE_ZSTD_ARG)
@@ -674,10 +649,8 @@ fn parse_blobstore_options(
             write_burst_bytes,
             bytes_min_count,
         },
-        manifold_api_key,
-        manifold_weak_consistency_ms,
-        manifold_thrift_ops,
-        manifold_request_priority,
+        #[cfg(fbcode_build)]
+        manifold_options,
         PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,

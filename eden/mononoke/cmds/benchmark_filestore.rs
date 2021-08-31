@@ -190,9 +190,9 @@ async fn get_blob<'a>(
                     fb,
                     bucket,
                     TEST_DATA_TTL,
-                    blobstore_options.manifold_api_key.as_deref(),
-                    blobstore_options.manifold_weak_consistency_ms,
-                    blobstore_options.manifold_request_priority,
+                    blobstore_options.manifold_options.api_key.as_deref(),
+                    blobstore_options.manifold_options.weak_consistency_ms,
+                    blobstore_options.manifold_options.request_priority,
                     put_behaviour,
                 )
                 .map_err(|e| -> Error { e })?;
