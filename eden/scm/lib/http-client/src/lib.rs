@@ -29,7 +29,9 @@ pub use errors::{Abort, HttpClientError, TlsError};
 pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
-pub use request::{Encoding, Method, MinTransferSpeed, Request, RequestContext, StreamRequest};
+pub use request::{
+    Encoding, Method, MinTransferSpeed, Request, RequestContext, RequestInfo, StreamRequest,
+};
 pub use response::{AsyncBody, AsyncResponse, Response};
 pub use stats::Stats;
 pub use stream::{BufferedStream, CborStream};

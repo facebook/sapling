@@ -20,10 +20,10 @@ use tokio::io::BufReader;
 use tokio_util::io::{ReaderStream, StreamReader};
 
 use crate::errors::HttpClientError;
-use crate::handler::Buffered;
+use crate::handler::{Buffered, HandlerExt};
 use crate::header::Header;
 use crate::receiver::ResponseStreams;
-use crate::request::Encoding;
+use crate::request::{Encoding, RequestInfo};
 use crate::stream::{BufferedStream, CborStream};
 
 #[derive(Debug)]
@@ -31,6 +31,7 @@ pub struct Head {
     pub(crate) version: Version,
     pub(crate) status: StatusCode,
     pub(crate) headers: HeaderMap,
+    pub(crate) request_info: RequestInfo,
 }
 
 impl Head {
@@ -47,6 +48,11 @@ impl Head {
     /// Get the response's headers.
     pub fn headers(&self) -> &HeaderMap {
         &self.headers
+    }
+
+    /// Get metadata about the response's corresponding HTTP request.
+    pub fn request_info(&self) -> &RequestInfo {
+        &self.request_info
     }
 
     /// Get the response's encoding from the Content-Encoding header.
@@ -122,6 +128,7 @@ impl TryFrom<&mut Buffered> for Response {
                 version,
                 status,
                 headers: buffered.take_headers(),
+                request_info: buffered.request_context().info.clone(),
             },
             body: buffered.take_body(),
         })
@@ -207,7 +214,10 @@ pub struct AsyncResponse {
 }
 
 impl AsyncResponse {
-    pub(crate) async fn new(streams: ResponseStreams) -> Result<Self, HttpClientError> {
+    pub(crate) async fn new(
+        streams: ResponseStreams,
+        request_info: RequestInfo,
+    ) -> Result<Self, HttpClientError> {
         let ResponseStreams {
             headers_rx,
             body_rx,
@@ -265,6 +275,7 @@ impl AsyncResponse {
             version,
             status,
             headers,
+            request_info,
         };
         let encoding = head.encoding();
         let body = AsyncBody { encoding, body };

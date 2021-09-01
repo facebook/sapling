@@ -117,14 +117,40 @@ impl fmt::Display for Encoding {
     }
 }
 
+/// Metadata about this request.
+#[derive(Debug, Clone)]
+pub struct RequestInfo {
+    id: RequestId,
+    url: Url,
+    method: Method,
+}
+
+impl RequestInfo {
+    /// Obtain the URL of the request.
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    /// Obtain the HTTP method of the request.
+    pub fn method(&self) -> &Method {
+        &self.method
+    }
+
+    /// Obtain the request ID
+    ///
+    /// The ID is automatically assigned and uniquely identifies the requests
+    /// in this process.
+    pub fn id(&self) -> RequestId {
+        self.id
+    }
+}
+
 /// A subset of the `Request` builder. Preserved in curl types.
 /// Expose the request in curl handler callback context.
 #[cfg_attr(test, derive(Clone))]
 #[derive(Debug)]
 pub struct RequestContext {
-    id: RequestId,
-    url: Url,
-    method: Method,
+    pub(crate) info: RequestInfo,
     pub(crate) body: Option<Vec<u8>>,
     pub(crate) event_listeners: RequestEventListeners,
 }
@@ -163,9 +189,7 @@ impl RequestContext {
         static ID: AtomicUsize = AtomicUsize::new(0);
         let id = RequestId(ID.fetch_add(1, AcqRel));
         Self {
-            id,
-            url,
-            method,
+            info: RequestInfo { id, url, method },
             body: None,
             event_listeners: Default::default(),
         }
@@ -173,12 +197,12 @@ impl RequestContext {
 
     /// Obtain the HTTP url of the request.
     pub fn url(&self) -> &Url {
-        &self.url
+        &self.info.url()
     }
 
     /// Obtain the HTTP method of the request.
     pub fn method(&self) -> &Method {
-        &self.method
+        &self.info.method()
     }
 
     /// Obtain the request Id.
@@ -186,7 +210,12 @@ impl RequestContext {
     /// The Id is automatically assigned and uniquely identifies the requests
     /// in this process.
     pub fn id(&self) -> RequestId {
-        self.id
+        self.info.id()
+    }
+
+    /// Obtain the request metadata.
+    pub fn info(&self) -> &RequestInfo {
+        &self.info
     }
 
     /// Set the data to be uploaded in the request body.
@@ -546,6 +575,7 @@ impl Request {
 
     /// Execute this request asynchronously.
     pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
+        let request_info = self.ctx().info().clone();
         let (receiver, streams) = ChannelReceiver::new();
         let request = self.into_streaming(receiver);
 
@@ -553,7 +583,7 @@ impl Request {
         // the worker it is scheduled on until completion.
         let io_task = tokio::task::spawn_blocking(move || request.send());
 
-        match AsyncResponse::new(streams).await {
+        match AsyncResponse::new(streams, request_info).await {
             Ok(res) => Ok(res),
             // If the request was dropped before completion, this likely means
             // that configuring or sending the request failed. The IO task will
@@ -588,7 +618,7 @@ impl Request {
             .trigger_new_request(&mut self);
 
         let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
-        let url = self.ctx.url.clone();
+        let url = self.ctx.url().clone();
         let handler = create_handler(self.ctx);
 
         let mut easy = Easy2::new(handler);
@@ -597,7 +627,7 @@ impl Request {
         easy.unix_socket_path(self.auth_proxy_socket_path)?;
 
         // Configure the handle for the desired HTTP method.
-        match easy.get_ref().request_context().method {
+        match easy.get_ref().request_context().method() {
             Method::Get => {}
             Method::Head => {
                 easy.nobody(true)?;

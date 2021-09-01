@@ -162,6 +162,7 @@ impl HttpClient {
         let mut responses = Vec::new();
 
         for req in requests {
+            let request_info = req.ctx().info().clone();
             let (receiver, streams) = ChannelReceiver::new();
 
             // Create a blocking streaming HTTP request to be dispatched on a
@@ -171,7 +172,7 @@ impl HttpClient {
             // Create response Future to return to the caller. The response is
             // linked to the request via channels, allowing async Rust code to
             // seamlessly receive data from the IO task.
-            responses.push(AsyncResponse::new(streams).boxed());
+            responses.push(AsyncResponse::new(streams, request_info).boxed());
         }
 
         let task = tokio::task::spawn_blocking(move || {
