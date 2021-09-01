@@ -6,9 +6,6 @@
  */
 
 use std::ops::AddAssign;
-use std::sync::Arc;
-
-use parking_lot::RwLock;
 
 use crate::indexedlogutil::StoreType;
 

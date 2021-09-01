@@ -10,11 +10,8 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{
-    indexedlogutil::StoreType,
-    scmstore::metrics::{
-        namespaced, ApiMetrics, FetchMetrics, LocalAndCacheFetchMetrics, WriteMetrics,
-    },
+use crate::scmstore::metrics::{
+    namespaced, ApiMetrics, FetchMetrics, LocalAndCacheFetchMetrics, WriteMetrics,
 };
 
 #[derive(Clone, Debug, Default)]

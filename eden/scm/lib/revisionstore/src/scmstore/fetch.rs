@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::HashMap;
 
 use anyhow::{anyhow, Error, Result};
-use tracing::{field, instrument};
+use tracing::instrument;
 
-use types::{Key, Sha256};
+use types::Key;
 
 pub(crate) struct FetchErrors {
     /// Errors encountered for specific keys

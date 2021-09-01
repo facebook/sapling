@@ -9,7 +9,7 @@ use std::collections::{hash_map, HashMap, HashSet};
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Result};
 use parking_lot::RwLock;
 use tracing::{field, instrument};
 
