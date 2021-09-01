@@ -124,7 +124,7 @@ class HgImportRequestQueue {
   /**
    * Puts an item into the queue.
    */
-  template <typename Ret, typename ImportType = void>
+  template <typename Ret, typename ImportType>
   folly::Future<Ret> enqueue(std::shared_ptr<HgImportRequest> request);
 
   HgImportRequestQueue(HgImportRequestQueue&&) = delete;
@@ -132,7 +132,9 @@ class HgImportRequestQueue {
 
   struct State {
     bool running = true;
-    std::vector<std::shared_ptr<HgImportRequest>> queue;
+    std::vector<std::shared_ptr<HgImportRequest>> treeQueue;
+    std::vector<std::shared_ptr<HgImportRequest>> blobQueue;
+    std::vector<std::shared_ptr<HgImportRequest>> prefetchQueue;
 
     /**
      * Map of a Hash to an element in the queue. Any changes to this type can

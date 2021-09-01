@@ -276,6 +276,27 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
     enqueued_tree.emplace(hash);
   }
 
+  rawEdenConfig->importBatchSizeTree.setValue(
+      10, ConfigSource::UserConfig, true);
+  auto dequeuedTree = queue.dequeue();
+  EXPECT_EQ(dequeuedTree.size(), 10);
+  for (int i = 0; i < 10; i++) {
+    auto dequeuedRequest = dequeuedTree.at(i);
+
+    EXPECT_TRUE(
+        enqueued_tree.find(
+            dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash) !=
+        enqueued_tree.end());
+
+    folly::Try<std::unique_ptr<Tree>> tree = folly::makeTryWith(
+        [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
+                    ->hash]() {
+          return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
+        });
+    queue.markImportAsFinished<Tree>(
+        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
+  }
+
   rawEdenConfig->importBatchSize.setValue(20, ConfigSource::UserConfig, true);
   auto dequeuedBlob = queue.dequeue();
   EXPECT_EQ(dequeuedBlob.size(), 10);
@@ -294,27 +315,6 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
         });
     queue.markImportAsFinished<Blob>(
         dequeuedRequest->getRequest<HgImportRequest::BlobImport>()->hash, blob);
-  }
-
-  rawEdenConfig->importBatchSizeTree.setValue(
-      3, ConfigSource::UserConfig, true);
-  auto dequeuedTree = queue.dequeue();
-  EXPECT_EQ(dequeuedTree.size(), 3);
-  for (int i = 0; i < 3; i++) {
-    auto dequeuedRequest = dequeuedTree.at(i);
-
-    EXPECT_TRUE(
-        enqueued_tree.find(
-            dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash) !=
-        enqueued_tree.end());
-
-    folly::Try<std::unique_ptr<Tree>> tree = folly::makeTryWith(
-        [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
-                    ->hash]() {
-          return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
-        });
-    queue.markImportAsFinished<Tree>(
-        dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
   }
 }
 

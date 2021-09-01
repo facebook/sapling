@@ -58,6 +58,12 @@ struct ImportPriority {
       const ImportPriority& rhs) noexcept {
     return lhs.value() < rhs.value();
   }
+
+  friend bool operator>(
+      const ImportPriority& lhs,
+      const ImportPriority& rhs) noexcept {
+    return lhs.value() > rhs.value();
+  }
 };
 
 } // namespace facebook::eden

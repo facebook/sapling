@@ -34,7 +34,7 @@ folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
 
 folly::Future<folly::Unit> HgImportRequestQueue::enqueuePrefetch(
     std::shared_ptr<HgImportRequest> request) {
-  return enqueue<folly::Unit>(std::move(request));
+  return enqueue<folly::Unit, HgImportRequest::Prefetch>(std::move(request));
 }
 
 template <typename Ret, typename ImportType>
@@ -42,7 +42,18 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
   auto state = state_.lock();
 
-  if constexpr (!std::is_same_v<ImportType, void>) {
+  std::vector<std::shared_ptr<HgImportRequest>>* queue;
+  if constexpr (std::is_same_v<ImportType, HgImportRequest::BlobImport>) {
+    queue = &state->blobQueue;
+  } else if constexpr (std::
+                           is_same_v<ImportType, HgImportRequest::TreeImport>) {
+    queue = &state->treeQueue;
+  } else {
+    static_assert(std::is_same_v<ImportType, HgImportRequest::Prefetch>);
+    queue = &state->prefetchQueue;
+  }
+
+  if constexpr (!std::is_same_v<ImportType, HgImportRequest::Prefetch>) {
     const auto& hash = request->getRequest<ImportType>()->hash;
 
     if (auto* existingRequestPtr =
@@ -62,8 +73,8 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
         // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
         // duplicated requests will thus lead to a quadratic complexity.
         std::make_heap(
-            state->queue.begin(),
-            state->queue.end(),
+            queue->begin(),
+            queue->end(),
             [](const std::shared_ptr<HgImportRequest>& lhs,
                const std::shared_ptr<HgImportRequest>& rhs) {
               return (*lhs) < (*rhs);
@@ -74,17 +85,17 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
     }
   }
 
-  state->queue.emplace_back(request);
+  queue->emplace_back(request);
   auto promise = request->getPromise<Ret>();
 
-  if constexpr (!std::is_same_v<ImportType, void>) {
+  if constexpr (!std::is_same_v<ImportType, HgImportRequest::Prefetch>) {
     const auto& hash = request->getRequest<ImportType>()->hash;
     state->requestTracker.emplace(hash, std::move(request));
   }
 
   std::push_heap(
-      state->queue.begin(),
-      state->queue.end(),
+      queue->begin(),
+      queue->end(),
       [](const std::shared_ptr<HgImportRequest>& lhs,
          const std::shared_ptr<HgImportRequest>& rhs) {
         return (*lhs) < (*rhs);
@@ -96,60 +107,69 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
 }
 
 std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
+  size_t count;
+  std::vector<std::shared_ptr<HgImportRequest>>* queue = nullptr;
+
   auto state = state_.lock();
+  while (true) {
+    if (!state->running) {
+      state->treeQueue.clear();
+      state->blobQueue.clear();
+      state->prefetchQueue.clear();
+      return std::vector<std::shared_ptr<HgImportRequest>>();
+    }
 
-  while (state->running && state->queue.empty()) {
-    queueCV_.wait(state.as_lock());
-  }
+    ImportPriority highestPriority{ImportPriorityKind::Low, 0};
 
-  if (!state->running) {
-    state->queue.clear();
-    return std::vector<std::shared_ptr<HgImportRequest>>();
-  }
+    // Trees have a higher priority than blobs who themself have a higher
+    // priority than prefetch, thus check the queues in that order.
+    // The reason for trees having a higher priority is due to trees allowing a
+    // higher fan-out and thus increasing concurrency of fetches which
+    // translate onto a higher overall throughput.
+    if (!state->treeQueue.empty()) {
+      count = config_->getEdenConfig()->importBatchSizeTree.getValue();
+      highestPriority = state->treeQueue.front()->getPriority();
+      queue = &state->treeQueue;
+    }
 
-  auto& queue = state->queue;
+    if (!state->blobQueue.empty()) {
+      auto priority = state->blobQueue.front()->getPriority();
+      if (!queue || priority > highestPriority) {
+        queue = &state->blobQueue;
+        count = config_->getEdenConfig()->importBatchSize.getValue();
+        highestPriority = priority;
+      }
+    }
 
-  std::vector<std::shared_ptr<HgImportRequest>> result;
-  std::vector<std::shared_ptr<HgImportRequest>> putback;
+    if (!state->prefetchQueue.empty()) {
+      auto priority = state->prefetchQueue.front()->getPriority();
+      if (!queue || priority > highestPriority) {
+        queue = &state->prefetchQueue;
+        count = 1;
+      }
+    }
 
-  // The highest-pri request is the first element of the queue (a heap).
-  size_t type = queue.front()->getType();
-  size_t count = queue.front()->isType<HgImportRequest::TreeImport>()
-      ? config_->getEdenConfig()->importBatchSizeTree.getValue()
-      : config_->getEdenConfig()->importBatchSize.getValue();
-
-  for (size_t i = 0; i < count * 3; i++) {
-    if (queue.empty() || result.size() == count) {
+    if (queue) {
       break;
-    }
-
-    std::pop_heap(
-        queue.begin(),
-        queue.end(),
-        [](const std::shared_ptr<HgImportRequest>& lhs,
-           const std::shared_ptr<HgImportRequest>& rhs) {
-          return (*lhs) < (*rhs);
-        });
-
-    auto request = std::move(queue.back());
-    queue.pop_back();
-
-    if (type == request->getType()) {
-      result.emplace_back(std::move(request));
     } else {
-      putback.emplace_back(std::move(request));
+      queueCV_.wait(state.as_lock());
     }
   }
 
-  for (auto& item : putback) {
-    queue.emplace_back(std::move(item));
-    std::push_heap(
-        queue.begin(),
-        queue.end(),
+  count = std::min(count, queue->size());
+  std::vector<std::shared_ptr<HgImportRequest>> result;
+  result.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    std::pop_heap(
+        queue->begin(),
+        queue->end(),
         [](const std::shared_ptr<HgImportRequest>& lhs,
            const std::shared_ptr<HgImportRequest>& rhs) {
           return (*lhs) < (*rhs);
         });
+
+    result.emplace_back(std::move(queue->back()));
+    queue->pop_back();
   }
 
   return result;
