@@ -396,21 +396,31 @@ pub struct RevlogIndex {
 }
 
 /// "smallvec" optimization
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct ParentRevs([i32; 2]);
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ParentRevs {
+    Compact([i32; 2]),
+    // Box<Vec<i32>> takes 8 bytes. Box<[i32]> takes 16 bytes.
+    // Using smaller struct for better memory efficiency.
+    Octopus(Box<Vec<i32>>),
+}
 
 impl ParentRevs {
     fn from_p1p2(p1: i32, p2: i32) -> Self {
-        Self([p1, p2])
+        Self::Compact([p1, p2])
     }
 
     pub fn as_revs(&self) -> &[u32] {
-        let slice: &[i32] = if self.0[0] == -1 {
-            &self.0[0..0]
-        } else if self.0[1] == -1 {
-            &self.0[0..1]
-        } else {
-            &self.0[..]
+        let slice: &[i32] = match self {
+            ParentRevs::Compact(s) => {
+                if s[0] == -1 {
+                    &s[0..0]
+                } else if s[1] == -1 {
+                    &s[0..1]
+                } else {
+                    &s[..]
+                }
+            }
+            ParentRevs::Octopus(s) => &s[..],
         };
         let ptr = (slice as *const [i32]) as *const [u32];
         unsafe { &*ptr }
@@ -1837,9 +1847,9 @@ mod tests {
         let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(index.parent_revs(0)?, ParentRevs([-1, -1]));
-        assert_eq!(index.parent_revs(1)?, ParentRevs([0, -1]));
-        assert_eq!(index.parent_revs(2)?, ParentRevs([1, -1]));
+        assert_eq!(index.parent_revs(0)?, ParentRevs::Compact([-1, -1]));
+        assert_eq!(index.parent_revs(1)?, ParentRevs::Compact([0, -1]));
+        assert_eq!(index.parent_revs(2)?, ParentRevs::Compact([1, -1]));
 
         // Read commit data.
         let read = |rev: u32| -> Result<String> {
@@ -2129,11 +2139,11 @@ commit 3"#
         let revlog3 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(revlog3.parent_revs(0)?, ParentRevs([-1, -1]));
-        assert_eq!(revlog3.parent_revs(1)?, ParentRevs([0, -1]));
-        assert_eq!(revlog3.parent_revs(2)?, ParentRevs([-1, -1]));
-        assert_eq!(revlog3.parent_revs(3)?, ParentRevs([2, -1]));
-        assert_eq!(revlog3.parent_revs(4)?, ParentRevs([0, 2])); // 0: "commit 1"
+        assert_eq!(revlog3.parent_revs(0)?, ParentRevs::Compact([-1, -1]));
+        assert_eq!(revlog3.parent_revs(1)?, ParentRevs::Compact([0, -1]));
+        assert_eq!(revlog3.parent_revs(2)?, ParentRevs::Compact([-1, -1]));
+        assert_eq!(revlog3.parent_revs(3)?, ParentRevs::Compact([2, -1]));
+        assert_eq!(revlog3.parent_revs(4)?, ParentRevs::Compact([0, 2])); // 0: "commit 1"
 
         // Prefix lookup.
         assert_eq!(r(revlog3.vertexes_by_hex_prefix(b"0303", 2))?, vec![v(3)]);
