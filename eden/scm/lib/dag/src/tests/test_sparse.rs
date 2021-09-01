@@ -358,18 +358,13 @@ async fn test_flush_reassign_master() {
     // Force reassign of vertexes in the non-master group.
     client.dag.flush(&["G".into()]).await.unwrap();
 
-    // SUBOPTIMAL: I, J, K, L are looked up.
     assert_eq!(
         client.output(),
         [
             "resolve names: [B, D], heads: [E]",
             "resolve names: [I, X], heads: [E]",
             "resolve paths: [E~2, E~4]",
-            "resolve names: [H], heads: [G, E]",
-            "resolve names: [L], heads: [G, E]",
-            "resolve names: [K], heads: [G, E]",
-            "resolve names: [J], heads: [G, E]",
-            "resolve names: [I], heads: [G, E]"
+            "resolve names: [H], heads: [G, E]"
         ]
     );
 }

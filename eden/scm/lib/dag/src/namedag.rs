@@ -2013,6 +2013,12 @@ where
             self.dag.remove_non_master()?;
             self.map.remove_non_master()?;
 
+            // Populate vertex negative cache to reduce round-trips doing remote lookups.
+            if self.is_vertex_lazy() {
+                self.populate_missing_vertexes_for_add_heads(&parents, &heads)
+                    .await?;
+            }
+
             // Rebuild them.
             self.build(&parents, &[], &heads[..]).await?;
 
