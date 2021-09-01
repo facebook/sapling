@@ -19,6 +19,7 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
+use dag::ops::CheckIntegrity;
 use dag::ops::DagExportCloneData;
 use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
@@ -55,6 +56,7 @@ pub trait Commits:
     ReadCommitText
     + StripCommits
     + AppendCommits
+    + CheckIntegrity
     + DescribeBackend
     + DagAlgorithm
     + IdConvert
@@ -211,6 +213,41 @@ py_class!(pub class commits |py| {
         let mut out = cpython_ext::wrap_pyio(out);
         inner.explain_internals(&mut out).map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    /// checkuniversalids() -> [id]
+    ///
+    /// Check for missing universal ids.
+    /// Returns missing ids. A valid lazy graph should return an empty list.
+    /// See document in the dag crate for details.
+    def checkuniversalids(&self) -> PyResult<Vec<u64>> {
+        let inner = self.inner(py).borrow();
+        let ids = block_on(inner.check_universal_ids()).map_pyerr(py)?;
+        Ok(ids.into_iter().map(|i| i.0).collect())
+    }
+
+    /// checksegments() -> [str]
+    ///
+    /// Check for problems of segments such as cycles or wrong flags.
+    /// Returns a list of human-readable messages indicating problems.
+    /// A valid graph should return an empty list.
+    def checksegments(&self) -> PyResult<Vec<String>> {
+        let inner = self.inner(py).borrow();
+        let problems = block_on(inner.check_segments()).map_pyerr(py)?;
+        Ok(problems)
+    }
+
+    /// checkisomorphicgraph(inner, heads) -> [str]
+    ///
+    /// Check for problems of segments such as cycles or wrong flags.
+    /// Returns a list of human-readable messages indicating problems.
+    /// A valid graph should return an empty list.
+    def checkisomorphicgraph(&self, other: commits, heads: Names) -> PyResult<Vec<String>> {
+        let inner = self.inner(py).borrow();
+        let other = other.inner(py).borrow().dag_snapshot().map_pyerr(py)?;
+        let heads = heads.0;
+        let problems = block_on(inner.check_isomorphic_graph(&other, heads)).map_pyerr(py)?;
+        Ok(problems)
     }
 
     /// migratesparsesegments(src, dst, heads=[]).
