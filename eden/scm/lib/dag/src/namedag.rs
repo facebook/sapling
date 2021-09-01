@@ -1956,6 +1956,7 @@ where
     /// or called with a small amount of data. For example, bounded amount of
     /// non-master commits.
     async fn non_master_parent_names(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
+        tracing::debug!(target: "dag::reassign", "calculating non-master subgraph");
         let parent_ids = self.dag.non_master_parent_ids()?;
         // PERF: This is suboptimal async iteration. It might be okay if non-master
         // part is not lazy.
@@ -1970,6 +1971,7 @@ where
                 .collect::<Result<Vec<_>>>()?;
             parent_names_map.insert(name, parent_names);
         }
+        tracing::debug!(target: "dag::reassign", "non-master subgraph has {} entries", parent_names_map.len());
         Ok(parent_names_map)
     }
 
@@ -1990,6 +1992,7 @@ where
                 .map(|&v| v.clone())
                 .collect::<Vec<_>>();
             heads.sort_unstable();
+            tracing::debug!(target: "dag::reassign", "non-master heads: {} entries", heads.len());
 
             // Remove existing non-master data.
             self.dag.remove_non_master()?;

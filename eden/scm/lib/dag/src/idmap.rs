@@ -102,6 +102,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
 
         let mut todo_stack: Vec<Todo> = vec![Visit(head.clone())];
         while let Some(todo) = todo_stack.pop() {
+            tracing::trace!(target: "dag::assign", "todo: {:?}", &todo);
             match todo {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
@@ -111,6 +112,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     match self.vertex_id_with_max_group(&head, group).await? {
                         None => {
                             let parents = parents_by_name.parent_names(head.clone()).await?;
+                            tracing::trace!(target: "dag::assign", "visit {:?} with parents {:?}", &head, &parents);
                             todo_stack.push(Todo::Assign(head, parents.len()));
                             // If the parent was not assigned, or was assigned to a higher group,
                             // (re-)assign the parent to this group.
@@ -135,6 +137,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         Some(id) => id,
                         None => {
                             let id = self.next_free_id(group)?;
+                            tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
                             self.insert(id, head.as_ref())?;
                             let parents = &parent_ids[parent_start..];
                             outcome.push_edge(id, parents);
