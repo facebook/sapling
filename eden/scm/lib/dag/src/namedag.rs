@@ -416,11 +416,11 @@ where
 #[async_trait::async_trait]
 impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    IS: IdDagStore + Persist,
+    IS: IdDagStore + Persist + 'static,
     IdDag<IS>: TryClone,
-    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Persist + Send + Sync,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
 {
     async fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         // Write directly to disk. Bypassing "flush()" that re-assigns Ids
@@ -445,11 +445,11 @@ where
 
 impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
-    IS: IdDagStore + Persist,
+    IS: IdDagStore + Persist + 'static,
     IdDag<IS>: TryClone,
-    M: TryClone + IdMapAssignHead + Persist + Send + Sync,
-    P: TryClone + Send + Sync,
-    S: TryClone + Persist + Send + Sync,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
 {
     /// Verify that universally known vertexes and heads are present in IdMap.
     async fn verify_missing(&self) -> Result<()> {
