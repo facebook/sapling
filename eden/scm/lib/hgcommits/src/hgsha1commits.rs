@@ -214,7 +214,7 @@ impl StripCommits for HgCommits {
     }
 }
 
-delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, HgCommits => self.dag);
+delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, HgCommits => self.dag);
 
 impl DescribeBackend for HgCommits {
     fn algorithm_backend(&self) -> &'static str {

@@ -442,7 +442,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
     }
 }
 
-delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, HybridCommits => self.commits);
+delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, HybridCommits => self.commits);
 
 impl DescribeBackend for HybridCommits {
     fn algorithm_backend(&self) -> &'static str {

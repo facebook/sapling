@@ -174,7 +174,7 @@ impl StripCommits for GitSegmentedCommits {
     }
 }
 
-delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, GitSegmentedCommits => self.dag);
+delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, GitSegmentedCommits => self.dag);
 
 impl DescribeBackend for GitSegmentedCommits {
     fn algorithm_backend(&self) -> &'static str {
