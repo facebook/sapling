@@ -869,6 +869,10 @@ where
     pub fn set_remote_protocol(&mut self, protocol: Arc<dyn RemoteIdConvertProtocol>) {
         self.remote_protocol = protocol;
     }
+
+    pub(crate) fn get_remote_protocol(&self) -> Arc<dyn RemoteIdConvertProtocol> {
+        self.remote_protocol.clone()
+    }
 }
 
 impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>

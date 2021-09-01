@@ -75,6 +75,13 @@ impl TestDag {
         }
     }
 
+    /// Reopen the dag. Drop in-memory state including caches.
+    pub fn reopen(&mut self) {
+        let mut dag = NameDag::open(self.dir.path().join("n")).unwrap();
+        dag.set_remote_protocol(self.dag.get_remote_protocol());
+        self.dag = dag;
+    }
+
     /// Add vertexes to the graph. Does not resolve vertexes remotely.
     pub fn drawdag(&mut self, text: &str, master_heads: &[&str]) {
         self.drawdag_with_limited_heads(text, master_heads, None);

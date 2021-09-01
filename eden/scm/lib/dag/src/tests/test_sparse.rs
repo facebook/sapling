@@ -332,6 +332,46 @@ async fn test_pull_no_pending_changes() {
     );
 }
 
+#[tokio::test]
+async fn test_flush_reassign_master() {
+    // Test remote calls when flush() causes id reassignment
+    // from non-master to master.
+
+    let mut server = TestDag::draw("A-B-C-D-E # master: E");
+    let mut client = server.client_cloned_data().await;
+
+    // Add vertexes in the non-master group.
+    client.drawdag("B-X-Y-Z-F D-F-G-H", &[]);
+    client.dag.flush(&[]).await.unwrap();
+
+    // The server needs to have the new master group vertexes (up to G)
+    // for the client to be able to assign them in the master group.
+    server.drawdag("B-X-Y-Z-F D-F-G", &["G"]);
+    client.set_remote(&server);
+
+    // To avoid reusing caches, reopen the graph from disk.
+    client.reopen();
+
+    // Force reassign of vertexes in the non-master group.
+    client.dag.flush(&["G".into()]).await.unwrap();
+
+    // SUBOPTIMAL: Too many remote lookups.
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [B, D], heads: [E]",
+            "resolve names: [X], heads: [E]",
+            "resolve paths: [E~2, E~4]",
+            "resolve names: [G], heads: [E]",
+            "resolve names: [F], heads: [E]",
+            "resolve names: [Z], heads: [E]",
+            "resolve names: [Y], heads: [E]",
+            "resolve names: [X], heads: [E]",
+            "resolve names: [H], heads: [G, E]"
+        ]
+    );
+}
+
 async fn client_for_local_cache_test() -> TestDag {
     let server = TestDag::draw("A-B-C-D-E-F-G # master: G");
     server.client_cloned_data().await
