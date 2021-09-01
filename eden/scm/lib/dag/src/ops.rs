@@ -418,6 +418,42 @@ pub trait IdConvert: PrefixLookup + Sync {
     fn map_version(&self) -> &VerLink;
 }
 
+/// Integrity check functions.
+#[async_trait::async_trait]
+pub trait CheckIntegrity {
+    /// Verify that universally known `Id`s (parents of merges) are actually
+    /// known locally.
+    ///
+    /// Returns set of `Id`s that should be universally known but missing.
+    /// An empty set means all universally known `Id`s are known locally.
+    ///
+    /// Check `FirstAncestorConstraint::KnownUniversally` for concepts of
+    /// "universally known".
+    async fn check_universal_ids(&self) -> Result<Vec<Id>>;
+
+    /// Check segment properties: no cycles, no overlaps, no gaps etc.
+    /// This is only about the `Id`s, not about the vertex names.
+    ///
+    /// Returns human readable messages about problems.
+    /// No messages indicates there are no problems detected.
+    async fn check_segments(&self) -> Result<Vec<String>>;
+
+    /// Check that the subset of the current graph (ancestors of `heads`)
+    /// is isomorphic with the subset in the `other` graph.
+    ///
+    /// Returns messages about where two graphs are different.
+    /// No messages indicates two graphs are likely isomorphic.
+    ///
+    /// Note: For performance, this function only checks the "shape"
+    /// of the graph, without checking the (potentially lazy) vertex
+    /// names.
+    async fn check_isomorphic_graph(
+        &self,
+        other: &dyn DagAlgorithm,
+        heads: NameSet,
+    ) -> Result<Vec<String>>;
+}
+
 impl<T> ImportAscii for T
 where
     T: DagAddHeads,
