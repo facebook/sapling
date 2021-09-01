@@ -303,6 +303,36 @@ macro_rules! delegate {
         }
     };
 
+    (CheckIntegrity, $type:ty => self.$($t:tt)*) => {
+        impl $crate::ops::CheckIntegrity for $type {
+            fn check_universal_ids<'a: 's, 's>(&'a self)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<$crate::Id>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.check_universal_ids()
+            }
+            fn check_segments<'a: 's, 's>(&'a self)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<String>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.check_segments()
+            }
+            fn check_isomorphic_graph<'a: 's, 'b: 's, 's> (
+                &'a self,
+                other: &'b dyn $crate::ops::DagAlgorithm,
+                heads: $crate::NameSet,
+            )
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<String>>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.check_isomorphic_graph(other, heads)
+            }
+        }
+    };
+
     ($name:ident | $name2:ident $(| $name3:ident )*, $type:ty => self.$($t:tt)*) => {
         delegate!($name, $type => self.$($t)*);
         delegate!($name2 $(| $name3 )*, $type => self.$($t)*);
