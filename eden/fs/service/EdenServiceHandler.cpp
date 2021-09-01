@@ -1363,22 +1363,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
                                  }));
   }
 
-  if (background) {
-    folly::futures::detachOn(
-        server_->getServerState()->getThreadPool().get(),
-        folly::makeSemiFuture(
-            folly::collectAll(std::move(globResults))
-                .toUnsafeFuture()
-                .ensure([globRoot,
-                         originRootIds = std::move(originRootIds),
-                         helper = std::move(helper)]() {
-                  // keep globRoot, originRootIds, and helper alive until the
-                  // end. the helper contains the fetchContext, which is needed
-                  // while fetching.
-                })));
-    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
-  }
-  return wrapFuture(
+  auto prefetchFuture = wrapFuture(
       std::move(helper),
       folly::collectAll(std::move(globResults))
           .via(server_->getServerState()->getThreadPool().get())
@@ -1484,6 +1469,15 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
           .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
             // keep globRoot and originRootIds alive until the end
           }));
+
+  if (!background) {
+    return prefetchFuture;
+  } else {
+    folly::futures::detachOn(
+        server_->getServerState()->getThreadPool().get(),
+        std::move(prefetchFuture).semi());
+    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+  }
 }
 
 folly::Future<std::unique_ptr<SetPathObjectIdResult>>
