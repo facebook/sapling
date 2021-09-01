@@ -19,6 +19,7 @@ use dag::errors::DagError;
 use dag::errors::NotFoundError;
 use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
+use dag::ops::CheckIntegrity;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
@@ -1755,6 +1756,30 @@ impl DagAddHeads for RevlogIndex {
     async fn add_heads(&mut self, parents_func: &dyn Parents, heads: &[Vertex]) -> dag::Result<()> {
         self.add_heads_for_testing(parents_func, heads)
     }
+}
+
+#[async_trait::async_trait]
+impl CheckIntegrity for RevlogIndex {
+    async fn check_universal_ids(&self) -> dag::Result<Vec<Id>> {
+        unsupported_dag_error()
+    }
+
+    async fn check_segments(&self) -> dag::Result<Vec<String>> {
+        unsupported_dag_error()
+    }
+
+    async fn check_isomorphic_graph(
+        &self,
+        other: &dyn DagAlgorithm,
+        heads: dag::NameSet,
+    ) -> dag::Result<Vec<String>> {
+        let _ = (other, heads);
+        unsupported_dag_error()
+    }
+}
+
+fn unsupported_dag_error<T>() -> dag::Result<T> {
+    Err(dag::errors::BackendError::Generic("unsupported by revlog index".to_string()).into())
 }
 
 #[cfg(test)]
