@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
@@ -121,6 +122,7 @@ impl TestDag {
         if validate {
             self.validate().await;
         }
+        assert_eq!(self.dag.check_segments().await.unwrap(), [] as [String; 0]);
         let master_heads = master_heads
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
@@ -132,6 +134,7 @@ impl TestDag {
         if validate {
             self.validate().await;
         }
+        assert_eq!(self.dag.check_segments().await.unwrap(), [] as [String; 0]);
     }
 
     /// Replace ASCII with Ids in the graph.
