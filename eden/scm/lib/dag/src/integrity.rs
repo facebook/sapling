@@ -14,12 +14,16 @@ use crate::namedag::AbstractNameDag;
 use crate::nameset::NameSet;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::TryClone;
 use crate::segment::SegmentFlags;
 use crate::Group;
 use crate::Id;
 use crate::Result;
+use crate::VertexName;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use std::collections::BTreeSet;
 
 #[async_trait::async_trait]
@@ -155,7 +159,120 @@ where
         other: &dyn DagAlgorithm,
         heads: NameSet,
     ) -> Result<Vec<String>> {
-        let _ = (other, heads);
-        unimplemented!();
+        let mut problems = Vec::new();
+
+        // Prefetch merges and their parents in both graphs' master group.
+        // This reduces round-trips.
+        tracing::debug!("prefetching merges and parents");
+        for graph in [self, other] as [&dyn DagAlgorithm; 2] {
+            if !graph.is_vertex_lazy() {
+                continue;
+            }
+            let related = graph.master_group().await? & graph.ancestors(heads.clone()).await?;
+            let merges = graph.merges(related).await?;
+            let parents = graph.parents(merges.clone()).await?;
+            let prefetch = merges | parents;
+            let mut iter = prefetch.iter().await?;
+            while let Some(_) = iter.next().await {}
+        }
+        tracing::trace!("prefetched merges and parents");
+
+        // To verify two graphs are isomorphic. Start from some heads,
+        // check and compare their linear ancestors recursively.
+        //
+        // For example, starting from "to_check" having just "E":
+        //
+        //      A--C--D--E      B--C--D--E
+        //        /               /
+        //       B               A
+        //
+        // 1. Figure out the linear portion (C--D--E).
+        // 2. Check the linear portion is the same in both graphs.
+        //    (only its root C can be a merge and C has the same parents)
+        // 3. Remove the head (E) from "to_check", insert root (C)'s parents
+        //    to "to_check".
+        // 4. Repeat from 1 until "to_check" is empty.
+        let mut to_check: Vec<VertexName> = heads.iter().await?.try_collect().await?;
+        let mut visited: BTreeSet<VertexName> = Default::default();
+        while let Some(head) = to_check.pop() {
+            if !visited.insert(head.clone()) {
+                continue;
+            }
+
+            // Use flat segment to figure out the linear portion.
+            let head_id = self.vertex_id(head.clone()).await?;
+            let seg = match self.dag.find_flat_segment_including_id(head_id)? {
+                Some(seg) => seg,
+                None => {
+                    problems.push(format!(
+                        "head_id {:?} should be covered by a flat segment",
+                        head_id
+                    ));
+                    continue;
+                }
+            };
+            let span = seg.span()?;
+            let root_id = span.low;
+            let root = self.vertex_name(root_id).await?;
+            let parents = self.parent_names(root.clone()).await?;
+            let mut add_problem = |msg| {
+                problems.push(format!(
+                    "range {:?}::{:?} with parents {:?}: {}",
+                    &root, &head, &parents, msg
+                ));
+            };
+            tracing::trace!("checking range {:?}::{:?}", &root, &head);
+
+            // Check against the other graph for various properties.
+            // Check vertex count in the range.
+            let this_count = head_id.0 - root_id.0 + 1;
+            let set = match other.range(root.clone().into(), head.clone().into()).await {
+                Ok(set) => set,
+                Err(e) => {
+                    add_problem(format!("cannot resolve range on the other graph: {:?}", e));
+                    continue;
+                }
+            };
+            let other_count = set.count().await? as u64;
+            if other_count != this_count {
+                add_problem(format!(
+                    "length mismatch: {} != {}",
+                    this_count, other_count
+                ));
+            }
+
+            // Check that merge can only be at most 1 (`root`).
+            let other_merges = other.merges(set).await?.count().await?;
+            let this_merges = if parents.len() > 1 { 1 } else { 0 };
+            if other_merges != this_merges {
+                add_problem(format!(
+                    "merge mismatch: {} != {}",
+                    this_merges, other_merges
+                ));
+            }
+
+            // Check parents of root.
+            let other_parents = match other.parent_names(root.clone()).await {
+                Ok(ps) => ps,
+                Err(e) => {
+                    add_problem(format!(
+                        "cannot get parents of {:?} on the other graph: {:?}",
+                        &root, e
+                    ));
+                    continue;
+                }
+            };
+            if other_parents != parents {
+                add_problem(format!(
+                    "parents mismatch: {:?} != {:?}",
+                    &parents, other_parents
+                ));
+            }
+
+            // Check parents recursively.
+            to_check.extend(parents);
+        }
+
+        Ok(problems)
     }
 }
