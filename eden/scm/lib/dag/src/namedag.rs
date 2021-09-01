@@ -1776,6 +1776,17 @@ where
                 {
                     return Ok(None);
                 }
+                if max_group == Group::MASTER
+                    && self
+                        .map
+                        .vertex_id_with_max_group(name, Group::NON_MASTER)
+                        .await?
+                        .is_some()
+                {
+                    // If the vertex exists in the non-master group. Then it must be missing in the
+                    // master group.
+                    return Ok(None);
+                }
                 match self.resolve_vertexes_remotely(&[name.clone()]).await {
                     Ok(ids) => match ids.first() {
                         Some(Some(id)) => Ok(Some(*id)),

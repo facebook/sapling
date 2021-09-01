@@ -355,18 +355,12 @@ async fn test_flush_reassign_master() {
     // Force reassign of vertexes in the non-master group.
     client.dag.flush(&["G".into()]).await.unwrap();
 
-    // SUBOPTIMAL: Too many remote lookups.
     assert_eq!(
         client.output(),
         [
             "resolve names: [B, D], heads: [E]",
             "resolve names: [X], heads: [E]",
             "resolve paths: [E~2, E~4]",
-            "resolve names: [G], heads: [E]",
-            "resolve names: [F], heads: [E]",
-            "resolve names: [Z], heads: [E]",
-            "resolve names: [Y], heads: [E]",
-            "resolve names: [X], heads: [E]",
             "resolve names: [H], heads: [G, E]"
         ]
     );
