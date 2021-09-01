@@ -24,6 +24,7 @@ use crate::idmap::IdMapWrite;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
+use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
@@ -452,16 +453,7 @@ where
 {
     /// Verify that universally known vertexes and heads are present in IdMap.
     async fn verify_missing(&self) -> Result<()> {
-        let missing: Vec<Id> = {
-            let universal_ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
-            tracing::debug!("clone: {} universally known vertexes", universal_ids.len());
-            let exists = self.map.contains_vertex_id_locally(&universal_ids).await?;
-            universal_ids
-                .into_iter()
-                .zip(exists)
-                .filter_map(|(id, b)| if b { None } else { Some(id) })
-                .collect()
-        };
+        let missing: Vec<Id> = self.check_universal_ids().await?;
         if !missing.is_empty() {
             let msg = format!(
                 concat!(

@@ -29,7 +29,15 @@ where
     S: TryClone + Persist + Send + Sync,
 {
     async fn check_universal_ids(&self) -> Result<Vec<Id>> {
-        unimplemented!();
+        let universal_ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
+        tracing::debug!("{} universally known vertexes", universal_ids.len());
+        let exists = self.map.contains_vertex_id_locally(&universal_ids).await?;
+        let missing_ids = universal_ids
+            .into_iter()
+            .zip(exists)
+            .filter_map(|(id, b)| if b { None } else { Some(id) })
+            .collect();
+        Ok(missing_ids)
     }
 
     async fn check_segments(&self) -> Result<Vec<String>> {
