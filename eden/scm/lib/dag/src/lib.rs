@@ -20,6 +20,7 @@ mod fmt;
 mod iddag;
 pub mod iddagstore;
 pub mod idmap;
+mod integrity;
 pub mod namedag;
 pub mod nameset;
 pub mod ops;
