@@ -445,7 +445,9 @@ def _setupcommit(ui):
             profiles = repo.getsparsepatterns(ctx.rev()).allprofiles()
             if profiles & set(ctx.files()):
                 origstatus = repo.status()
-                origsparsematch = repo.sparsematch()
+                origsparsematch = repo.sparsematch(
+                    *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
+                )
                 _refresh(repo.ui, repo, origstatus, origsparsematch, True)
 
             repo.prunetemporaryincludes()

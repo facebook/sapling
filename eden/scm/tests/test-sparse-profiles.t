@@ -178,7 +178,6 @@ Introduce a conflicting .hgsparse change
   $ hg ci -qAm "edit profile other"
   $ ls
   backend.sparse
-  data.py
   index.html
   webpage.sparse
 
@@ -972,3 +971,30 @@ Test non-existing profiles are properly reported
     "type": "profile"
    }
   ]
+  $ cd $TESTTMP
+
+Verify that removing from a sparse profile removes from disk
+  $ hg init remove_test_repo
+  $ cd remove_test_repo
+  $ echo x > data.py
+  $ cat > webpage.sparse <<EOF
+  > [metadata]
+  > title: frontend sparse profile
+  > [include]
+  > *.sparse
+  > *.py
+  > EOF
+  $ hg ci -Aqm 'initial'
+  $ hg sparse enable webpage.sparse
+  $ ls
+  data.py
+  webpage.sparse
+  $ cat > webpage.sparse <<EOF
+  > [metadata]
+  > title: frontend sparse profile
+  > [include]
+  > *.sparse
+  > EOF
+  $ hg commit -m 'remove py'
+  $ ls
+  webpage.sparse
