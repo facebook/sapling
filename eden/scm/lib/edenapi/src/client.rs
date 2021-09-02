@@ -10,6 +10,7 @@ use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
 use std::iter::FromIterator;
 use std::num::NonZeroU64;
+use std::sync::Arc;
 
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
@@ -93,7 +94,12 @@ mod paths {
     pub const FETCH_SNAPSHOT: &str = "snapshot";
 }
 
+#[derive(Clone)]
 pub struct Client {
+    inner: Arc<ClientInner>,
+}
+
+pub struct ClientInner {
     config: Config,
     client: HttpClient,
 }
@@ -104,12 +110,17 @@ impl Client {
         let client = http_client("edenapi")
             .verbose(config.debug)
             .max_concurrent_requests(config.max_requests.unwrap_or(0));
-        Self { config, client }
+        let inner = Arc::new(ClientInner { config, client });
+        Self { inner }
+    }
+
+    fn config(&self) -> &Config {
+        &self.inner.config
     }
 
     /// Append a repo name and endpoint path onto the server's base URL.
     fn build_url(&self, path: &str, repo: Option<&str>) -> Result<Url, EdenApiError> {
-        let url = &self.config.server_url;
+        let url = &self.config().server_url;
         Ok(match repo {
             Some(repo) => url
                 // Repo name must be sanitized since it can be set by the user.
@@ -121,43 +132,45 @@ impl Client {
 
     /// Add configured values to a request.
     fn configure_request(&self, mut req: Request) -> Result<Request, EdenApiError> {
-        if let Some(ref cert) = self.config.cert {
-            if self.config.validate_certs {
+        let config = self.config();
+
+        if let Some(ref cert) = config.cert {
+            if self.config().validate_certs {
                 check_certs(cert)?;
             }
             req.set_cert(cert);
-            req.set_convert_cert(self.config.convert_cert);
+            req.set_convert_cert(config.convert_cert);
         }
 
-        if let Some(ref key) = self.config.key {
+        if let Some(ref key) = config.key {
             req.set_key(key);
         }
 
-        if let Some(ref ca) = self.config.ca_bundle {
+        if let Some(ref ca) = config.ca_bundle {
             req.set_cainfo(ca);
         }
 
-        for (k, v) in &self.config.headers {
+        for (k, v) in &config.headers {
             req.set_header(k, v);
         }
 
-        if let Some(ref correlator) = self.config.correlator {
+        if let Some(ref correlator) = config.correlator {
             req.set_header("X-Client-Correlator", correlator);
         }
 
-        if let Some(timeout) = self.config.timeout {
+        if let Some(timeout) = config.timeout {
             req.set_timeout(timeout);
         }
 
-        if let Some(http_version) = self.config.http_version {
+        if let Some(http_version) = config.http_version {
             req.set_http_version(http_version);
         }
 
-        if let Some(encoding) = &self.config.encoding {
+        if let Some(encoding) = &config.encoding {
             req.set_accept_encoding([encoding.clone()]);
         }
 
-        if let Some(mts) = &self.config.min_transfer_speed {
+        if let Some(mts) = &config.min_transfer_speed {
             req.set_min_transfer_speed(*mts);
         }
 
@@ -205,7 +218,10 @@ impl Client {
         progress: Option<ProgressCallback>,
     ) -> Result<Response<T>, EdenApiError> {
         let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
-        let (responses, stats) = self.client.send_async_with_progress(requests, progress)?;
+        let (responses, stats) = self
+            .inner
+            .client
+            .send_async_with_progress(requests, progress)?;
 
         // Transform each response `Future` (which resolves when all of the HTTP
         // headers for that response have been received) into a `Stream` that
@@ -273,7 +289,7 @@ impl Client {
     fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
         tracing::trace!("Sending request: {:?}", req);
 
-        let log_dir = match &self.config.log_dir {
+        let log_dir = match &self.config().log_dir {
             Some(path) => path.clone(),
             None => return,
         };
@@ -352,7 +368,7 @@ impl EdenApi for Client {
 
         let msg = format!("Sending health check request: {}", &url);
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -370,7 +386,7 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         let msg = format!("Requesting content for {} file(s)", keys.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -381,7 +397,7 @@ impl EdenApi for Client {
         let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
 
         let url = self.build_url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, keys, self.config.max_files, |keys| {
+        let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
@@ -398,7 +414,7 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         let msg = format!("Requesting attributes for {} file(s)", reqs.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -409,7 +425,7 @@ impl EdenApi for Client {
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
 
         let url = self.build_url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, reqs, self.config.max_files, |reqs| {
+        let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
             let req = FileRequest { reqs, keys: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
@@ -427,7 +443,7 @@ impl EdenApi for Client {
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
         let msg = format!("Requesting history for {} file(s)", keys.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -436,7 +452,7 @@ impl EdenApi for Client {
         }
 
         let url = self.build_url(paths::HISTORY, Some(&repo))?;
-        let requests = self.prepare_requests(&url, keys, self.config.max_history, |keys| {
+        let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
             let req = HistoryRequest { keys, length };
             self.log_request(&req, "history");
             req.to_wire()
@@ -463,7 +479,7 @@ impl EdenApi for Client {
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!("Requesting {} tree(s)", keys.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -472,7 +488,7 @@ impl EdenApi for Client {
         }
 
         let url = self.build_url(paths::TREES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, keys, self.config.max_trees, |keys| {
+        let requests = self.prepare_requests(&url, keys, self.config().max_trees, |keys| {
             let req = TreeRequest {
                 keys,
                 attributes: attributes.clone().unwrap_or_default(),
@@ -499,7 +515,7 @@ impl EdenApi for Client {
             &rootdir
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -529,7 +545,7 @@ impl EdenApi for Client {
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         let msg = format!("Requesting revlog data for {} commit(s)", hgids.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -554,7 +570,7 @@ impl EdenApi for Client {
     ) -> Result<Response<BookmarkEntry>, EdenApiError> {
         let msg = format!("Requesting '{}' bookmarks", bookmarks.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
         let url = self.build_url(paths::BOOKMARKS, Some(&repo))?;
@@ -575,7 +591,7 @@ impl EdenApi for Client {
     ) -> Result<CloneData<HgId>, EdenApiError> {
         let msg = format!("Requesting clone data for the '{}' repository", repo);
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -599,7 +615,7 @@ impl EdenApi for Client {
             repo
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -631,7 +647,7 @@ impl EdenApi for Client {
             repo
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -684,7 +700,7 @@ impl EdenApi for Client {
             requests.len()
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -697,7 +713,7 @@ impl EdenApi for Client {
         let formatted = self.prepare_requests(
             &url,
             requests,
-            self.config.max_location_to_hash,
+            self.config().max_location_to_hash,
             |requests| {
                 let batch = CommitLocationToHashRequestBatch { requests };
                 self.log_request(&batch, "commit_location_to_hash");
@@ -720,7 +736,7 @@ impl EdenApi for Client {
             hgids.len()
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -731,7 +747,7 @@ impl EdenApi for Client {
         let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
 
         let formatted =
-            self.prepare_requests(&url, hgids, self.config.max_location_to_hash, |hgids| {
+            self.prepare_requests(&url, hgids, self.config().max_location_to_hash, |hgids| {
                 let batch = CommitHashToLocationRequestBatch {
                     master_heads: master_heads.clone(),
                     hgids,
@@ -846,7 +862,7 @@ impl EdenApi for Client {
     ) -> Result<Response<LookupResponse>, EdenApiError> {
         let msg = format!("Requesting lookup for {} item(s)", items.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -963,7 +979,7 @@ impl EdenApi for Client {
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -997,7 +1013,7 @@ impl EdenApi for Client {
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         let msg = format!("Requesting trees upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -1036,7 +1052,7 @@ impl EdenApi for Client {
             changesets.len(),
         );
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -1067,7 +1083,7 @@ impl EdenApi for Client {
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let msg = "Requesting changeset upload";
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
 
@@ -1092,7 +1108,7 @@ impl EdenApi for Client {
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         let msg = "Preparing ephemeral bubble";
         tracing::info!("{}", &msg);
-        if self.config.debug {
+        if self.config().debug {
             eprintln!("{}", &msg);
         }
         let url = self.build_url(paths::EPHEMERAL_PREPARE, Some(&repo))?;
@@ -1121,7 +1137,7 @@ impl EdenApi for Client {
             request.cs_id,
             request.bubble_id
         );
-        if self.config.debug {
+        if self.config().debug {
             eprintln!(
                 "Fetching snapshot {} from bubble {}",
                 request.cs_id, request.bubble_id
