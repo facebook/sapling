@@ -1565,7 +1565,7 @@ py_class!(pub class treescmstore |py| {
 
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
         let store = self.store(py);
-        mutabledeltastore::create_instance(py, store.get_shared_mutable().map_pyerr(py)?)
+        mutabledeltastore::create_instance(py, store.get_shared_mutable())
     }
 });
 

@@ -17,14 +17,15 @@ use anyhow::{bail, Result};
 
 use minibytes::Bytes;
 use tracing::field;
-use types::Key;
+use types::{Key, RepoPathBuf};
 
 use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     memcache::MEMCACHE_DELAY,
     util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
-    HgIdMutableDeltaStore, LocalStore, MemcacheStore, Metadata, StoreKey, StoreResult,
+    HgIdMutableDeltaStore, LegacyStore, LocalStore, MemcacheStore, Metadata, RepackLocation,
+    StoreKey, StoreResult,
 };
 
 pub struct TreeStore {
@@ -226,21 +227,6 @@ impl TreeStore {
         Ok(())
     }
 
-    /// Returns only the local cache / shared store, in place of the local-only store, such that writes will go directly to the local cache.
-    /// For compatibility with ContentStore::get_shared_mutable
-    pub fn get_shared_mutable(&self) -> Result<Arc<dyn HgIdMutableDeltaStore>> {
-        Ok(Arc::new(TreeStore {
-            indexedlog_local: self.indexedlog_cache.clone(),
-            indexedlog_cache: None,
-            cache_to_local_cache: false,
-            memcache: None,
-            cache_to_memcache: false,
-            edenapi: None,
-            contentstore: None,
-            creation_time: Instant::now(),
-        }))
-    }
-
     /// Returns a TreeStore with only the local subset of backends
     pub fn local(&self) -> TreeStore {
         TreeStore {
@@ -270,6 +256,76 @@ impl TreeStore {
             contentstore: None,
 
             creation_time: Instant::now(),
+        }
+    }
+}
+
+impl LegacyStore for TreeStore {
+    /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
+    /// For compatibility with ContentStore::get_shared_mutable
+    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+        // this is infallible in ContentStore so panic if there are no shared/cache stores.
+        assert!(
+            self.indexedlog_cache.is_some(),
+            "cannot get shared_mutable, no shared / local cache stores available"
+        );
+        Arc::new(TreeStore {
+            indexedlog_local: self.indexedlog_cache.clone(),
+            indexedlog_cache: None,
+            cache_to_local_cache: false,
+
+            memcache: None,
+            cache_to_memcache: false,
+
+            edenapi: None,
+            contentstore: None,
+            creation_time: Instant::now(),
+        })
+    }
+
+    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+        unimplemented!(
+            "get_logged_fetches is not implemented for trees, it should only ever be falled for files"
+        );
+    }
+
+    fn get_file_content(&self, _key: &Key) -> Result<Option<Bytes>> {
+        unimplemented!(
+            "get_file_content is not implemented for trees, it should only ever be falled for files"
+        );
+    }
+
+    // If ContentStore is available, these call into ContentStore. Otherwise, implement these
+    // methods on top of scmstore (though they should still eventaully be removed).
+    fn add_pending(
+        &self,
+        key: &Key,
+        data: Bytes,
+        meta: Metadata,
+        location: RepackLocation,
+    ) -> Result<()> {
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.add_pending(key, data, meta, location)
+        } else {
+            let delta = Delta {
+                data,
+                base: None,
+                key: key.clone(),
+            };
+
+            match location {
+                RepackLocation::Local => self.add(&delta, &meta),
+                RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
+            }
+        }
+    }
+
+    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.commit_pending(location)
+        } else {
+            self.flush()?;
+            Ok(None)
         }
     }
 }
